@@ -18,6 +18,8 @@
 - [x] Add direct links to Google Ads campaign creation
 - [x] Add direct links to Meta Business Suite (Facebook/Instagram)
 - [x] Create campaign templates from marketing documents
-- [ ] Build lead tracking system
+- [x] Create lead tracking page at /leads with source dropdown
+- [x] Create campaign launch checklist PDF
+- [x] Add monthly budget calculator to dashboard
 - [ ] Add campaign performance tracking
 - [x] Create campaign library with ad copy

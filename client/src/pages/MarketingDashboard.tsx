@@ -14,18 +14,23 @@ import {
   MessageSquare,
   Settings,
   Plus,
-  ExternalLink
+  ExternalLink,
+  DollarSign,
+  Download,
+  CheckSquare
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import CampaignLibrary from "@/components/CampaignLibrary";
 import { getLoginUrl } from "@/const";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+import { Slider } from "@/components/ui/slider";
 
 export default function MarketingDashboard() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
+  const [monthlyBudget, setMonthlyBudget] = useState([10000]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -205,6 +210,179 @@ export default function MarketingDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Budget Calculator */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <DollarSign className="h-5 w-5 text-[#ff6b35]" />
+                      Monthly Budget Calculator
+                    </CardTitle>
+                    <CardDescription>Recommended allocation across platforms ($8K-15K strategy)</CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open('/campaign-launch-checklist.pdf', '_blank')}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Campaign Checklist
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Budget Slider */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Total Monthly Budget</label>
+                    <span className="text-2xl font-bold text-[#ff6b35]">
+                      ${monthlyBudget[0].toLocaleString()}
+                    </span>
+                  </div>
+                  <Slider
+                    value={monthlyBudget}
+                    onValueChange={setMonthlyBudget}
+                    min={8000}
+                    max={15000}
+                    step={500}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>$8,000</span>
+                    <span>$15,000</span>
+                  </div>
+                </div>
+
+                {/* Platform Allocation */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-sm">Recommended Platform Allocation</h3>
+                  
+                  {/* Google Ads */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BarChart3 className="h-4 w-4 text-[#ff6b35]" />
+                        <span className="text-sm font-medium">Google Ads (Search)</span>
+                      </div>
+                      <span className="text-sm font-bold">
+                        ${Math.round(monthlyBudget[0] * 0.425).toLocaleString()} <span className="text-xs text-muted-foreground">(42.5%)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-[#ff6b35]" style={{ width: '42.5%' }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">High-intent searches, emergency repairs, installations</p>
+                  </div>
+
+                  {/* Facebook/Instagram */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Facebook className="h-4 w-4 text-[#ff6b35]" />
+                        <span className="text-sm font-medium">Facebook/Instagram</span>
+                      </div>
+                      <span className="text-sm font-bold">
+                        ${Math.round(monthlyBudget[0] * 0.275).toLocaleString()} <span className="text-xs text-muted-foreground">(27.5%)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600" style={{ width: '27.5%' }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Brand awareness, lead generation, retargeting</p>
+                  </div>
+
+                  {/* YouTube */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Youtube className="h-4 w-4 text-[#ff6b35]" />
+                        <span className="text-sm font-medium">YouTube</span>
+                      </div>
+                      <span className="text-sm font-bold">
+                        ${Math.round(monthlyBudget[0] * 0.15).toLocaleString()} <span className="text-xs text-muted-foreground">(15%)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-red-600" style={{ width: '15%' }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Educational content, system demonstrations</p>
+                  </div>
+
+                  {/* Display Network */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-[#ff6b35]" />
+                        <span className="text-sm font-medium">Display Network</span>
+                      </div>
+                      <span className="text-sm font-bold">
+                        ${Math.round(monthlyBudget[0] * 0.10).toLocaleString()} <span className="text-xs text-muted-foreground">(10%)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-green-600" style={{ width: '10%' }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Banner ads, remarketing campaigns</p>
+                  </div>
+
+                  {/* Nextdoor */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4 text-[#ff6b35]" />
+                        <span className="text-sm font-medium">Nextdoor</span>
+                      </div>
+                      <span className="text-sm font-bold">
+                        ${Math.round(monthlyBudget[0] * 0.05).toLocaleString()} <span className="text-xs text-muted-foreground">(5%)</span>
+                      </span>
+                    </div>
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-purple-600" style={{ width: '5%' }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Hyper-local neighborhood targeting</p>
+                  </div>
+                </div>
+
+                {/* Daily Budget Breakdown */}
+                <div className="pt-4 border-t">
+                  <h3 className="font-semibold text-sm mb-3">Daily Budget Breakdown</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="p-3 bg-secondary/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">Google Ads/day</p>
+                      <p className="text-lg font-bold">${Math.round(monthlyBudget[0] * 0.425 / 30)}</p>
+                    </div>
+                    <div className="p-3 bg-secondary/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">Facebook/day</p>
+                      <p className="text-lg font-bold">${Math.round(monthlyBudget[0] * 0.275 / 30)}</p>
+                    </div>
+                    <div className="p-3 bg-secondary/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">YouTube/day</p>
+                      <p className="text-lg font-bold">${Math.round(monthlyBudget[0] * 0.15 / 30)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    className="flex-1 bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+                    onClick={() => window.open('/campaign-launch-checklist.pdf', '_blank')}
+                  >
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Campaign Checklist
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setLocation('/leads')}
+                  >
+                    View Lead Tracker
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
             <Card>
               <CardHeader>

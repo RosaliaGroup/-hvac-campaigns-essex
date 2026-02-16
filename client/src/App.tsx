@@ -14,6 +14,7 @@ import MaintenanceSubscription from "./pages/MaintenanceSubscription";
 import Partnerships from "./pages/Partnerships";
 import Careers from "./pages/Careers";
 import MarketingDashboard from "./pages/MarketingDashboard";
+import LeadTracker from "./pages/LeadTracker";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -31,6 +32,7 @@ function Router() {
       <Route path={"/partnerships"} component={Partnerships} />
       <Route path={"/careers"} component={Careers} />
       <Route path={"/marketing-dashboard"} component={MarketingDashboard} />
+      <Route path={"/leads"} component={LeadTracker} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
