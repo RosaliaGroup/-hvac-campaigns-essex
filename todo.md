@@ -49,3 +49,6 @@
 - [x] Change exit popup messaging to focus on commercial and other services
 - [x] Remove before/after images from testimonials page
 - [x] Update lead capture database schema to include firstName and lastName
+
+## Exit Popup Updates
+- [x] Update exit popup to include both residential and commercial services with incentives
