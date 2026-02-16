@@ -52,3 +52,6 @@
 
 ## Exit Popup Updates
 - [x] Update exit popup to include both residential and commercial services with incentives
+
+## Content Updates
+- [x] Replace all instances of BIM with BMS throughout the website

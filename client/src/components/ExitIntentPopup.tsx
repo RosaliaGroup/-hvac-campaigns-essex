@@ -165,7 +165,7 @@ export default function ExitIntentPopup() {
                   <li>✓ Up to 80% rebate coverage</li>
                   <li>✓ VRF/VRV systems</li>
                   <li>✓ Maintenance programs</li>
-                  <li>✓ BIM technology integration</li>
+                  <li>✓ BMS technology integration</li>
                 </ul>
               </div>
             </div>

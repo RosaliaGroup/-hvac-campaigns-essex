@@ -47,7 +47,7 @@ const caseStudies = [
     annualSavings: "$55,200",
     paybackPeriod: "1.3 years",
     highlights: [
-      "Smart building integration with BIM technology",
+      "Smart building integration with BMS technology",
       "46% reduction in energy costs",
       "Eliminated gas utility connection fees",
       "Improved tenant comfort and satisfaction"

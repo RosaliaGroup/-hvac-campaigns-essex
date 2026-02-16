@@ -47,7 +47,7 @@ export default function About() {
           <div className="max-w-4xl mx-auto">
             <h2 className="text-4xl font-bold text-[#1e3a5f] mb-6">What We Do</h2>
             <p className="text-lg text-muted-foreground mb-8">
-              We focus on HVAC design improvements by applying Smart Building concepts with BIM technology. Our team supplies, installs, commissions, and starts up all types of HVAC equipment, ensuring compliance with manufacturer standards and customer satisfaction.
+              We focus on HVAC design improvements by applying Smart Building concepts with BMS technology. Our team supplies, installs, commissions, and starts up all types of HVAC equipment, ensuring compliance with manufacturer standards and customer satisfaction.
             </p>
             <p className="text-lg text-muted-foreground mb-8">
               Our technicians bring over 20 years of extensive experience in heavy industry, food production, residential buildings, restaurants, hospitality, and healthcare environments, and more.

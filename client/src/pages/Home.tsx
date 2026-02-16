@@ -82,7 +82,7 @@ export default function Home() {
                 <CardTitle className="text-lg">VRV/VRF Specialists</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Expert in variable refrigerant flow systems and BIM technology</p>
+                <p className="text-sm text-muted-foreground">Expert in variable refrigerant flow systems and BMS technology</p>
               </CardContent>
             </Card>
 
@@ -134,7 +134,7 @@ export default function Home() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span>BIM technology integration</span>
+                    <span>BMS technology integration</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />

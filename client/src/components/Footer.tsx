@@ -68,7 +68,7 @@ export default function Footer() {
               <li>Emergency Services</li>
               <li>VRV/VRF Systems</li>
               <li>System Design</li>
-              <li>BIM Technology</li>
+              <li>BMS Technology</li>
             </ul>
           </div>
 
