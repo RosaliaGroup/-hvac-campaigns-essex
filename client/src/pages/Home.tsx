@@ -298,7 +298,7 @@ export default function Home() {
                 </Button>
               </Link>
               <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20">
-                <a href="tel:+19737500759">(973) 750-0759</a>
+                <a href="tel:+18624239396">(862) 423-9396</a>
               </Button>
             </div>
           </div>

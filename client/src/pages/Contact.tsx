@@ -34,8 +34,8 @@ export default function Contact() {
                 <CardTitle className="text-lg">Phone</CardTitle>
               </CardHeader>
               <CardContent>
-                <a href="tel:+19737500759" className="text-[#1e3a5f] hover:text-[#ff6b35] font-medium">
-                  (973) 750-0759
+                <a href="tel:+18624239396" className="text-[#1e3a5f] hover:text-[#ff6b35] font-medium">
+                  (862) 423-9396
                 </a>
               </CardContent>
             </Card>
@@ -55,12 +55,11 @@ export default function Contact() {
             <Card className="text-center border-t-4 border-t-[#ff6b35]">
               <CardHeader>
                 <MapPin className="h-10 w-10 text-[#ff6b35] mx-auto mb-2" />
-                <CardTitle className="text-lg">Address</CardTitle>
+                <CardTitle className="text-lg">Location</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  51 ½ Merchant St<br />
-                  Newark, NJ 07105
+                  Newark, NJ
                 </p>
               </CardContent>
             </Card>
@@ -185,9 +184,9 @@ export default function Contact() {
             <p className="text-xl text-white/90 mb-6">
               We're available 24/7 for all your HVAC emergencies
             </p>
-            <a href="tel:+19737500759">
+            <a href="tel:+18624239396">
               <button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors">
-                Call Now: (973) 750-0759
+                Call Now: (862) 423-9396
               </button>
             </a>
           </div>

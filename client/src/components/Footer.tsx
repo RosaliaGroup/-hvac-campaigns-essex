@@ -27,23 +27,23 @@ export default function Footer() {
             <h4 className="font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/">
-                  <a className="text-white/80 hover:text-white transition-colors">Home</a>
+                <Link href="/" className="text-white/80 hover:text-white transition-colors">
+                  Home
                 </Link>
               </li>
               <li>
-                <Link href="/about">
-                  <a className="text-white/80 hover:text-white transition-colors">About Us</a>
+                <Link href="/about" className="text-white/80 hover:text-white transition-colors">
+                  About Us
                 </Link>
               </li>
               <li>
-                <Link href="/services">
-                  <a className="text-white/80 hover:text-white transition-colors">Services</a>
+                <Link href="/services" className="text-white/80 hover:text-white transition-colors">
+                  Services
                 </Link>
               </li>
               <li>
-                <Link href="/contact">
-                  <a className="text-white/80 hover:text-white transition-colors">Contact</a>
+                <Link href="/contact" className="text-white/80 hover:text-white transition-colors">
+                  Contact
                 </Link>
               </li>
             </ul>
@@ -68,12 +68,12 @@ export default function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
                 <MapPin className="h-4 w-4 text-[#ff6b35] mt-0.5 flex-shrink-0" />
-                <span className="text-white/80">51 ½ Merchant St<br />Newark, NJ 07105</span>
+                <span className="text-white/80">Newark, NJ</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 text-[#ff6b35] flex-shrink-0" />
-                <a href="tel:+19737500759" className="text-white/80 hover:text-white transition-colors">
-                  (973) 750-0759
+                <a href="tel:+18624239396" className="text-white/80 hover:text-white transition-colors">
+                  (862) 423-9396
                 </a>
               </li>
               <li className="flex items-center gap-2">
