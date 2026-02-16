@@ -131,6 +131,173 @@ export default function Careers() {
         </div>
       </section>
 
+      {/* Employee Testimonials */}
+      <section className="py-16 bg-slate-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a5f] mb-4 text-center">
+              Hear From Our Team
+            </h2>
+            <p className="text-lg text-slate-600 text-center mb-12 max-w-3xl mx-auto">
+              Real stories from technicians who have grown their careers with us
+            </p>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              {/* Testimonial 1 */}
+              <Card className="bg-white border-t-4 border-t-[#ff6b35]">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-[#ff6b35]/10 rounded-full flex items-center justify-center">
+                      <Users className="w-6 h-6 text-[#ff6b35]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-[#1e3a5f]">Marcus J.</div>
+                      <div className="text-sm text-slate-600">Lead Technician, 4 years</div>
+                    </div>
+                  </div>
+                  <p className="text-slate-700 italic mb-4">
+                    "I started as an apprentice with zero HVAC experience. The company paid for my EPA 608, OSHA 30, and NATE certifications. Now I'm leading commercial installations and earning twice what I made before. The investment in training here is real."
+                  </p>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="text-xs">EPA 608</Badge>
+                    <Badge variant="outline" className="text-xs">OSHA 30</Badge>
+                    <Badge variant="outline" className="text-xs">NATE</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Testimonial 2 */}
+              <Card className="bg-white border-t-4 border-t-[#1e3a5f]">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-[#ff6b35]/10 rounded-full flex items-center justify-center">
+                      <Users className="w-6 h-6 text-[#ff6b35]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-[#1e3a5f]">Sarah L.</div>
+                      <div className="text-sm text-slate-600">Service Technician, 3 years</div>
+                    </div>
+                  </div>
+                  <p className="text-slate-700 italic mb-4">
+                    "The VRF/VRV training I received here opened doors to high-end commercial projects. Plus, the company culture is supportive - senior techs actually want to teach you. I've never felt stuck or like I couldn't ask questions."
+                  </p>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="text-xs">VRF/VRV</Badge>
+                    <Badge variant="outline" className="text-xs">BAS</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Testimonial 3 */}
+              <Card className="bg-white border-t-4 border-t-[#ff6b35]">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-[#ff6b35]/10 rounded-full flex items-center justify-center">
+                      <Users className="w-6 h-6 text-[#ff6b35]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-[#1e3a5f]">David M.</div>
+                      <div className="text-sm text-slate-600">Installation Specialist, 2 years</div>
+                    </div>
+                  </div>
+                  <p className="text-slate-700 italic mb-4">
+                    "Coming from another HVAC company, the difference is night and day. Here, they actually invest in you - paid certifications, modern tools, and real career progression. I've learned more in 2 years here than 5 years at my previous job."
+                  </p>
+                  <div className="flex gap-2">
+                    <Badge variant="outline" className="text-xs">OSHA 10</Badge>
+                    <Badge variant="outline" className="text-xs">First Aid</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Comparison Chart */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a5f] mb-4 text-center">
+              How We Compare
+            </h2>
+            <p className="text-lg text-slate-600 text-center mb-12 max-w-3xl mx-auto">
+              Our benefits package vs. industry standard
+            </p>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white shadow-lg rounded-lg overflow-hidden">
+                <thead>
+                  <tr className="bg-gradient-to-r from-[#1e3a5f] to-[#2d5a8f] text-white">
+                    <th className="p-4 text-left font-semibold">Benefit</th>
+                    <th className="p-4 text-center font-semibold">Industry Standard</th>
+                    <th className="p-4 text-center font-semibold bg-[#ff6b35]">Mechanical Enterprise</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">Continuing Education</td>
+                    <td className="p-4 text-center text-slate-600">Limited or self-funded</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ Fully company-paid</td>
+                  </tr>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">OSHA Certification</td>
+                    <td className="p-4 text-center text-slate-600">OSHA 10 only</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ OSHA 10 & 30</td>
+                  </tr>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">EPA 608 Certification</td>
+                    <td className="p-4 text-center text-slate-600">Employee pays</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ Company-paid</td>
+                  </tr>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">Advanced Training (VRF/VRV, BAS)</td>
+                    <td className="p-4 text-center text-slate-600">Rarely offered</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ Included</td>
+                  </tr>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">Health Insurance</td>
+                    <td className="p-4 text-center text-slate-600">Basic coverage</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ Comprehensive plans</td>
+                  </tr>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">Paid Time Off</td>
+                    <td className="p-4 text-center text-slate-600">1-2 weeks/year</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ Competitive PTO</td>
+                  </tr>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">Retirement Plan</td>
+                    <td className="p-4 text-center text-slate-600">No match</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ With company match</td>
+                  </tr>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">Performance Bonuses</td>
+                    <td className="p-4 text-center text-slate-600">Uncommon</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ Regular bonuses</td>
+                  </tr>
+                  <tr className="border-b border-slate-200 hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">Modern Tools & Equipment</td>
+                    <td className="p-4 text-center text-slate-600">Basic tools</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ Latest technology</td>
+                  </tr>
+                  <tr className="hover:bg-slate-50">
+                    <td className="p-4 font-medium text-[#1e3a5f]">Career Advancement Path</td>
+                    <td className="p-4 text-center text-slate-600">Unclear</td>
+                    <td className="p-4 text-center font-semibold text-green-700">✓ Defined progression</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-8 p-6 bg-gradient-to-br from-[#ff6b35]/10 to-white rounded-lg border-l-4 border-[#ff6b35]">
+              <p className="text-slate-700">
+                <strong className="text-[#1e3a5f]">Our Commitment:</strong> We believe that investing in our team's development creates better technicians, happier employees, and superior service for our clients. Every benefit listed is designed to support your long-term career growth.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Continuing Education Programs */}
       <section className="py-16 bg-slate-50">
         <div className="container mx-auto px-4">
@@ -384,6 +551,43 @@ export default function Careers() {
                   </a>
                 </CardContent>
               </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Application Form */}
+      <section className="py-16 bg-slate-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <ClipboardCheck className="h-16 w-16 text-[#ff6b35] mx-auto mb-4" />
+              <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a5f] mb-4">
+                Apply Now
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                Complete the form below to submit your application. We review all applications and will contact qualified candidates within 3-5 business days.
+              </p>
+            </div>
+
+            <Card className="border-2 border-[#ff6b35]/20">
+              <CardContent className="p-0">
+                <iframe 
+                  src="https://docs.google.com/forms/d/e/1FAIpQLSd8GwaX3VjNffO3SvCnGTc-1wGwKv3QbhvGrWP__WJPYP_Vuw/viewform?embedded=true" 
+                  width="100%" 
+                  height="1400" 
+                  frameBorder="0" 
+                  marginHeight={0} 
+                  marginWidth={0}
+                  className="rounded-lg"
+                >
+                  Loading…
+                </iframe>
+              </CardContent>
+            </Card>
+
+            <div className="mt-6 text-center text-sm text-slate-600">
+              <p>Prefer to email your resume? Send it to <a href="mailto:sales@mechanicalenterprise.com" className="text-[#ff6b35] hover:underline font-semibold">sales@mechanicalenterprise.com</a></p>
             </div>
           </div>
         </div>
