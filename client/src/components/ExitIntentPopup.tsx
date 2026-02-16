@@ -36,6 +36,14 @@ export default function ExitIntentPopup() {
       return;
     }
 
+    // Show popup after 15 seconds
+    const timer = setTimeout(() => {
+      if (!hasShown && !isVisible) {
+        setIsVisible(true);
+        setHasShown(true);
+      }
+    }, 15000); // 15 seconds
+
     // Detect exit intent (mouse leaving viewport from top)
     const handleMouseLeave = (e: MouseEvent) => {
       if (e.clientY <= 0 && !hasShown && !isVisible) {
@@ -47,6 +55,7 @@ export default function ExitIntentPopup() {
     document.addEventListener("mouseleave", handleMouseLeave);
 
     return () => {
+      clearTimeout(timer);
       document.removeEventListener("mouseleave", handleMouseLeave);
     };
   }, [hasShown, isVisible]);

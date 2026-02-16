@@ -67,3 +67,6 @@
 
 ## Analytics & Tracking
 - [x] Add Google Ads conversion tracking tag (AW-17768263516)
+
+## Bug Fixes
+- [x] Add 15-second timer to exit popup (in addition to exit-intent trigger)
