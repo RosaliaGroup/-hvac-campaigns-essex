@@ -14,6 +14,8 @@ const caseStudies = [
     projectCost: "$95,000",
     rebateReceived: "$68,000",
     rebatePercentage: "72%",
+    outOfPocket: "$27,000",
+    monthlyPayment: "$450",
     energySavingsBefore: "$2,800/month",
     energySavingsAfter: "$1,400/month",
     monthlySavings: "$1,400",
@@ -37,6 +39,8 @@ const caseStudies = [
     projectCost: "$285,000",
     rebateReceived: "$215,000",
     rebatePercentage: "75%",
+    outOfPocket: "$70,000",
+    monthlyPayment: "$1,167",
     energySavingsBefore: "$8,500/month",
     energySavingsAfter: "$3,900/month",
     monthlySavings: "$4,600",
@@ -60,6 +64,8 @@ const caseStudies = [
     projectCost: "$425,000",
     rebateReceived: "$340,000",
     rebatePercentage: "80%",
+    outOfPocket: "$85,000",
+    monthlyPayment: "$1,417",
     energySavingsBefore: "$14,200/month",
     energySavingsAfter: "$6,100/month",
     monthlySavings: "$8,100",
@@ -126,6 +132,30 @@ export default function CaseStudies() {
                   <div className="flex items-center justify-between pt-2 border-t border-green-300">
                     <span className="text-sm font-medium">Coverage:</span>
                     <Badge className="bg-green-600 text-white">{study.rebatePercentage} Covered</Badge>
+                  </div>
+                </div>
+
+                {/* On-Bill Repayment Details */}
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="h-5 w-5 text-purple-600" />
+                    <span className="font-semibold text-purple-900">On-Bill Repayment Option</span>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Remaining Cost:</span>
+                      <span className="font-bold">{study.outOfPocket}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Monthly Payment (5 years):</span>
+                      <span className="font-bold text-purple-700">{study.monthlyPayment}/mo</span>
+                    </div>
+                    <div className="pt-2 border-t border-purple-300">
+                      <p className="text-xs text-purple-900 font-medium">
+                        💡 Net Cash Flow: <span className="text-green-700">+${(parseFloat(study.monthlySavings.replace('$', '').replace(',', '')) - parseFloat(study.monthlyPayment.replace('$', '').replace(',', ''))).toLocaleString()}/month</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">Energy savings exceed monthly payments!</p>
+                    </div>
                   </div>
                 </div>
 

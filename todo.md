@@ -1,9 +1,9 @@
-# TODO: Add On-Bill Repayment Information
+# TODO: Update Commercial Case Studies with Payment Details
 
 ## Tasks
-- [ ] Add on-bill repayment section to Residential page
-- [ ] Add on-bill repayment section to Commercial page
-- [ ] Update Rebate Guide with on-bill repayment details
-- [ ] Add residential timeline (approval → installation → inspection)
-- [ ] Mention account must be in good standing
+- [ ] Read CaseStudies component
+- [ ] Add monthly payment information to each case study
+- [ ] Include financing terms: up to $590K over 5 years
+- [ ] Calculate monthly payments for each project
+- [ ] Show how monthly payments compare to energy savings
 - [ ] Create new checkpoint
