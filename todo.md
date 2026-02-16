@@ -1,7 +1,8 @@
-# TODO: Move Application Process Above Form
+# TODO: Update Experience Messaging
 
-## Tasks
-- [ ] Move 4-step process section above Google Form on Residential page
-- [ ] Move 4-step process section above Google Form on Commercial page
-- [ ] Ensure proper spacing and layout
-- [ ] Create new checkpoint
+## Changes Needed
+- [ ] Update Home page: Add "20+ Years of Experience" for team expertise
+- [ ] Update About page: Clarify 5 years in business vs 20+ years team experience
+- [ ] Update Services page: Mention experienced technicians
+- [ ] Keep company age at 5 years but highlight team's 20+ years expertise
+- [ ] Create new checkpoint after updates

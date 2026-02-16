@@ -237,7 +237,7 @@ export default function Services() {
           <div className="text-center mb-12">
             <h2 className="text-4xl font-bold text-[#1e3a5f] mb-4">Industry Specializations</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Extensive experience across diverse sectors
+              Over 20 years of experience across diverse sectors
             </p>
           </div>
 

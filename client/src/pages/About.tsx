@@ -31,7 +31,7 @@ export default function About() {
             <h2 className="text-4xl font-bold text-[#1e3a5f] mb-6">Who We Are</h2>
             <div className="space-y-4 text-lg text-muted-foreground">
               <p>
-                Mechanical Enterprise is a dedicated group within HVAC, specializing in VRV/VRF systems and complex solutions for industry, IoT, factories, residential, and hospitality. Our expertise adds value by accelerating the adoption of new technologies and delivering high-end improvements.
+                Mechanical Enterprise is a dedicated group within HVAC, specializing in VRV/VRF systems and complex solutions for industry, IoT, factories, residential, and hospitality. Our team brings over 20 years of combined HVAC experience, accelerating the adoption of new technologies and delivering high-end improvements.
               </p>
               <p>
                 We use the latest technology to meet the specific demands of each sector and provide effective solutions for our clients, making their daily operations simpler, smarter, and more efficient.
@@ -50,7 +50,7 @@ export default function About() {
               We focus on HVAC design improvements by applying Smart Building concepts with BIM technology. Our team supplies, installs, commissions, and starts up all types of HVAC equipment, ensuring compliance with manufacturer standards and customer satisfaction.
             </p>
             <p className="text-lg text-muted-foreground mb-8">
-              We bring extensive experience in heavy industry, food production, residential buildings, restaurants, hospitality, and healthcare environments, and more.
+              Our technicians bring over 20 years of extensive experience in heavy industry, food production, residential buildings, restaurants, hospitality, and healthcare environments, and more.
             </p>
 
             <div className="grid md:grid-cols-2 gap-6">

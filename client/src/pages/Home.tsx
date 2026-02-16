@@ -94,10 +94,10 @@ export default function Home() {
             <Card className="text-center border-t-4 border-t-[#1e3a5f]">
               <CardHeader>
                 <Award className="h-12 w-12 text-[#ff6b35] mx-auto mb-2" />
-                <CardTitle className="text-lg">5 Years Experience</CardTitle>
+                <CardTitle className="text-lg">20+ Years Experience</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Proven expertise across residential, commercial, and industrial</p>
+                <p className="text-sm text-muted-foreground">Our team brings over two decades of HVAC expertise</p>
               </CardContent>
             </Card>
           </div>
