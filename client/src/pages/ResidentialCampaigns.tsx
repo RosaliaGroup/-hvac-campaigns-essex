@@ -82,31 +82,6 @@ export default function ResidentialCampaigns() {
       {/* Residential Case Studies */}
       <ResidentialCaseStudies />
 
-      {/* Google Form Section */}
-      <section className="py-20 bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white">
-        <div className="container">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Get Your Free Quote</h2>
-            <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
-              Fill out the form below to receive a personalized quote and learn about available rebates for your home
-            </p>
-          </div>
-
-          <div className="max-w-4xl mx-auto bg-white rounded-lg p-2">
-            <iframe 
-              src="https://docs.google.com/forms/d/e/1FAIpQLSelUjWmZt7pXF1epkCafLwyB54KsKQ-vnIL1XnqTW5WjnHgwQ/viewform?embedded=true"
-              width="100%"
-              height="1200"
-              frameBorder="0"
-              marginHeight={0}
-              marginWidth={0}
-              className="rounded-lg"
-            >
-              Loading…
-            </iframe>
-          </div>        </div>
-      </section>
-
       {/* On-Bill Repayment Option */}
       <section className="py-16 bg-gradient-to-br from-green-50 to-blue-50">
         <div className="container">
@@ -190,6 +165,31 @@ export default function ResidentialCampaigns() {
           </div>
         </div>
       </section>
+      {/* Google Form Section */}
+      <section className="py-20 bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white">
+        <div className="container">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">Get Your Free Quote</h2>
+            <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
+              Fill out the form below to receive a personalized quote and learn about available rebates for your home
+            </p>
+          </div>
+
+          <div className="max-w-4xl mx-auto bg-white rounded-lg p-2">
+            <iframe 
+              src="https://docs.google.com/forms/d/e/1FAIpQLSelUjWmZt7pXF1epkCafLwyB54KsKQ-vnIL1XnqTW5WjnHgwQ/viewform?embedded=true"
+              width="100%"
+              height="1200"
+              frameBorder="0"
+              marginHeight={0}
+              marginWidth={0}
+              className="rounded-lg"
+            >
+              Loading…
+            </iframe>
+          </div>        </div>
+      </section>
+
 
       {/* Service Area Coverage */}
       <section className="py-16 bg-white">

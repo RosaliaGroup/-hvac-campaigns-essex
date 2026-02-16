@@ -1,8 +1,7 @@
-# TODO: Remove All Brand Names
+# TODO: Move Application Process Above Form
 
 ## Tasks
-- [ ] Remove brand names from residential case studies
-- [ ] Remove brand names from commercial case studies
-- [ ] Remove brand partnerships list from About/Services pages
-- [ ] Replace with generic system descriptions
+- [ ] Move 4-step process section above Google Form on Residential page
+- [ ] Move 4-step process section above Google Form on Commercial page
+- [ ] Ensure proper spacing and layout
 - [ ] Create new checkpoint
