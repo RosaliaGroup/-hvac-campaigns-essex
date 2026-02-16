@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Home, Building2 } from "lucide-react";
+import { X, Home, Building2, CheckCircle, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,9 +7,71 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
+// A/B Test Variants
+type PopupVariant = {
+  id: string;
+  headline: string;
+  buttonColor: string;
+  buttonHoverColor: string;
+  timerDelay: number;
+};
+
+const POPUP_VARIANTS: PopupVariant[] = [
+  {
+    id: "control",
+    headline: "Don't Miss Out on HVAC Savings!",
+    buttonColor: "bg-[#ff6b35]",
+    buttonHoverColor: "hover:bg-[#ff6b35]/90",
+    timerDelay: 15000,
+  },
+  {
+    id: "urgency",
+    headline: "Limited Time: $16K Rebates Available!",
+    buttonColor: "bg-[#ff6b35]",
+    buttonHoverColor: "hover:bg-[#ff6b35]/90",
+    timerDelay: 15000,
+  },
+  {
+    id: "green_button",
+    headline: "Don't Miss Out on HVAC Savings!",
+    buttonColor: "bg-green-600",
+    buttonHoverColor: "hover:bg-green-700",
+    timerDelay: 15000,
+  },
+  {
+    id: "faster_timer",
+    headline: "Don't Miss Out on HVAC Savings!",
+    buttonColor: "bg-[#ff6b35]",
+    buttonHoverColor: "hover:bg-[#ff6b35]/90",
+    timerDelay: 10000,
+  },
+  {
+    id: "slower_timer",
+    headline: "Don't Miss Out on HVAC Savings!",
+    buttonColor: "bg-[#ff6b35]",
+    buttonHoverColor: "hover:bg-[#ff6b35]/90",
+    timerDelay: 20000,
+  },
+];
+
+// Select variant based on user session (consistent per user)
+function getVariant(): PopupVariant {
+  let variantId = localStorage.getItem("hvac-popup-variant");
+  
+  if (!variantId) {
+    // Randomly assign variant on first visit
+    const randomIndex = Math.floor(Math.random() * POPUP_VARIANTS.length);
+    variantId = POPUP_VARIANTS[randomIndex].id;
+    localStorage.setItem("hvac-popup-variant", variantId);
+  }
+  
+  return POPUP_VARIANTS.find(v => v.id === variantId) || POPUP_VARIANTS[0];
+}
+
 export default function ExitIntentPopup() {
   const [isVisible, setIsVisible] = useState(false);
   const [hasShown, setHasShown] = useState(false);
+  const [variant] = useState(getVariant());
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -20,6 +82,24 @@ export default function ExitIntentPopup() {
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       toast.success("Thanks! We'll send you information about available HVAC incentives and rebates.");
+      
+      // Track Google Ads conversion
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', 'conversion', {
+          'send_to': 'AW-17768263516/popup_lead_capture',
+          'value': 1.0,
+          'currency': 'USD',
+          'transaction_id': Date.now().toString()
+        });
+        
+        // Track A/B test variant
+        (window as any).gtag('event', 'popup_variant', {
+          'event_category': 'A/B Test',
+          'event_label': variant.id,
+          'value': 1
+        });
+      }
+      
       setIsVisible(false);
       localStorage.setItem("hvac-exit-popup-shown", "true");
     },
@@ -36,19 +116,37 @@ export default function ExitIntentPopup() {
       return;
     }
 
-    // Show popup after 15 seconds
+    // Show popup after variant-specific delay
     const timer = setTimeout(() => {
       if (!hasShown && !isVisible) {
         setIsVisible(true);
         setHasShown(true);
+        
+        // Track popup impression
+        if (typeof window !== 'undefined' && (window as any).gtag) {
+          (window as any).gtag('event', 'popup_impression', {
+            'event_category': 'A/B Test',
+            'event_label': variant.id,
+            'value': 1
+          });
+        }
       }
-    }, 15000); // 15 seconds
+    }, variant.timerDelay);
 
     // Detect exit intent (mouse leaving viewport from top)
     const handleMouseLeave = (e: MouseEvent) => {
       if (e.clientY <= 0 && !hasShown && !isVisible) {
         setIsVisible(true);
         setHasShown(true);
+        
+        // Track popup impression
+        if (typeof window !== 'undefined' && (window as any).gtag) {
+          (window as any).gtag('event', 'popup_impression', {
+            'event_category': 'A/B Test',
+            'event_label': variant.id,
+            'value': 1
+          });
+        }
       }
     };
 
@@ -58,7 +156,7 @@ export default function ExitIntentPopup() {
       clearTimeout(timer);
       document.removeEventListener("mouseleave", handleMouseLeave);
     };
-  }, [hasShown, isVisible]);
+  }, [hasShown, isVisible, variant]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,11 +192,29 @@ export default function ExitIntentPopup() {
 
         <CardHeader className="text-center pb-4">
           <CardTitle className="text-2xl text-[#1e3a5f]">
-            Don't Miss Out on HVAC Savings!
+            {variant.headline}
           </CardTitle>
           <CardDescription className="text-base">
             Get exclusive information about available rebates and incentives for your home or business
           </CardDescription>
+          
+          {/* Social Proof Badges */}
+          <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <div className="text-left">
+                <p className="text-sm font-semibold text-[#1e3a5f]">4,000+</p>
+                <p className="text-xs text-muted-foreground">Installations</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-600" />
+              <div className="text-left">
+                <p className="text-sm font-semibold text-[#1e3a5f]">98%</p>
+                <p className="text-xs text-muted-foreground">Satisfaction</p>
+              </div>
+            </div>
+          </div>
         </CardHeader>
 
         <CardContent>
@@ -181,7 +297,7 @@ export default function ExitIntentPopup() {
 
             <Button
               type="submit"
-              className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+              className={`w-full ${variant.buttonColor} ${variant.buttonHoverColor}`}
               disabled={createCapture.isPending}
             >
               {createCapture.isPending ? "Submitting..." : "Get Rebate & Incentive Information"}

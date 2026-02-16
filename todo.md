@@ -70,3 +70,8 @@
 
 ## Bug Fixes
 - [x] Add 15-second timer to exit popup (in addition to exit-intent trigger)
+
+## Popup Enhancements
+- [x] Add social proof badges to exit popup (installations completed, customer satisfaction)
+- [x] Add Google Ads conversion tracking for popup form submissions
+- [x] Create A/B test variants for popup (headlines, button colors, timer delays)
