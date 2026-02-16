@@ -75,3 +75,7 @@
 - [x] Add social proof badges to exit popup (installations completed, customer satisfaction)
 - [x] Add Google Ads conversion tracking for popup form submissions
 - [x] Create A/B test variants for popup (headlines, button colors, timer delays)
+
+## Urgent Bug Fix
+- [ ] Debug and fix popup not showing after latest changes
+- [x] Fix 404 error on /marketing-dashboard route (fixed missing useAuth import)

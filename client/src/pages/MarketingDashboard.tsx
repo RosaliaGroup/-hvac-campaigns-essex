@@ -1,4 +1,3 @@
-import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,6 +23,7 @@ import Footer from "@/components/Footer";
 import CampaignLibrary from "@/components/CampaignLibrary";
 import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Slider } from "@/components/ui/slider";
 
