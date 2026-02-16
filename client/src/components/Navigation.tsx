@@ -15,9 +15,9 @@ export default function Navigation() {
           <Link href="/">
             <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
               <img 
-                src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663360032476/ziPuhHtSxVguNbwi.png" 
+                src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663360032476/PuYjNNzkSZddSRrE.png" 
                 alt="Mechanical Enterprise" 
-                className="h-12 w-auto"
+                className="h-14 w-auto"
               />
             </div>
           </Link>

@@ -1,11 +1,8 @@
-# TODO: Update Contact Information
+# TODO: Replace Logo
 
-## Changes Needed
-- [ ] Remove full street address (51 ½ Merchant St)
-- [ ] Keep only "Newark, NJ" for location
-- [ ] Change phone number from (973) 750-0759 to (862) 423-9396
-- [ ] Update Navigation component
-- [ ] Update Footer component
-- [ ] Update Contact page
-- [ ] Update all references across website
+## Tasks
+- [ ] Upload new logo to CDN
+- [ ] Update Navigation component with new logo
+- [ ] Update Footer component with new logo
+- [ ] Test logo display on all pages
 - [ ] Create new checkpoint

@@ -9,9 +9,9 @@ export default function Footer() {
           {/* Company Info */}
           <div>
             <img 
-              src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663360032476/ziPuhHtSxVguNbwi.png" 
+              src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663360032476/PuYjNNzkSZddSRrE.png" 
               alt="Mechanical Enterprise" 
-              className="h-16 w-auto mb-4 bg-white p-2 rounded"
+              className="h-20 w-auto mb-4"
             />
             <p className="text-sm text-white/80">
               Specialized HVAC solutions for residential, commercial, and industrial properties across New Jersey.
