@@ -33,8 +33,7 @@ export default function Testimonials() {
       service: "Heat Pump Installation",
       rating: 5,
       quote: "We replaced our old oil furnace with a heat pump system and couldn't be happier. The team helped us navigate the rebate process and we received $14,000 back! Our energy bills dropped by 60% and the house stays comfortable year-round. The installation was professional and clean.",
-      beforeImage: "https://images.unsplash.com/photo-1581858726788-75bc0f6a952d?w=800&h=600&fit=crop",
-      afterImage: "https://images.unsplash.com/photo-1631545804203-e6c0e1c0c6b4?w=800&h=600&fit=crop",
+
       savings: "$14,000 rebate + 60% lower bills",
       date: "January 2026",
     },
@@ -57,8 +56,7 @@ export default function Testimonials() {
       service: "VRF System Installation",
       rating: 5,
       quote: "Our 1920s home had uneven heating and cooling for decades. The VRF system gives us zone control in every room. The craftsmanship was exceptional - they preserved our historic details while modernizing the HVAC. Worth every penny.",
-      beforeImage: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&h=600&fit=crop",
-      afterImage: "https://images.unsplash.com/photo-1635274022345-a5a1e7d89e87?w=800&h=600&fit=crop",
+
       date: "October 2025",
     },
     {
@@ -80,8 +78,7 @@ export default function Testimonials() {
       service: "Complete HVAC Replacement",
       rating: 5,
       quote: "After 25 years, our entire system needed replacement. The team designed a modern solution that cut our energy use in half. They coordinated all the rebates, handled permits, and finished on schedule. Our home has never been more comfortable.",
-      beforeImage: "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=800&h=600&fit=crop",
-      afterImage: "https://images.unsplash.com/photo-1607400201889-565b1ee75f8e?w=800&h=600&fit=crop",
+
       savings: "$12,500 in rebates",
       date: "September 2025",
     },
@@ -199,51 +196,9 @@ export default function Testimonials() {
 
                     {/* Media Side */}
                     <div className="bg-slate-100 relative">
-                      {testimonial.videoUrl ? (
-                        <div className="relative h-full min-h-[400px] flex items-center justify-center bg-slate-900">
-                          <div className="absolute inset-0 bg-gradient-to-br from-[#1e3a5f]/80 to-[#2a5a8f]/80 flex items-center justify-center">
-                            <Button
-                              size="lg"
-                              className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 rounded-full h-20 w-20"
-                              onClick={() => setSelectedVideo(testimonial.videoUrl!)}
-                            >
-                              <Play className="h-8 w-8" />
-                            </Button>
-                          </div>
-                          <div className="absolute bottom-4 left-4 right-4 text-white">
-                            <Badge className="bg-white/20 text-white backdrop-blur-sm">
-                              Video Testimonial
-                            </Badge>
-                          </div>
-                        </div>
-                      ) : testimonial.beforeImage && testimonial.afterImage ? (
-                        <div className="grid grid-cols-2 h-full min-h-[400px]">
-                          <div className="relative">
-                            <img
-                              src={testimonial.beforeImage}
-                              alt="Before"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute top-4 left-4">
-                              <Badge className="bg-slate-900/80 text-white">Before</Badge>
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <img
-                              src={testimonial.afterImage}
-                              alt="After"
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute top-4 left-4">
-                              <Badge className="bg-[#ff6b35] text-white">After</Badge>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="h-full min-h-[400px] flex items-center justify-center">
-                          <ThermometerSun className="h-24 w-24 text-[#ff6b35]/30" />
-                        </div>
-                      )}
+                      <div className="h-full min-h-[400px] flex items-center justify-center bg-gradient-to-br from-[#1e3a5f]/10 to-[#2a5a8f]/10">
+                        <ThermometerSun className="h-24 w-24 text-[#ff6b35]/30" />
+                      </div>
                     </div>
                   </div>
                 </CardContent>

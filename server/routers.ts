@@ -70,6 +70,8 @@ export const appRouter = router({
         z.object({
           email: z.string().email().optional(),
           phone: z.string().optional(),
+          firstName: z.string().optional(),
+          lastName: z.string().optional(),
           name: z.string().optional(),
           captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote"]),
           pageUrl: z.string().optional(),
@@ -86,9 +88,14 @@ export const appRouter = router({
         
         // Send email notification to owner
         const contactInfo = [];
+        if (input.firstName || input.lastName) {
+          const fullName = [input.firstName, input.lastName].filter(Boolean).join(' ');
+          contactInfo.push(`Name: ${fullName}`);
+        } else if (input.name) {
+          contactInfo.push(`Name: ${input.name}`);
+        }
         if (input.email) contactInfo.push(`Email: ${input.email}`);
         if (input.phone) contactInfo.push(`Phone: ${input.phone}`);
-        if (input.name) contactInfo.push(`Name: ${input.name}`);
         
         await notifyOwner({
           title: `New Lead Capture: ${input.captureType.replace(/_/g, ' ')}`,

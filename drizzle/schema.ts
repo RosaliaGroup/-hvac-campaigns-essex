@@ -51,6 +51,8 @@ export const leadCaptures = mysqlTable("leadCaptures", {
   id: int("id").autoincrement().primaryKey(),
   email: varchar("email", { length: 320 }),
   phone: varchar("phone", { length: 50 }),
+  firstName: varchar("firstName", { length: 255 }),
+  lastName: varchar("lastName", { length: 255 }),
   name: varchar("name", { length: 255 }),
   captureType: mysqlEnum("captureType", ["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote"]).notNull(),
   pageUrl: varchar("pageUrl", { length: 500 }),

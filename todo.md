@@ -43,3 +43,9 @@
 - [ ] Add inline lead capture forms on key pages (services, rebate guide)
 - [ ] Create newsletter signup component for footer
 - [ ] Add downloadable rebate guide with email gate
+
+## Updates to Lead Capture & Testimonials
+- [x] Add first name and last name fields to exit popup
+- [x] Change exit popup messaging to focus on commercial and other services
+- [x] Remove before/after images from testimonials page
+- [x] Update lead capture database schema to include firstName and lastName
