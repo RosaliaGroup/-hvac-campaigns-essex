@@ -19,8 +19,3 @@
 - [ ] Build lead tracking system
 - [ ] Add campaign performance tracking
 - [ ] Create campaign library with ad copy
-
-
-## SEO Improvements
-- [x] Add meta description to homepage
-- [x] Add meta keywords to homepage
