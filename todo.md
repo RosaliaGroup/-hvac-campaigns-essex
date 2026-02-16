@@ -23,3 +23,14 @@
 - [x] Add monthly budget calculator to dashboard
 - [ ] Add campaign performance tracking
 - [x] Create campaign library with ad copy
+
+## Bug Fixes
+- [x] Fix Partnerships page layout - upper part of site (navigation/header) is being removed or hidden when clicking Partnerships link
+
+## New Marketing Enhancements
+- [x] Add automated email notifications when new leads are logged in tracker
+- [x] Create campaign performance dashboard with Google Ads API integration
+- [x] Create campaign performance dashboard with Facebook API integration
+- [x] Build customer testimonials page with before/after photos
+- [x] Add video review support to testimonials page
+- [x] Add testimonials page to navigation

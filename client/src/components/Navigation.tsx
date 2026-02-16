@@ -51,6 +51,9 @@ export default function Navigation() {
             <Link href="/careers" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/careers') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Careers
             </Link>
+            <Link href="/testimonials" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/testimonials') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+              Testimonials
+            </Link>
             <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Contact
             </Link>

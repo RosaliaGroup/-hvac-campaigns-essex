@@ -365,20 +365,25 @@ export default function MarketingDashboard() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="flex gap-3 pt-4">
+                <div className="grid grid-cols-3 gap-3 pt-4">
                   <Button
-                    className="flex-1 bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+                    className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
                     onClick={() => window.open('/campaign-launch-checklist.pdf', '_blank')}
                   >
                     <CheckSquare className="h-4 w-4 mr-2" />
-                    Campaign Checklist
+                    Checklist
                   </Button>
                   <Button
                     variant="outline"
-                    className="flex-1"
                     onClick={() => setLocation('/leads')}
                   >
-                    View Lead Tracker
+                    Lead Tracker
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setLocation('/campaign-performance')}
+                  >
+                    Performance
                   </Button>
                 </div>
               </CardContent>
