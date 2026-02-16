@@ -27,7 +27,7 @@ export default function Home() {
         
         <div className="container relative z-10 py-20">
           <div className="max-w-3xl">
-            <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">WMBE/SBE Certified | 5 Years of Excellence</Badge>
+            <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">WMBE/SBE Certified</Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
               Expert HVAC Solutions for New Jersey
             </h1>

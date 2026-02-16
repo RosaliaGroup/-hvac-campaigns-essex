@@ -1,7 +1,7 @@
-# TODO: Update Commercial Incentives
+# TODO: Remove "5 Years of Excellence" Badge
 
 ## Tasks
-- [ ] Update CommercialCampaigns.tsx with 80% rebate language
-- [ ] Update Home.tsx commercial section with 80% rebate
-- [ ] Review all commercial references for consistency
+- [ ] Remove badge from Home page
+- [ ] Remove badge from About page
+- [ ] Remove badge from any other pages
 - [ ] Create new checkpoint
