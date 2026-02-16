@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, DollarSign, Zap, Award, MapPin, Users, ArrowRight, CheckCircle, Clock } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import RebateCalculator from "@/components/RebateCalculator";
+import CaseStudies from "@/components/CaseStudies";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Commercial focus with professional, ROI-driven tone */
@@ -233,7 +235,17 @@ export default function CommercialCampaigns() {
         </div>
       </section>
 
-      {/* Google Form Section - Placeholder */}
+      {/* Rebate Calculator */}
+      <section className="py-20 bg-white">
+        <div className="container max-w-4xl">
+          <RebateCalculator />
+        </div>
+      </section>
+
+      {/* Case Studies */}
+      <CaseStudies />
+
+      {/* Google Form Section */}
       <section className="py-20 bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white">
         <div className="container">
           <div className="text-center mb-12">
