@@ -115,7 +115,41 @@ export default function CommercialCampaigns() {
                     </p>
                   </div>
 
-                  <div className="grid md:grid-cols-3 gap-4 mt-4">
+                  <div>
+                    <h4 className="font-semibold text-lg mb-3 text-[#1e3a5f]">Commercial Application Process</h4>
+                    <div className="space-y-3">
+                      <div className="flex gap-3">
+                        <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">1</div>
+                        <div>
+                          <p className="font-medium">Application Submission</p>
+                          <p className="text-sm text-muted-foreground">Submit project details and business information</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">2</div>
+                        <div>
+                          <p className="font-medium">Rebate Program Review & Approval</p>
+                          <p className="text-sm text-muted-foreground">Program reviews and approves final application</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">3</div>
+                        <div>
+                          <p className="font-medium">Professional Installation</p>
+                          <p className="text-sm text-muted-foreground">Our certified team installs your new HVAC system</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">4</div>
+                        <div>
+                          <p className="font-medium">Close Out Job</p>
+                          <p className="text-sm text-muted-foreground">Final inspection, documentation, and project completion</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4 mt-6">
                     <div className="bg-white border border-gray-200 rounded-lg p-4">
                       <h5 className="font-semibold text-[#1e3a5f] mb-2">Preserve Capital</h5>
                       <p className="text-sm text-muted-foreground">Keep your cash for core business operations</p>

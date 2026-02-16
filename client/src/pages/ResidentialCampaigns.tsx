@@ -143,7 +143,7 @@ export default function ResidentialCampaigns() {
                   </div>
 
                   <div>
-                    <h4 className="font-semibold text-lg mb-3 text-[#1e3a5f]">Simple 3-Step Timeline</h4>
+                    <h4 className="font-semibold text-lg mb-3 text-[#1e3a5f]">Simple 4-Step Process</h4>
                     <div className="space-y-3">
                       <div className="flex gap-3">
                         <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">1</div>
@@ -164,6 +164,13 @@ export default function ResidentialCampaigns() {
                         <div>
                           <p className="font-medium">Inspection & Verification</p>
                           <p className="text-sm text-muted-foreground">Official inspection confirms work is completed to standards</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">4</div>
+                        <div>
+                          <p className="font-medium">Rebate Processing & Close Out</p>
+                          <p className="text-sm text-muted-foreground">Rebate application processed and project finalized</p>
                         </div>
                       </div>
                     </div>
