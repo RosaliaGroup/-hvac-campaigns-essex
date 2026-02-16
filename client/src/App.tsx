@@ -11,6 +11,7 @@ import RebateGuide from "./pages/RebateGuide";
 import ResidentialCampaigns from "./pages/ResidentialCampaigns";
 import CommercialCampaigns from "./pages/CommercialCampaigns";
 import MaintenanceSubscription from "./pages/MaintenanceSubscription";
+import Partnerships from "./pages/Partnerships";
 import NotFound from "./pages/NotFound";
 
 
@@ -25,6 +26,7 @@ function Router() {
       <Route path={"/residential"} component={ResidentialCampaigns} />
       <Route path={"/commercial"} component={CommercialCampaigns} />
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
+      <Route path={"/partnerships"} component={Partnerships} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

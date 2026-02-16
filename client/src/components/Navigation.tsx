@@ -45,6 +45,9 @@ export default function Navigation() {
             <Link href="/maintenance" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/maintenance') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Maintenance
             </Link>
+            <Link href="/partnerships" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/partnerships') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+              Partnerships
+            </Link>
             <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Contact
             </Link>
@@ -94,6 +97,12 @@ export default function Navigation() {
           </Link>
           <Link href="/rebate-guide" className={`block py-2 text-sm font-medium ${isActive('/rebate-guide') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Rebate Guide
+          </Link>
+          <Link href="/maintenance" className={`block py-2 text-sm font-medium ${isActive('/maintenance') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+            Maintenance
+          </Link>
+          <Link href="/partnerships" className={`block py-2 text-sm font-medium ${isActive('/partnerships') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+            Partnerships
           </Link>
           <Link href="/contact" className={`block py-2 text-sm font-medium ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Contact
