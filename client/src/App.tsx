@@ -13,10 +13,11 @@ import CommercialCampaigns from "./pages/CommercialCampaigns";
 import MaintenanceSubscription from "./pages/MaintenanceSubscription";
 import Partnerships from "./pages/Partnerships";
 import Careers from "./pages/Careers";
+import MarketingDashboard from "./pages/MarketingDashboard";
 import NotFound from "./pages/NotFound";
 
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
@@ -29,6 +30,7 @@ function Router() {
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
       <Route path={"/partnerships"} component={Partnerships} />
       <Route path={"/careers"} component={Careers} />
+      <Route path={"/marketing-dashboard"} component={MarketingDashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
