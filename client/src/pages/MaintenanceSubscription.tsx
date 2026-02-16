@@ -333,6 +333,248 @@ export default function MaintenanceSubscription() {
         </div>
       </section>
 
+      {/* Cost Comparison Case Studies */}
+      <section className="py-20 bg-white">
+        <div className="container">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">Real Cost Savings</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              See how our subscription maintenance programs reduce costs, downtime, and emergency repairs
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            {/* Case Study 1: Multi-Family Property */}
+            <Card className="border-2 border-[#ff6b35]/20 hover:border-[#ff6b35] transition-all">
+              <CardHeader className="bg-gradient-to-br from-[#ff6b35]/10 to-white pb-6">
+                <Building2 className="h-10 w-10 text-[#ff6b35] mb-3" />
+                <CardTitle className="text-2xl text-[#1e3a5f]">Multi-Family Property</CardTitle>
+                <CardDescription className="text-base">48-unit residential building, Newark</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                {/* Before */}
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <h4 className="font-bold text-red-900 mb-3 flex items-center gap-2">
+                    <span className="bg-red-600 text-white text-xs px-2 py-1 rounded">BEFORE</span>
+                    Reactive Maintenance
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Annual PM Costs:</span>
+                      <span className="font-semibold text-red-900">$8,400</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Emergency Repairs:</span>
+                      <span className="font-semibold text-red-900">$14,200</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Downtime (tenant issues):</span>
+                      <span className="font-semibold text-red-900">42 days</span>
+                    </div>
+                    <div className="flex justify-between border-t border-red-300 pt-2 mt-2">
+                      <span className="text-red-800 font-bold">Total Annual Cost:</span>
+                      <span className="font-bold text-red-900">$22,600</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* After */}
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+                    <span className="bg-green-600 text-white text-xs px-2 py-1 rounded">AFTER</span>
+                    Our Subscription Program
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Annual Subscription:</span>
+                      <span className="font-semibold text-green-900">$12,000</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Emergency Repairs:</span>
+                      <span className="font-semibold text-green-900">$2,800</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Downtime (tenant issues):</span>
+                      <span className="font-semibold text-green-900">8 days</span>
+                    </div>
+                    <div className="flex justify-between border-t border-green-300 pt-2 mt-2">
+                      <span className="text-green-800 font-bold">Total Annual Cost:</span>
+                      <span className="font-bold text-green-900">$14,800</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Savings */}
+                <div className="bg-[#ff6b35] text-white p-4 rounded-lg text-center">
+                  <div className="text-3xl font-bold mb-1">$7,800/year</div>
+                  <div className="text-sm opacity-90">35% Total Cost Reduction</div>
+                  <div className="text-xs opacity-75 mt-2">81% fewer downtime days</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Case Study 2: Commercial Office */}
+            <Card className="border-2 border-[#1e3a5f]/20 hover:border-[#1e3a5f] transition-all">
+              <CardHeader className="bg-gradient-to-br from-[#1e3a5f]/10 to-white pb-6">
+                <Building2 className="h-10 w-10 text-[#ff6b35] mb-3" />
+                <CardTitle className="text-2xl text-[#1e3a5f]">Commercial Office</CardTitle>
+                <CardDescription className="text-base">25,000 sq ft office building, Jersey City</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                {/* Before */}
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <h4 className="font-bold text-red-900 mb-3 flex items-center gap-2">
+                    <span className="bg-red-600 text-white text-xs px-2 py-1 rounded">BEFORE</span>
+                    Reactive Maintenance
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Annual PM Costs:</span>
+                      <span className="font-semibold text-red-900">$6,200</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Emergency Repairs:</span>
+                      <span className="font-semibold text-red-900">$18,500</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Productivity Loss:</span>
+                      <span className="font-semibold text-red-900">$8,400</span>
+                    </div>
+                    <div className="flex justify-between border-t border-red-300 pt-2 mt-2">
+                      <span className="text-red-800 font-bold">Total Annual Cost:</span>
+                      <span className="font-bold text-red-900">$33,100</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* After */}
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+                    <span className="bg-green-600 text-white text-xs px-2 py-1 rounded">AFTER</span>
+                    Our Subscription Program
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Annual Subscription:</span>
+                      <span className="font-semibold text-green-900">$9,600</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Emergency Repairs:</span>
+                      <span className="font-semibold text-green-900">$3,200</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Productivity Loss:</span>
+                      <span className="font-semibold text-green-900">$1,100</span>
+                    </div>
+                    <div className="flex justify-between border-t border-green-300 pt-2 mt-2">
+                      <span className="text-green-800 font-bold">Total Annual Cost:</span>
+                      <span className="font-bold text-green-900">$13,900</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Savings */}
+                <div className="bg-[#1e3a5f] text-white p-4 rounded-lg text-center">
+                  <div className="text-3xl font-bold mb-1">$19,200/year</div>
+                  <div className="text-sm opacity-90">58% Total Cost Reduction</div>
+                  <div className="text-xs opacity-75 mt-2">87% less productivity loss</div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Case Study 3: Retail Portfolio */}
+            <Card className="border-2 border-[#ff6b35]/20 hover:border-[#ff6b35] transition-all">
+              <CardHeader className="bg-gradient-to-br from-[#ff6b35]/10 to-white pb-6">
+                <Building2 className="h-10 w-10 text-[#ff6b35] mb-3" />
+                <CardTitle className="text-2xl text-[#1e3a5f]">Retail Portfolio</CardTitle>
+                <CardDescription className="text-base">4 retail locations across Essex County</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                {/* Before */}
+                <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                  <h4 className="font-bold text-red-900 mb-3 flex items-center gap-2">
+                    <span className="bg-red-600 text-white text-xs px-2 py-1 rounded">BEFORE</span>
+                    Multiple Vendors
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Annual PM Costs:</span>
+                      <span className="font-semibold text-red-900">$11,600</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Emergency Repairs:</span>
+                      <span className="font-semibold text-red-900">$22,400</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-red-800">Lost Revenue (downtime):</span>
+                      <span className="font-semibold text-red-900">$15,800</span>
+                    </div>
+                    <div className="flex justify-between border-t border-red-300 pt-2 mt-2">
+                      <span className="text-red-800 font-bold">Total Annual Cost:</span>
+                      <span className="font-bold text-red-900">$49,800</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* After */}
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-bold text-green-900 mb-3 flex items-center gap-2">
+                    <span className="bg-green-600 text-white text-xs px-2 py-1 rounded">AFTER</span>
+                    Our Portfolio Program
+                  </h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Annual Subscription:</span>
+                      <span className="font-semibold text-green-900">$16,800</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Emergency Repairs:</span>
+                      <span className="font-semibold text-green-900">$4,200</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800">Lost Revenue (downtime):</span>
+                      <span className="font-semibold text-green-900">$2,400</span>
+                    </div>
+                    <div className="flex justify-between border-t border-green-300 pt-2 mt-2">
+                      <span className="text-green-800 font-bold">Total Annual Cost:</span>
+                      <span className="font-bold text-green-900">$23,400</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Savings */}
+                <div className="bg-[#ff6b35] text-white p-4 rounded-lg text-center">
+                  <div className="text-3xl font-bold mb-1">$26,400/year</div>
+                  <div className="text-sm opacity-90">53% Total Cost Reduction</div>
+                  <div className="text-xs opacity-75 mt-2">85% less revenue loss</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="mt-16 max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] rounded-2xl p-8 text-white">
+              <h3 className="text-2xl font-bold mb-6 text-center">Average Savings Across All Case Studies</h3>
+              <div className="grid md:grid-cols-3 gap-6 text-center">
+                <div>
+                  <div className="text-4xl font-bold text-[#ff6b35] mb-2">49%</div>
+                  <div className="text-sm opacity-90">Average Cost Reduction</div>
+                </div>
+                <div>
+                  <div className="text-4xl font-bold text-[#ff6b35] mb-2">84%</div>
+                  <div className="text-sm opacity-90">Fewer Emergency Repairs</div>
+                </div>
+                <div>
+                  <div className="text-4xl font-bold text-[#ff6b35] mb-2">83%</div>
+                  <div className="text-sm opacity-90">Less Downtime/Revenue Loss</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Why Property Managers Choose Us */}
       <section className="py-20 bg-secondary/30">
         <div className="container">
