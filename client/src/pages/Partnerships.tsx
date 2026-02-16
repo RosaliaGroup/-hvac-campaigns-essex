@@ -67,6 +67,100 @@ export default function Partnerships() {
         </div>
       </section>
 
+      {/* Partner Success Stories */}
+      <section className="py-16 bg-gradient-to-br from-slate-50 to-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a5f] mb-4 text-center">
+              Partner Success Stories
+            </h2>
+            <p className="text-lg text-slate-600 text-center mb-12 max-w-3xl mx-auto">
+              See how our partners are earning substantial income by leveraging their networks
+            </p>
+            
+            <div className="grid md:grid-cols-3 gap-8">
+              {/* Success Story 1 */}
+              <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-br from-[#ff6b35] to-[#e55a25] p-6 text-white">
+                  <div className="text-4xl font-bold mb-1">$8,500</div>
+                  <div className="text-white/90">Average Monthly Earnings</div>
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-[#ff6b35]/10 rounded-full flex items-center justify-center">
+                      <Building2 className="w-6 h-6 text-[#ff6b35]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-[#1e3a5f]">Maria R.</div>
+                      <div className="text-sm text-slate-600">Property Manager</div>
+                    </div>
+                  </div>
+                  <p className="text-slate-700 text-sm leading-relaxed mb-4">
+                    "I manage 12 residential buildings in Essex County. By referring my properties for HVAC upgrades and maintenance contracts, I've created a consistent income stream while improving tenant comfort."
+                  </p>
+                  <div className="bg-slate-50 p-3 rounded-lg">
+                    <div className="text-xs text-slate-600 mb-1">Network Leverage:</div>
+                    <div className="text-sm font-semibold text-[#1e3a5f]">Multi-family property portfolio</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Success Story 2 */}
+              <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a8f] p-6 text-white">
+                  <div className="text-4xl font-bold mb-1">$12,300</div>
+                  <div className="text-white/90">Average Monthly Earnings</div>
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-[#ff6b35]/10 rounded-full flex items-center justify-center">
+                      <Zap className="w-6 h-6 text-[#ff6b35]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-[#1e3a5f]">James T.</div>
+                      <div className="text-sm text-slate-600">Solar Installer</div>
+                    </div>
+                  </div>
+                  <p className="text-slate-700 text-sm leading-relaxed mb-4">
+                    "Every solar customer I work with also needs efficient HVAC. By partnering with Mechanical Enterprise, I offer complete energy solutions and earn commissions on both solar and HVAC installations."
+                  </p>
+                  <div className="bg-slate-50 p-3 rounded-lg">
+                    <div className="text-xs text-slate-600 mb-1">Network Leverage:</div>
+                    <div className="text-sm font-semibold text-[#1e3a5f]">Existing solar customer base</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Success Story 3 */}
+              <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-br from-[#ff6b35] to-[#e55a25] p-6 text-white">
+                  <div className="text-4xl font-bold mb-1">$6,200</div>
+                  <div className="text-white/90">Average Monthly Earnings</div>
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-[#ff6b35]/10 rounded-full flex items-center justify-center">
+                      <Users className="w-6 h-6 text-[#ff6b35]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-[#1e3a5f]">David K.</div>
+                      <div className="text-sm text-slate-600">Real Estate Agent</div>
+                    </div>
+                  </div>
+                  <p className="text-slate-700 text-sm leading-relaxed mb-4">
+                    "I connect my commercial real estate clients with HVAC solutions during property transactions. It's a natural fit, and the referral model means I earn without extra work."
+                  </p>
+                  <div className="bg-slate-50 p-3 rounded-lg">
+                    <div className="text-xs text-slate-600 mb-1">Network Leverage:</div>
+                    <div className="text-sm font-semibold text-[#1e3a5f]">Commercial real estate clients</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Who This Is For */}
       <section className="py-16 bg-slate-50">
         <div className="container mx-auto px-4">
@@ -356,8 +450,96 @@ export default function Partnerships() {
         </div>
       </section>
 
+      {/* Partner Kit Download */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a8f] rounded-2xl p-8 md:p-12 text-white shadow-2xl">
+              <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="flex-1">
+                  <div className="inline-flex items-center gap-2 bg-[#ff6b35] px-4 py-2 rounded-full text-sm font-semibold mb-4">
+                    <FileText className="w-4 h-4" />
+                    Free Download
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                    Download Partner Kit
+                  </h2>
+                  <p className="text-lg text-slate-200 mb-6 leading-relaxed">
+                    Get our comprehensive partner guide with detailed commission structure, program overview, marketing materials guide, and everything you need to start earning.
+                  </p>
+                  <ul className="space-y-2 mb-6">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-[#ff6b35]" />
+                      <span>Detailed commission breakdown</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-[#ff6b35]" />
+                      <span>Target industry profiles</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-[#ff6b35]" />
+                      <span>Getting started checklist</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-[#ff6b35]" />
+                      <span>FAQs and support resources</span>
+                    </li>
+                  </ul>
+                  <a 
+                    href="/mechanical-enterprise-partner-kit.pdf" 
+                    download
+                    className="inline-flex items-center gap-2 bg-[#ff6b35] text-white px-8 py-4 rounded-lg font-semibold hover:bg-[#e55a25] transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <FileText className="w-5 h-5" />
+                    Download Partner Kit (PDF)
+                  </a>
+                </div>
+                <div className="flex-shrink-0">
+                  <div className="w-48 h-64 bg-white/10 backdrop-blur-sm rounded-lg border-2 border-white/30 flex items-center justify-center">
+                    <FileText className="w-24 h-24 text-white/50" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Partner Application Form */}
+      <section className="py-16 bg-slate-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold text-[#1e3a5f] mb-4">
+                Apply to Become a Partner
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                Fill out the form below to get started. We'll review your application and contact you within 24-48 hours to discuss next steps.
+              </p>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <iframe 
+                src="https://docs.google.com/forms/d/e/1FAIpQLSeRXfVVpxfmuAQkXBS4JADVyexOb5u8RaAfx3EO5uUcCF9HjA/viewform?embedded=true" 
+                width="100%" 
+                height="1200" 
+                frameBorder="0" 
+                marginHeight={0} 
+                marginWidth={0}
+                className="rounded-lg"
+              >
+                Loading…
+              </iframe>
+              <p className="text-sm text-slate-500 mt-4 text-center">
+                Form not loading? <a href="https://docs.google.com/forms/d/e/1FAIpQLSeRXfVVpxfmuAQkXBS4JADVyexOb5u8RaAfx3EO5uUcCF9HjA/viewform" target="_blank" rel="noopener noreferrer" className="text-[#ff6b35] hover:underline">Open in new window</a>
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Job Types */}
-      <section className="py-12 bg-slate-50">
+      <section className="py-12 bg-white">
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h3 className="text-2xl font-bold text-[#1e3a5f] mb-6">Job Types Available</h3>
