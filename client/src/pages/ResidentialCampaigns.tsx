@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Home, DollarSign, Zap, Award, MapPin, Users, ArrowRight, CheckCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import ResidentialCaseStudies from "@/components/ResidentialCaseStudies";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Residential focus with warm, family-friendly tone */
@@ -77,6 +78,9 @@ export default function ResidentialCampaigns() {
           </div>
         </div>
       </section>
+
+      {/* Residential Case Studies */}
+      <ResidentialCaseStudies />
 
       {/* Google Form Section */}
       <section className="py-20 bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white">
