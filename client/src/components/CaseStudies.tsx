@@ -15,7 +15,7 @@ const caseStudies = [
     rebateReceived: "$68,000",
     rebatePercentage: "72%",
     outOfPocket: "$27,000",
-    monthlyPayment: "$225",
+    monthlyPayment: "$450",
     energySavingsBefore: "$2,800/month",
     energySavingsAfter: "$1,400/month",
     monthlySavings: "$1,400",
@@ -40,7 +40,7 @@ const caseStudies = [
     rebateReceived: "$215,000",
     rebatePercentage: "75%",
     outOfPocket: "$70,000",
-    monthlyPayment: "$584",
+    monthlyPayment: "$1,167",
     energySavingsBefore: "$8,500/month",
     energySavingsAfter: "$3,900/month",
     monthlySavings: "$4,600",
@@ -65,7 +65,7 @@ const caseStudies = [
     rebateReceived: "$340,000",
     rebatePercentage: "80%",
     outOfPocket: "$85,000",
-    monthlyPayment: "$709",
+    monthlyPayment: "$1,417",
     energySavingsBefore: "$14,200/month",
     energySavingsAfter: "$6,100/month",
     monthlySavings: "$8,100",
@@ -147,7 +147,7 @@ export default function CaseStudies() {
                       <span className="font-bold">{study.outOfPocket}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Monthly Payment (10 years):</span>
+                      <span className="text-muted-foreground">Monthly Payment (5 years):</span>
                       <span className="font-bold text-purple-700">{study.monthlyPayment}/mo</span>
                     </div>
                     <div className="pt-2 border-t border-purple-300">

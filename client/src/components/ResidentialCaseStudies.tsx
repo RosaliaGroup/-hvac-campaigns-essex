@@ -143,9 +143,10 @@ export default function ResidentialCaseStudies() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Monthly Payment (10 years):</span>
+                      <span className="text-muted-foreground">Monthly Payment (10 years)*:</span>
                       <span className="font-bold text-purple-700">{study.monthlyPayment}/mo</span>
                     </div>
+                    <p className="text-xs text-muted-foreground italic">*10-year term for qualifying accounts only</p>
                     <div className="pt-2 border-t border-purple-300">
                       <p className="text-xs text-purple-900 font-medium">
                         💡 Net Savings: <span className="text-green-700">+${(parseFloat(study.monthlySavings.replace('$', '').replace(',', '')) - parseFloat(study.monthlyPayment.replace('$', '').replace(',', ''))).toLocaleString()}/month</span>

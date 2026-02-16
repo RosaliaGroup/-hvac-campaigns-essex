@@ -178,7 +178,10 @@ export default function ResidentialCampaigns() {
 
                   <div className="bg-green-50 border border-green-300 rounded-lg p-4 mt-4">
                     <p className="text-sm font-medium text-green-900">
-                      💡 <strong>Benefit:</strong> Start saving on energy costs immediately while spreading payments over time through your utility bill.
+                      💡 <strong>Benefit:</strong> Start saving on energy costs immediately while spreading payments over 10 years through your utility bill.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2 italic">
+                      *10-year payment term available for qualifying accounts only. Terms and eligibility subject to program requirements.
                     </p>
                   </div>
                 </div>
