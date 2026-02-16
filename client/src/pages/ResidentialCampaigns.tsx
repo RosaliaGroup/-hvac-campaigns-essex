@@ -19,10 +19,10 @@ export default function ResidentialCampaigns() {
           <div className="max-w-4xl mx-auto text-center text-white">
             <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">Residential Homeowners</Badge>
             <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-              Residential HVAC Campaigns
+              Upgrade Your Home Comfort
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-              Strategic marketing campaigns designed to generate qualified residential leads across 15 counties in New Jersey
+              Get up to $16,000 in rebates for energy-efficient heat pump installation. Serving homeowners across 15 New Jersey counties with flexible payment options.
             </p>
           </div>
         </div>

@@ -20,11 +20,16 @@ export default function CommercialCampaigns() {
           <div className="max-w-4xl mx-auto text-center text-white">
             <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">Commercial Properties</Badge>
             <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-              Commercial HVAC Campaigns
+              Commercial HVAC Upgrades
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-              Strategic marketing campaigns designed to generate qualified commercial leads across 15 counties in New Jersey
+              Get up to 80% rebates for energy-efficient commercial HVAC systems. Serving businesses across 15 New Jersey counties with flexible financing up to $590K.
             </p>
+            <div className="flex gap-4 justify-center">
+              <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" asChild>
+                <a href="/rebate-guide">View Rebate Guide <ArrowRight className="ml-2 h-5 w-5" /></a>
+              </Button>
+            </div>
           </div>
         </div>
       </section>

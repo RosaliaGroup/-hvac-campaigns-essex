@@ -1,8 +1,8 @@
-# TODO: Update On-Bill Repayment Term to 120 Months
+# TODO: Update Hero Text and Add Rebate Guide
 
 ## Tasks
-- [ ] Update residential case studies monthly payments (120 months instead of 60)
-- [ ] Update commercial case studies monthly payments (120 months instead of 60)
-- [ ] Update all references from "5 years" to "10 years"
-- [ ] Recalculate all monthly payment amounts
+- [ ] Remove "Strategic marketing campaigns" from Residential hero
+- [ ] Remove "Strategic marketing campaigns" from Commercial hero
+- [ ] Replace with customer-facing benefit-focused copy
+- [ ] Add Rebate Guide link/CTA to Commercial page
 - [ ] Create new checkpoint
