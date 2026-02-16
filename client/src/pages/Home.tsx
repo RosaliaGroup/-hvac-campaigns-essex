@@ -268,17 +268,11 @@ export default function Home() {
             <p className="text-muted-foreground">We work with industry-leading brands</p>
           </div>
           <div className="flex flex-wrap justify-center items-center gap-8 opacity-70">
-            <span className="text-lg font-semibold text-[#1e3a5f]">Mitsubishi</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Fujitsu</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">LG</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Trane</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Lennox</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Carrier</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Daikin</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Samsung HVAC</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Hitachi</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Toshiba</span>
-            <span className="text-lg font-semibold text-[#1e3a5f]">Gree</span>
+            <span className="text-lg font-semibold text-[#1e3a5f]">Premium Equipment</span>
+            <span className="text-lg font-semibold text-[#1e3a5f]">Top-Tier Manufacturers</span>
+            <span className="text-lg font-semibold text-[#1e3a5f]">Industry-Leading Systems</span>
+            <span className="text-lg font-semibold text-[#1e3a5f]">High-Efficiency Units</span>
+
           </div>
         </div>
       </section>
