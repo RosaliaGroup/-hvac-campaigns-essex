@@ -64,3 +64,6 @@
 ## SEO Improvements
 - [x] Reduce homepage keywords from 10 to 6 focused keywords
 - [x] Shorten meta description from 163 to 137 characters
+
+## Analytics & Tracking
+- [x] Add Google Ads conversion tracking tag (AW-17768263516)
