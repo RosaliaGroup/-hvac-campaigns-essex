@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Thermometer, MapPin, TrendingUp, Users, Building2, Home as HomeIcon, Zap, DollarSign, Award, Phone, Mail, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Home() {
   return (
@@ -22,20 +23,24 @@ export default function Home() {
         
         <div className="container relative z-10 py-20">
           <div className="max-w-3xl">
-            <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">PSEG Service Area - 15 Counties, New Jersey</Badge>
+            <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">15 Counties Across New Jersey</Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
               HVAC Lead Generation Campaigns
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-              Strategic marketing campaigns designed to generate qualified leads for HVAC installations and replacements across 15 counties and 262+ municipalities in the PSEG service area.
+              Strategic marketing campaigns designed to generate qualified leads for HVAC installations and replacements across 15 counties and 262+ municipalities in New Jersey.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
-                View Campaigns <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20">
-                Market Research
-              </Button>
+              <Link href="/residential">
+                <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
+                  Residential Campaigns <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              <Link href="/commercial">
+                <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20">
+                  Commercial Campaigns <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -51,7 +56,7 @@ export default function Home() {
                 <CardDescription className="text-base">Total Population</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Across 15 counties in PSEG service area</p>
+                <p className="text-sm text-muted-foreground">Across 15 counties in New Jersey service area</p>
               </CardContent>
             </Card>
             
@@ -95,7 +100,7 @@ export default function Home() {
             <Badge className="mb-4 bg-[#ff6b35] text-white text-base px-4 py-2">🔥 Featured Programs</Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-4">Heat Pump Incentive Programs</h2>
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
-              Up to $16K residential rebates and 80% commercial coverage across the PSEG service area
+              Up to $16K residential rebates and 80% commercial coverage across 15 New Jersey counties
             </p>
           </div>
 
@@ -154,7 +159,7 @@ export default function Home() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary" className="bg-white/20 text-white text-xs">up to 16K heat pump rebate</Badge>
                     <Badge variant="secondary" className="bg-white/20 text-white text-xs">80% commercial HVAC coverage</Badge>
-                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">PSEG service area heat pump</Badge>
+                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">NJ 15 county heat pump</Badge>
                   </div>
                 </div>
               </CardContent>
@@ -364,7 +369,7 @@ export default function Home() {
                       <span className="font-medium">Target Areas:</span>
                     </div>
                     <p className="text-sm text-muted-foreground pl-8">
-                      All 15 counties in PSEG service area - 262+ municipalities, residential and commercial
+                      All 15 counties across New Jersey - 262+ municipalities, residential and commercial
                     </p>
                   </div>
 
@@ -385,7 +390,7 @@ export default function Home() {
                   <div className="bg-gradient-to-r from-[#ff6b35]/10 to-[#1e3a5f]/10 p-4 rounded-lg border border-[#ff6b35]/20">
                     <h4 className="font-semibold mb-2 text-[#1e3a5f]">SEO-Optimized Keywords:</h4>
                     <p className="text-xs text-muted-foreground mb-2">
-                      heat pump rebates NJ, residential decarbonization program, commercial direct replacement, PSEG service area, up to 16K residential, 80% commercial coverage
+                      heat pump rebates NJ, residential decarbonization program, commercial direct replacement, New Jersey HVAC, up to 16K residential, 80% commercial coverage
                     </p>
                   </div>
 
@@ -405,7 +410,7 @@ export default function Home() {
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">Geographic Market Segmentation</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              PSEG's 15-county service area with 262+ municipalities strategically divided into four targeting tiers
+              15-county service area with 262+ municipalities strategically divided into four targeting tiers
             </p>
           </div>
 
@@ -531,7 +536,7 @@ export default function Home() {
         <div className="container text-center">
               <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Generate More HVAC Leads?</h2>
               <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
-                These comprehensive campaigns are designed to drive qualified leads for HVAC installations and replacements across the entire PSEG service area - 15 counties, 262+ municipalities.
+                These comprehensive campaigns are designed to drive qualified leads for HVAC installations and replacements across 15 counties and 262+ municipalities in New Jersey.
               </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
@@ -553,7 +558,7 @@ export default function Home() {
             <div>
               <h3 className="text-xl font-bold mb-4">HVAC Lead Generation</h3>
               <p className="text-white/70 text-sm">
-                Comprehensive marketing campaigns for PSEG service area mechanical enterprises across 15 NJ counties.
+                Comprehensive marketing campaigns for mechanical enterprises across 15 New Jersey counties.
               </p>
             </div>
             <div>
@@ -573,7 +578,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-white/70">
-            <p>© 2026 HVAC Lead Generation Campaigns - PSEG Service Area, NJ. All rights reserved.</p>
+            <p>© 2026 HVAC Lead Generation Campaigns - New Jersey. All rights reserved.</p>
           </div>
         </div>
       </footer>
