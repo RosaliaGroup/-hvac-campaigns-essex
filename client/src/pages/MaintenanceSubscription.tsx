@@ -386,8 +386,12 @@ export default function MaintenanceSubscription() {
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-green-800">Annual Subscription:</span>
-                      <span className="font-semibold text-green-900">$12,000</span>
+                      <span className="text-green-800">Monthly Subscription:</span>
+                      <span className="font-semibold text-green-900">$1,000/mo</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800 text-xs italic">Annual Total:</span>
+                      <span className="font-semibold text-green-900 text-xs">$12,000</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-green-800">Emergency Repairs:</span>
@@ -455,8 +459,12 @@ export default function MaintenanceSubscription() {
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-green-800">Annual Subscription:</span>
-                      <span className="font-semibold text-green-900">$9,600</span>
+                      <span className="text-green-800">Monthly Subscription:</span>
+                      <span className="font-semibold text-green-900">$800/mo</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800 text-xs italic">Annual Total:</span>
+                      <span className="font-semibold text-green-900 text-xs">$9,600</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-green-800">Emergency Repairs:</span>
@@ -524,8 +532,12 @@ export default function MaintenanceSubscription() {
                   </h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-green-800">Annual Subscription:</span>
-                      <span className="font-semibold text-green-900">$16,800</span>
+                      <span className="text-green-800">Monthly Subscription:</span>
+                      <span className="font-semibold text-green-900">$1,400/mo</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-green-800 text-xs italic">Annual Total:</span>
+                      <span className="font-semibold text-green-900 text-xs">$16,800</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-green-800">Emergency Repairs:</span>
@@ -556,6 +568,11 @@ export default function MaintenanceSubscription() {
           <div className="mt-16 max-w-4xl mx-auto">
             <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] rounded-2xl p-8 text-white">
               <h3 className="text-2xl font-bold mb-6 text-center">Average Savings Across All Case Studies</h3>
+              <div className="mb-6 text-center">
+                <div className="inline-block bg-[#ff6b35] text-white px-6 py-3 rounded-lg">
+                  <div className="text-sm font-semibold">💰 Monthly Payments • Less Cash Upfront • Predictable Budgeting</div>
+                </div>
+              </div>
               <div className="grid md:grid-cols-3 gap-6 text-center">
                 <div>
                   <div className="text-4xl font-bold text-[#ff6b35] mb-2">49%</div>
