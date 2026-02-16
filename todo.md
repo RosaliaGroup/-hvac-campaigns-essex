@@ -34,3 +34,12 @@
 - [x] Build customer testimonials page with before/after photos
 - [x] Add video review support to testimonials page
 - [x] Add testimonials page to navigation
+
+## Lead Capture System
+- [x] Create exit-intent pop-up to capture leaving visitors
+- [x] Fix testimonials page - remove placeholder videos and update before/after images
+- [x] Create quick quote form component
+- [x] Add lead capture to database and email notifications
+- [ ] Add inline lead capture forms on key pages (services, rebate guide)
+- [ ] Create newsletter signup component for footer
+- [ ] Add downloadable rebate guide with email gate

@@ -63,6 +63,46 @@ export const appRouter = router({
       }),
   }),
 
+  // Lead capture router (public - no auth required)
+  leadCaptures: router({
+    create: publicProcedure
+      .input(
+        z.object({
+          email: z.string().email().optional(),
+          phone: z.string().optional(),
+          name: z.string().optional(),
+          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote"]),
+          pageUrl: z.string().optional(),
+          message: z.string().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        // Validate that at least email or phone is provided
+        if (!input.email && !input.phone) {
+          throw new Error("Either email or phone is required");
+        }
+
+        await db.createLeadCapture(input);
+        
+        // Send email notification to owner
+        const contactInfo = [];
+        if (input.email) contactInfo.push(`Email: ${input.email}`);
+        if (input.phone) contactInfo.push(`Phone: ${input.phone}`);
+        if (input.name) contactInfo.push(`Name: ${input.name}`);
+        
+        await notifyOwner({
+          title: `New Lead Capture: ${input.captureType.replace(/_/g, ' ')}`,
+          content: `A visitor has submitted their contact information:\n\n${contactInfo.join('\n')}\nCapture Type: ${input.captureType}\nPage: ${input.pageUrl || 'Unknown'}\nMessage: ${input.message || 'None'}\n\nLog in to your dashboard to follow up.`,
+        });
+        
+        return { success: true };
+      }),
+    
+    list: protectedProcedure.query(async () => {
+      return await db.getAllLeadCaptures();
+    }),
+  }),
+
   // TODO: add feature routers here, e.g.
   // todo: router({
   //   list: protectedProcedure.query(({ ctx }) =>

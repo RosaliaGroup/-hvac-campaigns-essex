@@ -18,6 +18,7 @@ import LeadTracker from "./pages/LeadTracker";
 import CampaignPerformance from "./pages/CampaignPerformance";
 import Testimonials from "./pages/Testimonials";
 import NotFound from "./pages/NotFound";
+import ExitIntentPopup from "./components/ExitIntentPopup";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -59,6 +60,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <ExitIntentPopup />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

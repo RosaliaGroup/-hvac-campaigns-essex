@@ -1,6 +1,6 @@
 import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, leads, InsertLead } from "../drizzle/schema";
+import { InsertUser, users, leads, InsertLead, leadCaptures, InsertLeadCapture } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -118,6 +118,28 @@ export async function updateLeadStatus(leadId: number, status: "new" | "contacte
   }
 
   await db.update(leads).set({ status }).where(eq(leads.id, leadId));
+}
+
+/**
+ * Lead capture management functions
+ */
+export async function createLeadCapture(capture: InsertLeadCapture) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  const result = await db.insert(leadCaptures).values(capture);
+  return result;
+}
+
+export async function getAllLeadCaptures() {
+  const db = await getDb();
+  if (!db) {
+    return [];
+  }
+
+  return await db.select().from(leadCaptures).orderBy(desc(leadCaptures.createdAt));
 }
 
 // TODO: add feature queries here as your schema grows.

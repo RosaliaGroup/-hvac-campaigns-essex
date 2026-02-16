@@ -44,4 +44,21 @@ export const leads = mysqlTable("leads", {
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
 
+/**
+ * Lead captures table for tracking website visitor contact information
+ */
+export const leadCaptures = mysqlTable("leadCaptures", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 50 }),
+  name: varchar("name", { length: 255 }),
+  captureType: mysqlEnum("captureType", ["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote"]).notNull(),
+  pageUrl: varchar("pageUrl", { length: 500 }),
+  message: text("message"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LeadCapture = typeof leadCaptures.$inferSelect;
+export type InsertLeadCapture = typeof leadCaptures.$inferInsert;
+
 // TODO: Add your tables here

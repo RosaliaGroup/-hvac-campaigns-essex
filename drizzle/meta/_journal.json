@@ -15,6 +15,13 @@
       "when": 1771276469761,
       "tag": "0001_quick_romulus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1771277063220,
+      "tag": "0002_jittery_martin_li",
+      "breakpoints": true
     }
   ]
 }

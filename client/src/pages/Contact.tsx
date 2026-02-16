@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import QuickQuoteForm from "@/components/QuickQuoteForm";
 
 export default function Contact() {
   return (
@@ -120,57 +121,11 @@ export default function Contact() {
       {/* Request Quote Section */}
       <section className="py-20 bg-secondary/30">
         <div className="container">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-[#1e3a5f] mb-4">Request a Quote</h2>
-              <p className="text-xl text-muted-foreground">
-                Choose the type of service you need
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8">
-              <Card className="border-t-4 border-t-[#ff6b35]">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Residential Services</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    Get a quote for your home HVAC needs. Learn about heat pump rebates up to $16,000.
-                  </p>
-                  <a 
-                    href="https://docs.google.com/forms/d/e/1FAIpQLSelUjWmZt7pXF1epkCafLwyB54KsKQ-vnIL1XnqTW5WjnHgwQ/viewform"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-                      Residential Quote Form
-                    </button>
-                  </a>
-                </CardContent>
-              </Card>
-
-              <Card className="border-t-4 border-t-[#1e3a5f]">
-                <CardHeader>
-                  <CardTitle className="text-2xl">Commercial Services</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    Get a quote for your business HVAC needs. Learn about commercial incentive programs.
-                  </p>
-                  <a 
-                    href="https://docs.google.com/forms/d/e/1FAIpQLSdc1dHJx1IAeLq6I7cZ2y4z1LS9Hn9w1Xdm8J8LririqJj4CA/viewform"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <button className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white font-semibold py-3 px-6 rounded-lg transition-colors">
-                      Commercial Quote Form
-                    </button>
-                  </a>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="max-w-3xl mx-auto">
+            <QuickQuoteForm 
+              title="Request a Free Quote"
+              description="Fill out the form below and we'll get back to you within 24 hours with a detailed quote for your HVAC project"
+            />
           </div>
         </div>
       </section>
