@@ -25,7 +25,7 @@ export default function Partnerships() {
             
             <div className="flex flex-wrap justify-center gap-4">
               <a 
-                href="mailto:sales@mechanicalenterprise.com?subject=Partnership Inquiry" 
+                href="#apply" 
                 className="inline-flex items-center gap-2 bg-[#ff6b35] text-white px-8 py-4 rounded-lg font-semibold hover:bg-[#e55a25] transition-all shadow-lg hover:shadow-xl"
               >
                 <Users className="w-5 h-5" />
