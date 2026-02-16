@@ -22,12 +22,12 @@ export default function Home() {
         
         <div className="container relative z-10 py-20">
           <div className="max-w-3xl">
-            <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">Essex County, New Jersey</Badge>
+            <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">PSEG Service Area - 15 Counties, New Jersey</Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
               HVAC Lead Generation Campaigns
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-              Strategic marketing campaigns designed to generate qualified leads for HVAC installations and replacements across all 22 municipalities in Essex County.
+              Strategic marketing campaigns designed to generate qualified leads for HVAC installations and replacements across 15 counties and 262+ municipalities in the PSEG service area.
             </p>
             <div className="flex flex-wrap gap-4">
               <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
@@ -47,41 +47,41 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="border-l-4 border-l-[#ff6b35]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-3xl font-bold text-[#1e3a5f]">881,527</CardTitle>
+                <CardTitle className="text-3xl font-bold text-[#1e3a5f]">6.2M+</CardTitle>
                 <CardDescription className="text-base">Total Population</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Growing market with 2.2% increase since 2020</p>
+                <p className="text-sm text-muted-foreground">Across 15 counties in PSEG service area</p>
               </CardContent>
             </Card>
             
             <Card className="border-l-4 border-l-[#ff6b35]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-3xl font-bold text-[#1e3a5f]">143,500+</CardTitle>
-                <CardDescription className="text-base">Owner-Occupied Homes</CardDescription>
+                <CardTitle className="text-3xl font-bold text-[#1e3a5f]">262+</CardTitle>
+                <CardDescription className="text-base">Municipalities Served</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Primary target for HVAC replacements</p>
+                <p className="text-sm text-muted-foreground">Across 15 counties in Northern, Central & Southern NJ</p>
               </CardContent>
             </Card>
             
             <Card className="border-l-4 border-l-[#ff6b35]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-3xl font-bold text-[#1e3a5f]">$80,789</CardTitle>
-                <CardDescription className="text-base">Median Household Income</CardDescription>
+                <CardTitle className="text-3xl font-bold text-[#1e3a5f]">2.2M</CardTitle>
+                <CardDescription className="text-base">Electric Customers</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Strong purchasing power for quality systems</p>
+                <p className="text-sm text-muted-foreground">Plus 1.8M gas customers in service area</p>
               </CardContent>
             </Card>
             
             <Card className="border-l-4 border-l-[#ff6b35]">
               <CardHeader className="pb-3">
-                <CardTitle className="text-3xl font-bold text-[#1e3a5f]">19,392</CardTitle>
-                <CardDescription className="text-base">Commercial Establishments</CardDescription>
+                <CardTitle className="text-3xl font-bold text-[#1e3a5f]">100K+</CardTitle>
+                <CardDescription className="text-base">Commercial Properties</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Significant B2B opportunity</p>
+                <p className="text-sm text-muted-foreground">Massive B2B opportunity across service area</p>
               </CardContent>
             </Card>
           </div>
@@ -92,10 +92,10 @@ export default function Home() {
       <section className="py-20 bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white diagonal-divider">
         <div className="container">
           <div className="text-center mb-12">
-            <Badge className="mb-4 bg-[#ff6b35] text-white text-base px-4 py-2">🔥 Featured Campaign</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">PSEG Decarbonization Program</h2>
+            <Badge className="mb-4 bg-[#ff6b35] text-white text-base px-4 py-2">🔥 Featured Programs</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">Heat Pump Incentive Programs</h2>
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
-              Zero upfront cost heat pump installations for residential and commercial properties
+              Up to $16K residential rebates and 80% commercial coverage across the PSEG service area
             </p>
           </div>
 
@@ -106,8 +106,8 @@ export default function Home() {
                   <DollarSign className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">$0 Down Payment</h3>
-                  <p className="text-white/80">No money required upfront through PSEG's program</p>
+                  <h3 className="text-xl font-semibold mb-2">Up to $16K Residential</h3>
+                  <p className="text-white/80">Decarbonization Program for homeowners</p>
                 </div>
               </div>
 
@@ -126,13 +126,13 @@ export default function Home() {
                   <Award className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Residential & Commercial</h3>
-                  <p className="text-white/80">Available for all property types across Essex County</p>
+                  <h3 className="text-xl font-semibold mb-2">Up to 80% Commercial</h3>
+                  <p className="text-white/80">Direct Replacement Program for businesses</p>
                 </div>
               </div>
 
               <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold w-full md:w-auto">
-                View PSEG Campaign Details <ArrowRight className="ml-2 h-5 w-5" />
+                View Program Details <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
 
@@ -144,17 +144,17 @@ export default function Home() {
                 <div>
                   <p className="text-sm text-white/70 mb-2">Primary Keywords:</p>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="bg-white/20 text-white">PSEG heat pump program NJ</Badge>
-                    <Badge variant="secondary" className="bg-white/20 text-white">free heat pump installation</Badge>
-                    <Badge variant="secondary" className="bg-white/20 text-white">no cost HVAC replacement</Badge>
+                    <Badge variant="secondary" className="bg-white/20 text-white">heat pump rebates NJ</Badge>
+                    <Badge variant="secondary" className="bg-white/20 text-white">residential decarbonization</Badge>
+                    <Badge variant="secondary" className="bg-white/20 text-white">commercial direct replacement</Badge>
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-white/70 mb-2">Long-tail Keywords:</p>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">PSEG no money down HVAC</Badge>
-                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">qualify for PSEG heat pump rebate</Badge>
-                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">best heat pump contractors Essex County</Badge>
+                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">up to 16K heat pump rebate</Badge>
+                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">80% commercial HVAC coverage</Badge>
+                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">PSEG service area heat pump</Badge>
                   </div>
                 </div>
               </CardContent>
@@ -210,7 +210,7 @@ export default function Home() {
                       <span className="font-medium">Target Areas:</span>
                     </div>
                     <p className="text-sm text-muted-foreground pl-8">
-                      Livingston, Millburn, Montclair, Essex Fells, North Caldwell, Short Hills, Glen Ridge
+                      Bergen, Essex, Morris, Somerset Counties - Affluent suburbs across PSEG service area
                     </p>
                   </div>
 
@@ -220,7 +220,7 @@ export default function Home() {
                       <span className="font-medium">Demographics:</span>
                     </div>
                     <p className="text-sm text-muted-foreground pl-8">
-                      High-income homeowners ($150k+), aged 40-65, homes valued at $750k+. Quality-conscious, value reliability.
+                      High-income homeowners ($150k+), aged 40-65, homes valued at $750k+. Towns like Montclair, Livingston, Summit, Princeton. Quality-conscious, value reliability.
                     </p>
                   </div>
 
@@ -261,7 +261,7 @@ export default function Home() {
                       <span className="font-medium">Target Areas:</span>
                     </div>
                     <p className="text-sm text-muted-foreground pl-8">
-                      West Orange, Bloomfield, Maplewood, South Orange, Verona, Cedar Grove, Nutley, Belleville
+                      Burlington, Camden, Middlesex, Mercer, Union Counties - Middle-class suburbs across PSEG territory
                     </p>
                   </div>
 
@@ -271,7 +271,7 @@ export default function Home() {
                       <span className="font-medium">Demographics:</span>
                     </div>
                     <p className="text-sm text-muted-foreground pl-8">
-                      Middle to upper-middle-class families, aged 35-55, homes valued at $400k-$750k. Budget-conscious but want reliability.
+                      Middle to upper-middle-class families, aged 35-55, homes valued at $400k-$750k. Towns like Edison, Hamilton, Cherry Hill. Budget-conscious but want reliability.
                     </p>
                   </div>
 
@@ -312,7 +312,7 @@ export default function Home() {
                       <span className="font-medium">Target Areas:</span>
                     </div>
                     <p className="text-sm text-muted-foreground pl-8">
-                      Newark, East Orange, Irvington, City of Orange
+                      Hudson, Passaic, Essex, Camden Counties - Urban centers (Newark, Jersey City, Paterson, Camden)
                     </p>
                   </div>
 
@@ -364,7 +364,7 @@ export default function Home() {
                       <span className="font-medium">Target Areas:</span>
                     </div>
                     <p className="text-sm text-muted-foreground pl-8">
-                      All Essex County municipalities - residential and commercial properties
+                      All 15 counties in PSEG service area - 262+ municipalities, residential and commercial
                     </p>
                   </div>
 
@@ -374,7 +374,8 @@ export default function Home() {
                       <span className="font-medium">Program Benefits:</span>
                     </div>
                     <ul className="text-sm text-muted-foreground pl-8 space-y-1">
-                      <li>• $0 down payment through PSEG</li>
+                      <li>• Up to $16,000 residential rebates</li>
+                      <li>• Up to 80% commercial coverage</li>
                       <li>• Up to 50% energy savings</li>
                       <li>• Professional installation included</li>
                       <li>• Eco-friendly heat pump technology</li>
@@ -384,12 +385,12 @@ export default function Home() {
                   <div className="bg-gradient-to-r from-[#ff6b35]/10 to-[#1e3a5f]/10 p-4 rounded-lg border border-[#ff6b35]/20">
                     <h4 className="font-semibold mb-2 text-[#1e3a5f]">SEO-Optimized Keywords:</h4>
                     <p className="text-xs text-muted-foreground mb-2">
-                      PSEG heat pump program NJ, free heat pump installation Essex County, no cost HVAC replacement, heat pump rebates New Jersey, zero upfront cost heat pump
+                      heat pump rebates NJ, residential decarbonization program, commercial direct replacement, PSEG service area, up to 16K residential, 80% commercial coverage
                     </p>
                   </div>
 
                   <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 w-full text-white">
-                    View PSEG Campaign Materials
+                    View Program Campaign Materials
                   </Button>
                 </div>
               </div>
@@ -404,7 +405,7 @@ export default function Home() {
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">Geographic Market Segmentation</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Essex County's 22 municipalities strategically divided into four targeting tiers
+              PSEG's 15-county service area with 262+ municipalities strategically divided into four targeting tiers
             </p>
           </div>
 
@@ -423,7 +424,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">Premium HVAC systems, high conversion rates</p>
-                <p className="text-xs font-medium">7 municipalities</p>
+                <p className="text-xs font-medium">Bergen, Essex, Morris, Somerset</p>
               </CardContent>
             </Card>
 
@@ -433,7 +434,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">Volume opportunity, maintenance contracts</p>
-                <p className="text-xs font-medium">8 municipalities</p>
+                <p className="text-xs font-medium">Burlington, Camden, Middlesex, Mercer, Union</p>
               </CardContent>
             </Card>
 
@@ -443,7 +444,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">Emergency repairs, rental properties</p>
-                <p className="text-xs font-medium">4 municipalities</p>
+                <p className="text-xs font-medium">Hudson, Passaic, Urban Essex, Camden</p>
               </CardContent>
             </Card>
 
@@ -453,7 +454,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-3">Niche targeting, community focus</p>
-                <p className="text-xs font-medium">3 municipalities</p>
+                <p className="text-xs font-medium">Gloucester, Hunterdon, Monmouth, Ocean</p>
               </CardContent>
             </Card>
           </div>
@@ -528,10 +529,10 @@ export default function Home() {
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-[#1e3a5f] to-[#2a5a8f] text-white diagonal-divider-bottom">
         <div className="container text-center">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Generate More HVAC Leads?</h2>
-          <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
-            These comprehensive campaigns are designed to drive qualified leads for HVAC installations and replacements across Essex County's diverse market segments.
-          </p>
+              <h2 className="text-4xl md:text-5xl font-bold mb-6">Ready to Generate More HVAC Leads?</h2>
+              <p className="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
+                These comprehensive campaigns are designed to drive qualified leads for HVAC installations and replacements across the entire PSEG service area - 15 counties, 262+ municipalities.
+              </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
               <Phone className="mr-2 h-5 w-5" />
@@ -552,7 +553,7 @@ export default function Home() {
             <div>
               <h3 className="text-xl font-bold mb-4">HVAC Lead Generation</h3>
               <p className="text-white/70 text-sm">
-                Comprehensive marketing campaigns for Essex County, NJ mechanical enterprises.
+                Comprehensive marketing campaigns for PSEG service area mechanical enterprises across 15 NJ counties.
               </p>
             </div>
             <div>
@@ -561,18 +562,18 @@ export default function Home() {
                 <li>Elite Comfort (Affluent Markets)</li>
                 <li>Reliable & Affordable (Suburban)</li>
                 <li>Fast & Dependable (Urban)</li>
-                <li>PSEG Decarbonization Program</li>
+                <li>Heat Pump Incentive Programs</li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Service Area</h4>
               <p className="text-sm text-white/70">
-                All 22 municipalities in Essex County, New Jersey including Newark, Montclair, Bloomfield, and surrounding communities.
+                15 counties across Northern, Central, and Southern NJ including Bergen, Essex, Hudson, Middlesex, Morris, Passaic, Somerset, Union, Burlington, Camden, and more.
               </p>
             </div>
           </div>
           <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-white/70">
-            <p>© 2026 HVAC Lead Generation Campaigns - Essex County, NJ. All rights reserved.</p>
+            <p>© 2026 HVAC Lead Generation Campaigns - PSEG Service Area, NJ. All rights reserved.</p>
           </div>
         </div>
       </footer>
