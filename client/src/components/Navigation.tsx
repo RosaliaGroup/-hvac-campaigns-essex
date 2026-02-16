@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Phone, Mail } from "lucide-react";
+import { Phone, LayoutDashboard } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Navigation() {
   const [location] = useLocation();
+  const { isAuthenticated } = useAuth();
 
   const isActive = (path: string) => location === path;
 
@@ -57,6 +59,12 @@ export default function Navigation() {
             <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Contact
             </Link>
+            {isAuthenticated && (
+              <Link href="/marketing" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] flex items-center gap-1 ${isActive('/marketing') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Link>
+            )}
           </div>
 
           {/* Contact Info & CTA */}
@@ -113,9 +121,18 @@ export default function Navigation() {
           <Link href="/careers" className={`block py-2 text-sm font-medium ${isActive('/careers') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Careers
           </Link>
+          <Link href="/testimonials" className={`block py-2 text-sm font-medium ${isActive('/testimonials') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+            Testimonials
+          </Link>
           <Link href="/contact" className={`block py-2 text-sm font-medium ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Contact
           </Link>
+          {isAuthenticated && (
+            <Link href="/marketing" className={`block py-2 text-sm font-medium flex items-center gap-1 ${isActive('/marketing') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </Link>
+          )}
           <div className="pt-2">
             <a href="tel:+18624239396" className="flex items-center gap-2 text-sm text-[#1e3a5f] hover:text-[#ff6b35]">
               <Phone className="h-4 w-4" />

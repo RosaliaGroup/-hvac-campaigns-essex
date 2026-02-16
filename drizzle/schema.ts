@@ -63,4 +63,38 @@ export const leadCaptures = mysqlTable("leadCaptures", {
 export type LeadCapture = typeof leadCaptures.$inferSelect;
 export type InsertLeadCapture = typeof leadCaptures.$inferInsert;
 
+/**
+ * Email drip campaign templates
+ */
+export const dripCampaignTemplates = mysqlTable("dripCampaignTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  dayNumber: int("dayNumber").notNull(), // Day 1, Day 3, Day 7, etc.
+  subject: varchar("subject", { length: 500 }).notNull(),
+  body: text("body").notNull(),
+  isActive: int("isActive").default(1).notNull(), // 1 = active, 0 = inactive
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type DripCampaignTemplate = typeof dripCampaignTemplates.$inferSelect;
+export type InsertDripCampaignTemplate = typeof dripCampaignTemplates.$inferInsert;
+
+/**
+ * Email drip campaign schedule tracking
+ */
+export const dripCampaignSchedule = mysqlTable("dripCampaignSchedule", {
+  id: int("id").autoincrement().primaryKey(),
+  leadCaptureId: int("leadCaptureId").notNull(),
+  templateId: int("templateId").notNull(),
+  scheduledFor: timestamp("scheduledFor").notNull(),
+  sentAt: timestamp("sentAt"),
+  status: mysqlEnum("status", ["pending", "sent", "failed"]).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DripCampaignSchedule = typeof dripCampaignSchedule.$inferSelect;
+export type InsertDripCampaignSchedule = typeof dripCampaignSchedule.$inferInsert;
+
 // TODO: Add your tables here

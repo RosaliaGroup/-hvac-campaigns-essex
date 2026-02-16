@@ -55,3 +55,12 @@
 
 ## Content Updates
 - [x] Replace all instances of BIM with BMS throughout the website
+
+## New Enhancements
+- [x] Add marketing dashboard link to main navigation (visible only when logged in)
+- [ ] Create automated email drip campaign system for captured leads
+- [ ] Add social proof badges to exit popup (installations completed, customer satisfaction)
+
+## SEO Improvements
+- [x] Reduce homepage keywords from 10 to 6 focused keywords
+- [x] Shorten meta description from 163 to 137 characters
