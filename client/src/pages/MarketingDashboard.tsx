@@ -63,12 +63,21 @@ export default function MarketingDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Globe className="h-5 w-5 text-[#ff6b35]" />
-                <Badge variant="outline" className="text-xs">Not Connected</Badge>
+                <Badge variant="outline" className="text-xs">Manual</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm font-semibold">Google Business</p>
-              <p className="text-xs text-muted-foreground">Manage your profile</p>
+              <p className="text-sm font-semibold mb-1">Google Business</p>
+              <p className="text-xs text-muted-foreground mb-3">Manage your profile</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="w-full text-xs"
+                onClick={() => window.open('https://business.google.com/create', '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open
+              </Button>
             </CardContent>
           </Card>
 
@@ -76,12 +85,21 @@ export default function MarketingDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <BarChart3 className="h-5 w-5 text-[#ff6b35]" />
-                <Badge variant="outline" className="text-xs">Not Connected</Badge>
+                <Badge variant="outline" className="text-xs">Manual</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm font-semibold">Google Ads</p>
-              <p className="text-xs text-muted-foreground">Campaign management</p>
+              <p className="text-sm font-semibold mb-1">Google Ads</p>
+              <p className="text-xs text-muted-foreground mb-3">Campaign management</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="w-full text-xs"
+                onClick={() => window.open('https://ads.google.com/aw/campaigns/new', '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open
+              </Button>
             </CardContent>
           </Card>
 
@@ -89,12 +107,21 @@ export default function MarketingDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Facebook className="h-5 w-5 text-[#ff6b35]" />
-                <Badge variant="outline" className="text-xs">Not Connected</Badge>
+                <Badge variant="outline" className="text-xs">Manual</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm font-semibold">Facebook</p>
-              <p className="text-xs text-muted-foreground">Post & manage ads</p>
+              <p className="text-sm font-semibold mb-1">Facebook</p>
+              <p className="text-xs text-muted-foreground mb-3">Post & manage ads</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="w-full text-xs"
+                onClick={() => window.open('https://business.facebook.com', '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open
+              </Button>
             </CardContent>
           </Card>
 
@@ -102,12 +129,21 @@ export default function MarketingDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Instagram className="h-5 w-5 text-[#ff6b35]" />
-                <Badge variant="outline" className="text-xs">Not Connected</Badge>
+                <Badge variant="outline" className="text-xs">Manual</Badge>
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm font-semibold">Instagram</p>
-              <p className="text-xs text-muted-foreground">Share content</p>
+              <p className="text-sm font-semibold mb-1">Instagram</p>
+              <p className="text-xs text-muted-foreground mb-3">Share content</p>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                className="w-full text-xs"
+                onClick={() => window.open('https://business.facebook.com', '_blank')}
+              >
+                <ExternalLink className="h-3 w-3 mr-1" />
+                Open
+              </Button>
             </CardContent>
           </Card>
         </div>
