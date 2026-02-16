@@ -1,7 +1,9 @@
-# TODO: Remove "5 Years of Excellence" Badge
+# TODO: Add On-Bill Repayment Information
 
 ## Tasks
-- [ ] Remove badge from Home page
-- [ ] Remove badge from About page
-- [ ] Remove badge from any other pages
+- [ ] Add on-bill repayment section to Residential page
+- [ ] Add on-bill repayment section to Commercial page
+- [ ] Update Rebate Guide with on-bill repayment details
+- [ ] Add residential timeline (approval → installation → inspection)
+- [ ] Mention account must be in good standing
 - [ ] Create new checkpoint

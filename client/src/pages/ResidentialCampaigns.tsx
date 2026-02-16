@@ -202,11 +202,84 @@ export default function ResidentialCampaigns() {
             >
               Loading…
             </iframe>
+          </div>        </div>
+      </section>
+
+      {/* On-Bill Repayment Option */}
+      <section className="py-16 bg-gradient-to-br from-green-50 to-blue-50">
+        <div className="container">
+          <div className="max-w-4xl mx-auto">
+            <Card className="border-2 border-green-600">
+              <CardHeader className="bg-gradient-to-r from-green-600 to-blue-600 text-white">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-8 w-8" />
+                  <div>
+                    <CardTitle className="text-2xl">Flexible Payment Option: On-Bill Repayment</CardTitle>
+                    <CardDescription className="text-white/90 mt-1">
+                      No upfront costs - pay through your monthly utility bill
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold text-lg mb-3 text-[#1e3a5f]">How It Works</h4>
+                    <p className="text-muted-foreground mb-4">
+                      Qualified homeowners can add the project cost to their monthly utility bill, making energy-efficient upgrades more accessible with no money down.
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h5 className="font-semibold mb-3 flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                      Eligibility Requirement
+                    </h5>
+                    <p className="text-sm text-muted-foreground">
+                      Your utility account must be in good standing to qualify for on-bill repayment.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-lg mb-3 text-[#1e3a5f]">Simple 3-Step Timeline</h4>
+                    <div className="space-y-3">
+                      <div className="flex gap-3">
+                        <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">1</div>
+                        <div>
+                          <p className="font-medium">Homeowner Approval</p>
+                          <p className="text-sm text-muted-foreground">Review and approve the proposed work and payment terms</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">2</div>
+                        <div>
+                          <p className="font-medium">Professional Installation</p>
+                          <p className="text-sm text-muted-foreground">Our certified technicians complete the heat pump installation</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="bg-[#ff6b35] text-white rounded-full w-8 h-8 flex items-center justify-center font-bold flex-shrink-0">3</div>
+                        <div>
+                          <p className="font-medium">Inspection & Verification</p>
+                          <p className="text-sm text-muted-foreground">Official inspection confirms work is completed to standards</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 border border-green-300 rounded-lg p-4 mt-4">
+                    <p className="text-sm font-medium text-green-900">
+                      💡 <strong>Benefit:</strong> Start saving on energy costs immediately while spreading payments over time through your utility bill.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
 
-      {/* Service Area */}
+      {/* Service Area Coverage */}
       <section className="py-16 bg-white">
         <div className="container">
           <div className="text-center">

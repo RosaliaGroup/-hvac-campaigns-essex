@@ -80,6 +80,68 @@ export default function CommercialCampaigns() {
         </div>
       </section>
 
+      {/* On-Bill Repayment Option */}
+      <section className="py-16 bg-gradient-to-br from-green-50 to-blue-50">
+        <div className="container">
+          <div className="max-w-4xl mx-auto">
+            <Card className="border-2 border-green-600">
+              <CardHeader className="bg-gradient-to-r from-green-600 to-blue-600 text-white">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-8 w-8" />
+                  <div>
+                    <CardTitle className="text-2xl">Flexible Payment Option: On-Bill Repayment</CardTitle>
+                    <CardDescription className="text-white/90 mt-1">
+                      Preserve cash flow - pay through your monthly utility bill
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold text-lg mb-3 text-[#1e3a5f]">How It Works for Commercial Properties</h4>
+                    <p className="text-muted-foreground mb-4">
+                      Qualified businesses can add the project cost to their monthly utility bill, making large-scale HVAC upgrades manageable without impacting your operating capital.
+                    </p>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h5 className="font-semibold mb-3 flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-blue-600" />
+                      Eligibility Requirement
+                    </h5>
+                    <p className="text-sm text-muted-foreground">
+                      Your commercial utility account must be in good standing to qualify for on-bill repayment.
+                    </p>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-4 mt-4">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-semibold text-[#1e3a5f] mb-2">Preserve Capital</h5>
+                      <p className="text-sm text-muted-foreground">Keep your cash for core business operations</p>
+                    </div>
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-semibold text-[#1e3a5f] mb-2">Immediate Savings</h5>
+                      <p className="text-sm text-muted-foreground">Start reducing energy costs from day one</p>
+                    </div>
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <h5 className="font-semibold text-[#1e3a5f] mb-2">Simple Billing</h5>
+                      <p className="text-sm text-muted-foreground">One monthly payment on your utility bill</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-green-50 border border-green-300 rounded-lg p-4 mt-4">
+                    <p className="text-sm font-medium text-green-900">
+                      💡 <strong>Business Advantage:</strong> Energy savings often offset the monthly payment, resulting in net-positive cash flow from day one.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Commercial Property Types */}
       <section className="py-20 bg-secondary/30">
         <div className="container">
