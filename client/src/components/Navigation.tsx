@@ -48,6 +48,9 @@ export default function Navigation() {
             <Link href="/partnerships" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/partnerships') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Partnerships
             </Link>
+            <Link href="/careers" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/careers') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+              Careers
+            </Link>
             <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Contact
             </Link>
@@ -103,6 +106,9 @@ export default function Navigation() {
           </Link>
           <Link href="/partnerships" className={`block py-2 text-sm font-medium ${isActive('/partnerships') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Partnerships
+          </Link>
+          <Link href="/careers" className={`block py-2 text-sm font-medium ${isActive('/careers') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+            Careers
           </Link>
           <Link href="/contact" className={`block py-2 text-sm font-medium ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Contact
