@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Home, DollarSign, Zap, Award, MapPin, Users, ArrowRight, CheckCircle } from "lucide-react";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Residential focus with warm, family-friendly tone */
@@ -9,6 +11,7 @@ import { Home, DollarSign, Zap, Award, MapPin, Users, ArrowRight, CheckCircle } 
 export default function ResidentialCampaigns() {
   return (
     <div className="min-h-screen">
+      <Navigation />
       {/* Hero Section */}
       <section className="relative min-h-[500px] flex items-center overflow-hidden bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f]">
         <div className="container relative z-10 py-16">
@@ -217,6 +220,8 @@ export default function ResidentialCampaigns() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }

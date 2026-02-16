@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Building2, DollarSign, Zap, Award, MapPin, Users, ArrowRight, CheckCircle, Clock } from "lucide-react";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Commercial focus with professional, ROI-driven tone */
@@ -9,6 +11,7 @@ import { Building2, DollarSign, Zap, Award, MapPin, Users, ArrowRight, CheckCirc
 export default function CommercialCampaigns() {
   return (
     <div className="min-h-screen">
+      <Navigation />
       {/* Hero Section */}
       <section className="relative min-h-[500px] flex items-center overflow-hidden bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f]">
         <div className="container relative z-10 py-16">
@@ -270,6 +273,8 @@ export default function CommercialCampaigns() {
           </div>
         </div>
       </section>
+
+      <Footer />
     </div>
   );
 }
