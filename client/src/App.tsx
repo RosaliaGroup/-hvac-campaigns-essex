@@ -12,6 +12,7 @@ import ResidentialCampaigns from "./pages/ResidentialCampaigns";
 import CommercialCampaigns from "./pages/CommercialCampaigns";
 import MaintenanceSubscription from "./pages/MaintenanceSubscription";
 import Partnerships from "./pages/Partnerships";
+import Careers from "./pages/Careers";
 import NotFound from "./pages/NotFound";
 
 
@@ -27,6 +28,7 @@ function Router() {
       <Route path={"/commercial"} component={CommercialCampaigns} />
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
       <Route path={"/partnerships"} component={Partnerships} />
+      <Route path={"/careers"} component={Careers} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
