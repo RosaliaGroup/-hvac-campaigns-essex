@@ -247,7 +247,7 @@ export default function Home() {
                   <li>• Office buildings</li>
                   <li>• Retail & hospitality</li>
                   <li>• Industrial facilities</li>
-                  <li>• Commercial incentives available</li>
+                  <li>• Up to 80% rebates available</li>
                 </ul>
                 <Link href="/commercial">
                   <Button className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">

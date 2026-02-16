@@ -1,8 +1,7 @@
-# TODO: Replace Logo
+# TODO: Update Commercial Incentives
 
 ## Tasks
-- [ ] Upload new logo to CDN
-- [ ] Update Navigation component with new logo
-- [ ] Update Footer component with new logo
-- [ ] Test logo display on all pages
+- [ ] Update CommercialCampaigns.tsx with 80% rebate language
+- [ ] Update Home.tsx commercial section with 80% rebate
+- [ ] Review all commercial references for consistency
 - [ ] Create new checkpoint

@@ -34,7 +34,7 @@ export default function CommercialCampaigns() {
             <Badge className="mb-4 bg-[#ff6b35] text-white text-base px-4 py-2">🔥 Featured Program</Badge>
             <h2 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">Commercial Direct Replacement Program</h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Incentives available for businesses upgrading to energy-efficient heat pumps
+              Incentives available - up to 80% cost covered by rebates for businesses upgrading to energy-efficient systems
             </p>
           </div>
 
@@ -44,10 +44,10 @@ export default function CommercialCampaigns() {
                 <div className="bg-[#ff6b35] w-12 h-12 rounded-lg flex items-center justify-center mb-4">
                   <DollarSign className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle>Commercial Incentives</CardTitle>
+                <CardTitle>Up to 80% Rebates</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Financial incentives available for commercial heat pump installations</p>
+                <p className="text-sm text-muted-foreground">Get up to 80% of your costs covered through energy efficiency rebate programs</p>
               </CardContent>
             </Card>
 
