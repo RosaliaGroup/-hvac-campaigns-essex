@@ -5,6 +5,7 @@ import { Shield, Clock, TrendingDown, FileText, Building2, CheckCircle, ArrowRig
 import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import PaymentCalculator from "@/components/PaymentCalculator";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Subscription maintenance services page - high-level without pricing */
@@ -28,6 +29,26 @@ export default function MaintenanceSubscription() {
             <Link href="/contact">
               <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
                 Request Custom Quote <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Promotion Banner */}
+      <section className="py-4 bg-gradient-to-r from-[#ff6b35] to-[#ff8c5a]">
+        <div className="container">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-white">
+            <div className="flex items-center gap-3">
+              <Badge className="bg-white text-[#ff6b35] hover:bg-white text-lg px-4 py-2">LIMITED TIME</Badge>
+              <div>
+                <div className="text-2xl font-bold">First Month FREE</div>
+                <div className="text-sm opacity-90">New subscription signups only • No long-term commitment required</div>
+              </div>
+            </div>
+            <Link href="/contact">
+              <Button size="lg" className="bg-white text-[#ff6b35] hover:bg-slate-100 font-semibold shadow-lg">
+                Claim Your Free Month <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
           </div>
@@ -588,6 +609,26 @@ export default function MaintenanceSubscription() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Payment Comparison Calculator */}
+      <section className="py-20 bg-white">
+        <div className="container">
+          <div className="max-w-5xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">Compare Your Savings</h2>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                See how much you could save with our subscription model vs. traditional pay-per-service maintenance
+              </p>
+            </div>
+
+            <Card className="border-2 border-[#ff6b35]/20">
+              <CardContent className="p-8">
+                <PaymentCalculator />
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
