@@ -1,7 +1,8 @@
-# TODO: Update Application Timelines
+# TODO: Update On-Bill Repayment Term to 120 Months
 
 ## Tasks
-- [ ] Update residential timeline to 4 steps (homeowner approval → installation → inspection → rebate/close out)
-- [ ] Update commercial timeline to 4 steps (application → review/approval → installation → close out)
-- [ ] Make timelines more prominent on both pages
+- [ ] Update residential case studies monthly payments (120 months instead of 60)
+- [ ] Update commercial case studies monthly payments (120 months instead of 60)
+- [ ] Update all references from "5 years" to "10 years"
+- [ ] Recalculate all monthly payment amounts
 - [ ] Create new checkpoint

@@ -14,7 +14,7 @@ const residentialCaseStudies = [
     projectCost: "$23,500",
     rebateReceived: "$14,000",
     outOfPocket: "$9,500",
-    monthlyPayment: "$158",
+    monthlyPayment: "$79",
     energySavingsBefore: "$385/month",
     energySavingsAfter: "$165/month",
     monthlySavings: "$220",
@@ -39,7 +39,7 @@ const residentialCaseStudies = [
     projectCost: "$29,800",
     rebateReceived: "$16,000",
     outOfPocket: "$13,800",
-    monthlyPayment: "$230",
+    monthlyPayment: "$115",
     energySavingsBefore: "$520/month",
     energySavingsAfter: "$235/month",
     monthlySavings: "$285",
@@ -64,7 +64,7 @@ const residentialCaseStudies = [
     projectCost: "$34,500",
     rebateReceived: "$16,000",
     outOfPocket: "$18,500",
-    monthlyPayment: "$308",
+    monthlyPayment: "$154",
     energySavingsBefore: "$640/month",
     energySavingsAfter: "$290/month",
     monthlySavings: "$350",
@@ -143,7 +143,7 @@ export default function ResidentialCaseStudies() {
                   </div>
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">Monthly Payment (5 years):</span>
+                      <span className="text-muted-foreground">Monthly Payment (10 years):</span>
                       <span className="font-bold text-purple-700">{study.monthlyPayment}/mo</span>
                     </div>
                     <div className="pt-2 border-t border-purple-300">
