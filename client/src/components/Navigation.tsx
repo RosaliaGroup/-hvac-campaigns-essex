@@ -42,6 +42,9 @@ export default function Navigation() {
             <Link href="/rebate-guide" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/rebate-guide') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Rebate Guide
             </Link>
+            <Link href="/maintenance" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/maintenance') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
+              Maintenance
+            </Link>
             <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Contact
             </Link>

@@ -1,6 +1,5 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -11,6 +10,8 @@ import Contact from "./pages/Contact";
 import RebateGuide from "./pages/RebateGuide";
 import ResidentialCampaigns from "./pages/ResidentialCampaigns";
 import CommercialCampaigns from "./pages/CommercialCampaigns";
+import MaintenanceSubscription from "./pages/MaintenanceSubscription";
+import NotFound from "./pages/NotFound";
 
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
       <Route path={"/rebate-guide"} component={RebateGuide} />
       <Route path={"/residential"} component={ResidentialCampaigns} />
       <Route path={"/commercial"} component={CommercialCampaigns} />
+      <Route path={"/maintenance"} component={MaintenanceSubscription} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

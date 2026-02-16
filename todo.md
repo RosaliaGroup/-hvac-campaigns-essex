@@ -1,8 +1,12 @@
-# TODO: Update Experience Messaging
+# TODO: Add Maintenance Subscription Services Page
 
-## Changes Needed
-- [ ] Update Home page: Add "20+ Years of Experience" for team expertise
-- [ ] Update About page: Clarify 5 years in business vs 20+ years team experience
-- [ ] Update Services page: Mention experienced technicians
-- [ ] Keep company age at 5 years but highlight team's 20+ years expertise
-- [ ] Create new checkpoint after updates
+## Tasks
+- [ ] Create MaintenanceSubscription.tsx page component
+- [ ] Add service tiers (Essential, Pro, Premium) WITHOUT pricing
+- [ ] Add Portfolio Residential Program WITHOUT per-unit pricing
+- [ ] Add Commercial Membership WITHOUT pricing
+- [ ] Highlight benefits and value propositions
+- [ ] Add strong CTA to contact for custom quote
+- [ ] Add route to App.tsx
+- [ ] Add link to Navigation component
+- [ ] Create new checkpoint
