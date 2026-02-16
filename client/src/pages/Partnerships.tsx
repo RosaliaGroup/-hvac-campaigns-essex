@@ -450,61 +450,6 @@ export default function Partnerships() {
         </div>
       </section>
 
-      {/* Partner Kit Download */}
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a8f] rounded-2xl p-8 md:p-12 text-white shadow-2xl">
-              <div className="flex flex-col md:flex-row items-center gap-8">
-                <div className="flex-1">
-                  <div className="inline-flex items-center gap-2 bg-[#ff6b35] px-4 py-2 rounded-full text-sm font-semibold mb-4">
-                    <FileText className="w-4 h-4" />
-                    Free Download
-                  </div>
-                  <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                    Download Partner Kit
-                  </h2>
-                  <p className="text-lg text-slate-200 mb-6 leading-relaxed">
-                    Get our comprehensive partner guide with detailed commission structure, program overview, marketing materials guide, and everything you need to start earning.
-                  </p>
-                  <ul className="space-y-2 mb-6">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-[#ff6b35]" />
-                      <span>Detailed commission breakdown</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-[#ff6b35]" />
-                      <span>Target industry profiles</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-[#ff6b35]" />
-                      <span>Getting started checklist</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-[#ff6b35]" />
-                      <span>FAQs and support resources</span>
-                    </li>
-                  </ul>
-                  <a 
-                    href="/mechanical-enterprise-partner-kit.pdf" 
-                    download
-                    className="inline-flex items-center gap-2 bg-[#ff6b35] text-white px-8 py-4 rounded-lg font-semibold hover:bg-[#e55a25] transition-all shadow-lg hover:shadow-xl"
-                  >
-                    <FileText className="w-5 h-5" />
-                    Download Partner Kit (PDF)
-                  </a>
-                </div>
-                <div className="flex-shrink-0">
-                  <div className="w-48 h-64 bg-white/10 backdrop-blur-sm rounded-lg border-2 border-white/30 flex items-center justify-center">
-                    <FileText className="w-24 h-24 text-white/50" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Partner Application Form */}
       <section className="py-16 bg-slate-50">
         <div className="container mx-auto px-4">
