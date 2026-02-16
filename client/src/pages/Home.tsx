@@ -100,7 +100,7 @@ export default function Home() {
             <Badge className="mb-4 bg-[#ff6b35] text-white text-base px-4 py-2">🔥 Featured Programs</Badge>
             <h2 className="text-4xl md:text-5xl font-bold mb-4">Heat Pump Incentive Programs</h2>
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
-              Up to $16K residential rebates and 80% commercial coverage across 15 New Jersey counties
+              Up to $16K residential rebates and commercial incentives available across 15 New Jersey counties
             </p>
           </div>
 
@@ -131,7 +131,7 @@ export default function Home() {
                   <Award className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold mb-2">Up to 80% Commercial</h3>
+                  <h3 className="text-xl font-semibold mb-2">Commercial Incentives</h3>
                   <p className="text-white/80">Direct Replacement Program for businesses</p>
                 </div>
               </div>
@@ -158,7 +158,7 @@ export default function Home() {
                   <p className="text-sm text-white/70 mb-2">Long-tail Keywords:</p>
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary" className="bg-white/20 text-white text-xs">up to 16K heat pump rebate</Badge>
-                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">80% commercial HVAC coverage</Badge>
+                    <Badge variant="secondary" className="bg-white/20 text-white text-xs">commercial HVAC incentives</Badge>
                     <Badge variant="secondary" className="bg-white/20 text-white text-xs">NJ 15 county heat pump</Badge>
                   </div>
                 </div>
@@ -380,7 +380,7 @@ export default function Home() {
                     </div>
                     <ul className="text-sm text-muted-foreground pl-8 space-y-1">
                       <li>• Up to $16,000 residential rebates</li>
-                      <li>• Up to 80% commercial coverage</li>
+                      <li>• Commercial incentives available</li>
                       <li>• Up to 50% energy savings</li>
                       <li>• Professional installation included</li>
                       <li>• Eco-friendly heat pump technology</li>
@@ -390,7 +390,7 @@ export default function Home() {
                   <div className="bg-gradient-to-r from-[#ff6b35]/10 to-[#1e3a5f]/10 p-4 rounded-lg border border-[#ff6b35]/20">
                     <h4 className="font-semibold mb-2 text-[#1e3a5f]">SEO-Optimized Keywords:</h4>
                     <p className="text-xs text-muted-foreground mb-2">
-                      heat pump rebates NJ, residential decarbonization program, commercial direct replacement, New Jersey HVAC, up to 16K residential, 80% commercial coverage
+                      heat pump rebates NJ, residential decarbonization program, commercial direct replacement, New Jersey HVAC, up to 16K residential, commercial HVAC incentives
                     </p>
                   </div>
 
