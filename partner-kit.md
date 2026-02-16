@@ -60,19 +60,19 @@ Thank you for your interest in partnering with Mechanical Enterprise. This kit p
 ## Commission Structure
 
 ### Referral Commissions
-- **Residential Projects:** 5-8% of project value
-- **Commercial Projects:** 3-6% of project value
-- **Maintenance Contracts:** 10% of annual contract value (recurring)
+- **Residential Projects:** Up to 8% of project value
+- **Commercial Projects:** Up to 6% of project value
+- **Maintenance Contracts:** Up to 10% of annual contract value (recurring)
 
 ### Direct Sales Commissions
-- **Residential Projects:** 10-15% of project value
-- **Commercial Projects:** 8-12% of project value
-- **Maintenance Contracts:** 15-20% of annual contract value (recurring)
+- **Residential Projects:** Up to 15% of project value
+- **Commercial Projects:** Up to 12% of project value
+- **Maintenance Contracts:** Up to 20% of annual contract value (recurring)
 
 ### Bonus Opportunities
-- **Volume Bonus:** Additional 2% for 5+ projects per quarter
-- **Commercial Bonus:** Extra $500 for projects over $100K
-- **Recurring Revenue:** Ongoing 5% commission on maintenance renewals
+- **Volume Bonus:** Up to 2% additional for high-performing partners
+- **Commercial Bonus:** Up to $500 for large projects
+- **Recurring Revenue:** Ongoing commission on maintenance renewals
 
 **Payment Terms:** Commission paid within 30 days of project completion and payment receipt.
 
