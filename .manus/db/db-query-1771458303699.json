@@ -1,0 +1,28 @@
+{
+  "query": "SELECT * FROM aiVaCredentials WHERE service = 'vapi';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT * FROM aiVaCredentials WHERE service = 'vapi';",
+  "rows": [
+    {
+      "id": "30007",
+      "service": "vapi",
+      "credentialKey": "apiKey",
+      "credentialValue": "test_vapi_key_123",
+      "isActive": "1",
+      "createdAt": "2026-02-18 23:43:51",
+      "updatedAt": "2026-02-18 23:43:51"
+    },
+    {
+      "id": "30008",
+      "service": "vapi",
+      "credentialKey": "assistantId",
+      "credentialValue": "asst_test_456",
+      "isActive": "1",
+      "createdAt": "2026-02-18 23:43:51",
+      "updatedAt": "2026-02-18 23:43:51"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tservice\tcredentialKey\tcredentialValue\tisActive\tcreatedAt\tupdatedAt\n30007\tvapi\tapiKey\ttest_vapi_key_123\t1\t2026-02-18 23:43:51\t2026-02-18 23:43:51\n30008\tvapi\tassistantId\tasst_test_456\t1\t2026-02-18 23:43:51\t2026-02-18 23:43:51\n",
+  "stderr": "",
+  "execution_time_ms": 358
+}
