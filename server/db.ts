@@ -1,6 +1,11 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, leads, InsertLead, leadCaptures, InsertLeadCapture } from "../drizzle/schema";
+import { 
+  InsertUser, users, leads, InsertLead, leadCaptures, InsertLeadCapture,
+  aiVaCredentials, InsertAiVaCredential, callLogs, InsertCallLog,
+  smsConversations, InsertSmsConversation, socialPosts, InsertSocialPost,
+  socialInteractions, InsertSocialInteraction, aiVaAnalytics, InsertAiVaAnalytic
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -142,4 +147,181 @@ export async function getAllLeadCaptures() {
   return await db.select().from(leadCaptures).orderBy(desc(leadCaptures.createdAt));
 }
 
-// TODO: add feature queries here as your schema grows.
+/**
+ * AI VA Credentials management
+ */
+export async function saveAiVaCredentials(service: string, credentials: Record<string, string>) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  // Delete existing credentials for this service
+  await db.delete(aiVaCredentials).where(eq(aiVaCredentials.service, service));
+
+  // Insert new credentials
+  const credentialEntries: InsertAiVaCredential[] = Object.entries(credentials).map(([key, value]) => ({
+    service,
+    credentialKey: key,
+    credentialValue: value, // TODO: Encrypt this value before storing
+    isActive: 1,
+  }));
+
+  await db.insert(aiVaCredentials).values(credentialEntries);
+}
+
+export async function getAiVaCredentials(service: string) {
+  const db = await getDb();
+  if (!db) {
+    return {};
+  }
+
+  const results = await db
+    .select()
+    .from(aiVaCredentials)
+    .where(eq(aiVaCredentials.service, service));
+
+  // Convert array to object
+  const credentials: Record<string, string> = {};
+  results.forEach((row) => {
+    credentials[row.credentialKey] = row.credentialValue; // TODO: Decrypt this value
+  });
+
+  return credentials;
+}
+
+/**
+ * Call Logs management
+ */
+export async function createCallLog(log: InsertCallLog) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  return await db.insert(callLogs).values(log);
+}
+
+export async function getCallLogs(limit: number = 50, offset: number = 0) {
+  const db = await getDb();
+  if (!db) {
+    return [];
+  }
+
+  return await db
+    .select()
+    .from(callLogs)
+    .orderBy(desc(callLogs.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+/**
+ * SMS Conversations management
+ */
+export async function createSmsConversation(sms: InsertSmsConversation) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  return await db.insert(smsConversations).values(sms);
+}
+
+export async function getSmsConversations(limit: number = 50, offset: number = 0) {
+  const db = await getDb();
+  if (!db) {
+    return [];
+  }
+
+  return await db
+    .select()
+    .from(smsConversations)
+    .orderBy(desc(smsConversations.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+/**
+ * Social Posts management
+ */
+export async function createSocialPost(post: InsertSocialPost) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  return await db.insert(socialPosts).values(post);
+}
+
+export async function getSocialPosts(status?: "draft" | "scheduled" | "posted" | "failed", limit: number = 50, offset: number = 0) {
+  const db = await getDb();
+  if (!db) {
+    return [];
+  }
+
+  let query = db.select().from(socialPosts);
+  
+  if (status) {
+    query = query.where(eq(socialPosts.status, status)) as any;
+  }
+
+  return await query
+    .orderBy(desc(socialPosts.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+/**
+ * Social Interactions management
+ */
+export async function createSocialInteraction(interaction: InsertSocialInteraction) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  return await db.insert(socialInteractions).values(interaction);
+}
+
+/**
+ * AI VA Analytics
+ */
+export async function getAiVaAnalytics(startDate: string, endDate: string) {
+  const db = await getDb();
+  if (!db) {
+    return [];
+  }
+
+  return await db
+    .select()
+    .from(aiVaAnalytics)
+    .where(sql`${aiVaAnalytics.date} BETWEEN ${startDate} AND ${endDate}`)
+    .orderBy(desc(aiVaAnalytics.date));
+}
+
+export async function createOrUpdateAnalytics(date: string, metrics: Partial<InsertAiVaAnalytic>) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  // Try to update existing record
+  const existing = await db
+    .select()
+    .from(aiVaAnalytics)
+    .where(sql`DATE(${aiVaAnalytics.date}) = ${date}`)
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .update(aiVaAnalytics)
+      .set(metrics)
+      .where(eq(aiVaAnalytics.id, existing[0].id));
+  } else {
+    await db.insert(aiVaAnalytics).values({
+      date: new Date(date),
+      ...metrics,
+    } as InsertAiVaAnalytic);
+  }
+}

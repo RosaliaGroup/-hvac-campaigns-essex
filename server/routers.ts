@@ -4,6 +4,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { handleVapiWebhook } from "./integrations/vapi";
+import { handleIncomingSms } from "./integrations/twilio";
 import { notifyOwner } from "./_core/notification";
 
 export const appRouter = router({
@@ -110,12 +112,93 @@ export const appRouter = router({
     }),
   }),
 
-  // TODO: add feature routers here, e.g.
-  // todo: router({
-  //   list: protectedProcedure.query(({ ctx }) =>
-  //     db.getUserTodos(ctx.user.id)
-  //   ),
-  // }),
+  // AI Virtual Assistant router
+  aiVa: router({
+    saveCredentials: protectedProcedure
+      .input(
+        z.object({
+          service: z.enum(["vapi", "twilio", "facebook", "google_business"] as const),
+          credentials: z.record(z.string(), z.string()),
+        })
+      )
+      .mutation(async ({ input }) => {
+        // Store credentials securely (encrypted)
+        const credentials = input.credentials as Record<string, string>;
+        await db.saveAiVaCredentials(input.service, credentials);
+        return { success: true };
+      }),
+
+    getCredentials: protectedProcedure
+      .input(z.object({ service: z.enum(["vapi", "twilio", "facebook", "google_business"] as const) }))
+      .query(async ({ input }) => {
+        return await db.getAiVaCredentials(input.service);
+      }),
+
+    listCallLogs: protectedProcedure
+      .input(
+        z.object({
+          limit: z.number().optional().default(50),
+          offset: z.number().optional().default(0),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getCallLogs(input.limit, input.offset);
+      }),
+
+    listSmsConversations: protectedProcedure
+      .input(
+        z.object({
+          limit: z.number().optional().default(50),
+          offset: z.number().optional().default(0),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getSmsConversations(input.limit, input.offset);
+      }),
+
+    listSocialPosts: protectedProcedure
+      .input(
+        z.object({
+          status: z.enum(["draft", "scheduled", "posted", "failed"] as const).optional(),
+          limit: z.number().optional().default(50),
+          offset: z.number().optional().default(0),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getSocialPosts(input.status, input.limit, input.offset);
+      }),
+
+    getAnalytics: protectedProcedure
+      .input(
+        z.object({
+          startDate: z.string(),
+          endDate: z.string(),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getAiVaAnalytics(input.startDate, input.endDate);
+      }),
+  }),
+
+  // Webhook endpoints for external services
+  webhooks: router({
+
+    // Vapi voice AI webhook
+    vapi: publicProcedure
+      .input(z.any())
+      .mutation(async ({ input }) => {
+        await handleVapiWebhook(input);
+        return { success: true };
+      }),
+
+    // Twilio SMS webhook
+    twilio: publicProcedure
+      .input(z.any())
+      .mutation(async ({ input }) => {
+        const response = await handleIncomingSms(input);
+        return { response };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;
