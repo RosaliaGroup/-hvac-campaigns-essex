@@ -37,6 +37,12 @@ export const leads = mysqlTable("leads", {
   service: varchar("service", { length: 255 }).notNull(),
   status: mysqlEnum("status", ["new", "contacted", "quoted", "won", "lost"]).default("new").notNull(),
   notes: text("notes"),
+  // Lead scoring fields
+  score: int("score").default(0).notNull(),
+  priority: mysqlEnum("priority", ["hot", "warm", "cold"]).default("cold").notNull(),
+  lastInteractionAt: timestamp("lastInteractionAt"),
+  interactionCount: int("interactionCount").default(0).notNull(),
+  scoreBreakdown: text("scoreBreakdown"), // JSON: {calls: 20, sms: 15, social: 5, ...}
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -19,6 +19,7 @@ import CampaignPerformance from "./pages/CampaignPerformance";
 import Testimonials from "./pages/Testimonials";
 import AIVADashboard from "./pages/AIVADashboard";
 import AIVASettings from "./pages/AIVASettings";
+import LeadScoringDashboard from "./pages/LeadScoringDashboard";
 import NotFound from "./pages/NotFound";
 import ExitIntentPopup from "./components/ExitIntentPopup";
 
@@ -42,6 +43,7 @@ function Router() {
       <Route path={"/testimonials"} component={Testimonials} />
       <Route path={"/ai-va-dashboard"} component={AIVADashboard} />
       <Route path={"/ai-va-settings"} component={AIVASettings} />
+      <Route path={"/lead-scoring"} component={LeadScoringDashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

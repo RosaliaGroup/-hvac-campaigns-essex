@@ -180,6 +180,95 @@ export const appRouter = router({
       }),
   }),
 
+  // Lead Scoring endpoints
+  leadScoring: router({
+    
+    // Get scored leads list
+    getScoredLeads: protectedProcedure
+      .input(
+        z.object({
+          priority: z.enum(["hot", "warm", "cold"] as const).optional(),
+          limit: z.number().optional().default(50),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getLeadsByPriority(input.priority, input.limit);
+      }),
+
+    // Get top leads by score
+    getTopLeads: protectedProcedure
+      .input(
+        z.object({
+          limit: z.number().optional().default(10),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getTopLeads(input.limit);
+      }),
+
+    // Get lead score statistics
+    getScoreStats: protectedProcedure
+      .query(async () => {
+        return await db.getLeadScoreStats();
+      }),
+
+    // Get lead interaction data for scoring
+    getLeadInteractions: protectedProcedure
+      .input(
+        z.object({
+          leadId: z.number(),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getLeadInteractionData(input.leadId);
+      }),
+
+    // Manually recalculate lead score
+    recalculateScore: protectedProcedure
+      .input(
+        z.object({
+          leadId: z.number(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        // Get interaction data
+        const interactions = await db.getLeadInteractionData(input.leadId);
+        if (!interactions) {
+          throw new Error("Lead not found");
+        }
+
+        // Import scoring service
+        const { calculateLeadScore, calculatePriority } = await import("./services/leadScoring");
+
+        // Calculate scores
+        const callCount = interactions.calls?.length || 0;
+        const smsCount = interactions.sms?.length || 0;
+        const socialCount = interactions.social?.length || 0;
+
+        const scoringData = {
+          totalCalls: callCount,
+          inboundCalls: interactions.calls?.filter(c => c.direction === 'inbound').length || 0,
+          totalSms: smsCount,
+          inboundSms: interactions.sms?.filter(s => s.direction === 'inbound').length || 0,
+          socialInteractions: socialCount,
+        };
+
+        const breakdown = calculateLeadScore(scoringData);
+        const priority = calculatePriority(breakdown.total);
+
+        // Update database
+        await db.updateLeadScore(
+          input.leadId,
+          breakdown.total,
+          priority,
+          JSON.stringify(breakdown),
+          callCount + smsCount + socialCount
+        );
+
+        return { score: breakdown.total, priority, breakdown };
+      }),
+  }),
+
   // Webhook endpoints for external services
   webhooks: router({
 

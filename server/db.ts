@@ -325,3 +325,130 @@ export async function createOrUpdateAnalytics(date: string, metrics: Partial<Ins
     } as InsertAiVaAnalytic);
   }
 }
+
+/**
+ * Lead Scoring functions
+ */
+export async function updateLeadScore(
+  leadId: number, 
+  score: number, 
+  priority: 'hot' | 'warm' | 'cold',
+  scoreBreakdown: string,
+  interactionCount: number
+) {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+
+  return await db
+    .update(leads)
+    .set({
+      score,
+      priority,
+      scoreBreakdown,
+      interactionCount,
+      lastInteractionAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(leads.id, leadId));
+}
+
+export async function getLeadsByPriority(priority?: 'hot' | 'warm' | 'cold', limit: number = 50) {
+  const db = await getDb();
+  if (!db) {
+    return [];
+  }
+
+  let query = db.select().from(leads);
+  
+  if (priority) {
+    query = query.where(eq(leads.priority, priority)) as any;
+  }
+
+  return await query
+    .orderBy(desc(leads.score), desc(leads.lastInteractionAt))
+    .limit(limit);
+}
+
+export async function getLeadScoreHistory(leadId: number) {
+  const db = await getDb();
+  if (!db) {
+    return null;
+  }
+
+  return await db
+    .select()
+    .from(leads)
+    .where(eq(leads.id, leadId))
+    .limit(1);
+}
+
+export async function getLeadInteractionData(leadId: number) {
+  const db = await getDb();
+  if (!db) {
+    return null;
+  }
+
+  // Get call data
+  const callData = await db
+    .select()
+    .from(callLogs)
+    .where(eq(callLogs.leadId, leadId));
+
+  // Get SMS data
+  const smsData = await db
+    .select()
+    .from(smsConversations)
+    .where(eq(smsConversations.leadId, leadId));
+
+  // Get social data
+  const socialData = await db
+    .select()
+    .from(socialInteractions)
+    .where(eq(socialInteractions.leadId, leadId));
+
+  return {
+    calls: callData,
+    sms: smsData,
+    social: socialData,
+  };
+}
+
+export async function getTopLeads(limit: number = 10) {
+  const db = await getDb();
+  if (!db) {
+    return [];
+  }
+
+  return await db
+    .select()
+    .from(leads)
+    .orderBy(desc(leads.score))
+    .limit(limit);
+}
+
+export async function getLeadScoreStats() {
+  const db = await getDb();
+  if (!db) {
+    return {
+      totalLeads: 0,
+      hotLeads: 0,
+      warmLeads: 0,
+      coldLeads: 0,
+      avgScore: 0,
+    };
+  }
+
+  const allLeads = await db.select().from(leads);
+  
+  return {
+    totalLeads: allLeads.length,
+    hotLeads: allLeads.filter(l => l.priority === 'hot').length,
+    warmLeads: allLeads.filter(l => l.priority === 'warm').length,
+    coldLeads: allLeads.filter(l => l.priority === 'cold').length,
+    avgScore: allLeads.length > 0 
+      ? Math.round(allLeads.reduce((sum, l) => sum + l.score, 0) / allLeads.length)
+      : 0,
+  };
+}

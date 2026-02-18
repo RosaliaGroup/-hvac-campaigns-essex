@@ -136,3 +136,15 @@
 - [x] Add conversation history viewer
 - [x] Add AI VA Dashboard link to navigation menu
 - [x] Add AI VA Settings link to dashboard
+
+## Lead Scoring System
+- [x] Design lead scoring algorithm with point values for different interactions
+- [x] Add lead score field to database schema
+- [x] Create backend scoring calculation logic
+- [x] Implement automatic score updates on new interactions
+- [x] Create API endpoint to get scored leads list
+- [x] Build lead scoring dashboard component
+- [x] Add lead priority badges (Hot/Warm/Cold)
+- [x] Create lead details view with score breakdown
+- [x] Add score history tracking
+- [x] Implement lead prioritization sorting

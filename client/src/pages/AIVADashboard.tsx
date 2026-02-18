@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Phone, MessageSquare, Share2, TrendingUp, Settings, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Phone, MessageSquare, Share2, TrendingUp, Settings, CheckCircle, Clock, AlertCircle, Target } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
@@ -42,12 +42,20 @@ export default function AIVADashboard() {
               <h1 className="text-4xl font-bold mb-2">AI Virtual Assistant</h1>
               <p className="text-white/90 text-lg">Automated lead generation & customer interaction system</p>
             </div>
-            <Link href="/ai-va-settings">
-              <Button variant="outline" className="bg-white/10 text-white border-white hover:bg-white/20">
-                <Settings className="mr-2 h-4 w-4" />
-                Settings
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/lead-scoring">
+                <Button variant="outline" className="bg-white/10 text-white border-white hover:bg-white/20">
+                  <Target className="mr-2 h-4 w-4" />
+                  Lead Scoring
+                </Button>
+              </Link>
+              <Link href="/ai-va-settings">
+                <Button variant="outline" className="bg-white/10 text-white border-white hover:bg-white/20">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </div>

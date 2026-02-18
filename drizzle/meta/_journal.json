@@ -43,6 +43,13 @@
       "when": 1771449807231,
       "tag": "0005_parallel_sharon_carter",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1771451539551,
+      "tag": "0006_narrow_saracen",
+      "breakpoints": true
     }
   ]
 }
