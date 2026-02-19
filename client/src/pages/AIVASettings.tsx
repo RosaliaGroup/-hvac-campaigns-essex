@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Phone, MessageSquare, Share2, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Phone, MessageSquare, Share2, CheckCircle2, AlertCircle, Loader2, FileText } from "lucide-react";
+import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
 
@@ -189,10 +190,20 @@ export default function AIVASettings() {
     <div className="min-h-screen bg-secondary/30 py-8">
       <div className="container max-w-5xl">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">AI VA Settings</h1>
-          <p className="text-muted-foreground">
-            Configure your AI Virtual Assistant integrations for voice calls, SMS, and social media posting
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">AI VA Settings</h1>
+              <p className="text-muted-foreground">
+                Configure your AI Virtual Assistant integrations for voice calls, SMS, and social media posting
+              </p>
+            </div>
+            <Link href="/ai-assistant-prompts">
+              <Button variant="outline" className="gap-2">
+                <FileText className="h-4 w-4" />
+                View AI Prompts
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Alert className="mb-6 border-[#ff6b35] bg-[#ff6b35]/10">

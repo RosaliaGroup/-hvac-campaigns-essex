@@ -176,3 +176,14 @@
 - [x] Verify credentials are stored correctly
 - [x] Provide webhook configuration instructions
 - [ ] Test Vapi integration with live credentials
+
+## Vapi Assistant Customization
+- [x] Design conversation flow for residential leads
+- [x] Design conversation flow for commercial leads
+- [x] Create VRV/VRF system qualification script
+- [x] Add rebate information handling (up to $16K residential, 80% commercial)
+- [x] Create emergency vs scheduled service routing logic
+- [x] Write master AI assistant prompt with all scenarios
+- [x] Create prompt library page in website
+- [x] Add link to AI Assistant Prompts from AI VA Settings
+- [ ] Test different lead scenarios with AI responses
