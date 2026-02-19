@@ -134,8 +134,9 @@ export default function ExitIntentPopup() {
     }, variant.timerDelay);
 
     // Detect exit intent (mouse leaving viewport from top)
-    const handleMouseLeave = (e: MouseEvent) => {
-      if (e.clientY <= 0 && !hasShown && !isVisible) {
+    const handleMouseOut = (e: MouseEvent) => {
+      // Check if mouse is leaving the document from the top
+      if (!e.relatedTarget && e.clientY <= 10 && !hasShown && !isVisible) {
         setIsVisible(true);
         setHasShown(true);
         
@@ -150,11 +151,11 @@ export default function ExitIntentPopup() {
       }
     };
 
-    document.addEventListener("mouseleave", handleMouseLeave);
+    document.documentElement.addEventListener("mouseout", handleMouseOut);
 
     return () => {
       clearTimeout(timer);
-      document.removeEventListener("mouseleave", handleMouseLeave);
+      document.documentElement.removeEventListener("mouseout", handleMouseOut);
     };
   }, [hasShown, isVisible, variant]);
 

@@ -238,3 +238,16 @@
 - [x] Add popup to Commercial page
 - [x] Test scroll trigger on both pages
 - [x] Verify lead capture saves to database
+
+## Exit Intent Popup Restoration
+- [x] Investigate why exit intent popup disappeared from homepage
+- [x] Restore ExitIntentPopup to Home.tsx
+- [x] Test popup triggers correctly (15s timer + exit intent)
+- [x] Verify popup closes properly and saves leads to database
+
+## Popup Trigger Fixes
+- [x] Change ScrollRebatePopup to trigger on exit intent (mouse leaving page) instead of scroll
+- [x] Update popup component name from ScrollRebatePopup to ExitRebatePopup
+- [x] Debug homepage exit intent popup - not triggering on mouse exit
+- [x] Test all three exit intent popups (homepage, residential, commercial)
+- [x] Verify all popups save leads correctly to database

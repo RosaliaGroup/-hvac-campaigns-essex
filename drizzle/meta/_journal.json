@@ -64,6 +64,13 @@
       "when": 1771481431615,
       "tag": "0008_melted_tyger_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1771482698363,
+      "tag": "0009_sparkling_sabretooth",
+      "breakpoints": true
     }
   ]
 }

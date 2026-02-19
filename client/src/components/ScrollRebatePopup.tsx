@@ -23,7 +23,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
       // Track Google Ads conversion
       if (typeof window !== 'undefined' && (window as any).gtag) {
         (window as any).gtag('event', 'conversion', {
-          'send_to': 'AW-17768263516/scroll_rebate_capture',
+          'send_to': 'AW-17768263516/exit_rebate_capture',
           'value': 1.0,
           'currency': 'USD',
           'transaction_id': Date.now().toString()
@@ -31,7 +31,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
       }
       
       setIsVisible(false);
-      localStorage.setItem(`hvac-scroll-popup-${pageType}`, "true");
+      localStorage.setItem(`hvac-exit-popup-${pageType}`, "true");
     },
     onError: (error) => {
       toast.error(`Failed to submit: ${error.message}`);
@@ -40,25 +40,24 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
 
   useEffect(() => {
     // Check if popup was already shown for this page type
-    const alreadyShown = localStorage.getItem(`hvac-scroll-popup-${pageType}`);
+    const alreadyShown = localStorage.getItem(`hvac-exit-popup-${pageType}`);
     if (alreadyShown) {
       setHasShown(true);
       return;
     }
 
-    // Detect scroll to 50% of page
-    const handleScroll = () => {
+    // Detect mouse leaving viewport (exit intent)
+    const handleMouseOut = (e: MouseEvent) => {
       if (hasShown || isVisible) return;
-
-      const scrollPercentage = (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100;
       
-      if (scrollPercentage >= 50) {
+      // Trigger when mouse leaves from top of page
+      if (!e.relatedTarget && e.clientY <= 10) {
         setIsVisible(true);
         setHasShown(true);
         
         // Track popup impression
         if (typeof window !== 'undefined' && (window as any).gtag) {
-          (window as any).gtag('event', 'scroll_popup_impression', {
+          (window as any).gtag('event', 'exit_popup_impression', {
             'event_category': 'Lead Capture',
             'event_label': pageType,
             'value': 1
@@ -67,10 +66,10 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
       }
     };
 
-    window.addEventListener("scroll", handleScroll);
+    document.documentElement.addEventListener("mouseout", handleMouseOut);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      document.documentElement.removeEventListener("mouseout", handleMouseOut);
     };
   }, [hasShown, isVisible, pageType]);
 
@@ -84,7 +83,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
 
     createCapture.mutate({
       email: email,
-      captureType: `scroll_popup_${pageType}`,
+      captureType: `exit_popup_${pageType}`,
       pageUrl: window.location.href,
     });
   };

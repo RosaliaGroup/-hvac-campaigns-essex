@@ -75,7 +75,7 @@ export const appRouter = router({
           firstName: z.string().optional(),
           lastName: z.string().optional(),
           name: z.string().optional(),
-          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial"]),
+          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial"]),
           pageUrl: z.string().optional(),
           message: z.string().optional(),
         })

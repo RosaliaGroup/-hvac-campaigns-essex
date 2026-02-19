@@ -1,0 +1,1 @@
+ALTER TABLE `leadCaptures` MODIFY COLUMN `captureType` enum('exit_popup','inline_form','newsletter','download_gate','quick_quote','scroll_popup_residential','scroll_popup_commercial','exit_popup_residential','exit_popup_commercial') NOT NULL;
