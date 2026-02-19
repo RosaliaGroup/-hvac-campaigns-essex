@@ -251,3 +251,9 @@
 - [x] Debug homepage exit intent popup - not triggering on mouse exit
 - [x] Test all three exit intent popups (homepage, residential, commercial)
 - [x] Verify all popups save leads correctly to database
+
+## Popup Restoration
+- [x] Check if ExitIntentPopup component exists in client/src/components/
+- [x] Check if ScrollRebatePopup component exists in client/src/components/
+- [x] Verify popups are imported in Home.tsx, ResidentialCampaigns.tsx, CommercialCampaigns.tsx
+- [x] Test all three popups to ensure they trigger correctly
