@@ -5,6 +5,7 @@ import { Home, DollarSign, Zap, Award, MapPin, Users, ArrowRight, CheckCircle } 
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ResidentialCaseStudies from "@/components/ResidentialCaseStudies";
+import ScrollRebatePopup from "@/components/ScrollRebatePopup";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Residential focus with warm, family-friendly tone */
@@ -12,6 +13,7 @@ import ResidentialCaseStudies from "@/components/ResidentialCaseStudies";
 export default function ResidentialCampaigns() {
   return (
     <div className="min-h-screen">
+      <ScrollRebatePopup pageType="residential" />
       <Navigation />
       {/* Hero Section */}
       <section className="relative min-h-[500px] flex items-center overflow-hidden bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f]">

@@ -6,6 +6,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import RebateCalculator from "@/components/RebateCalculator";
 import CaseStudies from "@/components/CaseStudies";
+import ScrollRebatePopup from "@/components/ScrollRebatePopup";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Commercial focus with professional, ROI-driven tone */
@@ -13,6 +14,7 @@ import CaseStudies from "@/components/CaseStudies";
 export default function CommercialCampaigns() {
   return (
     <div className="min-h-screen">
+      <ScrollRebatePopup pageType="commercial" />
       <Navigation />
       {/* Hero Section */}
       <section className="relative min-h-[500px] flex items-center overflow-hidden bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f]">

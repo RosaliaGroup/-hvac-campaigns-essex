@@ -230,3 +230,11 @@
 - [x] Investigate why exit intent popup disappeared
 - [x] Restore exit intent popup functionality
 - [x] Test popup on all pages (homepage, services, residential, commercial, etc.)
+
+## Scroll-Triggered Rebate Popup
+- [x] Create ScrollRebatePopup component with email capture form
+- [x] Add scroll detection logic (trigger at 50% page scroll)
+- [x] Add popup to Residential page
+- [x] Add popup to Commercial page
+- [x] Test scroll trigger on both pages
+- [x] Verify lead capture saves to database

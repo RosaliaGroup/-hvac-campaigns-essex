@@ -60,7 +60,7 @@ export const leadCaptures = mysqlTable("leadCaptures", {
   firstName: varchar("firstName", { length: 255 }),
   lastName: varchar("lastName", { length: 255 }),
   name: varchar("name", { length: 255 }),
-  captureType: mysqlEnum("captureType", ["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote"]).notNull(),
+  captureType: mysqlEnum("captureType", ["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial"]).notNull(),
   pageUrl: varchar("pageUrl", { length: 500 }),
   message: text("message"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

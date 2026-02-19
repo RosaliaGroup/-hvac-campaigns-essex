@@ -24,7 +24,6 @@ import AIAssistantPrompts from "./pages/AIAssistantPrompts";
 import AIScriptManager from "./pages/AIScriptManager";
 import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
-import ExitIntentPopup from "./components/ExitIntentPopup";
 
 function Router() {
   // make sure to consider if you need authentication for certain routes
@@ -72,7 +71,6 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
-          <ExitIntentPopup />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
