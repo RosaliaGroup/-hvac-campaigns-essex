@@ -179,7 +179,11 @@ export default function ExitIntentPopup() {
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div 
+      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
+      onClick={() => setIsVisible(false)}
+    >
+      <div onClick={(e) => e.stopPropagation()}>
       <Card className="max-w-lg w-full relative animate-in slide-in-from-bottom-4 duration-300">
         <Button
           variant="ghost"
@@ -309,6 +313,7 @@ export default function ExitIntentPopup() {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

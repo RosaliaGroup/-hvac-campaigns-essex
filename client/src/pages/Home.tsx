@@ -6,6 +6,7 @@ import { Building2, Zap, Award, ArrowRight, CheckCircle, Wrench, Clock, Shield, 
 import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import ExitIntentPopup from "@/components/ExitIntentPopup";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Professional HVAC company homepage showcasing expertise and services */
@@ -17,6 +18,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      <ExitIntentPopup />
       <Navigation />
       
       {/* Hero Section */}

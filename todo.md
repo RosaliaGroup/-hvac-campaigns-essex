@@ -225,3 +225,8 @@
 - [ ] Publish latest checkpoint to production
 - [ ] Update Vapi webhook URL to production domain
 - [ ] Test all features on production site
+
+## Bug Fixes
+- [x] Investigate why exit intent popup disappeared
+- [x] Restore exit intent popup functionality
+- [x] Test popup on all pages (homepage, services, residential, commercial, etc.)
