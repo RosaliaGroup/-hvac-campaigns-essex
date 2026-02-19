@@ -217,3 +217,11 @@
 - [x] Add authentication protection to admin route
 - [x] Add admin portal route to App.tsx
 - [x] Test admin portal access and navigation
+
+## Deployment & Configuration Steps
+- [x] Configure Vapi webhook URL setup guide
+- [x] Create publishing guide for production deployment
+- [x] Add discreet admin portal link to footer (visible only when authenticated)
+- [ ] Publish latest checkpoint to production
+- [ ] Update Vapi webhook URL to production domain
+- [ ] Test all features on production site

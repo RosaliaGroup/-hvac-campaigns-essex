@@ -1,7 +1,10 @@
-import { Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, Lock } from "lucide-react";
 import { Link } from "wouter";
+import { useAuth } from "@/_core/hooks/useAuth";
 
 export default function Footer() {
+  const { isAuthenticated } = useAuth();
+  
   return (
     <footer className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white py-12">
       <div className="container">
@@ -97,7 +100,15 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-white/60">
-          <p>© 2026 Mechanical Enterprise. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+            <p>© 2026 Mechanical Enterprise. All rights reserved.</p>
+            {isAuthenticated && (
+              <Link href="/admin" className="flex items-center gap-1 text-white/40 hover:text-white/80 transition-colors text-xs">
+                <Lock className="h-3 w-3" />
+                Admin Portal
+              </Link>
+            )}
+          </div>
         </div>
       </div>
     </footer>
