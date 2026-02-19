@@ -187,3 +187,18 @@
 - [x] Create prompt library page in website
 - [x] Add link to AI Assistant Prompts from AI VA Settings
 - [ ] Test different lead scenarios with AI responses
+
+## AI Script Management System
+- [x] Design database schema for storing custom AI scripts (title, category, content, timestamps)
+- [x] Create database table for AI scripts
+- [x] Build backend API endpoint to create new script
+- [x] Build backend API endpoint to get all scripts
+- [x] Build backend API endpoint to update existing script
+- [x] Build backend API endpoint to delete script
+- [x] Create frontend script management page with list view
+- [x] Add "Create New Script" form with title, category, content fields
+- [x] Add "Edit Script" functionality with pre-filled form
+- [x] Add "Delete Script" confirmation dialog
+- [x] Add script categories (Master, Residential, Commercial, VRV/VRF, Objections, Custom)
+- [x] Add copy-to-clipboard functionality for each script
+- [ ] Test full CRUD workflow (create, read, update, delete)

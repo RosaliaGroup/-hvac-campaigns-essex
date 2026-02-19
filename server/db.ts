@@ -4,7 +4,8 @@ import {
   InsertUser, users, leads, InsertLead, leadCaptures, InsertLeadCapture,
   aiVaCredentials, InsertAiVaCredential, callLogs, InsertCallLog,
   smsConversations, InsertSmsConversation, socialPosts, InsertSocialPost,
-  socialInteractions, InsertSocialInteraction, aiVaAnalytics, InsertAiVaAnalytic
+  socialInteractions, InsertSocialInteraction, aiVaAnalytics, InsertAiVaAnalytic,
+  aiScripts, InsertAiScript
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -451,4 +452,50 @@ export async function getLeadScoreStats() {
       ? Math.round(allLeads.reduce((sum, l) => sum + l.score, 0) / allLeads.length)
       : 0,
   };
+}
+
+// ========== AI Scripts Management ==========
+
+export async function createAiScript(script: InsertAiScript) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const [result] = await db.insert(aiScripts).values(script);
+  return result;
+}
+
+export async function getAllAiScripts() {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(aiScripts).orderBy(desc(aiScripts.createdAt));
+}
+
+export async function getAiScriptById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  
+  const [script] = await db.select().from(aiScripts).where(eq(aiScripts.id, id));
+  return script || null;
+}
+
+export async function getAiScriptsByCategory(category: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db.select().from(aiScripts).where(sql`${aiScripts.category} = ${category}`);
+}
+
+export async function updateAiScript(id: number, updates: Partial<InsertAiScript>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(aiScripts).set(updates).where(eq(aiScripts.id, id));
+}
+
+export async function deleteAiScript(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(aiScripts).where(eq(aiScripts.id, id));
 }

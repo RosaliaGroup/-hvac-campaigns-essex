@@ -50,6 +50,13 @@
       "when": 1771451539551,
       "tag": "0006_narrow_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1771478940066,
+      "tag": "0007_legal_argent",
+      "breakpoints": true
     }
   ]
 }

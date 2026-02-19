@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -221,3 +221,18 @@ export const aiVaAnalytics = mysqlTable("aiVaAnalytics", {
 
 export type AiVaAnalytic = typeof aiVaAnalytics.$inferSelect;
 export type InsertAiVaAnalytic = typeof aiVaAnalytics.$inferInsert;
+/**
+ * AI Scripts - Custom Vapi assistant scripts for different scenarios
+ */
+export const aiScripts = mysqlTable("aiScripts", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  category: mysqlEnum("category", ["master", "residential", "commercial", "vrv_vrf", "objections", "custom"]).notNull(),
+  content: text("content").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AiScript = typeof aiScripts.$inferSelect;
+export type InsertAiScript = typeof aiScripts.$inferInsert;

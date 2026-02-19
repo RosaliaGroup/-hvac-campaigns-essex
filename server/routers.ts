@@ -283,6 +283,62 @@ export const appRouter = router({
       }),
   }),
 
+  // AI Scripts management router
+  aiScripts: router({
+    create: protectedProcedure
+      .input(
+        z.object({
+          title: z.string().min(1),
+          category: z.enum(["master", "residential", "commercial", "vrv_vrf", "objections", "custom"]),
+          content: z.string().min(1),
+          isActive: z.boolean().default(true),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.createAiScript(input);
+        return { success: true };
+      }),
+
+    getAll: protectedProcedure.query(async () => {
+      return await db.getAllAiScripts();
+    }),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getAiScriptById(input.id);
+      }),
+
+    getByCategory: protectedProcedure
+      .input(z.object({ category: z.string() }))
+      .query(async ({ input }) => {
+        return await db.getAiScriptsByCategory(input.category);
+      }),
+
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          title: z.string().min(1).optional(),
+          category: z.enum(["master", "residential", "commercial", "vrv_vrf", "objections", "custom"]).optional(),
+          content: z.string().min(1).optional(),
+          isActive: z.boolean().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...updates } = input;
+        await db.updateAiScript(id, updates);
+        return { success: true };
+      }),
+
+    delete: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteAiScript(input.id);
+        return { success: true };
+      }),
+  }),
+
   // Webhook endpoints for external services
   webhooks: router({
 
