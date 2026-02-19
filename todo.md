@@ -169,3 +169,10 @@
 - [x] Create getAllCredentials endpoint to fetch all credentials at once
 - [x] Fix TypeScript errors in credential loading logic
 - [x] Test all four credential tabs (Vapi, Twilio, Facebook, Google)
+
+## Vapi Integration Setup
+- [x] Save user's Vapi API key to database
+- [x] Save user's Vapi Assistant ID to database
+- [x] Verify credentials are stored correctly
+- [x] Provide webhook configuration instructions
+- [ ] Test Vapi integration with live credentials
