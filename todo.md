@@ -202,3 +202,10 @@
 - [x] Add script categories (Master, Residential, Commercial, VRV/VRF, Objections, Custom)
 - [x] Add copy-to-clipboard functionality for each script
 - [ ] Test full CRUD workflow (create, read, update, delete)
+
+## Navigation & Routing Fixes
+- [x] Investigate why AI Script Manager shows 404 on published site (route exists in code, needs publishing)
+- [x] Remove Dashboard link from front page navigation
+- [x] Remove AI VA link from front page navigation
+- [x] Test all navigation links work correctly
+- [ ] Verify changes on both dev and production
