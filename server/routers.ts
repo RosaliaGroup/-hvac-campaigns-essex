@@ -134,6 +134,20 @@ export const appRouter = router({
         return await db.getAiVaCredentials(input.service);
       }),
 
+    getAllCredentials: protectedProcedure
+      .query(async () => {
+        // Get all credentials for all services
+        const services = ["vapi", "twilio", "facebook", "google_business"] as const;
+        const allCredentials = await Promise.all(
+          services.map(async (service) => {
+            const creds = await db.getAiVaCredentials(service);
+            return creds ? { service, credentials: creds } : null;
+          })
+        );
+        // Filter out null values (services with no credentials)
+        return allCredentials.filter(c => c !== null);
+      }),
+
     listCallLogs: protectedProcedure
       .input(
         z.object({

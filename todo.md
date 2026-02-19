@@ -160,3 +160,12 @@
 - [x] Add proper form validation and error handling
 - [x] Test credential saving and retrieval
 - [x] Push database schema to create AI VA tables
+
+## AI VA Settings Credential Persistence Bug
+- [x] Debug why credentials don't persist after clicking save
+- [x] Check if credentials are being loaded on page refresh
+- [x] Add visual feedback (toast notifications) when save succeeds/fails
+- [x] Verify database queries are working correctly
+- [x] Create getAllCredentials endpoint to fetch all credentials at once
+- [x] Fix TypeScript errors in credential loading logic
+- [x] Test all four credential tabs (Vapi, Twilio, Facebook, Google)

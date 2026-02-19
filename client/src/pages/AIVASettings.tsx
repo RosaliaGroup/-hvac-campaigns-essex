@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -36,12 +36,53 @@ export default function AIVASettings() {
 
   const [activeTab, setActiveTab] = useState("vapi");
 
+  // Load existing credentials
+  const { data: credentials, refetch: refetchCredentials } = trpc.aiVa.getAllCredentials.useQuery();
+
+  // Populate form fields when credentials are loaded
+  useEffect(() => {
+    if (credentials) {
+      // Load Vapi credentials
+      const vapiCreds = credentials.find((c: any) => c.service === 'vapi');
+      if (vapiCreds && vapiCreds.credentials) {
+        setVapiApiKey(vapiCreds.credentials.apiKey || "");
+        setVapiAssistantId(vapiCreds.credentials.assistantId || "");
+      }
+
+      // Load Twilio credentials
+      const twilioCreds = credentials.find((c: any) => c.service === 'twilio');
+      if (twilioCreds && twilioCreds.credentials) {
+        setTwilioAccountSid(twilioCreds.credentials.accountSid || "");
+        setTwilioAuthToken(twilioCreds.credentials.authToken || "");
+        setTwilioPhoneNumber(twilioCreds.credentials.phoneNumber || "");
+      }
+
+      // Load Facebook credentials
+      const facebookCreds = credentials.find((c: any) => c.service === 'facebook');
+      if (facebookCreds && facebookCreds.credentials) {
+        setFacebookAppId(facebookCreds.credentials.appId || "");
+        setFacebookAppSecret(facebookCreds.credentials.appSecret || "");
+        setFacebookAccessToken(facebookCreds.credentials.accessToken || "");
+      }
+
+      // Load Google credentials
+      const googleCreds = credentials.find((c: any) => c.service === 'google_business');
+      if (googleCreds && googleCreds.credentials) {
+        setGoogleApiKey(googleCreds.credentials.apiKey || "");
+        setGoogleClientId(googleCreds.credentials.clientId || "");
+        setGoogleClientSecret(googleCreds.credentials.clientSecret || "");
+      }
+    }
+  }, [credentials]);
+
   const saveCredentialsMutation = trpc.aiVa.saveCredentials.useMutation({
     onSuccess: () => {
       toast({
         title: "Success",
         description: "Credentials saved securely",
       });
+      // Reload credentials after successful save
+      refetchCredentials();
     },
     onError: (error) => {
       toast({
