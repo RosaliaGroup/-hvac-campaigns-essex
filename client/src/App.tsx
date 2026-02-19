@@ -22,6 +22,7 @@ import AIVASettings from "./pages/AIVASettings";
 import LeadScoringDashboard from "./pages/LeadScoringDashboard";
 import AIAssistantPrompts from "./pages/AIAssistantPrompts";
 import AIScriptManager from "./pages/AIScriptManager";
+import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
 import ExitIntentPopup from "./components/ExitIntentPopup";
 
@@ -48,6 +49,7 @@ function Router() {
       <Route path={"/lead-scoring"} component={LeadScoringDashboard} />
       <Route path={"/ai-assistant-prompts"} component={AIAssistantPrompts} />
       <Route path={"/ai-script-manager"} component={AIScriptManager} />
+      <Route path={"/admin"} component={AdminPortal} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
