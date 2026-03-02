@@ -16,7 +16,7 @@ export default function LPRebateGuide() {
       setSubmitted(true);
     },
     onError: () => {
-      toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Please call (862) 419-1763", variant: "destructive" });
     },
   });
 
@@ -98,7 +98,7 @@ export default function LPRebateGuide() {
                   <p className="text-gray-600 mb-2">Your free guide is on its way to <strong>{form.email}</strong></p>
                   <p className="text-gray-500 text-sm mb-6">Didn't receive it? Check your spam folder or call us directly.</p>
                   <div className="space-y-3">
-                    <a href="tel:+18624239396">
+                    <a href="tel:+18624191763">
                       <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold">
                         <Phone className="h-4 w-4 mr-2" /> Call for a Free Estimate
                       </Button>
@@ -174,9 +174,9 @@ export default function LPRebateGuide() {
             <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
               <Download className="h-5 w-5 mr-2" /> Download Free Guide
             </Button>
-            <a href="tel:+18624239396">
+            <a href="tel:+18624191763">
               <Button size="lg" variant="outline" className="border-[#1e3a5f] text-[#1e3a5f]">
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
               </Button>
             </a>
           </div>

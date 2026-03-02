@@ -60,7 +60,7 @@ export default function Careers() {
 
             <div className="mt-6 text-center text-sm text-slate-600">
               <p>Prefer to email your resume? Send it to <a href="mailto:sales@mechanicalenterprise.com" className="text-[#ff6b35] hover:underline font-semibold">sales@mechanicalenterprise.com</a></p>
-              <p className="mt-2">Questions? Call us at <a href="tel:862-423-9396" className="text-[#ff6b35] hover:underline font-semibold">(862) 423-9396</a></p>
+              <p className="mt-2">Questions? Call us at <a href="tel:862-419-1763" className="text-[#ff6b35] hover:underline font-semibold">(862) 419-1763</a></p>
             </div>
           </div>
         </div>

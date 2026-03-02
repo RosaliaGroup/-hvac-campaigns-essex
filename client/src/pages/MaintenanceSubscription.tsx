@@ -722,7 +722,7 @@ export default function MaintenanceSubscription() {
                 </Button>
               </Link>
               <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20">
-                <a href="tel:8624239396">Call (862) 423-9396</a>
+                <a href="tel:8624191763">Call (862) 419-1763</a>
               </Button>
             </div>
           </div>

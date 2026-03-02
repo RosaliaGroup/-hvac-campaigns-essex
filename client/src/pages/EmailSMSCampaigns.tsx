@@ -76,11 +76,11 @@ To find out exactly how much you qualify for, we'd love to schedule a FREE in-ho
 ✅ Calculate your exact incentive amount
 ✅ Provide a detailed quote with no obligation
 
-Ready to get started? Reply to this email or call us at (862) 423-9396.
+Ready to get started? Reply to this email or call us at (862) 419-1763.
 
 Warm regards,
 The Mechanical Enterprise Team
-(862) 423-9396 | mechanicalenterprise.com
+(862) 419-1763 | mechanicalenterprise.com
 WMBE/SBE Certified | Licensed & Insured`,
         cta: "Book Your Free Assessment",
         ctaUrl: "https://mechanicalenterprise.com/contact",
@@ -106,7 +106,7 @@ Would any of these times work for you?
 • Thursday or Friday morning
 • Saturday morning
 
-Just reply with what works, or call us directly at (862) 423-9396.
+Just reply with what works, or call us directly at (862) 419-1763.
 
 Best,
 The Mechanical Enterprise Team`,
@@ -136,7 +136,7 @@ If you're considering upgrading your HVAC system this year, the best time to act
 
 Our free in-home assessment takes about 45 minutes and gives you a complete picture of your options, costs, and incentive eligibility. No pressure, no obligation.
 
-Call us at (862) 423-9396 or book online.
+Call us at (862) 419-1763 or book online.
 
 Best regards,
 Mechanical Enterprise Team`,
@@ -160,13 +160,13 @@ A few things to keep in mind:
 • Licensed, insured, WMBE/SBE certified
 • 20+ years serving Essex County and NJ
 
-When the time is right, give us a call at (862) 423-9396 or visit mechanicalenterprise.com.
+When the time is right, give us a call at (862) 419-1763 or visit mechanicalenterprise.com.
 
 We'd love to help you save money and improve your home's comfort.
 
 Take care,
 Mechanical Enterprise Team
-(862) 423-9396`,
+(862) 419-1763`,
         cta: "Visit Our Website",
         ctaUrl: "https://mechanicalenterprise.com",
       },
@@ -204,7 +204,7 @@ Our commercial HVAC services include:
 
 We'd like to schedule a complimentary commercial site survey to assess your current systems and identify the best upgrade path and incentive opportunities.
 
-Please reply or call us at (862) 423-9396 to schedule.
+Please reply or call us at (862) 419-1763 to schedule.
 
 Best regards,
 Mechanical Enterprise Commercial Team
@@ -233,7 +233,7 @@ Combined with available incentives covering up to 80% of installation costs, the
 
 Our team can provide a detailed ROI analysis for your specific property during a free site survey.
 
-Available this week for commercial assessments. Call (862) 423-9396 or reply to schedule.
+Available this week for commercial assessments. Call (862) 419-1763 or reply to schedule.
 
 Best regards,
 Mechanical Enterprise Commercial Team`,
@@ -253,22 +253,22 @@ const smsSequences: SMSSequence[] = [
     steps: [
       {
         day: 0,
-        message: "Hi {{first_name}}! This is Mechanical Enterprise. Thanks for your interest in HVAC incentives. We'll be in touch shortly to schedule your free assessment. Questions? Call (862) 423-9396. Reply STOP to opt out.",
+        message: "Hi {{first_name}}! This is Mechanical Enterprise. Thanks for your interest in HVAC incentives. We'll be in touch shortly to schedule your free assessment. Questions? Call (862) 419-1763. Reply STOP to opt out.",
         timing: "Within 5 minutes of form submission",
       },
       {
         day: 1,
-        message: "Hi {{first_name}}, Mechanical Enterprise here. Did you get a chance to review the incentive info we sent? We have openings this week for free in-home assessments. Interested? Reply YES or call (862) 423-9396.",
+        message: "Hi {{first_name}}, Mechanical Enterprise here. Did you get a chance to review the incentive info we sent? We have openings this week for free in-home assessments. Interested? Reply YES or call (862) 419-1763.",
         timing: "Next day, 10am",
       },
       {
         day: 3,
-        message: "{{first_name}}, just a reminder — NJ heat pump incentives up to $16K are available now. Free estimate, no obligation. Call (862) 423-9396 or visit mechanicalenterprise.com. Reply STOP to opt out.",
+        message: "{{first_name}}, just a reminder — NJ heat pump incentives up to $16K are available now. Free estimate, no obligation. Call (862) 419-1763 or visit mechanicalenterprise.com. Reply STOP to opt out.",
         timing: "Day 3, 11am",
       },
       {
         day: 7,
-        message: "Hi {{first_name}}! Mechanical Enterprise checking in. Still interested in HVAC incentives? We're booking free assessments for this week. Call (862) 423-9396. Reply STOP to unsubscribe.",
+        message: "Hi {{first_name}}! Mechanical Enterprise checking in. Still interested in HVAC incentives? We're booking free assessments for this week. Call (862) 419-1763. Reply STOP to unsubscribe.",
         timing: "Day 7, 10am",
       },
     ],
@@ -281,17 +281,17 @@ const smsSequences: SMSSequence[] = [
     steps: [
       {
         day: -2,
-        message: "Hi {{first_name}}! Reminder: Your free HVAC assessment with Mechanical Enterprise is scheduled for {{appointment_date}} at {{appointment_time}}. Questions? Call (862) 423-9396. Reply CONFIRM to confirm.",
+        message: "Hi {{first_name}}! Reminder: Your free HVAC assessment with Mechanical Enterprise is scheduled for {{appointment_date}} at {{appointment_time}}. Questions? Call (862) 419-1763. Reply CONFIRM to confirm.",
         timing: "2 days before appointment",
       },
       {
         day: -1,
-        message: "{{first_name}}, see you tomorrow! Your Mechanical Enterprise assessment is at {{appointment_time}}. Our tech will review your system and calculate your exact incentive amount. Call (862) 423-9396 if you need to reschedule.",
+        message: "{{first_name}}, see you tomorrow! Your Mechanical Enterprise assessment is at {{appointment_time}}. Our tech will review your system and calculate your exact incentive amount. Call (862) 419-1763 if you need to reschedule.",
         timing: "Day before appointment, 5pm",
       },
       {
         day: 0,
-        message: "Good morning {{first_name}}! Your Mechanical Enterprise assessment is today at {{appointment_time}}. Our technician will arrive in a Mechanical Enterprise vehicle. Call (862) 423-9396 with any questions.",
+        message: "Good morning {{first_name}}! Your Mechanical Enterprise assessment is today at {{appointment_time}}. Our technician will arrive in a Mechanical Enterprise vehicle. Call (862) 419-1763 with any questions.",
         timing: "Day of appointment, 8am",
       },
     ],
@@ -304,17 +304,17 @@ const smsSequences: SMSSequence[] = [
     steps: [
       {
         day: 0,
-        message: "Hi {{first_name}}, thanks for having us today! We'll send your detailed proposal and incentive breakdown within 24 hours. Questions? Call (862) 423-9396. — Mechanical Enterprise Team",
+        message: "Hi {{first_name}}, thanks for having us today! We'll send your detailed proposal and incentive breakdown within 24 hours. Questions? Call (862) 419-1763. — Mechanical Enterprise Team",
         timing: "Same day as visit, within 2 hours",
       },
       {
         day: 2,
-        message: "{{first_name}}, your HVAC proposal is ready! Check your email for the full breakdown including your incentive eligibility. Ready to move forward? Call (862) 423-9396. We can schedule installation within the week.",
+        message: "{{first_name}}, your HVAC proposal is ready! Check your email for the full breakdown including your incentive eligibility. Ready to move forward? Call (862) 419-1763. We can schedule installation within the week.",
         timing: "2 days after visit",
       },
       {
         day: 5,
-        message: "Hi {{first_name}}, Mechanical Enterprise here. Just checking in on your proposal. Any questions about the incentives or installation process? We're happy to walk you through everything. Call (862) 423-9396.",
+        message: "Hi {{first_name}}, Mechanical Enterprise here. Just checking in on your proposal. Any questions about the incentives or installation process? We're happy to walk you through everything. Call (862) 419-1763.",
         timing: "5 days after visit",
       },
     ],

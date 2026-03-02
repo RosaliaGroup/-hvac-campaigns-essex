@@ -16,7 +16,7 @@ export default function LPMaintenanceOffer() {
       setSubmitted(true);
     },
     onError: () => {
-      toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Please call (862) 419-1763", variant: "destructive" });
     },
   });
 
@@ -88,7 +88,7 @@ export default function LPMaintenanceOffer() {
                   <Calendar className="h-16 w-16 text-green-500 mx-auto mb-4" />
                   <h3 className="text-2xl font-bold text-[#1e3a5f] mb-2">You're Booked!</h3>
                   <p className="text-gray-600 mb-4">We'll call you within 2 hours to confirm your appointment time.</p>
-                  <a href="tel:+18624239396">
+                  <a href="tel:+18624191763">
                     <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold">
                       <Phone className="h-4 w-4 mr-2" /> Call to Schedule Immediately
                     </Button>
@@ -190,9 +190,9 @@ export default function LPMaintenanceOffer() {
             <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold px-8" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
               Book $89 Tune-Up <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
-            <a href="tel:+18624239396">
+            <a href="tel:+18624191763">
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
               </Button>
             </a>
           </div>

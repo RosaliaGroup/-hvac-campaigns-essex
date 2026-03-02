@@ -73,7 +73,7 @@ const campaigns: Campaign[] = [
           "VRV/VRF System Experts",
         ],
         descriptions: [
-          "Stack PSE&G, NJ Clean Energy & federal incentives for up to $16K back. Free in-home estimate. Call (862) 423-9396.",
+          "Stack PSE&G, NJ Clean Energy & federal incentives for up to $16K back. Free in-home estimate. Call (862) 419-1763.",
           "WMBE/SBE certified HVAC contractor. Over 4,000 residential installations. Get your free quote today.",
           "Authorized dealer for top HVAC brands. Expert heat pump installation across 15 NJ counties. Book now.",
           "Don't leave money on the table. Our team handles all rebate paperwork for you. Free consultation.",
@@ -130,10 +130,10 @@ const campaigns: Campaign[] = [
           "Same-Day HVAC Repair Essex County",
           "Emergency AC Repair – Fast Response",
           "No Heat? We Fix It Today",
-          "HVAC Emergency – (862) 423-9396",
+          "HVAC Emergency – (862) 419-1763",
         ],
         descriptions: [
-          "24/7 emergency HVAC service across Essex County and surrounding NJ areas. Fast response. Call (862) 423-9396.",
+          "24/7 emergency HVAC service across Essex County and surrounding NJ areas. Fast response. Call (862) 419-1763.",
           "Furnace or AC emergency? Our licensed technicians are on call. Same-day service available. Call now.",
         ],
         finalUrl: "https://mechanicalenterprise.com/contact",
@@ -177,7 +177,7 @@ const campaigns: Campaign[] = [
         ],
         descriptions: [
           "Commercial HVAC incentives up to 80% available. VRV/VRF specialists with BMS integration expertise. Free assessment.",
-          "2.6 million sq ft of commercial space served. Hotels, restaurants, healthcare, office buildings. Call (862) 423-9396.",
+          "2.6 million sq ft of commercial space served. Hotels, restaurants, healthcare, office buildings. Call (862) 419-1763.",
           "WMBE/SBE certified. Authorized commercial HVAC dealer. JCP&L and utility incentives available. Get a quote.",
           "Expert commercial HVAC design, installation, and commissioning. BIM technology. Serving all 15 NJ counties.",
         ],
@@ -268,7 +268,7 @@ const campaigns: Campaign[] = [
         ],
         descriptions: [
           "Mechanical Enterprise – WMBE/SBE certified HVAC specialists serving Essex County and 14 other NJ counties.",
-          "20+ years of HVAC excellence. 4,000+ residential installs. 2.6M sq ft commercial. Call (862) 423-9396.",
+          "20+ years of HVAC excellence. 4,000+ residential installs. 2.6M sq ft commercial. Call (862) 419-1763.",
         ],
         finalUrl: "https://mechanicalenterprise.com",
         bid: "$4–$8 CPC",
@@ -529,7 +529,7 @@ export default function GoogleAdsCampaigns() {
                     "Add conversion tracking tag (AW-17768263516) — already on site",
                     "Set up billing with credit card",
                     "Verify business address for location extensions",
-                    "Add phone number (862) 423-9396 as call extension",
+                    "Add phone number (862) 419-1763 as call extension",
                     "Upload logo for responsive display ads",
                     "Set geo-targeting to Essex + surrounding NJ counties",
                   ].map((item, i) => (
@@ -544,7 +544,7 @@ export default function GoogleAdsCampaigns() {
                 <h3 className="font-semibold text-[#1e3a5f] mb-3">Ad Extensions to Add</h3>
                 <div className="space-y-2 text-sm">
                   {[
-                    "Call extension: (862) 423-9396",
+                    "Call extension: (862) 419-1763",
                     "Location extension: Essex County, NJ service area",
                     "Sitelink: Residential Rebates → /residential",
                     "Sitelink: Commercial HVAC → /commercial",

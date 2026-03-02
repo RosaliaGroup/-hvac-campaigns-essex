@@ -19,7 +19,7 @@ export default function LPEmergencyHVAC() {
       }
     },
     onError: () => {
-      toast({ title: "Something went wrong", description: "Call us now: (862) 423-9396", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Call us now: (862) 419-1763", variant: "destructive" });
     },
   });
 
@@ -44,7 +44,7 @@ export default function LPEmergencyHVAC() {
     <div className="min-h-screen bg-white font-sans">
       {/* Urgent Top Bar */}
       <div className="bg-red-600 text-white py-3 px-4 text-center font-bold text-sm animate-pulse">
-        🚨 HVAC EMERGENCY? Call Now: (862) 423-9396 — Same-Day Service Available
+        🚨 HVAC EMERGENCY? Call Now: (862) 419-1763 — Same-Day Service Available
       </div>
 
       {/* Hero */}
@@ -73,9 +73,9 @@ export default function LPEmergencyHVAC() {
                 ))}
               </div>
               {/* Urgent Call CTA */}
-              <a href="tel:+18624239396">
+              <a href="tel:+18624191763">
                 <Button size="lg" className="bg-red-500 hover:bg-red-600 text-white font-bold text-lg px-8 py-4 w-full md:w-auto">
-                  <Phone className="h-5 w-5 mr-2" /> Call Now: (862) 423-9396
+                  <Phone className="h-5 w-5 mr-2" /> Call Now: (862) 419-1763
                 </Button>
               </a>
             </div>
@@ -87,7 +87,7 @@ export default function LPEmergencyHVAC() {
                   <AlertTriangle className="h-16 w-16 text-red-500 mx-auto mb-4" />
                   <h3 className="text-2xl font-bold text-[#1e3a5f] mb-2">We're On It!</h3>
                   <p className="text-gray-600 mb-4">A technician will call you within 30 minutes to confirm your appointment.</p>
-                  <a href="tel:+18624239396">
+                  <a href="tel:+18624191763">
                     <Button className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3">
                       <Phone className="h-4 w-4 mr-2" /> Call Now for Faster Service
                     </Button>
@@ -189,9 +189,9 @@ export default function LPEmergencyHVAC() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold mb-3">Don't Wait — Call Now</h2>
           <p className="text-white/90 mb-6">Every hour without HVAC costs you comfort and potentially damages your system further.</p>
-          <a href="tel:+18624239396">
+          <a href="tel:+18624191763">
             <Button size="lg" className="bg-white text-red-600 hover:bg-gray-100 font-bold text-xl px-12 py-5">
-              <Phone className="h-6 w-6 mr-2" /> (862) 423-9396
+              <Phone className="h-6 w-6 mr-2" /> (862) 419-1763
             </Button>
           </a>
           <p className="text-white/60 text-xs mt-4">Serving 15 NJ Counties · Licensed & Insured · Available 24/7</p>
