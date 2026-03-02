@@ -14,7 +14,10 @@ import {
   Calendar,
   TrendingUp,
   Shield,
-  LogOut
+  LogOut,
+  Search,
+  Mail,
+  Zap
 } from "lucide-react";
 import { getLoginUrl } from "@/const";
 
@@ -91,6 +94,38 @@ export default function AdminPortal() {
       ]
     },
     {
+      title: "Lead Generation Campaigns",
+      description: "Ready-to-launch multi-channel campaigns to get more business",
+      icon: Zap,
+      color: "bg-orange-500",
+      tools: [
+        {
+          name: "Campaign Generator",
+          description: "Multi-channel campaign hub with launch checklists and ROI calculator",
+          icon: TrendingUp,
+          path: "/campaign-generator",
+          badge: "New"
+        },
+        {
+          name: "Google Ads Campaigns",
+          description: "Ready-to-launch search ad copy, keywords, and targeting for NJ",
+          icon: Search,
+          path: "/google-ads-campaigns"
+        },
+        {
+          name: "Facebook & Instagram Ads",
+          description: "Social media ad copy, audiences, and creative briefs",
+          icon: Users,
+          path: "/facebook-campaigns"
+        },
+        {
+          name: "Email & SMS Sequences",
+          description: "Automated nurture sequences for residential and commercial leads",
+          icon: Mail,
+          path: "/email-sms-campaigns"
+        }
+      ]
+    },    {
       title: "AI Virtual Assistant",
       description: "Manage AI-powered lead generation and automation",
       icon: Bot,

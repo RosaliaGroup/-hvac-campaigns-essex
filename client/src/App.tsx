@@ -23,6 +23,10 @@ import LeadScoringDashboard from "./pages/LeadScoringDashboard";
 import AIAssistantPrompts from "./pages/AIAssistantPrompts";
 import AIScriptManager from "./pages/AIScriptManager";
 import AdminPortal from "./pages/AdminPortal";
+import GoogleAdsCampaigns from "./pages/GoogleAdsCampaigns";
+import FacebookCampaigns from "./pages/FacebookCampaigns";
+import EmailSMSCampaigns from "./pages/EmailSMSCampaigns";
+import CampaignGenerator from "./pages/CampaignGenerator";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -49,6 +53,10 @@ function Router() {
       <Route path={"/ai-assistant-prompts"} component={AIAssistantPrompts} />
       <Route path={"/ai-script-manager"} component={AIScriptManager} />
       <Route path={"/admin"} component={AdminPortal} />
+      <Route path={"/campaign-generator"} component={CampaignGenerator} />
+      <Route path={"/google-ads-campaigns"} component={GoogleAdsCampaigns} />
+      <Route path={"/facebook-campaigns"} component={FacebookCampaigns} />
+      <Route path={"/email-sms-campaigns"} component={EmailSMSCampaigns} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -1,0 +1,585 @@
+import { useState } from "react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "wouter";
+import { toast } from "sonner";
+import {
+  ArrowLeft, Copy, ExternalLink, Search, DollarSign, Target, Zap,
+  Home, Building2, Wrench, AlertTriangle, CheckCircle, TrendingUp
+} from "lucide-react";
+import { getLoginUrl } from "@/const";
+
+interface AdGroup {
+  name: string;
+  keywords: string[];
+  negativeKeywords: string[];
+  headlines: string[];
+  descriptions: string[];
+  finalUrl: string;
+  bid: string;
+}
+
+interface Campaign {
+  id: string;
+  name: string;
+  icon: React.ElementType;
+  color: string;
+  budget: string;
+  goal: string;
+  targetCPA: string;
+  geoTarget: string;
+  adGroups: AdGroup[];
+}
+
+const campaigns: Campaign[] = [
+  {
+    id: "residential-rebates",
+    name: "Residential Rebates & Heat Pumps",
+    icon: Home,
+    color: "bg-green-500",
+    budget: "$50–$80/day",
+    goal: "Lead form submissions",
+    targetCPA: "$80–$120",
+    geoTarget: "Essex, Morris, Union, Bergen, Passaic, Hudson Counties NJ",
+    adGroups: [
+      {
+        name: "Heat Pump Rebates",
+        keywords: [
+          "heat pump rebates NJ",
+          "NJ heat pump incentive",
+          "heat pump installation Essex County NJ",
+          "PSE&G heat pump rebate",
+          "NJ clean energy heat pump",
+          "heat pump rebate 2025 New Jersey",
+          "heat pump rebates near me",
+          "heat pump installation near me NJ",
+        ],
+        negativeKeywords: ["DIY", "how to", "YouTube", "manual", "parts only", "used", "cheap"],
+        headlines: [
+          "Up to $16K in Heat Pump Incentives",
+          "NJ Heat Pump Rebates Available Now",
+          "Free Quote – Heat Pump Installation",
+          "PSE&G + Federal Incentives Stacked",
+          "Essex County HVAC Specialists",
+          "WMBE Certified HVAC Contractor",
+          "20+ Years HVAC Experience NJ",
+          "Heat Pump Install – Same Week",
+          "Get Your Rebate Guide Free",
+          "Serving 15 NJ Counties",
+          "Licensed & Insured HVAC Pros",
+          "VRV/VRF System Experts",
+        ],
+        descriptions: [
+          "Stack PSE&G, NJ Clean Energy & federal incentives for up to $16K back. Free in-home estimate. Call (862) 423-9396.",
+          "WMBE/SBE certified HVAC contractor. Over 4,000 residential installations. Get your free quote today.",
+          "Authorized dealer for top HVAC brands. Expert heat pump installation across 15 NJ counties. Book now.",
+          "Don't leave money on the table. Our team handles all rebate paperwork for you. Free consultation.",
+        ],
+        finalUrl: "https://mechanicalenterprise.com/residential",
+        bid: "$8–$14 CPC",
+      },
+      {
+        name: "AC Installation & Replacement",
+        keywords: [
+          "AC installation Essex County NJ",
+          "central air conditioning installation NJ",
+          "new AC unit installation NJ",
+          "air conditioner replacement NJ",
+          "HVAC installation near me",
+          "central air install cost NJ",
+          "AC replacement near me Essex County",
+        ],
+        negativeKeywords: ["repair", "fix", "broken", "not working", "DIY", "window unit"],
+        headlines: [
+          "New AC Installation – Free Quote",
+          "Central Air Install Essex County NJ",
+          "Energy-Efficient AC Systems",
+          "AC Replacement – Same Week Service",
+          "Top HVAC Brands – Best Prices",
+          "Licensed AC Installers NJ",
+          "Financing Available – 0% Interest",
+          "Free In-Home AC Assessment",
+        ],
+        descriptions: [
+          "Expert central air conditioning installation across Essex County and 14 other NJ counties. Free estimates.",
+          "Energy-efficient systems with available financing. WMBE certified. Over 20 years experience. Call today.",
+          "Authorized dealer for premium HVAC brands. Professional installation with full warranty. Get a quote.",
+          "Beat the summer heat. Fast installation, competitive pricing, and rebate assistance. Book your free visit.",
+        ],
+        finalUrl: "https://mechanicalenterprise.com/residential",
+        bid: "$7–$12 CPC",
+      },
+      {
+        name: "Emergency HVAC Service",
+        keywords: [
+          "emergency HVAC repair NJ",
+          "24/7 HVAC repair Essex County",
+          "furnace not working NJ",
+          "AC not working emergency NJ",
+          "HVAC emergency service near me",
+          "heating emergency NJ",
+          "no heat NJ emergency",
+        ],
+        negativeKeywords: ["DIY", "how to fix", "YouTube", "parts"],
+        headlines: [
+          "24/7 Emergency HVAC Service NJ",
+          "Furnace Not Working? Call Now",
+          "Same-Day HVAC Repair Essex County",
+          "Emergency AC Repair – Fast Response",
+          "No Heat? We Fix It Today",
+          "HVAC Emergency – (862) 423-9396",
+        ],
+        descriptions: [
+          "24/7 emergency HVAC service across Essex County and surrounding NJ areas. Fast response. Call (862) 423-9396.",
+          "Furnace or AC emergency? Our licensed technicians are on call. Same-day service available. Call now.",
+        ],
+        finalUrl: "https://mechanicalenterprise.com/contact",
+        bid: "$12–$20 CPC",
+      },
+    ],
+  },
+  {
+    id: "commercial-hvac",
+    name: "Commercial HVAC & VRV/VRF Systems",
+    icon: Building2,
+    color: "bg-blue-500",
+    budget: "$60–$100/day",
+    goal: "Lead form submissions + calls",
+    targetCPA: "$120–$200",
+    geoTarget: "All 15 NJ Counties + NYC Metro",
+    adGroups: [
+      {
+        name: "Commercial HVAC Installation",
+        keywords: [
+          "commercial HVAC installation NJ",
+          "commercial air conditioning NJ",
+          "commercial HVAC contractor Essex County",
+          "office building HVAC NJ",
+          "commercial heating cooling NJ",
+          "commercial HVAC company New Jersey",
+          "industrial HVAC NJ",
+          "hotel HVAC system NJ",
+        ],
+        negativeKeywords: ["residential", "home", "house", "DIY", "repair parts"],
+        headlines: [
+          "Commercial HVAC – Up to 80% Rebates",
+          "VRV/VRF System Specialists NJ",
+          "Commercial HVAC Installation NJ",
+          "2.6M Sq Ft Commercial Experience",
+          "Hotels, Offices, Retail HVAC NJ",
+          "WMBE Certified Commercial HVAC",
+          "BMS Integration Specialists",
+          "Free Commercial HVAC Assessment",
+          "JCP&L Commercial Rebates Available",
+        ],
+        descriptions: [
+          "Commercial HVAC incentives up to 80% available. VRV/VRF specialists with BMS integration expertise. Free assessment.",
+          "2.6 million sq ft of commercial space served. Hotels, restaurants, healthcare, office buildings. Call (862) 423-9396.",
+          "WMBE/SBE certified. Authorized commercial HVAC dealer. JCP&L and utility incentives available. Get a quote.",
+          "Expert commercial HVAC design, installation, and commissioning. BIM technology. Serving all 15 NJ counties.",
+        ],
+        finalUrl: "https://mechanicalenterprise.com/commercial",
+        bid: "$10–$18 CPC",
+      },
+      {
+        name: "VRV/VRF Systems",
+        keywords: [
+          "VRV system installation NJ",
+          "VRF system NJ",
+          "variable refrigerant flow NJ",
+          "Daikin VRV NJ",
+          "multi-zone HVAC NJ",
+          "VRF heat pump NJ",
+          "VRV HVAC contractor New Jersey",
+        ],
+        negativeKeywords: ["DIY", "repair", "parts", "used"],
+        headlines: [
+          "VRV/VRF System Specialists NJ",
+          "Multi-Zone HVAC – Expert Install",
+          "Daikin VRV Authorized Dealer NJ",
+          "Energy-Efficient VRF Systems",
+          "VRV Install – Free Site Survey",
+          "Smart Building HVAC Integration",
+        ],
+        descriptions: [
+          "VRV/VRF system specialists with BMS and BIM technology expertise. Multi-zone climate control for commercial properties.",
+          "Authorized VRV/VRF dealer and installer. Energy-efficient solutions with up to 80% commercial incentives available.",
+        ],
+        finalUrl: "https://mechanicalenterprise.com/commercial",
+        bid: "$9–$16 CPC",
+      },
+      {
+        name: "HVAC Maintenance Contracts",
+        keywords: [
+          "commercial HVAC maintenance contract NJ",
+          "HVAC preventive maintenance NJ",
+          "HVAC service contract Essex County",
+          "commercial HVAC service plan NJ",
+          "HVAC maintenance company NJ",
+        ],
+        negativeKeywords: ["residential", "home", "DIY"],
+        headlines: [
+          "Commercial HVAC Maintenance Plans",
+          "Preventive HVAC Service NJ",
+          "HVAC Service Contracts – Save Money",
+          "Keep Systems Running Efficiently",
+          "Annual HVAC Maintenance NJ",
+        ],
+        descriptions: [
+          "Commercial HVAC maintenance contracts that prevent costly breakdowns. Serving NJ businesses for 20+ years.",
+          "Preventive maintenance programs, emergency priority service, and running tests. Protect your HVAC investment.",
+        ],
+        finalUrl: "https://mechanicalenterprise.com/maintenance",
+        bid: "$7–$12 CPC",
+      },
+    ],
+  },
+  {
+    id: "brand-awareness",
+    name: "Brand & Local Awareness",
+    icon: TrendingUp,
+    color: "bg-orange-500",
+    budget: "$20–$40/day",
+    goal: "Website visits + brand recall",
+    targetCPA: "$30–$60",
+    geoTarget: "Essex County + 10-mile radius",
+    adGroups: [
+      {
+        name: "Mechanical Enterprise Brand",
+        keywords: [
+          "Mechanical Enterprise HVAC NJ",
+          "mechanical enterprise essex county",
+          "HVAC contractor Essex County NJ",
+          "best HVAC company NJ",
+          "top rated HVAC NJ",
+          "HVAC company near me Essex County",
+          "local HVAC contractor NJ",
+        ],
+        negativeKeywords: ["cheap", "free", "DIY"],
+        headlines: [
+          "Mechanical Enterprise – HVAC NJ",
+          "Essex County's Trusted HVAC Pros",
+          "WMBE Certified – 20+ Years NJ",
+          "Top Rated HVAC Company NJ",
+          "Local HVAC Experts – Free Quote",
+        ],
+        descriptions: [
+          "Mechanical Enterprise – WMBE/SBE certified HVAC specialists serving Essex County and 14 other NJ counties.",
+          "20+ years of HVAC excellence. 4,000+ residential installs. 2.6M sq ft commercial. Call (862) 423-9396.",
+        ],
+        finalUrl: "https://mechanicalenterprise.com",
+        bid: "$4–$8 CPC",
+      },
+    ],
+  },
+];
+
+function copyToClipboard(text: string, label: string) {
+  navigator.clipboard.writeText(text);
+  toast.success(`${label} copied to clipboard!`);
+}
+
+function AdGroupCard({ group }: { group: AdGroup }) {
+  return (
+    <Card className="mb-4">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-semibold text-[#1e3a5f]">{group.name}</CardTitle>
+          <Badge variant="outline" className="text-xs">{group.bid}</Badge>
+        </div>
+        <CardDescription>Final URL: <span className="font-mono text-xs">{group.finalUrl}</span></CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Keywords */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-green-700">Keywords ({group.keywords.length})</p>
+            <Button
+              size="sm" variant="ghost" className="h-6 text-xs"
+              onClick={() => copyToClipboard(group.keywords.join("\n"), "Keywords")}
+            >
+              <Copy className="h-3 w-3 mr-1" /> Copy All
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {group.keywords.map((kw, i) => (
+              <span key={i} className="px-2 py-0.5 bg-green-50 text-green-800 text-xs rounded border border-green-200">{kw}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Negative Keywords */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-red-700">Negative Keywords</p>
+            <Button
+              size="sm" variant="ghost" className="h-6 text-xs"
+              onClick={() => copyToClipboard(group.negativeKeywords.join("\n"), "Negative Keywords")}
+            >
+              <Copy className="h-3 w-3 mr-1" /> Copy
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {group.negativeKeywords.map((kw, i) => (
+              <span key={i} className="px-2 py-0.5 bg-red-50 text-red-800 text-xs rounded border border-red-200">{kw}</span>
+            ))}
+          </div>
+        </div>
+
+        {/* Headlines */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-blue-700">Headlines ({group.headlines.length}/15 max)</p>
+            <Button
+              size="sm" variant="ghost" className="h-6 text-xs"
+              onClick={() => copyToClipboard(group.headlines.join("\n"), "Headlines")}
+            >
+              <Copy className="h-3 w-3 mr-1" /> Copy All
+            </Button>
+          </div>
+          <div className="space-y-1">
+            {group.headlines.map((h, i) => (
+              <div key={i} className="flex items-center justify-between bg-blue-50 px-3 py-1.5 rounded text-sm">
+                <span className="text-blue-900">{h}</span>
+                <span className="text-xs text-blue-400 ml-2">{h.length}/30</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Descriptions */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-purple-700">Descriptions ({group.descriptions.length}/4 max)</p>
+            <Button
+              size="sm" variant="ghost" className="h-6 text-xs"
+              onClick={() => copyToClipboard(group.descriptions.join("\n\n"), "Descriptions")}
+            >
+              <Copy className="h-3 w-3 mr-1" /> Copy All
+            </Button>
+          </div>
+          <div className="space-y-2">
+            {group.descriptions.map((d, i) => (
+              <div key={i} className="flex items-start justify-between bg-purple-50 px-3 py-2 rounded text-sm">
+                <span className="text-purple-900 flex-1">{d}</span>
+                <span className="text-xs text-purple-400 ml-2 whitespace-nowrap">{d.length}/90</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function GoogleAdsCampaigns() {
+  const { isAuthenticated, loading } = useAuth();
+  const [activeTab, setActiveTab] = useState(campaigns[0].id);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b35]"></div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    window.location.href = getLoginUrl();
+    return null;
+  }
+
+  const activeCampaign = campaigns.find(c => c.id === activeTab)!;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Header */}
+      <div className="bg-white border-b border-border shadow-sm">
+        <div className="container py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link href="/admin">
+                <Button variant="ghost" size="sm">
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Admin Portal
+                </Button>
+              </Link>
+              <div>
+                <h1 className="text-2xl font-bold text-[#1e3a5f] flex items-center gap-2">
+                  <Search className="h-6 w-6 text-[#ff6b35]" />
+                  Google Ads Campaigns
+                </h1>
+                <p className="text-sm text-muted-foreground">Ready-to-launch campaigns for Mechanical Enterprise</p>
+              </div>
+            </div>
+            <Button
+              className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+              onClick={() => window.open("https://ads.google.com", "_blank")}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" /> Open Google Ads
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="container py-8">
+        {/* Campaign Overview Cards */}
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
+          {campaigns.map(campaign => (
+            <Card
+              key={campaign.id}
+              className={`cursor-pointer transition-all ${activeTab === campaign.id ? "ring-2 ring-[#ff6b35] shadow-lg" : "hover:shadow-md"}`}
+              onClick={() => setActiveTab(campaign.id)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className={`${campaign.color} p-2 rounded-lg`}>
+                    <campaign.icon className="h-5 w-5 text-white" />
+                  </div>
+                  <CardTitle className="text-base">{campaign.name}</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                  <span><strong>Budget:</strong> {campaign.budget}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-blue-600" />
+                  <span><strong>Target CPA:</strong> {campaign.targetCPA}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-orange-500" />
+                  <span><strong>Ad Groups:</strong> {campaign.adGroups.length}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Campaign Detail */}
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className={`${activeCampaign.color} p-2 rounded-lg`}>
+                <activeCampaign.icon className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">{activeCampaign.name}</CardTitle>
+                <CardDescription>{activeCampaign.geoTarget}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-lg mb-6">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Daily Budget</p>
+                <p className="text-lg font-bold text-[#1e3a5f]">{activeCampaign.budget}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Campaign Goal</p>
+                <p className="text-sm font-semibold text-[#1e3a5f]">{activeCampaign.goal}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Target CPA</p>
+                <p className="text-lg font-bold text-green-600">{activeCampaign.targetCPA}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">Ad Groups</p>
+                <p className="text-lg font-bold text-blue-600">{activeCampaign.adGroups.length}</p>
+              </div>
+            </div>
+
+            {/* Ad Groups */}
+            <Tabs defaultValue={activeCampaign.adGroups[0].name}>
+              <TabsList className="mb-4 flex-wrap h-auto gap-1">
+                {activeCampaign.adGroups.map(group => (
+                  <TabsTrigger key={group.name} value={group.name} className="text-xs">
+                    {group.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {activeCampaign.adGroups.map(group => (
+                <TabsContent key={group.name} value={group.name}>
+                  <AdGroupCard group={group} />
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* Setup Checklist */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Google Ads Setup Checklist
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-semibold text-[#1e3a5f] mb-3">Before You Launch</h3>
+                <div className="space-y-2 text-sm">
+                  {[
+                    "Create Google Ads account at ads.google.com",
+                    "Link to Google Analytics for conversion tracking",
+                    "Add conversion tracking tag (AW-17768263516) — already on site",
+                    "Set up billing with credit card",
+                    "Verify business address for location extensions",
+                    "Add phone number (862) 423-9396 as call extension",
+                    "Upload logo for responsive display ads",
+                    "Set geo-targeting to Essex + surrounding NJ counties",
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded border-2 border-slate-300 flex-shrink-0 mt-0.5"></div>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="font-semibold text-[#1e3a5f] mb-3">Ad Extensions to Add</h3>
+                <div className="space-y-2 text-sm">
+                  {[
+                    "Call extension: (862) 423-9396",
+                    "Location extension: Essex County, NJ service area",
+                    "Sitelink: Residential Rebates → /residential",
+                    "Sitelink: Commercial HVAC → /commercial",
+                    "Sitelink: Get a Free Quote → /contact",
+                    "Sitelink: Rebate Guide → /rebate-guide",
+                    "Callout: WMBE/SBE Certified",
+                    "Callout: 20+ Years Experience",
+                    "Callout: 24/7 Emergency Service",
+                    "Callout: Free In-Home Estimates",
+                  ].map((item, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <div className="w-5 h-5 rounded border-2 border-slate-300 flex-shrink-0 mt-0.5"></div>
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-semibold text-amber-800">Recommended Starting Budget</p>
+                  <p className="text-amber-700 mt-1">
+                    Start with <strong>$100–$150/day total</strong> across all three campaigns for the first 2 weeks to gather data.
+                    At $9–$12 average CPC, expect 10–15 clicks/day per campaign and 3–5 leads/week initially.
+                    Scale up campaigns that show cost-per-lead under $120.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

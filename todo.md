@@ -257,3 +257,13 @@
 - [x] Check if ScrollRebatePopup component exists in client/src/components/
 - [x] Verify popups are imported in Home.tsx, ResidentialCampaigns.tsx, CommercialCampaigns.tsx
 - [x] Test all three popups to ensure they trigger correctly
+
+## Lead Generation Campaign System
+- [ ] Research NJ HVAC market, keywords, and competitor landscape
+- [ ] Build Google Ads campaign page with ad copy, keywords, and targeting settings
+- [ ] Build Facebook/Instagram campaign page with ad copy and audience targeting
+- [ ] Build email outreach sequences (residential, commercial, follow-up)
+- [ ] Build SMS follow-up campaign templates
+- [ ] Create Campaign Generator dashboard tying all channels together
+- [ ] Add launch checklists for each campaign channel
+- [ ] Test all campaign pages
