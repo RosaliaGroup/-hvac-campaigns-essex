@@ -27,6 +27,13 @@ import GoogleAdsCampaigns from "./pages/GoogleAdsCampaigns";
 import FacebookCampaigns from "./pages/FacebookCampaigns";
 import EmailSMSCampaigns from "./pages/EmailSMSCampaigns";
 import CampaignGenerator from "./pages/CampaignGenerator";
+import LPHeatPumpRebates from "./pages/lp/LPHeatPumpRebates";
+import LPCommercialVRV from "./pages/lp/LPCommercialVRV";
+import LPEmergencyHVAC from "./pages/lp/LPEmergencyHVAC";
+import LPFBResidential from "./pages/lp/LPFBResidential";
+import LPFBCommercial from "./pages/lp/LPFBCommercial";
+import LPRebateGuide from "./pages/lp/LPRebateGuide";
+import LPMaintenanceOffer from "./pages/lp/LPMaintenanceOffer";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -57,6 +64,14 @@ function Router() {
       <Route path={"/google-ads-campaigns"} component={GoogleAdsCampaigns} />
       <Route path={"/facebook-campaigns"} component={FacebookCampaigns} />
       <Route path={"/email-sms-campaigns"} component={EmailSMSCampaigns} />
+      {/* Campaign Landing Pages — no nav, optimized for paid traffic */}
+      <Route path={"/lp/heat-pump-rebates"} component={LPHeatPumpRebates} />
+      <Route path={"/lp/commercial-vrv"} component={LPCommercialVRV} />
+      <Route path={"/lp/emergency-hvac"} component={LPEmergencyHVAC} />
+      <Route path={"/lp/fb-residential"} component={LPFBResidential} />
+      <Route path={"/lp/fb-commercial"} component={LPFBCommercial} />
+      <Route path={"/lp/rebate-guide"} component={LPRebateGuide} />
+      <Route path={"/lp/maintenance-offer"} component={LPMaintenanceOffer} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

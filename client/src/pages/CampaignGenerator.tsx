@@ -460,6 +460,44 @@ export default function CampaignGenerator() {
           </CardContent>
         </Card>
 
+        {/* Dedicated Landing Pages */}
+        <div>
+          <h2 className="text-xl font-bold text-[#1e3a5f] mb-2">Dedicated Campaign Landing Pages</h2>
+          <p className="text-sm text-muted-foreground mb-4">No navigation distractions — each page is optimized for a single conversion goal. Use these URLs in your ad campaigns.</p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[
+              { label: "Google Ads · Residential", url: "/lp/heat-pump-rebates", desc: "Heat pump rebates up to $16K", color: "border-blue-200 bg-blue-50", badge: "Google Ads" },
+              { label: "Google Ads · Commercial", url: "/lp/commercial-vrv", desc: "VRV/VRF systems + 80% incentives", color: "border-blue-200 bg-blue-50", badge: "Google Ads" },
+              { label: "Google Ads · Emergency", url: "/lp/emergency-hvac", desc: "24/7 emergency HVAC service", color: "border-blue-200 bg-blue-50", badge: "Google Ads" },
+              { label: "Facebook · Residential", url: "/lp/fb-residential", desc: "NJ homeowners — rebate awareness", color: "border-indigo-200 bg-indigo-50", badge: "Facebook" },
+              { label: "Facebook · Commercial", url: "/lp/fb-commercial", desc: "Business owners — cost reduction", color: "border-indigo-200 bg-indigo-50", badge: "Facebook" },
+              { label: "Email · Rebate Guide", url: "/lp/rebate-guide", desc: "Free 2025 NJ incentive guide download", color: "border-green-200 bg-green-50", badge: "Email" },
+              { label: "SMS/Email · Tune-Up", url: "/lp/maintenance-offer", desc: "$89 spring tune-up special", color: "border-orange-200 bg-orange-50", badge: "SMS" },
+            ].map((lp) => (
+              <div key={lp.url} className={`border rounded-lg p-4 ${lp.color}`}>
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <Badge variant="outline" className="text-xs mb-1">{lp.badge}</Badge>
+                    <p className="font-semibold text-[#1e3a5f] text-sm">{lp.label}</p>
+                    <p className="text-xs text-muted-foreground">{lp.desc}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Link href={lp.url} className="flex-1">
+                    <Button size="sm" className="w-full text-xs bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+                      Preview <ExternalLink className="h-3 w-3 ml-1" />
+                    </Button>
+                  </Link>
+                  <Button size="sm" variant="outline" className="text-xs"
+                    onClick={() => { navigator.clipboard.writeText(window.location.origin + lp.url); }}>
+                    Copy URL
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* ROI Calculator Preview */}
         <Card className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white">
           <CardHeader>

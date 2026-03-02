@@ -259,11 +259,23 @@
 - [x] Test all three popups to ensure they trigger correctly
 
 ## Lead Generation Campaign System
-- [ ] Research NJ HVAC market, keywords, and competitor landscape
-- [ ] Build Google Ads campaign page with ad copy, keywords, and targeting settings
-- [ ] Build Facebook/Instagram campaign page with ad copy and audience targeting
-- [ ] Build email outreach sequences (residential, commercial, follow-up)
-- [ ] Build SMS follow-up campaign templates
-- [ ] Create Campaign Generator dashboard tying all channels together
-- [ ] Add launch checklists for each campaign channel
-- [ ] Test all campaign pages
+- [x] Research NJ HVAC market, keywords, and competitor landscape
+- [x] Build Google Ads campaign page with ad copy, keywords, and targeting settings
+- [x] Build Facebook/Instagram campaign page with ad copy and audience targeting
+- [x] Build email outreach sequences (residential, commercial, follow-up)
+- [x] Build SMS follow-up campaign templates
+- [x] Create Campaign Generator dashboard tying all channels together
+- [x] Add launch checklists for each campaign channel
+- [x] Test all campaign pages
+
+## Dedicated Campaign Landing Pages
+- [x] LP: Google Ads - Residential Heat Pump Rebates (/lp/heat-pump-rebates)
+- [x] LP: Google Ads - Commercial VRV/VRF Systems (/lp/commercial-vrv)
+- [x] LP: Google Ads - Emergency HVAC Service (/lp/emergency-hvac)
+- [x] LP: Facebook - Residential Homeowners (/lp/fb-residential)
+- [x] LP: Facebook - Commercial Business Owners (/lp/fb-commercial)
+- [x] LP: Email - Rebate Guide Download (/lp/rebate-guide)
+- [x] LP: SMS/Email - Maintenance Tune-Up Offer (/lp/maintenance-offer)
+- [x] Add all landing page routes to App.tsx
+- [x] Link landing pages from campaign management pages
+- [x] Add conversion tracking to all landing pages
