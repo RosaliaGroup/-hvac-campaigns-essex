@@ -165,6 +165,13 @@ export default function AdminPortal() {
       color: "bg-green-500",
       tools: [
         {
+          name: "Lead Management Dashboard",
+          description: "Real-time tracking of all leads from every channel",
+          icon: Users,
+          path: "/lead-dashboard",
+          badge: "New"
+        },
+        {
           name: "Lead Scoring Dashboard",
           description: "View Hot/Warm/Cold leads with intelligent scoring",
           icon: Target,

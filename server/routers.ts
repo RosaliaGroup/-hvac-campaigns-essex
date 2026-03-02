@@ -75,7 +75,7 @@ export const appRouter = router({
           firstName: z.string().optional(),
           lastName: z.string().optional(),
           name: z.string().optional(),
-          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial"]),
+          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance"]),
           pageUrl: z.string().optional(),
           message: z.string().optional(),
         })
@@ -107,8 +107,46 @@ export const appRouter = router({
         return { success: true };
       }),
     
-    list: protectedProcedure.query(async () => {
-      return await db.getAllLeadCaptures();
+    list: protectedProcedure
+      .input(
+        z.object({
+          status: z.enum(["new", "contacted", "qualified", "booked", "lost"]).optional(),
+          captureType: z.string().optional(),
+          search: z.string().optional(),
+          limit: z.number().optional().default(100),
+          offset: z.number().optional().default(0),
+        })
+      )
+      .query(async ({ input }) => {
+        return await db.getAllLeadCaptures(input);
+      }),
+
+    updateStatus: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          status: z.enum(["new", "contacted", "qualified", "booked", "lost"]),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.updateLeadCaptureStatus(input.id, input.status);
+        return { success: true };
+      }),
+
+    addNote: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          notes: z.string(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.updateLeadCaptureNotes(input.id, input.notes);
+        return { success: true };
+      }),
+
+    stats: protectedProcedure.query(async () => {
+      return await db.getLeadCaptureStats();
     }),
   }),
 

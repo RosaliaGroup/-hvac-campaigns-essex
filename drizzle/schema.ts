@@ -60,10 +60,15 @@ export const leadCaptures = mysqlTable("leadCaptures", {
   firstName: varchar("firstName", { length: 255 }),
   lastName: varchar("lastName", { length: 255 }),
   name: varchar("name", { length: 255 }),
-  captureType: mysqlEnum("captureType", ["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial"]).notNull(),
+  captureType: mysqlEnum("captureType", ["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance"]).notNull(),
   pageUrl: varchar("pageUrl", { length: 500 }),
   message: text("message"),
+  status: mysqlEnum("status", ["new", "contacted", "qualified", "booked", "lost"]).default("new").notNull(),
+  notes: text("notes"),
+  assignedTo: varchar("assignedTo", { length: 255 }),
+  followUpAt: timestamp("followUpAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type LeadCapture = typeof leadCaptures.$inferSelect;

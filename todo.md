@@ -279,3 +279,21 @@
 - [x] Add all landing page routes to App.tsx
 - [x] Link landing pages from campaign management pages
 - [x] Add conversion tracking to all landing pages
+
+## Bug Fixes
+- [ ] Fix error on /lp/heat-pump-rebates landing page (and all other landing pages)
+- [ ] Fix /lp/* routing — 404 on production due to missing server-side fallback
+- [ ] Verify all 7 landing pages load correctly on production
+
+## Lead Management Dashboard
+- [x] Add status and notes fields to leadCaptures schema
+- [x] Add tRPC procedures: list leads with filters, update lead status, add notes
+- [x] Build LeadManagement page with real-time data table
+- [x] Add source/campaign filter (by landing page)
+- [x] Add status management (New, Contacted, Qualified, Booked, Lost)
+- [x] Add lead detail panel with notes and activity log
+- [x] Add summary stats cards (total leads, by source, conversion rate)
+- [x] Wire /lead-dashboard route in App.tsx
+- [x] Add link from Admin Portal
+- [x] Write unit tests (23 tests passing)
+- [ ] Test with real lead submissions from landing pages

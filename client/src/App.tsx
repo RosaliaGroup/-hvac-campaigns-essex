@@ -34,6 +34,7 @@ import LPFBResidential from "./pages/lp/LPFBResidential";
 import LPFBCommercial from "./pages/lp/LPFBCommercial";
 import LPRebateGuide from "./pages/lp/LPRebateGuide";
 import LPMaintenanceOffer from "./pages/lp/LPMaintenanceOffer";
+import LeadDashboard from "./pages/LeadDashboard";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -60,6 +61,7 @@ function Router() {
       <Route path={"/ai-assistant-prompts"} component={AIAssistantPrompts} />
       <Route path={"/ai-script-manager"} component={AIScriptManager} />
       <Route path={"/admin"} component={AdminPortal} />
+      <Route path={"/lead-dashboard"} component={LeadDashboard} />
       <Route path={"/campaign-generator"} component={CampaignGenerator} />
       <Route path={"/google-ads-campaigns"} component={GoogleAdsCampaigns} />
       <Route path={"/facebook-campaigns"} component={FacebookCampaigns} />

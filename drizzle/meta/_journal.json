@@ -71,6 +71,13 @@
       "when": 1771482698363,
       "tag": "0009_sparkling_sabretooth",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1772477863914,
+      "tag": "0010_romantic_speedball",
+      "breakpoints": true
     }
   ]
 }

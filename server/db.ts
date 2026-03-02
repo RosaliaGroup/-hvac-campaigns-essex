@@ -1,4 +1,4 @@
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and, like, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users, leads, InsertLead, leadCaptures, InsertLeadCapture,
@@ -139,13 +139,82 @@ export async function createLeadCapture(capture: InsertLeadCapture) {
   return result;
 }
 
-export async function getAllLeadCaptures() {
+export async function getAllLeadCaptures(filters?: {
+  status?: "new" | "contacted" | "qualified" | "booked" | "lost";
+  captureType?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}) {
   const db = await getDb();
   if (!db) {
     return [];
   }
 
-  return await db.select().from(leadCaptures).orderBy(desc(leadCaptures.createdAt));
+  const conditions = [];
+  if (filters?.status) {
+    conditions.push(eq(leadCaptures.status, filters.status));
+  }
+  if (filters?.captureType) {
+    conditions.push(sql`${leadCaptures.captureType} = ${filters.captureType}`);
+  }
+  if (filters?.search) {
+    const searchTerm = `%${filters.search}%`;
+    conditions.push(
+      or(
+        like(leadCaptures.email, searchTerm),
+        like(leadCaptures.firstName, searchTerm),
+        like(leadCaptures.lastName, searchTerm),
+        like(leadCaptures.phone, searchTerm)
+      )
+    );
+  }
+
+  let query = db.select().from(leadCaptures);
+  if (conditions.length > 0) {
+    query = query.where(and(...conditions)) as any;
+  }
+
+  return await query
+    .orderBy(desc(leadCaptures.createdAt))
+    .limit(filters?.limit ?? 100)
+    .offset(filters?.offset ?? 0);
+}
+
+export async function updateLeadCaptureStatus(id: number, status: "new" | "contacted" | "qualified" | "booked" | "lost") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(leadCaptures).set({ status, updatedAt: new Date() }).where(eq(leadCaptures.id, id));
+}
+
+export async function updateLeadCaptureNotes(id: number, notes: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(leadCaptures).set({ notes, updatedAt: new Date() }).where(eq(leadCaptures.id, id));
+}
+
+export async function getLeadCaptureStats() {
+  const db = await getDb();
+  if (!db) {
+    return { total: 0, new: 0, contacted: 0, qualified: 0, booked: 0, lost: 0, bySource: {} };
+  }
+
+  const all = await db.select().from(leadCaptures).orderBy(desc(leadCaptures.createdAt));
+  const bySource: Record<string, number> = {};
+  all.forEach(l => {
+    bySource[l.captureType] = (bySource[l.captureType] || 0) + 1;
+  });
+
+  return {
+    total: all.length,
+    new: all.filter(l => l.status === 'new').length,
+    contacted: all.filter(l => l.status === 'contacted').length,
+    qualified: all.filter(l => l.status === 'qualified').length,
+    booked: all.filter(l => l.status === 'booked').length,
+    lost: all.filter(l => l.status === 'lost').length,
+    bySource,
+    recentLeads: all.slice(0, 5),
+  };
 }
 
 /**
