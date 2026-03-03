@@ -297,3 +297,14 @@
 - [x] Add link from Admin Portal
 - [x] Write unit tests (23 tests passing)
 - [ ] Test with real lead submissions from landing pages
+
+## Jessica AI Assistant — Appointment Booking
+- [x] Write Jessica inbound prompt (modeled on Iron 65 booking flow)
+- [x] Write Jessica outbound prompt (outbound sales + booking)
+- [x] Update AI Assistant Prompts page with Jessica inbound + outbound prompts
+- [x] Add Vapi tools documentation (getCallerInfo, sendForm, bookAppointment, rescheduleAppointment)
+- [x] Add tool quick reference table to prompts page
+- [ ] Configure bookAppointment webhook handler in server/routers.ts to save appointments to DB
+- [ ] Configure rescheduleAppointment webhook handler
+- [ ] Configure getCallerInfo webhook handler to look up existing leads
+- [ ] Test Jessica booking flow end-to-end with Vapi
