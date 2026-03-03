@@ -1,0 +1,32 @@
+{
+  "query": "SELECT id, name, contact, contactType, source, service, notes, createdAt FROM leads ORDER BY createdAt DESC LIMIT 20;\nSELECT id, phone, email, firstName, lastName, captureType, message, notes, createdAt FROM leadCaptures ORDER BY createdAt DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, name, contact, contactType, source, service, notes, createdAt FROM leads ORDER BY createdAt DESC LIMIT 20;\nSELECT id, phone, email, firstName, lastName, captureType, message, notes, createdAt FROM leadCaptures ORDER BY createdAt DESC LIMIT 20;",
+  "rows": [
+    {
+      "id": "30001",
+      "phone": "NULL",
+      "email": "scrolltest@example.com",
+      "firstName": "NULL",
+      "lastName": "NULL",
+      "captureType": "scroll_popup_residential",
+      "message": "NULL",
+      "notes": "NULL",
+      "createdAt": "2026-02-19 06:19:02"
+    },
+    {
+      "id": "1",
+      "phone": "6462269189",
+      "email": "ana@rosaliagroup.com",
+      "firstName": "Ana",
+      "lastName": "Haynes",
+      "captureType": "exit_popup",
+      "message": "NULL",
+      "notes": "NULL",
+      "createdAt": "2026-02-16 21:55:53"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tphone\temail\tfirstName\tlastName\tcaptureType\tmessage\tnotes\tcreatedAt\n30001\tNULL\tscrolltest@example.com\tNULL\tNULL\tscroll_popup_residential\tNULL\tNULL\t2026-02-19 06:19:02\n1\t6462269189\tana@rosaliagroup.com\tAna\tHaynes\texit_popup\tNULL\tNULL\t2026-02-16 21:55:53\n",
+  "stderr": "",
+  "execution_time_ms": 91
+}

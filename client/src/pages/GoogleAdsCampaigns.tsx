@@ -8,9 +8,11 @@ import { Link } from "wouter";
 import { toast } from "sonner";
 import {
   ArrowLeft, Copy, ExternalLink, Search, DollarSign, Target, Zap,
-  Home, Building2, Wrench, AlertTriangle, CheckCircle, TrendingUp
+  Home, Building2, Wrench, AlertTriangle, CheckCircle, TrendingUp,
+  RefreshCw, Send, BarChart3, Wifi, WifiOff, Loader2
 } from "lucide-react";
 import { getLoginUrl } from "@/const";
+import { trpc } from "@/lib/trpc";
 
 interface AdGroup {
   name: string;
@@ -378,6 +380,71 @@ function AdGroupCard({ group }: { group: AdGroup }) {
 export default function GoogleAdsCampaigns() {
   const { isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState(campaigns[0].id);
+  const [pushingCampaign, setPushingCampaign] = useState<string | null>(null);
+
+  // Google Ads API hooks
+  const { data: connectionStatus, refetch: refetchStatus } = trpc.googleAds.getConnectionStatus.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+  const { data: performanceData, isLoading: perfLoading, refetch: refetchPerf } = trpc.googleAds.getCampaignPerformance.useQuery(
+    undefined,
+    { enabled: !!(isAuthenticated && connectionStatus?.connected) }
+  );
+  const { data: summaryData } = trpc.googleAds.getAccountSummary.useQuery(
+    undefined,
+    { enabled: !!(isAuthenticated && connectionStatus?.connected) }
+  );
+  const getAuthUrl = trpc.googleAds.getAuthUrl.useQuery(
+    { redirectUri: `${window.location.origin}/api/oauth/google-ads/callback` },
+    { enabled: isAuthenticated }
+  );
+
+  // Handle redirect back from Google OAuth
+  const [searchParams] = useState(() => new URLSearchParams(window.location.search));
+  const connectedParam = searchParams.get("connected");
+  const errorParam = searchParams.get("error");
+  useState(() => {
+    if (connectedParam === "1") {
+      toast.success("Google Ads connected successfully! Live data will appear shortly.");
+      refetchStatus();
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (errorParam) {
+      toast.error(`Google Ads connection failed: ${errorParam}. Please try again.`);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  });
+
+  const createCampaign = trpc.googleAds.createCampaign.useMutation({
+    onSuccess: (data) => {
+      toast.success(`Campaign pushed to Google Ads! ID: ${data.campaignId}. It is paused — enable it in Google Ads when ready.`);
+      setPushingCampaign(null);
+    },
+    onError: (err) => {
+      toast.error(`Failed to push campaign: ${err.message}`);
+      setPushingCampaign(null);
+    },
+  });
+
+  const handleConnect = () => {
+    if (getAuthUrl.data?.url) {
+      window.location.href = getAuthUrl.data.url;
+    }
+  };
+
+  const handlePushCampaign = (campaign: Campaign) => {
+    const firstGroup = campaign.adGroups[0];
+    setPushingCampaign(campaign.id);
+    createCampaign.mutate({
+      name: `ME - ${campaign.name}`,
+      dailyBudget: 50,
+      keywords: firstGroup.keywords,
+      headlines: firstGroup.headlines,
+      descriptions: firstGroup.descriptions,
+      finalUrl: `https://mechanicalenterprise.com${firstGroup.finalUrl}`,
+      geoTargetNames: ["New Jersey"],
+    });
+  };
 
   if (loading) {
     return (
@@ -414,17 +481,110 @@ export default function GoogleAdsCampaigns() {
                 <p className="text-sm text-muted-foreground">Ready-to-launch campaigns for Mechanical Enterprise</p>
               </div>
             </div>
-            <Button
-              className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-              onClick={() => window.open("https://ads.google.com", "_blank")}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" /> Open Google Ads
-            </Button>
+            <div className="flex items-center gap-3">
+              {connectionStatus?.connected ? (
+                <Badge className="bg-green-100 text-green-700 border-green-200 flex items-center gap-1">
+                  <Wifi className="h-3 w-3" /> Google Ads Connected
+                </Badge>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="border-[#ff6b35] text-[#ff6b35] hover:bg-[#ff6b35]/10"
+                  onClick={handleConnect}
+                >
+                  <WifiOff className="h-4 w-4 mr-2" /> Connect Google Ads
+                </Button>
+              )}
+              <Button
+                className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+                onClick={() => window.open("https://ads.google.com", "_blank")}
+              >
+                <ExternalLink className="h-4 w-4 mr-2" /> Open Google Ads
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
       <div className="container py-8">
+        {/* Live Performance Panel */}
+        {connectionStatus?.connected && (
+          <Card className="mb-6 border-green-200 bg-green-50/50">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-green-600" />
+                  Live Google Ads Performance (Last 30 Days)
+                </CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => { refetchPerf(); refetchStatus(); }}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {perfLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading live data...
+                </div>
+              ) : summaryData?.summary ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                    {[
+                      { label: "Impressions", value: summaryData.summary.impressions.toLocaleString(), color: "text-blue-600" },
+                      { label: "Clicks", value: summaryData.summary.clicks.toLocaleString(), color: "text-[#ff6b35]" },
+                      { label: "Spend", value: `$${summaryData.summary.cost.toFixed(2)}`, color: "text-red-600" },
+                      { label: "Conversions", value: summaryData.summary.conversions.toFixed(1), color: "text-green-600" },
+                      { label: "CTR", value: `${(summaryData.summary.ctr * 100).toFixed(2)}%`, color: "text-purple-600" },
+                      { label: "Avg CPC", value: `$${summaryData.summary.avgCpc.toFixed(2)}`, color: "text-[#1e3a5f]" },
+                    ].map(stat => (
+                      <div key={stat.label} className="text-center p-3 bg-white rounded-lg border">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">{stat.label}</p>
+                        <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {performanceData?.campaigns && performanceData.campaigns.length > 0 && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b">
+                            <th className="text-left py-2 font-medium text-muted-foreground">Campaign</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">Status</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">Impressions</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">Clicks</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">Spend</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">Conversions</th>
+                            <th className="text-right py-2 font-medium text-muted-foreground">CPC</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {performanceData.campaigns.map(c => (
+                            <tr key={c.id} className="border-b hover:bg-white/50">
+                              <td className="py-2 font-medium">{c.name}</td>
+                              <td className="py-2 text-right">
+                                <Badge variant={c.status === 2 ? "default" : "secondary"} className="text-xs">
+                                  {c.status === 2 ? "Active" : "Paused"}
+                                </Badge>
+                              </td>
+                              <td className="py-2 text-right">{c.impressions.toLocaleString()}</td>
+                              <td className="py-2 text-right">{c.clicks.toLocaleString()}</td>
+                              <td className="py-2 text-right">${c.cost.toFixed(2)}</td>
+                              <td className="py-2 text-right">{c.conversions.toFixed(1)}</td>
+                              <td className="py-2 text-right">${c.avgCpc.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No performance data available for the last 30 days.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Campaign Overview Cards */}
         <div className="grid md:grid-cols-3 gap-4 mb-8">
           {campaigns.map(campaign => (
@@ -454,6 +614,20 @@ export default function GoogleAdsCampaigns() {
                   <Zap className="h-4 w-4 text-orange-500" />
                   <span><strong>Ad Groups:</strong> {campaign.adGroups.length}</span>
                 </div>
+                {connectionStatus?.connected && (
+                  <Button
+                    size="sm"
+                    className="w-full mt-2 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white"
+                    disabled={pushingCampaign === campaign.id}
+                    onClick={(e) => { e.stopPropagation(); handlePushCampaign(campaign); }}
+                  >
+                    {pushingCampaign === campaign.id ? (
+                      <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Pushing...</>
+                    ) : (
+                      <><Send className="h-3 w-3 mr-1" /> Push to Google Ads</>
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

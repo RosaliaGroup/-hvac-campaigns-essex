@@ -1,0 +1,70 @@
+{
+  "query": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'leads' AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'leads' AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "name",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "contact",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "contactType",
+      "DATA_TYPE": "enum"
+    },
+    {
+      "COLUMN_NAME": "source",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "service",
+      "DATA_TYPE": "varchar"
+    },
+    {
+      "COLUMN_NAME": "status",
+      "DATA_TYPE": "enum"
+    },
+    {
+      "COLUMN_NAME": "notes",
+      "DATA_TYPE": "text"
+    },
+    {
+      "COLUMN_NAME": "createdAt",
+      "DATA_TYPE": "timestamp"
+    },
+    {
+      "COLUMN_NAME": "updatedAt",
+      "DATA_TYPE": "timestamp"
+    },
+    {
+      "COLUMN_NAME": "score",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "priority",
+      "DATA_TYPE": "enum"
+    },
+    {
+      "COLUMN_NAME": "lastInteractionAt",
+      "DATA_TYPE": "timestamp"
+    },
+    {
+      "COLUMN_NAME": "interactionCount",
+      "DATA_TYPE": "int"
+    },
+    {
+      "COLUMN_NAME": "scoreBreakdown",
+      "DATA_TYPE": "text"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\tDATA_TYPE\nid\tint\nname\tvarchar\ncontact\tvarchar\ncontactType\tenum\nsource\tvarchar\nservice\tvarchar\nstatus\tenum\nnotes\ttext\ncreatedAt\ttimestamp\nupdatedAt\ttimestamp\nscore\tint\npriority\tenum\nlastInteractionAt\ttimestamp\ninteractionCount\tint\nscoreBreakdown\ttext\n",
+  "stderr": "",
+  "execution_time_ms": 56
+}

@@ -1,0 +1,8 @@
+{
+  "query": "SELECT * FROM leads WHERE phone LIKE '%8624239396%' OR phone LIKE '%862-423-9396%' OR notes LIKE '%warehouse%' OR notes LIKE '%job%' ORDER BY created_at DESC LIMIT 20;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT * FROM leads WHERE phone LIKE '%8624239396%' OR phone LIKE '%862-423-9396%' OR notes LIKE '%warehouse%' OR notes LIKE '%job%' ORDER BY created_at DESC LIMIT 20;",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1054 (42S22) at line 1: Unknown column 'created_at' in 'order clause'"
+  ]
+}

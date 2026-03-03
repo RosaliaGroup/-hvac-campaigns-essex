@@ -1,6 +1,8 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
+import { exchangeCodeForTokens } from "../googleAds";
+import { saveAiVaCredentials } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -10,6 +12,27 @@ function getQueryParam(req: Request, key: string): string | undefined {
 }
 
 export function registerOAuthRoutes(app: Express) {
+  // Google Ads OAuth callback — exchanges code for refresh token and saves it
+  app.get("/api/oauth/google-ads/callback", async (req: Request, res: Response) => {
+    const code = getQueryParam(req, "code");
+    const redirectUri = `${req.protocol}://${req.get("host")}/api/oauth/google-ads/callback`;
+
+    if (!code) {
+      res.redirect(302, "/google-ads-campaigns?error=missing_code");
+      return;
+    }
+
+    try {
+      const tokens = await exchangeCodeForTokens(code, redirectUri);
+      await saveAiVaCredentials("google_ads", { refresh_token: tokens.refresh_token });
+      console.log("[Google Ads] OAuth connected successfully");
+      res.redirect(302, "/google-ads-campaigns?connected=1");
+    } catch (error) {
+      console.error("[Google Ads] OAuth callback failed", error);
+      res.redirect(302, "/google-ads-campaigns?error=auth_failed");
+    }
+  });
+
   app.get("/api/oauth/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
     const state = getQueryParam(req, "state");

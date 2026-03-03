@@ -15,7 +15,11 @@ import {
   AlertCircle,
   Settings,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  Loader2
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
@@ -23,45 +27,39 @@ import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
 
 export default function CampaignPerformance() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const [showSettings, setShowSettings] = useState(false);
-  
-  // API Connection State
-  const [googleAdsConnected, setGoogleAdsConnected] = useState(false);
-  const [facebookConnected, setFacebookConnected] = useState(false);
-  
-  // API Credentials (stored in localStorage for demo)
+  const [facebookConnected] = useState(false);
   const [credentials, setCredentials] = useState({
-    googleAdsApiKey: "",
-    googleAdsCustomerId: "",
     facebookAccessToken: "",
     facebookAdAccountId: "",
   });
 
-  // Mock performance data (replace with real API calls when connected)
-  const [performanceData, setPerformanceData] = useState({
-    googleAds: {
-      impressions: 0,
-      clicks: 0,
-      cost: 0,
-      conversions: 0,
-      ctr: 0,
-      cpc: 0,
-      conversionRate: 0,
-    },
-    facebook: {
-      impressions: 0,
-      clicks: 0,
-      cost: 0,
-      conversions: 0,
-      ctr: 0,
-      cpc: 0,
-      conversionRate: 0,
-    },
-  });
+  // Real Google Ads data via tRPC
+  const { data: connectionStatus, refetch: refetchStatus } = trpc.googleAds.getConnectionStatus.useQuery(
+    undefined,
+    { enabled: isAuthenticated }
+  );
+  const googleAdsConnected = connectionStatus?.connected ?? false;
+
+  const { data: summaryData, isLoading: summaryLoading, refetch: refetchSummary } = trpc.googleAds.getAccountSummary.useQuery(
+    undefined,
+    { enabled: !!(isAuthenticated && googleAdsConnected) }
+  );
+  const { data: campaignsData, isLoading: campaignsLoading, refetch: refetchCampaigns } = trpc.googleAds.getCampaignPerformance.useQuery(
+    undefined,
+    { enabled: !!(isAuthenticated && googleAdsConnected) }
+  );
+  const getAuthUrl = trpc.googleAds.getAuthUrl.useQuery(
+    { redirectUri: `${window.location.origin}/api/oauth/google-ads/callback` },
+    { enabled: isAuthenticated }
+  );
+
+  const liveGoogleAds = summaryData?.summary ?? null;
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -70,34 +68,23 @@ export default function CampaignPerformance() {
     }
   }, [loading, isAuthenticated]);
 
-  // Load credentials from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem("hvac-api-credentials");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setCredentials(parsed);
-      setGoogleAdsConnected(!!(parsed.googleAdsApiKey && parsed.googleAdsCustomerId));
-      setFacebookConnected(!!(parsed.facebookAccessToken && parsed.facebookAdAccountId));
-    }
-  }, []);
+  const handleConnectGoogle = () => {
+    if (getAuthUrl.data?.url) window.location.href = getAuthUrl.data.url;
+  };
+
+  const handleRefresh = () => {
+    refetchStatus();
+    refetchSummary();
+    refetchCampaigns();
+    toast.success("Refreshing live data...");
+  };
 
   const saveCredentials = () => {
-    localStorage.setItem("hvac-api-credentials", JSON.stringify(credentials));
-    setGoogleAdsConnected(!!(credentials.googleAdsApiKey && credentials.googleAdsCustomerId));
-    setFacebookConnected(!!(credentials.facebookAccessToken && credentials.facebookAdAccountId));
-    toast.success("API credentials saved successfully");
+    toast.success("Facebook credentials saved (integration coming soon)");
     setShowSettings(false);
   };
 
-  const fetchGoogleAdsData = async () => {
-    // TODO: Implement actual Google Ads API call
-    // For now, show placeholder data
-    toast.info("Google Ads API integration coming soon");
-  };
-
   const fetchFacebookData = async () => {
-    // TODO: Implement actual Facebook API call
-    // For now, show placeholder data
     toast.info("Facebook API integration coming soon");
   };
 
@@ -157,36 +144,22 @@ export default function CampaignPerformance() {
                   <BarChart3 className="h-5 w-5 text-[#ff6b35]" />
                   <h3 className="text-lg font-semibold">Google Ads API</h3>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="googleAdsApiKey">Developer Token / API Key</Label>
-                    <Input
-                      id="googleAdsApiKey"
-                      type="password"
-                      value={credentials.googleAdsApiKey}
-                      onChange={(e) => setCredentials({ ...credentials, googleAdsApiKey: e.target.value })}
-                      placeholder="Enter your Google Ads developer token"
-                    />
+                {googleAdsConnected ? (
+                  <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <div>
+                      <p className="font-medium text-green-800">Google Ads Connected</p>
+                      <p className="text-sm text-green-600">Customer ID: 332-572-0049 — Live data is being pulled automatically.</p>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="googleAdsCustomerId">Customer ID</Label>
-                    <Input
-                      id="googleAdsCustomerId"
-                      value={credentials.googleAdsCustomerId}
-                      onChange={(e) => setCredentials({ ...credentials, googleAdsCustomerId: e.target.value })}
-                      placeholder="123-456-7890"
-                    />
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">Google Ads credentials are configured server-side. Click the button below to authorize the connection.</p>
+                    <Button onClick={handleConnectGoogle} className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
+                      Authorize Google Ads
+                    </Button>
                   </div>
-                </div>
-                <div className="text-sm text-muted-foreground bg-secondary/50 p-4 rounded-lg">
-                  <p className="font-semibold mb-2">How to get Google Ads API access:</p>
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Go to <a href="https://ads.google.com/home/tools/manager-accounts/" target="_blank" rel="noopener noreferrer" className="text-[#ff6b35] hover:underline">Google Ads Manager Account</a></li>
-                    <li>Navigate to Tools & Settings → Setup → API Center</li>
-                    <li>Apply for a developer token (approval may take 24-48 hours)</li>
-                    <li>Find your Customer ID in the top right corner of Google Ads dashboard</li>
-                  </ol>
-                </div>
+                )}
               </div>
 
               {/* Facebook Settings */}
@@ -328,7 +301,7 @@ export default function CampaignPerformance() {
             </div>
           </CardHeader>
           <CardContent>
-            {!googleAdsConnected ? (
+              {!googleAdsConnected ? (
               <div className="text-center py-12">
                 <AlertCircle className="h-12 w-12 mx-auto mb-3 text-orange-500" />
                 <p className="text-lg font-semibold mb-2">Google Ads Not Connected</p>
@@ -336,56 +309,97 @@ export default function CampaignPerformance() {
                   Connect your Google Ads account to see real campaign performance metrics
                 </p>
                 <Button
-                  onClick={() => setShowSettings(true)}
+                  onClick={handleConnectGoogle}
                   className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
                 >
                   Connect Now
                 </Button>
               </div>
+            ) : summaryLoading ? (
+              <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" /> Loading live data from Google Ads...
+              </div>
             ) : (
-              <div className="grid md:grid-cols-4 gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Eye className="h-4 w-4" />
-                    Impressions
+              <div className="space-y-6">
+                <div className="grid md:grid-cols-4 gap-6">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Eye className="h-4 w-4" />
+                      Impressions
+                    </div>
+                    <p className="text-3xl font-bold">{(liveGoogleAds?.impressions ?? 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Total ad views</p>
                   </div>
-                  <p className="text-3xl font-bold">{performanceData.googleAds.impressions.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Total ad views</p>
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MousePointer className="h-4 w-4" />
-                    Clicks
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MousePointer className="h-4 w-4" />
+                      Clicks
+                    </div>
+                    <p className="text-3xl font-bold">{(liveGoogleAds?.clicks ?? 0).toLocaleString()}</p>
+                    <p className="text-xs text-green-600">
+                      {liveGoogleAds && liveGoogleAds.ctr > 0 ? `${(liveGoogleAds.ctr * 100).toFixed(2)}% CTR` : "—"}
+                    </p>
                   </div>
-                  <p className="text-3xl font-bold">{performanceData.googleAds.clicks.toLocaleString()}</p>
-                  <p className="text-xs text-green-600">
-                    {performanceData.googleAds.ctr > 0 ? `${performanceData.googleAds.ctr.toFixed(2)}% CTR` : "—"}
-                  </p>
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <DollarSign className="h-4 w-4" />
-                    Cost
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <DollarSign className="h-4 w-4" />
+                      Cost
+                    </div>
+                    <p className="text-3xl font-bold">${(liveGoogleAds?.cost ?? 0).toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {liveGoogleAds && liveGoogleAds.avgCpc > 0 ? `$${liveGoogleAds.avgCpc.toFixed(2)} CPC` : "—"}
+                    </p>
                   </div>
-                  <p className="text-3xl font-bold">${performanceData.googleAds.cost.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {performanceData.googleAds.cpc > 0 ? `$${performanceData.googleAds.cpc.toFixed(2)} CPC` : "—"}
-                  </p>
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Target className="h-4 w-4" />
-                    Conversions
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Target className="h-4 w-4" />
+                      Conversions
+                    </div>
+                    <p className="text-3xl font-bold">{(liveGoogleAds?.conversions ?? 0).toFixed(1)}</p>
+                    <p className="text-xs text-green-600">Last 30 days</p>
                   </div>
-                  <p className="text-3xl font-bold">{performanceData.googleAds.conversions}</p>
-                  <p className="text-xs text-green-600">
-                    {performanceData.googleAds.conversionRate > 0 
-                      ? `${performanceData.googleAds.conversionRate.toFixed(2)}% rate` 
-                      : "—"}
-                  </p>
+                </div>
+                {campaignsData?.campaigns && campaignsData.campaigns.length > 0 && (
+                  <div className="overflow-x-auto border rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr className="border-b">
+                          <th className="text-left p-3 font-medium">Campaign</th>
+                          <th className="text-right p-3 font-medium">Status</th>
+                          <th className="text-right p-3 font-medium">Impressions</th>
+                          <th className="text-right p-3 font-medium">Clicks</th>
+                          <th className="text-right p-3 font-medium">Spend</th>
+                          <th className="text-right p-3 font-medium">Conversions</th>
+                          <th className="text-right p-3 font-medium">CPC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {campaignsData.campaigns.map(c => (
+                          <tr key={c.id} className="border-b hover:bg-slate-50">
+                            <td className="p-3 font-medium">{c.name}</td>
+                            <td className="p-3 text-right">
+                              <Badge variant={c.status === 2 ? "default" : "secondary"} className="text-xs">
+                                {c.status === 2 ? "Active" : "Paused"}
+                              </Badge>
+                            </td>
+                            <td className="p-3 text-right">{c.impressions.toLocaleString()}</td>
+                            <td className="p-3 text-right">{c.clicks.toLocaleString()}</td>
+                            <td className="p-3 text-right">${c.cost.toFixed(2)}</td>
+                            <td className="p-3 text-right">{c.conversions.toFixed(1)}</td>
+                            <td className="p-3 text-right">${c.avgCpc.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <div className="flex justify-end">
+                  <Button variant="ghost" size="sm" onClick={handleRefresh}>
+                    <RefreshCw className="h-4 w-4 mr-2" /> Refresh Data
+                  </Button>
                 </div>
               </div>
             )}
@@ -431,7 +445,7 @@ export default function CampaignPerformance() {
                     <Eye className="h-4 w-4" />
                     Impressions
                   </div>
-                  <p className="text-3xl font-bold">{performanceData.facebook.impressions.toLocaleString()}</p>
+                  <p className="text-3xl font-bold">0</p>
                   <p className="text-xs text-muted-foreground">Total ad views</p>
                 </div>
 
@@ -440,10 +454,8 @@ export default function CampaignPerformance() {
                     <MousePointer className="h-4 w-4" />
                     Clicks
                   </div>
-                  <p className="text-3xl font-bold">{performanceData.facebook.clicks.toLocaleString()}</p>
-                  <p className="text-xs text-green-600">
-                    {performanceData.facebook.ctr > 0 ? `${performanceData.facebook.ctr.toFixed(2)}% CTR` : "—"}
-                  </p>
+                  <p className="text-3xl font-bold">0</p>
+                  <p className="text-xs text-green-600">—</p>
                 </div>
 
                 <div className="space-y-2">
@@ -451,10 +463,8 @@ export default function CampaignPerformance() {
                     <DollarSign className="h-4 w-4" />
                     Cost
                   </div>
-                  <p className="text-3xl font-bold">${performanceData.facebook.cost.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {performanceData.facebook.cpc > 0 ? `$${performanceData.facebook.cpc.toFixed(2)} CPC` : "—"}
-                  </p>
+                  <p className="text-3xl font-bold">$0.00</p>
+                  <p className="text-xs text-muted-foreground">—</p>
                 </div>
 
                 <div className="space-y-2">
@@ -462,12 +472,8 @@ export default function CampaignPerformance() {
                     <Target className="h-4 w-4" />
                     Conversions
                   </div>
-                  <p className="text-3xl font-bold">{performanceData.facebook.conversions}</p>
-                  <p className="text-xs text-green-600">
-                    {performanceData.facebook.conversionRate > 0 
-                      ? `${performanceData.facebook.conversionRate.toFixed(2)}% rate` 
-                      : "—"}
-                  </p>
+                  <p className="text-3xl font-bold">0</p>
+                  <p className="text-xs text-green-600">Last 30 days</p>
                 </div>
               </div>
             )}
@@ -487,20 +493,20 @@ export default function CampaignPerformance() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Google Ads</span>
                   <span className="text-sm text-muted-foreground">
-                    ${performanceData.googleAds.cost.toLocaleString()} / ${googleAdsAllocated.toLocaleString()}
+                    ${(liveGoogleAds?.cost ?? 0).toFixed(2)} / ${googleAdsAllocated.toLocaleString()}
                   </span>
                 </div>
                 <div className="h-3 bg-secondary rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-[#ff6b35]" 
                     style={{ 
-                      width: `${Math.min((performanceData.googleAds.cost / googleAdsAllocated) * 100, 100)}%` 
+                      width: `${Math.min(((liveGoogleAds?.cost ?? 0) / googleAdsAllocated) * 100, 100)}%` 
                     }} 
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   {googleAdsConnected 
-                    ? `${((performanceData.googleAds.cost / googleAdsAllocated) * 100).toFixed(1)}% of budget used`
+                    ? `${(((liveGoogleAds?.cost ?? 0) / googleAdsAllocated) * 100).toFixed(1)}% of budget used`
                     : "Connect to track spending"}
                 </p>
               </div>
@@ -510,21 +516,14 @@ export default function CampaignPerformance() {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Facebook / Instagram</span>
                   <span className="text-sm text-muted-foreground">
-                    ${performanceData.facebook.cost.toLocaleString()} / ${facebookAllocated.toLocaleString()}
+                    $0.00 / ${facebookAllocated.toLocaleString()}
                   </span>
                 </div>
                 <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-600" 
-                    style={{ 
-                      width: `${Math.min((performanceData.facebook.cost / facebookAllocated) * 100, 100)}%` 
-                    }} 
-                  />
+                  <div className="h-full bg-blue-600" style={{ width: "0%" }} />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {facebookConnected 
-                    ? `${((performanceData.facebook.cost / facebookAllocated) * 100).toFixed(1)}% of budget used`
-                    : "Connect to track spending"}
+                  {facebookConnected ? "0% of budget used" : "Connect to track spending"}
                 </p>
               </div>
             </div>

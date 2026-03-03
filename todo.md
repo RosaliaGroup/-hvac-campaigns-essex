@@ -308,3 +308,12 @@
 - [ ] Configure rescheduleAppointment webhook handler
 - [ ] Configure getCallerInfo webhook handler to look up existing leads
 - [ ] Test Jessica booking flow end-to-end with Vapi
+
+## Google Ads Two-Way Integration
+- [ ] Collect Google Ads Developer Token, Customer ID, OAuth Client ID, OAuth Client Secret
+- [ ] Add credentials as secrets in app
+- [ ] Build Google Ads OAuth flow on server (authorize + refresh token)
+- [ ] Build campaign push endpoint — create/update campaigns in Google Ads from app
+- [ ] Build live performance data pull — sync spend, clicks, impressions, conversions
+- [ ] Update Google Ads Campaigns page with Push to Google Ads button
+- [ ] Update Campaign Performance page with live data from Google Ads API

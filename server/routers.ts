@@ -7,10 +7,12 @@ import * as db from "./db";
 import { handleVapiWebhook } from "./integrations/vapi";
 import { handleIncomingSms } from "./integrations/twilio";
 import { notifyOwner } from "./_core/notification";
+import { googleAdsRouter } from "./routers/googleAds";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
+  googleAds: googleAdsRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

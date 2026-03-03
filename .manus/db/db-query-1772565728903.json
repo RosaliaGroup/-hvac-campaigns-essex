@@ -1,0 +1,136 @@
+{
+  "query": "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'leads' ORDER BY ORDINAL_POSITION;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'leads' ORDER BY ORDINAL_POSITION;",
+  "rows": [
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "id"
+    },
+    {
+      "COLUMN_NAME": "name"
+    },
+    {
+      "COLUMN_NAME": "source"
+    },
+    {
+      "COLUMN_NAME": "name"
+    },
+    {
+      "COLUMN_NAME": "contact"
+    },
+    {
+      "COLUMN_NAME": "name"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "phone"
+    },
+    {
+      "COLUMN_NAME": "phone"
+    },
+    {
+      "COLUMN_NAME": "contactType"
+    },
+    {
+      "COLUMN_NAME": "moveInDate"
+    },
+    {
+      "COLUMN_NAME": "email"
+    },
+    {
+      "COLUMN_NAME": "source"
+    },
+    {
+      "COLUMN_NAME": "preferredUnitType"
+    },
+    {
+      "COLUMN_NAME": "unitPreference"
+    },
+    {
+      "COLUMN_NAME": "service"
+    },
+    {
+      "COLUMN_NAME": "moveInTimeline"
+    },
+    {
+      "COLUMN_NAME": "message"
+    },
+    {
+      "COLUMN_NAME": "status"
+    },
+    {
+      "COLUMN_NAME": "source"
+    },
+    {
+      "COLUMN_NAME": "message"
+    },
+    {
+      "COLUMN_NAME": "notes"
+    },
+    {
+      "COLUMN_NAME": "campaignPage"
+    },
+    {
+      "COLUMN_NAME": "campaign"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "createdAt"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "score"
+    },
+    {
+      "COLUMN_NAME": "petOwner"
+    },
+    {
+      "COLUMN_NAME": "needsParking"
+    },
+    {
+      "COLUMN_NAME": "priority"
+    },
+    {
+      "COLUMN_NAME": "tourInterested"
+    },
+    {
+      "COLUMN_NAME": "lastInteractionAt"
+    },
+    {
+      "COLUMN_NAME": "lastCallId"
+    },
+    {
+      "COLUMN_NAME": "interactionCount"
+    },
+    {
+      "COLUMN_NAME": "updatedAt"
+    },
+    {
+      "COLUMN_NAME": "scoreBreakdown"
+    },
+    {
+      "COLUMN_NAME": "leadQuality"
+    },
+    {
+      "COLUMN_NAME": "notes"
+    }
+  ],
+  "messages": [],
+  "stdout": "COLUMN_NAME\nid\nid\nid\nname\nsource\nname\ncontact\nname\nemail\nphone\nphone\ncontactType\nmoveInDate\nemail\nsource\npreferredUnitType\nunitPreference\nservice\nmoveInTimeline\nmessage\nstatus\nsource\nmessage\nnotes\ncampaignPage\ncampaign\ncreatedAt\ncreatedAt\ncreatedAt\nupdatedAt\nscore\npetOwner\nneedsParking\npriority\ntourInterested\nlastInteractionAt\nlastCallId\ninteractionCount\nupdatedAt\nscoreBreakdown\nleadQuality\nnotes\n",
+  "stderr": "",
+  "execution_time_ms": 60
+}
