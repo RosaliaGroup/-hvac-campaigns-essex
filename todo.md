@@ -406,3 +406,7 @@
 - [x] Add deleteSocialPost and updateSocialPostStatus to db.ts
 - [x] Add lp_referral_partner and lp_maintenance_subscription captureType values to schema + db:push
 - [x] Register all new routes in App.tsx
+
+## Command Center Hub
+- [x] Build Command Center hub page with all dashboard links organized by category
+- [x] Add Command Center link to main navigation

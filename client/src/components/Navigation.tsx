@@ -59,11 +59,16 @@ export default function Navigation() {
             <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Contact
             </Link>
-            {/* Only show Autopilot link to authenticated (logged-in) users */}
+            {/* Only show Dashboard + Autopilot links to authenticated (logged-in) users */}
             {isAuthenticated && (
-              <Link href="/marketing-autopilot" className={`text-sm font-bold transition-colors px-3 py-1 rounded-full border-2 border-[#ff6b35] ${isActive('/marketing-autopilot') ? 'bg-[#ff6b35] text-white' : 'text-[#ff6b35] hover:bg-[#ff6b35] hover:text-white'}`}>
-                ⚡ Autopilot
-              </Link>
+              <>
+                <Link href="/command-center" className={`text-sm font-bold transition-colors px-3 py-1 rounded-full border-2 border-[#1e3a5f] ${isActive('/command-center') ? 'bg-[#1e3a5f] text-white' : 'text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white'}`}>
+                  🗂 Dashboard
+                </Link>
+                <Link href="/marketing-autopilot" className={`text-sm font-bold transition-colors px-3 py-1 rounded-full border-2 border-[#ff6b35] ${isActive('/marketing-autopilot') ? 'bg-[#ff6b35] text-white' : 'text-[#ff6b35] hover:bg-[#ff6b35] hover:text-white'}`}>
+                  ⚡ Autopilot
+                </Link>
+              </>
             )}
           </div>
 
@@ -127,11 +132,16 @@ export default function Navigation() {
           <Link href="/contact" className={`block py-2 text-sm font-medium ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Contact
           </Link>
-          {/* Only show Autopilot link to authenticated (logged-in) users */}
+          {/* Only show Dashboard + Autopilot links to authenticated (logged-in) users */}
           {isAuthenticated && (
-            <Link href="/marketing-autopilot" className={`block py-2 text-sm font-bold ${isActive('/marketing-autopilot') ? 'text-[#ff6b35]' : 'text-[#ff6b35]/80'}`}>
-              ⚡ Autopilot
-            </Link>
+            <>
+              <Link href="/command-center" className={`block py-2 text-sm font-bold ${isActive('/command-center') ? 'text-[#1e3a5f]' : 'text-[#1e3a5f]/80'}`}>
+                🗂 Dashboard
+              </Link>
+              <Link href="/marketing-autopilot" className={`block py-2 text-sm font-bold ${isActive('/marketing-autopilot') ? 'text-[#ff6b35]' : 'text-[#ff6b35]/80'}`}>
+                ⚡ Autopilot
+              </Link>
+            </>
           )}
 
           <div className="pt-2">
