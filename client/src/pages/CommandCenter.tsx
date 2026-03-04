@@ -148,7 +148,7 @@ export default function CommandCenter() {
       <Navigation />
 
       <div className="flex-1 overflow-y-auto">
-      <div className="container py-6">
+        <div className="container py-6">
         {/* Header */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-2">
@@ -207,7 +207,7 @@ export default function CommandCenter() {
             </section>
           ))}
         </div>
-      </div>
+        </div>
       </div>
 
       <Footer />
