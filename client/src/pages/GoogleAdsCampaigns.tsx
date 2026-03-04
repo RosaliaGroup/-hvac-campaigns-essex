@@ -517,7 +517,7 @@ export default function GoogleAdsCampaigns() {
               )}
               <Button
                 className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                onClick={() => window.open("https://ads.google.com", "_blank")}
+                onClick={() => window.open("https://ads.google.com/aw/campaigns?ocid=332572004900", "_blank")}
               >
                 <ExternalLink className="h-4 w-4 mr-2" /> Open Google Ads
               </Button>

@@ -374,3 +374,26 @@
 - [ ] Fix Push to Google Ads flow (GoogleAdsCampaigns + MarketingAutopilot pages)
 - [ ] Add adjustable daily budget input before pushing any campaign
 - [ ] Add budget adjustment for existing campaigns (update budget without recreating)
+
+## Fix Sprint — Marketing Dashboard Buttons & New Campaigns (Mar 3 2026)
+- [ ] Fix Open Google Ads button → link to ads.google.com/aw/campaigns (signed-in account)
+- [ ] Fix Open Facebook button → link to correct Facebook Business Manager URL
+- [ ] Fix Open Instagram button → link to correct Instagram Business URL
+- [ ] Fix Open Google Business button → link to business.google.com
+- [ ] Fix Connect buttons on Settings tab to actually trigger OAuth flows
+- [ ] Fix Open Google Search button in campaign modal → link to correct campaign in Google Ads
+- [ ] Fix Open YouTube button → show message that video must be uploaded first
+- [ ] Update all rebate copy: residential = up to $16,000, commercial = up to 80% covered by PSE&G
+- [ ] Add Commercial HVAC Upgrades campaign (PSE&G up to 80% covered)
+- [ ] Add Maintenance Subscription campaign
+- [ ] Add Referral Partnership Program campaign
+- [ ] Disable/replace YouTube campaign placeholder until video is ready
+
+## Session 3 Updates (Mar 2026)
+- [x] Fix all Open/Connect buttons in MarketingDashboard to use correct URLs (Google Business, Google Ads, Facebook/Instagram with Business Manager ID)
+- [x] Add 3 new campaign templates: Commercial HVAC Upgrades (80% PSE&G), Maintenance Subscriptions, Referral Partnership Program
+- [x] Add 'Commercial' tab to CampaignLibrary component
+- [x] Update all rebate amounts to "up to $16,000" in campaignTemplates.ts
+- [x] Fix Open Google Ads button to link to campaigns list (account 332-572-0049)
+- [x] Update platformLinks to use correct Facebook Business Manager URL (ID: 25087499474212997)
+- [x] Update platformInstructions to include account IDs for Google Ads and Meta

@@ -78,7 +78,7 @@ export default function MarketingDashboard() {
                 size="sm" 
                 variant="outline" 
                 className="w-full text-xs"
-                onClick={() => window.open('https://business.google.com/create', '_blank')}
+                onClick={() => window.open('https://business.google.com/dashboard', '_blank')}
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 Open
@@ -100,7 +100,7 @@ export default function MarketingDashboard() {
                 size="sm" 
                 variant="outline" 
                 className="w-full text-xs"
-                onClick={() => window.open('https://ads.google.com/aw/campaigns/new', '_blank')}
+                onClick={() => window.open('https://ads.google.com/aw/campaigns', '_blank')}
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 Open
@@ -122,7 +122,7 @@ export default function MarketingDashboard() {
                 size="sm" 
                 variant="outline" 
                 className="w-full text-xs"
-                onClick={() => window.open('https://business.facebook.com', '_blank')}
+                onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327', '_blank')}
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 Open
@@ -144,7 +144,7 @@ export default function MarketingDashboard() {
                 size="sm" 
                 variant="outline" 
                 className="w-full text-xs"
-                onClick={() => window.open('https://business.facebook.com', '_blank')}
+                onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327', '_blank')}
               >
                 <ExternalLink className="h-3 w-3 mr-1" />
                 Open
@@ -404,10 +404,10 @@ export default function MarketingDashboard() {
                     </p>
                     <Button 
                       className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                      onClick={() => window.open('https://business.google.com', '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open Google Business
+onClick={() => window.open('https://business.google.com/dashboard', '_blank')}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Google Business
                     </Button>
                   </div>
 
@@ -419,10 +419,10 @@ export default function MarketingDashboard() {
                     </p>
                     <Button 
                       className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                      onClick={() => window.open('https://ads.google.com', '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open Google Ads
+onClick={() => window.open('https://ads.google.com/aw/campaigns', '_blank')}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Google Ads
                     </Button>
                   </div>
 
@@ -434,10 +434,10 @@ export default function MarketingDashboard() {
                     </p>
                     <Button 
                       className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                      onClick={() => window.open('https://business.facebook.com', '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open Meta Business Suite
+onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327', '_blank')}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Meta Business Suite
                     </Button>
                   </div>
 
@@ -449,10 +449,10 @@ export default function MarketingDashboard() {
                     </p>
                     <Button 
                       className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                      onClick={() => window.open('https://business.facebook.com/instagram', '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open Instagram Business
+onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327', '_blank')}
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open Instagram Business
                     </Button>
                   </div>
                 </div>
@@ -534,7 +534,7 @@ export default function MarketingDashboard() {
                           <p className="text-sm text-muted-foreground">Not connected</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Connect</Button>
+                      <Button variant="outline" size="sm" onClick={() => window.open('https://business.google.com/dashboard', '_blank')}>Open</Button>
                     </div>
 
                     <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -545,7 +545,7 @@ export default function MarketingDashboard() {
                           <p className="text-sm text-muted-foreground">Not connected</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Connect</Button>
+                      <Button variant="outline" size="sm" onClick={() => window.open('https://ads.google.com/aw/campaigns', '_blank')}>Open</Button>
                     </div>
 
                     <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -556,7 +556,7 @@ export default function MarketingDashboard() {
                           <p className="text-sm text-muted-foreground">Not connected</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Connect</Button>
+                      <Button variant="outline" size="sm" onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327', '_blank')}>Open</Button>
                     </div>
 
                     <div className="flex items-center justify-between p-3 border rounded-lg">
@@ -567,7 +567,7 @@ export default function MarketingDashboard() {
                           <p className="text-sm text-muted-foreground">Not connected</p>
                         </div>
                       </div>
-                      <Button variant="outline" size="sm">Connect</Button>
+                      <Button variant="outline" size="sm" onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327', '_blank')}>Open</Button>
                     </div>
                   </div>
                 </div>
