@@ -6,7 +6,11 @@ const CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET!;
 const CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID!;
 
 // Build OAuth URL for user to authorize
+// We encode the redirectUri in the state param so the callback handler
+// can use the exact same URI that was registered in Google Cloud Console.
 export function getGoogleAdsAuthUrl(redirectUri: string): string {
+  // state = base64(redirectUri) so callback can reconstruct it exactly
+  const state = Buffer.from(redirectUri).toString("base64");
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     redirect_uri: redirectUri,
@@ -14,6 +18,7 @@ export function getGoogleAdsAuthUrl(redirectUri: string): string {
     scope: "https://www.googleapis.com/auth/adwords",
     access_type: "offline",
     prompt: "consent",
+    state,
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }

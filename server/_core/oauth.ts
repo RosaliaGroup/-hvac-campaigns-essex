@@ -15,14 +15,34 @@ export function registerOAuthRoutes(app: Express) {
   // Google Ads OAuth callback — exchanges code for refresh token and saves it
   app.get("/api/oauth/google-ads/callback", async (req: Request, res: Response) => {
     const code = getQueryParam(req, "code");
-    const redirectUri = `${req.protocol}://${req.get("host")}/api/oauth/google-ads/callback`;
+    const stateParam = getQueryParam(req, "state");
 
     if (!code) {
       res.redirect(302, "/google-ads-campaigns?error=missing_code");
       return;
     }
 
+    // Decode redirectUri from state (base64 encoded by getGoogleAdsAuthUrl)
+    // This ensures we use the exact same URI that was registered in Google Cloud Console
+    let redirectUri: string;
+    if (stateParam) {
+      try {
+        const decoded = Buffer.from(stateParam, "base64").toString("utf8");
+        // Validate it looks like a URL before trusting it
+        if (decoded.startsWith("http")) {
+          redirectUri = decoded;
+        } else {
+          redirectUri = "https://mechanicalenterprise.com/api/oauth/google-ads/callback";
+        }
+      } catch {
+        redirectUri = "https://mechanicalenterprise.com/api/oauth/google-ads/callback";
+      }
+    } else {
+      redirectUri = "https://mechanicalenterprise.com/api/oauth/google-ads/callback";
+    }
+
     try {
+      console.log("[Google Ads] Exchanging code with redirectUri:", redirectUri);
       const tokens = await exchangeCodeForTokens(code, redirectUri);
       await saveAiVaCredentials("google_ads", { refresh_token: tokens.refresh_token });
       console.log("[Google Ads] OAuth connected successfully");
