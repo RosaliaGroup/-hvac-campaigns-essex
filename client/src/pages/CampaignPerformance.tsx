@@ -22,7 +22,7 @@ import {
   Loader2
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
+import DashboardFooter from "@/components/DashboardFooter";
 import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -531,7 +531,7 @@ export default function CampaignPerformance() {
         </Card>
       </div>
 
-      <Footer />
+      <DashboardFooter />
     </div>
   );
 }

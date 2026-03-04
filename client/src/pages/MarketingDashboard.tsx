@@ -19,7 +19,7 @@ import {
   CheckSquare
 } from "lucide-react";
 import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
+import DashboardFooter from "@/components/DashboardFooter";
 import CampaignLibrary from "@/components/CampaignLibrary";
 import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
@@ -855,7 +855,7 @@ onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm
         </Tabs>
       </div>
       </div>
-      <Footer />
+      <DashboardFooter />
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
 import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
+import DashboardFooter from "@/components/DashboardFooter";
 import {
   BarChart3,
   Facebook,
@@ -210,7 +210,7 @@ export default function CommandCenter() {
         </div>
       </div>
 
-      <Footer />
+      <DashboardFooter />
     </div>
   );
 }

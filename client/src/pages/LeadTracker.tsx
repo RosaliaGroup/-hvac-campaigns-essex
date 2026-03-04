@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, User, Calendar, TrendingUp, Download, Plus, Bell } from "lucide-react";
 import Navigation from "@/components/Navigation";
-import Footer from "@/components/Footer";
+import DashboardFooter from "@/components/DashboardFooter";
 import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
@@ -516,7 +516,7 @@ export default function LeadTracker() {
         )}
       </div>
 
-      <Footer />
+      <DashboardFooter />
     </div>
   );
 }
