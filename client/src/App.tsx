@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import About from "./pages/About";
@@ -38,10 +39,13 @@ import LeadDashboard from "./pages/LeadDashboard";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
 import NotFound from "./pages/NotFound";
 
+// Helper to wrap a page in ProtectedRoute cleanly
+const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
+
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
+      {/* ── Public routes ─────────────────────────────────────────── */}
       <Route path={"/"} component={Home} />
       <Route path={"/about"} component={About} />
       <Route path={"/services"} component={Services} />
@@ -52,22 +56,8 @@ function Router() {
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
       <Route path={"/partnerships"} component={Partnerships} />
       <Route path={"/careers"} component={Careers} />
-      <Route path={"/marketing-dashboard"} component={MarketingDashboard} />
-      <Route path={"/leads"} component={LeadTracker} />
-      <Route path={"/campaign-performance"} component={CampaignPerformance} />
       <Route path={"/testimonials"} component={Testimonials} />
-      <Route path={"/ai-va-dashboard"} component={AIVADashboard} />
-      <Route path={"/ai-va-settings"} component={AIVASettings} />
-      <Route path={"/lead-scoring"} component={LeadScoringDashboard} />
-      <Route path={"/ai-assistant-prompts"} component={AIAssistantPrompts} />
-      <Route path={"/ai-script-manager"} component={AIScriptManager} />
-      <Route path={"/admin"} component={AdminPortal} />
-      <Route path={"/lead-dashboard"} component={LeadDashboard} />
-      <Route path={"/campaign-generator"} component={CampaignGenerator} />
-      <Route path={"/google-ads-campaigns"} component={GoogleAdsCampaigns} />
-      <Route path={"/facebook-campaigns"} component={FacebookCampaigns} />
-      <Route path={"/email-sms-campaigns"} component={EmailSMSCampaigns} />
-      <Route path={"/marketing-autopilot"} component={MarketingAutopilot} />
+
       {/* Campaign Landing Pages — no nav, optimized for paid traffic */}
       <Route path={"/lp/heat-pump-rebates"} component={LPHeatPumpRebates} />
       <Route path={"/lp/commercial-vrv"} component={LPCommercialVRV} />
@@ -76,6 +66,24 @@ function Router() {
       <Route path={"/lp/fb-commercial"} component={LPFBCommercial} />
       <Route path={"/lp/rebate-guide"} component={LPRebateGuide} />
       <Route path={"/lp/maintenance-offer"} component={LPMaintenanceOffer} />
+
+      {/* ── Protected internal routes (login required) ────────────── */}
+      <Route path={"/marketing-autopilot"} component={protect(MarketingAutopilot)} />
+      <Route path={"/marketing-dashboard"} component={protect(MarketingDashboard)} />
+      <Route path={"/leads"} component={protect(LeadTracker)} />
+      <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
+      <Route path={"/campaign-performance"} component={protect(CampaignPerformance)} />
+      <Route path={"/google-ads-campaigns"} component={protect(GoogleAdsCampaigns)} />
+      <Route path={"/facebook-campaigns"} component={protect(FacebookCampaigns)} />
+      <Route path={"/email-sms-campaigns"} component={protect(EmailSMSCampaigns)} />
+      <Route path={"/campaign-generator"} component={protect(CampaignGenerator)} />
+      <Route path={"/ai-va-dashboard"} component={protect(AIVADashboard)} />
+      <Route path={"/ai-va-settings"} component={protect(AIVASettings)} />
+      <Route path={"/lead-scoring"} component={protect(LeadScoringDashboard)} />
+      <Route path={"/ai-assistant-prompts"} component={protect(AIAssistantPrompts)} />
+      <Route path={"/ai-script-manager"} component={protect(AIScriptManager)} />
+      <Route path={"/admin"} component={protect(AdminPortal)} />
+
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -83,18 +91,10 @@ function Router() {
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
           <Router />

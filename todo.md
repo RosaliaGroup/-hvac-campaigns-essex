@@ -362,3 +362,9 @@
 - [ ] Connect Vapi tool webhook URL in Vapi Dashboard
 - [ ] Test Jessica booking flow end-to-end
 - [ ] Verify Google Ads OAuth connect flow on production
+
+## Security — Auth Protection for Internal Pages
+- [ ] Hide ⚡ Autopilot nav link from public visitors (show only when logged in)
+- [ ] Add auth guard to /marketing-autopilot route
+- [ ] Add auth guard to all other internal routes (marketing-dashboard, leads, lead-dashboard, ai-va-dashboard, ai-va-settings, lead-scoring, ai-assistant-prompts, ai-script-manager, admin, campaign-performance, google-ads-campaigns, facebook-campaigns, email-sms-campaigns, campaign-generator)
+- [ ] Create a reusable ProtectedRoute component

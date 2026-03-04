@@ -1,9 +1,11 @@
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Phone } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export default function Navigation() {
   const [location] = useLocation();
+  const { isAuthenticated } = useAuth();
 
   const isActive = (path: string) => location === path;
 
@@ -57,10 +59,12 @@ export default function Navigation() {
             <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Contact
             </Link>
-            <Link href="/marketing-autopilot" className={`text-sm font-bold transition-colors px-3 py-1 rounded-full border-2 border-[#ff6b35] ${isActive('/marketing-autopilot') ? 'bg-[#ff6b35] text-white' : 'text-[#ff6b35] hover:bg-[#ff6b35] hover:text-white'}`}>
-              ⚡ Autopilot
-            </Link>
-
+            {/* Only show Autopilot link to authenticated (logged-in) users */}
+            {isAuthenticated && (
+              <Link href="/marketing-autopilot" className={`text-sm font-bold transition-colors px-3 py-1 rounded-full border-2 border-[#ff6b35] ${isActive('/marketing-autopilot') ? 'bg-[#ff6b35] text-white' : 'text-[#ff6b35] hover:bg-[#ff6b35] hover:text-white'}`}>
+                ⚡ Autopilot
+              </Link>
+            )}
           </div>
 
           {/* Contact Info & CTA */}
@@ -123,9 +127,12 @@ export default function Navigation() {
           <Link href="/contact" className={`block py-2 text-sm font-medium ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Contact
           </Link>
-          <Link href="/marketing-autopilot" className={`block py-2 text-sm font-bold ${isActive('/marketing-autopilot') ? 'text-[#ff6b35]' : 'text-[#ff6b35]/80'}`}>
-            ⚡ Autopilot
-          </Link>
+          {/* Only show Autopilot link to authenticated (logged-in) users */}
+          {isAuthenticated && (
+            <Link href="/marketing-autopilot" className={`block py-2 text-sm font-bold ${isActive('/marketing-autopilot') ? 'text-[#ff6b35]' : 'text-[#ff6b35]/80'}`}>
+              ⚡ Autopilot
+            </Link>
+          )}
 
           <div className="pt-2">
             <a href="tel:+18624191763" className="flex items-center gap-2 text-sm text-[#1e3a5f] hover:text-[#ff6b35]">
