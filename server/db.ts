@@ -6,7 +6,8 @@ import {
   smsConversations, InsertSmsConversation, socialPosts, InsertSocialPost,
   socialInteractions, InsertSocialInteraction, aiVaAnalytics, InsertAiVaAnalytic,
   aiScripts, InsertAiScript,
-  appointments, InsertAppointment
+  appointments, InsertAppointment,
+  teamMembers
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -668,4 +669,108 @@ export async function updateSocialPostStatus(id: number, status: "draft" | "sche
   const db = await getDb();
   if (!db) return;
   await db.update(socialPosts).set({ status, errorMessage: errorMessage || null }).where(eq(socialPosts.id, id));
+}
+
+// ─── Team Members ────────────────────────────────────────────────────────────
+
+export async function getTeamMemberByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(teamMembers).where(eq(teamMembers.email, email.toLowerCase())).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getTeamMemberByInviteToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(teamMembers).where(eq(teamMembers.inviteToken, token)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getTeamMemberByResetToken(token: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(teamMembers).where(eq(teamMembers.resetToken, token)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function createTeamMember(data: {
+  email: string;
+  name: string;
+  role: "admin" | "member" | "viewer";
+  inviteToken: string;
+  inviteExpiresAt: Date;
+  invitedBy: string;
+}) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(teamMembers).values({
+    email: data.email.toLowerCase(),
+    name: data.name,
+    role: data.role,
+    status: "invited",
+    inviteToken: data.inviteToken,
+    inviteExpiresAt: data.inviteExpiresAt,
+    invitedBy: data.invitedBy,
+  });
+  return getTeamMemberByEmail(data.email);
+}
+
+export async function activateTeamMember(id: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(teamMembers).set({
+    passwordHash,
+    status: "active",
+    inviteToken: null,
+    inviteExpiresAt: null,
+  }).where(eq(teamMembers.id, id));
+}
+
+export async function setTeamMemberResetToken(id: number, token: string, expiresAt: Date) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(teamMembers).set({ resetToken: token, resetExpiresAt: expiresAt }).where(eq(teamMembers.id, id));
+}
+
+export async function resetTeamMemberPassword(id: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(teamMembers).set({
+    passwordHash,
+    resetToken: null,
+    resetExpiresAt: null,
+    status: "active",
+  }).where(eq(teamMembers.id, id));
+}
+
+export async function updateTeamMemberLastSignedIn(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(teamMembers).set({ lastSignedIn: new Date() }).where(eq(teamMembers.id, id));
+}
+
+export async function listTeamMembers() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(teamMembers).orderBy(desc(teamMembers.createdAt));
+}
+
+export async function deleteTeamMember(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(teamMembers).where(eq(teamMembers.id, id));
+}
+
+export async function updateTeamMemberStatus(id: number, status: "active" | "suspended") {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(teamMembers).set({ status }).where(eq(teamMembers.id, id));
+}
+
+export async function getTeamMemberById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(teamMembers).where(eq(teamMembers.id, id)).limit(1);
+  return rows[0] ?? null;
 }

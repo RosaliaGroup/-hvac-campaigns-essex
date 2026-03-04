@@ -1,7 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 import { Loader2 } from "lucide-react";
-import { Redirect } from "wouter";
+import { useLocation } from "wouter";
 
 interface ProtectedRouteProps {
   component: React.ComponentType;
@@ -14,6 +13,7 @@ interface ProtectedRouteProps {
  */
 export default function ProtectedRoute({ component: Component }: ProtectedRouteProps) {
   const { isAuthenticated, loading } = useAuth();
+  const [location] = useLocation();
 
   if (loading) {
     return (
@@ -27,8 +27,9 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
   }
 
   if (!isAuthenticated) {
-    // Redirect to Manus OAuth login, return to current page after auth
-    window.location.href = getLoginUrl();
+    // Redirect to team login, preserving the current path as a return destination
+    const returnPath = encodeURIComponent(location);
+    window.location.href = `/team-login?return=${returnPath}`;
     return null;
   }
 

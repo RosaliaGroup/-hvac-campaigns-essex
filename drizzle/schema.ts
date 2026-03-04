@@ -271,3 +271,26 @@ export const appointments = mysqlTable("appointments", {
 });
 export type Appointment = typeof appointments.$inferSelect;
 export type InsertAppointment = typeof appointments.$inferInsert;
+
+/**
+ * Team members table for email/password dashboard access.
+ * Separate from Manus OAuth users — allows owner to invite staff.
+ */
+export const teamMembers = mysqlTable("teamMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  email: varchar("email", { length: 320 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  passwordHash: text("passwordHash"),
+  role: mysqlEnum("role", ["admin", "member", "viewer"]).default("member").notNull(),
+  status: mysqlEnum("status", ["invited", "active", "suspended"]).default("invited").notNull(),
+  inviteToken: varchar("inviteToken", { length: 128 }),
+  inviteExpiresAt: timestamp("inviteExpiresAt"),
+  resetToken: varchar("resetToken", { length: 128 }),
+  resetExpiresAt: timestamp("resetExpiresAt"),
+  invitedBy: varchar("invitedBy", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn"),
+});
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type InsertTeamMember = typeof teamMembers.$inferInsert;

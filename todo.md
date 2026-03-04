@@ -410,3 +410,10 @@
 ## Command Center Hub
 - [x] Build Command Center hub page with all dashboard links organized by category
 - [x] Add Command Center link to main navigation
+
+## Session 4 - Team Access System
+- [ ] Add teamMembers table to schema (email, passwordHash, inviteToken, role, status)
+- [ ] Build backend: invite, acceptInvite, teamLogin, logout, resetPassword, sendResetEmail procedures
+- [ ] Build frontend: TeamLogin page (/team-login), AcceptInvite page (/accept-invite), ResetPassword page
+- [ ] Build Team Management page in Command Center (invite, list, revoke)
+- [ ] Update all protected dashboard routes to accept team member sessions

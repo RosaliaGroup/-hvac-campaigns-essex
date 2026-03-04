@@ -39,6 +39,10 @@ import LPReferralPartner from "./pages/lp/LPReferralPartner";
 import CommandCenter from "./pages/CommandCenter";
 import LeadDashboard from "./pages/LeadDashboard";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
+import TeamLogin from "./pages/TeamLogin";
+import AcceptInvite from "./pages/AcceptInvite";
+import ResetPassword from "./pages/ResetPassword";
+import TeamManagement from "./pages/TeamManagement";
 import NotFound from "./pages/NotFound";
 
 // Helper to wrap a page in ProtectedRoute cleanly
@@ -59,6 +63,11 @@ function Router() {
       <Route path={"/partnerships"} component={Partnerships} />
       <Route path={"/careers"} component={Careers} />
       <Route path={"/testimonials"} component={Testimonials} />
+
+      {/* Team auth routes — public (no login required to access these) */}
+      <Route path={"/team-login"} component={TeamLogin} />
+      <Route path={"/accept-invite"} component={AcceptInvite} />
+      <Route path={"/reset-password"} component={ResetPassword} />
 
       {/* Campaign Landing Pages — no nav, optimized for paid traffic */}
       <Route path={"/lp/heat-pump-rebates"} component={LPHeatPumpRebates} />
@@ -87,6 +96,7 @@ function Router() {
       <Route path={"/ai-assistant-prompts"} component={protect(AIAssistantPrompts)} />
       <Route path={"/ai-script-manager"} component={protect(AIScriptManager)} />
       <Route path={"/admin"} component={protect(AdminPortal)} />
+      <Route path={"/team-management"} component={protect(TeamManagement)} />
 
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

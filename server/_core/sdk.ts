@@ -6,6 +6,7 @@ import type { Request } from "express";
 import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
+
 import { ENV } from "./env";
 import type {
   ExchangeTokenRequest,
@@ -23,6 +24,8 @@ export type SessionPayload = {
   appId: string;
   name: string;
 };
+
+const TEAM_SESSION_PREFIX = "team:";
 
 const EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
 const GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
@@ -257,7 +260,6 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<User> {
-    // Regular authentication flow
     const cookies = this.parseCookies(req.headers.cookie);
     const sessionCookie = cookies.get(COOKIE_NAME);
     const session = await this.verifySession(sessionCookie);
@@ -268,6 +270,30 @@ class SDKServer {
 
     const sessionUserId = session.openId;
     const signedInAt = new Date();
+
+    // ── Team member session (openId starts with "team:") ──────────────────
+    if (sessionUserId.startsWith(TEAM_SESSION_PREFIX)) {
+      const memberId = parseInt(sessionUserId.slice(TEAM_SESSION_PREFIX.length), 10);
+      const member = await db.getTeamMemberById(memberId);
+      if (!member || member.status !== "active") {
+        throw ForbiddenError("Team member not found or suspended");
+      }
+      await db.updateTeamMemberLastSignedIn(memberId);
+      // Return a User-shaped object so the rest of the app works unchanged
+      return {
+        id: -(memberId), // negative to distinguish from OAuth users
+        openId: sessionUserId,
+        name: member.name,
+        email: member.email,
+        loginMethod: "team",
+        role: member.role === "admin" ? "admin" : "user",
+        createdAt: member.createdAt,
+        updatedAt: member.createdAt,
+        lastSignedIn: signedInAt,
+      } as User;
+    }
+
+    // ── Regular Manus OAuth session ───────────────────────────────────────
     let user = await db.getUserByOpenId(sessionUserId);
 
     // If user not in DB, sync from OAuth server automatically

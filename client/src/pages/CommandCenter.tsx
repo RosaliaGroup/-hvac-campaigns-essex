@@ -119,6 +119,7 @@ const categories: Category[] = [
     icon: ShieldCheck,
     tools: [
       { label: "Admin Portal", href: "/admin", description: "Full admin access — all tools in one view", icon: ShieldCheck, badge: "Admin", badgeColor: "bg-red-100 text-red-800" },
+      { label: "Team Access", href: "/team-management", description: "Invite team members, manage roles, suspend or remove access", icon: Users, badge: "New", badgeColor: "bg-blue-100 text-blue-800" },
     ],
   },
 ];
