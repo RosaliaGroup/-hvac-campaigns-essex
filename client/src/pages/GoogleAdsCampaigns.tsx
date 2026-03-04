@@ -482,10 +482,10 @@ export default function GoogleAdsCampaigns() {
   const activeCampaign = campaigns.find(c => c.id === activeTab)!;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
-      <div className="bg-white border-b border-border shadow-sm">
-        <div className="container py-6">
+      <div className="bg-white border-b border-border shadow-sm flex-shrink-0">
+        <div className="container py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/admin">
@@ -526,7 +526,8 @@ export default function GoogleAdsCampaigns() {
         </div>
       </div>
 
-      <div className="container py-8">
+      <div className="flex-1 overflow-y-auto">
+      <div className="container py-4">
         {/* Live Performance Panel */}
         {connectionStatus?.connected && (
           <Card className="mb-6 border-green-200 bg-green-50/50">
@@ -836,6 +837,7 @@ export default function GoogleAdsCampaigns() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

@@ -33,9 +33,9 @@ export default function AIVADashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30">
+    <div className="h-screen flex flex-col bg-secondary/30">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2a5a8f] text-white py-8">
+      <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2a5a8f] text-white py-4 flex-shrink-0">
         <div className="container">
           <div className="flex items-center justify-between">
             <div>
@@ -60,8 +60,9 @@ export default function AIVADashboard() {
         </div>
       </div>
 
-      <div className="container py-8">
-        <Tabs defaultValue="overview" className="space-y-6">
+      <div className="flex-1 overflow-y-auto">
+      <div className="container py-4">
+        <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="calls">Voice Calls</TabsTrigger>
@@ -97,6 +98,7 @@ export default function AIVADashboard() {
             <AnalyticsDashboard />
           </TabsContent>
         </Tabs>
+      </div>
       </div>
     </div>
   );

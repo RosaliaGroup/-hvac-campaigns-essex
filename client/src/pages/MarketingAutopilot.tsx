@@ -131,9 +131,10 @@ export default function MarketingAutopilot() {
   const pct = analysis?.percentToGoal ?? 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50">
       <Navigation />
-      <div className="container py-8 max-w-7xl mx-auto">
+      <div className="flex-1 overflow-y-auto">
+      <div className="container py-4 max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
@@ -479,6 +480,7 @@ export default function MarketingAutopilot() {
             )}
           </TabsContent>
         </Tabs>
+      </div>
       </div>
     </div>
   );

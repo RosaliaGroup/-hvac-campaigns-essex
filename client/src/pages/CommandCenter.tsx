@@ -143,10 +143,11 @@ export default function CommandCenter() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen flex flex-col bg-gray-50">
       <Navigation />
 
-      <div className="container py-10">
+      <div className="flex-1 overflow-y-auto">
+      <div className="container py-6">
         {/* Header */}
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-2">
@@ -205,6 +206,7 @@ export default function CommandCenter() {
             </section>
           ))}
         </div>
+      </div>
       </div>
 
       <Footer />

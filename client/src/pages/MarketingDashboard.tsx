@@ -329,12 +329,13 @@ export default function MarketingDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30">
+    <div className="h-screen flex flex-col bg-secondary/30">
       <Navigation />
       
-      <div className="container py-8">
+      <div className="flex-1 overflow-y-auto">
+      <div className="container py-4">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-4">
           <h1 className="text-4xl font-bold text-[#1e3a5f] mb-2">Marketing Dashboard</h1>
           <p className="text-muted-foreground">Manage your campaigns and social media from one place</p>
         </div>
@@ -853,7 +854,7 @@ onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm
           </TabsContent>
         </Tabs>
       </div>
-
+      </div>
       <Footer />
     </div>
   );

@@ -348,10 +348,10 @@ export default function EmailSMSCampaigns() {
   const activeSMS = smsSequences.find(s => s.id === activeSMSSeq)!;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Header */}
-      <div className="bg-white border-b border-border shadow-sm">
-        <div className="container py-6">
+      <div className="bg-white border-b border-border shadow-sm flex-shrink-0">
+        <div className="container py-3">
           <div className="flex items-center gap-4">
             <Link href="/admin">
               <Button variant="ghost" size="sm">
@@ -369,7 +369,8 @@ export default function EmailSMSCampaigns() {
         </div>
       </div>
 
-      <div className="container py-8">
+      <div className="flex-1 overflow-y-auto">
+      <div className="container py-4">
         <Tabs defaultValue="email">
           <TabsList className="mb-6">
             <TabsTrigger value="email" className="flex items-center gap-2">
@@ -578,6 +579,7 @@ export default function EmailSMSCampaigns() {
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );
