@@ -368,3 +368,9 @@
 - [ ] Add auth guard to /marketing-autopilot route
 - [ ] Add auth guard to all other internal routes (marketing-dashboard, leads, lead-dashboard, ai-va-dashboard, ai-va-settings, lead-scoring, ai-assistant-prompts, ai-script-manager, admin, campaign-performance, google-ads-campaigns, facebook-campaigns, email-sms-campaigns, campaign-generator)
 - [ ] Create a reusable ProtectedRoute component
+
+## Bug Fix — Push to Google Ads + Budget Adjustment
+- [ ] Diagnose why Push to Google Ads buttons are not working
+- [ ] Fix Push to Google Ads flow (GoogleAdsCampaigns + MarketingAutopilot pages)
+- [ ] Add adjustable daily budget input before pushing any campaign
+- [ ] Add budget adjustment for existing campaigns (update budget without recreating)

@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
 import { toast } from "sonner";
 import {
@@ -381,6 +384,9 @@ export default function GoogleAdsCampaigns() {
   const { isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState(campaigns[0].id);
   const [pushingCampaign, setPushingCampaign] = useState<string | null>(null);
+  // Budget dialog state
+  const [budgetDialog, setBudgetDialog] = useState<{ open: boolean; campaign: Campaign | null }>({ open: false, campaign: null });
+  const [dailyBudget, setDailyBudget] = useState<string>("50");
 
   // Google Ads API hooks
   const { data: connectionStatus, refetch: refetchStatus } = trpc.googleAds.getConnectionStatus.useQuery(
@@ -433,15 +439,29 @@ export default function GoogleAdsCampaigns() {
   };
 
   const handlePushCampaign = (campaign: Campaign) => {
+    // Open budget dialog first so user can set/adjust budget before pushing
+    setBudgetDialog({ open: true, campaign });
+    setDailyBudget("50");
+  };
+
+  const handleConfirmPush = () => {
+    const campaign = budgetDialog.campaign;
+    if (!campaign) return;
+    const budget = parseFloat(dailyBudget);
+    if (isNaN(budget) || budget < 1) {
+      toast.error("Please enter a valid daily budget (minimum $1)");
+      return;
+    }
     const firstGroup = campaign.adGroups[0];
+    setBudgetDialog({ open: false, campaign: null });
     setPushingCampaign(campaign.id);
     createCampaign.mutate({
       name: `ME - ${campaign.name}`,
-      dailyBudget: 50,
+      dailyBudget: budget,
       keywords: firstGroup.keywords,
       headlines: firstGroup.headlines,
       descriptions: firstGroup.descriptions,
-      finalUrl: `https://mechanicalenterprise.com${firstGroup.finalUrl}`,
+      finalUrl: firstGroup.finalUrl.startsWith("http") ? firstGroup.finalUrl : `https://mechanicalenterprise.com${firstGroup.finalUrl}`,
       geoTargetNames: ["New Jersey"],
     });
   };
@@ -754,6 +774,68 @@ export default function GoogleAdsCampaigns() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Budget Confirmation Dialog */}
+      <Dialog open={budgetDialog.open} onOpenChange={(open) => setBudgetDialog({ open, campaign: budgetDialog.campaign })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-[#ff6b35]" />
+              Set Daily Budget
+            </DialogTitle>
+            <DialogDescription>
+              Set the daily budget for <strong>{budgetDialog.campaign?.name}</strong> before pushing to Google Ads.
+              The campaign will be created as <strong>paused</strong> — you enable it in Google Ads when ready.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="daily-budget">Daily Budget (USD)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">$</span>
+                <Input
+                  id="daily-budget"
+                  type="number"
+                  min="1"
+                  step="5"
+                  value={dailyBudget}
+                  onChange={(e) => setDailyBudget(e.target.value)}
+                  className="pl-7"
+                  placeholder="50"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Recommended: <strong>$50–$100/day</strong> for search campaigns. At $9–$12 avg CPC, expect 5–10 clicks/day.
+              </p>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {[25, 50, 75, 100].map(amt => (
+                <Button
+                  key={amt}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setDailyBudget(String(amt))}
+                  className={dailyBudget === String(amt) ? "border-[#ff6b35] text-[#ff6b35]" : ""}
+                >
+                  ${amt}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBudgetDialog({ open: false, campaign: null })}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white"
+              onClick={handleConfirmPush}
+            >
+              <Send className="h-4 w-4 mr-2" />
+              Push to Google Ads — ${dailyBudget}/day
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
