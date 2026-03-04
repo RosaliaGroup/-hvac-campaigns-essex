@@ -57,6 +57,9 @@ export default function Navigation() {
             <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
               Contact
             </Link>
+            <Link href="/marketing-autopilot" className={`text-sm font-bold transition-colors px-3 py-1 rounded-full border-2 border-[#ff6b35] ${isActive('/marketing-autopilot') ? 'bg-[#ff6b35] text-white' : 'text-[#ff6b35] hover:bg-[#ff6b35] hover:text-white'}`}>
+              ⚡ Autopilot
+            </Link>
 
           </div>
 
@@ -119,6 +122,9 @@ export default function Navigation() {
           </Link>
           <Link href="/contact" className={`block py-2 text-sm font-medium ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
             Contact
+          </Link>
+          <Link href="/marketing-autopilot" className={`block py-2 text-sm font-bold ${isActive('/marketing-autopilot') ? 'text-[#ff6b35]' : 'text-[#ff6b35]/80'}`}>
+            ⚡ Autopilot
           </Link>
 
           <div className="pt-2">

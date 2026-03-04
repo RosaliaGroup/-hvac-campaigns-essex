@@ -5,7 +5,8 @@ import {
   aiVaCredentials, InsertAiVaCredential, callLogs, InsertCallLog,
   smsConversations, InsertSmsConversation, socialPosts, InsertSocialPost,
   socialInteractions, InsertSocialInteraction, aiVaAnalytics, InsertAiVaAnalytic,
-  aiScripts, InsertAiScript
+  aiScripts, InsertAiScript,
+  appointments, InsertAppointment
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -567,4 +568,92 @@ export async function deleteAiScript(id: number) {
   if (!db) throw new Error("Database not available");
   
   await db.delete(aiScripts).where(eq(aiScripts.id, id));
+}
+
+// ─── Appointments (booked by Jessica via Vapi) ───────────────────────────────
+
+export async function createAppointment(data: InsertAppointment) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const [result] = await db.insert(appointments).values(data);
+  return result;
+}
+
+export async function getAllAppointments(limit = 100, offset = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(appointments).orderBy(desc(appointments.createdAt)).limit(limit).offset(offset);
+}
+
+export async function getAppointmentByPhone(phone: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [appt] = await db.select().from(appointments)
+    .where(eq(appointments.phone, phone))
+    .orderBy(desc(appointments.createdAt))
+    .limit(1);
+  return appt || null;
+}
+
+export async function updateAppointmentStatus(id: number, status: "pending" | "confirmed" | "completed" | "cancelled" | "rescheduled") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(appointments).set({ status }).where(eq(appointments.id, id));
+}
+
+export async function rescheduleAppointment(phone: string, newDate: string, newTime: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  // Find most recent pending appointment for this phone
+  const [appt] = await db.select().from(appointments)
+    .where(and(eq(appointments.phone, phone), eq(appointments.status, "pending")))
+    .orderBy(desc(appointments.createdAt))
+    .limit(1);
+  if (!appt) return null;
+  await db.update(appointments)
+    .set({ preferredDate: newDate, preferredTime: newTime, status: "rescheduled" })
+    .where(eq(appointments.id, appt.id));
+  return appt;
+}
+
+export async function getAppointmentStats() {
+  const db = await getDb();
+  if (!db) return { total: 0, pending: 0, confirmed: 0, thisWeek: 0 };
+  const all = await db.select().from(appointments);
+  const now = new Date();
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - now.getDay()); // Sunday
+  weekStart.setHours(0, 0, 0, 0);
+  const thisWeek = all.filter(a => new Date(a.createdAt) >= weekStart).length;
+  return {
+    total: all.length,
+    pending: all.filter(a => a.status === "pending").length,
+    confirmed: all.filter(a => a.status === "confirmed").length,
+    thisWeek,
+  };
+}
+
+export async function getWeeklyAppointmentCounts(weeksBack = 8) {
+  const db = await getDb();
+  if (!db) return [];
+  const all = await db.select().from(appointments).orderBy(desc(appointments.createdAt));
+  const weeks: { week: string; count: number; goal: number }[] = [];
+  const now = new Date();
+  for (let i = weeksBack - 1; i >= 0; i--) {
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() - i * 7);
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+    const count = all.filter(a => {
+      const d = new Date(a.createdAt);
+      return d >= weekStart && d < weekEnd;
+    }).length;
+    weeks.push({
+      week: weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      count,
+      goal: 20,
+    });
+  }
+  return weeks;
 }

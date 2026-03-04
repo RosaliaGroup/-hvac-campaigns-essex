@@ -5,9 +5,11 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
 import { handleVapiWebhook } from "./integrations/vapi";
+import { handleVapiToolCalls } from "./integrations/vapiTools";
 import { handleIncomingSms } from "./integrations/twilio";
 import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
+import { runCampaignAnalysis } from "./services/campaignEngine";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -323,6 +325,36 @@ export const appRouter = router({
       }),
   }),
 
+  // Appointments router (booked by Jessica)
+  appointments: router({
+    list: protectedProcedure
+      .input(z.object({
+        limit: z.number().optional().default(100),
+        offset: z.number().optional().default(0),
+      }))
+      .query(async ({ input }) => {
+        return await db.getAllAppointments(input.limit, input.offset);
+      }),
+
+    stats: protectedProcedure.query(async () => {
+      return await db.getAppointmentStats();
+    }),
+
+    weeklyTrend: protectedProcedure.query(async () => {
+      return await db.getWeeklyAppointmentCounts(8);
+    }),
+
+    updateStatus: protectedProcedure
+      .input(z.object({
+        id: z.number(),
+        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled"]),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateAppointmentStatus(input.id, input.status);
+        return { success: true };
+      }),
+  }),
+
   // AI Scripts management router
   aiScripts: router({
     create: protectedProcedure
@@ -390,6 +422,14 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Vapi tool-calls webhook (Jessica's bookAppointment / rescheduleAppointment / getCallerInfo)
+    vapiTools: publicProcedure
+      .input(z.any())
+      .mutation(async ({ input }) => {
+        const result = await handleVapiToolCalls(input);
+        return result;
+      }),
+
     // Twilio SMS webhook
     twilio: publicProcedure
       .input(z.any())
@@ -397,6 +437,18 @@ export const appRouter = router({
         const response = await handleIncomingSms(input);
         return { response };
       }),
+  }),
+
+  // Marketing Autopilot — autonomous campaign engine
+  autopilot: router({
+    analyze: protectedProcedure.query(async () => {
+      return await runCampaignAnalysis();
+    }),
+
+    // Refresh analysis on demand
+    refresh: protectedProcedure.mutation(async () => {
+      return await runCampaignAnalysis();
+    }),
   }),
 });
 

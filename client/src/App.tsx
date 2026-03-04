@@ -35,6 +35,7 @@ import LPFBCommercial from "./pages/lp/LPFBCommercial";
 import LPRebateGuide from "./pages/lp/LPRebateGuide";
 import LPMaintenanceOffer from "./pages/lp/LPMaintenanceOffer";
 import LeadDashboard from "./pages/LeadDashboard";
+import MarketingAutopilot from "./pages/MarketingAutopilot";
 import NotFound from "./pages/NotFound";
 
 function Router() {
@@ -66,6 +67,7 @@ function Router() {
       <Route path={"/google-ads-campaigns"} component={GoogleAdsCampaigns} />
       <Route path={"/facebook-campaigns"} component={FacebookCampaigns} />
       <Route path={"/email-sms-campaigns"} component={EmailSMSCampaigns} />
+      <Route path={"/marketing-autopilot"} component={MarketingAutopilot} />
       {/* Campaign Landing Pages — no nav, optimized for paid traffic */}
       <Route path={"/lp/heat-pump-rebates"} component={LPHeatPumpRebates} />
       <Route path={"/lp/commercial-vrv"} component={LPCommercialVRV} />

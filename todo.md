@@ -317,3 +317,48 @@
 - [ ] Build live performance data pull — sync spend, clicks, impressions, conversions
 - [ ] Update Google Ads Campaigns page with Push to Google Ads button
 - [ ] Update Campaign Performance page with live data from Google Ads API
+
+## Sprint — All 3 Next Steps (Mar 3 2026)
+- [ ] Add job-caller deflection to Jessica inbound script
+- [ ] Update AI Assistant Prompts page with job-caller section
+- [ ] Build Vapi webhook endpoint for bookAppointment tool
+- [ ] Build Vapi webhook endpoint for rescheduleAppointment tool
+- [ ] Build Vapi webhook endpoint for getCallerInfo tool
+- [ ] Create appointments table in DB schema and push migration
+- [ ] Add appointments section to Lead Dashboard
+- [ ] Send owner notification on every new booking from Jessica
+- [ ] Verify Google Ads OAuth connect flow end-to-end
+
+## Automated Marketing System — 20 Appointments/Week Goal
+- [ ] Push DB migration for appointments table
+- [ ] Build Vapi webhook: bookAppointment handler (save to appointments table + notify owner)
+- [ ] Build Vapi webhook: rescheduleAppointment handler
+- [ ] Build Vapi webhook: getCallerInfo handler (look up existing leads)
+- [ ] Build campaign performance scoring engine (AI-powered weekly analysis)
+- [ ] Build 20-appointments/week goal tracker with gap analysis
+- [ ] Build automated campaign adjustment recommendations (AI)
+- [ ] Build automated Google Ads campaign creation when below goal
+- [ ] Build Marketing Autopilot dashboard page
+- [ ] Add weekly email report to owner (appointments booked, gap to goal, AI actions taken)
+- [ ] Add automated budget reallocation logic (shift spend to best-performing campaigns)
+- [ ] Add A/B test automation for ad headlines and descriptions
+
+## Automated Marketing System (20 Appointments/Week Goal)
+- [x] Add appointments table to database schema
+- [x] Push DB migration for appointments table
+- [x] Build Vapi tool webhook handler (bookAppointment, rescheduleAppointment, getCallerInfo)
+- [x] Add appointments tRPC router (list, stats, weeklyTrend, updateStatus)
+- [x] Build campaign engine service with AI-powered analysis
+- [x] Build weekly trend tracker (8-week history)
+- [x] Build AI recommendation engine (5 recommendations per analysis)
+- [x] Add autopilot tRPC router (analyze, refresh)
+- [x] Build Marketing Autopilot dashboard page (/marketing-autopilot)
+- [x] Add goal progress banner with trend status
+- [x] Add weekly bar chart visualization
+- [x] Add AI recommendations tab with one-click Push to Google Ads
+- [x] Add Appointments tab with confirm/cancel/complete actions
+- [x] Add ⚡ Autopilot link to Navigation (desktop + mobile)
+- [x] Add job-caller deflection to Jessica inbound script
+- [ ] Connect Vapi tool webhook URL in Vapi Dashboard
+- [ ] Test Jessica booking flow end-to-end
+- [ ] Verify Google Ads OAuth connect flow on production

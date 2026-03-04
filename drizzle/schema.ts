@@ -241,3 +241,33 @@ export const aiScripts = mysqlTable("aiScripts", {
 
 export type AiScript = typeof aiScripts.$inferSelect;
 export type InsertAiScript = typeof aiScripts.$inferInsert;
+
+/**
+ * Appointments — booked by Jessica (Vapi AI assistant) via bookAppointment / rescheduleAppointment tools
+ */
+export const appointments = mysqlTable("appointments", {
+  id: int("id").autoincrement().primaryKey(),
+  // Caller info
+  fullName: varchar("fullName", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  // Property
+  propertyAddress: text("propertyAddress"),
+  propertyType: mysqlEnum("propertyType", ["residential", "commercial"]).default("residential"),
+  // Appointment details
+  appointmentType: mysqlEnum("appointmentType", ["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]).notNull(),
+  preferredDate: varchar("preferredDate", { length: 100 }).notNull(),
+  preferredTime: varchar("preferredTime", { length: 100 }).notNull(),
+  issueDescription: text("issueDescription"),
+  // Status
+  status: mysqlEnum("status", ["pending", "confirmed", "completed", "cancelled", "rescheduled"]).default("pending").notNull(),
+  notes: text("notes"),
+  // Source tracking
+  vapiCallId: varchar("vapiCallId", { length: 255 }),
+  bookedBy: varchar("bookedBy", { length: 100 }).default("jessica"),
+  // Timestamps
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type Appointment = typeof appointments.$inferSelect;
+export type InsertAppointment = typeof appointments.$inferInsert;
