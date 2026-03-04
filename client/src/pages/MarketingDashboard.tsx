@@ -26,6 +26,281 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Slider } from "@/components/ui/slider";
+import { trpc } from "@/lib/trpc";
+import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Loader2, Trash2, Send, Sparkles } from "lucide-react";
+
+const CONTENT_TYPES = [
+  { value: "hvac_tip", label: "HVAC Tip" },
+  { value: "rebate_alert", label: "Rebate Alert" },
+  { value: "seasonal_advice", label: "Seasonal Advice" },
+  { value: "energy_savings", label: "Energy Savings" },
+  { value: "faq", label: "FAQ" },
+  { value: "customer_testimonial", label: "Customer Testimonial" },
+  { value: "maintenance_reminder", label: "Maintenance Reminder" },
+  { value: "before_after", label: "Before & After" },
+];
+
+const PLATFORMS = [
+  { value: "google_business", label: "Google Business Profile" },
+  { value: "facebook", label: "Facebook" },
+  { value: "instagram", label: "Instagram" },
+];
+
+function SocialPostManager() {
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
+  const [platform, setPlatform] = useState<"google_business" | "facebook" | "instagram">("google_business");
+  const [contentType, setContentType] = useState<string>("hvac_tip");
+  const [content, setContent] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const { data: posts, isLoading: postsLoading } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 });
+
+  const generateContent = trpc.aiVa.generatePostContent.useMutation({
+    onSuccess: (data: any) => {
+      const hashtags = data.hashtags?.join(" ") || "";
+      setContent(`${data.content}\n\n${hashtags}`);
+      toast({ title: "Content generated!", description: "Review and edit before posting." });
+    },
+    onError: (err: any) => toast({ title: "Generation failed", description: err.message, variant: "destructive" }),
+  });
+
+  const schedulePost = trpc.aiVa.schedulePost.useMutation({
+    onSuccess: () => {
+      toast({ title: "Post scheduled!", description: "Your post has been added to the queue." });
+      setContent("");
+      setScheduledAt("");
+      setIsDialogOpen(false);
+      utils.aiVa.listSocialPosts.invalidate();
+    },
+    onError: (err: any) => toast({ title: "Failed to schedule", description: err.message, variant: "destructive" }),
+  });
+
+  const deletePost = trpc.aiVa.deletePost.useMutation({
+    onSuccess: () => {
+      toast({ title: "Post deleted" });
+      utils.aiVa.listSocialPosts.invalidate();
+    },
+    onError: (err: any) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+  });
+
+  const handleSchedule = () => {
+    if (!content.trim()) { toast({ title: "Please enter or generate content", variant: "destructive" }); return; }
+    if (!scheduledAt) { toast({ title: "Please select a scheduled date/time", variant: "destructive" }); return; }
+    schedulePost.mutate({ platform, content, contentType, scheduledAt: new Date(scheduledAt).toISOString() });
+  };
+
+  const platformBadgeColor = (p: string) => {
+    if (p === "google_business") return "bg-blue-100 text-blue-800";
+    if (p === "facebook") return "bg-indigo-100 text-indigo-800";
+    if (p === "instagram") return "bg-pink-100 text-pink-800";
+    return "";
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Create Post Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>AI-Powered Social Posts</CardTitle>
+              <CardDescription>Generate, schedule, and manage posts for Google Business, Facebook & Instagram</CardDescription>
+            </div>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
+                  <Plus className="h-4 w-4 mr-2" /> Create Post
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Create & Schedule Post</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Platform</label>
+                      <Select value={platform} onValueChange={(v) => setPlatform(v as any)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {PLATFORMS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-1 block">Content Type</label>
+                      <Select value={contentType} onValueChange={setContentType}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {CONTENT_TYPES.map(ct => <SelectItem key={ct.value} value={ct.value}>{ct.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm font-medium">Post Content</label>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => generateContent.mutate({ platform, contentType: contentType as any })}
+                        disabled={generateContent.isPending}
+                      >
+                        {generateContent.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                        AI Generate
+                      </Button>
+                    </div>
+                    <Textarea
+                      placeholder="Write your post content here, or use AI Generate above..."
+                      value={content}
+                      onChange={e => setContent(e.target.value)}
+                      rows={6}
+                      className="resize-none"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">{content.length} characters</p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Schedule Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      value={scheduledAt}
+                      onChange={e => setScheduledAt(e.target.value)}
+                      className="w-full border rounded-md px-3 py-2 text-sm bg-background"
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                    <strong>Note:</strong> To auto-publish posts, connect your Google Business Profile, Facebook, or Instagram credentials in the AI VA Settings page.
+                  </div>
+
+                  <Button
+                    className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white"
+                    onClick={handleSchedule}
+                    disabled={schedulePost.isPending}
+                  >
+                    {schedulePost.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Calendar className="h-4 w-4 mr-2" />}
+                    Schedule Post
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {postsLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : posts && posts.length > 0 ? (
+            <div className="space-y-3">
+              {posts.map((post: any) => (
+                <div key={post.id} className="p-4 border rounded-lg flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${platformBadgeColor(post.platform)}`}>
+                        {PLATFORMS.find(p => p.value === post.platform)?.label || post.platform}
+                      </span>
+                      <Badge variant={
+                        post.status === "posted" ? "default" :
+                        post.status === "scheduled" ? "secondary" :
+                        post.status === "failed" ? "destructive" : "outline"
+                      }>
+                        {post.status}
+                      </Badge>
+                      {post.scheduledAt && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(post.scheduledAt).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-foreground line-clamp-3">{post.content}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive flex-shrink-0"
+                    onClick={() => deletePost.mutate({ id: post.id })}
+                    disabled={deletePost.isPending}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-semibold mb-2">No posts yet</p>
+              <p className="text-sm mb-4">Use the AI generator to create and schedule your first post</p>
+              <Button
+                className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+                onClick={() => setIsDialogOpen(true)}
+              >
+                <Sparkles className="h-4 w-4 mr-2" /> Generate First Post
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Platform Setup Guide */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Auto-Publish Setup</CardTitle>
+          <CardDescription>Connect your accounts to publish posts automatically when scheduled</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Globe className="h-5 w-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-sm">Google Business Profile</p>
+                  <p className="text-xs text-muted-foreground">Connect via AI VA Settings to auto-publish posts</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => window.open('/ai-va', '_blank')}>
+                Configure
+              </Button>
+            </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Facebook className="h-5 w-5 text-indigo-600" />
+                <div>
+                  <p className="font-medium text-sm">Facebook Page</p>
+                  <p className="text-xs text-muted-foreground">Business ID: 25087499474212997 · Asset: 844109052114327</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327', '_blank')}>
+                Open FB
+              </Button>
+            </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="flex items-center gap-3">
+                <Instagram className="h-5 w-5 text-pink-600" />
+                <div>
+                  <p className="font-medium text-sm">Instagram</p>
+                  <p className="text-xs text-muted-foreground">Connected via Facebook Business Manager</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327', '_blank')}>
+                Open IG
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function MarketingDashboard() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -475,27 +750,7 @@ onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm
 
           {/* Posts Tab */}
           <TabsContent value="posts" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Social Media Posts</CardTitle>
-                    <CardDescription>Schedule and manage your content</CardDescription>
-                  </div>
-                  <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Post
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <MessageSquare className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-semibold mb-2">No posts scheduled</p>
-                  <p className="text-sm">Connect your social media accounts to start posting</p>
-                </div>
-              </CardContent>
-            </Card>
+            <SocialPostManager />
           </TabsContent>
 
           {/* Analytics Tab */}

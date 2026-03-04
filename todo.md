@@ -397,3 +397,12 @@
 - [x] Fix Open Google Ads button to link to campaigns list (account 332-572-0049)
 - [x] Update platformLinks to use correct Facebook Business Manager URL (ID: 25087499474212997)
 - [x] Update platformInstructions to include account IDs for Google Ads and Meta
+
+## Session 4 Updates (Mar 4, 2026)
+- [x] Add Referral Partner landing page at /lp/referral-partner
+- [x] Rebuild Maintenance Subscription LP at /lp/maintenance-offer with 3-tier plan selector
+- [x] Add AI-powered social post generator and scheduler to Marketing Dashboard Posts tab
+- [x] Add new tRPC procedures: generatePostContent, schedulePost, publishPost, deletePost
+- [x] Add deleteSocialPost and updateSocialPostStatus to db.ts
+- [x] Add lp_referral_partner and lp_maintenance_subscription captureType values to schema + db:push
+- [x] Register all new routes in App.tsx

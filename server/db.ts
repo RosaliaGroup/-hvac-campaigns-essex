@@ -657,3 +657,15 @@ export async function getWeeklyAppointmentCounts(weeksBack = 8) {
   }
   return weeks;
 }
+
+export async function deleteSocialPost(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(socialPosts).where(eq(socialPosts.id, id));
+}
+
+export async function updateSocialPostStatus(id: number, status: "draft" | "scheduled" | "posted" | "failed", errorMessage?: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(socialPosts).set({ status, errorMessage: errorMessage || null }).where(eq(socialPosts.id, id));
+}

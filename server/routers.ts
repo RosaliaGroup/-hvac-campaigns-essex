@@ -10,6 +10,9 @@ import { handleIncomingSms } from "./integrations/twilio";
 import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
 import { runCampaignAnalysis } from "./services/campaignEngine";
+import { generateSocialPost } from "./integrations/ai-content-generator";
+import { postToGoogleBusiness } from "./integrations/google-business";
+import { postToFacebook, postToInstagram } from "./integrations/facebook";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -79,7 +82,7 @@ export const appRouter = router({
           firstName: z.string().optional(),
           lastName: z.string().optional(),
           name: z.string().optional(),
-          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance"]),
+          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance", "lp_referral_partner", "lp_maintenance_subscription"]),
           pageUrl: z.string().optional(),
           message: z.string().optional(),
         })
@@ -233,6 +236,89 @@ export const appRouter = router({
       )
       .query(async ({ input }) => {
         return await db.getAiVaAnalytics(input.startDate, input.endDate);
+      }),
+
+    // Generate AI content for a social post
+    generatePostContent: protectedProcedure
+      .input(
+        z.object({
+          platform: z.enum(["facebook", "instagram", "google_business"] as const),
+          contentType: z.enum(["hvac_tip", "rebate_alert", "seasonal_advice", "energy_savings", "faq", "customer_testimonial", "maintenance_reminder", "before_after"] as const),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const result = await generateSocialPost(input.contentType, input.platform);
+        return result;
+      }),
+
+    // Schedule a post (save to DB as scheduled)
+    schedulePost: protectedProcedure
+      .input(
+        z.object({
+          platform: z.enum(["facebook", "instagram", "google_business"] as const),
+          content: z.string().min(1),
+          contentType: z.string().optional(),
+          scheduledAt: z.string(), // ISO string
+          mediaUrls: z.array(z.string()).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        await db.createSocialPost({
+          platform: input.platform,
+          content: input.content,
+          contentType: input.contentType,
+          scheduledAt: new Date(input.scheduledAt),
+          mediaUrls: input.mediaUrls ? JSON.stringify(input.mediaUrls) : null,
+          status: "scheduled",
+        });
+        return { success: true };
+      }),
+
+    // Publish a post immediately to the selected platform
+    publishPost: protectedProcedure
+      .input(
+        z.object({
+          platform: z.enum(["facebook", "instagram", "google_business"] as const),
+          content: z.string().min(1),
+          contentType: z.string().optional(),
+          mediaUrls: z.array(z.string()).optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const credMap = await db.getAiVaCredentials(input.platform === "instagram" ? "facebook" : input.platform);
+        if (!credMap) {
+          throw new Error(`No credentials saved for ${input.platform}. Please configure in AI VA Settings.`);
+        }
+
+        if (input.platform === "google_business") {
+          await postToGoogleBusiness(
+            { accessToken: credMap.accessToken, accountId: credMap.accountId, locationId: credMap.locationId },
+            input.content,
+            input.mediaUrls
+          );
+        } else if (input.platform === "facebook") {
+          await postToFacebook(
+            { accessToken: credMap.accessToken, pageId: credMap.pageId, instagramAccountId: credMap.instagramAccountId },
+            input.content,
+            input.mediaUrls?.[0]
+          );
+        } else if (input.platform === "instagram") {
+          if (!input.mediaUrls?.[0]) throw new Error("Instagram posts require an image URL");
+          await postToInstagram(
+            { accessToken: credMap.accessToken, pageId: credMap.pageId, instagramAccountId: credMap.instagramAccountId },
+            input.content,
+            input.mediaUrls[0]
+          );
+        }
+        return { success: true };
+      }),
+
+    // Delete a scheduled post
+    deletePost: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteSocialPost(input.id);
+        return { success: true };
       }),
   }),
 
