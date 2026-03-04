@@ -27,7 +27,7 @@ export interface GeneratedContent {
  */
 export async function generateSocialPost(
   contentType: ContentType,
-  platform: "facebook" | "instagram" | "google_business" | "linkedin"
+  platform: "facebook" | "instagram" | "google_business" | "linkedin" | "nextdoor"
 ): Promise<GeneratedContent> {
   const systemPrompt = `You are a social media content creator for Mechanical Enterprise, an HVAC company in New Jersey specializing in VRF/VRV systems, heat pumps, and energy-efficient upgrades.
 
@@ -164,6 +164,7 @@ function getPlatformCharLimit(platform: string): number {
     instagram: 2200,
     google_business: 1500,
     linkedin: 3000,
+    nextdoor: 2000,
     twitter: 280,
   };
   

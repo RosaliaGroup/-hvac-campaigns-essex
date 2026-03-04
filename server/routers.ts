@@ -242,7 +242,7 @@ export const appRouter = router({
     generatePostContent: protectedProcedure
       .input(
         z.object({
-          platform: z.enum(["facebook", "instagram", "google_business"] as const),
+          platform: z.enum(["facebook", "instagram", "google_business", "nextdoor"] as const),
           contentType: z.enum(["hvac_tip", "rebate_alert", "seasonal_advice", "energy_savings", "faq", "customer_testimonial", "maintenance_reminder", "before_after"] as const),
         })
       )
@@ -255,7 +255,7 @@ export const appRouter = router({
     schedulePost: protectedProcedure
       .input(
         z.object({
-          platform: z.enum(["facebook", "instagram", "google_business"] as const),
+          platform: z.enum(["facebook", "instagram", "google_business", "nextdoor"] as const),
           content: z.string().min(1),
           contentType: z.string().optional(),
           scheduledAt: z.string(), // ISO string
@@ -278,7 +278,7 @@ export const appRouter = router({
     publishPost: protectedProcedure
       .input(
         z.object({
-          platform: z.enum(["facebook", "instagram", "google_business"] as const),
+          platform: z.enum(["facebook", "instagram", "google_business", "nextdoor"] as const),
           content: z.string().min(1),
           contentType: z.string().optional(),
           mediaUrls: z.array(z.string()).optional(),
@@ -309,6 +309,9 @@ export const appRouter = router({
             input.content,
             input.mediaUrls[0]
           );
+        } else if (input.platform === "nextdoor") {
+          // Nextdoor does not have a public posting API — content is queued for manual posting
+          // The post is saved to DB with status 'scheduled' for manual publishing
         }
         return { success: true };
       }),

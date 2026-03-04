@@ -1,8 +1,8 @@
 export interface CampaignTemplate {
   id: string;
   name: string;
-  category: 'emergency' | 'installation' | 'maintenance' | 'rebates' | 'partnerships' | 'commercial';
-  platform: 'google-search' | 'facebook' | 'instagram' | 'youtube' | 'google-business';
+  category: 'emergency' | 'installation' | 'maintenance' | 'rebates' | 'partnerships' | 'commercial' | 'nextdoor';
+  platform: 'google-search' | 'facebook' | 'instagram' | 'youtube' | 'google-business' | 'nextdoor';
   adType: string;
   content: {
     headline?: string;
@@ -13,6 +13,7 @@ export interface CampaignTemplate {
     primaryText?: string;
     body?: string;
     cta?: string;
+    hashtags?: string[];
   };
   targetAudience: string;
   estimatedBudget?: string;
@@ -30,7 +31,7 @@ export const campaignTemplates: CampaignTemplate[] = [
       headline: '24/7 Emergency AC Repair Newark',
       headline2: 'Same-Day Service | Licensed Techs',
       headline3: 'Call Now (862) 419-1763',
-      description: 'AC broken? We\'re available 24/7 for emergency repairs across Essex County. Licensed technicians, transparent pricing, same-day service.',
+      description: "AC broken? We're available 24/7 for emergency repairs across Essex County. Licensed technicians, transparent pricing, same-day service.",
       description2: 'WMBE certified. Serving 15 New Jersey counties. Call (862) 419-1763 for immediate assistance.',
     },
     targetAudience: 'Homeowners with immediate HVAC failure, 33-mile radius',
@@ -44,7 +45,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Search Ad',
     content: {
       headline: 'Emergency Furnace Repair Near You',
-      headline2: 'No Heat? We\'re Here 24/7',
+      headline2: "No Heat? We're Here 24/7",
       headline3: 'Licensed HVAC Experts',
       description: 'Furnace not working? Get fast, reliable emergency heating repair. Licensed technicians respond quickly across Essex County and surrounding areas.',
       description2: 'Transparent pricing. WMBE certified business. Call (862) 419-1763 now.',
@@ -229,7 +230,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Google Business Post',
     content: {
       headline: 'Prepare Your AC for Summer',
-      body: 'Don\'t wait for your AC to break during the first heat wave! ☀️\n\nOur pre-season maintenance includes:\n✓ Full system inspection\n✓ Filter replacement\n✓ Refrigerant check\n✓ Performance optimization\n\n**First-time customers: First month of maintenance subscription FREE!**\n\nCall (862) 419-1763 to schedule your tune-up today!',
+      body: "Don't wait for your AC to break during the first heat wave! ☀️\n\nOur pre-season maintenance includes:\n✓ Full system inspection\n✓ Filter replacement\n✓ Refrigerant check\n✓ Performance optimization\n\n**First-time customers: First month of maintenance subscription FREE!**\n\nCall (862) 419-1763 to schedule your tune-up today!",
       cta: 'Call Now',
     },
     targetAudience: 'Local homeowners in service area',
@@ -243,7 +244,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Google Business Post',
     content: {
       headline: 'HVAC Maintenance Subscription – First Month FREE',
-      body: '🔧 Protect Your HVAC Investment with Our Subscription Plan\n\nFor a fixed monthly fee, you get:\n✅ Bi-annual tune-ups (spring & fall)\n✅ Priority emergency service\n✅ Filter replacements included\n✅ 15% discount on all repairs\n✅ Extended equipment warranty\n\nResidential plans starting at $49/month.\nCommercial plans available for multi-unit properties.\n\n**First month FREE for new subscribers!**\n\nCall (862) 419-1763 to enroll.',
+      body: '🔧 Protect Your HVAC Investment with Our Subscription Plan\n\nFor a fixed monthly fee, you get:\n✅ Bi-annual tune-ups (spring & fall)\n✅ Priority emergency service\n✅ Filter replacements included\n✅ 15% discount on all repairs\n✅ Extended equipment warranty\n\nResidential plans starting at $29/month.\nCommercial plans available for multi-unit properties.\n\n**First month FREE for new subscribers!**\n\nCall (862) 419-1763 to enroll.',
       cta: 'Learn More',
     },
     targetAudience: 'Homeowners and property managers in service area',
@@ -310,17 +311,95 @@ export const campaignTemplates: CampaignTemplate[] = [
     targetAudience: 'Real estate agents, property managers, contractors in New Jersey',
     estimatedBudget: 'Free (Google Business)',
   },
+
+  // ─── NEXTDOOR TEMPLATES ───────────────────────────────────────────────────
+  {
+    id: 'nextdoor-residential-rebates',
+    name: 'NJ Heat Pump Rebates – Neighbors',
+    category: 'nextdoor',
+    platform: 'nextdoor',
+    adType: 'Nextdoor Neighborhood Post',
+    content: {
+      headline: 'Neighbors – Up to $16K in Heat Pump Rebates Available Now',
+      body: '👋 Hi neighbors!\n\nI wanted to share something that could save you a lot of money this year. New Jersey homeowners can stack PSE&G, NJ Clean Energy, and federal incentives for up to $16,000 back on a new heat pump system.\n\nWe are Mechanical Enterprise, a local HVAC company serving Essex County and 14 other NJ counties. We are WMBE/SBE certified with 4,000+ residential installations completed.\n\nWe handle ALL the rebate paperwork for you — you just enjoy the savings.\n\n📞 Call (862) 419-1763 for a free in-home estimate\n🌐 mechanicalenterprise.com/residential',
+      cta: 'Get Free Estimate',
+      hashtags: ['#HVAC', '#NewJersey', '#EssexCounty', '#HeatPump', '#EnergyRebates'],
+    },
+    targetAudience: 'Homeowners in Essex County and surrounding NJ neighborhoods',
+    estimatedBudget: '$5-15 per day (Nextdoor Local Deal)',
+  },
+  {
+    id: 'nextdoor-emergency-hvac',
+    name: 'Emergency HVAC – Local Neighbors',
+    category: 'nextdoor',
+    platform: 'nextdoor',
+    adType: 'Nextdoor Neighborhood Post',
+    content: {
+      headline: 'Local HVAC Emergency Service – Same Day Response',
+      body: '🚨 HVAC Emergency? We are your neighbors!\n\nMechanical Enterprise provides 24/7 emergency HVAC service across Essex County. Furnace not working? AC down in the heat? We respond fast.\n\n✅ Same-day service available\n✅ Licensed & insured technicians\n✅ Serving your neighborhood for 20+ years\n✅ Transparent pricing, no surprises\n\nSave our number: (862) 419-1763\n\nWe are local — we care about our community.',
+      cta: 'Call Now',
+      hashtags: ['#HVAC', '#EssexCounty', '#Emergency', '#LocalBusiness'],
+    },
+    targetAudience: 'Homeowners in Essex County experiencing HVAC emergencies',
+    estimatedBudget: '$10-20 per day (Nextdoor Local Deal)',
+  },
+  {
+    id: 'nextdoor-maintenance-subscription',
+    name: 'HVAC Maintenance Plan – Neighbors',
+    category: 'nextdoor',
+    platform: 'nextdoor',
+    adType: 'Nextdoor Neighborhood Post',
+    content: {
+      headline: 'Protect Your HVAC This Season – Maintenance Plans from $29/mo',
+      body: '🏠 Hey neighbors!\n\nDid you know that skipping annual HVAC maintenance can cut your system\'s life in half and cost you thousands in repairs?\n\nMechanical Enterprise offers affordable maintenance subscription plans starting at $29/month:\n\n🔧 Essential Plan – $29/mo: Bi-annual tune-ups, priority scheduling\n⭐ Pro Plan – $49/mo: Quarterly visits, filter replacements included\n💎 Premium Plan – $79/mo: Monthly check-ins, emergency priority, parts discount\n\n🎁 First month FREE for new subscribers!\n\nCall (862) 419-1763 or visit mechanicalenterprise.com/lp/maintenance-offer',
+      cta: 'Start Free Month',
+      hashtags: ['#HVAC', '#EssexCounty', '#HomeMaintenance', '#LocalBusiness'],
+    },
+    targetAudience: 'Homeowners in Essex County interested in preventive HVAC care',
+    estimatedBudget: '$5-10 per day (Nextdoor Local Deal)',
+  },
+  {
+    id: 'nextdoor-commercial-rebates',
+    name: 'Commercial HVAC Upgrades – 80% Covered',
+    category: 'nextdoor',
+    platform: 'nextdoor',
+    adType: 'Nextdoor Business Post',
+    content: {
+      headline: 'Business Owners: Up to 80% of Your HVAC Upgrade Covered by PSE&G',
+      body: '📢 Attention local business owners and property managers!\n\nPSE&G and NJ utility programs can cover up to 80% of the cost of commercial HVAC upgrades. This is real money — we have helped local businesses save hundreds of thousands of dollars.\n\nMechanical Enterprise specializes in:\n• VRV/VRF multi-zone systems\n• Commercial heat pumps\n• BMS/BIM integration\n• Hotels, restaurants, offices, retail\n\nWe have served 2.6 million sq ft of commercial space in NJ.\n\n📞 (862) 419-1763 for a free commercial assessment\n🌐 mechanicalenterprise.com/commercial',
+      cta: 'Free Assessment',
+      hashtags: ['#CommercialHVAC', '#EssexCounty', '#BusinessOwners', '#PSEGRebates'],
+    },
+    targetAudience: 'Local business owners and property managers in Essex County',
+    estimatedBudget: '$10-20 per day (Nextdoor Business)',
+  },
+  {
+    id: 'nextdoor-referral-partner',
+    name: 'Referral Partner Program – Neighbors',
+    category: 'nextdoor',
+    platform: 'nextdoor',
+    adType: 'Nextdoor Neighborhood Post',
+    content: {
+      headline: 'Earn Extra Income Referring HVAC Projects – No Experience Needed',
+      body: '💰 Looking to earn extra income?\n\nMechanical Enterprise is looking for referral partners in our neighborhood. If you know homeowners or businesses that need HVAC work, you can earn a commission on every project you refer.\n\nPerfect for:\n• Real estate agents\n• Property managers\n• Contractors & handymen\n• Anyone with a local network\n\nNo upfront investment. No experience needed. Just refer and earn.\n\n📞 Call (862) 419-1763 or visit mechanicalenterprise.com/lp/referral-partner to apply.',
+      cta: 'Apply to Partner',
+      hashtags: ['#EarnExtraIncome', '#EssexCounty', '#ReferralProgram', '#LocalBusiness'],
+    },
+    targetAudience: 'Neighbors interested in earning referral income in Essex County',
+    estimatedBudget: '$5-10 per day (Nextdoor Local Deal)',
+  },
 ];
 
-export const platformLinks = {
+export const platformLinks: Record<string, string> = {
   'google-search': 'https://ads.google.com/aw/campaigns',
   'google-business': 'https://business.google.com/dashboard',
   'facebook': 'https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327',
   'instagram': 'https://business.facebook.com/latest/home?nav_ref=bm_home_redirect&business_id=25087499474212997&asset_id=844109052114327',
   'youtube': 'https://studio.youtube.com',
+  'nextdoor': 'https://nextdoor.com/business/',
 };
 
-export const platformInstructions = {
+export const platformInstructions: Record<string, { title: string; steps: string[] }> = {
   'google-search': {
     title: 'Google Search Ads Setup',
     steps: [
@@ -382,6 +461,19 @@ export const platformInstructions = {
       'Copy headline and description from template',
       'Set budget and bidding strategy',
       'Launch campaign',
+    ],
+  },
+  'nextdoor': {
+    title: 'Nextdoor Local Post Setup',
+    steps: [
+      'Go to nextdoor.com/business and sign in or create a business account',
+      'Select "Local Deals" or "Neighborhood Sponsor" for paid reach',
+      'For organic posts: go to your business page and click "Create Post"',
+      'Copy the post body from the template above',
+      'Add a photo of your team or recent work for higher engagement',
+      'Set your neighborhood targeting (Essex County and surrounding areas)',
+      'For paid Local Deals: set your budget ($5-20/day) and duration',
+      'Publish and monitor responses in the Nextdoor Business dashboard',
     ],
   },
 };

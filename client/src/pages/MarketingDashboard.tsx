@@ -48,12 +48,13 @@ const PLATFORMS = [
   { value: "google_business", label: "Google Business Profile" },
   { value: "facebook", label: "Facebook" },
   { value: "instagram", label: "Instagram" },
+  { value: "nextdoor", label: "Nextdoor" },
 ];
 
 function SocialPostManager() {
   const { toast } = useToast();
   const utils = trpc.useUtils();
-  const [platform, setPlatform] = useState<"google_business" | "facebook" | "instagram">("google_business");
+  const [platform, setPlatform] = useState<"google_business" | "facebook" | "instagram" | "nextdoor">("google_business");
   const [contentType, setContentType] = useState<string>("hvac_tip");
   const [content, setContent] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -99,6 +100,7 @@ function SocialPostManager() {
     if (p === "google_business") return "bg-blue-100 text-blue-800";
     if (p === "facebook") return "bg-indigo-100 text-indigo-800";
     if (p === "instagram") return "bg-pink-100 text-pink-800";
+    if (p === "nextdoor") return "bg-green-100 text-green-800";
     return "";
   };
 

@@ -38,6 +38,7 @@ export default function CampaignLibrary() {
       case 'facebook': return 'bg-blue-100 text-blue-800';
       case 'instagram': return 'bg-pink-100 text-pink-800';
       case 'youtube': return 'bg-red-100 text-red-800';
+      case 'nextdoor': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -50,7 +51,7 @@ export default function CampaignLibrary() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="emergency">Emergency</TabsTrigger>
           <TabsTrigger value="installation">Installation</TabsTrigger>
@@ -58,9 +59,10 @@ export default function CampaignLibrary() {
           <TabsTrigger value="rebates">Rebates</TabsTrigger>
           <TabsTrigger value="commercial">Commercial</TabsTrigger>
           <TabsTrigger value="partnerships">Partners</TabsTrigger>
+          <TabsTrigger value="nextdoor">Nextdoor</TabsTrigger>
         </TabsList>
 
-        {['all', 'emergency', 'installation', 'maintenance', 'rebates', 'commercial', 'partnerships'].map(category => (
+        {['all', 'emergency', 'installation', 'maintenance', 'rebates', 'commercial', 'partnerships', 'nextdoor'].map(category => (
           <TabsContent key={category} value={category} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               {filterByCategory(category).map(template => (

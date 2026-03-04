@@ -448,8 +448,8 @@ export default function GoogleAdsCampaigns() {
     const campaign = budgetDialog.campaign;
     if (!campaign) return;
     const budget = parseFloat(dailyBudget);
-    if (isNaN(budget) || budget < 1) {
-      toast.error("Please enter a valid daily budget (minimum $1)");
+    if (isNaN(budget) || budget < 0) {
+      toast.error("Please enter a valid daily budget ($0 or more)");
       return;
     }
     const firstGroup = campaign.adGroups[0];
@@ -808,8 +808,8 @@ export default function GoogleAdsCampaigns() {
                 Recommended: <strong>$50–$100/day</strong> for search campaigns. At $9–$12 avg CPC, expect 5–10 clicks/day.
               </p>
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {[25, 50, 75, 100].map(amt => (
+            <div className="grid grid-cols-5 gap-2">
+              {[0, 25, 50, 75, 100].map(amt => (
                 <Button
                   key={amt}
                   variant="outline"
