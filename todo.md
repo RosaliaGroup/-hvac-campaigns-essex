@@ -417,3 +417,6 @@
 - [ ] Build frontend: TeamLogin page (/team-login), AcceptInvite page (/accept-invite), ResetPassword page
 - [ ] Build Team Management page in Command Center (invite, list, revoke)
 - [ ] Update all protected dashboard routes to accept team member sessions
+
+## Promos Landing Page (Yard Sign QR Code)
+- [x] Create /promos standalone landing page with rebate info, case studies, financing details, and booking CTA

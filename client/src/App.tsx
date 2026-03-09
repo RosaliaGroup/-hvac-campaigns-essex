@@ -36,6 +36,7 @@ import LPFBCommercial from "./pages/lp/LPFBCommercial";
 import LPRebateGuide from "./pages/lp/LPRebateGuide";
 import LPMaintenanceOffer from "./pages/lp/LPMaintenanceOffer";
 import LPReferralPartner from "./pages/lp/LPReferralPartner";
+import PromosLanding from "./pages/PromosLanding";
 import CommandCenter from "./pages/CommandCenter";
 import LeadDashboard from "./pages/LeadDashboard";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
@@ -78,6 +79,7 @@ function Router() {
       <Route path={"/lp/rebate-guide"} component={LPRebateGuide} />
       <Route path={"/lp/maintenance-offer"} component={LPMaintenanceOffer} />
       <Route path={"/lp/referral-partner"} component={LPReferralPartner} />
+      <Route path={"/promos"} component={PromosLanding} />
 
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />
