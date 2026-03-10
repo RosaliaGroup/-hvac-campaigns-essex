@@ -1,0 +1,26 @@
+{
+  "query": "SELECT id, phone, status, errorMessage, quotaRemaining, sentAt FROM smsSends ORDER BY sentAt DESC LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, phone, status, errorMessage, quotaRemaining, sentAt FROM smsSends ORDER BY sentAt DESC LIMIT 5;",
+  "rows": [
+    {
+      "id": "2",
+      "phone": "+16462269189",
+      "status": "failed",
+      "errorMessage": "North America region keys can only be used from North American countries.",
+      "quotaRemaining": "NULL",
+      "sentAt": "2026-03-10 20:20:31"
+    },
+    {
+      "id": "1",
+      "phone": "6462269189",
+      "status": "failed",
+      "errorMessage": "North America region keys can only be used from North American countries.",
+      "quotaRemaining": "NULL",
+      "sentAt": "2026-03-10 20:08:30"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tphone\tstatus\terrorMessage\tquotaRemaining\tsentAt\n2\t+16462269189\tfailed\tNorth America region keys can only be used from North American countries.\tNULL\t2026-03-10 20:20:31\n1\t6462269189\tfailed\tNorth America region keys can only be used from North American countries.\tNULL\t2026-03-10 20:08:30\n",
+  "stderr": "",
+  "execution_time_ms": 55
+}

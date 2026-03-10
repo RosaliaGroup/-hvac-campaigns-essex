@@ -461,3 +461,8 @@
 - [x] Add updateContact tRPC procedure in smsCampaigns router
 - [x] Add Edit button that opens a dialog to edit name, phone, email, zip, segment
 - [x] Make Delete button a standalone red icon button (trash icon) — always visible, not hidden in action group
+
+## SMS — TextBelt Region Override
+- [x] Switched to TextBelt Global key — works from any server location (no proxy needed)
+- [x] Test SMS send confirmed successful: {"success":true} with quota remaining
+- [x] Fixed Confirm Send preview to show personalized message (replaces {{contact.firstname}} with actual name)

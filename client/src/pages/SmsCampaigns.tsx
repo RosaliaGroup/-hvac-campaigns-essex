@@ -721,8 +721,19 @@ export default function SmsCampaigns() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 max-h-32 overflow-y-auto font-mono text-xs">
-            {msgTexts[activeMsg]}
+          <div className="space-y-1">
+            <p className="text-xs text-gray-400">Preview (personalized for first contact):</p>
+            <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-700 max-h-32 overflow-y-auto font-mono text-xs">
+              {(() => {
+                const firstContact = sendTarget === "all"
+                  ? activeContacts[0]
+                  : filteredContacts.find((c) => selectedContactIds.includes(c.id) && !c.optedOut);
+                const name = firstContact?.firstName ?? "[Name]";
+                return msgTexts[activeMsg]
+                  .replace(/\{\{contact\.firstname\}\}/gi, name)
+                  .replace(/\{\{firstName\}\}/gi, name);
+              })()}
+            </div>
           </div>
 
           {sendResult && (

@@ -1,0 +1,35 @@
+{
+  "query": "SELECT id, firstName, phone FROM smsContacts LIMIT 5;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, firstName, phone FROM smsContacts LIMIT 5;",
+  "rows": [
+    {
+      "id": "1",
+      "firstName": "Green",
+      "phone": "+19734896266"
+    },
+    {
+      "id": "2",
+      "firstName": "Valerie",
+      "phone": "+18624327178"
+    },
+    {
+      "id": "3",
+      "firstName": "Donald",
+      "phone": "+19085916870"
+    },
+    {
+      "id": "4",
+      "firstName": "Frances",
+      "phone": "+19733358575"
+    },
+    {
+      "id": "5",
+      "firstName": "Tom",
+      "phone": "+19732190852"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfirstName\tphone\n1\tGreen\t+19734896266\n2\tValerie\t+18624327178\n3\tDonald\t+19085916870\n4\tFrances\t+19733358575\n5\tTom\t+19732190852\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}
