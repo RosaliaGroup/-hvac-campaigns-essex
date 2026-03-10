@@ -8,6 +8,7 @@ import { sdk } from "../_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { notifyOwner } from "../_core/notification";
+import { sendPasswordResetEmail, sendTeamInviteEmail } from "../services/emailService";
 
 const TEAM_SESSION_PREFIX = "team:";
 
@@ -58,11 +59,19 @@ export const teamAuthRouter = router({
 
       const inviteUrl = `${input.origin}/accept-invite?token=${token}`;
 
-      // Notify owner so they can forward the invite link to the team member
+      // Send invite email directly to the new team member
+      const emailSent = await sendTeamInviteEmail(
+        input.email,
+        input.name,
+        inviteUrl,
+        ctx.user?.name ?? ctx.user?.email ?? "Owner"
+      ).catch(() => false);
+
+      // Also notify owner (as backup)
       await notifyOwner({
-        title: `Team Invite: ${input.name} (${input.email})`,
-        content: `You invited ${input.name} (${input.email}) as ${input.role}.\n\nSend them this link to set their password:\n${inviteUrl}\n\nExpires in 7 days.`,
-      }).catch(() => {}); // Non-blocking
+        title: `Team Invite Sent: ${input.name} (${input.email})`,
+        content: `You invited ${input.name} (${input.email}) as ${input.role}.${emailSent ? " An invite email was sent directly to them." : " Note: Email delivery failed — send them this link manually:"}\n\n${inviteUrl}\n\nExpires in 7 days.`,
+      }).catch(() => {});
 
       return { success: true, inviteUrl };
     }),
@@ -166,11 +175,20 @@ export const teamAuthRouter = router({
 
       const resetUrl = `${input.origin}/reset-password?token=${token}`;
 
-      // Notify owner to forward the reset link
-      await notifyOwner({
-        title: `Password Reset Request: ${member.name}`,
-        content: `${member.name} (${member.email}) requested a password reset.\n\nSend them this link:\n${resetUrl}\n\nExpires in 1 hour.`,
-      }).catch(() => {});
+      // Send reset link directly to the user's email
+      const emailSent = await sendPasswordResetEmail(
+        member.email,
+        member.name,
+        resetUrl
+      ).catch(() => false);
+
+      // Also notify owner as backup in case email fails
+      if (!emailSent) {
+        await notifyOwner({
+          title: `Password Reset Request: ${member.name}`,
+          content: `${member.name} (${member.email}) requested a password reset but the email could not be delivered.\n\nManually send them this link:\n${resetUrl}\n\nExpires in 1 hour.`,
+        }).catch(() => {});
+      }
 
       return { success: true };
     }),

@@ -445,3 +445,9 @@
 - [x] Auto-mark contact as optedOut when STOP reply received
 - [x] Cancel all pending scheduled sends for opted-out contact
 - [x] Add Opt-Out Setup tab with webhook URL and TextBelt configuration instructions
+
+## Bug Fix — Password Reset Email
+- [x] Fix reset password flow to send link directly to user's email (not just notify owner)
+- [x] Use Resend email service to deliver reset link to user's email address
+- [x] Also send team invite emails directly to new members
+- [x] Test reset flow end-to-end (Resend API key validated)
