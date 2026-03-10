@@ -5,8 +5,8 @@
 import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
-import { smsContacts, smsCampaigns, smsSends } from "../../drizzle/schema";
-import { eq, desc } from "drizzle-orm";
+import { smsContacts, smsCampaigns, smsSends, scheduledSends } from "../../drizzle/schema";
+import { eq, desc, and, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 
 type DbInstance = ReturnType<typeof drizzle>;
@@ -350,4 +350,74 @@ export const smsCampaignsRouter = router({
       const msg3 = sends.filter((s: typeof sends[0]) => s.messageNum === 3 && s.status === "sent").length;
       return { total, sent, failed, msg1, msg2, msg3 };
     }),
+
+  // ── Scheduled Sends ───────────────────────────────────────────────────────
+  scheduleSend: protectedProcedure
+    .input(
+      z.object({
+        contactIds: z.array(z.number()),
+        campaignId: z.number().optional(),
+        messageNum: z.number().min(1).max(3),
+        messageText: z.string().min(1),
+        scheduledAt: z.date(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      let scheduled = 0;
+      for (const contactId of input.contactIds) {
+        const [contact] = await db
+          .select({ id: smsContacts.id, optedOut: smsContacts.optedOut })
+          .from(smsContacts)
+          .where(eq(smsContacts.id, contactId))
+          .limit(1);
+        if (!contact || contact.optedOut) continue;
+        await db.insert(scheduledSends).values({
+          contactId,
+          campaignId: input.campaignId ?? null,
+          messageNum: input.messageNum,
+          messageText: input.messageText,
+          scheduledAt: input.scheduledAt,
+          status: "pending",
+        });
+        scheduled++;
+      }
+      return { scheduled };
+    }),
+
+  listScheduledSends: protectedProcedure
+    .input(z.object({ status: z.enum(["pending", "sent", "failed", "cancelled", "all"]).default("all") }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      if (input.status === "all") {
+        return db.select().from(scheduledSends).orderBy(desc(scheduledSends.scheduledAt)).limit(200);
+      }
+      return db
+        .select()
+        .from(scheduledSends)
+        .where(eq(scheduledSends.status, input.status as "pending" | "sent" | "failed" | "cancelled"))
+        .orderBy(desc(scheduledSends.scheduledAt))
+        .limit(200);
+    }),
+
+  cancelScheduledSend: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db
+        .update(scheduledSends)
+        .set({ status: "cancelled" })
+        .where(and(eq(scheduledSends.id, input.id), eq(scheduledSends.status, "pending")));
+      return { success: true };
+    }),
+
+  getPendingScheduledCount: protectedProcedure.query(async () => {
+    const db = await requireDb();
+    const now = new Date();
+    const pending = await db
+      .select({ id: scheduledSends.id })
+      .from(scheduledSends)
+      .where(and(eq(scheduledSends.status, "pending"), gte(scheduledSends.scheduledAt, now)));
+    return { count: pending.length };
+  }),
 });

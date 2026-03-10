@@ -350,3 +350,20 @@ export const smsSends = mysqlTable("smsSends", {
 });
 export type SmsSend = typeof smsSends.$inferSelect;
 export type InsertSmsSend = typeof smsSends.$inferInsert;
+
+/**
+ * Scheduled SMS Sends — queue for auto Day 4 / Day 10 drip messages
+ */
+export const scheduledSends = mysqlTable("scheduledSends", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId").notNull(),
+  campaignId: int("campaignId"),
+  messageNum: int("messageNum").notNull(), // 1, 2, or 3
+  messageText: text("messageText").notNull(),
+  scheduledAt: timestamp("scheduledAt").notNull(),
+  status: mysqlEnum("status", ["pending", "sent", "failed", "cancelled"]).default("pending").notNull(),
+  smsSendId: int("smsSendId"), // FK to smsSends once processed
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ScheduledSend = typeof scheduledSends.$inferSelect;
+export type InsertScheduledSend = typeof scheduledSends.$inferInsert;

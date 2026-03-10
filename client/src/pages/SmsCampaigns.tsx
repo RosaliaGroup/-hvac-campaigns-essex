@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -38,6 +38,9 @@ import {
   Mail,
   MapPin,
   AlertTriangle,
+  CalendarClock,
+  Ban,
+  Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
@@ -119,6 +122,12 @@ export default function SmsCampaigns() {
   const [sendResult, setSendResult] = useState<{ sent: number; failed: number; skipped: number; quotaRemaining?: number } | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedContactForHistory, setSelectedContactForHistory] = useState<Contact | null>(null);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [scheduleTarget, setScheduleTarget] = useState<"selected" | "all">("selected");
+  const [scheduledDate, setScheduledDate] = useState("");
+  const [scheduledTime, setScheduledTime] = useState("09:00");
+  const [isScheduling, setIsScheduling] = useState(false);
+  const [scheduleResult, setScheduleResult] = useState<{ scheduled: number } | null>(null);
 
   // Queries
   const { data: contacts = [], isLoading: contactsLoading, refetch: refetchContacts } = trpc.smsCampaigns.listContacts.useQuery({ segment: segmentFilter });
@@ -154,6 +163,21 @@ export default function SmsCampaigns() {
     },
   });
 
+  const scheduleSendMutation = trpc.smsCampaigns.scheduleSend.useMutation({
+    onSuccess: (data) => {
+      setScheduleResult(data);
+      setIsScheduling(false);
+      toast({
+        title: `Scheduled ${data.scheduled} messages`,
+        description: `They will be sent automatically at the chosen date/time.`,
+      });
+    },
+    onError: (e) => {
+      setIsScheduling(false);
+      toast({ title: "Schedule failed", description: e.message, variant: "destructive" });
+    },
+  });
+
   const toggleOptOutMutation = trpc.smsCampaigns.toggleOptOut.useMutation({
     onSuccess: () => refetchContacts(),
   });
@@ -172,6 +196,44 @@ export default function SmsCampaigns() {
 
   const charCount = msgTexts[activeMsg].length;
   const smsCount = Math.ceil(charCount / 160);
+
+  // Set default scheduled date to tomorrow
+  useEffect(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    setScheduledDate(tomorrow.toISOString().split("T")[0]);
+  }, []);
+
+  async function handleScheduleSend() {
+    if (!scheduledDate || !scheduledTime) {
+      toast({ title: "Please select a date and time", variant: "destructive" });
+      return;
+    }
+    const scheduledAt = new Date(`${scheduledDate}T${scheduledTime}:00`);
+    if (scheduledAt <= new Date()) {
+      toast({ title: "Scheduled time must be in the future", variant: "destructive" });
+      return;
+    }
+    const ids =
+      scheduleTarget === "all"
+        ? activeContacts.map((c) => c.id)
+        : selectedContactIds.filter((id) => {
+            const c = filteredContacts.find((x) => x.id === id);
+            return c && !c.optedOut;
+          });
+    if (ids.length === 0) {
+      toast({ title: "No contacts to schedule", variant: "destructive" });
+      return;
+    }
+    setIsScheduling(true);
+    setScheduleResult(null);
+    await scheduleSendMutation.mutateAsync({
+      contactIds: ids,
+      messageNum: activeMsg,
+      messageText: msgTexts[activeMsg],
+      scheduledAt,
+    });
+  }
 
   function toggleSelectAll() {
     if (allSelected) {
@@ -272,7 +334,9 @@ export default function SmsCampaigns() {
           <TabsList className="mb-6 bg-white border">
             <TabsTrigger value="contacts" className="gap-2"><Users className="h-4 w-4" /> Contacts ({filteredContacts.length})</TabsTrigger>
             <TabsTrigger value="compose" className="gap-2"><MessageSquare className="h-4 w-4" /> Compose & Send</TabsTrigger>
+            <TabsTrigger value="scheduled" className="gap-2"><CalendarClock className="h-4 w-4" /> Scheduled</TabsTrigger>
             <TabsTrigger value="history" className="gap-2"><BarChart3 className="h-4 w-4" /> Send History</TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2"><Info className="h-4 w-4" /> Opt-Out Setup</TabsTrigger>
           </TabsList>
 
           {/* ── CONTACTS TAB ── */}
@@ -480,9 +544,9 @@ export default function SmsCampaigns() {
                     <p>All messages must include opt-out language (e.g. "Reply STOP to opt out"). TextBelt handles STOP replies automatically.</p>
                   </div>
 
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-2 pt-2 flex-wrap">
                     <Button
-                      className="flex-1 bg-[#ff6b35] hover:bg-[#ff6b35]/90 gap-2"
+                      className="flex-1 bg-[#ff6b35] hover:bg-[#ff6b35]/90 gap-2 min-w-[140px]"
                       disabled={selectedContactIds.length === 0}
                       onClick={() => { setSendTarget("selected"); setSendDialogOpen(true); }}
                     >
@@ -491,12 +555,21 @@ export default function SmsCampaigns() {
                     </Button>
                     <Button
                       variant="outline"
-                      className="flex-1 gap-2"
+                      className="flex-1 gap-2 min-w-[140px]"
                       disabled={activeContacts.length === 0}
                       onClick={() => { setSendTarget("all"); setSendDialogOpen(true); }}
                     >
                       <Send className="h-4 w-4" />
                       Send to all ({activeContacts.length})
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 gap-2 min-w-[140px] border-[#1e3a5f] text-[#1e3a5f]"
+                      disabled={selectedContactIds.length === 0 && activeContacts.length === 0}
+                      onClick={() => { setScheduleTarget(selectedContactIds.length > 0 ? "selected" : "all"); setScheduleDialogOpen(true); }}
+                    >
+                      <CalendarClock className="h-4 w-4" />
+                      Schedule Send
                     </Button>
                   </div>
                 </CardContent>
@@ -566,9 +639,19 @@ export default function SmsCampaigns() {
             </div>
           </TabsContent>
 
+          {/* ── SCHEDULED TAB ── */}
+          <TabsContent value="scheduled">
+            <ScheduledSendsTab />
+          </TabsContent>
+
           {/* ── HISTORY TAB ── */}
           <TabsContent value="history">
             <SendHistoryTab />
+          </TabsContent>
+
+          {/* ── OPT-OUT SETUP TAB ── */}
+          <TabsContent value="settings">
+            <OptOutSetupTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -623,6 +706,64 @@ export default function SmsCampaigns() {
         </DialogContent>
       </Dialog>
 
+      {/* Schedule Send Dialog */}
+      <Dialog open={scheduleDialogOpen} onOpenChange={(open) => { setScheduleDialogOpen(open); if (!open) setScheduleResult(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarClock className="h-5 w-5 text-[#1e3a5f]" />
+              Schedule Send — Message {activeMsg} ({activeMsg === 1 ? "Day 1" : activeMsg === 2 ? "Day 4" : "Day 10"})
+            </DialogTitle>
+            <DialogDescription>
+              Choose a date and time. The server will automatically send the message to all eligible contacts at that time.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-sm font-medium mb-1.5 block">Date</Label>
+                <Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} min={new Date().toISOString().split("T")[0]} />
+              </div>
+              <div>
+                <Label className="text-sm font-medium mb-1.5 block">Time</Label>
+                <Input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-700">
+              <p className="font-semibold mb-1">Sending to:</p>
+              <p>{scheduleTarget === "all" ? `All ${activeContacts.length} active contacts` : `${selectedContactIds.length} selected contacts`}</p>
+              {scheduledDate && scheduledTime && (
+                <p className="mt-1 text-blue-600">Scheduled for: {new Date(`${scheduledDate}T${scheduledTime}:00`).toLocaleString()}</p>
+              )}
+            </div>
+
+            {scheduleResult && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2 text-green-700 font-semibold"><CheckCircle2 className="h-4 w-4" /> Scheduled!</div>
+                <p className="text-sm text-green-600 mt-1">{scheduleResult.scheduled} messages queued. Check the Scheduled tab to monitor or cancel.</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setScheduleDialogOpen(false); setScheduleResult(null); }}>
+              {scheduleResult ? "Close" : "Cancel"}
+            </Button>
+            {!scheduleResult && (
+              <Button
+                className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 gap-2"
+                onClick={handleScheduleSend}
+                disabled={isScheduling}
+              >
+                {isScheduling ? <><RefreshCw className="h-4 w-4 animate-spin" /> Scheduling...</> : <><CalendarClock className="h-4 w-4" /> Schedule</>}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Contact History Dialog */}
       <Dialog open={historyDialogOpen} onOpenChange={setHistoryDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -650,6 +791,148 @@ export default function SmsCampaigns() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function ScheduledSendsTab() {
+  const { data: scheduled = [], isLoading, refetch } = trpc.smsCampaigns.listScheduledSends.useQuery({ status: "all" });
+  const { toast } = useToast();
+  const cancelMutation = trpc.smsCampaigns.cancelScheduledSend.useMutation({
+    onSuccess: () => { refetch(); toast({ title: "Scheduled send cancelled" }); },
+    onError: (e) => toast({ title: "Cancel failed", description: e.message, variant: "destructive" }),
+  });
+
+  const pending = scheduled.filter((s) => s.status === "pending");
+  const sent = scheduled.filter((s) => s.status === "sent");
+  const failed = scheduled.filter((s) => s.status === "failed");
+  const cancelled = scheduled.filter((s) => s.status === "cancelled");
+
+  if (isLoading) return <div className="flex justify-center py-16"><RefreshCw className="animate-spin h-8 w-8 text-gray-400" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Pending", value: pending.length, color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Sent", value: sent.length, color: "text-green-600", bg: "bg-green-50" },
+          { label: "Failed", value: failed.length, color: "text-red-600", bg: "bg-red-50" },
+          { label: "Cancelled", value: cancelled.length, color: "text-gray-500", bg: "bg-gray-50" },
+        ].map((stat) => (
+          <Card key={stat.label} className={stat.bg}>
+            <CardContent className="pt-4 pb-3">
+              <div className="text-xs text-gray-500 mb-1">{stat.label}</div>
+              <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {scheduled.length === 0 ? (
+        <Card className="text-center py-16">
+          <CardContent>
+            <CalendarClock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No scheduled sends yet</p>
+            <p className="text-gray-400 text-sm mt-1">Use the "Schedule Send" button in the Compose tab to queue messages</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Contact ID</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Message</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Scheduled For</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Status</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {scheduled.map((s) => (
+                  <tr key={s.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3 text-xs text-gray-600">Contact #{s.contactId}</td>
+                    <td className="px-4 py-3">
+                      <span className="text-xs bg-gray-100 px-2 py-0.5 rounded">
+                        Msg {s.messageNum} (Day {s.messageNum === 1 ? 1 : s.messageNum === 2 ? 4 : 10})
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-600">{new Date(s.scheduledAt).toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        s.status === "pending" ? "bg-blue-100 text-blue-700" :
+                        s.status === "sent" ? "bg-green-100 text-green-700" :
+                        s.status === "failed" ? "bg-red-100 text-red-700" :
+                        "bg-gray-100 text-gray-600"
+                      }`}>{s.status}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {s.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 gap-1"
+                          onClick={() => cancelMutation.mutate({ id: s.id })}
+                        >
+                          <Ban className="h-3 w-3" /> Cancel
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function OptOutSetupTab() {
+  const domain = window.location.origin;
+  const webhookUrl = `${domain}/api/sms/reply`;
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Ban className="h-5 w-5 text-red-500" />
+            Automatic Opt-Out (STOP Reply Handler)
+          </CardTitle>
+          <CardDescription>
+            When a contact replies STOP, UNSUBSCRIBE, QUIT, CANCEL, or END, they are automatically marked as opted out and all pending scheduled sends are cancelled.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-green-700 font-semibold mb-2"><CheckCircle2 className="h-4 w-4" /> Webhook is active at:</div>
+            <code className="text-sm bg-white border rounded px-3 py-2 block text-gray-800 break-all">{webhookUrl}</code>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-800">How to configure in TextBelt:</h3>
+            <ol className="space-y-2 text-sm text-gray-700">
+              <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">1.</span> Log in to your TextBelt account at <a href="https://textbelt.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">textbelt.com/dashboard</a></li>
+              <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">2.</span> Find the <strong>Webhook URL</strong> or <strong>Reply Webhook</strong> setting</li>
+              <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">3.</span> Paste the URL above into the webhook field</li>
+              <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">4.</span> Save — TextBelt will now POST to your server whenever a recipient replies</li>
+            </ol>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-700">
+            <p className="font-semibold mb-1">Opt-out keywords handled automatically:</p>
+            <p className="font-mono text-xs">STOP · UNSUBSCRIBE · QUIT · CANCEL · END · OPT-OUT · OPT OUT · REMOVE</p>
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+            <div className="flex items-center gap-2 font-semibold mb-1"><AlertTriangle className="h-4 w-4" /> Note</div>
+            <p>TextBelt's reply webhook feature requires a paid plan. If you are on a free/trial plan, opt-outs must be managed manually via the Contacts tab.</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

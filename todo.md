@@ -434,3 +434,14 @@
 - [x] Add send history / delivery status per contact
 - [x] Pre-load contacts from Excel file into DB
 - [x] Add SMS Campaigns link to Command Center
+
+## SMS Campaign Manager — Next Steps
+- [x] Add scheduledSends DB table (contactId, campaignId, messageNum, scheduledAt, status)
+- [x] Add scheduleForContact and scheduleForAll tRPC procedures
+- [x] Add server-side cron job to process pending scheduled sends every 5 minutes
+- [x] Add "Schedule Send" UI in SMS Campaign page (pick date/time for Day 4 and Day 10)
+- [x] Show scheduled sends queue in Scheduled tab
+- [x] Build TextBelt opt-out webhook endpoint (POST /api/sms/reply)
+- [x] Auto-mark contact as optedOut when STOP reply received
+- [x] Cancel all pending scheduled sends for opted-out contact
+- [x] Add Opt-Out Setup tab with webhook URL and TextBelt configuration instructions

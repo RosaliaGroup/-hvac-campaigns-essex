@@ -7,6 +7,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { startScheduledSmsProcessor } from "../services/scheduledSms";
+import { registerSmsWebhookRoutes } from "../services/smsWebhook";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -35,6 +37,8 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // SMS reply webhook (TextBelt STOP opt-out handler)
+  registerSmsWebhookRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
@@ -59,6 +63,8 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Start background SMS scheduler (checks every 5 min for due sends)
+    startScheduledSmsProcessor();
   });
 }
 
