@@ -294,3 +294,59 @@ export const teamMembers = mysqlTable("teamMembers", {
 });
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type InsertTeamMember = typeof teamMembers.$inferInsert;
+
+/**
+ * SMS Campaign Contacts — imported from Excel, used for TextBelt drip campaigns
+ */
+export const smsContacts = mysqlTable("smsContacts", {
+  id: int("id").autoincrement().primaryKey(),
+  firstName: varchar("firstName", { length: 255 }).notNull(),
+  lastName: varchar("lastName", { length: 255 }),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  zip: varchar("zip", { length: 20 }),
+  segment: mysqlEnum("segment", ["A", "B", "C"]).default("A").notNull(),
+  leadStatus: varchar("leadStatus", { length: 100 }),
+  smsTag: varchar("smsTag", { length: 255 }),
+  optedOut: boolean("optedOut").default(false).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SmsContact = typeof smsContacts.$inferSelect;
+export type InsertSmsContact = typeof smsContacts.$inferInsert;
+
+/**
+ * SMS Campaigns — 3-message drip sequence definitions
+ */
+export const smsCampaigns = mysqlTable("smsCampaigns", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  message1: text("message1").notNull(), // Day 1
+  message2: text("message2").notNull(), // Day 4
+  message3: text("message3").notNull(), // Day 10
+  status: mysqlEnum("status", ["draft", "active", "paused", "completed"]).default("draft").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SmsCampaign = typeof smsCampaigns.$inferSelect;
+export type InsertSmsCampaign = typeof smsCampaigns.$inferInsert;
+
+/**
+ * SMS Sends — log of every text sent to a contact
+ */
+export const smsSends = mysqlTable("smsSends", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId").notNull(),
+  campaignId: int("campaignId"),
+  messageNum: int("messageNum").notNull(), // 1, 2, or 3
+  messageText: text("messageText").notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  status: mysqlEnum("status", ["sent", "failed", "pending"]).default("pending").notNull(),
+  textBeltId: varchar("textBeltId", { length: 255 }),
+  errorMessage: text("errorMessage"),
+  quotaRemaining: int("quotaRemaining"),
+  sentAt: timestamp("sentAt").defaultNow().notNull(),
+});
+export type SmsSend = typeof smsSends.$inferSelect;
+export type InsertSmsSend = typeof smsSends.$inferInsert;

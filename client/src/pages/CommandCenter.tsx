@@ -55,6 +55,7 @@ const categories: Category[] = [
       { label: "Google Ads Campaigns", href: "/google-ads-campaigns", description: "Create & manage Google Search and Display campaigns", icon: BarChart3 },
       { label: "Facebook Campaigns", href: "/facebook-campaigns", description: "Facebook & Instagram ad campaigns", icon: Facebook },
       { label: "Email & SMS Campaigns", href: "/email-sms-campaigns", description: "Drip sequences and broadcast messages", icon: Mail },
+      { label: "SMS Campaign Manager", href: "/sms-campaigns", description: "TextBelt contact list, 3-message drip, send history", icon: MessageSquare, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
       { label: "Campaign Generator", href: "/campaign-generator", description: "AI-powered ad copy and campaign builder", icon: Zap, badge: "AI", badgeColor: "bg-purple-100 text-purple-800" },
       { label: "Marketing Autopilot", href: "/marketing-autopilot", description: "Automated campaign recommendations and scheduling", icon: TrendingUp },
     ],

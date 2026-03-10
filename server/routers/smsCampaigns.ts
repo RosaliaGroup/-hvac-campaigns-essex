@@ -1,0 +1,353 @@
+/**
+ * SMS Campaign Router — TextBelt-powered drip campaign management
+ * Handles contacts, campaigns, sending, and delivery tracking
+ */
+import { protectedProcedure, router } from "../_core/trpc";
+import { z } from "zod";
+import { getDb } from "../db";
+import { smsContacts, smsCampaigns, smsSends } from "../../drizzle/schema";
+import { eq, desc } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
+
+type DbInstance = ReturnType<typeof drizzle>;
+
+const TEXTBELT_API = "https://textbelt.com/text";
+const TEXTBELT_QUOTA_API = "https://textbelt.com/quota/";
+
+// Normalize phone to 10-digit US format
+function normalizePhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  // Remove leading 1 if 11 digits
+  if (digits.length === 11 && digits.startsWith("1")) return digits.slice(1);
+  return digits;
+}
+
+// Replace {{contact.firstname}} merge tag
+function personalize(template: string, firstName: string): string {
+  return template
+    .replace(/\{\{contact\.firstname\}\}/gi, firstName)
+    .replace(/\{\{firstName\}\}/gi, firstName);
+}
+
+async function requireDb(): Promise<DbInstance> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db;
+}
+
+export const smsCampaignsRouter = router({
+  // ── Quota ─────────────────────────────────────────────────────────────────
+  getQuota: protectedProcedure.query(async () => {
+    const apiKey = process.env.TEXTBELT_API_KEY;
+    if (!apiKey) throw new Error("TEXTBELT_API_KEY not configured");
+    const res = await globalThis.fetch(`${TEXTBELT_QUOTA_API}${apiKey}`);
+    const data = (await res.json()) as { success: boolean; quotaRemaining: number };
+    return { quotaRemaining: data.quotaRemaining ?? 0, success: data.success };
+  }),
+
+  // ── Contacts ──────────────────────────────────────────────────────────────
+  listContacts: protectedProcedure
+    .input(z.object({ segment: z.enum(["A", "B", "C", "all"]).default("all") }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      if (input.segment === "all") {
+        return db.select().from(smsContacts).orderBy(desc(smsContacts.createdAt));
+      }
+      return db
+        .select()
+        .from(smsContacts)
+        .where(eq(smsContacts.segment, input.segment as "A" | "B" | "C"))
+        .orderBy(desc(smsContacts.createdAt));
+    }),
+
+  importContacts: protectedProcedure
+    .input(
+      z.array(
+        z.object({
+          firstName: z.string(),
+          lastName: z.string().optional(),
+          phone: z.string(),
+          email: z.string().optional(),
+          zip: z.string().optional(),
+          segment: z.enum(["A", "B", "C"]).default("A"),
+          leadStatus: z.string().optional(),
+          smsTag: z.string().optional(),
+        })
+      )
+    )
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      let imported = 0;
+      let skipped = 0;
+      for (const contact of input) {
+        const phone = normalizePhone(contact.phone);
+        if (phone.length < 10) { skipped++; continue; }
+        // Check for duplicate
+        const existing = await db
+          .select({ id: smsContacts.id })
+          .from(smsContacts)
+          .where(eq(smsContacts.phone, phone))
+          .limit(1);
+        if (existing.length > 0) { skipped++; continue; }
+        await db.insert(smsContacts).values({
+          firstName: contact.firstName,
+          lastName: contact.lastName ?? "",
+          phone,
+          email: contact.email ?? "",
+          zip: contact.zip ?? "",
+          segment: contact.segment,
+          leadStatus: contact.leadStatus ?? "",
+          smsTag: contact.smsTag ?? "",
+          optedOut: false,
+        });
+        imported++;
+      }
+      return { imported, skipped };
+    }),
+
+  deleteContact: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db.delete(smsContacts).where(eq(smsContacts.id, input.id));
+      return { success: true };
+    }),
+
+  toggleOptOut: protectedProcedure
+    .input(z.object({ id: z.number(), optedOut: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db
+        .update(smsContacts)
+        .set({ optedOut: input.optedOut })
+        .where(eq(smsContacts.id, input.id));
+      return { success: true };
+    }),
+
+  // ── Campaigns ─────────────────────────────────────────────────────────────
+  listCampaigns: protectedProcedure.query(async () => {
+    const db = await requireDb();
+    return db.select().from(smsCampaigns).orderBy(desc(smsCampaigns.createdAt));
+  }),
+
+  createCampaign: protectedProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        message1: z.string().min(1),
+        message2: z.string().min(1),
+        message3: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const [result] = await db.insert(smsCampaigns).values({
+        name: input.name,
+        message1: input.message1,
+        message2: input.message2,
+        message3: input.message3,
+        status: "draft",
+      });
+      return { id: (result as { insertId: number }).insertId };
+    }),
+
+  updateCampaign: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        message1: z.string().min(1).optional(),
+        message2: z.string().min(1).optional(),
+        message3: z.string().min(1).optional(),
+        status: z.enum(["draft", "active", "paused", "completed"]).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const { id, ...updates } = input;
+      await db.update(smsCampaigns).set(updates).where(eq(smsCampaigns.id, id));
+      return { success: true };
+    }),
+
+  // ── Send SMS ───────────────────────────────────────────────────────────────
+  sendSingle: protectedProcedure
+    .input(
+      z.object({
+        contactId: z.number(),
+        campaignId: z.number().optional(),
+        messageNum: z.number().min(1).max(3),
+        messageText: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const apiKey = process.env.TEXTBELT_API_KEY;
+      if (!apiKey) throw new Error("TEXTBELT_API_KEY not configured");
+
+      // Get contact
+      const [contact] = await db
+        .select()
+        .from(smsContacts)
+        .where(eq(smsContacts.id, input.contactId))
+        .limit(1);
+      if (!contact) throw new Error("Contact not found");
+      if (contact.optedOut) throw new Error("Contact has opted out");
+
+      const personalizedMsg = personalize(input.messageText, contact.firstName);
+
+      // Send via TextBelt
+      const res = await globalThis.fetch(TEXTBELT_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: contact.phone,
+          message: personalizedMsg,
+          key: apiKey,
+          sender: "Mechanical Enterprise",
+        }),
+      });
+      const data = (await res.json()) as {
+        success: boolean;
+        quotaRemaining?: number;
+        textId?: string | number;
+        error?: string;
+      };
+
+      // Log the send
+      await db.insert(smsSends).values({
+        contactId: input.contactId,
+        campaignId: input.campaignId ?? null,
+        messageNum: input.messageNum,
+        messageText: personalizedMsg,
+        phone: contact.phone,
+        status: data.success ? "sent" : "failed",
+        textBeltId: data.textId ? String(data.textId) : null,
+        errorMessage: data.error ?? null,
+        quotaRemaining: data.quotaRemaining ?? null,
+      });
+
+      return {
+        success: data.success,
+        quotaRemaining: data.quotaRemaining,
+        error: data.error,
+      };
+    }),
+
+  sendBulk: protectedProcedure
+    .input(
+      z.object({
+        contactIds: z.array(z.number()),
+        campaignId: z.number().optional(),
+        messageNum: z.number().min(1).max(3),
+        messageText: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const apiKey = process.env.TEXTBELT_API_KEY;
+      if (!apiKey) throw new Error("TEXTBELT_API_KEY not configured");
+
+      let sent = 0;
+      let failed = 0;
+      let skipped = 0;
+      let lastQuota: number | undefined;
+      const errors: string[] = [];
+
+      for (const contactId of input.contactIds) {
+        const [contact] = await db
+          .select()
+          .from(smsContacts)
+          .where(eq(smsContacts.id, contactId))
+          .limit(1);
+
+        if (!contact || contact.optedOut) { skipped++; continue; }
+
+        const personalizedMsg = personalize(input.messageText, contact.firstName);
+
+        try {
+          const res = await globalThis.fetch(TEXTBELT_API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              phone: contact.phone,
+              message: personalizedMsg,
+              key: apiKey,
+              sender: "Mechanical Enterprise",
+            }),
+          });
+          const data = (await res.json()) as {
+            success: boolean;
+            quotaRemaining?: number;
+            textId?: string | number;
+            error?: string;
+          };
+
+          lastQuota = data.quotaRemaining;
+
+          await db.insert(smsSends).values({
+            contactId,
+            campaignId: input.campaignId ?? null,
+            messageNum: input.messageNum,
+            messageText: personalizedMsg,
+            phone: contact.phone,
+            status: data.success ? "sent" : "failed",
+            textBeltId: data.textId ? String(data.textId) : null,
+            errorMessage: data.error ?? null,
+            quotaRemaining: data.quotaRemaining ?? null,
+          });
+
+          if (data.success) {
+            sent++;
+          } else {
+            failed++;
+            errors.push(`${contact.firstName} ${contact.lastName ?? ""}: ${data.error}`);
+          }
+        } catch (_err: unknown) {
+          failed++;
+          errors.push(`${contact.firstName}: network error`);
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise((r) => setTimeout(r, 300));
+      }
+
+      return { sent, failed, skipped, quotaRemaining: lastQuota, errors };
+    }),
+
+  // ── Send History ──────────────────────────────────────────────────────────
+  getSendHistory: protectedProcedure
+    .input(z.object({ contactId: z.number().optional(), limit: z.number().default(50) }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      if (input.contactId) {
+        return db
+          .select()
+          .from(smsSends)
+          .where(eq(smsSends.contactId, input.contactId))
+          .orderBy(desc(smsSends.sentAt))
+          .limit(input.limit);
+      }
+      return db
+        .select()
+        .from(smsSends)
+        .orderBy(desc(smsSends.sentAt))
+        .limit(input.limit);
+    }),
+
+  getCampaignStats: protectedProcedure
+    .input(z.object({ campaignId: z.number() }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const sends = await db
+        .select()
+        .from(smsSends)
+        .where(eq(smsSends.campaignId, input.campaignId));
+      const total = sends.length;
+      const sent = sends.filter((s: typeof sends[0]) => s.status === "sent").length;
+      const failed = sends.filter((s: typeof sends[0]) => s.status === "failed").length;
+      const msg1 = sends.filter((s: typeof sends[0]) => s.messageNum === 1 && s.status === "sent").length;
+      const msg2 = sends.filter((s: typeof sends[0]) => s.messageNum === 2 && s.status === "sent").length;
+      const msg3 = sends.filter((s: typeof sends[0]) => s.messageNum === 3 && s.status === "sent").length;
+      return { total, sent, failed, msg1, msg2, msg3 };
+    }),
+});

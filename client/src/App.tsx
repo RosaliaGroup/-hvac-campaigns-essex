@@ -27,6 +27,7 @@ import AdminPortal from "./pages/AdminPortal";
 import GoogleAdsCampaigns from "./pages/GoogleAdsCampaigns";
 import FacebookCampaigns from "./pages/FacebookCampaigns";
 import EmailSMSCampaigns from "./pages/EmailSMSCampaigns";
+import SmsCampaigns from "./pages/SmsCampaigns";
 import CampaignGenerator from "./pages/CampaignGenerator";
 import LPHeatPumpRebates from "./pages/lp/LPHeatPumpRebates";
 import LPCommercialVRV from "./pages/lp/LPCommercialVRV";
@@ -91,6 +92,7 @@ function Router() {
       <Route path={"/google-ads-campaigns"} component={protect(GoogleAdsCampaigns)} />
       <Route path={"/facebook-campaigns"} component={protect(FacebookCampaigns)} />
       <Route path={"/email-sms-campaigns"} component={protect(EmailSMSCampaigns)} />
+      <Route path={"/sms-campaigns"} component={protect(SmsCampaigns)} />
       <Route path={"/campaign-generator"} component={protect(CampaignGenerator)} />
       <Route path={"/ai-va-dashboard"} component={protect(AIVADashboard)} />
       <Route path={"/ai-va-settings"} component={protect(AIVASettings)} />

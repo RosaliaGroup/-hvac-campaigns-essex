@@ -10,6 +10,7 @@ import { handleIncomingSms } from "./integrations/twilio";
 import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
 import { teamAuthRouter } from "./routers/teamAuth";
+import { smsCampaignsRouter } from "./routers/smsCampaigns";
 import { runCampaignAnalysis } from "./services/campaignEngine";
 import { generateSocialPost } from "./integrations/ai-content-generator";
 import { postToGoogleBusiness } from "./integrations/google-business";
@@ -20,6 +21,7 @@ export const appRouter = router({
   system: systemRouter,
   googleAds: googleAdsRouter,
   teamAuth: teamAuthRouter,
+  smsCampaigns: smsCampaignsRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

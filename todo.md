@@ -420,3 +420,17 @@
 
 ## Promos Landing Page (Yard Sign QR Code)
 - [x] Create /promos standalone landing page with rebate info, case studies, financing details, and booking CTA
+
+## SMS Campaign Manager (TextBelt)
+- [x] Create smsContacts DB table (firstName, lastName, phone, email, zip, segment, leadStatus, smsTag)
+- [x] Create smsCampaigns DB table (name, message1, message2, message3, status)
+- [x] Create smsSends DB table (contactId, campaignId, messageNum, status, sentAt, textId)
+- [x] Build tRPC endpoints: importContacts, listContacts, sendSms, getCampaignStats, checkQuota
+- [x] Build SMS Campaign page at /sms-campaigns
+- [x] Add contact list with segment filter (Segment A / Segment B)
+- [x] Add 3-message drip template editor (Day 1, Day 4, Day 10)
+- [x] Add send individual or bulk SMS with personalization (first name merge tag)
+- [x] Add TextBelt quota display
+- [x] Add send history / delivery status per contact
+- [x] Pre-load contacts from Excel file into DB
+- [x] Add SMS Campaigns link to Command Center
