@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
+import InternalNav from "@/components/InternalNav";
 import Navigation from "@/components/Navigation";
 import DashboardFooter from "@/components/DashboardFooter";
 import {
@@ -146,6 +147,7 @@ export default function CommandCenter() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
+      <InternalNav />
       <Navigation />
 
       <div className="flex-1 overflow-y-auto">

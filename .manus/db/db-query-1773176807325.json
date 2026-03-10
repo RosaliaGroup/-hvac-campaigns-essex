@@ -1,0 +1,67 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "aiScripts"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "aiVaAnalytics"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "aiVaCredentials"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "appointments"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "callLogs"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "dripCampaignSchedule"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "dripCampaignTemplates"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "leadCaptures"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "leads"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "scheduledSends"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "smsCampaigns"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "smsContacts"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "smsConversations"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "smsSends"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "socialInteractions"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "socialPosts"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "teamMembers"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL": "users"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_4ocuaVfrPR2qxUA9U855oL\n__drizzle_migrations\naiScripts\naiVaAnalytics\naiVaCredentials\nappointments\ncallLogs\ndripCampaignSchedule\ndripCampaignTemplates\nleadCaptures\nleads\nscheduledSends\nsmsCampaigns\nsmsContacts\nsmsConversations\nsmsSends\nsocialInteractions\nsocialPosts\nteamMembers\nusers\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

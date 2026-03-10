@@ -1,0 +1,8 @@
+{
+  "query": "SELECT id, first_name, last_name, phone, email, segment FROM sms_contacts WHERE first_name LIKE '%text%' OR first_name LIKE '%Altman%' OR last_name LIKE '%Altman%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, first_name, last_name, phone, email, segment FROM sms_contacts WHERE first_name LIKE '%text%' OR first_name LIKE '%Altman%' OR last_name LIKE '%Altman%';",
+  "returncode": 1,
+  "logs": [
+    "ERROR 1146 (42S02) at line 1: Table '4ocuavfrpr2qxua9u855ol.sms_contacts' doesn't exist"
+  ]
+}

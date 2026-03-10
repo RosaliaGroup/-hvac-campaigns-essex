@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import InternalNav from "@/components/InternalNav";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -188,6 +189,7 @@ export default function AIVASettings() {
 
   return (
     <div className="min-h-screen bg-secondary/30 py-8">
+      <InternalNav />
       <div className="container max-w-5xl">
         <div className="mb-8">
           <div className="flex items-center justify-between">

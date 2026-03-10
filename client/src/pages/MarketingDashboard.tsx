@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import InternalNav from "@/components/InternalNav";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -330,6 +331,7 @@ export default function MarketingDashboard() {
 
   return (
     <div className="h-screen flex flex-col bg-secondary/30">
+      <InternalNav />
       <Navigation />
       
       <div className="flex-1 overflow-y-auto">

@@ -1,0 +1,25 @@
+{
+  "query": "SELECT * FROM smsContacts WHERE firstName LIKE '%text%' OR lastName LIKE '%Altman%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT * FROM smsContacts WHERE firstName LIKE '%text%' OR lastName LIKE '%Altman%';",
+  "rows": [
+    {
+      "id": "30",
+      "firstName": "text",
+      "lastName": "Altman",
+      "phone": "+19738749998",
+      "email": "efrat@ynhnj.com",
+      "zip": "07102",
+      "segment": "B",
+      "leadStatus": "",
+      "smsTag": "ME-Rebate-SegB-2026",
+      "optedOut": "0",
+      "notes": "",
+      "createdAt": "2026-03-10 19:57:44",
+      "updatedAt": "2026-03-10 20:19:51"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfirstName\tlastName\tphone\temail\tzip\tsegment\tleadStatus\tsmsTag\toptedOut\tnotes\tcreatedAt\tupdatedAt\n30\ttext\tAltman\t+19738749998\tefrat@ynhnj.com\t07102\tB\t\tME-Rebate-SegB-2026\t0\t\t2026-03-10 19:57:44\t2026-03-10 20:19:51\n",
+  "stderr": "",
+  "execution_time_ms": 62
+}

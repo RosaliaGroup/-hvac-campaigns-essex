@@ -470,3 +470,16 @@
 ## SMS — Remove URL from Default Templates (TextBelt URL whitelist pending)
 - [x] Remove mechanicalenterprise.com URL from all 3 default message templates
 - [x] Replace with call-to-action using phone number only until whitelist approved
+
+## SMS Campaign Manager Improvements
+- [ ] Fix "text Altman" contact name in database
+- [ ] Add quota warning before bulk send (show credit count, warn if insufficient)
+- [ ] Add contact notes field (DB schema + UI)
+- [ ] Add drip auto-scheduler (schedule all 3 drip messages at once per contact)
+- [ ] Show contact name in Scheduled tab (not just phone number)
+
+## Dashboard Quick Access
+- [x] Add SMS Campaigns as a top-level sidebar nav item in DashboardLayout
+- [x] Add Marketing Dashboard as a top-level sidebar nav item in DashboardLayout
+- [x] Ensure both appear prominently in Command Center card grid
+- [x] Add InternalNav quick-access bar to all internal dashboard pages (SMS, Marketing, Leads, AI VA, Performance, etc.)

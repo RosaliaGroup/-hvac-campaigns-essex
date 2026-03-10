@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, User, Calendar, TrendingUp, Download, Plus, Bell } from "lucide-react";
+import InternalNav from "@/components/InternalNav";
 import Navigation from "@/components/Navigation";
 import DashboardFooter from "@/components/DashboardFooter";
 import { getLoginUrl } from "@/const";
@@ -157,6 +158,7 @@ export default function LeadTracker() {
 
   return (
     <div className="min-h-screen bg-secondary/30">
+      <InternalNav />
       <Navigation />
       
       <div className="container py-8">

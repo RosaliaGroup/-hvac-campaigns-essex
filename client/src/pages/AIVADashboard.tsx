@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -392,6 +393,7 @@ function SocialPosts() {
 function AnalyticsDashboard() {
   return (
     <div className="grid md:grid-cols-2 gap-6">
+      <InternalNav />
       <Card>
         <CardHeader>
           <CardTitle>Lead Generation Funnel</CardTitle>

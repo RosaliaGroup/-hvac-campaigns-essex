@@ -1,0 +1,22 @@
+{
+  "query": "SHOW TABLES LIKE '%sms%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SHOW TABLES LIKE '%sms%';",
+  "rows": [
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL (%sms%)": "smsCampaigns"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL (%sms%)": "smsContacts"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL (%sms%)": "smsConversations"
+    },
+    {
+      "Tables_in_4ocuaVfrPR2qxUA9U855oL (%sms%)": "smsSends"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_4ocuaVfrPR2qxUA9U855oL (%sms%)\nsmsCampaigns\nsmsContacts\nsmsConversations\nsmsSends\n",
+  "stderr": "",
+  "execution_time_ms": 67
+}

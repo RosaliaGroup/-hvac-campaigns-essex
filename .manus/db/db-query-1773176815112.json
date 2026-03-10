@@ -1,0 +1,18 @@
+{
+  "query": "SELECT id, firstName, lastName, phone, email, segment FROM smsContacts WHERE firstName LIKE '%text%' OR firstName LIKE '%Altman%' OR lastName LIKE '%Altman%';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, firstName, lastName, phone, email, segment FROM smsContacts WHERE firstName LIKE '%text%' OR firstName LIKE '%Altman%' OR lastName LIKE '%Altman%';",
+  "rows": [
+    {
+      "id": "30",
+      "firstName": "text",
+      "lastName": "Altman",
+      "phone": "+19738749998",
+      "email": "efrat@ynhnj.com",
+      "segment": "B"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\tfirstName\tlastName\tphone\temail\tsegment\n30\ttext\tAltman\t+19738749998\tefrat@ynhnj.com\tB\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

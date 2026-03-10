@@ -1,4 +1,5 @@
 import { useState } from "react";
+import InternalNav from "@/components/InternalNav";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -163,6 +164,7 @@ export default function AIScriptManager() {
 
   return (
     <div className="min-h-screen bg-secondary/30 py-8">
+      <InternalNav />
       <div className="container max-w-7xl">
         <div className="mb-8 flex items-center justify-between">
           <div>

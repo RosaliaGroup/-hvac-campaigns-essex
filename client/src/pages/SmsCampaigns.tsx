@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -332,6 +333,7 @@ export default function SmsCampaigns() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <InternalNav />
       {/* Header */}
       <div className="bg-[#1e3a5f] text-white px-6 py-5">
         <div className="max-w-7xl mx-auto flex items-center justify-between flex-wrap gap-4">

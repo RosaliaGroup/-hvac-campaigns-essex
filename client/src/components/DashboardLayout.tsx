@@ -21,19 +21,52 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import {
+  LayoutDashboard,
+  LogOut,
+  PanelLeft,
+  MessageSquare,
+  Megaphone,
+  Users,
+  Bot,
+  Star,
+  BarChart3,
+  Settings,
+  FileText,
+} from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+type MenuItem = {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  path: string;
+  section?: string;
+};
+
+const menuItems: MenuItem[] = [
+  // Main
+  { icon: LayoutDashboard, label: "Command Center", path: "/command-center" },
+
+  // Campaigns
+  { icon: MessageSquare, label: "SMS Campaigns", path: "/sms-campaigns", section: "Campaigns" },
+  { icon: Megaphone, label: "Marketing Dashboard", path: "/marketing-dashboard", section: "Campaigns" },
+  { icon: BarChart3, label: "Campaign Performance", path: "/campaign-performance", section: "Campaigns" },
+
+  // Leads
+  { icon: Users, label: "Lead Tracker", path: "/leads", section: "Leads" },
+  { icon: Star, label: "Lead Scoring", path: "/lead-scoring", section: "Leads" },
+
+  // AI & Tools
+  { icon: Bot, label: "AI VA Dashboard", path: "/ai-va-dashboard", section: "AI & Tools" },
+  { icon: FileText, label: "AI Script Manager", path: "/ai-scripts", section: "AI & Tools" },
+  { icon: Settings, label: "AI VA Settings", path: "/ai-va-settings", section: "AI & Tools" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
-const DEFAULT_WIDTH = 280;
+const DEFAULT_WIDTH = 240;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
@@ -151,6 +184,10 @@ function DashboardLayoutContent({
     };
   }, [isResizing, setSidebarWidth]);
 
+  // Group menu items by section
+  const topItems = menuItems.filter(item => !item.section);
+  const sections = Array.from(new Set(menuItems.filter(i => i.section).map(i => i.section)));
+
   return (
     <>
       <div className="relative" ref={sidebarRef}>
@@ -170,8 +207,8 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                  <span className="font-semibold tracking-tight truncate text-[#1e3a5f]">
+                    ME Dashboard
                   </span>
                 </div>
               ) : null}
@@ -179,8 +216,9 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
+            {/* Top-level items (no section) */}
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {topItems.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>
@@ -199,6 +237,40 @@ function DashboardLayoutContent({
                 );
               })}
             </SidebarMenu>
+
+            {/* Sectioned items */}
+            {sections.map(section => {
+              const sectionItems = menuItems.filter(i => i.section === section);
+              return (
+                <div key={section} className="mt-1">
+                  {!isCollapsed && (
+                    <p className="px-4 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                      {section}
+                    </p>
+                  )}
+                  <SidebarMenu className="px-2 py-0.5">
+                    {sectionItems.map(item => {
+                      const isActive = location === item.path;
+                      return (
+                        <SidebarMenuItem key={item.path}>
+                          <SidebarMenuButton
+                            isActive={isActive}
+                            onClick={() => setLocation(item.path)}
+                            tooltip={item.label}
+                            className={`h-9 transition-all font-normal`}
+                          >
+                            <item.icon
+                              className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                            />
+                            <span>{item.label}</span>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </div>
+              );
+            })}
           </SidebarContent>
 
           <SidebarFooter className="p-3">

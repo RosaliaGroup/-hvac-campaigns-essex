@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -346,6 +347,7 @@ function PriorityBadge({ priority }: { priority: 'hot' | 'warm' | 'cold' }) {
 function ScoreBreakdown({ breakdown }: { breakdown: any }) {
   return (
     <div className="bg-secondary/30 rounded-lg p-3 mt-2">
+      <InternalNav />
       <div className="text-xs font-semibold mb-2">Score Breakdown:</div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
         {breakdown.callScore > 0 && (

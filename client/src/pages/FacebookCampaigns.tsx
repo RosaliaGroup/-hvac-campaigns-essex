@@ -1,4 +1,5 @@
 import { useState } from "react";
+import InternalNav from "@/components/InternalNav";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -210,6 +211,7 @@ export default function FacebookCampaigns() {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-slate-100">
+      <InternalNav />
       {/* Header */}
       <div className="bg-white border-b border-border shadow-sm flex-shrink-0">
         <div className="container py-3">

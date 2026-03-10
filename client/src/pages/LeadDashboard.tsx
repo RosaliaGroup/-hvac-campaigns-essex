@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -336,6 +337,7 @@ export default function LeadDashboard() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      <InternalNav />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
