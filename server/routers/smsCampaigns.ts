@@ -14,12 +14,13 @@ type DbInstance = ReturnType<typeof drizzle>;
 const TEXTBELT_API = "https://textbelt.com/text";
 const TEXTBELT_QUOTA_API = "https://textbelt.com/quota/";
 
-// Normalize phone to 10-digit US format
+// Normalize phone to E.164 US format (+1XXXXXXXXXX) required by TextBelt
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
-  // Remove leading 1 if 11 digits
-  if (digits.length === 11 && digits.startsWith("1")) return digits.slice(1);
-  return digits;
+  // Remove leading 1 if 11 digits to get 10-digit base
+  const ten = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+  if (ten.length !== 10) return ten; // return as-is if not valid
+  return `+1${ten}`;
 }
 
 // Replace {{contact.firstname}} merge tag
@@ -81,7 +82,7 @@ export const smsCampaignsRouter = router({
       let skipped = 0;
       for (const contact of input) {
         const phone = normalizePhone(contact.phone);
-        if (phone.length < 10) { skipped++; continue; }
+        if (phone.length < 12) { skipped++; continue; } // +1XXXXXXXXXX = 12 chars
         // Check for duplicate
         const existing = await db
           .select({ id: smsContacts.id })

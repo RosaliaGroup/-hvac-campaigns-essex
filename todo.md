@@ -451,3 +451,8 @@
 - [x] Use Resend email service to deliver reset link to user's email address
 - [x] Also send team invite emails directly to new members
 - [x] Test reset flow end-to-end (Resend API key validated)
+
+## SMS Campaign Manager — Delete Contact
+- [ ] Add deleteContact tRPC procedure in smsCampaigns router
+- [ ] Add db helper to delete SMS contact by ID
+- [ ] Add delete button (trash icon) to each row in Contacts tab with confirmation dialog
