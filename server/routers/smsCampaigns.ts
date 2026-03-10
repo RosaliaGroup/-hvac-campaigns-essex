@@ -114,6 +114,29 @@ export const smsCampaignsRouter = router({
       return { success: true };
     }),
 
+  updateContact: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      firstName: z.string().min(1).optional(),
+      lastName: z.string().optional(),
+      phone: z.string().optional(),
+      email: z.string().optional(),
+      zip: z.string().optional(),
+      segment: z.enum(["A", "B", "C"]).optional(),
+      leadStatus: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const { id, phone: rawPhone, ...rest } = input;
+      const updates: Record<string, unknown> = { ...rest };
+      if (rawPhone !== undefined) {
+        updates.phone = normalizePhone(rawPhone);
+      }
+      await db.update(smsContacts).set(updates).where(eq(smsContacts.id, id));
+      return { success: true };
+    }),
+
   toggleOptOut: protectedProcedure
     .input(z.object({ id: z.number(), optedOut: z.boolean() }))
     .mutation(async ({ input }) => {

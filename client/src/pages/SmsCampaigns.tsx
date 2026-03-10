@@ -41,6 +41,8 @@ import {
   CalendarClock,
   Ban,
   Info,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
@@ -128,6 +130,8 @@ export default function SmsCampaigns() {
   const [scheduledTime, setScheduledTime] = useState("09:00");
   const [isScheduling, setIsScheduling] = useState(false);
   const [scheduleResult, setScheduleResult] = useState<{ scheduled: number } | null>(null);
+  const [editContact, setEditContact] = useState<Contact | null>(null);
+  const [editForm, setEditForm] = useState({ firstName: "", lastName: "", phone: "", email: "", zip: "", segment: "A" as "A" | "B" | "C", leadStatus: "", notes: "" });
 
   // Queries
   const { data: contacts = [], isLoading: contactsLoading, refetch: refetchContacts } = trpc.smsCampaigns.listContacts.useQuery({ segment: segmentFilter });
@@ -188,6 +192,34 @@ export default function SmsCampaigns() {
       toast({ title: "Contact removed" });
     },
   });
+
+  const updateContactMutation = trpc.smsCampaigns.updateContact.useMutation({
+    onSuccess: () => {
+      refetchContacts();
+      setEditContact(null);
+      toast({ title: "Contact updated" });
+    },
+    onError: (e) => toast({ title: "Update failed", description: e.message, variant: "destructive" }),
+  });
+
+  function openEditContact(contact: Contact) {
+    setEditContact(contact);
+    setEditForm({
+      firstName: contact.firstName,
+      lastName: contact.lastName ?? "",
+      phone: contact.phone,
+      email: contact.email ?? "",
+      zip: contact.zip ?? "",
+      segment: contact.segment,
+      leadStatus: contact.leadStatus ?? "",
+      notes: "",
+    });
+  }
+
+  function handleSaveEdit() {
+    if (!editContact) return;
+    updateContactMutation.mutate({ id: editContact.id, ...editForm });
+  }
 
   // Computed
   const filteredContacts = contacts as Contact[];
@@ -454,7 +486,7 @@ export default function SmsCampaigns() {
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 items-center">
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -472,12 +504,26 @@ export default function SmsCampaigns() {
                                 {contact.optedOut ? "Restore" : "Opt Out"}
                               </Button>
                               <Button
-                                size="sm"
+                                size="icon"
                                 variant="ghost"
-                                className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => deleteContactMutation.mutate({ id: contact.id })}
+                                className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                title="Edit contact"
+                                onClick={() => openEditContact(contact)}
                               >
-                                Remove
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Delete contact"
+                                onClick={() => {
+                                  if (confirm(`Delete ${contact.firstName} ${contact.lastName ?? ""}?`)) {
+                                    deleteContactMutation.mutate({ id: contact.id });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </div>
                           </td>
@@ -789,6 +835,64 @@ export default function SmsCampaigns() {
               ))}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── EDIT CONTACT DIALOG ── */}
+      <Dialog open={!!editContact} onOpenChange={(o) => { if (!o) setEditContact(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Contact</DialogTitle>
+            <DialogDescription>Update contact details. Phone will be auto-formatted to +1 US format.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">First Name</Label>
+                <Input value={editForm.firstName} onChange={(e) => setEditForm((f) => ({ ...f, firstName: e.target.value }))} className="h-8 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Last Name</Label>
+                <Input value={editForm.lastName} onChange={(e) => setEditForm((f) => ({ ...f, lastName: e.target.value }))} className="h-8 text-sm" />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Phone Number</Label>
+              <Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} placeholder="e.g. 9731234567 or +19731234567" className="h-8 text-sm" />
+              <p className="text-xs text-gray-400 mt-0.5">Enter 10-digit number — +1 is added automatically</p>
+            </div>
+            <div>
+              <Label className="text-xs">Email</Label>
+              <Input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="h-8 text-sm" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">ZIP Code</Label>
+                <Input value={editForm.zip} onChange={(e) => setEditForm((f) => ({ ...f, zip: e.target.value }))} className="h-8 text-sm" />
+              </div>
+              <div>
+                <Label className="text-xs">Segment</Label>
+                <Select value={editForm.segment} onValueChange={(v) => setEditForm((f) => ({ ...f, segment: v as "A" | "B" | "C" }))}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">Segment A (SQL)</SelectItem>
+                    <SelectItem value="B">Segment B (NJ Lead)</SelectItem>
+                    <SelectItem value="C">Segment C</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Lead Status</Label>
+              <Input value={editForm.leadStatus} onChange={(e) => setEditForm((f) => ({ ...f, leadStatus: e.target.value }))} className="h-8 text-sm" placeholder="e.g. CONNECTED, ATTEMPTED_TO_CONTACT" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditContact(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={updateContactMutation.isPending} className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">
+              {updateContactMutation.isPending ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -456,3 +456,8 @@
 - [ ] Add deleteContact tRPC procedure in smsCampaigns router
 - [ ] Add db helper to delete SMS contact by ID
 - [ ] Add delete button (trash icon) to each row in Contacts tab with confirmation dialog
+
+## SMS Campaign Manager — Edit Contact & Visible Delete
+- [x] Add updateContact tRPC procedure in smsCampaigns router
+- [x] Add Edit button that opens a dialog to edit name, phone, email, zip, segment
+- [x] Make Delete button a standalone red icon button (trash icon) — always visible, not hidden in action group
