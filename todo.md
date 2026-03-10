@@ -466,3 +466,7 @@
 - [x] Switched to TextBelt Global key — works from any server location (no proxy needed)
 - [x] Test SMS send confirmed successful: {"success":true} with quota remaining
 - [x] Fixed Confirm Send preview to show personalized message (replaces {{contact.firstname}} with actual name)
+
+## SMS — Remove URL from Default Templates (TextBelt URL whitelist pending)
+- [x] Remove mechanicalenterprise.com URL from all 3 default message templates
+- [x] Replace with call-to-action using phone number only until whitelist approved

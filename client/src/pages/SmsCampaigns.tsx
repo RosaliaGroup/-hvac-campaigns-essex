@@ -91,9 +91,9 @@ const EXCEL_CONTACTS_B = [
 ];
 
 // Default message templates from the Excel file
-const DEFAULT_MSG1 = `Hi {{contact.firstname}}! Mechanical Enterprise here 🏠 NJ homeowners are qualifying for up to $16,000 in rebates on heat pump upgrades — no upfront cost, payments go right on your utility bill. FREE assessment, zero obligation. Book now: mechanicalenterprise.com/residential or call (862) 419-1763. Reply STOP to opt out.`;
-const DEFAULT_MSG2 = `{{contact.firstname}}, just checking in — Mechanical Enterprise. Homeowners in your area are cutting energy bills by 50% with heat pump upgrades + up to $16K back in rebates. Takes 10 min to see if you qualify. FREE assessment: mechanicalenterprise.com/residential — (862) 419-1763. Reply STOP to opt out.`;
-const DEFAULT_MSG3 = `Last reminder from Mechanical Enterprise 👋 The Residential Decarbonization Program rebates (up to $16K) are available now for NJ homeowners. Your FREE assessment could save you $100s/month on energy. Book: (862) 419-1763 or mechanicalenterprise.com/residential. Reply STOP to opt out.`;
+const DEFAULT_MSG1 = `Hi {{contact.firstname}}! Mechanical Enterprise here 🏠 New Jersey homeowners are qualifying for up to $16,000 in rebates on heat pump upgrades — no upfront cost, payments go right on your utility bill. FREE assessment, zero obligation. Call us now: (862) 419-1763. Reply STOP to opt out.`;
+const DEFAULT_MSG2 = `{{contact.firstname}}, just checking in — Mechanical Enterprise. Homeowners in your area are cutting energy bills by 50% with heat pump upgrades + up to $16K back in rebates. Takes 10 min to see if you qualify. Call for your FREE assessment: (862) 419-1763. Reply STOP to opt out.`;
+const DEFAULT_MSG3 = `Last reminder from Mechanical Enterprise 👋 The Residential Decarbonization Program rebates (up to $16K) are available now for New Jersey homeowners. Your FREE assessment could save you $100s/month on energy. Call to book: (862) 419-1763. Reply STOP to opt out.`;
 
 type Contact = {
   id: number;
