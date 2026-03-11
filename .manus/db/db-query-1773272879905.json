@@ -1,0 +1,9 @@
+{
+  "query": "SELECT id, email, name, role, passwordHash, status FROM teamMembers WHERE email = 'sales@mechanicalenterprise.com';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, email, name, role, passwordHash, status FROM teamMembers WHERE email = 'sales@mechanicalenterprise.com';",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 62
+}

@@ -1,0 +1,38 @@
+{
+  "query": "SELECT id, email, role, name, passwordHash FROM teamMembers;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, email, role, name, passwordHash FROM teamMembers;",
+  "rows": [
+    {
+      "id": "1",
+      "email": "jhon@mechanicalenterprise.com",
+      "role": "member",
+      "name": "Jhon Rendon ",
+      "passwordHash": "$2b$12$c1NJXO87TeW2ebeAWyvEUuvRlSbbCetoyS8HNitXkP.3us2507CHy"
+    },
+    {
+      "id": "2",
+      "email": "projects@mechanicalenterprise.com",
+      "role": "member",
+      "name": "Daniel Perez",
+      "passwordHash": "NULL"
+    },
+    {
+      "id": "3",
+      "email": "info@mechanicalenterprise.com",
+      "role": "member",
+      "name": "Rocio Varela",
+      "passwordHash": "$2b$12$x.5qFvr1dbdmUMLZWQdCGO.D2JxBg.gn61LKm6V4btCss7Mu0LtNC"
+    },
+    {
+      "id": "4",
+      "email": "ana@rosaliagroup.com",
+      "role": "member",
+      "name": "Rosalia Group",
+      "passwordHash": "$2b$12$YmtXYwY4gLWNYz2EFadN.uqXPLONNDr4TiiVxM5MD8imTcLekByI2"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\trole\tname\tpasswordHash\n1\tjhon@mechanicalenterprise.com\tmember\tJhon Rendon \t$2b$12$c1NJXO87TeW2ebeAWyvEUuvRlSbbCetoyS8HNitXkP.3us2507CHy\n2\tprojects@mechanicalenterprise.com\tmember\tDaniel Perez\tNULL\n3\tinfo@mechanicalenterprise.com\tmember\tRocio Varela\t$2b$12$x.5qFvr1dbdmUMLZWQdCGO.D2JxBg.gn61LKm6V4btCss7Mu0LtNC\n4\tana@rosaliagroup.com\tmember\tRosalia Group\t$2b$12$YmtXYwY4gLWNYz2EFadN.uqXPLONNDr4TiiVxM5MD8imTcLekByI2\n",
+  "stderr": "",
+  "execution_time_ms": 63
+}

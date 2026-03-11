@@ -1,0 +1,38 @@
+{
+  "query": "SELECT id, email, name, status, LEFT(passwordHash, 30) as hashStart FROM teamMembers ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, email, name, status, LEFT(passwordHash, 30) as hashStart FROM teamMembers ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "email": "jhon@mechanicalenterprise.com",
+      "name": "Jhon Rendon ",
+      "status": "active",
+      "hashStart": "$2b$12$c1NJXO87TeW2ebeAWyvEUuv"
+    },
+    {
+      "id": "2",
+      "email": "projects@mechanicalenterprise.com",
+      "name": "Daniel Perez",
+      "status": "invited",
+      "hashStart": "NULL"
+    },
+    {
+      "id": "3",
+      "email": "info@mechanicalenterprise.com",
+      "name": "Rocio Varela",
+      "status": "active",
+      "hashStart": "$2b$12$x.5qFvr1dbdmUMLZWQdCGO."
+    },
+    {
+      "id": "4",
+      "email": "ana@rosaliagroup.com",
+      "name": "Rosalia Group",
+      "status": "active",
+      "hashStart": "$2b$12$YmtXYwY4gLWNYz2EFadN.uq"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\tstatus\thashStart\n1\tjhon@mechanicalenterprise.com\tJhon Rendon \tactive\t$2b$12$c1NJXO87TeW2ebeAWyvEUuv\n2\tprojects@mechanicalenterprise.com\tDaniel Perez\tinvited\tNULL\n3\tinfo@mechanicalenterprise.com\tRocio Varela\tactive\t$2b$12$x.5qFvr1dbdmUMLZWQdCGO.\n4\tana@rosaliagroup.com\tRosalia Group\tactive\t$2b$12$YmtXYwY4gLWNYz2EFadN.uq\n",
+  "stderr": "",
+  "execution_time_ms": 61
+}

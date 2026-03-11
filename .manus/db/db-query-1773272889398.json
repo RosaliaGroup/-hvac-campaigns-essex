@@ -1,0 +1,38 @@
+{
+  "query": "SELECT id, email, name, role, status FROM teamMembers ORDER BY id;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT id, email, name, role, status FROM teamMembers ORDER BY id;",
+  "rows": [
+    {
+      "id": "1",
+      "email": "jhon@mechanicalenterprise.com",
+      "name": "Jhon Rendon ",
+      "role": "member",
+      "status": "active"
+    },
+    {
+      "id": "2",
+      "email": "projects@mechanicalenterprise.com",
+      "name": "Daniel Perez",
+      "role": "member",
+      "status": "invited"
+    },
+    {
+      "id": "3",
+      "email": "info@mechanicalenterprise.com",
+      "name": "Rocio Varela",
+      "role": "member",
+      "status": "active"
+    },
+    {
+      "id": "4",
+      "email": "ana@rosaliagroup.com",
+      "name": "Rosalia Group",
+      "role": "member",
+      "status": "active"
+    }
+  ],
+  "messages": [],
+  "stdout": "id\temail\tname\trole\tstatus\n1\tjhon@mechanicalenterprise.com\tJhon Rendon \tmember\tactive\n2\tprojects@mechanicalenterprise.com\tDaniel Perez\tmember\tinvited\n3\tinfo@mechanicalenterprise.com\tRocio Varela\tmember\tactive\n4\tana@rosaliagroup.com\tRosalia Group\tmember\tactive\n",
+  "stderr": "",
+  "execution_time_ms": 57
+}

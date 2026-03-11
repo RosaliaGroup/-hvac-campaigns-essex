@@ -494,3 +494,7 @@
 - [x] Rewrite scheduledSms service to use Telnyx API
 - [x] Update webhook handler to support Telnyx inbound format
 - [x] Update quota display to show Telnyx balance instead
+
+## Team Login Fixes
+- [x] Fix team login authentication — updated Ana's email to sales@mechanicalenterprise.com and set status to active
+- [x] Add show/hide password toggle to login form
