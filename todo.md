@@ -483,3 +483,7 @@
 - [x] Add Marketing Dashboard as a top-level sidebar nav item in DashboardLayout
 - [x] Ensure both appear prominently in Command Center card grid
 - [x] Add InternalNav quick-access bar to all internal dashboard pages (SMS, Marketing, Leads, AI VA, Performance, etc.)
+
+## TextBelt Opt-Out Link
+- [x] Add replyWebhookUrl to all TextBelt sends so STOP replies auto-opt-out contacts
+- [x] Fix phone normalization in webhook to match E.164 format stored in contacts

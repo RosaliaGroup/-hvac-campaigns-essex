@@ -35,11 +35,12 @@ function isOptOutMessage(text: string): boolean {
   return OPT_OUT_KEYWORDS.has(normalized);
 }
 
-// Normalize phone to 10-digit US format (matches how contacts are stored)
+// Normalize phone to E.164 format (+1XXXXXXXXXX) — matches how contacts are stored
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
-  if (digits.length === 11 && digits.startsWith("1")) return digits.slice(1);
-  return digits;
+  const ten = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+  if (ten.length === 10) return `+1${ten}`;
+  return raw; // return as-is if not a standard US number
 }
 
 export function registerSmsWebhookRoutes(app: Express): void {

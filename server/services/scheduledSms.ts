@@ -57,6 +57,7 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
     const personalizedMsg = personalize(item.messageText, contact.firstName);
 
     try {
+      const webhookBase = process.env.VITE_APP_URL || "https://mechanicalenterprise.com";
       const res = await globalThis.fetch(TEXTBELT_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,6 +66,7 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
           message: personalizedMsg,
           key: apiKey,
           sender: "Mechanical Enterprise",
+          replyWebhookUrl: `${webhookBase}/api/sms/reply`,
         }),
       });
 

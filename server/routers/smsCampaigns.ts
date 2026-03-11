@@ -220,6 +220,7 @@ export const smsCampaignsRouter = router({
       const personalizedMsg = personalize(input.messageText, contact.firstName);
 
       // Send via TextBelt
+      const webhookBase = process.env.VITE_APP_URL || "https://mechanicalenterprise.com";
       const res = await globalThis.fetch(TEXTBELT_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -228,6 +229,7 @@ export const smsCampaignsRouter = router({
           message: personalizedMsg,
           key: apiKey,
           sender: "Mechanical Enterprise",
+          replyWebhookUrl: `${webhookBase}/api/sms/reply`,
         }),
       });
       const data = (await res.json()) as {
@@ -289,6 +291,7 @@ export const smsCampaignsRouter = router({
         const personalizedMsg = personalize(input.messageText, contact.firstName);
 
         try {
+          const webhookBase = process.env.VITE_APP_URL || "https://mechanicalenterprise.com";
           const res = await globalThis.fetch(TEXTBELT_API, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -297,6 +300,7 @@ export const smsCampaignsRouter = router({
               message: personalizedMsg,
               key: apiKey,
               sender: "Mechanical Enterprise",
+              replyWebhookUrl: `${webhookBase}/api/sms/reply`,
             }),
           });
           const data = (await res.json()) as {
