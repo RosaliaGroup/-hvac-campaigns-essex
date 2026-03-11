@@ -1,13 +1,12 @@
 /**
- * Scheduled SMS Service
+ * Scheduled SMS Service — Telnyx-powered
  * Processes pending scheduled sends every 5 minutes via a cron-like interval.
- * Runs server-side — no external job queue needed.
  */
 import { getDb } from "../db";
 import { scheduledSends, smsContacts, smsSends } from "../../drizzle/schema";
 import { eq, lte, and } from "drizzle-orm";
 
-const TEXTBELT_API = "https://textbelt.com/text";
+const TELNYX_API = "https://api.telnyx.com/v2/messages";
 
 function personalize(template: string, firstName: string): string {
   return template
@@ -15,17 +14,50 @@ function personalize(template: string, firstName: string): string {
     .replace(/\{\{firstName\}\}/gi, firstName);
 }
 
+async function sendViaTelnyx(phone: string, message: string): Promise<{
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}> {
+  const apiKey = process.env.TELNYX_API_KEY;
+  const fromNumber = process.env.TELNYX_FROM_NUMBER;
+  if (!apiKey || !fromNumber) {
+    return { success: false, error: "Telnyx credentials not configured" };
+  }
+
+  const res = await globalThis.fetch(TELNYX_API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from: fromNumber,
+      to: phone,
+      text: message,
+    }),
+  });
+
+  if (res.status === 200 || res.status === 201) {
+    const data = (await res.json()) as { data: { id: string } };
+    return { success: true, messageId: data.data?.id };
+  } else {
+    const err = (await res.json()) as { errors?: Array<{ detail: string }> };
+    const errorMsg = err.errors?.[0]?.detail ?? `HTTP ${res.status}`;
+    return { success: false, error: errorMsg };
+  }
+}
+
 export async function processScheduledSends(): Promise<{ processed: number; sent: number; failed: number }> {
   const db = await getDb();
   if (!db) return { processed: 0, sent: 0, failed: 0 };
 
-  const apiKey = process.env.TEXTBELT_API_KEY;
+  const apiKey = process.env.TELNYX_API_KEY;
   if (!apiKey) {
-    console.warn("[ScheduledSMS] TEXTBELT_API_KEY not set — skipping");
+    console.warn("[ScheduledSMS] TELNYX_API_KEY not set — skipping");
     return { processed: 0, sent: 0, failed: 0 };
   }
 
-  // Find all pending sends that are due (scheduledAt <= now)
   const now = new Date();
   const due = await db
     .select()
@@ -38,7 +70,6 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
   let failed = 0;
 
   for (const item of due) {
-    // Get contact
     const [contact] = await db
       .select()
       .from(smsContacts)
@@ -46,7 +77,6 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
       .limit(1);
 
     if (!contact || contact.optedOut) {
-      // Cancel — contact opted out or deleted
       await db
         .update(scheduledSends)
         .set({ status: "cancelled" })
@@ -57,54 +87,34 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
     const personalizedMsg = personalize(item.messageText, contact.firstName);
 
     try {
-      const webhookBase = process.env.VITE_APP_URL || "https://mechanicalenterprise.com";
-      const res = await globalThis.fetch(TEXTBELT_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: contact.phone,
-          message: personalizedMsg,
-          key: apiKey,
-          sender: "Mechanical Enterprise",
-          replyWebhookUrl: `${webhookBase}/api/sms/reply`,
-        }),
-      });
+      const result = await sendViaTelnyx(contact.phone, personalizedMsg);
 
-      const data = (await res.json()) as {
-        success: boolean;
-        quotaRemaining?: number;
-        textId?: string | number;
-        error?: string;
-      };
-
-      // Log the actual send
       const [sendResult] = await db.insert(smsSends).values({
         contactId: item.contactId,
         campaignId: item.campaignId ?? null,
         messageNum: item.messageNum,
         messageText: personalizedMsg,
         phone: contact.phone,
-        status: data.success ? "sent" : "failed",
-        textBeltId: data.textId ? String(data.textId) : null,
-        errorMessage: data.error ?? null,
-        quotaRemaining: data.quotaRemaining ?? null,
+        status: result.success ? "sent" : "failed",
+        textBeltId: result.messageId ?? null,
+        errorMessage: result.error ?? null,
+        quotaRemaining: null,
       });
 
-      // Update scheduled send status
       await db
         .update(scheduledSends)
         .set({
-          status: data.success ? "sent" : "failed",
+          status: result.success ? "sent" : "failed",
           smsSendId: (sendResult as { insertId: number }).insertId,
         })
         .where(eq(scheduledSends.id, item.id));
 
-      if (data.success) {
+      if (result.success) {
         sent++;
-        console.log(`[ScheduledSMS] ✓ Sent Msg${item.messageNum} to ${contact.phone}`);
+        console.log(`[ScheduledSMS] ✓ Sent Msg${item.messageNum} to ${contact.phone} via Telnyx`);
       } else {
         failed++;
-        console.warn(`[ScheduledSMS] ✗ Failed Msg${item.messageNum} to ${contact.phone}: ${data.error}`);
+        console.warn(`[ScheduledSMS] ✗ Failed Msg${item.messageNum} to ${contact.phone}: ${result.error}`);
       }
     } catch (err) {
       failed++;
@@ -115,24 +125,17 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
       console.error(`[ScheduledSMS] Error for contact ${item.contactId}:`, err);
     }
 
-    // Small delay between sends
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 200));
   }
 
   console.log(`[ScheduledSMS] Processed ${due.length}: ${sent} sent, ${failed} failed`);
   return { processed: due.length, sent, failed };
 }
 
-/**
- * Start the background scheduler — runs every 5 minutes.
- * Call this once from server startup.
- */
 export function startScheduledSmsProcessor(): void {
-  const INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  const INTERVAL_MS = 5 * 60 * 1000;
+  console.log("[ScheduledSMS] Telnyx processor started — checking every 5 minutes");
 
-  console.log("[ScheduledSMS] Processor started — checking every 5 minutes");
-
-  // Run immediately on startup to catch any overdue sends
   processScheduledSends().catch((err) =>
     console.error("[ScheduledSMS] Startup run error:", err)
   );

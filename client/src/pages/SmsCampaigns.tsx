@@ -159,7 +159,7 @@ export default function SmsCampaigns() {
       refetchQuota();
       toast({
         title: `Sent ${data.sent} messages`,
-        description: `${data.failed} failed, ${data.skipped} skipped. Quota left: ${data.quotaRemaining ?? "?"}`,
+        description: `${data.failed} failed, ${data.skipped} skipped.`,
       });
     },
     onError: (e) => {

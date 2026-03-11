@@ -1,5 +1,5 @@
 /**
- * SMS Campaign Router — TextBelt-powered drip campaign management
+ * SMS Campaign Router — Telnyx-powered drip campaign management
  * Handles contacts, campaigns, sending, and delivery tracking
  */
 import { protectedProcedure, router } from "../_core/trpc";
@@ -11,15 +11,13 @@ import { drizzle } from "drizzle-orm/mysql2";
 
 type DbInstance = ReturnType<typeof drizzle>;
 
-const TEXTBELT_API = "https://textbelt.com/text";
-const TEXTBELT_QUOTA_API = "https://textbelt.com/quota/";
+const TELNYX_API = "https://api.telnyx.com/v2/messages";
 
-// Normalize phone to E.164 US format (+1XXXXXXXXXX) required by TextBelt
+// Normalize phone to E.164 US format (+1XXXXXXXXXX) required by Telnyx
 function normalizePhone(raw: string): string {
   const digits = raw.replace(/\D/g, "");
-  // Remove leading 1 if 11 digits to get 10-digit base
   const ten = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
-  if (ten.length !== 10) return ten; // return as-is if not valid
+  if (ten.length !== 10) return ten;
   return `+1${ten}`;
 }
 
@@ -36,14 +34,57 @@ async function requireDb(): Promise<DbInstance> {
   return db;
 }
 
+// Send a single SMS via Telnyx API
+async function sendViaTelnyx(phone: string, message: string): Promise<{
+  success: boolean;
+  messageId?: string;
+  error?: string;
+}> {
+  const apiKey = process.env.TELNYX_API_KEY;
+  const fromNumber = process.env.TELNYX_FROM_NUMBER;
+  if (!apiKey) throw new Error("TELNYX_API_KEY not configured");
+  if (!fromNumber) throw new Error("TELNYX_FROM_NUMBER not configured");
+
+  const res = await globalThis.fetch(TELNYX_API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      from: fromNumber,
+      to: phone,
+      text: message,
+    }),
+  });
+
+  if (res.status === 200 || res.status === 201) {
+    const data = (await res.json()) as { data: { id: string } };
+    return { success: true, messageId: data.data?.id };
+  } else {
+    const err = (await res.json()) as { errors?: Array<{ detail: string }> };
+    const errorMsg = err.errors?.[0]?.detail ?? `HTTP ${res.status}`;
+    return { success: false, error: errorMsg };
+  }
+}
+
 export const smsCampaignsRouter = router({
-  // ── Quota ─────────────────────────────────────────────────────────────────
+  // ── Quota / Balance ───────────────────────────────────────────────────────
   getQuota: protectedProcedure.query(async () => {
-    const apiKey = process.env.TEXTBELT_API_KEY;
-    if (!apiKey) throw new Error("TEXTBELT_API_KEY not configured");
-    const res = await globalThis.fetch(`${TEXTBELT_QUOTA_API}${apiKey}`);
-    const data = (await res.json()) as { success: boolean; quotaRemaining: number };
-    return { quotaRemaining: data.quotaRemaining ?? 0, success: data.success };
+    const apiKey = process.env.TELNYX_API_KEY;
+    if (!apiKey) throw new Error("TELNYX_API_KEY not configured");
+    const res = await globalThis.fetch("https://api.telnyx.com/v2/balance", {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!res.ok) return { quotaRemaining: 0, success: false, balance: "0.00" };
+    const data = (await res.json()) as { data: { balance: string; available_credit: string } };
+    const balance = parseFloat(data.data?.balance ?? "0");
+    // Estimate remaining texts at ~$0.004 per text
+    const quotaRemaining = Math.floor(balance / 0.004);
+    return { quotaRemaining, success: true, balance: data.data?.balance ?? "0.00" };
   }),
 
   // ── Contacts ──────────────────────────────────────────────────────────────
@@ -82,8 +123,7 @@ export const smsCampaignsRouter = router({
       let skipped = 0;
       for (const contact of input) {
         const phone = normalizePhone(contact.phone);
-        if (phone.length < 12) { skipped++; continue; } // +1XXXXXXXXXX = 12 chars
-        // Check for duplicate
+        if (phone.length < 12) { skipped++; continue; }
         const existing = await db
           .select({ id: smsContacts.id })
           .from(smsContacts)
@@ -205,10 +245,7 @@ export const smsCampaignsRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await requireDb();
-      const apiKey = process.env.TEXTBELT_API_KEY;
-      if (!apiKey) throw new Error("TEXTBELT_API_KEY not configured");
 
-      // Get contact
       const [contact] = await db
         .select()
         .from(smsContacts)
@@ -218,44 +255,23 @@ export const smsCampaignsRouter = router({
       if (contact.optedOut) throw new Error("Contact has opted out");
 
       const personalizedMsg = personalize(input.messageText, contact.firstName);
+      const result = await sendViaTelnyx(contact.phone, personalizedMsg);
 
-      // Send via TextBelt
-      const webhookBase = process.env.VITE_APP_URL || "https://mechanicalenterprise.com";
-      const res = await globalThis.fetch(TEXTBELT_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: contact.phone,
-          message: personalizedMsg,
-          key: apiKey,
-          sender: "Mechanical Enterprise",
-          replyWebhookUrl: `${webhookBase}/api/sms/reply`,
-        }),
-      });
-      const data = (await res.json()) as {
-        success: boolean;
-        quotaRemaining?: number;
-        textId?: string | number;
-        error?: string;
-      };
-
-      // Log the send
       await db.insert(smsSends).values({
         contactId: input.contactId,
         campaignId: input.campaignId ?? null,
         messageNum: input.messageNum,
         messageText: personalizedMsg,
         phone: contact.phone,
-        status: data.success ? "sent" : "failed",
-        textBeltId: data.textId ? String(data.textId) : null,
-        errorMessage: data.error ?? null,
-        quotaRemaining: data.quotaRemaining ?? null,
+        status: result.success ? "sent" : "failed",
+        textBeltId: result.messageId ?? null,
+        errorMessage: result.error ?? null,
+        quotaRemaining: null,
       });
 
       return {
-        success: data.success,
-        quotaRemaining: data.quotaRemaining,
-        error: data.error,
+        success: result.success,
+        error: result.error,
       };
     }),
 
@@ -270,13 +286,10 @@ export const smsCampaignsRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await requireDb();
-      const apiKey = process.env.TEXTBELT_API_KEY;
-      if (!apiKey) throw new Error("TEXTBELT_API_KEY not configured");
 
       let sent = 0;
       let failed = 0;
       let skipped = 0;
-      let lastQuota: number | undefined;
       const errors: string[] = [];
 
       for (const contactId of input.contactIds) {
@@ -291,26 +304,7 @@ export const smsCampaignsRouter = router({
         const personalizedMsg = personalize(input.messageText, contact.firstName);
 
         try {
-          const webhookBase = process.env.VITE_APP_URL || "https://mechanicalenterprise.com";
-          const res = await globalThis.fetch(TEXTBELT_API, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              phone: contact.phone,
-              message: personalizedMsg,
-              key: apiKey,
-              sender: "Mechanical Enterprise",
-              replyWebhookUrl: `${webhookBase}/api/sms/reply`,
-            }),
-          });
-          const data = (await res.json()) as {
-            success: boolean;
-            quotaRemaining?: number;
-            textId?: string | number;
-            error?: string;
-          };
-
-          lastQuota = data.quotaRemaining;
+          const result = await sendViaTelnyx(contact.phone, personalizedMsg);
 
           await db.insert(smsSends).values({
             contactId,
@@ -318,17 +312,17 @@ export const smsCampaignsRouter = router({
             messageNum: input.messageNum,
             messageText: personalizedMsg,
             phone: contact.phone,
-            status: data.success ? "sent" : "failed",
-            textBeltId: data.textId ? String(data.textId) : null,
-            errorMessage: data.error ?? null,
-            quotaRemaining: data.quotaRemaining ?? null,
+            status: result.success ? "sent" : "failed",
+            textBeltId: result.messageId ?? null,
+            errorMessage: result.error ?? null,
+            quotaRemaining: null,
           });
 
-          if (data.success) {
+          if (result.success) {
             sent++;
           } else {
             failed++;
-            errors.push(`${contact.firstName} ${contact.lastName ?? ""}: ${data.error}`);
+            errors.push(`${contact.firstName} ${contact.lastName ?? ""}: ${result.error}`);
           }
         } catch (_err: unknown) {
           failed++;
@@ -336,10 +330,10 @@ export const smsCampaignsRouter = router({
         }
 
         // Small delay to avoid rate limiting
-        await new Promise((r) => setTimeout(r, 300));
+        await new Promise((r) => setTimeout(r, 200));
       }
 
-      return { sent, failed, skipped, quotaRemaining: lastQuota, errors };
+      return { sent, failed, skipped, errors };
     }),
 
   // ── Send History ──────────────────────────────────────────────────────────

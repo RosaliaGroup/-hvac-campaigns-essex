@@ -487,3 +487,10 @@
 ## TextBelt Opt-Out Link
 - [x] Add replyWebhookUrl to all TextBelt sends so STOP replies auto-opt-out contacts
 - [x] Fix phone normalization in webhook to match E.164 format stored in contacts
+
+## Telnyx Migration
+- [x] Store TELNYX_API_KEY and TELNYX_FROM_NUMBER as secrets
+- [x] Rewrite smsCampaigns router to use Telnyx API
+- [x] Rewrite scheduledSms service to use Telnyx API
+- [x] Update webhook handler to support Telnyx inbound format
+- [x] Update quota display to show Telnyx balance instead

@@ -1,17 +1,18 @@
 /**
- * SMS Webhook Service — handles TextBelt inbound reply webhooks
+ * SMS Webhook Service — handles Telnyx inbound reply webhooks
  *
- * TextBelt sends a POST to your webhook URL when a recipient replies.
- * Payload: { fromNumber, text, data }
+ * Telnyx sends a POST to your webhook URL when a recipient replies.
+ * Payload: { data: { event_type: "message.received", payload: { from: { phone_number }, text } } }
  *
  * This handler:
  *  1. Detects STOP / UNSUBSCRIBE / QUIT / CANCEL / END keywords
  *  2. Marks the matching contact as optedOut in the database
  *  3. Cancels any pending scheduled sends for that contact
- *  4. Returns 200 OK to TextBelt
+ *  4. Returns 200 OK to Telnyx
  *
- * Register your webhook URL in TextBelt dashboard:
- *   https://textbelt.com/dashboard → Webhook URL → https://yourdomain.com/api/sms/reply
+ * Webhook URL is set in Telnyx Messaging Profile:
+ *   https://portal.telnyx.com → Messaging → Profiles → Mechanical Enterprise → Inbound → Webhook URL
+ *   Set to: https://mechanicalenterprise.com/api/sms/reply
  */
 import type { Express, Request, Response } from "express";
 import { getDb } from "../db";
@@ -43,60 +44,87 @@ function normalizePhone(raw: string): string {
   return raw; // return as-is if not a standard US number
 }
 
+async function handleOptOut(phone: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+
+  const normalizedPhone = normalizePhone(phone);
+
+  const [contact] = await db
+    .select({ id: smsContacts.id, firstName: smsContacts.firstName })
+    .from(smsContacts)
+    .where(eq(smsContacts.phone, normalizedPhone))
+    .limit(1);
+
+  if (contact) {
+    await db
+      .update(smsContacts)
+      .set({ optedOut: true })
+      .where(eq(smsContacts.id, contact.id));
+
+    await db
+      .update(scheduledSends)
+      .set({ status: "cancelled" })
+      .where(
+        and(
+          eq(scheduledSends.contactId, contact.id),
+          eq(scheduledSends.status, "pending")
+        )
+      );
+
+    console.log(
+      `[SMSWebhook] ✓ Opted out contact ${contact.firstName} (${normalizedPhone}) — pending sends cancelled`
+    );
+  } else {
+    console.log(`[SMSWebhook] STOP from unknown number ${normalizedPhone} — no contact found`);
+  }
+}
+
 export function registerSmsWebhookRoutes(app: Express): void {
   /**
    * POST /api/sms/reply
-   * TextBelt inbound reply webhook
+   * Telnyx inbound reply webhook
    */
   app.post("/api/sms/reply", async (req: Request, res: Response) => {
     try {
-      const { fromNumber, text } = req.body as { fromNumber?: string; text?: string };
+      // Telnyx webhook format
+      const body = req.body as {
+        data?: {
+          event_type?: string;
+          payload?: {
+            from?: { phone_number?: string };
+            text?: string;
+          };
+        };
+        // Legacy TextBelt format fallback
+        fromNumber?: string;
+        text?: string;
+      };
 
-      if (!fromNumber || !text) {
-        return res.status(400).json({ error: "Missing fromNumber or text" });
+      let fromPhone: string | undefined;
+      let messageText: string | undefined;
+
+      if (body.data?.event_type === "message.received") {
+        // Telnyx format
+        fromPhone = body.data.payload?.from?.phone_number;
+        messageText = body.data.payload?.text;
+      } else if (body.fromNumber) {
+        // Legacy TextBelt format fallback
+        fromPhone = body.fromNumber;
+        messageText = body.text;
       }
 
-      const phone = normalizePhone(fromNumber);
-      console.log(`[SMSWebhook] Reply from ${phone}: "${text}"`);
-
-      if (isOptOutMessage(text)) {
-        const db = await getDb();
-        if (db) {
-          // Find contact by phone
-          const [contact] = await db
-            .select({ id: smsContacts.id, firstName: smsContacts.firstName })
-            .from(smsContacts)
-            .where(eq(smsContacts.phone, phone))
-            .limit(1);
-
-          if (contact) {
-            // Mark as opted out
-            await db
-              .update(smsContacts)
-              .set({ optedOut: true })
-              .where(eq(smsContacts.id, contact.id));
-
-            // Cancel all pending scheduled sends for this contact
-            await db
-              .update(scheduledSends)
-              .set({ status: "cancelled" })
-              .where(
-                and(
-                  eq(scheduledSends.contactId, contact.id),
-                  eq(scheduledSends.status, "pending")
-                )
-              );
-
-            console.log(
-              `[SMSWebhook] ✓ Opted out contact ${contact.firstName} (${phone}) — pending sends cancelled`
-            );
-          } else {
-            console.log(`[SMSWebhook] STOP from unknown number ${phone} — no contact found`);
-          }
-        }
+      if (!fromPhone || !messageText) {
+        console.log("[SMSWebhook] Received webhook with missing phone or text — ignoring");
+        return res.status(200).json({ success: true });
       }
 
-      // Always return 200 to TextBelt
+      console.log(`[SMSWebhook] Reply from ${fromPhone}: "${messageText}"`);
+
+      if (isOptOutMessage(messageText)) {
+        await handleOptOut(fromPhone);
+      }
+
       return res.status(200).json({ success: true });
     } catch (err) {
       console.error("[SMSWebhook] Error:", err);
@@ -106,9 +134,9 @@ export function registerSmsWebhookRoutes(app: Express): void {
 
   /**
    * GET /api/sms/reply
-   * Verification endpoint (some webhook providers do a GET to verify the URL)
+   * Verification endpoint
    */
   app.get("/api/sms/reply", (_req: Request, res: Response) => {
-    res.status(200).json({ status: "SMS webhook active", service: "Mechanical Enterprise" });
+    res.status(200).json({ status: "SMS webhook active", service: "Mechanical Enterprise", provider: "Telnyx" });
   });
 }
