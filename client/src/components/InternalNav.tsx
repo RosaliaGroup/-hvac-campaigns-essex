@@ -30,20 +30,20 @@ export default function InternalNav() {
           {navItems.map((item, idx) => {
             const isActive = location === item.href;
             return (
-              <Link key={item.href} href={item.href}>
-                <a
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
-                    isActive
-                      ? "bg-[#ff6b35] text-white"
-                      : "text-white/70 hover:text-white hover:bg-white/10"
-                  }`}
-                >
-                  <item.icon className="h-3.5 w-3.5 shrink-0" />
-                  {item.label}
-                  {idx < navItems.length - 1 && !isActive && (
-                    <ChevronRight className="h-3 w-3 text-white/30 ml-0.5 hidden sm:block" />
-                  )}
-                </a>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${
+                  isActive
+                    ? "bg-[#ff6b35] text-white"
+                    : "text-white/70 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                <item.icon className="h-3.5 w-3.5 shrink-0" />
+                {item.label}
+                {idx < navItems.length - 1 && !isActive && (
+                  <ChevronRight className="h-3 w-3 text-white/30 ml-0.5 hidden sm:block" />
+                )}
               </Link>
             );
           })}
