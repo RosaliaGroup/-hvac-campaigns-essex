@@ -498,3 +498,10 @@
 ## Team Login Fixes
 - [x] Fix team login authentication — updated Ana's email to sales@mechanicalenterprise.com and set status to active
 - [x] Add show/hide password toggle to login form
+
+## SMS Delivery Fix
+- [ ] Diagnose why Telnyx SMS sends show success but messages not delivered
+- [ ] Add opt-out link to message templates
+
+## TextBelt Revert (Telnyx 10DLC pending)
+- [x] Revert SMS sends back to TextBelt while Telnyx 10DLC approval is pending
