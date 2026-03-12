@@ -505,3 +505,14 @@
 
 ## TextBelt Revert (Telnyx 10DLC pending)
 - [x] Revert SMS sends back to TextBelt while Telnyx 10DLC approval is pending
+
+## Opt-Out Link in SMS Messages
+- [ ] Add TextBelt opt-out URL to all SMS campaign message templates
+
+## Booking Link in SMS Messages
+- [ ] Add booking/appointment link to all 3 default SMS message templates
+
+## Qualify Landing Page + SMS Links
+- [x] Build /qualify page with rebate calculator (house details → rebate amount → out-of-pocket → book)
+- [x] Add mechanicalenterprise.com/qualify link to all 3 SMS message templates
+- [x] Wire /qualify into App.tsx routing
