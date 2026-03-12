@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -44,6 +44,9 @@ import {
   Info,
   Pencil,
   Trash2,
+  Inbox,
+  Reply,
+  Circle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
@@ -368,6 +371,7 @@ export default function SmsCampaigns() {
           <TabsList className="mb-6 bg-white border">
             <TabsTrigger value="contacts" className="gap-2"><Users className="h-4 w-4" /> Contacts ({filteredContacts.length})</TabsTrigger>
             <TabsTrigger value="compose" className="gap-2"><MessageSquare className="h-4 w-4" /> Compose & Send</TabsTrigger>
+            <TabsTrigger value="inbox" className="gap-2"><Inbox className="h-4 w-4" /> Inbox</TabsTrigger>
             <TabsTrigger value="scheduled" className="gap-2"><CalendarClock className="h-4 w-4" /> Scheduled</TabsTrigger>
             <TabsTrigger value="history" className="gap-2"><BarChart3 className="h-4 w-4" /> Send History</TabsTrigger>
             <TabsTrigger value="settings" className="gap-2"><Info className="h-4 w-4" /> Opt-Out Setup</TabsTrigger>
@@ -685,6 +689,11 @@ export default function SmsCampaigns() {
                 </Card>
               </div>
             </div>
+          </TabsContent>
+
+          {/* ── INBOX TAB ── */}
+          <TabsContent value="inbox">
+            <SmsInboxTab />
           </TabsContent>
 
           {/* ── SCHEDULED TAB ── */}
@@ -1050,6 +1059,231 @@ function OptOutSetupTab() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function SmsInboxTab() {
+  const { toast } = useToast();
+  const utils = trpc.useUtils();
+  const [selectedConvKey, setSelectedConvKey] = useState<string | null>(null);
+  const [replyText, setReplyText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { data: conversations = [], isLoading: convsLoading, refetch: refetchConvs } = trpc.smsCampaigns.getConversations.useQuery();
+  const { data: unreadData } = trpc.smsCampaigns.getUnreadCount.useQuery();
+
+  // Find selected conversation
+  const selectedConv = conversations.find((c) => c.key === selectedConvKey);
+
+  // Get messages for selected conversation
+  const { data: messages = [], isLoading: msgsLoading, refetch: refetchMsgs } = trpc.smsCampaigns.listInboxMessages.useQuery(
+    { contactId: selectedConv?.contactId ?? undefined, limit: 100 },
+    { enabled: !!selectedConv?.contactId }
+  );
+
+  // Sort messages ascending for conversation view
+  const sortedMessages = useMemo(() => [...messages].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()), [messages]);
+
+  const markReadMutation = trpc.smsCampaigns.markConversationRead.useMutation({
+    onSuccess: () => {
+      refetchConvs();
+      utils.smsCampaigns.getUnreadCount.invalidate();
+    },
+  });
+
+  const replyMutation = trpc.smsCampaigns.replyToContact.useMutation({
+    onSuccess: () => {
+      setReplyText("");
+      refetchMsgs();
+      refetchConvs();
+      toast({ title: "Reply sent" });
+    },
+    onError: (e) => toast({ title: "Reply failed", description: e.message, variant: "destructive" }),
+  });
+
+  function selectConversation(key: string) {
+    setSelectedConvKey(key);
+    const conv = conversations.find((c) => c.key === key);
+    if (conv?.contactId && conv.unreadCount > 0) {
+      markReadMutation.mutate({ contactId: conv.contactId });
+    }
+  }
+
+  function handleSendReply() {
+    if (!replyText.trim() || !selectedConv?.contactId) return;
+    replyMutation.mutate({
+      contactId: selectedConv.contactId,
+      message: replyText.trim(),
+      sentByName: "Team",
+    });
+  }
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [sortedMessages.length]);
+
+  if (convsLoading) return <div className="flex justify-center py-16"><RefreshCw className="animate-spin h-8 w-8 text-gray-400" /></div>;
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold text-gray-800">2-Way SMS Inbox</h2>
+          {unreadData && unreadData.count > 0 && (
+            <span className="bg-[#ff6b35] text-white text-xs font-bold px-2 py-0.5 rounded-full">{unreadData.count} unread</span>
+          )}
+        </div>
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => { refetchConvs(); if (selectedConv?.contactId) refetchMsgs(); }}>
+          <RefreshCw className="h-4 w-4" /> Refresh
+        </Button>
+      </div>
+
+      {conversations.length === 0 ? (
+        <Card className="text-center py-16">
+          <CardContent>
+            <Inbox className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">No replies yet</p>
+            <p className="text-gray-400 text-sm mt-1">When contacts reply to your SMS campaigns, their messages will appear here.</p>
+            <p className="text-gray-400 text-sm mt-1">Make sure the webhook URL is configured in your TextBelt account.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid lg:grid-cols-3 gap-4 h-[600px]">
+          {/* Conversation List */}
+          <Card className="lg:col-span-1 overflow-hidden flex flex-col">
+            <div className="p-3 border-b bg-gray-50">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{conversations.length} Conversations</p>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              {conversations.map((conv) => (
+                <button
+                  key={conv.key}
+                  className={`w-full text-left px-4 py-3 border-b hover:bg-gray-50 transition-colors ${
+                    selectedConvKey === conv.key ? "bg-blue-50 border-l-2 border-l-[#1e3a5f]" : ""
+                  }`}
+                  onClick={() => selectConversation(conv.key)}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {conv.unreadCount > 0 && <Circle className="h-2 w-2 fill-[#ff6b35] text-[#ff6b35] flex-shrink-0" />}
+                        <span className={`text-sm font-medium truncate ${conv.unreadCount > 0 ? "text-gray-900" : "text-gray-700"}`}>
+                          {conv.contactName?.trim() || conv.phone}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 truncate mt-0.5">{conv.phone}</p>
+                      <p className="text-xs text-gray-400 truncate mt-0.5 line-clamp-1">{conv.latestMessage}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span className="text-xs text-gray-400">{new Date(conv.latestAt).toLocaleDateString()}</span>
+                      {conv.unreadCount > 0 && (
+                        <span className="bg-[#ff6b35] text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{conv.unreadCount}</span>
+                      )}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {/* Message Thread */}
+          <Card className="lg:col-span-2 overflow-hidden flex flex-col">
+            {!selectedConv ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <MessageSquare className="h-12 w-12 text-gray-200 mx-auto mb-3" />
+                  <p className="text-gray-400">Select a conversation to view messages</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Thread Header */}
+                <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-gray-800">{selectedConv.contactName?.trim() || selectedConv.phone}</p>
+                    <p className="text-xs text-gray-500">{selectedConv.phone} · {selectedConv.totalCount} messages</p>
+                  </div>
+                  {selectedConv.contactId && (
+                    <Badge variant="outline" className="text-xs">
+                      Contact #{selectedConv.contactId}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Messages */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {msgsLoading ? (
+                    <div className="flex justify-center py-8"><RefreshCw className="animate-spin h-6 w-6 text-gray-300" /></div>
+                  ) : sortedMessages.length === 0 ? (
+                    <p className="text-center text-gray-400 text-sm py-8">No messages yet</p>
+                  ) : (
+                    sortedMessages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
+                          className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
+                            msg.direction === "outbound"
+                              ? "bg-[#1e3a5f] text-white rounded-br-sm"
+                              : msg.isOptOut
+                              ? "bg-red-100 text-red-800 border border-red-200 rounded-bl-sm"
+                              : "bg-gray-100 text-gray-800 rounded-bl-sm"
+                          }`}
+                        >
+                          <p className="leading-relaxed">{msg.message}</p>
+                          <div className={`text-xs mt-1 ${
+                            msg.direction === "outbound" ? "text-blue-200" : "text-gray-400"
+                          }`}>
+                            {new Date(msg.createdAt).toLocaleString()}
+                            {msg.direction === "outbound" && msg.sentByName && ` · ${msg.sentByName}`}
+                            {msg.isOptOut && " · STOP"}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Reply Box */}
+                {selectedConv.contactId ? (
+                  <div className="p-4 border-t bg-gray-50">
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        placeholder="Type your reply..."
+                        rows={2}
+                        className="text-sm resize-none flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSendReply();
+                        }}
+                      />
+                      <Button
+                        className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 gap-2 self-end"
+                        onClick={handleSendReply}
+                        disabled={!replyText.trim() || replyMutation.isPending}
+                      >
+                        {replyMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Reply className="h-4 w-4" />}
+                        Send
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Press Ctrl+Enter to send</p>
+                  </div>
+                ) : (
+                  <div className="p-4 border-t bg-yellow-50">
+                    <p className="text-xs text-yellow-700">This number is not in your contacts list. Add them as a contact to reply.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

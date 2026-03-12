@@ -39,6 +39,7 @@ import LPMaintenanceOffer from "./pages/lp/LPMaintenanceOffer";
 import LPReferralPartner from "./pages/lp/LPReferralPartner";
 import PromosLanding from "./pages/PromosLanding";
 import Qualify from "./pages/Qualify";
+import RebateCalculator from "./pages/RebateCalculator";
 import CommandCenter from "./pages/CommandCenter";
 import LeadDashboard from "./pages/LeadDashboard";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
@@ -47,6 +48,7 @@ import AcceptInvite from "./pages/AcceptInvite";
 import ResetPassword from "./pages/ResetPassword";
 import TeamManagement from "./pages/TeamManagement";
 import NotFound from "./pages/NotFound";
+import AssessmentSubmissions from "./pages/AssessmentSubmissions";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -83,6 +85,7 @@ function Router() {
       <Route path={"/lp/referral-partner"} component={LPReferralPartner} />
       <Route path={"/promos"} component={PromosLanding} />
       <Route path={"/qualify"} component={Qualify} />
+      <Route path={"/rebate-calculator"} component={RebateCalculator} />
 
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />
@@ -103,6 +106,7 @@ function Router() {
       <Route path={"/ai-script-manager"} component={protect(AIScriptManager)} />
       <Route path={"/admin"} component={protect(AdminPortal)} />
       <Route path={"/team-management"} component={protect(TeamManagement)} />
+      <Route path={"/assessment-submissions"} component={protect(AssessmentSubmissions)} />
 
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}

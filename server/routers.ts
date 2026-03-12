@@ -11,6 +11,7 @@ import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
 import { teamAuthRouter } from "./routers/teamAuth";
 import { smsCampaignsRouter } from "./routers/smsCampaigns";
+import { rebateCalculatorRouter } from "./routers/rebateCalculator";
 import { runCampaignAnalysis } from "./services/campaignEngine";
 import { generateSocialPost } from "./integrations/ai-content-generator";
 import { postToGoogleBusiness } from "./integrations/google-business";
@@ -22,6 +23,7 @@ export const appRouter = router({
   googleAds: googleAdsRouter,
   teamAuth: teamAuthRouter,
   smsCampaigns: smsCampaignsRouter,
+  rebateCalculator: rebateCalculatorRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

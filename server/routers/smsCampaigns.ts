@@ -6,8 +6,8 @@
 import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
-import { smsContacts, smsCampaigns, smsSends, scheduledSends } from "../../drizzle/schema";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { smsContacts, smsCampaigns, smsSends, scheduledSends, smsInboxMessages } from "../../drizzle/schema";
+import { eq, desc, and, gte, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 
 type DbInstance = ReturnType<typeof drizzle>;
@@ -432,5 +432,170 @@ export const smsCampaignsRouter = router({
       .from(scheduledSends)
       .where(and(eq(scheduledSends.status, "pending"), gte(scheduledSends.scheduledAt, now)));
     return { count: pending.length };
+  }),
+
+  // ── 2-Way SMS Inbox ───────────────────────────────────────────────────────
+  listInboxMessages: protectedProcedure
+    .input(z.object({
+      contactId: z.number().optional(),
+      limit: z.number().default(100),
+    }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      if (input.contactId) {
+        return db
+          .select()
+          .from(smsInboxMessages)
+          .where(eq(smsInboxMessages.contactId, input.contactId))
+          .orderBy(desc(smsInboxMessages.createdAt))
+          .limit(input.limit);
+      }
+      return db
+        .select()
+        .from(smsInboxMessages)
+        .orderBy(desc(smsInboxMessages.createdAt))
+        .limit(input.limit);
+    }),
+
+  getUnreadCount: protectedProcedure.query(async () => {
+    const db = await requireDb();
+    const unread = await db
+      .select({ id: smsInboxMessages.id })
+      .from(smsInboxMessages)
+      .where(and(eq(smsInboxMessages.isRead, false), eq(smsInboxMessages.direction, "inbound")));
+    return { count: unread.length };
+  }),
+
+  markAsRead: protectedProcedure
+    .input(z.object({ ids: z.array(z.number()) }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      for (const id of input.ids) {
+        await db
+          .update(smsInboxMessages)
+          .set({ isRead: true })
+          .where(eq(smsInboxMessages.id, id));
+      }
+      return { success: true };
+    }),
+
+  markConversationRead: protectedProcedure
+    .input(z.object({ contactId: z.number() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      await db
+        .update(smsInboxMessages)
+        .set({ isRead: true })
+        .where(and(
+          eq(smsInboxMessages.contactId, input.contactId),
+          eq(smsInboxMessages.isRead, false)
+        ));
+      return { success: true };
+    }),
+
+  replyToContact: protectedProcedure
+    .input(z.object({
+      contactId: z.number(),
+      message: z.string().min(1),
+      sentByName: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+
+      const [contact] = await db
+        .select()
+        .from(smsContacts)
+        .where(eq(smsContacts.id, input.contactId))
+        .limit(1);
+      if (!contact) throw new Error("Contact not found");
+      if (contact.optedOut) throw new Error("Contact has opted out");
+
+      const result = await sendViaTextBelt(contact.phone, input.message);
+
+      // Save outbound reply to inbox
+      await db.insert(smsInboxMessages).values({
+        contactId: input.contactId,
+        phone: contact.phone,
+        direction: "outbound",
+        message: input.message,
+        isOptOut: false,
+        isRead: true,
+        sentByName: input.sentByName ?? "Team",
+        textBeltId: result.messageId ?? null,
+      });
+
+      return {
+        success: result.success,
+        error: result.error,
+        quotaRemaining: result.quotaRemaining,
+      };
+    }),
+
+  getConversations: protectedProcedure.query(async () => {
+    // Returns one row per contact that has inbox messages, with latest message and unread count
+    const db = await requireDb();
+    const messages = await db
+      .select()
+      .from(smsInboxMessages)
+      .orderBy(desc(smsInboxMessages.createdAt))
+      .limit(500);
+
+    // Group by contactId (or phone for unknown contacts)
+    const convMap = new Map<string, {
+      key: string;
+      contactId: number | null;
+      phone: string;
+      latestMessage: string;
+      latestAt: Date;
+      unreadCount: number;
+      totalCount: number;
+    }>();
+
+    for (const msg of messages) {
+      const key = msg.contactId ? `c:${msg.contactId}` : `p:${msg.phone}`;
+      if (!convMap.has(key)) {
+        convMap.set(key, {
+          key,
+          contactId: msg.contactId ?? null,
+          phone: msg.phone,
+          latestMessage: msg.message,
+          latestAt: msg.createdAt,
+          unreadCount: 0,
+          totalCount: 0,
+        });
+      }
+      const conv = convMap.get(key)!;
+      conv.totalCount++;
+      if (!msg.isRead && msg.direction === "inbound") conv.unreadCount++;
+      // Keep the latest message (messages are desc so first is latest)
+      if (msg.createdAt > conv.latestAt) {
+        conv.latestMessage = msg.message;
+        conv.latestAt = msg.createdAt;
+      }
+    }
+
+    // Fetch contact names for known contacts
+    const conversations = Array.from(convMap.values());
+    const contactIds = conversations
+      .filter((c) => c.contactId !== null)
+      .map((c) => c.contactId as number);
+
+    const contactMap = new Map<number, { firstName: string; lastName: string | null }>();
+    if (contactIds.length > 0) {
+      const contacts = await db
+        .select({ id: smsContacts.id, firstName: smsContacts.firstName, lastName: smsContacts.lastName })
+        .from(smsContacts)
+        .where(or(...contactIds.map((id) => eq(smsContacts.id, id))));
+      for (const c of contacts) contactMap.set(c.id, c);
+    }
+
+    return conversations
+      .sort((a, b) => b.latestAt.getTime() - a.latestAt.getTime())
+      .map((conv) => ({
+        ...conv,
+        contactName: conv.contactId
+          ? `${contactMap.get(conv.contactId)?.firstName ?? ""} ${contactMap.get(conv.contactId)?.lastName ?? ""}`
+          : null,
+      }));
   }),
 });

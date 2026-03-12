@@ -28,6 +28,7 @@ import {
   Handshake,
   Wrench,
   Building2,
+  Home,
 } from "lucide-react";
 
 type Tool = {
@@ -67,6 +68,7 @@ const categories: Category[] = [
     icon: Users,
     tools: [
       { label: "Lead Dashboard", href: "/lead-dashboard", description: "All leads with status, source, and follow-up tracking", icon: LayoutDashboard, badge: "Hub", badgeColor: "bg-[#1e3a5f] text-white" },
+      { label: "Assessment Submissions", href: "/assessment-submissions", description: "Rebate calculator leads — homeowners who requested a free assessment", icon: Home, badge: "New", badgeColor: "bg-orange-100 text-orange-800" },
       { label: "Lead Tracker", href: "/leads", description: "Log and manage individual leads manually", icon: Target },
       { label: "Lead Scoring", href: "/lead-scoring", description: "Hot / Warm / Cold scoring with priority queue", icon: Star },
       { label: "Campaign Performance", href: "/campaign-performance", description: "ROI, cost-per-lead, and conversion analytics", icon: TrendingUp },
@@ -109,6 +111,7 @@ const categories: Category[] = [
       { label: "Commercial", href: "/commercial", description: "Commercial HVAC campaigns", icon: Building2 },
       { label: "Maintenance Plans", href: "/maintenance", description: "Subscription plan overview page", icon: Wrench },
       { label: "Partnerships", href: "/partnerships", description: "Referral & partner program info", icon: Handshake },
+      { label: "Rebate Calculator", href: "/rebate-calculator", description: "Homeowner rebate estimator with assessment booking", icon: Home, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
       { label: "Rebate Guide", href: "/rebate-guide", description: "PSE&G rebate information", icon: FileText },
       { label: "Testimonials", href: "/testimonials", description: "Customer reviews and ratings", icon: Star },
       { label: "About", href: "/about", description: "Company background and certifications", icon: ShieldCheck },

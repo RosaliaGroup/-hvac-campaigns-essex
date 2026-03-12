@@ -16,7 +16,7 @@
  */
 import type { Express, Request, Response } from "express";
 import { getDb } from "../db";
-import { smsContacts, scheduledSends } from "../../drizzle/schema";
+import { smsContacts, scheduledSends, smsInboxMessages } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 
 const OPT_OUT_KEYWORDS = new Set([
@@ -44,9 +44,26 @@ function normalizePhone(raw: string): string {
   return raw; // return as-is if not a standard US number
 }
 
-async function handleOptOut(phone: string): Promise<void> {
+async function saveInboxMessage(phone: string, message: string, isOptOut: boolean, contactId: number | null): Promise<void> {
   const db = await getDb();
   if (!db) return;
+  try {
+    await db.insert(smsInboxMessages).values({
+      contactId: contactId ?? null,
+      phone,
+      direction: "inbound",
+      message,
+      isOptOut,
+      isRead: false,
+    });
+  } catch (err) {
+    console.error("[SMSWebhook] Failed to save inbox message:", err);
+  }
+}
+
+async function handleOptOut(phone: string): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
 
   const normalizedPhone = normalizePhone(phone);
 
@@ -75,8 +92,10 @@ async function handleOptOut(phone: string): Promise<void> {
     console.log(
       `[SMSWebhook] ✓ Opted out contact ${contact.firstName} (${normalizedPhone}) — pending sends cancelled`
     );
+    return contact.id;
   } else {
     console.log(`[SMSWebhook] STOP from unknown number ${normalizedPhone} — no contact found`);
+    return null;
   }
 }
 
@@ -121,9 +140,27 @@ export function registerSmsWebhookRoutes(app: Express): void {
 
       console.log(`[SMSWebhook] Reply from ${fromPhone}: "${messageText}"`);
 
-      if (isOptOutMessage(messageText)) {
-        await handleOptOut(fromPhone);
+      const normalizedPhone = normalizePhone(fromPhone);
+      const isOptOut = isOptOutMessage(messageText);
+      let contactId: number | null = null;
+
+      if (isOptOut) {
+        contactId = await handleOptOut(normalizedPhone);
+      } else {
+        // Look up contact for non-STOP replies
+        const db = await getDb();
+        if (db) {
+          const [contact] = await db
+            .select({ id: smsContacts.id })
+            .from(smsContacts)
+            .where(eq(smsContacts.phone, normalizedPhone))
+            .limit(1);
+          contactId = contact?.id ?? null;
+        }
       }
+
+      // Save all inbound messages to inbox
+      await saveInboxMessage(normalizedPhone, messageText, isOptOut, contactId);
 
       return res.status(200).json({ success: true });
     } catch (err) {

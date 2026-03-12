@@ -516,3 +516,40 @@
 - [x] Build /qualify page with rebate calculator (house details → rebate amount → out-of-pocket → book)
 - [x] Add mechanicalenterprise.com/qualify link to all 3 SMS message templates
 - [x] Wire /qualify into App.tsx routing
+
+## TextBelt API Key Update
+- [ ] Update TEXTBELT_API_KEY to new approved key
+
+## HVAC Rebate Calculator & Quote Tool
+- [ ] Analyze proposal PDFs to extract pricing, rebate tiers, equipment options
+- [ ] Build /estimate page with address lookup and property details form
+- [ ] Show ducted vs ductless options with high-efficiency and standard tiers
+- [ ] Show rebate amounts, system cost, out-of-pocket, monthly savings
+- [ ] Add 3 financing packages (100% finance, 12% deposit, $4500 project)
+- [ ] Add assessment booking/order form with package selection
+- [ ] Wire backend to save quote requests and notify Ana
+
+## HVAC Rebate Calculator Tool (/rebate-calculator)
+- [x] Build 4-step rebate calculator page at /rebate-calculator
+- [x] Step 1: Home details (address, property type, year built, sqft, bedrooms, floors, ducts, heating, income)
+- [x] Step 2: System options (ducted vs ductless, high-efficiency vs standard, with cost/rebate/OOP breakdown)
+- [x] Step 3: Financing packages (100% finance, 12% deposit, $4500 deposit) with gift cards, warranty, incentives
+- [x] Step 4: Book free assessment with preferred date/time
+- [x] Add backend tRPC procedure for assessment submissions with owner notification
+- [x] Wire /rebate-calculator route in App.tsx
+
+## Rebate Calculator Enhancements (Phase 2)
+- [x] Add Google Maps Places Autocomplete to address field (auto-fills city/state/zip)
+- [x] Add address confirmation indicator (green checkmark when address verified)
+- [x] Save rebate calculations to database (rebateCalculations table)
+- [x] Add listSubmissions and updateStatus tRPC procedures for admin view
+- [x] Create /assessment-submissions admin page with filters, status management, and financial summary
+- [x] Add Assessment Submissions link to CommandCenter Lead Management section
+- [x] Add Rebate Calculator link to CommandCenter Public Pages section
+- [x] Fix duplicate rebateCalculator router conflict (merged into single router file)
+
+## SMS Inbox (2-Way Messaging)
+- [x] Add smsInboxMessages table to database schema
+- [x] Update smsWebhook service to save all inbound messages to inbox
+- [x] Add inbox tRPC procedures (listConversations, getConversation, sendReply, markRead)
+- [x] Add Inbox tab to SMS Campaigns page with conversation view

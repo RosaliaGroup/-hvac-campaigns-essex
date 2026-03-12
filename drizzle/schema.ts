@@ -367,3 +367,72 @@ export const scheduledSends = mysqlTable("scheduledSends", {
 });
 export type ScheduledSend = typeof scheduledSends.$inferSelect;
 export type InsertScheduledSend = typeof scheduledSends.$inferInsert;
+
+/**
+ * SMS Inbox Messages — inbound replies from contacts (2-way SMS)
+ * Stores all replies received via webhook, including STOP and regular messages
+ */
+export const smsInboxMessages = mysqlTable("smsInboxMessages", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId"), // FK to smsContacts (null if unknown number)
+  phone: varchar("phone", { length: 50 }).notNull(), // E.164 format
+  direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
+  message: text("message").notNull(),
+  isOptOut: boolean("isOptOut").default(false).notNull(),
+  isRead: boolean("isRead").default(false).notNull(),
+  // For outbound replies sent from the dashboard
+  sentByName: varchar("sentByName", { length: 255 }), // team member who replied
+  textBeltId: varchar("textBeltId", { length: 255 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type SmsInboxMessage = typeof smsInboxMessages.$inferSelect;
+export type InsertSmsInboxMessage = typeof smsInboxMessages.$inferInsert;
+
+/**
+ * Rebate Calculator Submissions
+ * Stores property info, calculated rebates, and assessment order requests
+ */
+export const rebateCalculations = mysqlTable("rebateCalculations", {
+  id: int("id").autoincrement().primaryKey(),
+  // Contact info
+  firstName: varchar("firstName", { length: 255 }).notNull(),
+  lastName: varchar("lastName", { length: 255 }),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 50 }),
+  // Property info
+  address: varchar("address", { length: 500 }).notNull(),
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 50 }),
+  zip: varchar("zip", { length: 20 }),
+  propertyType: mysqlEnum("propertyType", ["single_family", "multi_family", "condo", "townhouse"]).default("single_family"),
+  squareFootage: int("squareFootage"),
+  bedrooms: int("bedrooms"),
+  bathrooms: int("bathrooms"),
+  stories: int("stories"),
+  currentSystem: mysqlEnum("currentSystem", ["gas_furnace", "oil_furnace", "electric_baseboard", "central_ac", "heat_pump", "window_ac", "none"]),
+  systemAge: int("systemAge"), // years
+  // Calculated rebates (stored as cents to avoid float issues)
+  psegRebateCents: int("psegRebateCents"),
+  federalTaxCreditCents: int("federalTaxCreditCents"),
+  totalRebateCents: int("totalRebateCents"),
+  // Selected option
+  selectedOption: mysqlEnum("selectedOption", ["high_efficiency", "standard"]),
+  selectedPaymentTier: mysqlEnum("selectedPaymentTier", ["full_finance", "deposit_12pct", "full_payment"]),
+  // Project cost estimates (cents)
+  projectCostCents: int("projectCostCents"),
+  outOfPocketCents: int("outOfPocketCents"),
+  // Assessment order
+  assessmentRequested: boolean("assessmentRequested").default(false).notNull(),
+  assessmentStatus: mysqlEnum("assessmentStatus", ["pending", "scheduled", "completed", "cancelled"]).default("pending"),
+  assessmentNotes: text("assessmentNotes"),
+  // Raw property data from address lookup (JSON)
+  propertyDataJson: text("propertyDataJson"),
+  // Admin
+  status: mysqlEnum("status", ["new", "contacted", "scheduled", "won", "lost"]).default("new"),
+  assignedTo: varchar("assignedTo", { length: 255 }),
+  internalNotes: text("internalNotes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type RebateCalculation = typeof rebateCalculations.$inferSelect;
+export type InsertRebateCalculation = typeof rebateCalculations.$inferInsert;
