@@ -569,14 +569,20 @@ export default function RebateCalculator() {
   // Each package has a DIFFERENT total project cost (costMultiplier) but the
   // SAME rebate/incentive amount — rebates are fixed by the program, not by
   // how you pay. Only the total job cost changes based on payment timing.
+  // For LMI customers, Option 3 (100% OBR) allows up to 120-month repayment term
+  const isLMICustomer = home.incomeLevel === "lmi";
+  const obrTerm = (pkg: FinancingPackage) =>
+    pkg.id === "njcleanheat_obr" && isLMICustomer ? 120 : 84;
+
   function getPkgCost(pkg: FinancingPackage, quote: typeof activeQuote) {
-    if (!quote) return { totalCost: 0, upfront: 0, remaining: 0, monthly84: 0, incentive: 0, outOfPocket: 0 };
+    if (!quote) return { totalCost: 0, upfront: 0, remaining: 0, monthly84: 0, monthly120: 0, termMonths: 84, incentive: 0, outOfPocket: 0 };
+    const term = obrTerm(pkg);
     if (selectedEfficiency === "standard") {
       // Standard: no rebates, all packages use same base cost
       const totalCost = quote.totalCost;
       const upfront = Math.round(totalCost * pkg.upfrontPct);
       const remaining = totalCost - upfront;
-      return { totalCost, upfront, remaining, monthly84: Math.round(remaining / 84), incentive: 0, outOfPocket: totalCost };
+      return { totalCost, upfront, remaining, monthly84: Math.round(remaining / 84), monthly120: Math.round(remaining / 120), termMonths: term, incentive: 0, outOfPocket: totalCost };
     }
     // High-efficiency: apply cost multiplier to get THIS package's total project cost
     // Rebate/incentive is ALWAYS the same (quote.totalIncentive) regardless of plan
@@ -585,13 +591,14 @@ export default function RebateCalculator() {
     const outOfPocket = Math.max(0, pkgTotalCost - incentive);
     const upfront = pkg.upfrontFixed !== undefined ? pkg.upfrontFixed : Math.round(pkgTotalCost * pkg.upfrontPct);
     const remaining = Math.max(0, outOfPocket - upfront);
-    return { totalCost: pkgTotalCost, upfront, remaining, monthly84: Math.round(remaining / 84), incentive, outOfPocket };
+    return { totalCost: pkgTotalCost, upfront, remaining, monthly84: Math.round(remaining / 84), monthly120: Math.round(remaining / 120), termMonths: term, incentive, outOfPocket };
   }
 
   const activePkgCost = getPkgCost(activePkg, activeQuote);
   const upfrontAmount = activePkgCost.upfront;
   const remainingOOP = activePkgCost.remaining;
-  const monthlyOBR = activePkgCost.monthly84;
+  const monthlyOBR = activePkgCost.termMonths === 120 ? activePkgCost.monthly120 : activePkgCost.monthly84;
+  const obrTermMonths = activePkgCost.termMonths;
 
   const handleSubmit = () => {
     if (!bookingForm.name || !bookingForm.phone) {
@@ -1049,7 +1056,7 @@ export default function RebateCalculator() {
                     </div>
 
                     <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                      <strong>0% OBR Financing:</strong> Your {fmt(activeQuote.outOfPocket)} out-of-pocket can be financed through NJ Clean Heat On-Bill Repayment program at 0% interest — as low as <strong>{fmt(activeQuote.monthlyOBR84)}/month</strong> over 84 months.
+                      <strong>0% OBR Financing:</strong> Your {fmt(activeQuote.outOfPocket)} out-of-pocket can be financed through NJ Clean Heat On-Bill Repayment program at 0% interest — as low as <strong>{fmt(home.incomeLevel === "lmi" ? Math.round(activeQuote.outOfPocket / 120) : activeQuote.monthlyOBR84)}/month</strong> over {home.incomeLevel === "lmi" ? "120" : "84"} months{home.incomeLevel === "lmi" ? " (LMI extended term)" : ""}.
                     </div>
                   </CardContent>
                 </Card>
@@ -1115,7 +1122,7 @@ export default function RebateCalculator() {
                                 ["Project Cost", fmt(hiQ.totalCost), fmt(stdTotal)],
                                 ["Rebate Incentive", fmt(hiQ.totalIncentive), "$0 (ineligible)"],
                                 ["Out-of-Pocket", fmt(hiQ.outOfPocket), fmt(stdTotal)],
-                                ["Monthly (84mo)", `${fmt(hiQ.monthlyOBR84)}/mo`, `${fmt(Math.round(stdTotal / 84))}/mo`],
+                                [home.incomeLevel === "lmi" ? "Monthly (120mo LMI)" : "Monthly (84mo)", home.incomeLevel === "lmi" ? `${fmt(Math.round(hiQ.outOfPocket / 120))}/mo` : `${fmt(hiQ.monthlyOBR84)}/mo`, `${fmt(Math.round(stdTotal / 84))}/mo`],
                                 ["Energy Savings", `${fmt(hiQ.annualSavings)}/yr`, `${fmt(Math.round(hiQ.annualSavings * 0.6))}/yr`],
                               ].map(([label, hi, std]) => (
                                 <tr key={label}>
@@ -1207,9 +1214,12 @@ export default function RebateCalculator() {
                         <span className="font-medium">{fmt(pkgCost.remaining)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Monthly (84 months)</span>
-                        <span className="font-medium text-green-700">{fmt(pkgCost.monthly84)}/mo</span>
+                        <span className="text-muted-foreground">Monthly ({pkgCost.termMonths} months)</span>
+                        <span className="font-medium text-green-700">{fmt(pkgCost.termMonths === 120 ? pkgCost.monthly120 : pkgCost.monthly84)}/mo</span>
                       </div>
+                      {pkgCost.termMonths === 120 && (
+                        <div className="text-xs text-green-700 font-medium">✓ LMI extended term (120 months)</div>
+                      )}
                     </div>
 
                     <Separator className="my-3" />
@@ -1257,7 +1267,7 @@ export default function RebateCalculator() {
                       {upfrontAmount === 0 ? "$0 Today" : `${fmt(upfrontAmount)} Today`}
                     </div>
                     <div className="text-white/70 text-sm mt-1">
-                      {monthlyOBR > 0 ? `Then ${fmt(monthlyOBR)}/month for 84 months` : "No monthly payments"}
+                      {monthlyOBR > 0 ? `Then ${fmt(monthlyOBR)}/month for ${obrTermMonths} months` : "No monthly payments"}
                       {activePkg.id !== "third_party_finance" ? " at 0% interest" : " via 3rd-party lender"}
                     </div>
                   </div>

@@ -598,3 +598,8 @@
 - [x] Fix hero text overflow — title wraps to two lines on mobile
 - [x] Fix html/body overflow-x: hidden to prevent horizontal scroll
 - [x] Ensure all buttons are full-width and easy to tap on phones
+
+## OBR LMI 120-Month Financing
+- [x] Update Option 3 (100% OBR) to show 120-month term when home is flagged as LMI
+- [x] Calculate and display lower monthly payment for 120-month OBR term for LMI customers
+- [x] Keep standard term for non-LMI customers on Option 3
