@@ -1,73 +1,67 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Phone } from "lucide-react";
+import { Phone, Menu, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { isAuthenticated } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (path: string) => location === path;
+
+  const navLinks = [
+    { href: "/", label: "Home" },
+    { href: "/about", label: "About" },
+    { href: "/services", label: "Services" },
+    { href: "/residential", label: "Residential" },
+    { href: "/commercial", label: "Commercial" },
+    { href: "/rebate-guide", label: "Rebate Guide" },
+    { href: "/maintenance", label: "Maintenance" },
+    { href: "/partnerships", label: "Partnerships" },
+    { href: "/careers", label: "Careers" },
+    { href: "/testimonials", label: "Testimonials" },
+    { href: "/contact", label: "Contact" },
+  ];
 
   return (
     <nav className="bg-white border-b border-border sticky top-0 z-50 shadow-sm">
       <div className="container">
-        <div className="flex items-center justify-between py-4">
+        <div className="flex items-center justify-between py-3">
           {/* Logo */}
-          <Link href="/">
+          <Link href="/" onClick={() => setMobileOpen(false)}>
             <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
-              <img 
-                src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663360032476/PuYjNNzkSZddSRrE.png" 
-                alt="Mechanical Enterprise" 
-                className="h-14 w-auto"
+              <img
+                src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663360032476/PuYjNNzkSZddSRrE.png"
+                alt="Mechanical Enterprise"
+                className="h-12 w-auto"
               />
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Home
-            </Link>
-            <Link href="/about" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/about') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              About
-            </Link>
-            <Link href="/services" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/services') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Services
-            </Link>
-            <Link href="/residential" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/residential') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Residential
-            </Link>
-            <Link href="/commercial" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/commercial') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Commercial
-            </Link>
-            <Link href="/rebate-guide" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/rebate-guide') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Rebate Guide
-            </Link>
-            <Link href="/maintenance" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/maintenance') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Maintenance
-            </Link>
-            <Link href="/partnerships" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/partnerships') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Partnerships
-            </Link>
-            <Link href="/careers" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/careers') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Careers
-            </Link>
-            <Link href="/testimonials" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/testimonials') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Testimonials
-            </Link>
-            <Link href="/contact" className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-              Contact
-            </Link>
-            {/* Only show Dashboard link to authenticated (logged-in) users */}
+          <div className="hidden md:flex items-center gap-5 flex-wrap">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`text-sm font-medium transition-colors hover:text-[#ff6b35] ${isActive(link.href) ? "text-[#ff6b35]" : "text-[#1e3a5f]"}`}
+              >
+                {link.label}
+              </Link>
+            ))}
             {isAuthenticated && (
-              <Link href="/command-center" className={`text-sm font-bold transition-colors px-3 py-1 rounded-full border-2 border-[#1e3a5f] ${isActive('/command-center') ? 'bg-[#1e3a5f] text-white' : 'text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white'}`}>
+              <Link
+                href="/command-center"
+                className={`text-sm font-bold transition-colors px-3 py-1 rounded-full border-2 border-[#1e3a5f] ${isActive("/command-center") ? "bg-[#1e3a5f] text-white" : "text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white"}`}
+              >
                 🗂 Dashboard
               </Link>
             )}
           </div>
 
-          {/* Contact Info & CTA */}
+          {/* Desktop Contact & CTA */}
           <div className="hidden lg:flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-[#1e3a5f]">
               <Phone className="h-4 w-4 text-[#ff6b35]" />
@@ -76,71 +70,56 @@ export default function Navigation() {
               </a>
             </div>
             <Link href="/contact">
-              <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
-                Get a Quote
-              </Button>
+              <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">Get a Quote</Button>
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="md:hidden">
-            <Link href="/contact">
-              <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
-                Contact
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Mobile Navigation */}
-        <div className="md:hidden pb-4 space-y-2">
-          <Link href="/" className={`block py-2 text-sm font-medium ${isActive('/') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Home
-          </Link>
-          <Link href="/about" className={`block py-2 text-sm font-medium ${isActive('/about') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            About
-          </Link>
-          <Link href="/services" className={`block py-2 text-sm font-medium ${isActive('/services') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Services
-          </Link>
-          <Link href="/residential" className={`block py-2 text-sm font-medium ${isActive('/residential') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Residential
-          </Link>
-          <Link href="/commercial" className={`block py-2 text-sm font-medium ${isActive('/commercial') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Commercial
-          </Link>
-          <Link href="/rebate-guide" className={`block py-2 text-sm font-medium ${isActive('/rebate-guide') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Rebate Guide
-          </Link>
-          <Link href="/maintenance" className={`block py-2 text-sm font-medium ${isActive('/maintenance') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Maintenance
-          </Link>
-          <Link href="/partnerships" className={`block py-2 text-sm font-medium ${isActive('/partnerships') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Partnerships
-          </Link>
-          <Link href="/careers" className={`block py-2 text-sm font-medium ${isActive('/careers') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Careers
-          </Link>
-          <Link href="/testimonials" className={`block py-2 text-sm font-medium ${isActive('/testimonials') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Testimonials
-          </Link>
-          <Link href="/contact" className={`block py-2 text-sm font-medium ${isActive('/contact') ? 'text-[#ff6b35]' : 'text-[#1e3a5f]'}`}>
-            Contact
-          </Link>
-          {/* Only show Dashboard link to authenticated (logged-in) users */}
-          {isAuthenticated && (
-            <Link href="/command-center" className={`block py-2 text-sm font-bold ${isActive('/command-center') ? 'text-[#1e3a5f]' : 'text-[#1e3a5f]/80'}`}>
-              🗂 Dashboard
-            </Link>
-          )}
-
-          <div className="pt-2">
-            <a href="tel:+18624191763" className="flex items-center gap-2 text-sm text-[#1e3a5f] hover:text-[#ff6b35]">
-              <Phone className="h-4 w-4" />
-              (862) 419-1763
+          {/* Mobile: phone + hamburger */}
+          <div className="md:hidden flex items-center gap-3">
+            <a href="tel:+18624191763" className="text-[#1e3a5f]">
+              <Phone className="h-5 w-5 text-[#ff6b35]" />
             </a>
+            <button
+              onClick={() => setMobileOpen((o) => !o)}
+              className="p-2 rounded-md text-[#1e3a5f] hover:bg-gray-100 transition-colors"
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            >
+              {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu — only visible when open */}
+        {mobileOpen && (
+          <div className="md:hidden border-t border-border pb-4 pt-2 space-y-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileOpen(false)}
+                className={`block px-2 py-3 text-base font-medium rounded-md transition-colors ${isActive(link.href) ? "text-[#ff6b35] bg-orange-50" : "text-[#1e3a5f] hover:bg-gray-50"}`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            {isAuthenticated && (
+              <Link
+                href="/command-center"
+                onClick={() => setMobileOpen(false)}
+                className={`block px-2 py-3 text-base font-bold rounded-md transition-colors ${isActive("/command-center") ? "text-[#1e3a5f] bg-blue-50" : "text-[#1e3a5f]/80 hover:bg-gray-50"}`}
+              >
+                🗂 Dashboard
+              </Link>
+            )}
+            <div className="pt-3 px-2">
+              <Link href="/contact" onClick={() => setMobileOpen(false)}>
+                <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white text-base py-3">
+                  Get a Free Quote
+                </Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </nav>
   );

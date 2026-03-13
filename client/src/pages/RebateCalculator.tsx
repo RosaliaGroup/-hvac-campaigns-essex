@@ -642,41 +642,40 @@ export default function RebateCalculator() {
   const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <Navigation />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white py-12">
-        <div className="container max-w-4xl mx-auto px-4 text-center">
+      <section className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white py-12 overflow-hidden">
+        <div className="w-full max-w-4xl mx-auto px-5 text-center">
           <Badge className="mb-3 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">NJ Clean Heat Rebate Program</Badge>
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">
-            See How Much You Qualify For
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 leading-tight">
+            How Much Can You Get<br className="sm:hidden" /> in Rebates?
           </h1>
-          <p className="text-lg text-white/85 max-w-2xl mx-auto">
-            New Jersey homeowners can receive up to <strong>$16,000 in rebates &amp; incentives</strong> on heat pump upgrades — plus 0% financing. Get your personalized estimate in 2 minutes.
+          <p className="text-sm sm:text-lg text-white/85 max-w-2xl mx-auto">
+            NJ homeowners receive up to <strong>$16,000 in rebates &amp; incentives</strong> on heat pump upgrades — plus 0% financing. Get your estimate in 2 minutes.
           </p>
           {/* Progress bar — compact on mobile */}
-          <div className="mt-6 flex items-center justify-center gap-1.5">
+          <div className="mt-6 flex items-center justify-center gap-1 flex-wrap">
             {STEP_LABELS.map((label, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <div className={`flex items-center gap-1.5 rounded-full font-medium transition-all
-                  px-2.5 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm
+              <div key={i} className="flex items-center gap-1">
+                <div className={`flex items-center gap-1 rounded-full font-medium transition-all
+                  px-2 py-1 text-xs
                   ${step === i + 1 ? 'bg-[#ff6b35] text-white' : step > i + 1 ? 'bg-white/30 text-white' : 'bg-white/10 text-white/50'}`}>
                   {step > i + 1
-                    ? <CheckCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                    : <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-current flex items-center justify-center text-xs">{i + 1}</span>
+                    ? <CheckCircle className="h-3 w-3" />
+                    : <span className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-xs font-bold">{i + 1}</span>
                   }
-                  <span className="hidden sm:inline">{label}</span>
-                  <span className="sm:hidden">{label.split(' ')[0]}</span>
+                  <span className="hidden xs:inline sm:inline">{label}</span>
                 </div>
-                {i < STEP_LABELS.length - 1 && <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-white/30 shrink-0" />}
+                {i < STEP_LABELS.length - 1 && <ChevronRight className="h-3 w-3 text-white/30 shrink-0" />}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="container max-w-4xl mx-auto px-4 py-10">
+      <div className="w-full max-w-4xl mx-auto px-4 py-10 overflow-hidden">
 
         {/* ── STEP 1: Home Details ── */}
         {step === 1 && (
@@ -691,7 +690,7 @@ export default function RebateCalculator() {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="address">Street Address</Label>
-                  <div className="flex gap-2 mt-1">
+                  <div className="flex flex-col sm:flex-row gap-2 mt-1">
                     <Input
                       id="address"
                       ref={addressInputRef}
@@ -715,14 +714,14 @@ export default function RebateCalculator() {
                       variant="outline"
                       onClick={() => lookupAddress()}
                       disabled={addressLookupStatus === 'loading'}
-                      className="shrink-0 border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white"
+                      className="w-full sm:w-auto shrink-0 border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white"
                     >
                       {addressLookupStatus === 'loading' ? (
-                        <span className="flex items-center gap-1"><span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" /> Looking up...</span>
+                        <span className="flex items-center justify-center gap-1"><span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" /> Looking up...</span>
                       ) : addressConfirmed ? (
-                        <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" /> Confirmed</span>
+                        <span className="flex items-center justify-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" /> Confirmed</span>
                       ) : (
-                        'Look Up'
+                        '🔍 Look Up Address'
                       )}
                     </Button>
                   </div>
@@ -930,7 +929,7 @@ export default function RebateCalculator() {
               <Button
                 type="button"
                 size="lg"
-                className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8"
+                className="w-full sm:w-auto bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8 py-4 text-base"
                 onClick={(e) => { e.preventDefault(); handleCalculate(); }}
               >
                 Calculate My Rebates <ArrowRight className="ml-2 h-5 w-5" />
@@ -1136,9 +1135,9 @@ export default function RebateCalculator() {
               </>
             )}
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(1)}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
-              <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8" onClick={() => { setStep(3); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+            <div className="flex flex-col-reverse sm:flex-row justify-between gap-3">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setStep(1)}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+              <Button size="lg" className="w-full sm:w-auto bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8" onClick={() => { setStep(3); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 Choose Financing <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
@@ -1274,9 +1273,9 @@ export default function RebateCalculator() {
               </CardContent>
             </Card>
 
-            <div className="flex justify-between">
-              <Button variant="outline" onClick={() => setStep(2)}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
-              <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8" onClick={() => { setStep(4); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+            <div className="flex flex-col-reverse sm:flex-row justify-between gap-3">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setStep(2)}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+              <Button size="lg" className="w-full sm:w-auto bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8" onClick={() => { setStep(4); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                 Book Free Assessment <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </div>
@@ -1400,11 +1399,11 @@ export default function RebateCalculator() {
                   </div>
                 </div>
 
-                <div className="flex justify-between">
-                  <Button variant="outline" onClick={() => setStep(3)}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
+                <div className="flex flex-col-reverse sm:flex-row justify-between gap-3">
+                  <Button variant="outline" className="w-full sm:w-auto" onClick={() => setStep(3)}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
                   <Button
                     size="lg"
-                    className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8"
+                    className="w-full sm:w-auto bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8"
                     onClick={handleSubmit}
                     disabled={submitAssessment.isPending}
                   >

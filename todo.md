@@ -589,3 +589,12 @@
 - [x] Fix mobile layout: step indicator now compact on phones
 - [x] Fix rebate logic: rebate amount stays fixed, only total project cost changes per plan
 - [x] Fix address lookup: server-side geocoding via tRPC (geocodeAddress procedure) — works reliably on all devices
+
+## Rebate Calculator — Mobile Fix (Round 2)
+- [x] Diagnose exact mobile layout issues by testing at 390px viewport (used Playwright)
+- [x] Fix navigation bar — now collapsed hamburger menu on mobile
+- [x] Fix step indicator — compact numbered circles ① → ② → ③ → ④ on phones
+- [x] Fix all form grids to be single-column on mobile
+- [x] Fix hero text overflow — title wraps to two lines on mobile
+- [x] Fix html/body overflow-x: hidden to prevent horizontal scroll
+- [x] Ensure all buttons are full-width and easy to tap on phones
