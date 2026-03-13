@@ -3,6 +3,7 @@
  * Public-facing tool for homeowners to estimate HVAC rebates and place assessment orders
  */
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { makeRequest, GeocodingResult } from "../_core/map";
 import { z } from "zod";
 import { getDb } from "../db";
 import { rebateCalculations } from "../../drizzle/schema";
@@ -296,5 +297,105 @@ export const rebateCalculatorRouter = router({
         .where(eq(rebateCalculations.id, input.id))
         .limit(1);
       return row ?? null;
+    }),
+
+  /**
+   * Geocode an address using server-side Google Maps API (public)
+   * Returns city, state, zip, county, neighborhood, formatted address
+   */
+  geocodeAddress: publicProcedure
+    .input(z.object({ address: z.string().min(3) }))
+    .mutation(async ({ input }) => {
+      try {
+        const result = await makeRequest<GeocodingResult>("/maps/api/geocode/json", {
+          address: input.address,
+          region: "us",
+          components: "country:US|administrative_area:NJ",
+        });
+
+        if (result.status !== "OK" || !result.results.length) {
+          return { success: false, error: result.status };
+        }
+
+        const place = result.results[0];
+        const components = place.address_components;
+
+        const get = (type: string) =>
+          components.find((c) => c.types.includes(type))?.long_name ?? "";
+        const getShort = (type: string) =>
+          components.find((c) => c.types.includes(type))?.short_name ?? "";
+
+        const streetNumber = get("street_number");
+        const route = get("route");
+        const city =
+          get("locality") ||
+          get("sublocality_level_1") ||
+          get("neighborhood") ||
+          get("postal_town");
+        const county = get("administrative_area_level_2").replace(" County", "") + " County";
+        const state = getShort("administrative_area_level_1");
+        const zip = get("postal_code");
+        const neighborhood = get("neighborhood") || get("sublocality_level_1");
+
+        // Detect property type from place types
+        const types = place.types;
+        let propertyType = "single_family";
+        if (types.includes("premise") || types.includes("subpremise")) {
+          propertyType = "condo";
+        } else if (types.includes("establishment")) {
+          propertyType = "multi_family";
+        }
+
+        const streetAddress = [streetNumber, route].filter(Boolean).join(" ");
+
+        return {
+          success: true,
+          streetAddress,
+          city,
+          state,
+          zip,
+          county,
+          neighborhood,
+          propertyType,
+          formattedAddress: place.formatted_address,
+          placeId: place.place_id,
+        };
+      } catch (err) {
+        console.error("Geocode error:", err);
+        return { success: false, error: "Geocoding failed" };
+      }
+    }),
+
+  /**
+   * Autocomplete address suggestions (public) — for real-time dropdown as user types
+   */
+  autocompleteAddress: publicProcedure
+    .input(z.object({ input: z.string().min(2) }))
+    .query(async ({ input }) => {
+      try {
+        const result = await makeRequest<{
+          predictions: Array<{ description: string; place_id: string }>;
+          status: string;
+        }>("/maps/api/place/autocomplete/json", {
+          input: input.input,
+          types: "address",
+          components: "country:us",
+          region: "us",
+        });
+
+        if (result.status !== "OK" && result.status !== "ZERO_RESULTS") {
+          return { suggestions: [] };
+        }
+
+        return {
+          suggestions: (result.predictions || []).slice(0, 5).map((p) => ({
+            description: p.description,
+            placeId: p.place_id,
+          })),
+        };
+      } catch (err) {
+        console.error("Autocomplete error:", err);
+        return { suggestions: [] };
+      }
     }),
 });

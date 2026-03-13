@@ -12,40 +12,12 @@ import { trpc } from "@/lib/trpc";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 
-// ─── Google Maps address autocomplete ────────────────────────────────────────
-const API_KEY = import.meta.env.VITE_FRONTEND_FORGE_API_KEY;
-const FORGE_BASE_URL = import.meta.env.VITE_FRONTEND_FORGE_API_URL || "https://forge.butterfly-effect.dev";
-const MAPS_PROXY_URL = `${FORGE_BASE_URL}/v1/maps/proxy`;
-
-function loadGoogleMapsScript() {
-  if (window.google?.maps?.places) return Promise.resolve();
-  return new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector('script[data-maps]');
-    if (existing) {
-      existing.addEventListener('load', () => resolve());
-      return;
-    }
-    const script = document.createElement('script');
-    script.setAttribute('data-maps', 'true');
-    script.src = `${MAPS_PROXY_URL}/maps/api/js?key=${API_KEY}&v=weekly&libraries=places,geocoding`;
-    script.async = true;
-    script.crossOrigin = 'anonymous';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Google Maps'));
-    document.head.appendChild(script);
-  });
-}
-
 import {
   Home, MapPin, Thermometer, DollarSign, CheckCircle, ArrowRight, ArrowLeft,
   Zap, Award, Gift, Shield, Calendar, Phone, Mail, User, ChevronRight,
   Star, TrendingDown, Clock, BadgeCheck, HelpCircle, Info
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-declare global {
-  interface Window { google?: typeof google; }
-}
 
 // ─── Rebate calculation logic ────────────────────────────────────────────────
 
@@ -67,7 +39,7 @@ interface HomeDetails {
 }
 
 // NJ zip codes designated as LMI areas — all 21 counties
-// Source: HUD LMI census tracts + PSE&G Clean Heat program eligibility data
+// Source: HUD LMI census tracts + NJ Clean Heat program eligibility data
 const NJ_LMI_ZIPS = new Set([
   // ── ESSEX COUNTY ──────────────────────────────────────────────────────────
   // Newark
@@ -250,7 +222,7 @@ interface QuoteResult {
   projectCost: number;
   taxAmount: number;
   totalCost: number;
-  psegRebate: number;
+  njcleanheatRebate: number;
   decommissionAdder: number;
   reductAdder: number;
   additionalAdder: number;
@@ -319,18 +291,18 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
   // High efficiency adds ~8% to cost
   const highEffMultiplier = 1.08;
 
-  // PSE&G rebate calculation
+  // rebate calculation
   const decommissionAdder = hasGas ? 2000 : 0;
   const reductAdder = reductCost > 0 ? Math.min(2000, reductCost) : 0;
   const additionalAdder = numSystems > 1 ? (numSystems - 1) * 2000 : 0;
 
-  function calcRebate(projectCost: number): { pseg: number; total: number } {
+  function calcRebate(projectCost: number): { njcleanheat: number; total: number } {
     const maxBase = isLMI ? 12000 : 10000;
     const pct = isLMI ? 0.60 : 0.50;
     const baseRebate = Math.min(maxBase, projectCost * pct);
     const totalRebate = baseRebate + decommissionAdder + reductAdder + additionalAdder;
     const maxTotal = isLMI ? 18000 : 16000;
-    return { pseg: baseRebate, total: Math.min(totalRebate, maxTotal) };
+    return { njcleanheat: baseRebate, total: Math.min(totalRebate, maxTotal) };
   }
 
   function buildResult(
@@ -342,7 +314,7 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
     const projectCost = efficiency === "high" ? Math.round(projectCostBase * highEffMultiplier) : projectCostBase;
     const taxAmount = Math.round(projectCost * 0.06625);
     const totalCost = projectCost + taxAmount;
-    const { pseg, total: totalIncentive } = calcRebate(projectCost);
+    const { njcleanheat, total: totalIncentive } = calcRebate(projectCost);
     const outOfPocket = Math.max(0, totalCost - totalIncentive);
     const monthlyOBR84 = Math.round((outOfPocket / 84) * 100) / 100;
     const monthlyOBR60 = Math.round((outOfPocket / 60) * 100) / 100;
@@ -356,7 +328,7 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
       projectCost,
       taxAmount,
       totalCost,
-      psegRebate: pseg,
+      njcleanheatRebate: njcleanheat,
       decommissionAdder,
       reductAdder,
       additionalAdder,
@@ -385,13 +357,13 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
 //
 // Option 1 — 3rd-Party Finance (base cost × 1.00): Client finances full amount
 //   through a 3rd-party lender. We get paid immediately. Client receives MAX
-//   PSE&G incentive (up to $16K) transferred back to them after install.
+//   rebate incentive (up to $16K) transferred back to them after install.
 //
-// Option 2 — 15% Deposit + PSE&G (base cost × 1.18): Client pays 15% upfront,
-//   rest processed through PSE&G OBR. We wait ~8 weeks for PSE&G payment.
+// Option 2 — 15% Deposit + NJ Clean Heat (base cost × 1.18): Client pays 15% upfront,
+//   rest processed through NJ Clean Heat OBR. We wait ~8 weeks for NJ Clean Heat payment.
 //   Higher project cost reflects the delay risk.
 //
-// Option 3 — 100% PSE&G OBR (base cost × 1.30): PSE&G covers everything via
+// Option 3 — 100% NJ Clean Heat OBR (base cost × 1.30): NJ Clean Heat covers everything via
 //   On-Bill Repayment. We wait the full period for payment. Highest cost.
 
 interface FinancingPackage {
@@ -401,7 +373,7 @@ interface FinancingPackage {
   costMultiplier: number;        // Applied to base project cost to get THIS package's total
   upfrontPct: number;            // Fraction of total project cost paid upfront (0 = $0)
   upfrontFixed?: number;         // Fixed upfront amount (overrides pct if set)
-  maxIncentive: number;          // Max PSE&G incentive client can receive
+  maxIncentive: number;          // Max rebate incentive client can receive
   giftCard: number;
   warrantyYears: number;
   maintenanceYears: number;
@@ -419,13 +391,13 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
     tagline: "Best deal — max incentive",
     costMultiplier: 1.00,          // Base price — we get paid immediately
     upfrontPct: 0,                 // $0 today
-    maxIncentive: 16000,           // Full max PSE&G incentive transferred to client
+    maxIncentive: 16000,           // Full max rebate incentive transferred to client
     giftCard: 500,
     warrantyYears: 3,
     maintenanceYears: 1,
     highlight: true,
     badge: "BEST VALUE",
-    description: "Finance the full project through our 3rd-party lender. We get paid upfront so we pass the maximum PSE&G incentive (up to $16,000) directly back to you after installation.",
+    description: "Finance the full project through our 3rd-party lender. We get paid upfront so we pass the maximum rebate incentive (up to $16,000) directly back to you after installation.",
     creditApplied: 500,
     paymentNote: "Monthly payments through 3rd-party lender",
   },
@@ -433,21 +405,21 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
     id: "deposit_15pct",
     name: "15% Deposit",
     tagline: "Lower monthly, partial upfront",
-    costMultiplier: 1.18,          // 18% higher — we wait ~8 weeks for PSE&G payment
+    costMultiplier: 1.18,          // 18% higher — we wait ~8 weeks for NJ Clean Heat payment
     upfrontPct: 0.15,              // 15% of total project cost
     maxIncentive: 14000,           // Slightly reduced incentive (delay cost)
     giftCard: 500,
     warrantyYears: 3,
     maintenanceYears: 1,
     highlight: false,
-    description: "Pay 15% upfront to secure your slot. Remaining balance processed through PSE&G's OBR program at 0% interest. Slightly higher project cost reflects our 8-week PSE&G payment wait.",
+    description: "Pay 15% upfront to secure your slot. Remaining balance processed through NJ Clean Heat OBR program at 0% interest. Slightly higher project cost reflects our 8-week program payment wait.",
     creditApplied: 500,
-    paymentNote: "Remaining balance via PSE&G OBR at 0% interest",
+    paymentNote: "Remaining balance via NJ Clean Heat OBR at 0% interest",
   },
   {
     id: "full_obr",
-    name: "100% PSE&G OBR",
-    tagline: "Zero upfront, PSE&G covers all",
+    name: "100% NJ Clean Heat OBR",
+    tagline: "Zero upfront, NJ Clean Heat covers all",
     costMultiplier: 1.30,          // 30% higher — we wait full OBR period for payment
     upfrontPct: 0,                 // $0 today
     maxIncentive: 12000,           // Reduced incentive (full delay cost)
@@ -455,9 +427,9 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
     warrantyYears: 2,
     maintenanceYears: 0,
     highlight: false,
-    description: "PSE&G's On-Bill Repayment covers 100% of the project cost. Pay nothing upfront — payments added to your PSE&G bill at 0% interest. Higher project cost reflects the full payment delay.",
+    description: "NJ Clean Heat On-Bill Repayment covers 100% of the project cost. Pay nothing upfront — payments added to your utility bill at 0% interest. Higher project cost reflects the full payment delay.",
     creditApplied: 500,
-    paymentNote: "Added to your PSE&G monthly bill at 0% interest",
+    paymentNote: "Added to your monthly utility bill at 0% interest",
   },
 ];
 
@@ -510,75 +482,50 @@ export default function RebateCalculator() {
     },
   });
 
-  // Geocode address using Google Maps Geocoder API
-  const lookupAddress = useCallback(async (addressText?: string) => {
+  // Server-side geocoding via tRPC (bypasses browser API key restrictions)
+  const geocodeMutation = trpc.rebateCalculator.geocodeAddress.useMutation({
+    onSuccess: (data) => {
+      if (!data.success) {
+        setAddressLookupStatus('error');
+        toast({ title: 'Address not found', description: 'Try entering a more specific address (e.g. 123 Main St, Newark, NJ)', variant: 'destructive' });
+        return;
+      }
+      const isLmiZip = data.zip ? NJ_LMI_ZIPS.has(data.zip) : false;
+      setHome(prev => ({
+        ...prev,
+        address: data.streetAddress || prev.address,
+        city: data.city || prev.city,
+        state: data.state || prev.state || 'NJ',
+        zip: data.zip || prev.zip,
+        county: data.county || prev.county,
+        neighborhood: data.neighborhood || prev.neighborhood,
+        ...(data.propertyType ? { propertyType: data.propertyType } : {}),
+        ...(isLmiZip ? { incomeLevel: 'lmi' } : {}),
+      }));
+      setAddressConfirmed(true);
+      setAddressLookupStatus('done');
+      const lmiNote = isLmiZip ? ' · LMI area detected ✓' : '';
+      const countyNote = data.county ? ` (${data.county})` : '';
+      toast({
+        title: '✓ Address confirmed!',
+        description: `${data.city}${countyNote}, ${data.state} ${data.zip}${lmiNote}`,
+      });
+    },
+    onError: () => {
+      setAddressLookupStatus('error');
+      toast({ title: 'Lookup failed', description: 'Could not look up address. You can fill in city/state/ZIP manually.', variant: 'destructive' });
+    },
+  });
+
+  const lookupAddress = useCallback((addressText?: string) => {
     const query = (addressText ?? home.address).trim();
     if (!query || query.length < 5) {
       toast({ title: 'Enter your address', description: 'Please type your full street address first.', variant: 'destructive' });
       return;
     }
     setAddressLookupStatus('loading');
-    try {
-      await loadGoogleMapsScript();
-      const geocoder = new window.google!.maps.Geocoder();
-      geocoder.geocode(
-        { address: query, region: 'us', componentRestrictions: { country: 'US' } },
-        (results, status) => {
-          if (status !== 'OK' || !results || results.length === 0) {
-            setAddressLookupStatus('error');
-            toast({ title: 'Address not found', description: 'Try entering a more specific address (e.g. 123 Main St, Newark, NJ)', variant: 'destructive' });
-            return;
-          }
-          const result = results[0];
-          const comps = result.address_components;
-          const get = (type: string) => comps.find(c => c.types.includes(type))?.long_name || '';
-          const getShort = (type: string) => comps.find(c => c.types.includes(type))?.short_name || '';
-
-          const streetNum = get('street_number');
-          const route = get('route');
-          const city = get('locality') || get('sublocality_level_1') || get('sublocality') || get('neighborhood') || get('administrative_area_level_3');
-          const state = getShort('administrative_area_level_1');
-          const zip = get('postal_code');
-          const county = get('administrative_area_level_2');
-          const neighborhood = get('neighborhood') || get('sublocality_level_2') || '';
-
-          // Detect property type from result types
-          const resTypes = result.types || [];
-          let propertyTypeHint = '';
-          if (resTypes.includes('premise') || resTypes.includes('street_address')) propertyTypeHint = 'single_family';
-          else if (resTypes.includes('subpremise')) propertyTypeHint = 'condo';
-
-          const isLmiZip = zip ? NJ_LMI_ZIPS.has(zip) : false;
-          const formattedAddress = result.formatted_address;
-
-          setHome(prev => ({
-            ...prev,
-            address: streetNum ? `${streetNum} ${route}` : (route || formattedAddress),
-            city,
-            state: state || 'NJ',
-            zip,
-            county,
-            neighborhood,
-            ...(propertyTypeHint ? { propertyType: propertyTypeHint } : {}),
-            ...(isLmiZip ? { incomeLevel: 'lmi' } : {}),
-          }));
-          setAddressConfirmed(true);
-          setAddressLookupStatus('done');
-
-          const lmiNote = isLmiZip ? ' · LMI area detected ✓' : '';
-          const countyNote = county ? ` (${county})` : '';
-          toast({
-            title: '✓ Address confirmed!',
-            description: `${city}${countyNote}, ${state} ${zip}${lmiNote}`,
-          });
-        }
-      );
-    } catch (e) {
-      console.warn('Geocoding failed:', e);
-      setAddressLookupStatus('error');
-      toast({ title: 'Lookup failed', description: 'Could not reach Google Maps. You can still fill in the fields manually.', variant: 'destructive' });
-    }
-  }, [home.address, toast]);
+    geocodeMutation.mutate({ address: query });
+  }, [home.address, toast, geocodeMutation]);
 
   const handleCalculate = () => {
     if (!home.sqft || !home.bedrooms) {
@@ -596,7 +543,7 @@ export default function RebateCalculator() {
     ? selectedSystem === "ducted" ? quotes.ducted : quotes.ductless
     : null;
 
-  // For standard efficiency: lower base cost but NO PSE&G incentives
+  // For standard efficiency: lower base cost but NO rebate incentives
   const activeQuote = baseQuote
     ? selectedEfficiency === "high"
       ? baseQuote
@@ -606,7 +553,7 @@ export default function RebateCalculator() {
           projectCost: Math.round(baseQuote.projectCost / 1.08),
           taxAmount: Math.round((baseQuote.projectCost / 1.08) * 0.06625),
           totalCost: Math.round((baseQuote.projectCost / 1.08) * 1.06625),
-          psegRebate: 0,
+          njcleanheatRebate: 0,
           decommissionAdder: 0,
           reductAdder: 0,
           additionalAdder: 0,
@@ -619,21 +566,22 @@ export default function RebateCalculator() {
 
   const activePkg = FINANCING_PACKAGES.find((p) => p.id === selectedPackage)!;
 
-  // Each package has a different total project cost based on costMultiplier
-  // For standard efficiency, no packages apply PSE&G incentives
+  // Each package has a DIFFERENT total project cost (costMultiplier) but the
+  // SAME rebate/incentive amount — rebates are fixed by the program, not by
+  // how you pay. Only the total job cost changes based on payment timing.
   function getPkgCost(pkg: FinancingPackage, quote: typeof activeQuote) {
     if (!quote) return { totalCost: 0, upfront: 0, remaining: 0, monthly84: 0, incentive: 0, outOfPocket: 0 };
     if (selectedEfficiency === "standard") {
-      // Standard: no rebates, no multiplier variations — just base cost
+      // Standard: no rebates, all packages use same base cost
       const totalCost = quote.totalCost;
       const upfront = Math.round(totalCost * pkg.upfrontPct);
       const remaining = totalCost - upfront;
       return { totalCost, upfront, remaining, monthly84: Math.round(remaining / 84), incentive: 0, outOfPocket: totalCost };
     }
-    // High-efficiency: apply cost multiplier and cap incentive
-    const baseTotalCost = quote.totalCost;
-    const pkgTotalCost = Math.round(baseTotalCost * pkg.costMultiplier);
-    const incentive = Math.min(quote.totalIncentive, pkg.maxIncentive);
+    // High-efficiency: apply cost multiplier to get THIS package's total project cost
+    // Rebate/incentive is ALWAYS the same (quote.totalIncentive) regardless of plan
+    const pkgTotalCost = Math.round(quote.totalCost * pkg.costMultiplier);
+    const incentive = quote.totalIncentive;  // Fixed — same for all plans
     const outOfPocket = Math.max(0, pkgTotalCost - incentive);
     const upfront = pkg.upfrontFixed !== undefined ? pkg.upfrontFixed : Math.round(pkgTotalCost * pkg.upfrontPct);
     const remaining = Math.max(0, outOfPocket - upfront);
@@ -700,22 +648,28 @@ export default function RebateCalculator() {
       {/* Hero */}
       <section className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white py-12">
         <div className="container max-w-4xl mx-auto px-4 text-center">
-          <Badge className="mb-3 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">PSE&G Clean Heat Program</Badge>
+          <Badge className="mb-3 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">NJ Clean Heat Rebate Program</Badge>
           <h1 className="text-3xl md:text-4xl font-bold mb-3">
             See How Much You Qualify For
           </h1>
           <p className="text-lg text-white/85 max-w-2xl mx-auto">
-            New Jersey homeowners can receive up to <strong>$16,000 in rebates</strong> on heat pump upgrades — plus 0% financing through PSE&G. Get your personalized estimate in 2 minutes.
+            New Jersey homeowners can receive up to <strong>$16,000 in rebates &amp; incentives</strong> on heat pump upgrades — plus 0% financing. Get your personalized estimate in 2 minutes.
           </p>
-          {/* Progress bar */}
-          <div className="mt-8 flex items-center justify-center gap-2">
+          {/* Progress bar — compact on mobile */}
+          <div className="mt-6 flex items-center justify-center gap-1.5">
             {STEP_LABELS.map((label, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${step === i + 1 ? "bg-[#ff6b35] text-white" : step > i + 1 ? "bg-white/30 text-white" : "bg-white/10 text-white/50"}`}>
-                  {step > i + 1 ? <CheckCircle className="h-3.5 w-3.5" /> : <span className="w-4 h-4 rounded-full border border-current flex items-center justify-center text-xs">{i + 1}</span>}
+              <div key={i} className="flex items-center gap-1.5">
+                <div className={`flex items-center gap-1.5 rounded-full font-medium transition-all
+                  px-2.5 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-sm
+                  ${step === i + 1 ? 'bg-[#ff6b35] text-white' : step > i + 1 ? 'bg-white/30 text-white' : 'bg-white/10 text-white/50'}`}>
+                  {step > i + 1
+                    ? <CheckCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    : <span className="w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full border border-current flex items-center justify-center text-xs">{i + 1}</span>
+                  }
                   <span className="hidden sm:inline">{label}</span>
+                  <span className="sm:hidden">{label.split(' ')[0]}</span>
                 </div>
-                {i < STEP_LABELS.length - 1 && <ChevronRight className="h-4 w-4 text-white/30" />}
+                {i < STEP_LABELS.length - 1 && <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 text-white/30 shrink-0" />}
               </div>
             ))}
           </div>
@@ -783,8 +737,8 @@ export default function RebateCalculator() {
                     )}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="col-span-2 md:col-span-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2 md:col-span-1">
                     <Label htmlFor="city">City</Label>
                     <Input
                       id="city"
@@ -827,7 +781,7 @@ export default function RebateCalculator() {
                 <CardDescription>Help us size the right system for your home</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   <div>
                     <Label>Property Type</Label>
                     <Select value={home.propertyType} onValueChange={(v) => setHome({ ...home, propertyType: v })}>
@@ -901,7 +855,7 @@ export default function RebateCalculator() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <Label>Current Heating Fuel</Label>
                     <Select value={home.currentHeating} onValueChange={(v) => setHome({ ...home, currentHeating: v })}>
@@ -928,7 +882,7 @@ export default function RebateCalculator() {
                           <TooltipContent side="top" className="max-w-xs p-3 text-sm" sideOffset={6}>
                             <div className="space-y-2">
                               <p className="font-semibold text-base">What is LMI?</p>
-                              <p><strong>Low-to-Moderate Income (LMI)</strong> is a PSE&G designation for households earning below 80% of the Area Median Income (AMI) for their county.</p>
+                              <p><strong>Low-to-Moderate Income (LMI)</strong> is a program designation for households earning below 80% of the Area Median Income (AMI) for their county.</p>
                               <p className="text-muted-foreground">LMI households qualify for a <strong className="text-green-600">60% base rebate</strong> instead of the standard 50%, which can mean up to <strong>$12,000</strong> more in incentives on a typical project.</p>
                               <div className="border-t pt-2 mt-2">
                                 <p className="font-medium">Essex County 2024 LMI thresholds:</p>
@@ -939,7 +893,7 @@ export default function RebateCalculator() {
                                   <li>4 people: ≤ $82,400/yr</li>
                                 </ul>
                               </div>
-                              <p className="text-xs text-muted-foreground">PSE&G may request proof of income (tax return or pay stub) during the rebate application process.</p>
+                              <p className="text-xs text-muted-foreground">The program may request proof of income (tax return or pay stub) during the rebate application process.</p>
                             </div>
                           </TooltipContent>
                         </Tooltip>
@@ -961,12 +915,12 @@ export default function RebateCalculator() {
                 </div>
                 {home.incomeLevel === "lmi" && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
-                    <strong>LMI Bonus Applied:</strong> Your estimate uses the <strong>60% base rebate rate</strong> — up to <strong>$12,000</strong> more than the standard 50% rate. PSE&G will verify income eligibility during the application process.
+                    <strong>LMI Bonus Applied:</strong> Your estimate uses the <strong>60% base rebate rate</strong> — up to <strong>$12,000</strong> more than the standard 50% rate. The program will verify income eligibility during the application process.
                   </div>
                 )}
                 {home.currentHeating === "electric" && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                    <strong>Note:</strong> PSE&G's Clean Heat program requires replacing a fossil fuel heating system. If you currently heat with electric, please contact us to discuss your eligibility.
+                    <strong>Note:</strong> NJ Clean Heat program requires replacing a fossil fuel heating system. If you currently heat with electric, please contact us to discuss your eligibility.
                   </div>
                 )}
               </CardContent>
@@ -1017,18 +971,18 @@ export default function RebateCalculator() {
                     onClick={() => setSelectedEfficiency(eff)}
                     className={`px-4 py-1.5 rounded-full font-medium text-sm border transition-all ${selectedEfficiency === eff ? "bg-[#ff6b35] text-white border-[#ff6b35]" : "bg-white text-gray-600 border-gray-300 hover:border-[#ff6b35]"}`}
                   >
-                    {eff === "high" ? "⚡ High-Efficiency (PSE&G Eligible)" : "📊 Standard Efficiency (No Rebates)"}
+                    {eff === "high" ? "⚡ High-Efficiency (NJ Clean Heat Eligible)" : "📊 Standard Efficiency (No Rebates)"}
                   </button>
                 ))}
               </div>
               {selectedEfficiency === "standard" && (
                 <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-1">
-                  ⚠️ Standard efficiency systems are <strong>not eligible</strong> for PSE&G incentives. Shown for comparison only.
+                  ⚠️ Standard efficiency systems are <strong>not eligible</strong> for rebate incentives. Shown for comparison only.
                 </p>
               )}
               {selectedEfficiency === "high" && (
                 <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-1">
-                  ✅ High-efficiency heat pumps qualify for up to <strong>$16,000</strong> in PSE&G Clean Heat incentives.
+                  ✅ High-efficiency heat pumps qualify for up to <strong>$16,000</strong> in NJ Clean Heat incentives.
                 </p>
               )}
             </div>
@@ -1065,14 +1019,14 @@ export default function RebateCalculator() {
                         </div>
                       </div>
                       <div className="space-y-3">
-                        <h3 className="font-semibold text-green-700 text-sm uppercase tracking-wide">PSE&G Incentives</h3>
+                        <h3 className="font-semibold text-green-700 text-sm uppercase tracking-wide">Rebate Incentives</h3>
                         <div className="space-y-2 text-sm">
-                          <div className="flex justify-between"><span className="text-muted-foreground">Base Rebate ({home.incomeLevel === "lmi" ? "LMI 60%" : "50%"})</span><span className="font-medium text-green-700">-{fmt(activeQuote.psegRebate)}</span></div>
+                          <div className="flex justify-between"><span className="text-muted-foreground">Base Rebate ({home.incomeLevel === "lmi" ? "LMI 60%" : "50%"})</span><span className="font-medium text-green-700">-{fmt(activeQuote.njcleanheatRebate)}</span></div>
                           {activeQuote.decommissionAdder > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Decommissioning Adder</span><span className="font-medium text-green-700">-{fmt(activeQuote.decommissionAdder)}</span></div>}
                           {activeQuote.reductAdder > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Re-ducting Adder</span><span className="font-medium text-green-700">-{fmt(activeQuote.reductAdder)}</span></div>}
                           {activeQuote.additionalAdder > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Additional System Adder</span><span className="font-medium text-green-700">-{fmt(activeQuote.additionalAdder)}</span></div>}
                           <Separator />
-                          <div className="flex justify-between font-bold text-green-700"><span>Total PSE&G Incentive</span><span>-{fmt(activeQuote.totalIncentive)}</span></div>
+                          <div className="flex justify-between font-bold text-green-700"><span>Total Rebate Incentive</span><span>-{fmt(activeQuote.totalIncentive)}</span></div>
                         </div>
                       </div>
                     </div>
@@ -1083,7 +1037,7 @@ export default function RebateCalculator() {
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div className="bg-[#1e3a5f]/5 rounded-lg p-4">
                         <div className="text-2xl font-bold text-[#1e3a5f]">{fmt(activeQuote.totalIncentive)}</div>
-                        <div className="text-xs text-muted-foreground mt-1">Total PSE&G Rebate</div>
+                        <div className="text-xs text-muted-foreground mt-1">Total Rebate</div>
                       </div>
                       <div className="bg-[#ff6b35]/10 rounded-lg p-4">
                         <div className="text-2xl font-bold text-[#ff6b35]">{fmt(activeQuote.outOfPocket)}</div>
@@ -1096,7 +1050,7 @@ export default function RebateCalculator() {
                     </div>
 
                     <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                      <strong>0% OBR Financing:</strong> Your {fmt(activeQuote.outOfPocket)} out-of-pocket can be financed through PSE&G's On-Bill Repayment program at 0% interest — as low as <strong>{fmt(activeQuote.monthlyOBR84)}/month</strong> over 84 months.
+                      <strong>0% OBR Financing:</strong> Your {fmt(activeQuote.outOfPocket)} out-of-pocket can be financed through NJ Clean Heat On-Bill Repayment program at 0% interest — as low as <strong>{fmt(activeQuote.monthlyOBR84)}/month</strong> over 84 months.
                     </div>
                   </CardContent>
                 </Card>
@@ -1121,7 +1075,7 @@ export default function RebateCalculator() {
                           <tbody className="divide-y">
                             {[
                               ["Project Cost", fmt(quotes.ducted.totalCost), fmt(quotes.ductless.totalCost)],
-                              ["PSE&G Incentive", selectedEfficiency === "high" ? fmt(quotes.ducted.totalIncentive) : "N/A", selectedEfficiency === "high" ? fmt(quotes.ductless.totalIncentive) : "N/A"],
+                              ["Rebate Incentive", selectedEfficiency === "high" ? fmt(quotes.ducted.totalIncentive) : "N/A", selectedEfficiency === "high" ? fmt(quotes.ductless.totalIncentive) : "N/A"],
                               ["Out-of-Pocket", selectedEfficiency === "high" ? fmt(quotes.ducted.outOfPocket) : fmt(quotes.ducted.totalCost), selectedEfficiency === "high" ? fmt(quotes.ductless.outOfPocket) : fmt(quotes.ductless.totalCost)],
                               ["Energy Savings", `${fmt(quotes.ducted.annualSavings)}/yr`, `${fmt(quotes.ductless.annualSavings)}/yr`],
                               ["Zones", `${quotes.ducted.zones} zones`, `${quotes.ductless.zones} units`],
@@ -1160,7 +1114,7 @@ export default function RebateCalculator() {
                               const stdTotal = Math.round(stdCost * 1.06625);
                               return [
                                 ["Project Cost", fmt(hiQ.totalCost), fmt(stdTotal)],
-                                ["PSE&G Incentive", fmt(hiQ.totalIncentive), "$0 (ineligible)"],
+                                ["Rebate Incentive", fmt(hiQ.totalIncentive), "$0 (ineligible)"],
                                 ["Out-of-Pocket", fmt(hiQ.outOfPocket), fmt(stdTotal)],
                                 ["Monthly (84mo)", `${fmt(hiQ.monthlyOBR84)}/mo`, `${fmt(Math.round(stdTotal / 84))}/mo`],
                                 ["Energy Savings", `${fmt(hiQ.annualSavings)}/yr`, `${fmt(Math.round(hiQ.annualSavings * 0.6))}/yr`],
@@ -1202,7 +1156,7 @@ export default function RebateCalculator() {
             {selectedEfficiency === "standard" && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
                 <span className="text-amber-500 mt-0.5">⚠️</span>
-                <span><strong>Standard efficiency systems do not qualify for PSE&G incentives.</strong> Shown for comparison only. Switch to High-Efficiency to unlock up to $16,000 in incentives.</span>
+                <span><strong>Standard efficiency systems do not qualify for rebate incentives.</strong> Shown for comparison only. Switch to High-Efficiency to unlock up to $16,000 in incentives.</span>
               </div>
             )}
 
@@ -1245,7 +1199,7 @@ export default function RebateCalculator() {
                       </div>
                       {isHighEff && pkgCost.incentive > 0 && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">PSE&G Incentive</span>
+                          <span className="text-muted-foreground">Rebate Incentive</span>
                           <span className="font-medium text-green-700">-{fmt(pkgCost.incentive)}</span>
                         </div>
                       )}
@@ -1265,7 +1219,7 @@ export default function RebateCalculator() {
                       {isHighEff && (
                         <div className="flex items-center gap-2 text-green-700">
                           <TrendingDown className="h-3.5 w-3.5" />
-                          <span>Up to {fmt(pkg.maxIncentive)} PSE&G Incentive</span>
+                          <span>Up to {fmt(pkg.maxIncentive)} Rebate Incentive</span>
                         </div>
                       )}
                       <div className="flex items-center gap-2 text-green-700">
@@ -1312,7 +1266,7 @@ export default function RebateCalculator() {
                     <div className="text-white/70 text-sm">Total Project Cost</div>
                     <div className="text-xl font-bold">{fmt(activePkgCost.totalCost)}</div>
                     {selectedEfficiency === "high" && activePkgCost.incentive > 0 && (
-                      <div className="text-green-400 font-semibold text-sm mt-1">PSE&G Incentive: -{fmt(activePkgCost.incentive)}</div>
+                      <div className="text-green-400 font-semibold text-sm mt-1">Rebate Incentive: -{fmt(activePkgCost.incentive)}</div>
                     )}
                     <div className="text-white/70 text-sm mt-1">{fmt(activePkg.giftCard)} gift card + {activePkg.warrantyYears}yr warranty</div>
                   </div>
@@ -1366,7 +1320,7 @@ export default function RebateCalculator() {
                   <div className="bg-gradient-to-r from-[#1e3a5f] to-[#2a5a8f] text-white rounded-xl p-5">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
                       <div><div className="text-white/70 text-xs">System</div><div className="font-semibold capitalize">{selectedSystem}</div></div>
-                      <div><div className="text-white/70 text-xs">PSE&G Rebate</div><div className="font-semibold text-green-400">{fmt(activeQuote.totalIncentive)}</div></div>
+                      <div><div className="text-white/70 text-xs">Rebate</div><div className="font-semibold text-green-400">{fmt(activeQuote.totalIncentive)}</div></div>
                       <div><div className="text-white/70 text-xs">Package</div><div className="font-semibold">{activePkg.name}</div></div>
                       <div><div className="text-white/70 text-xs">Gift Card</div><div className="font-semibold text-[#ff6b35]">{fmt(activePkg.giftCard)}</div></div>
                     </div>

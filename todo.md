@@ -576,3 +576,16 @@
 ## Bug Fixes — Rebate Calculator
 - [x] Fix: "Calculate My Rebates" button redirects to homepage — fixed with type="button" + e.preventDefault()
 - [x] Fix: Address autocomplete replaced deprecated Autocomplete widget with Geocoder API + "Look Up" button — now reliably populates city/state/ZIP/county
+
+## Rebate Calculator — Mobile & Rebate Logic Fixes
+- [x] Fix mobile layout: step indicator takes 2/3 of screen on phones — now compact
+- [x] Make all 4 steps single-column and phone-friendly (larger touch targets, readable fonts)
+- [x] Fix rebate logic: rebate amount now FIXED across all 3 financing plans (uses quote.totalIncentive always)
+- [x] Only the total project cost changes per plan (not the rebate amount)
+- [x] Step 3 financing cards show same rebate but different project totals
+
+## Rebate Calculator — PSE&G Branding Removal & Mobile Fix
+- [x] Remove all "PSE&G" references from RebateCalculator page — replaced with "NJ Clean Heat", "Rebates & Incentives"
+- [x] Fix mobile layout: step indicator now compact on phones
+- [x] Fix rebate logic: rebate amount stays fixed, only total project cost changes per plan
+- [x] Fix address lookup: server-side geocoding via tRPC (geocodeAddress procedure) — works reliably on all devices
