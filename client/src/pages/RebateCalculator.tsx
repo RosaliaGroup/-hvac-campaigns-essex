@@ -36,6 +36,8 @@ interface HomeDetails {
   currentHeating: string;
   incomeLevel: string; // "lmi" | "standard"
   hasExistingDucts: string;
+  hasCentralAir: string;       // "yes" | "no" | ""
+  panelHasSpace: string;       // "yes" | "no" | "unsure"
 }
 
 // NJ zip codes designated as LMI areas — all 21 counties
@@ -233,6 +235,8 @@ interface QuoteResult {
   annualSavings: number;
   systemDescription: string;
   zones: number;
+  panelAdder: number;
+  numCondensers: number;
 }
 
 function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: QuoteResult } {
@@ -242,6 +246,20 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
   const isLMI = home.incomeLevel === "lmi";
   const hasGas = home.currentHeating === "gas" || home.currentHeating === "oil" || home.currentHeating === "propane";
   const hasExistingDucts = home.hasExistingDucts === "yes";
+  const hasCentralAir = home.hasCentralAir === "yes";
+  // Electric panel / disconnect adder:
+  //   - Panel has space (yes): $750 per condenser for disconnect switch
+  //     Central air = 1 condenser (1 disconnect); no central air = 2 condensers (2 disconnects)
+  //   - Panel unsure: $2,500 panel upgrade + $250 per permit (1 permit if central air, 2 if not)
+  //   - Panel no space: treated same as unsure (needs panel work)
+  const numCondensers = hasCentralAir ? 1 : 2;
+  let panelAdder = 0;
+  if (home.panelHasSpace === "yes") {
+    panelAdder = 750 * numCondensers;
+  } else if (home.panelHasSpace === "no" || home.panelHasSpace === "unsure") {
+    // $2,500 panel upgrade + $250 permit per disconnect
+    panelAdder = 2500 + (250 * numCondensers);
+  }
 
   // Determine number of systems/zones based on property size
   let numSystems = 1;
@@ -287,6 +305,10 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
     reductCost = Math.min(2000, sqft * 1.2); // up to $2K
     baseCostDucted += reductCost;
   }
+
+  // Add electric panel / disconnect adder to both system types
+  baseCostDucted += panelAdder;
+  baseCostDuctless += panelAdder;
 
   // High efficiency adds ~8% to cost
   const highEffMultiplier = 1.08;
@@ -339,6 +361,8 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
       annualSavings,
       systemDescription: desc,
       zones,
+      panelAdder,
+      numCondensers,
     };
   }
 
@@ -352,19 +376,19 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
 }
 
 // ─── Financing packages ───────────────────────────────────────────────────────
-// The 3 packages have DIFFERENT total project costs because cost to Mechanical
-// Enterprise changes based on how quickly they get paid.
+// 4 options, ordered from most client-friendly to least:
 //
-// Option 1 — 3rd-Party Finance (base cost × 1.00): Client finances full amount
-//   through a 3rd-party lender. We get paid immediately. Client receives MAX
-//   rebate incentive (up to $16K) transferred back to them after install.
+// Option 1 — Deposit (base cost × 1.00): Client pays deposit upfront.
+//   1-year PM, 2-year warranty, $100 gift card.
 //
-// Option 2 — 15% Deposit + NJ Clean Heat (base cost × 1.18): Client pays 15% upfront,
-//   rest processed through NJ Clean Heat OBR. We wait ~8 weeks for NJ Clean Heat payment.
-//   Higher project cost reflects the delay risk.
+// Option 2 — OBR (Client Finances, base cost × 1.18): Client finances the OBR
+//   themselves. 2-year PM, 3-year warranty, $200 gift card.
 //
-// Option 3 — 100% NJ Clean Heat OBR (base cost × 1.30): NJ Clean Heat covers everything via
-//   On-Bill Repayment. We wait the full period for payment. Highest cost.
+// Option 3 — 100% OBR (base cost × 1.30): NJ Clean Heat covers everything via
+//   On-Bill Repayment. 3-year PM, 5-year warranty, $500 gift card, $14k-$16k back.
+//
+// Option 4 — All Covered by NJ Clean Heat (base cost × 1.40): Fully covered,
+//   1-year warranty only, no PM, no gift card.
 
 interface FinancingPackage {
   id: string;
@@ -386,50 +410,65 @@ interface FinancingPackage {
 
 const FINANCING_PACKAGES: FinancingPackage[] = [
   {
-    id: "third_party_finance",
-    name: "3rd-Party Finance",
-    tagline: "Best deal — max incentive",
-    costMultiplier: 1.00,          // Base price — we get paid immediately
-    upfrontPct: 0,                 // $0 today
-    maxIncentive: 16000,           // Full max rebate incentive transferred to client
-    giftCard: 500,
-    warrantyYears: 3,
+    id: "deposit_option",
+    name: "Option 1 — Deposit",
+    tagline: "Pay a deposit, keep it simple",
+    costMultiplier: 1.00,
+    upfrontPct: 0.15,
+    maxIncentive: 14000,
+    giftCard: 100,
+    warrantyYears: 2,
     maintenanceYears: 1,
+    highlight: false,
+    description: "Pay a deposit upfront to secure your installation. Includes 1-year preventive maintenance, 2-year warranty, and a $100 gift card.",
+    creditApplied: 500,
+    paymentNote: "Deposit paid upfront; remaining balance via NJ Clean Heat OBR",
+  },
+  {
+    id: "obr_client_financed",
+    name: "Option 2 — OBR (Client Finances)",
+    tagline: "Client finances the OBR — better perks",
+    costMultiplier: 1.18,
+    upfrontPct: 0,
+    maxIncentive: 14000,
+    giftCard: 200,
+    warrantyYears: 3,
+    maintenanceYears: 2,
+    highlight: false,
+    description: "Client takes on the NJ Clean Heat OBR financing. $0 upfront. Includes 2-year preventive maintenance, 3-year warranty, and a $200 gift card.",
+    creditApplied: 500,
+    paymentNote: "OBR financed by client at 0% interest via NJ Clean Heat",
+  },
+  {
+    id: "njcleanheat_obr",
+    name: "Option 3 — 100% OBR",
+    tagline: "Best perks — $14k–$16k back + 5-yr warranty",
+    costMultiplier: 1.30,
+    upfrontPct: 0,
+    maxIncentive: 16000,
+    giftCard: 500,
+    warrantyYears: 5,
+    maintenanceYears: 3,
     highlight: true,
     badge: "BEST VALUE",
-    description: "Finance the full project through our 3rd-party lender. We get paid upfront so we pass the maximum rebate incentive (up to $16,000) directly back to you after installation.",
-    creditApplied: 500,
-    paymentNote: "Monthly payments through 3rd-party lender",
-  },
-  {
-    id: "deposit_15pct",
-    name: "15% Deposit",
-    tagline: "Lower monthly, partial upfront",
-    costMultiplier: 1.18,          // 18% higher — we wait ~8 weeks for NJ Clean Heat payment
-    upfrontPct: 0.15,              // 15% of total project cost
-    maxIncentive: 14000,           // Slightly reduced incentive (delay cost)
-    giftCard: 500,
-    warrantyYears: 3,
-    maintenanceYears: 1,
-    highlight: false,
-    description: "Pay 15% upfront to secure your slot. Remaining balance processed through NJ Clean Heat OBR program at 0% interest. Slightly higher project cost reflects our 8-week program payment wait.",
-    creditApplied: 500,
-    paymentNote: "Remaining balance via NJ Clean Heat OBR at 0% interest",
-  },
-  {
-    id: "full_obr",
-    name: "100% NJ Clean Heat OBR",
-    tagline: "Zero upfront, NJ Clean Heat covers all",
-    costMultiplier: 1.30,          // 30% higher — we wait full OBR period for payment
-    upfrontPct: 0,                 // $0 today
-    maxIncentive: 12000,           // Reduced incentive (full delay cost)
-    giftCard: 250,
-    warrantyYears: 2,
-    maintenanceYears: 0,
-    highlight: false,
-    description: "NJ Clean Heat On-Bill Repayment covers 100% of the project cost. Pay nothing upfront — payments added to your utility bill at 0% interest. Higher project cost reflects the full payment delay.",
+    description: "NJ Clean Heat On-Bill Repayment covers 100% of the project cost. Pay nothing upfront. Includes 3-year preventive maintenance, 5-year warranty, $500 gift card, and $14,000–$16,000 rebate incentive back.",
     creditApplied: 500,
     paymentNote: "Added to your monthly utility bill at 0% interest",
+  },
+  {
+    id: "all_covered_njcleanheat",
+    name: "Option 4 — All Covered by NJ Clean Heat",
+    tagline: "Fully covered — minimal extras",
+    costMultiplier: 1.40,
+    upfrontPct: 0,
+    maxIncentive: 10000,
+    giftCard: 0,
+    warrantyYears: 1,
+    maintenanceYears: 0,
+    highlight: false,
+    description: "100% covered by NJ Clean Heat program. No upfront cost. Includes 1-year warranty only. No preventive maintenance or gift card included.",
+    creditApplied: 500,
+    paymentNote: "Fully covered by NJ Clean Heat program",
   },
 ];
 
@@ -458,10 +497,12 @@ export default function RebateCalculator() {
     currentHeating: "gas",
     incomeLevel: "standard",
     hasExistingDucts: "yes",
+    hasCentralAir: "",
+    panelHasSpace: "",
   });
   const [selectedSystem, setSelectedSystem] = useState<"ducted" | "ductless">("ducted");
   const [selectedEfficiency, setSelectedEfficiency] = useState<"high" | "standard">("high");
-  const [selectedPackage, setSelectedPackage] = useState<string>("third_party_finance");
+  const [selectedPackage, setSelectedPackage] = useState<string>("njcleanheat_obr");
   const [quotes, setQuotes] = useState<{ ducted: QuoteResult; ductless: QuoteResult } | null>(null);
   const [bookingForm, setBookingForm] = useState({
     name: "",
@@ -530,6 +571,14 @@ export default function RebateCalculator() {
   const handleCalculate = () => {
     if (!home.sqft || !home.bedrooms) {
       toast({ title: "Missing info", description: "Please fill in square footage and bedrooms.", variant: "destructive" });
+      return;
+    }
+    if (!home.hasCentralAir) {
+      toast({ title: "Missing info", description: "Please answer whether the home currently has central air conditioning.", variant: "destructive" });
+      return;
+    }
+    if (!home.panelHasSpace) {
+      toast({ title: "Missing info", description: "Please answer the electric panel space question.", variant: "destructive" });
       return;
     }
     const result = calculateRebate(home);
@@ -932,6 +981,91 @@ export default function RebateCalculator() {
               </CardContent>
             </Card>
 
+            {/* Electric Panel Questions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[#1e3a5f]">
+                  <Zap className="h-5 w-5 text-[#ff6b35]" /> Electric Panel & Disconnect
+                </CardTitle>
+                <CardDescription>These questions help us accurately estimate electrical work costs</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                {/* Q1: Does the home have central air? */}
+                <div>
+                  <Label className="text-sm font-medium">Does the home currently have central air conditioning?</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                    This determines how many disconnect switches are needed (1 for central air, typically 2 without).
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {[{v:"yes",label:"Yes — has central A/C"},{v:"no",label:"No — no central A/C"}].map(({v,label}) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setHome({...home, hasCentralAir: v})}
+                        className={`flex-1 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
+                          home.hasCentralAir === v
+                            ? "border-[#ff6b35] bg-[#ff6b35]/10 text-[#ff6b35]"
+                            : "border-gray-200 hover:border-[#1e3a5f]/40"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Q2: Panel space */}
+                {home.hasCentralAir && (
+                  <div>
+                    <Label className="text-sm font-medium">
+                      Does the electric panel have available breaker space?
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5 mb-2">
+                      {home.hasCentralAir === "yes"
+                        ? "Minimum 2 open breaker slots needed (central A/C present)."
+                        : "Minimum 4 open breaker slots needed (no central A/C — likely 2 disconnects required)."}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {[
+                        {v:"yes", label:"Yes — panel has space"},
+                        {v:"no",  label:"No — panel is full"},
+                        {v:"unsure", label:"Not sure"},
+                      ].map(({v,label}) => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setHome({...home, panelHasSpace: v})}
+                          className={`flex-1 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
+                            home.panelHasSpace === v
+                              ? "border-[#ff6b35] bg-[#ff6b35]/10 text-[#ff6b35]"
+                              : "border-gray-200 hover:border-[#1e3a5f]/40"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Contextual explanation of the cost impact */}
+                    {home.panelHasSpace === "yes" && (
+                      <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+                        <strong>Disconnect switch cost:</strong> ${(750 * (home.hasCentralAir === "yes" ? 1 : 2)).toLocaleString()} added to your estimate
+                        ({home.hasCentralAir === "yes" ? "1 disconnect × $750" : "2 disconnects × $750"}).
+                      </div>
+                    )}
+                    {(home.panelHasSpace === "no" || home.panelHasSpace === "unsure") && (
+                      <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                        <strong>Panel upgrade estimate:</strong> $2,500 panel upgrade + ${(250 * (home.hasCentralAir === "yes" ? 1 : 2)).toLocaleString()} in permits
+                        = <strong>${(2500 + 250 * (home.hasCentralAir === "yes" ? 1 : 2)).toLocaleString()} added</strong> to your estimate.
+                        {home.panelHasSpace === "unsure" && " A technician will confirm during the free assessment."}
+                        <p className="text-xs mt-1 text-amber-700">Average NJ electrical permit: $150–$350 per disconnect (we use $250 as the estimate).</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="flex justify-end">
               <Button
                 type="button"
@@ -1027,6 +1161,16 @@ export default function RebateCalculator() {
                       <div className="space-y-3">
                         <h3 className="font-semibold text-green-700 text-sm uppercase tracking-wide">Rebate Incentives</h3>
                         <div className="space-y-2 text-sm">
+                          {activeQuote.panelAdder > 0 && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                {home.panelHasSpace === "yes"
+                                  ? `Disconnect Switch${activeQuote.numCondensers > 1 ? "es" : ""} (${activeQuote.numCondensers}×$750)`
+                                  : `Panel Upgrade + Permits (${activeQuote.numCondensers} disconnect${activeQuote.numCondensers > 1 ? "s" : ""})`}
+                              </span>
+                              <span className="font-medium text-amber-700">+{fmt(activeQuote.panelAdder)}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between"><span className="text-muted-foreground">Base Rebate ({home.incomeLevel === "lmi" ? "LMI 60%" : "50%"})</span><span className="font-medium text-green-700">-{fmt(activeQuote.njcleanheatRebate)}</span></div>
                           {activeQuote.decommissionAdder > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Decommissioning Adder</span><span className="font-medium text-green-700">-{fmt(activeQuote.decommissionAdder)}</span></div>}
                           {activeQuote.reductAdder > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Re-ducting Adder</span><span className="font-medium text-green-700">-{fmt(activeQuote.reductAdder)}</span></div>}
@@ -1166,7 +1310,7 @@ export default function RebateCalculator() {
               </div>
             )}
 
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {FINANCING_PACKAGES.map((pkg) => {
                 const pkgCost = getPkgCost(pkg, activeQuote);
                 const isSelected = selectedPackage === pkg.id;
@@ -1210,7 +1354,7 @@ export default function RebateCalculator() {
                         </div>
                       )}
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">{pkg.id === "third_party_finance" ? "Financed Balance" : "OBR Balance (0%)"}</span>
+                        <span className="text-muted-foreground">{pkg.id === "deposit_option" ? "OBR Balance (0%)" : pkg.id === "all_covered_njcleanheat" ? "Program Balance" : "OBR Balance (0%)"}</span>
                         <span className="font-medium">{fmt(pkgCost.remaining)}</span>
                       </div>
                       <div className="flex justify-between">
@@ -1268,7 +1412,7 @@ export default function RebateCalculator() {
                     </div>
                     <div className="text-white/70 text-sm mt-1">
                       {monthlyOBR > 0 ? `Then ${fmt(monthlyOBR)}/month for ${obrTermMonths} months` : "No monthly payments"}
-                      {activePkg.id !== "third_party_finance" ? " at 0% interest" : " via 3rd-party lender"}
+                      {activePkg.id === "all_covered_njcleanheat" ? " via NJ Clean Heat program" : " at 0% interest"}
                     </div>
                   </div>
                   <div className="text-right">

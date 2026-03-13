@@ -603,3 +603,15 @@
 - [x] Update Option 3 (100% OBR) to show 120-month term when home is flagged as LMI
 - [x] Calculate and display lower monthly payment for 120-month OBR term for LMI customers
 - [x] Keep standard term for non-LMI customers on Option 3
+
+## Rebate Calculator — 4-Option Financing Overhaul & Electric Panel Questions
+- [x] Revise Option 1 (Deposit): 1-year PM, 2-year warranty, $100 gift card
+- [x] Add new Option 2 (OBR Client-Financed): client pays OBR, 2-year PM, 3-year warranty, $200 gift card
+- [x] Revise Option 3 (100% OBR): 3-year PM, 5-year warranty, $500 gift card, $14k-$16k back
+- [x] Revise Option 4 (All covered by NJ Clean Heat): 1-year warranty only (no PM, no gift card)
+- [x] Add electric panel questions to Step 1 before pricing generation
+- [x] Panel question: does client have space? (central air = min 2 spaces; no central air = min 4 spaces)
+- [x] If yes: add $750 per condenser for disconnect switch
+- [x] If unsure/no: add $2,500 + $250 permits per disconnect
+- [x] If house has central air: 1 disconnect; if no central air: 2 disconnects
+- [x] Update pricing calculation to include panel/disconnect adders
