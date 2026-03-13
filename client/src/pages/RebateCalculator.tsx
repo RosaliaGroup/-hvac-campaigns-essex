@@ -199,12 +199,28 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
 }
 
 // ─── Financing packages ───────────────────────────────────────────────────────
+// The 3 packages have DIFFERENT total project costs because cost to Mechanical
+// Enterprise changes based on how quickly they get paid.
+//
+// Option 1 — 3rd-Party Finance (base cost × 1.00): Client finances full amount
+//   through a 3rd-party lender. We get paid immediately. Client receives MAX
+//   PSE&G incentive (up to $16K) transferred back to them after install.
+//
+// Option 2 — 15% Deposit + PSE&G (base cost × 1.18): Client pays 15% upfront,
+//   rest processed through PSE&G OBR. We wait ~8 weeks for PSE&G payment.
+//   Higher project cost reflects the delay risk.
+//
+// Option 3 — 100% PSE&G OBR (base cost × 1.30): PSE&G covers everything via
+//   On-Bill Repayment. We wait the full period for payment. Highest cost.
 
 interface FinancingPackage {
   id: string;
   name: string;
   tagline: string;
-  upfront: (oop: number) => number;
+  costMultiplier: number;        // Applied to base project cost to get THIS package's total
+  upfrontPct: number;            // Fraction of total project cost paid upfront (0 = $0)
+  upfrontFixed?: number;         // Fixed upfront amount (overrides pct if set)
+  maxIncentive: number;          // Max PSE&G incentive client can receive
   giftCard: number;
   warrantyYears: number;
   maintenanceYears: number;
@@ -212,45 +228,55 @@ interface FinancingPackage {
   badge?: string;
   description: string;
   creditApplied: number;
+  paymentNote: string;           // Short note shown under monthly payment
 }
 
 const FINANCING_PACKAGES: FinancingPackage[] = [
   {
-    id: "full_finance",
-    name: "100% Finance",
-    tagline: "Zero out of pocket today",
-    upfront: () => 0,
-    giftCard: 500,
-    warrantyYears: 3,
-    maintenanceYears: 1,
-    highlight: false,
-    description: "We handle everything. PSE&G rebates transferred directly to you. Pay nothing upfront — your out-of-pocket balance is financed through PSE&G's 0% OBR program.",
-    creditApplied: 500,
-  },
-  {
-    id: "deposit_12pct",
-    name: "12% Deposit",
-    tagline: "Best deal — save more",
-    upfront: (oop) => Math.round(oop * 0.12),
+    id: "third_party_finance",
+    name: "3rd-Party Finance",
+    tagline: "Best deal — max incentive",
+    costMultiplier: 1.00,          // Base price — we get paid immediately
+    upfrontPct: 0,                 // $0 today
+    maxIncentive: 16000,           // Full max PSE&G incentive transferred to client
     giftCard: 500,
     warrantyYears: 3,
     maintenanceYears: 1,
     highlight: true,
     badge: "BEST VALUE",
-    description: "Pay 12% upfront and receive maximum incentives. Your deposit helps us start faster, so we pass the savings directly to you. Remaining balance covered by PSE&G OBR at 0% interest.",
+    description: "Finance the full project through our 3rd-party lender. We get paid upfront so we pass the maximum PSE&G incentive (up to $16,000) directly back to you after installation.",
     creditApplied: 500,
+    paymentNote: "Monthly payments through 3rd-party lender",
   },
   {
-    id: "deposit_4500",
-    name: "$4,500 Deposit",
-    tagline: "Get started quickly",
-    upfront: () => 4500,
+    id: "deposit_15pct",
+    name: "15% Deposit",
+    tagline: "Lower monthly, partial upfront",
+    costMultiplier: 1.18,          // 18% higher — we wait ~8 weeks for PSE&G payment
+    upfrontPct: 0.15,              // 15% of total project cost
+    maxIncentive: 14000,           // Slightly reduced incentive (delay cost)
+    giftCard: 500,
+    warrantyYears: 3,
+    maintenanceYears: 1,
+    highlight: false,
+    description: "Pay 15% upfront to secure your slot. Remaining balance processed through PSE&G's OBR program at 0% interest. Slightly higher project cost reflects our 8-week PSE&G payment wait.",
+    creditApplied: 500,
+    paymentNote: "Remaining balance via PSE&G OBR at 0% interest",
+  },
+  {
+    id: "full_obr",
+    name: "100% PSE&G OBR",
+    tagline: "Zero upfront, PSE&G covers all",
+    costMultiplier: 1.30,          // 30% higher — we wait full OBR period for payment
+    upfrontPct: 0,                 // $0 today
+    maxIncentive: 12000,           // Reduced incentive (full delay cost)
     giftCard: 250,
     warrantyYears: 2,
     maintenanceYears: 0,
     highlight: false,
-    description: "Pay $4,500 upfront to secure your installation slot. Remaining balance financed through PSE&G OBR. Slightly higher project cost but quick scheduling.",
+    description: "PSE&G's On-Bill Repayment covers 100% of the project cost. Pay nothing upfront — payments added to your PSE&G bill at 0% interest. Higher project cost reflects the full payment delay.",
     creditApplied: 500,
+    paymentNote: "Added to your PSE&G monthly bill at 0% interest",
   },
 ];
 
@@ -281,7 +307,7 @@ export default function RebateCalculator() {
   });
   const [selectedSystem, setSelectedSystem] = useState<"ducted" | "ductless">("ducted");
   const [selectedEfficiency, setSelectedEfficiency] = useState<"high" | "standard">("high");
-  const [selectedPackage, setSelectedPackage] = useState<string>("deposit_12pct");
+  const [selectedPackage, setSelectedPackage] = useState<string>("third_party_finance");
   const [quotes, setQuotes] = useState<{ ducted: QuoteResult; ductless: QuoteResult } | null>(null);
   const [bookingForm, setBookingForm] = useState({
     name: "",
@@ -354,16 +380,59 @@ export default function RebateCalculator() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const activeQuote = quotes
-    ? selectedSystem === "ducted"
-      ? { ...quotes.ducted, efficiency: selectedEfficiency, projectCost: selectedEfficiency === "high" ? quotes.ducted.projectCost : Math.round(quotes.ducted.projectCost / 1.08), totalCost: selectedEfficiency === "high" ? quotes.ducted.totalCost : Math.round(quotes.ducted.totalCost / 1.08), outOfPocket: selectedEfficiency === "high" ? quotes.ducted.outOfPocket : Math.round(quotes.ducted.outOfPocket / 1.08 * 0.95) }
-      : { ...quotes.ductless, efficiency: selectedEfficiency, projectCost: selectedEfficiency === "high" ? quotes.ductless.projectCost : Math.round(quotes.ductless.projectCost / 1.08), totalCost: selectedEfficiency === "high" ? quotes.ductless.totalCost : Math.round(quotes.ductless.totalCost / 1.08), outOfPocket: selectedEfficiency === "high" ? quotes.ductless.outOfPocket : Math.round(quotes.ductless.outOfPocket / 1.08 * 0.95) }
+  // Base quote (high-efficiency uses the calculated cost; standard removes rebates)
+  const baseQuote = quotes
+    ? selectedSystem === "ducted" ? quotes.ducted : quotes.ductless
+    : null;
+
+  // For standard efficiency: lower base cost but NO PSE&G incentives
+  const activeQuote = baseQuote
+    ? selectedEfficiency === "high"
+      ? baseQuote
+      : {
+          ...baseQuote,
+          efficiency: "standard" as const,
+          projectCost: Math.round(baseQuote.projectCost / 1.08),
+          taxAmount: Math.round((baseQuote.projectCost / 1.08) * 0.06625),
+          totalCost: Math.round((baseQuote.projectCost / 1.08) * 1.06625),
+          psegRebate: 0,
+          decommissionAdder: 0,
+          reductAdder: 0,
+          additionalAdder: 0,
+          totalIncentive: 0,
+          outOfPocket: Math.round((baseQuote.projectCost / 1.08) * 1.06625),
+          monthlyOBR84: Math.round(((baseQuote.projectCost / 1.08) * 1.06625) / 84),
+          monthlyOBR60: Math.round(((baseQuote.projectCost / 1.08) * 1.06625) / 60),
+        }
     : null;
 
   const activePkg = FINANCING_PACKAGES.find((p) => p.id === selectedPackage)!;
-  const upfrontAmount = activeQuote ? activePkg.upfront(activeQuote.outOfPocket) : 0;
-  const remainingOOP = activeQuote ? Math.max(0, activeQuote.outOfPocket - upfrontAmount) : 0;
-  const monthlyOBR = Math.round((remainingOOP / 84) * 100) / 100;
+
+  // Each package has a different total project cost based on costMultiplier
+  // For standard efficiency, no packages apply PSE&G incentives
+  function getPkgCost(pkg: FinancingPackage, quote: typeof activeQuote) {
+    if (!quote) return { totalCost: 0, upfront: 0, remaining: 0, monthly84: 0, incentive: 0, outOfPocket: 0 };
+    if (selectedEfficiency === "standard") {
+      // Standard: no rebates, no multiplier variations — just base cost
+      const totalCost = quote.totalCost;
+      const upfront = Math.round(totalCost * pkg.upfrontPct);
+      const remaining = totalCost - upfront;
+      return { totalCost, upfront, remaining, monthly84: Math.round(remaining / 84), incentive: 0, outOfPocket: totalCost };
+    }
+    // High-efficiency: apply cost multiplier and cap incentive
+    const baseTotalCost = quote.totalCost;
+    const pkgTotalCost = Math.round(baseTotalCost * pkg.costMultiplier);
+    const incentive = Math.min(quote.totalIncentive, pkg.maxIncentive);
+    const outOfPocket = Math.max(0, pkgTotalCost - incentive);
+    const upfront = pkg.upfrontFixed !== undefined ? pkg.upfrontFixed : Math.round(pkgTotalCost * pkg.upfrontPct);
+    const remaining = Math.max(0, outOfPocket - upfront);
+    return { totalCost: pkgTotalCost, upfront, remaining, monthly84: Math.round(remaining / 84), incentive, outOfPocket };
+  }
+
+  const activePkgCost = getPkgCost(activePkg, activeQuote);
+  const upfrontAmount = activePkgCost.upfront;
+  const remainingOOP = activePkgCost.remaining;
+  const monthlyOBR = activePkgCost.monthly84;
 
   const handleSubmit = () => {
     if (!bookingForm.name || !bookingForm.phone) {
@@ -673,16 +742,28 @@ export default function RebateCalculator() {
             </div>
 
             {/* Efficiency toggle */}
-            <div className="flex gap-3 justify-center">
-              {(["high", "standard"] as const).map((eff) => (
-                <button
-                  key={eff}
-                  onClick={() => setSelectedEfficiency(eff)}
-                  className={`px-4 py-1.5 rounded-full font-medium text-sm border transition-all ${selectedEfficiency === eff ? "bg-[#ff6b35] text-white border-[#ff6b35]" : "bg-white text-gray-600 border-gray-300 hover:border-[#ff6b35]"}`}
-                >
-                  {eff === "high" ? "⚡ High-Efficiency (Recommended)" : "Standard Efficiency"}
-                </button>
-              ))}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-3">
+                {(["high", "standard"] as const).map((eff) => (
+                  <button
+                    key={eff}
+                    onClick={() => setSelectedEfficiency(eff)}
+                    className={`px-4 py-1.5 rounded-full font-medium text-sm border transition-all ${selectedEfficiency === eff ? "bg-[#ff6b35] text-white border-[#ff6b35]" : "bg-white text-gray-600 border-gray-300 hover:border-[#ff6b35]"}`}
+                  >
+                    {eff === "high" ? "⚡ High-Efficiency (PSE&G Eligible)" : "📊 Standard Efficiency (No Rebates)"}
+                  </button>
+                ))}
+              </div>
+              {selectedEfficiency === "standard" && (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-1">
+                  ⚠️ Standard efficiency systems are <strong>not eligible</strong> for PSE&G incentives. Shown for comparison only.
+                </p>
+              )}
+              {selectedEfficiency === "high" && (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-1">
+                  ✅ High-efficiency heat pumps qualify for up to <strong>$16,000</strong> in PSE&G Clean Heat incentives.
+                </p>
+              )}
             </div>
 
             {activeQuote && (
@@ -753,41 +834,84 @@ export default function RebateCalculator() {
                   </CardContent>
                 </Card>
 
-                {/* Comparison table */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-[#1e3a5f] text-base">Compare: Ducted vs Ductless</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b">
-                            <th className="text-left py-2 text-muted-foreground font-medium"></th>
-                            <th className={`text-center py-2 px-3 font-semibold ${selectedSystem === "ducted" ? "text-[#1e3a5f] bg-[#1e3a5f]/5 rounded-t" : "text-muted-foreground"}`}>🏠 Ducted</th>
-                            <th className={`text-center py-2 px-3 font-semibold ${selectedSystem === "ductless" ? "text-[#1e3a5f] bg-[#1e3a5f]/5 rounded-t" : "text-muted-foreground"}`}>❄️ Ductless</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {[
-                            ["Project Cost", fmt(quotes.ducted.totalCost), fmt(quotes.ductless.totalCost)],
-                            ["PSE&G Rebate", fmt(quotes.ducted.totalIncentive), fmt(quotes.ductless.totalIncentive)],
-                            ["Your Out-of-Pocket", fmt(quotes.ducted.outOfPocket), fmt(quotes.ductless.outOfPocket)],
-                            ["Monthly (84mo OBR)", `${fmt(quotes.ducted.monthlyOBR84)}/mo`, `${fmt(quotes.ductless.monthlyOBR84)}/mo`],
-                            ["Energy Savings", `${fmt(quotes.ducted.annualSavings)}/yr`, `${fmt(quotes.ductless.annualSavings)}/yr`],
-                            ["Zones", `${quotes.ducted.zones} zones`, `${quotes.ductless.zones} units`],
-                          ].map(([label, d, dl]) => (
-                            <tr key={label}>
-                              <td className="py-2 text-muted-foreground">{label}</td>
-                              <td className={`text-center py-2 px-3 font-medium ${selectedSystem === "ducted" ? "bg-[#1e3a5f]/5" : ""}`}>{d}</td>
-                              <td className={`text-center py-2 px-3 font-medium ${selectedSystem === "ductless" ? "bg-[#1e3a5f]/5" : ""}`}>{dl}</td>
+                {/* Comparison tables */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {/* Ducted vs Ductless */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-[#1e3a5f] text-sm">Ducted vs Ductless</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 text-muted-foreground font-medium text-xs"></th>
+                              <th className={`text-center py-2 px-2 font-semibold text-xs ${selectedSystem === "ducted" ? "text-[#1e3a5f] bg-[#1e3a5f]/5" : "text-muted-foreground"}`}>🏠 Ducted</th>
+                              <th className={`text-center py-2 px-2 font-semibold text-xs ${selectedSystem === "ductless" ? "text-[#1e3a5f] bg-[#1e3a5f]/5" : "text-muted-foreground"}`}>❄️ Ductless</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
+                          </thead>
+                          <tbody className="divide-y">
+                            {[
+                              ["Project Cost", fmt(quotes.ducted.totalCost), fmt(quotes.ductless.totalCost)],
+                              ["PSE&G Incentive", selectedEfficiency === "high" ? fmt(quotes.ducted.totalIncentive) : "N/A", selectedEfficiency === "high" ? fmt(quotes.ductless.totalIncentive) : "N/A"],
+                              ["Out-of-Pocket", selectedEfficiency === "high" ? fmt(quotes.ducted.outOfPocket) : fmt(quotes.ducted.totalCost), selectedEfficiency === "high" ? fmt(quotes.ductless.outOfPocket) : fmt(quotes.ductless.totalCost)],
+                              ["Energy Savings", `${fmt(quotes.ducted.annualSavings)}/yr`, `${fmt(quotes.ductless.annualSavings)}/yr`],
+                              ["Zones", `${quotes.ducted.zones} zones`, `${quotes.ductless.zones} units`],
+                            ].map(([label, d, dl]) => (
+                              <tr key={label}>
+                                <td className="py-1.5 text-muted-foreground text-xs">{label}</td>
+                                <td className={`text-center py-1.5 px-2 font-medium text-xs ${selectedSystem === "ducted" ? "bg-[#1e3a5f]/5" : ""}`}>{d}</td>
+                                <td className={`text-center py-1.5 px-2 font-medium text-xs ${selectedSystem === "ductless" ? "bg-[#1e3a5f]/5" : ""}`}>{dl}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* High-Efficiency vs Standard */}
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-[#1e3a5f] text-sm">High-Efficiency vs Standard</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b">
+                              <th className="text-left py-2 text-muted-foreground font-medium text-xs"></th>
+                              <th className={`text-center py-2 px-2 font-semibold text-xs ${selectedEfficiency === "high" ? "text-[#ff6b35] bg-[#ff6b35]/5" : "text-muted-foreground"}`}>⚡ High-Eff</th>
+                              <th className={`text-center py-2 px-2 font-semibold text-xs ${selectedEfficiency === "standard" ? "text-gray-700 bg-gray-50" : "text-muted-foreground"}`}>📊 Standard</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y">
+                            {(() => {
+                              const hiQ = selectedSystem === "ducted" ? quotes.ducted : quotes.ductless;
+                              const stdCost = Math.round(hiQ.projectCost / 1.08);
+                              const stdTotal = Math.round(stdCost * 1.06625);
+                              return [
+                                ["Project Cost", fmt(hiQ.totalCost), fmt(stdTotal)],
+                                ["PSE&G Incentive", fmt(hiQ.totalIncentive), "$0 (ineligible)"],
+                                ["Out-of-Pocket", fmt(hiQ.outOfPocket), fmt(stdTotal)],
+                                ["Monthly (84mo)", `${fmt(hiQ.monthlyOBR84)}/mo`, `${fmt(Math.round(stdTotal / 84))}/mo`],
+                                ["Energy Savings", `${fmt(hiQ.annualSavings)}/yr`, `${fmt(Math.round(hiQ.annualSavings * 0.6))}/yr`],
+                              ].map(([label, hi, std]) => (
+                                <tr key={label}>
+                                  <td className="py-1.5 text-muted-foreground text-xs">{label}</td>
+                                  <td className={`text-center py-1.5 px-2 font-medium text-xs ${selectedEfficiency === "high" ? "bg-[#ff6b35]/5" : ""}`}>{hi}</td>
+                                  <td className={`text-center py-1.5 px-2 font-medium text-xs ${selectedEfficiency === "standard" ? "bg-gray-50" : ""}`}>{std}</td>
+                                </tr>
+                              ));
+                            })()}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="text-xs text-green-700 mt-2 font-medium">High-efficiency saves more — even with higher upfront cost.</p>
+                    </CardContent>
+                  </Card>
+                </div>
               </>
             )}
 
@@ -808,12 +932,18 @@ export default function RebateCalculator() {
               <p className="text-muted-foreground mt-1">Your out-of-pocket: <strong>{fmt(activeQuote.outOfPocket)}</strong> — select how you'd like to handle it</p>
             </div>
 
+            {selectedEfficiency === "standard" && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
+                <span className="text-amber-500 mt-0.5">⚠️</span>
+                <span><strong>Standard efficiency systems do not qualify for PSE&G incentives.</strong> Shown for comparison only. Switch to High-Efficiency to unlock up to $16,000 in incentives.</span>
+              </div>
+            )}
+
             <div className="grid md:grid-cols-3 gap-4">
               {FINANCING_PACKAGES.map((pkg) => {
-                const upfront = pkg.upfront(activeQuote.outOfPocket);
-                const remaining = Math.max(0, activeQuote.outOfPocket - upfront);
-                const monthly = Math.round((remaining / 84) * 100) / 100;
+                const pkgCost = getPkgCost(pkg, activeQuote);
                 const isSelected = selectedPackage === pkg.id;
+                const isHighEff = selectedEfficiency === "high";
                 return (
                   <div
                     key={pkg.id}
@@ -835,24 +965,42 @@ export default function RebateCalculator() {
                       </div>
                     </div>
 
+                    {/* Total project cost for this package */}
+                    <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-center">
+                      <div className="text-xs text-muted-foreground">Total Project Cost</div>
+                      <div className="text-xl font-bold text-[#1e3a5f]">{fmt(pkgCost.totalCost)}</div>
+                    </div>
+
                     <div className="space-y-2 text-sm mb-4">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Upfront Payment</span>
-                        <span className="font-bold text-[#1e3a5f] text-base">{upfront === 0 ? "$0" : fmt(upfront)}</span>
+                        <span className="font-bold text-[#1e3a5f] text-base">{pkgCost.upfront === 0 ? "$0" : fmt(pkgCost.upfront)}</span>
                       </div>
+                      {isHighEff && pkgCost.incentive > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">PSE&G Incentive</span>
+                          <span className="font-medium text-green-700">-{fmt(pkgCost.incentive)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">OBR Balance (0%)</span>
-                        <span className="font-medium">{fmt(remaining)}</span>
+                        <span className="text-muted-foreground">{pkg.id === "third_party_finance" ? "Financed Balance" : "OBR Balance (0%)"}</span>
+                        <span className="font-medium">{fmt(pkgCost.remaining)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Monthly (84 months)</span>
-                        <span className="font-medium text-green-700">{fmt(monthly)}/mo</span>
+                        <span className="font-medium text-green-700">{fmt(pkgCost.monthly84)}/mo</span>
                       </div>
                     </div>
 
                     <Separator className="my-3" />
 
                     <div className="space-y-1.5 text-xs">
+                      {isHighEff && (
+                        <div className="flex items-center gap-2 text-green-700">
+                          <TrendingDown className="h-3.5 w-3.5" />
+                          <span>Up to {fmt(pkg.maxIncentive)} PSE&G Incentive</span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-green-700">
                         <Gift className="h-3.5 w-3.5" />
                         <span>{fmt(pkg.giftCard)} Gift Card</span>
@@ -889,12 +1037,16 @@ export default function RebateCalculator() {
                       {upfrontAmount === 0 ? "$0 Today" : `${fmt(upfrontAmount)} Today`}
                     </div>
                     <div className="text-white/70 text-sm mt-1">
-                      Then {fmt(monthlyOBR)}/month for 84 months at 0% interest
+                      {monthlyOBR > 0 ? `Then ${fmt(monthlyOBR)}/month for 84 months` : "No monthly payments"}
+                      {activePkg.id !== "third_party_finance" ? " at 0% interest" : " via 3rd-party lender"}
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-white/70 text-sm">Total PSE&G Rebate</div>
-                    <div className="text-xl font-bold text-green-400">{fmt(activeQuote.totalIncentive)}</div>
+                    <div className="text-white/70 text-sm">Total Project Cost</div>
+                    <div className="text-xl font-bold">{fmt(activePkgCost.totalCost)}</div>
+                    {selectedEfficiency === "high" && activePkgCost.incentive > 0 && (
+                      <div className="text-green-400 font-semibold text-sm mt-1">PSE&G Incentive: -{fmt(activePkgCost.incentive)}</div>
+                    )}
                     <div className="text-white/70 text-sm mt-1">{fmt(activePkg.giftCard)} gift card + {activePkg.warrantyYears}yr warranty</div>
                   </div>
                 </div>

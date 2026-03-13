@@ -553,3 +553,11 @@
 - [x] Update smsWebhook service to save all inbound messages to inbox
 - [x] Add inbox tRPC procedures (listConversations, getConversation, sendReply, markRead)
 - [x] Add Inbox tab to SMS Campaigns page with conversation view
+
+## Rebate Calculator Financing & Pricing Update
+- [x] Option 1: 3rd-party finance full $32,243 — client receives max PSE&G incentive up to $16K back after install
+- [x] Option 2: 15% deposit upfront (~$5,707) + rest through PSE&G — total project $38,047 (18% higher cost), lower incentive (we wait for PSE&G)
+- [x] Option 3: 100% PSE&G OBR covers everything — total project $41,916 (30% higher cost), highest cost (we wait full period)
+- [x] Rebates only available for high-efficiency PSE&G-approved systems — clear warning in UI
+- [x] Add standard/non-rebate option for comparison (no PSE&G incentives, lower base cost)
+- [x] Update Step 2 to show High-Efficiency (with rebates) vs Standard (no rebates) side-by-side
