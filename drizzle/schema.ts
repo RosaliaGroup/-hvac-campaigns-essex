@@ -427,6 +427,9 @@ export const rebateCalculations = mysqlTable("rebateCalculations", {
   assessmentNotes: text("assessmentNotes"),
   // Raw property data from address lookup (JSON)
   propertyDataJson: text("propertyDataJson"),
+  // Solar interest and preferred contact
+  solarInterest: mysqlEnum("solarInterest", ["yes", "no", "maybe"]),
+  preferredContact: mysqlEnum("preferredContact", ["call", "text", "email"]),
   // Admin
   status: mysqlEnum("status", ["new", "contacted", "scheduled", "won", "lost"]).default("new"),
   assignedTo: varchar("assignedTo", { length: 255 }),

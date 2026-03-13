@@ -156,6 +156,8 @@ export const rebateCalculatorRouter = router({
         panelHasSpace: z.string().optional(),
         // Solar interest
         interestedInSolar: z.string().optional(),
+        // Preferred contact method
+        preferredContact: z.enum(["call", "text", "email"]).optional(),
         // Raw property data JSON
         propertyDataJson: z.string().optional(),
       })
@@ -221,6 +223,8 @@ export const rebateCalculatorRouter = router({
         assessmentRequested: input.assessmentRequested,
         assessmentStatus: input.assessmentRequested ? "pending" : undefined,
         propertyDataJson: input.propertyDataJson,
+        solarInterest: (input.interestedInSolar as "yes" | "no" | "maybe" | undefined) ?? undefined,
+        preferredContact: input.preferredContact ?? undefined,
         status: "new",
       });
 
@@ -233,9 +237,12 @@ export const rebateCalculatorRouter = router({
         const solarNote = input.interestedInSolar
           ? `Solar Interest: ${input.interestedInSolar === "yes" ? "YES — include solar proposal" : input.interestedInSolar === "maybe" ? "Maybe — share info" : "No"}`
           : "Solar Interest: Not answered";
+        const contactNote = input.preferredContact
+          ? `Preferred Contact: ${input.preferredContact === "call" ? "Phone Call" : input.preferredContact === "text" ? "Text Message" : "Email"}`
+          : "Preferred Contact: Not specified";
         await notifyOwner({
           title: `🏠 New Assessment Request: ${input.firstName} ${input.lastName ?? ""} — ${input.address}`,
-          content: `A homeowner has requested a FREE assessment via the Rebate Calculator.\n\nContact: ${input.firstName} ${input.lastName ?? ""}\nEmail: ${input.email ?? "N/A"}\nPhone: ${input.phone ?? "N/A"}\nAddress: ${input.address}, ${input.city ?? ""} ${input.state ?? ""} ${input.zip ?? ""}\n\nProperty: ${input.squareFootage} sq ft | ${input.bedrooms} bed | ${input.stories ?? 1} stories\nCurrent System: ${input.currentSystem.replace(/_/g, " ")}\n\nSelected Option: ${input.selectedOption === "high_efficiency" ? "High-Efficiency" : "Standard"}\nPayment Tier: ${input.selectedPaymentTier.replace(/_/g, " ")}\nEstimated Project Cost: $${option.totalProjectCost.toLocaleString()}\nTotal Rebates: $${option.totalRebates.toLocaleString()}\nOut of Pocket: $${finalOutOfPocket.toLocaleString()}\n${panelNote}\n${solarNote}\n\nLog in to your dashboard to follow up.`,
+          content: `A homeowner has requested a FREE assessment via the Rebate Calculator.\n\nContact: ${input.firstName} ${input.lastName ?? ""}\nEmail: ${input.email ?? "N/A"}\nPhone: ${input.phone ?? "N/A"}\nAddress: ${input.address}, ${input.city ?? ""} ${input.state ?? ""} ${input.zip ?? ""}\n${contactNote}\n\nProperty: ${input.squareFootage} sq ft | ${input.bedrooms} bed | ${input.stories ?? 1} stories\nCurrent System: ${input.currentSystem.replace(/_/g, " ")}\n\nSelected Option: ${input.selectedOption === "high_efficiency" ? "High-Efficiency" : "Standard"}\nPayment Tier: ${input.selectedPaymentTier.replace(/_/g, " ")}\nEstimated Project Cost: $${option.totalProjectCost.toLocaleString()}\nTotal Rebates: $${option.totalRebates.toLocaleString()}\nOut of Pocket: $${finalOutOfPocket.toLocaleString()}\n${panelNote}\n${solarNote}\n\nLog in to your dashboard to follow up.`,
         });
       }
 

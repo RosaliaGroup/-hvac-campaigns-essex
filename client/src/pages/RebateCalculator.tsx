@@ -512,6 +512,7 @@ export default function RebateCalculator() {
     phone: "",
     preferredDate: "",
     preferredTime: "",
+    preferredContact: "",
     notes: "",
   });
   const [submitted, setSubmitted] = useState(false);
@@ -701,6 +702,8 @@ export default function RebateCalculator() {
       panelHasSpace: home.panelHasSpace || undefined,
       // Solar interest
       interestedInSolar: home.interestedInSolar || undefined,
+      // Preferred contact method
+      preferredContact: (bookingForm.preferredContact as "call" | "text" | "email") || undefined,
     });
   };
 
@@ -1612,6 +1615,35 @@ export default function RebateCalculator() {
                     <div className="flex justify-between"><span className="text-muted-foreground">Est. Rebate</span><span className="font-medium text-green-700">{activeQuote ? fmt(activeQuote.totalIncentive) : "—"}</span></div>
                     <div className="flex justify-between"><span className="text-muted-foreground">Gift Card</span><span className="font-medium">{fmt(activePkg.giftCard)}</span></div>
                   </div>
+                  {/* Solar CTA — shown when client expressed interest */}
+                  {(home.interestedInSolar === "yes" || home.interestedInSolar === "maybe") && (
+                    <div className="mt-6 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-5 max-w-lg mx-auto text-left">
+                      <div className="flex items-start gap-3">
+                        <Sun className="h-8 w-8 text-amber-500 shrink-0 mt-0.5" />
+                        <div>
+                          <h3 className="font-bold text-amber-900 text-base mb-1">Solar + Heat Pump Bundle</h3>
+                          <p className="text-sm text-amber-800 leading-relaxed">
+                            Great news — your new heat pump pairs perfectly with solar panels. NJ homeowners who bundle both can save an additional <strong>$1,200–$1,800/year</strong> on electricity and qualify for the <strong>30% Federal Solar Tax Credit</strong>. We'll include a personalized solar savings analysis in your assessment proposal.
+                          </p>
+                          <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                            <div className="bg-white rounded-lg p-2 border border-amber-200">
+                              <div className="font-bold text-amber-700 text-sm">30%</div>
+                              <div className="text-amber-600">Federal Tax Credit</div>
+                            </div>
+                            <div className="bg-white rounded-lg p-2 border border-amber-200">
+                              <div className="font-bold text-amber-700 text-sm">$1,500+</div>
+                              <div className="text-amber-600">Avg. Annual Savings</div>
+                            </div>
+                            <div className="bg-white rounded-lg p-2 border border-amber-200">
+                              <div className="font-bold text-amber-700 text-sm">6–9 yrs</div>
+                              <div className="text-amber-600">Payback Period</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mt-6 flex gap-3 justify-center">
                     <Button className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90" onClick={() => window.location.href = "/"}>Back to Home</Button>
                     <Button variant="outline" onClick={() => window.location.href = "tel:+18624239396"}>
@@ -1658,6 +1690,31 @@ export default function RebateCalculator() {
                       <div>
                         <Label htmlFor="email">Email Address</Label>
                         <Input id="email" type="email" placeholder="john@example.com" value={bookingForm.email} onChange={(e) => setBookingForm({ ...bookingForm, email: e.target.value })} className="mt-1" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium">How should we reach you? *</Label>
+                      <p className="text-xs text-muted-foreground mt-0.5 mb-2">Our team will use this method to confirm your appointment.</p>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        {[
+                          { v: "call",  label: "📞 Phone Call" },
+                          { v: "text",  label: "💬 Text Message" },
+                          { v: "email", label: "✉️ Email" },
+                        ].map(({ v, label }) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setBookingForm({ ...bookingForm, preferredContact: v })}
+                            className={`flex-1 rounded-lg border-2 px-4 py-2.5 text-sm font-medium transition-all ${
+                              bookingForm.preferredContact === v
+                                ? "border-[#ff6b35] bg-[#ff6b35]/10 text-[#ff6b35]"
+                                : "border-gray-200 hover:border-[#1e3a5f]/40"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
                       </div>
                     </div>
                   </CardContent>

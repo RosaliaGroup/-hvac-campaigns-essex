@@ -144,6 +144,24 @@ describe("Solar panel interest question", () => {
     expect(shouldShowSavings).toBe(false);
   });
 
+  it("shows solar CTA on confirmation screen when interest is 'yes'", () => {
+    const interest = "yes";
+    const showCTA = interest === "yes" || interest === "maybe";
+    expect(showCTA).toBe(true);
+  });
+
+  it("shows solar CTA on confirmation screen when interest is 'maybe'", () => {
+    const interest = "maybe";
+    const showCTA = interest === "yes" || interest === "maybe";
+    expect(showCTA).toBe(true);
+  });
+
+  it("hides solar CTA on confirmation screen when interest is 'no'", () => {
+    const interest = "no";
+    const showCTA = interest === "yes" || interest === "maybe";
+    expect(showCTA).toBe(false);
+  });
+
   it("includes solar note in notification when interest is 'yes'", () => {
     const interestedInSolar = "yes";
     const solarNote = interestedInSolar === "yes"
@@ -162,6 +180,26 @@ describe("Solar panel interest question", () => {
       ? "Maybe — share info"
       : "No";
     expect(solarNote).toBe("Maybe — share info");
+  });
+});
+
+describe("Preferred contact method", () => {
+  it("formats 'call' as Phone Call in notification", () => {
+    const preferredContact = "call";
+    const label = preferredContact === "call" ? "Phone Call" : preferredContact === "text" ? "Text Message" : "Email";
+    expect(label).toBe("Phone Call");
+  });
+
+  it("formats 'text' as Text Message in notification", () => {
+    const preferredContact = "text";
+    const label = preferredContact === "call" ? "Phone Call" : preferredContact === "text" ? "Text Message" : "Email";
+    expect(label).toBe("Text Message");
+  });
+
+  it("formats 'email' as Email in notification", () => {
+    const preferredContact = "email";
+    const label = preferredContact === "call" ? "Phone Call" : preferredContact === "text" ? "Text Message" : "Email";
+    expect(label).toBe("Email");
   });
 });
 

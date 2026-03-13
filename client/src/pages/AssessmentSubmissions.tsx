@@ -53,6 +53,7 @@ export default function AssessmentSubmissions() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [assessmentFilter, setAssessmentFilter] = useState<string>("all");
+  const [solarFilter, setSolarFilter] = useState<string>("all");
 
   const { data: submissions = [], isLoading, refetch } = trpc.rebateCalculator.listSubmissions.useQuery({
     limit: 200,
@@ -76,7 +77,11 @@ export default function AssessmentSubmissions() {
       || (assessmentFilter === "requested" && s.assessmentRequested)
       || (assessmentFilter === "not_requested" && !s.assessmentRequested)
       || s.assessmentStatus === assessmentFilter;
-    return matchesSearch && matchesStatus && matchesAssessment;
+    const matchesSolar = solarFilter === "all"
+      || (solarFilter === "yes" && s.solarInterest === "yes")
+      || (solarFilter === "maybe" && s.solarInterest === "maybe")
+      || (solarFilter === "interested" && (s.solarInterest === "yes" || s.solarInterest === "maybe"));
+    return matchesSearch && matchesStatus && matchesAssessment && matchesSolar;
   });
 
   // Stats
@@ -173,6 +178,17 @@ export default function AssessmentSubmissions() {
                   <SelectItem value="not_requested">No Assessment</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={solarFilter} onValueChange={setSolarFilter}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="Solar Interest" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Solar</SelectItem>
+                  <SelectItem value="interested">☀️ Interested (Yes/Maybe)</SelectItem>
+                  <SelectItem value="yes">☀️ Solar: Yes</SelectItem>
+                  <SelectItem value="maybe">☀️ Solar: Maybe</SelectItem>
+                </SelectContent>
+              </Select>
               <span className="text-sm text-muted-foreground">{filtered.length} results</span>
             </div>
           </CardContent>
@@ -231,6 +247,17 @@ export default function AssessmentSubmissions() {
                           {sub.selectedPaymentTier && (
                             <Badge className={`text-xs ${PAYMENT_TIER_COLORS[sub.selectedPaymentTier]}`}>
                               {PAYMENT_TIER_LABELS[sub.selectedPaymentTier]}
+                            </Badge>
+                          )}
+                          {sub.solarInterest === "yes" && (
+                            <Badge className="text-xs bg-amber-100 text-amber-800">☀️ Solar: Yes</Badge>
+                          )}
+                          {sub.solarInterest === "maybe" && (
+                            <Badge className="text-xs bg-yellow-100 text-yellow-700">☀️ Solar: Maybe</Badge>
+                          )}
+                          {sub.preferredContact && (
+                            <Badge className="text-xs bg-gray-100 text-gray-700">
+                              {sub.preferredContact === "call" ? "📞 Call" : sub.preferredContact === "text" ? "💬 Text" : "✉️ Email"}
                             </Badge>
                           )}
                         </div>

@@ -621,3 +621,8 @@
 - [x] Add "What is OBR?" tooltip on Option 2 and Option 3 financing cards
 - [x] Add compare-all-4 summary table at the top of Step 3 (gift card, warranty, PM, monthly)
 - [x] Add solar panel interest question to Step 1 with savings verbiage
+
+## Rebate Calculator — UX Improvements Round 3
+- [x] Solar CTA on confirmation screen when client said Yes/Maybe to solar
+- [x] Solar Interest column in Lead Dashboard / assessment submissions table
+- [x] Preferred contact method field (Call / Text / Email) in booking form
