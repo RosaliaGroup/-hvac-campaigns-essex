@@ -39,8 +39,9 @@ function loadGoogleMapsScript() {
 import {
   Home, MapPin, Thermometer, DollarSign, CheckCircle, ArrowRight, ArrowLeft,
   Zap, Award, Gift, Shield, Calendar, Phone, Mail, User, ChevronRight,
-  Star, TrendingDown, Clock, BadgeCheck
+  Star, TrendingDown, Clock, BadgeCheck, HelpCircle, Info
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 declare global {
   interface Window { google?: typeof google; }
@@ -53,6 +54,8 @@ interface HomeDetails {
   city: string;
   state: string;
   zip: string;
+  county: string;
+  neighborhood: string;
   propertyType: string;
   yearBuilt: string;
   sqft: string;
@@ -62,6 +65,25 @@ interface HomeDetails {
   incomeLevel: string; // "lmi" | "standard"
   hasExistingDucts: string;
 }
+
+// NJ zip codes commonly designated as LMI areas (Essex County focus)
+const NJ_LMI_ZIPS = new Set([
+  // Newark
+  "07101","07102","07103","07104","07105","07106","07107","07108",
+  "07109","07110","07111","07112","07114",
+  // East Orange, Orange, Irvington
+  "07017","07018","07050","07051","07111",
+  // Paterson, Passaic
+  "07501","07502","07503","07504","07505","07522","07524",
+  // Trenton
+  "08601","08602","08603","08604","08605","08606","08607","08608","08609",
+  // Camden
+  "08101","08102","08103","08104","08105",
+  // Elizabeth
+  "07201","07202","07206",
+  // Plainfield, New Brunswick
+  "07060","07061","07062","07063","08901","08902",
+]);
 
 interface QuoteResult {
   systemType: "ducted" | "ductless";
@@ -296,6 +318,8 @@ export default function RebateCalculator() {
     city: "",
     state: "NJ",
     zip: "",
+    county: "",
+    neighborhood: "",
     propertyType: "single_family",
     yearBuilt: "",
     sqft: "",
@@ -336,7 +360,7 @@ export default function RebateCalculator() {
       const autocomplete = new window.google!.maps.places.Autocomplete(addressInputRef.current, {
         types: ['address'],
         componentRestrictions: { country: 'us' },
-        fields: ['address_components', 'formatted_address', 'geometry'],
+        fields: ['address_components', 'formatted_address', 'geometry', 'types', 'name'],
       });
       autocompleteRef.current = autocomplete;
       autocomplete.addListener('place_changed', () => {
@@ -344,21 +368,48 @@ export default function RebateCalculator() {
         if (!place.address_components) return;
         const get = (type: string) => place.address_components!.find(c => c.types.includes(type))?.long_name || '';
         const getShort = (type: string) => place.address_components!.find(c => c.types.includes(type))?.short_name || '';
+
+        // Extract all available address components
         const streetNum = get('street_number');
         const route = get('route');
-        const city = get('locality') || get('sublocality') || get('neighborhood');
+        const city = get('locality') || get('sublocality_level_1') || get('sublocality') || get('neighborhood') || get('administrative_area_level_3');
         const state = getShort('administrative_area_level_1');
         const zip = get('postal_code');
+        const county = get('administrative_area_level_2'); // e.g. "Essex County"
+        const neighborhood = get('neighborhood') || get('sublocality_level_2') || '';
+
+        // Detect property type hint from place types
+        const placeTypes = (place as { types?: string[] }).types || [];
+        let propertyTypeHint = '';
+        if (placeTypes.includes('premise') || placeTypes.includes('street_address')) {
+          propertyTypeHint = 'single_family';
+        } else if (placeTypes.includes('subpremise')) {
+          propertyTypeHint = 'condo'; // unit/apt → likely condo/townhouse
+        }
+
+        // Auto-suggest LMI based on zip code
+        const isLmiZip = zip ? NJ_LMI_ZIPS.has(zip) : false;
+
         setHome(prev => ({
           ...prev,
           address: streetNum ? `${streetNum} ${route}` : route,
           city,
           state,
           zip,
+          county,
+          neighborhood,
+          ...(propertyTypeHint ? { propertyType: propertyTypeHint } : {}),
+          ...(isLmiZip ? { incomeLevel: 'lmi' } : {}),
         }));
         setAddressConfirmed(true);
         setAddressLookupStatus('done');
-        toast({ title: 'Address found!', description: `${streetNum} ${route}, ${city}, ${state} ${zip}` });
+
+        const lmiNote = isLmiZip ? ' — LMI area detected, income level updated.' : '';
+        const countyNote = county ? ` (${county})` : '';
+        toast({
+          title: 'Address confirmed!',
+          description: `${streetNum} ${route}, ${city}${countyNote}, ${state} ${zip}${lmiNote}`,
+        });
       });
     } catch (e) {
       console.warn('Google Maps autocomplete failed:', e);
@@ -544,7 +595,10 @@ export default function RebateCalculator() {
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {addressConfirmed ? (
-                      <span className="text-green-600 font-medium">✓ Address verified — city, state & ZIP auto-filled below</span>
+                      <span className="text-green-600 font-medium">
+                        ✓ Address confirmed — city, state, ZIP{home.county ? `, county (${home.county})` : ''}{home.neighborhood ? `, neighborhood (${home.neighborhood})` : ''} auto-filled
+                        {NJ_LMI_ZIPS.has(home.zip) ? ' · LMI area detected' : ''}
+                      </span>
                     ) : (
                       'Type your address and select from the dropdown to auto-fill details'
                     )}
@@ -683,19 +737,52 @@ export default function RebateCalculator() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Income Level</Label>
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Label>Income Level</Label>
+                      <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button type="button" className="text-muted-foreground hover:text-[#ff6b35] transition-colors" aria-label="What is LMI?">
+                              <HelpCircle className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs p-3 text-sm" sideOffset={6}>
+                            <div className="space-y-2">
+                              <p className="font-semibold text-base">What is LMI?</p>
+                              <p><strong>Low-to-Moderate Income (LMI)</strong> is a PSE&G designation for households earning below 80% of the Area Median Income (AMI) for their county.</p>
+                              <p className="text-muted-foreground">LMI households qualify for a <strong className="text-green-600">60% base rebate</strong> instead of the standard 50%, which can mean up to <strong>$12,000</strong> more in incentives on a typical project.</p>
+                              <div className="border-t pt-2 mt-2">
+                                <p className="font-medium">Essex County 2024 LMI thresholds:</p>
+                                <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                  <li>1 person: ≤ $57,750/yr</li>
+                                  <li>2 people: ≤ $66,000/yr</li>
+                                  <li>3 people: ≤ $74,250/yr</li>
+                                  <li>4 people: ≤ $82,400/yr</li>
+                                </ul>
+                              </div>
+                              <p className="text-xs text-muted-foreground">PSE&G may request proof of income (tax return or pay stub) during the rebate application process.</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      {NJ_LMI_ZIPS.has(home.zip) && (
+                        <span className="text-xs text-green-600 font-medium flex items-center gap-1">
+                          <Info className="h-3 w-3" /> LMI area detected
+                        </span>
+                      )}
+                    </div>
                     <Select value={home.incomeLevel} onValueChange={(v) => setHome({ ...home, incomeLevel: v })}>
-                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="standard">Standard Income</SelectItem>
-                        <SelectItem value="lmi">Low-to-Moderate Income (LMI)</SelectItem>
+                        <SelectItem value="standard">Standard Income (50% rebate)</SelectItem>
+                        <SelectItem value="lmi">Low-to-Moderate Income — LMI (60% rebate)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                 </div>
                 {home.incomeLevel === "lmi" && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
-                    <strong>LMI Bonus:</strong> You may qualify for up to <strong>$12,000</strong> base rebate (60% of project cost) — higher than the standard $10,000. PSE&G may request proof of income to confirm.
+                    <strong>LMI Bonus Applied:</strong> Your estimate uses the <strong>60% base rebate rate</strong> — up to <strong>$12,000</strong> more than the standard 50% rate. PSE&G will verify income eligibility during the application process.
                   </div>
                 )}
                 {home.currentHeating === "electric" && (

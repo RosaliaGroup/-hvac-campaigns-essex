@@ -561,3 +561,9 @@
 - [x] Rebates only available for high-efficiency PSE&G-approved systems — clear warning in UI
 - [x] Add standard/non-rebate option for comparison (no PSE&G incentives, lower base cost)
 - [x] Update Step 2 to show High-Efficiency (with rebates) vs Standard (no rebates) side-by-side
+
+## Address Auto-Populate & LMI Tooltip
+- [x] Enhance Google Maps autocomplete to populate all available fields (county, neighborhood, property type hints from address type)
+- [x] Auto-detect if address is in an LMI-eligible zip code/area from Google Maps data (NJ_LMI_ZIPS set)
+- [x] Add LMI "?" tooltip next to Income Level field explaining what LMI means
+- [x] Tooltip explains: LMI = Low-to-Moderate Income, 60% rebate vs 50% standard, Essex County income thresholds, PSE&G verification note
