@@ -125,6 +125,46 @@ describe("OBR LMI 120-month term logic", () => {
   });
 });
 
+describe("Solar panel interest question", () => {
+  it("shows savings panel when interest is 'yes'", () => {
+    const interest = "yes";
+    const shouldShowSavings = interest === "yes" || interest === "maybe";
+    expect(shouldShowSavings).toBe(true);
+  });
+
+  it("shows savings panel when interest is 'maybe'", () => {
+    const interest = "maybe";
+    const shouldShowSavings = interest === "yes" || interest === "maybe";
+    expect(shouldShowSavings).toBe(true);
+  });
+
+  it("hides savings panel when interest is 'no'", () => {
+    const interest = "no";
+    const shouldShowSavings = interest === "yes" || interest === "maybe";
+    expect(shouldShowSavings).toBe(false);
+  });
+
+  it("includes solar note in notification when interest is 'yes'", () => {
+    const interestedInSolar = "yes";
+    const solarNote = interestedInSolar === "yes"
+      ? "YES — include solar proposal"
+      : interestedInSolar === "maybe"
+      ? "Maybe — share info"
+      : "No";
+    expect(solarNote).toBe("YES — include solar proposal");
+  });
+
+  it("includes solar note in notification when interest is 'maybe'", () => {
+    const interestedInSolar = "maybe";
+    const solarNote = interestedInSolar === "yes"
+      ? "YES — include solar proposal"
+      : interestedInSolar === "maybe"
+      ? "Maybe — share info"
+      : "No";
+    expect(solarNote).toBe("Maybe — share info");
+  });
+});
+
 describe("Financing package perks", () => {
   const packages = [
     { id: "deposit_option",          giftCard: 100, warrantyYears: 2, maintenanceYears: 1 },

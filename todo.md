@@ -615,3 +615,9 @@
 - [x] If unsure/no: add $2,500 + $250 permits per disconnect
 - [x] If house has central air: 1 disconnect; if no central air: 2 disconnects
 - [x] Update pricing calculation to include panel/disconnect adders
+
+## Rebate Calculator — UX Improvements Round 2
+- [x] Add panel adder line to booking confirmation email / assessment notification
+- [x] Add "What is OBR?" tooltip on Option 2 and Option 3 financing cards
+- [x] Add compare-all-4 summary table at the top of Step 3 (gift card, warranty, PM, monthly)
+- [x] Add solar panel interest question to Step 1 with savings verbiage

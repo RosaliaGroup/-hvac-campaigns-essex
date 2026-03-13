@@ -15,7 +15,7 @@ import Footer from "@/components/Footer";
 import {
   Home, MapPin, Thermometer, DollarSign, CheckCircle, ArrowRight, ArrowLeft,
   Zap, Award, Gift, Shield, Calendar, Phone, Mail, User, ChevronRight,
-  Star, TrendingDown, Clock, BadgeCheck, HelpCircle, Info
+  Star, TrendingDown, Clock, BadgeCheck, HelpCircle, Info, Sun
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -38,6 +38,7 @@ interface HomeDetails {
   hasExistingDucts: string;
   hasCentralAir: string;       // "yes" | "no" | ""
   panelHasSpace: string;       // "yes" | "no" | "unsure"
+  interestedInSolar: string;   // "yes" | "no" | "maybe" | ""
 }
 
 // NJ zip codes designated as LMI areas — all 21 counties
@@ -499,6 +500,7 @@ export default function RebateCalculator() {
     hasExistingDucts: "yes",
     hasCentralAir: "",
     panelHasSpace: "",
+    interestedInSolar: "",
   });
   const [selectedSystem, setSelectedSystem] = useState<"ducted" | "ductless">("ducted");
   const [selectedEfficiency, setSelectedEfficiency] = useState<"high" | "standard">("high");
@@ -692,6 +694,13 @@ export default function RebateCalculator() {
       selectedOption: selectedEfficiency === 'high' ? 'high_efficiency' : 'standard',
       selectedPaymentTier: selectedPackage === 'full_finance' ? 'full_finance' : selectedPackage === 'deposit_12pct' ? 'deposit_12pct' : 'full_payment',
       assessmentRequested: true,
+      // Electric panel / disconnect adder
+      panelAdderCents: activeQuote ? Math.round(activeQuote.panelAdder * 100) : 0,
+      numCondensers: activeQuote ? activeQuote.numCondensers : 1,
+      hasCentralAir: home.hasCentralAir || undefined,
+      panelHasSpace: home.panelHasSpace || undefined,
+      // Solar interest
+      interestedInSolar: home.interestedInSolar || undefined,
     });
   };
 
@@ -1066,6 +1075,78 @@ export default function RebateCalculator() {
               </CardContent>
             </Card>
 
+            {/* Solar Panel Interest */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[#1e3a5f]">
+                  <Sun className="h-5 w-5 text-[#ff6b35]" /> Solar Panel Interest
+                </CardTitle>
+                <CardDescription>Pairing solar with your heat pump can dramatically cut your energy bills</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Are you interested in solar panels?</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+                    Heat pumps run on electricity — adding solar can offset nearly all of that cost.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {[
+                      { v: "yes",   label: "Yes — I'm interested" },
+                      { v: "maybe", label: "Maybe — tell me more" },
+                      { v: "no",    label: "No — not right now" },
+                    ].map(({ v, label }) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setHome({ ...home, interestedInSolar: v })}
+                        className={`flex-1 rounded-lg border-2 px-4 py-3 text-sm font-medium transition-all ${
+                          home.interestedInSolar === v
+                            ? "border-[#ff6b35] bg-[#ff6b35]/10 text-[#ff6b35]"
+                            : "border-gray-200 hover:border-[#1e3a5f]/40"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {(home.interestedInSolar === "yes" || home.interestedInSolar === "maybe") && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Sun className="h-5 w-5 text-amber-500 shrink-0" />
+                      <p className="font-semibold text-amber-900 text-sm">Solar + Heat Pump: The Power Couple</p>
+                    </div>
+                    <div className="grid sm:grid-cols-3 gap-3 text-sm">
+                      <div className="bg-white rounded-lg p-3 border border-amber-100">
+                        <div className="font-bold text-amber-700 text-base">~$1,200–$1,800</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">Estimated annual electric savings with solar covering your heat pump's energy use</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-amber-100">
+                        <div className="font-bold text-amber-700 text-base">30% Federal Tax Credit</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">IRS Residential Clean Energy Credit on the full solar installation cost (no cap)</div>
+                      </div>
+                      <div className="bg-white rounded-lg p-3 border border-amber-100">
+                        <div className="font-bold text-amber-700 text-base">6–9 Year Payback</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">Typical NJ solar payback period — then 15+ years of near-free electricity</div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      <strong>Why it matters for you:</strong> A heat pump uses roughly 3,000–6,000 kWh/year depending on your home size.
+                      A 6–8 kW solar system in NJ generates approximately that amount — meaning your heating, cooling, and hot water
+                      could run at <strong>zero net cost</strong> after solar. Our team can connect you with a trusted NJ solar partner
+                      for a combined heat pump + solar proposal.
+                    </p>
+                    {home.interestedInSolar === "yes" && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-2 text-xs text-green-800 font-medium">
+                        ✓ We'll include solar savings information in your assessment report.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             <div className="flex justify-end">
               <Button
                 type="button"
@@ -1303,6 +1384,61 @@ export default function RebateCalculator() {
               <p className="text-muted-foreground mt-1">Your out-of-pocket: <strong>{fmt(activeQuote.outOfPocket)}</strong> — select how you'd like to handle it</p>
             </div>
 
+            {/* Compare-all-4 summary table */}
+            <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[#1e3a5f] text-white">
+                    <th className="text-left px-4 py-3 font-semibold rounded-tl-xl">Option</th>
+                    <th className="text-center px-3 py-3 font-semibold">Upfront</th>
+                    <th className="text-center px-3 py-3 font-semibold">Monthly</th>
+                    <th className="text-center px-3 py-3 font-semibold">Warranty</th>
+                    <th className="text-center px-3 py-3 font-semibold">PM Plan</th>
+                    <th className="text-center px-3 py-3 font-semibold rounded-tr-xl">Gift Card</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {FINANCING_PACKAGES.map((pkg, idx) => {
+                    const pc = getPkgCost(pkg, activeQuote);
+                    const mo = pc.termMonths === 120 ? pc.monthly120 : pc.monthly84;
+                    const isActive = selectedPackage === pkg.id;
+                    return (
+                      <tr
+                        key={pkg.id}
+                        onClick={() => setSelectedPackage(pkg.id)}
+                        className={`cursor-pointer border-t transition-colors ${
+                          isActive
+                            ? "bg-[#ff6b35]/8 border-l-4 border-l-[#ff6b35]"
+                            : idx % 2 === 0 ? "bg-white hover:bg-gray-50" : "bg-gray-50 hover:bg-gray-100"
+                        }`}
+                      >
+                        <td className="px-4 py-2.5">
+                          <div className="flex items-center gap-2">
+                            {isActive && <div className="w-2 h-2 rounded-full bg-[#ff6b35] shrink-0" />}
+                            <span className={`font-medium ${isActive ? "text-[#ff6b35]" : "text-[#1e3a5f]"}`}>{pkg.name}</span>
+                          </div>
+                        </td>
+                        <td className="text-center px-3 py-2.5 font-semibold">{pc.upfront === 0 ? "$0" : fmt(pc.upfront)}</td>
+                        <td className="text-center px-3 py-2.5">
+                          {mo > 0 ? <span className="text-green-700 font-medium">{fmt(mo)}/mo</span> : <span className="text-muted-foreground text-xs">None</span>}
+                        </td>
+                        <td className="text-center px-3 py-2.5">{pkg.warrantyYears} yr</td>
+                        <td className="text-center px-3 py-2.5">
+                          {pkg.maintenanceYears > 0 ? `${pkg.maintenanceYears} yr` : <span className="text-muted-foreground text-xs">—</span>}
+                        </td>
+                        <td className="text-center px-3 py-2.5">
+                          {pkg.giftCard > 0 ? <span className="text-green-700 font-medium">{fmt(pkg.giftCard)}</span> : <span className="text-muted-foreground text-xs">—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div className="px-4 py-2 bg-gray-50 text-xs text-muted-foreground border-t rounded-b-xl">
+                Click any row to select that option. Monthly payments at 0% interest via NJ Clean Heat On-Bill Repayment.
+              </div>
+            </div>
+
             {selectedEfficiency === "standard" && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
                 <span className="text-amber-500 mt-0.5">⚠️</span>
@@ -1328,7 +1464,30 @@ export default function RebateCalculator() {
                     )}
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-bold text-[#1e3a5f] text-lg">{pkg.name}</h3>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-bold text-[#1e3a5f] text-lg">{pkg.name}</h3>
+                          {(pkg.id === "obr_client_financed" || pkg.id === "njcleanheat_obr" || pkg.id === "deposit_option") && (
+                            <TooltipProvider delayDuration={100}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="text-muted-foreground hover:text-[#ff6b35] transition-colors" aria-label="What is OBR?">
+                                    <HelpCircle className="h-4 w-4" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-xs p-3 text-sm" sideOffset={6}>
+                                  <div className="space-y-2">
+                                    <p className="font-semibold text-base">What is OBR?</p>
+                                    <p><strong>On-Bill Repayment (OBR)</strong> is a NJ Clean Heat program feature that lets you repay the cost of your heat pump upgrade directly on your monthly utility bill — at <strong>0% interest</strong>.</p>
+                                    <p className="text-muted-foreground">No bank loan, no credit check, no lump-sum payment. The repayment amount is added as a fixed line item to your PSE&G or other utility bill each month.</p>
+                                    <div className="border-t pt-2 mt-2 text-xs text-muted-foreground">
+                                      Standard term: <strong>84 months (7 years)</strong>. LMI customers on Option 3 qualify for <strong>120 months (10 years)</strong>.
+                                    </div>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                         <p className="text-sm text-muted-foreground">{pkg.tagline}</p>
                       </div>
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-1 ${isSelected ? "border-[#ff6b35] bg-[#ff6b35]" : "border-gray-300"}`}>
