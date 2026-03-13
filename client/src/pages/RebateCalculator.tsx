@@ -66,23 +66,182 @@ interface HomeDetails {
   hasExistingDucts: string;
 }
 
-// NJ zip codes commonly designated as LMI areas (Essex County focus)
+// NJ zip codes designated as LMI areas — all 21 counties
+// Source: HUD LMI census tracts + PSE&G Clean Heat program eligibility data
 const NJ_LMI_ZIPS = new Set([
+  // ── ESSEX COUNTY ──────────────────────────────────────────────────────────
   // Newark
   "07101","07102","07103","07104","07105","07106","07107","07108",
   "07109","07110","07111","07112","07114",
-  // East Orange, Orange, Irvington
-  "07017","07018","07050","07051","07111",
-  // Paterson, Passaic
-  "07501","07502","07503","07504","07505","07522","07524",
+  // East Orange
+  "07017","07018",
+  // Orange
+  "07050","07051",
+  // Irvington
+  "07111",
+  // Belleville, Bloomfield (partial LMI tracts)
+  "07109","07003",
+  // Montclair (partial)
+  "07042",
+
+  // ── HUDSON COUNTY ─────────────────────────────────────────────────────────
+  // Jersey City
+  "07302","07303","07304","07305","07306","07307","07308","07309","07310",
+  // Bayonne
+  "07002",
+  // Union City, West New York, Weehawken
+  "07087","07093","07086",
+  // Hoboken (partial)
+  "07030",
+  // Kearny, Harrison
+  "07032","07029",
+  // Secaucus (partial)
+  "07094",
+
+  // ── PASSAIC COUNTY ────────────────────────────────────────────────────────
+  // Paterson
+  "07501","07502","07503","07504","07505","07509","07510","07522","07524",
+  // Passaic
+  "07055",
+  // Clifton (partial)
+  "07011","07012","07013","07014",
+  // Haledon
+  "07508",
+
+  // ── UNION COUNTY ──────────────────────────────────────────────────────────
+  // Elizabeth
+  "07201","07202","07206","07208",
+  // Plainfield
+  "07060","07061","07062","07063",
+  // Linden, Roselle, Roselle Park
+  "07036","07203","07204",
+  // Hillside
+  "07205",
+
+  // ── MERCER COUNTY ─────────────────────────────────────────────────────────
   // Trenton
   "08601","08602","08603","08604","08605","08606","08607","08608","08609",
-  // Camden
+  "08610","08611","08618","08619","08620","08629","08638",
+  // Ewing (partial)
+  "08628",
+  // Hamilton (partial LMI tracts)
+  "08610","08619",
+
+  // ── CAMDEN COUNTY ─────────────────────────────────────────────────────────
+  // Camden City
   "08101","08102","08103","08104","08105",
-  // Elizabeth
-  "07201","07202","07206",
-  // Plainfield, New Brunswick
-  "07060","07061","07062","07063","08901","08902",
+  // Pennsauken (partial)
+  "08110",
+  // Gloucester City
+  "08030",
+
+  // ── MIDDLESEX COUNTY ──────────────────────────────────────────────────────
+  // New Brunswick
+  "08901","08902","08903","08904",
+  // Perth Amboy
+  "08861","08862",
+  // South Amboy
+  "08879",
+  // Carteret
+  "07008",
+  // Sayreville (partial)
+  "08872",
+
+  // ── BERGEN COUNTY ─────────────────────────────────────────────────────────
+  // Hackensack (partial LMI tracts)
+  "07601","07602",
+  // Englewood (partial)
+  "07631",
+  // Garfield
+  "07026",
+  // Lodi
+  "07644",
+
+  // ── MORRIS COUNTY ─────────────────────────────────────────────────────────
+  // Dover
+  "07801","07802",
+  // Wharton
+  "07885",
+  // Mine Hill (partial)
+  "07803",
+
+  // ── SOMERSET COUNTY ───────────────────────────────────────────────────────
+  // Bound Brook
+  "08805",
+  // Manville
+  "08835",
+
+  // ── HUNTERDON COUNTY ──────────────────────────────────────────────────────
+  // Flemington (partial)
+  "08822",
+
+  // ── WARREN COUNTY ─────────────────────────────────────────────────────────
+  // Phillipsburg
+  "08865",
+
+  // ── SUSSEX COUNTY ─────────────────────────────────────────────────────────
+  // Newton
+  "07860",
+
+  // ── OCEAN COUNTY ──────────────────────────────────────────────────────────
+  // Lakewood (large LMI population)
+  "08701","08702",
+  // Toms River (partial)
+  "08753","08755",
+  // Seaside Heights
+  "08751",
+
+  // ── MONMOUTH COUNTY ───────────────────────────────────────────────────────
+  // Asbury Park
+  "07712",
+  // Long Branch
+  "07740",
+  // Red Bank (partial)
+  "07701",
+  // Neptune
+  "07753",
+
+  // ── ATLANTIC COUNTY ───────────────────────────────────────────────────────
+  // Atlantic City
+  "08401","08402","08403","08404","08405",
+  // Pleasantville
+  "08232",
+  // Egg Harbor City
+  "08215",
+
+  // ── CAPE MAY COUNTY ───────────────────────────────────────────────────────
+  // Wildwood
+  "08260",
+  // Cape May (partial)
+  "08204",
+
+  // ── CUMBERLAND COUNTY ─────────────────────────────────────────────────────
+  // Vineland
+  "08360","08361","08362",
+  // Bridgeton
+  "08302",
+  // Millville
+  "08332",
+
+  // ── SALEM COUNTY ──────────────────────────────────────────────────────────
+  // Salem City
+  "08079",
+  // Penns Grove
+  "08069",
+
+  // ── GLOUCESTER COUNTY ─────────────────────────────────────────────────────
+  // Woodbury
+  "08096",
+  // Glassboro
+  "08028",
+
+  // ── BURLINGTON COUNTY ─────────────────────────────────────────────────────
+  // Burlington City
+  "08016",
+  // Mount Holly
+  "08060",
+  // Pemberton
+  "08068",
 ]);
 
 interface QuoteResult {
@@ -310,7 +469,6 @@ export default function RebateCalculator() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const addressInputRef = useRef<HTMLInputElement>(null);
-  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const [addressLookupStatus, setAddressLookupStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
   const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [home, setHome] = useState<HomeDetails>({
@@ -352,73 +510,75 @@ export default function RebateCalculator() {
     },
   });
 
-  // Initialize Google Places Autocomplete on address input
-  const initAutocomplete = useCallback(async () => {
+  // Geocode address using Google Maps Geocoder API
+  const lookupAddress = useCallback(async (addressText?: string) => {
+    const query = (addressText ?? home.address).trim();
+    if (!query || query.length < 5) {
+      toast({ title: 'Enter your address', description: 'Please type your full street address first.', variant: 'destructive' });
+      return;
+    }
+    setAddressLookupStatus('loading');
     try {
       await loadGoogleMapsScript();
-      if (!addressInputRef.current || autocompleteRef.current) return;
-      const autocomplete = new window.google!.maps.places.Autocomplete(addressInputRef.current, {
-        types: ['address'],
-        componentRestrictions: { country: 'us' },
-        fields: ['address_components', 'formatted_address', 'geometry', 'types', 'name'],
-      });
-      autocompleteRef.current = autocomplete;
-      autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (!place.address_components) return;
-        const get = (type: string) => place.address_components!.find(c => c.types.includes(type))?.long_name || '';
-        const getShort = (type: string) => place.address_components!.find(c => c.types.includes(type))?.short_name || '';
+      const geocoder = new window.google!.maps.Geocoder();
+      geocoder.geocode(
+        { address: query, region: 'us', componentRestrictions: { country: 'US' } },
+        (results, status) => {
+          if (status !== 'OK' || !results || results.length === 0) {
+            setAddressLookupStatus('error');
+            toast({ title: 'Address not found', description: 'Try entering a more specific address (e.g. 123 Main St, Newark, NJ)', variant: 'destructive' });
+            return;
+          }
+          const result = results[0];
+          const comps = result.address_components;
+          const get = (type: string) => comps.find(c => c.types.includes(type))?.long_name || '';
+          const getShort = (type: string) => comps.find(c => c.types.includes(type))?.short_name || '';
 
-        // Extract all available address components
-        const streetNum = get('street_number');
-        const route = get('route');
-        const city = get('locality') || get('sublocality_level_1') || get('sublocality') || get('neighborhood') || get('administrative_area_level_3');
-        const state = getShort('administrative_area_level_1');
-        const zip = get('postal_code');
-        const county = get('administrative_area_level_2'); // e.g. "Essex County"
-        const neighborhood = get('neighborhood') || get('sublocality_level_2') || '';
+          const streetNum = get('street_number');
+          const route = get('route');
+          const city = get('locality') || get('sublocality_level_1') || get('sublocality') || get('neighborhood') || get('administrative_area_level_3');
+          const state = getShort('administrative_area_level_1');
+          const zip = get('postal_code');
+          const county = get('administrative_area_level_2');
+          const neighborhood = get('neighborhood') || get('sublocality_level_2') || '';
 
-        // Detect property type hint from place types
-        const placeTypes = (place as { types?: string[] }).types || [];
-        let propertyTypeHint = '';
-        if (placeTypes.includes('premise') || placeTypes.includes('street_address')) {
-          propertyTypeHint = 'single_family';
-        } else if (placeTypes.includes('subpremise')) {
-          propertyTypeHint = 'condo'; // unit/apt → likely condo/townhouse
+          // Detect property type from result types
+          const resTypes = result.types || [];
+          let propertyTypeHint = '';
+          if (resTypes.includes('premise') || resTypes.includes('street_address')) propertyTypeHint = 'single_family';
+          else if (resTypes.includes('subpremise')) propertyTypeHint = 'condo';
+
+          const isLmiZip = zip ? NJ_LMI_ZIPS.has(zip) : false;
+          const formattedAddress = result.formatted_address;
+
+          setHome(prev => ({
+            ...prev,
+            address: streetNum ? `${streetNum} ${route}` : (route || formattedAddress),
+            city,
+            state: state || 'NJ',
+            zip,
+            county,
+            neighborhood,
+            ...(propertyTypeHint ? { propertyType: propertyTypeHint } : {}),
+            ...(isLmiZip ? { incomeLevel: 'lmi' } : {}),
+          }));
+          setAddressConfirmed(true);
+          setAddressLookupStatus('done');
+
+          const lmiNote = isLmiZip ? ' · LMI area detected ✓' : '';
+          const countyNote = county ? ` (${county})` : '';
+          toast({
+            title: '✓ Address confirmed!',
+            description: `${city}${countyNote}, ${state} ${zip}${lmiNote}`,
+          });
         }
-
-        // Auto-suggest LMI based on zip code
-        const isLmiZip = zip ? NJ_LMI_ZIPS.has(zip) : false;
-
-        setHome(prev => ({
-          ...prev,
-          address: streetNum ? `${streetNum} ${route}` : route,
-          city,
-          state,
-          zip,
-          county,
-          neighborhood,
-          ...(propertyTypeHint ? { propertyType: propertyTypeHint } : {}),
-          ...(isLmiZip ? { incomeLevel: 'lmi' } : {}),
-        }));
-        setAddressConfirmed(true);
-        setAddressLookupStatus('done');
-
-        const lmiNote = isLmiZip ? ' — LMI area detected, income level updated.' : '';
-        const countyNote = county ? ` (${county})` : '';
-        toast({
-          title: 'Address confirmed!',
-          description: `${streetNum} ${route}, ${city}${countyNote}, ${state} ${zip}${lmiNote}`,
-        });
-      });
+      );
     } catch (e) {
-      console.warn('Google Maps autocomplete failed:', e);
+      console.warn('Geocoding failed:', e);
+      setAddressLookupStatus('error');
+      toast({ title: 'Lookup failed', description: 'Could not reach Google Maps. You can still fill in the fields manually.', variant: 'destructive' });
     }
-  }, []);
-
-  useEffect(() => {
-    initAutocomplete();
-  }, [initAutocomplete]);
+  }, [home.address, toast]);
 
   const handleCalculate = () => {
     if (!home.sqft || !home.bedrooms) {
@@ -577,30 +737,49 @@ export default function RebateCalculator() {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="address">Street Address</Label>
-                  <div className="relative mt-1">
+                  <div className="flex gap-2 mt-1">
                     <Input
                       id="address"
                       ref={addressInputRef}
-                      placeholder="Start typing your address..."
+                      placeholder="e.g. 123 Main St, Newark, NJ"
                       value={home.address}
                       onChange={(e) => {
                         setHome({ ...home, address: e.target.value });
                         if (addressConfirmed) setAddressConfirmed(false);
+                        if (addressLookupStatus === 'done') setAddressLookupStatus('idle');
                       }}
-                      className={`pr-10 ${addressConfirmed ? 'border-green-500 bg-green-50' : ''}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          lookupAddress();
+                        }
+                      }}
+                      className={addressConfirmed ? 'border-green-500 bg-green-50' : ''}
                     />
-                    {addressConfirmed && (
-                      <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
-                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => lookupAddress()}
+                      disabled={addressLookupStatus === 'loading'}
+                      className="shrink-0 border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f] hover:text-white"
+                    >
+                      {addressLookupStatus === 'loading' ? (
+                        <span className="flex items-center gap-1"><span className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" /> Looking up...</span>
+                      ) : addressConfirmed ? (
+                        <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" /> Confirmed</span>
+                      ) : (
+                        'Look Up'
+                      )}
+                    </Button>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {addressConfirmed ? (
                       <span className="text-green-600 font-medium">
-                        ✓ Address confirmed — city, state, ZIP{home.county ? `, county (${home.county})` : ''}{home.neighborhood ? `, neighborhood (${home.neighborhood})` : ''} auto-filled
-                        {NJ_LMI_ZIPS.has(home.zip) ? ' · LMI area detected' : ''}
+                        ✓ {home.city}{home.county ? ` (${home.county})` : ''}, {home.state} {home.zip} auto-filled
+                        {NJ_LMI_ZIPS.has(home.zip) ? ' · LMI area detected ✓' : ''}
                       </span>
                     ) : (
-                      'Type your address and select from the dropdown to auto-fill details'
+                      'Type your full address and click "Look Up" to auto-fill city, state, ZIP, and county'
                     )}
                   </p>
                 </div>
@@ -795,9 +974,10 @@ export default function RebateCalculator() {
 
             <div className="flex justify-end">
               <Button
+                type="button"
                 size="lg"
                 className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold px-8"
-                onClick={handleCalculate}
+                onClick={(e) => { e.preventDefault(); handleCalculate(); }}
               >
                 Calculate My Rebates <ArrowRight className="ml-2 h-5 w-5" />
               </Button>

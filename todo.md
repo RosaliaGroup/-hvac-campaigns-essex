@@ -567,3 +567,12 @@
 - [x] Auto-detect if address is in an LMI-eligible zip code/area from Google Maps data (NJ_LMI_ZIPS set)
 - [x] Add LMI "?" tooltip next to Income Level field explaining what LMI means
 - [x] Tooltip explains: LMI = Low-to-Moderate Income, 60% rebate vs 50% standard, Essex County income thresholds, PSE&G verification note
+
+## Rebate Calculator — 3 New Enhancements
+- [x] Expand NJ_LMI_ZIPS to cover all 21 NJ counties (not just Essex County focus)
+- [ ] Add "Text me my estimate" button on Step 3 — client enters phone, receives SMS with quote summary and booking link via Telnyx
+- [ ] Add progress save/resume link — generate unique session ID, store form state in DB, allow client to resume via URL
+
+## Bug Fixes — Rebate Calculator
+- [x] Fix: "Calculate My Rebates" button redirects to homepage — fixed with type="button" + e.preventDefault()
+- [x] Fix: Address autocomplete replaced deprecated Autocomplete widget with Geocoder API + "Look Up" button — now reliably populates city/state/ZIP/county
