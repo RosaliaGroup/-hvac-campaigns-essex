@@ -1,0 +1,108 @@
+{
+  "project_info": {
+    "title": "Up to $16,000 Back",
+    "created": 1773456885.744644,
+    "last_updated": 1773457112.6016312,
+    "total_slides": 8
+  },
+  "slides": [
+    {
+      "id": "hook",
+      "state": "edited",
+      "pageNum": 1
+    },
+    {
+      "id": "who_we_are",
+      "state": "edited",
+      "pageNum": 2
+    },
+    {
+      "id": "opportunity",
+      "state": "edited",
+      "pageNum": 3
+    },
+    {
+      "id": "window_units",
+      "state": "edited",
+      "pageNum": 4
+    },
+    {
+      "id": "zero_out_of_pocket",
+      "state": "edited",
+      "pageNum": 5
+    },
+    {
+      "id": "what_you_get",
+      "state": "edited",
+      "pageNum": 6
+    },
+    {
+      "id": "cta",
+      "state": "edited",
+      "pageNum": 7
+    },
+    {
+      "id": "closing",
+      "state": "edited",
+      "pageNum": 8
+    }
+  ],
+  "outline": [
+    {
+      "id": "hook",
+      "title": "Up to $16,000 Back",
+      "summary": "Bold hook slide: New Jersey homeowners can get up to $16,000 in incentives for upgrading their heating system. Large orange dollar amount on dark navy background.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "who_we_are",
+      "title": "Mechanical Enterprise",
+      "summary": "Company intro: WMBE/SBE certified HVAC specialists serving 15 NJ counties, 4,000+ residential installations, VRV/VRF experts.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "opportunity",
+      "title": "Three Stacked Incentives",
+      "summary": "Three incentive sources side by side: NJ Clean Heat Program (up to $16K), Federal 30% Tax Credit, and On-Bill Repayment at 0% interest (up to 120 months for LMI).",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "window_units",
+      "title": "Window Units? This Changes Everything",
+      "summary": "Before/after comparison: window units + gas heat vs. one heat pump system for full heating AND cooling year-round. Game-changer message.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "zero_out_of_pocket",
+      "title": "$0 Out of Pocket",
+      "summary": "Step-by-step flow: Free assessment → Incentives applied (up to $16K) → Remaining balance on OBR at 0% → Monthly payment often covered by energy savings.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "what_you_get",
+      "title": "We Handle Everything",
+      "summary": "Four benefit tiles: Full Paperwork handled, Expert Installation (WMBE/SBE), Up to 5-year warranty + 3-year PM plan, Up to $500 gift card with select options.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "cta",
+      "title": "Book Your Free Assessment",
+      "summary": "Strong call to action: Book free home assessment, get exact incentive amount calculated, no obligation. Phone 862-419-1763, mechanicalenterprise.com.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    },
+    {
+      "id": "closing",
+      "title": "Mechanical Enterprise",
+      "summary": "Brand closing slide: Company name, WMBE/SBE certified, 15 counties served, YouTube channel @MechanicalEnterprise-AH, website mechanicalenterprise.com.",
+      "image_plan": "Use a suitable image if needed",
+      "slide_template_key": ""
+    }
+  ]
+}

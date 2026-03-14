@@ -652,3 +652,15 @@
 - [x] Write script: Commercial HVAC Solutions (60-sec)
 - [x] Generate AI video for NJ Rebates Explained
 - [x] Unlock all 5 Video Hub cards (Rebates: AI preview video; others: YouTube subscribe CTA)
+
+## HeyGen Avatar Videos — All 5 Scripts
+- [ ] Generate Video 1: NJ Rebates Explained (avatar talking-head)
+- [ ] Embed completed HeyGen video on Video Hub card 1
+- [ ] Generate remaining 4 videos once Video 1 is confirmed
+
+## 3-Platform Video Production (Kling 3.0 + Nano Banana 2 + HeyGen)
+- [ ] Write Nano Banana 2 slide content for NJ Rebates explainer
+- [ ] Generate Nano Banana 2 animated explainer video/slides
+- [ ] Generate Kling 3.0 cinematic B-roll scenes (5 key scenes)
+- [ ] Provide HeyGen production guide with corrected script + Daisy avatar
+- [ ] Embed all assets on Video Hub page

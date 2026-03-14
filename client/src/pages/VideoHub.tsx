@@ -104,7 +104,7 @@ const VIDEOS: VideoTopic[] = [
     youtubeId: null, // Replace with real YouTube ID when uploaded — preview video available below
     previewVideoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/nj-rebates-explainer_ee0faf4a.mp4",
     thumbnail:
-      "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/rebates-video-thumbnail-GNY8ywVaEBT2EcUiJh6YTa.png",
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/hook_generated_f14368ff.webp",
     badge: "Rebates & Incentives",
     badgeColor: "bg-[#1e3a5f] text-white",
     cta: "Calculate Your Rebate",
@@ -582,6 +582,80 @@ export default function VideoHub() {
                 </Button>
               </div>
             )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Kling B-Roll Gallery ──────────────────────────────────────── */}
+      <section className="py-14 bg-[#0f1e35] text-white">
+        <div className="container">
+          <div className="text-center mb-8">
+            <Badge className="mb-3 bg-[#ff6b35] text-white">🎬 Cinematic B-Roll</Badge>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">Behind the Story</h2>
+            <p className="text-white/70 max-w-xl mx-auto text-sm">
+              Cinematic scenes showing real NJ homeowners discovering rebates, our technicians at work, and families enjoying year-round comfort.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4">
+            {[
+              { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/kling-broll-scene1_4a877670.mp4", label: "Discovering Your Rebate" },
+              { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/kling-broll-scene2_ed5de037.mp4", label: "Expert Installation" },
+              { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/kling-broll-scene3_6db4c2c8.mp4", label: "Year-Round Comfort" },
+            ].map((scene) => (
+              <div key={scene.url} className="rounded-xl overflow-hidden bg-white/5">
+                <video
+                  src={scene.url}
+                  className="w-full aspect-video object-cover"
+                  controls
+                  muted
+                  loop
+                  playsInline
+                />
+                <p className="text-center text-white/80 text-sm py-2 font-medium">{scene.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Nano Banana Slide Gallery ─────────────────────────────────────── */}
+      <section className="py-14 bg-[#0f1e35] border-t border-white/10 text-white">
+        <div className="container">
+          <div className="text-center mb-8">
+            <Badge className="mb-3 bg-[#ff6b35] text-white">📊 Explainer Slides</Badge>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">NJ Rebates — Visual Breakdown</h2>
+            <p className="text-white/70 max-w-xl mx-auto text-sm">
+              Scroll through the full rebate explainer — every slide tells part of the story.
+            </p>
+          </div>
+          <div className="overflow-x-auto pb-4">
+            <div className="flex gap-4" style={{ width: "max-content" }}>
+              {[
+                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/hook_generated_f14368ff.webp", label: "Up to $16,000 Back" },
+                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/opportunity_generated_eb21207e.webp", label: "Three Stacked Incentives" },
+                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/window_units_generated_7930e870.webp", label: "Window Units? This Changes Everything" },
+                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/zero_out_of_pocket_generated_c473db49.webp", label: "$0 Out of Pocket" },
+                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/what_you_get_generated_367e5c8c.webp", label: "We Handle Everything" },
+                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/cta_generated_4b0e3981.webp", label: "Book Free Assessment" },
+                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/closing_generated_95f47e80.webp", label: "Mechanical Enterprise" },
+              ].map((slide) => (
+                <div key={slide.url} className="flex-shrink-0 w-72 rounded-xl overflow-hidden bg-white/5">
+                  <img src={slide.url} alt={slide.label} className="w-full aspect-video object-cover" />
+                  <p className="text-center text-white/80 text-xs py-2 font-medium px-2">{slide.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="text-center mt-6">
+            <a
+              href="https://www.youtube.com/@MechanicalEnterprise-AH"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Button className="bg-red-600 hover:bg-red-700 text-white">
+                <Youtube className="h-4 w-4 mr-2" /> Subscribe on YouTube for the Full Video
+              </Button>
+            </a>
           </div>
         </div>
       </section>
