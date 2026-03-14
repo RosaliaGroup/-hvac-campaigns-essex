@@ -1644,28 +1644,6 @@ export default function RebateCalculator() {
                     </div>
                   )}
 
-                  {/* Video Hub CTA */}
-                  <div className="mt-6 bg-gradient-to-r from-[#1e3a5f] to-[#2a5a8f] rounded-xl p-5 max-w-lg mx-auto text-white">
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-[#ff6b35] flex items-center justify-center shrink-0">
-                        <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                      </div>
-                      <div className="text-left">
-                        <h3 className="font-bold text-base mb-1">While you wait — watch your rebate explainer</h3>
-                        <p className="text-white/80 text-sm mb-3">
-                          Get a 90-second breakdown of exactly how your NJ rebates work, plus a personalized AI video addressed to you by name.
-                        </p>
-                        <Button
-                          size="sm"
-                          className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white"
-                          onClick={() => window.location.href = "/video-hub"}
-                        >
-                          Go to My Video Hub <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="mt-6 flex gap-3 justify-center">
                     <Button className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90" onClick={() => window.location.href = "/"}>Back to Home</Button>
                     <Button variant="outline" onClick={() => window.location.href = "tel:+18624239396"}>
