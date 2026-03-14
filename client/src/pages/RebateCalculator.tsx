@@ -315,18 +315,12 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
   // High efficiency adds ~8% to cost
   const highEffMultiplier = 1.08;
 
-  // Oil tank decommissioning: add $2K extra if tank is in basement, crawl space, or buried
-  // Above-ground tanks are easier to remove; buried/basement tanks require more work
-  const oilTankExtraAdder =
-    home.currentHeating === "oil" &&
-    (home.oilTankLocation === "basement" ||
-      home.oilTankLocation === "crawl_space" ||
-      home.oilTankLocation === "buried")
-      ? 2000
-      : 0;
+  // Oil tank decommissioning: $2K adder applies to ALL oil heating customers
+  // (all tank locations require decommissioning; location is captured for scheduling purposes)
+  const oilTankAdder = home.currentHeating === "oil" ? 2000 : 0;
 
   // rebate calculation
-  const decommissionAdder = hasGas ? 2000 + oilTankExtraAdder : 0;
+  const decommissionAdder = hasGas ? 2000 + oilTankAdder : 0;
   const reductAdder = reductCost > 0 ? Math.min(2000, reductCost) : 0;
   const additionalAdder = numSystems > 1 ? (numSystems - 1) * 2000 : 0;
 
@@ -392,7 +386,7 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
 }
 
 // ─── Financing packages ───────────────────────────────────────────────────────
-// 3 options, ordered from most affordable to most flexible:
+// 4 options, ordered from most affordable to most flexible:
 //
 // Option 1 — 3rd-Party Financing (BEST PRICE): Client uses a 3rd-party financing
 //   company. Project is paid in full upfront — Mechanical gets paid right away.
@@ -405,6 +399,9 @@ function calculateRebate(home: HomeDetails): { ducted: QuoteResult; ductless: Qu
 //
 // Option 3 — 100% OBR: NJ Clean Heat covers everything via On-Bill Repayment.
 //   $0 upfront. 1-year PM, 2-year warranty, $100 gift card.
+//
+// Option 4 — All Covered by NJ Clean Heat: Fully covered by program.
+//   1-year warranty only, no PM, no gift card.
 
 interface FinancingPackage {
   id: string;
@@ -477,6 +474,23 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
     description: "NJ Clean Heat On-Bill Repayment covers 100% of the project cost. Pay nothing upfront. Repayment added to your monthly utility bill at 0% interest. Includes 1-year preventive maintenance, 2-year warranty, and a $100 gift card.",
     creditApplied: 500,
     paymentNote: "Added to your monthly utility bill at 0% interest",
+    paidInFull: false,
+  },
+  {
+    id: "all_covered_njcleanheat",
+    name: "Option 4 — All Covered by NJ Clean Heat",
+    tagline: "Fully covered — minimal extras",
+    costMultiplier: 1.40,
+    upfrontPct: 0,
+    maxIncentive: 10000,
+    mechanicalIncentive: 0,
+    giftCard: 0,
+    warrantyYears: 1,
+    maintenanceYears: 0,
+    highlight: false,
+    description: "100% covered by NJ Clean Heat program. No upfront cost. Includes 1-year warranty only. No preventive maintenance or gift card included.",
+    creditApplied: 500,
+    paymentNote: "Fully covered by NJ Clean Heat program",
     paidInFull: false,
   },
 ];
@@ -1049,8 +1063,8 @@ export default function RebateCalculator() {
                     </div>
                     <p className="text-xs text-amber-800">
                       Oil tanks must be properly decommissioned during the heat pump installation.
-                      The location affects the decommissioning cost — buried, basement, and crawl space tanks
-                      require additional work and may add up to <strong>$2,000</strong> to the project cost.
+                      A <strong>$2,000 decommissioning adder</strong> is included in your estimate for all oil heating customers.
+                      Tank location helps our team plan the right equipment and crew for your job.
                     </p>
                     <div>
                       <Label className="text-sm font-medium text-amber-900">Where is your oil tank located?</Label>
@@ -1075,9 +1089,9 @@ export default function RebateCalculator() {
                           </button>
                         ))}
                       </div>
-                      {(home.oilTankLocation === "basement" || home.oilTankLocation === "crawl_space" || home.oilTankLocation === "buried") && (
+                      {home.oilTankLocation && (
                         <div className="mt-2 bg-amber-100 border border-amber-300 rounded-lg p-2 text-xs text-amber-900 font-medium">
-                          ⚠️ +$2,000 decommissioning adder applied to your estimate for this tank location.
+                          ✓ $2,000 decommissioning adder included in your estimate.
                         </div>
                       )}
                     </div>
@@ -1427,13 +1441,16 @@ export default function RebateCalculator() {
                             </tr>
                           </thead>
                           <tbody className="divide-y">
-                            {[
+                            {([
                               ["Project Cost", fmt(quotes.ducted.totalCost), fmt(quotes.ductless.totalCost)],
                               ["Rebate Incentive", selectedEfficiency === "high" ? fmt(quotes.ducted.totalIncentive) : "N/A", selectedEfficiency === "high" ? fmt(quotes.ductless.totalIncentive) : "N/A"],
                               ["Out-of-Pocket", selectedEfficiency === "high" ? fmt(quotes.ducted.outOfPocket) : fmt(quotes.ducted.totalCost), selectedEfficiency === "high" ? fmt(quotes.ductless.outOfPocket) : fmt(quotes.ductless.totalCost)],
                               ["Energy Savings", `${fmt(quotes.ducted.annualSavings)}/yr`, `${fmt(quotes.ductless.annualSavings)}/yr`],
+                              ...(home.interestedInSolar === "yes" || home.interestedInSolar === "maybe" ? [
+                                ["+ Solar Offset", `~${fmt(Math.round(quotes.ducted.annualSavings * 0.9))}/yr`, `~${fmt(Math.round(quotes.ductless.annualSavings * 0.9))}/yr`],
+                              ] : []),
                               ["Zones", `${quotes.ducted.zones} zones`, `${quotes.ductless.zones} units`],
-                            ].map(([label, d, dl]) => (
+                            ] as [string, string, string][]).map(([label, d, dl]) => (
                               <tr key={label}>
                                 <td className="py-1.5 text-muted-foreground text-xs">{label}</td>
                                 <td className={`text-center py-1.5 px-2 font-medium text-xs ${selectedSystem === "ducted" ? "bg-[#1e3a5f]/5" : ""}`}>{d}</td>
@@ -1466,13 +1483,17 @@ export default function RebateCalculator() {
                               const hiQ = selectedSystem === "ducted" ? quotes.ducted : quotes.ductless;
                               const stdCost = Math.round(hiQ.projectCost / 1.08);
                               const stdTotal = Math.round(stdCost * 1.06625);
-                              return [
+                              const solarRows: [string, string, string][] = (home.interestedInSolar === "yes" || home.interestedInSolar === "maybe") ? [
+                                ["+ Solar Offset", `~${fmt(Math.round(hiQ.annualSavings * 0.9))}/yr`, `~${fmt(Math.round(hiQ.annualSavings * 0.6 * 0.9))}/yr`],
+                              ] : [];
+                              return ([
                                 ["Project Cost", fmt(hiQ.totalCost), fmt(stdTotal)],
                                 ["Rebate Incentive", fmt(hiQ.totalIncentive), "$0 (ineligible)"],
                                 ["Out-of-Pocket", fmt(hiQ.outOfPocket), fmt(stdTotal)],
                                 [home.incomeLevel === "lmi" ? "Monthly (120mo LMI)" : "Monthly (84mo)", home.incomeLevel === "lmi" ? `${fmt(Math.round(hiQ.outOfPocket / 120))}/mo` : `${fmt(hiQ.monthlyOBR84)}/mo`, `${fmt(Math.round(stdTotal / 84))}/mo`],
                                 ["Energy Savings", `${fmt(hiQ.annualSavings)}/yr`, `${fmt(Math.round(hiQ.annualSavings * 0.6))}/yr`],
-                              ].map(([label, hi, std]) => (
+                                ...solarRows,
+                              ] as [string, string, string][]).map(([label, hi, std]) => (
                                 <tr key={label}>
                                   <td className="py-1.5 text-muted-foreground text-xs">{label}</td>
                                   <td className={`text-center py-1.5 px-2 font-medium text-xs ${selectedEfficiency === "high" ? "bg-[#ff6b35]/5" : ""}`}>{hi}</td>
@@ -1513,11 +1534,12 @@ export default function RebateCalculator() {
                 <thead>
                   <tr className="bg-[#1e3a5f] text-white">
                     <th className="text-left px-4 py-3 font-semibold rounded-tl-xl">Option</th>
-                    <th className="text-center px-3 py-3 font-semibold">Upfront</th>
+                    <th className="text-center px-3 py-3 font-semibold text-green-300">You Pay (Net)</th>
                     <th className="text-center px-3 py-3 font-semibold">Monthly</th>
                     <th className="text-center px-3 py-3 font-semibold">Warranty</th>
                     <th className="text-center px-3 py-3 font-semibold">PM Plan</th>
-                    <th className="text-center px-3 py-3 font-semibold rounded-tr-xl">Gift Card</th>
+                    <th className="text-center px-3 py-3 font-semibold">Gift Card</th>
+                    <th className="text-center px-3 py-3 font-semibold rounded-tr-xl text-white/70">Total Cost</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1525,6 +1547,11 @@ export default function RebateCalculator() {
                     const pc = getPkgCost(pkg, activeQuote);
                     const mo = pc.termMonths === 120 ? pc.monthly120 : pc.monthly84;
                     const isActive = selectedPackage === pkg.id;
+                    // Net amount client actually pays = upfront + OBR balance (rebates already deducted for OBR options)
+                    // For paidInFull: client pays monthly to lender; rebates + Mechanical incentive come back to them
+                    const netCost = pkg.paidInFull
+                      ? pc.totalCost - (selectedEfficiency === "high" ? pc.incentive + pc.mechanicalIncentive : 0)
+                      : pc.upfront + pc.remaining;
                     return (
                       <tr
                         key={pkg.id}
@@ -1541,7 +1568,12 @@ export default function RebateCalculator() {
                             <span className={`font-medium ${isActive ? "text-[#ff6b35]" : "text-[#1e3a5f]"}`}>{pkg.name}</span>
                           </div>
                         </td>
-                        <td className="text-center px-3 py-2.5 font-semibold">{pc.upfront === 0 ? "$0" : fmt(pc.upfront)}</td>
+                        <td className="text-center px-3 py-2.5">
+                          <span className="font-bold text-green-700 text-base">{fmt(netCost)}</span>
+                          {pkg.paidInFull && selectedEfficiency === "high" && (
+                            <div className="text-xs text-green-600">after rebates</div>
+                          )}
+                        </td>
                         <td className="text-center px-3 py-2.5">
                           {mo > 0 ? <span className="text-green-700 font-medium">{fmt(mo)}/mo</span> : <span className="text-muted-foreground text-xs">None</span>}
                         </td>
@@ -1552,13 +1584,14 @@ export default function RebateCalculator() {
                         <td className="text-center px-3 py-2.5">
                           {pkg.giftCard > 0 ? <span className="text-green-700 font-medium">{fmt(pkg.giftCard)}</span> : <span className="text-muted-foreground text-xs">—</span>}
                         </td>
+                        <td className="text-center px-3 py-2.5 text-muted-foreground text-xs">{fmt(pc.totalCost)}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
               <div className="px-4 py-2 bg-gray-50 text-xs text-muted-foreground border-t rounded-b-xl">
-                Click any row to select that option. Monthly payments at 0% interest via NJ Clean Heat On-Bill Repayment.
+                Click any row to select that option. <strong>You Pay (Net)</strong> = total project cost minus rebates &amp; incentives. Monthly payments at 0% interest via NJ Clean Heat On-Bill Repayment.
               </div>
             </div>
 
@@ -1618,11 +1651,30 @@ export default function RebateCalculator() {
                       </div>
                     </div>
 
-                    {/* Total project cost for this package */}
-                    <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3 text-center">
-                      <div className="text-xs text-muted-foreground">Total Project Cost</div>
-                      <div className="text-xl font-bold text-[#1e3a5f]">{fmt(pkgCost.totalCost)}</div>
-                    </div>
+                    {/* Primary figure: what the client actually pays (net) */}
+                    {(() => {
+                      const netCostCard = pkg.paidInFull
+                        ? pkgCost.totalCost - (isHighEff ? pkgCost.incentive + pkgCost.mechanicalIncentive : 0)
+                        : pkgCost.upfront + pkgCost.remaining;
+                      return (
+                        <div className="rounded-lg px-3 py-2 mb-3 text-center bg-green-50 border border-green-200">
+                          <div className="text-xs text-green-700 font-medium">
+                            {pkg.paidInFull ? "You Pay (after rebates)" : "OBR Monthly Payment"}
+                          </div>
+                          <div className="text-2xl font-bold text-green-700">
+                            {pkg.paidInFull
+                              ? fmt(netCostCard)
+                              : `${fmt(pkgCost.termMonths === 120 ? pkgCost.monthly120 : pkgCost.monthly84)}/mo`
+                            }
+                          </div>
+                          {!pkg.paidInFull && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {pkgCost.termMonths} months at 0% interest
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     <div className="space-y-2 text-sm mb-4">
                       {pkg.paidInFull ? (
