@@ -636,3 +636,11 @@
 - [x] Add user interest tracking to profile (checklist on registration/profile)
 - [x] Wire personalization logic (show relevant videos based on interests)
 - [x] Add lead capture CTA inside each video section
+
+## HeyGen Personalized Video Integration
+- [x] Validate HeyGen API key and list available avatars/voices
+- [x] Build server-side tRPC procedure to generate personalized HeyGen video
+- [x] Build status polling procedure to check video generation progress
+- [x] Wire HeyGen CTA on Video Hub to trigger personalized video for logged-in users
+- [x] Add "Watch your personalized video" CTA on Rebate Calculator confirmation screen
+- [x] Display generated video URL in user profile / Video Hub

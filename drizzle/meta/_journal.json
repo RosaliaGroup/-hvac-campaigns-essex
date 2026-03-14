@@ -141,6 +141,13 @@
       "when": 1773451375215,
       "tag": "0019_grey_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1773452691057,
+      "tag": "0020_misty_vector",
+      "breakpoints": true
     }
   ]
 }

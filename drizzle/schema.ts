@@ -441,3 +441,27 @@ export const rebateCalculations = mysqlTable("rebateCalculations", {
 });
 export type RebateCalculation = typeof rebateCalculations.$inferSelect;
 export type InsertRebateCalculation = typeof rebateCalculations.$inferInsert;
+
+/**
+ * Personalized HeyGen video generation jobs.
+ * Tracks each video request, its status, and the final URL once complete.
+ */
+export const personalizedVideos = mysqlTable("personalizedVideos", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  /** HeyGen video_id returned from the generate endpoint */
+  heygenVideoId: varchar("heygenVideoId", { length: 128 }).notNull(),
+  /** Topic of the video: rebates | financing | solar | assessment */
+  topic: mysqlEnum("topic", ["rebates", "financing", "solar", "assessment"]).notNull(),
+  clientName: varchar("clientName", { length: 255 }).notNull(),
+  /** Generation status */
+  status: mysqlEnum("status", ["pending", "processing", "completed", "failed"]).default("pending").notNull(),
+  /** Final video URL once completed */
+  videoUrl: text("videoUrl"),
+  thumbnailUrl: text("thumbnailUrl"),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PersonalizedVideo = typeof personalizedVideos.$inferSelect;
+export type InsertPersonalizedVideo = typeof personalizedVideos.$inferInsert;
