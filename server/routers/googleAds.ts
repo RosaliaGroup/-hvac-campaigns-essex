@@ -64,6 +64,7 @@ export const googleAdsRouter = router({
         name: z.string(),
         dailyBudget: z.number().min(1), // USD
         keywords: z.array(z.string()),
+        negativeKeywords: z.array(z.string()).optional().default([]),
         headlines: z.array(z.string()),
         descriptions: z.array(z.string()),
         finalUrl: z.string().url(),

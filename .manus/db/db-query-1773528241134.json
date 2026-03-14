@@ -1,0 +1,15 @@
+{
+  "query": "SELECT service, credentialKey, LEFT(credentialValue, 30) as value_preview FROM aiVaCredentials WHERE service = 'google_ads';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute SELECT service, credentialKey, LEFT(credentialValue, 30) as value_preview FROM aiVaCredentials WHERE service = 'google_ads';",
+  "rows": [
+    {
+      "service": "google_ads",
+      "credentialKey": "refresh_token",
+      "value_preview": "1//05slZcNGjsA_ZCgYIARAAGAUSNw"
+    }
+  ],
+  "messages": [],
+  "stdout": "service\tcredentialKey\tvalue_preview\ngoogle_ads\trefresh_token\t1//05slZcNGjsA_ZCgYIARAAGAUSNw\n",
+  "stderr": "",
+  "execution_time_ms": 59
+}

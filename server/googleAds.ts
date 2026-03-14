@@ -6,10 +6,7 @@ const CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET!;
 const CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID!;
 
 // Build OAuth URL for user to authorize
-// We encode the redirectUri in the state param so the callback handler
-// can use the exact same URI that was registered in Google Cloud Console.
 export function getGoogleAdsAuthUrl(redirectUri: string): string {
-  // state = base64(redirectUri) so callback can reconstruct it exactly
   const state = Buffer.from(redirectUri).toString("base64");
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -121,17 +118,42 @@ export async function getAccountSummary(refreshToken: string) {
   };
 }
 
-// Create a new search campaign
+// Parse keyword text and determine match type
+// Supports: [exact match], "phrase match", plain broad match
+function parseKeyword(kw: string): { text: string; matchType: number } {
+  const trimmed = kw.trim();
+  if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+    return {
+      text: trimmed.slice(1, -1),
+      matchType: enums.KeywordMatchType.EXACT,
+    };
+  }
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return {
+      text: trimmed.slice(1, -1),
+      matchType: enums.KeywordMatchType.PHRASE,
+    };
+  }
+  return {
+    text: trimmed,
+    matchType: enums.KeywordMatchType.BROAD,
+  };
+}
+
+// Create a new search campaign with full keyword match type support
 export async function createSearchCampaign(
   refreshToken: string,
   params: {
     name: string;
     dailyBudgetMicros: number;
     keywords: string[];
+    negativeKeywords?: string[];
     headlines: string[];
     descriptions: string[];
     finalUrl: string;
     geoTargetNames: string[];
+    // Essex County NJ geo target constant ID: 1023191
+    geoTargetIds?: number[];
   }
 ) {
   const customer = getClient(refreshToken);
@@ -156,7 +178,7 @@ export async function createSearchCampaign(
       bidding_strategy_type: enums.BiddingStrategyType.MAXIMIZE_CONVERSIONS,
       network_settings: {
         target_google_search: true,
-        target_search_network: true,
+        target_search_network: false,
         target_content_network: false,
       },
     },
@@ -164,7 +186,24 @@ export async function createSearchCampaign(
   const campaignResourceName = (campaignRes as any).results?.[0]?.resource_name ?? (campaignRes as any)[0]?.resource_name;
   const campaignId = (campaignRes as any).results?.[0]?.id ?? (campaignRes as any)[0]?.id;
 
-  // 3. Create ad group
+  // 3. Add geo targeting (Essex County NJ = location ID 1023191)
+  const geoIds = params.geoTargetIds ?? [1023191]; // Default: Essex County NJ
+  try {
+    await customer.campaignCriteria.create(
+      geoIds.map((locationId) => ({
+        campaign: campaignResourceName,
+        type: enums.CriterionType.LOCATION,
+        location: {
+          geo_target_constant: `geoTargetConstants/${locationId}`,
+        },
+      }))
+    );
+  } catch (geoErr) {
+    // Geo targeting is non-fatal — campaign still works without it
+    console.warn("Geo targeting failed (non-fatal):", geoErr);
+  }
+
+  // 4. Create ad group
   const adGroupRes = await customer.adGroups.create([
     {
       name: `${params.name} - Ad Group 1`,
@@ -175,19 +214,38 @@ export async function createSearchCampaign(
   ]);
   const adGroupResourceName = (adGroupRes as any).results?.[0]?.resource_name ?? (adGroupRes as any)[0]?.resource_name;
 
-  // 4. Create keywords
+  // 5. Create keywords with proper match types
+  const parsedKeywords = params.keywords.slice(0, 20).map(parseKeyword);
   await customer.adGroupCriteria.create(
-    params.keywords.slice(0, 20).map((kw) => ({
+    parsedKeywords.map(({ text, matchType }) => ({
       ad_group: adGroupResourceName,
       status: enums.AdGroupCriterionStatus.ENABLED,
       keyword: {
-        text: kw,
-        match_type: enums.KeywordMatchType.BROAD,
+        text,
+        match_type: matchType,
       },
     }))
   );
 
-  // 5. Create responsive search ad
+  // 6. Add negative keywords at campaign level
+  if (params.negativeKeywords && params.negativeKeywords.length > 0) {
+    try {
+      await customer.campaignCriteria.create(
+        params.negativeKeywords.slice(0, 20).map((kw) => ({
+          campaign: campaignResourceName,
+          negative: true,
+          keyword: {
+            text: kw.replace(/^-/, "").trim(),
+            match_type: enums.KeywordMatchType.BROAD,
+          },
+        }))
+      );
+    } catch (negErr) {
+      console.warn("Negative keywords failed (non-fatal):", negErr);
+    }
+  }
+
+  // 7. Create responsive search ad
   await customer.adGroupAds.create([
     {
       ad_group: adGroupResourceName,
@@ -206,7 +264,7 @@ export async function createSearchCampaign(
     campaignId: String(campaignId),
     campaignResourceName: String(campaignResourceName),
     status: "PAUSED",
-    message: "Campaign created successfully (paused for review). Enable it in Google Ads when ready.",
+    message: "Campaign created successfully (paused). Enable it in Google Ads when ready.",
   };
 }
 

@@ -1,0 +1,16 @@
+{
+  "query": "DESCRIBE aiVaCredentials; SELECT service, key_name, LEFT(value, 20) as value_preview FROM aiVaCredentials WHERE service = 'google_ads';",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway04.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 8H2GiF9TtL9Hx6i.root --database 4ocuaVfrPR2qxUA9U855oL --execute DESCRIBE aiVaCredentials; SELECT service, key_name, LEFT(value, 20) as value_preview FROM aiVaCredentials WHERE service = 'google_ads';",
+  "returncode": 1,
+  "logs": [
+    "Field\tType\tNull\tKey\tDefault\tExtra",
+    "id\tint\tNO\tPRI\tNULL\tauto_increment",
+    "service\tvarchar(50)\tNO\t\tNULL\t",
+    "credentialKey\tvarchar(100)\tNO\t\tNULL\t",
+    "credentialValue\ttext\tNO\t\tNULL\t",
+    "isActive\tint\tNO\t\t1\t",
+    "createdAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\t",
+    "updatedAt\ttimestamp\tNO\t\tCURRENT_TIMESTAMP\tDEFAULT_GENERATED on update CURRENT_TIMESTAMP",
+    "ERROR 1054 (42S22) at line 1: Unknown column 'key_name' in 'field list'"
+  ]
+}
