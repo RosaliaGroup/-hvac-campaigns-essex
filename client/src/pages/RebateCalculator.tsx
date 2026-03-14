@@ -1609,178 +1609,229 @@ export default function RebateCalculator() {
               </div>
             )}
 
-            {/* CSS subgrid: parent defines 6 row tracks; each card uses subgrid
-                 so every section aligns across all 4 cards at the same height.
-                 Row 1: header | Row 2: green box | Row 3: cost rows
-                 Row 4: separator | Row 5: perks | Row 6: description
+            {/* ── Row-band layout: 6 horizontal bands × 4 columns.
+                 Each band is a 4-column grid row, so every cell in the same band
+                 is physically the same DOM row — guaranteed alignment.
+                 Card borders are rendered as a background column overlay.
             */}
-            <div
-              className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4"
-              style={{
-                gridTemplateRows: 'repeat(6, auto)',
-              }}
-            >
-              {FINANCING_PACKAGES.map((pkg) => {
-                const pkgCost = getPkgCost(pkg, activeQuote);
+            {(() => {
+              const isHighEff = selectedEfficiency === "high";
+              const pkgCosts = FINANCING_PACKAGES.map(pkg => getPkgCost(pkg, activeQuote));
+
+              // Column border/bg style for each package
+              const colStyle = (pkg: FinancingPackage) => {
                 const isSelected = selectedPackage === pkg.id;
-                const isHighEff = selectedEfficiency === "high";
-                return (
-                  <div
-                    key={pkg.id}
-                    onClick={() => setSelectedPackage(pkg.id)}
-                    className={`relative cursor-pointer rounded-xl border-2 p-5 transition-all ${isSelected ? "border-[#ff6b35] shadow-lg bg-white" : "border-gray-200 bg-white hover:border-[#1e3a5f]/40"} ${pkg.highlight ? "ring-2 ring-[#ff6b35]/20" : ""}`}
-                    style={{ display: 'grid', gridRow: 'span 6', gridTemplateRows: 'subgrid', alignContent: 'start' }}
-                  >
-                    {/* Badge stays absolutely positioned — not a subgrid row */}
-                    {pkg.badge && (
-                      <div className="absolute -top-3 left-1/2 -translate-x-1/2" style={{ gridRow: 'none' }}>
-                        <Badge className="bg-[#ff6b35] text-white text-xs px-3">{pkg.badge}</Badge>
-                      </div>
-                    )}
+                return {
+                  background: 'white',
+                  borderLeft: isSelected ? '2px solid #ff6b35' : '2px solid #e5e7eb',
+                  borderRight: isSelected ? '2px solid #ff6b35' : '2px solid #e5e7eb',
+                  boxShadow: isSelected ? '0 4px 12px rgba(255,107,53,0.15)' : undefined,
+                  cursor: 'pointer',
+                } as React.CSSProperties;
+              };
+              // Top cap row style
+              const topStyle = (pkg: FinancingPackage) => {
+                const isSelected = selectedPackage === pkg.id;
+                return {
+                  background: 'white',
+                  borderLeft: isSelected ? '2px solid #ff6b35' : '2px solid #e5e7eb',
+                  borderRight: isSelected ? '2px solid #ff6b35' : '2px solid #e5e7eb',
+                  borderTop: isSelected ? '2px solid #ff6b35' : '2px solid #e5e7eb',
+                  borderRadius: '12px 12px 0 0',
+                  cursor: 'pointer',
+                } as React.CSSProperties;
+              };
+              // Bottom cap row style
+              const botStyle = (pkg: FinancingPackage) => {
+                const isSelected = selectedPackage === pkg.id;
+                return {
+                  background: 'white',
+                  borderLeft: isSelected ? '2px solid #ff6b35' : '2px solid #e5e7eb',
+                  borderRight: isSelected ? '2px solid #ff6b35' : '2px solid #e5e7eb',
+                  borderBottom: isSelected ? '2px solid #ff6b35' : '2px solid #e5e7eb',
+                  borderRadius: '0 0 12px 12px',
+                  cursor: 'pointer',
+                } as React.CSSProperties;
+              };
 
-                    {/* ── Subgrid row 1: Header (name + tagline + radio) ── */}
-                    <div style={{ gridRow: 1 }}>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <h3 className="font-bold text-[#1e3a5f] text-lg">{pkg.name}</h3>
-                            {(pkg.id === "njcleanheat_obr" || pkg.id === "deposit_option") && (
-                              <TooltipProvider delayDuration={100}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" className="text-muted-foreground hover:text-[#ff6b35] transition-colors" aria-label="What is OBR?">
-                                      <HelpCircle className="h-4 w-4" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="top" className="max-w-xs p-3 text-sm" sideOffset={6}>
-                                    <div className="space-y-2">
-                                      <p className="font-semibold text-base">What is OBR?</p>
-                                      <p><strong>On-Bill Repayment (OBR)</strong> is a NJ Clean Heat program feature that lets you repay the cost of your heat pump upgrade directly on your monthly utility bill — at <strong>0% interest</strong>.</p>
-                                      <p className="text-muted-foreground">No bank loan, no credit check, no lump-sum payment. The repayment amount is added as a fixed line item to your utility bill each month.</p>
-                                      <div className="border-t pt-2 mt-2 text-xs text-muted-foreground">
-                                        Standard term: <strong>84 months (7 years)</strong>. LMI customers qualify for <strong>120 months (10 years)</strong>.
-                                      </div>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
+              const gridCls = "grid grid-cols-2 xl:grid-cols-4 gap-x-4";
+
+              return (
+                <div className="relative">
+
+                  {/* ── Band 1: Header (name + tagline + radio) ── */}
+                  <div className={gridCls}>
+                    {FINANCING_PACKAGES.map((pkg) => (
+                      <div key={pkg.id} onClick={() => setSelectedPackage(pkg.id)}
+                        className="relative px-4 pt-6 pb-3"
+                        style={topStyle(pkg)}
+                      >
+                        {pkg.badge && (
+                          <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                            <Badge className="bg-[#ff6b35] text-white text-xs px-3 whitespace-nowrap">{pkg.badge}</Badge>
                           </div>
-                          <p className="text-sm text-muted-foreground">{pkg.tagline}</p>
-                        </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-1 ${isSelected ? "border-[#ff6b35] bg-[#ff6b35]" : "border-gray-300"}`}>
-                          {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
+                        )}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h3 className="font-bold text-[#1e3a5f] text-base leading-tight">{pkg.name}</h3>
+                              {(pkg.id === "njcleanheat_obr" || pkg.id === "deposit_option") && (
+                                <TooltipProvider delayDuration={100}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <button type="button" className="text-muted-foreground hover:text-[#ff6b35]" aria-label="What is OBR?">
+                                        <HelpCircle className="h-4 w-4" />
+                                      </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" className="max-w-xs p-3 text-sm" sideOffset={6}>
+                                      <div className="space-y-2">
+                                        <p className="font-semibold text-base">What is OBR?</p>
+                                        <p><strong>On-Bill Repayment (OBR)</strong> lets you repay the cost of your heat pump upgrade on your monthly utility bill at <strong>0% interest</strong>.</p>
+                                        <p className="text-muted-foreground">No bank loan, no credit check. Standard term: <strong>84 months</strong>. LMI customers: <strong>120 months</strong>.</p>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5">{pkg.tagline}</p>
+                          </div>
+                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center mt-0.5 ${selectedPackage === pkg.id ? "border-[#ff6b35] bg-[#ff6b35]" : "border-gray-300"}`}>
+                            {selectedPackage === pkg.id && <div className="w-2 h-2 rounded-full bg-white" />}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
+                  </div>
 
-                    {/* ── Subgrid row 2: You Pay After Rebates (green box) ── */}
-                    {(() => {
-                      const netCostCard = pkg.paidInFull
-                        ? pkgCost.totalCost - (isHighEff ? pkgCost.incentive + pkgCost.mechanicalIncentive : 0)
-                        : pkgCost.upfront + pkgCost.remaining;
-                      const monthlyDisplay = pkgCost.termMonths === 120 ? pkgCost.monthly120 : pkgCost.monthly84;
+                  {/* ── Band 2: You Pay After Rebates (green box) ── */}
+                  <div className={gridCls}>
+                    {FINANCING_PACKAGES.map((pkg, i) => {
+                      const pc = pkgCosts[i];
+                      const netCost = pkg.paidInFull
+                        ? pc.totalCost - (isHighEff ? pc.incentive + pc.mechanicalIncentive : 0)
+                        : pc.upfront + pc.remaining;
                       return (
-                        <>
-                          <div style={{ gridRow: 2 }} className="rounded-lg px-3 py-2 text-center bg-green-50 border border-green-200">
+                        <div key={pkg.id} onClick={() => setSelectedPackage(pkg.id)}
+                          className="px-4 py-3"
+                          style={colStyle(pkg)}
+                        >
+                          <div className="rounded-lg px-3 py-2 text-center bg-green-50 border border-green-200">
                             <div className="text-xs text-green-700 font-medium">You Pay After Rebates</div>
-                            <div className="text-2xl font-bold text-green-700">{fmt(netCostCard)}</div>
-                            {!pkg.paidInFull && isHighEff && pkgCost.incentive > 0 && (
+                            <div className="text-2xl font-bold text-green-700">{fmt(netCost)}</div>
+                            {!pkg.paidInFull && isHighEff && pc.incentive > 0 && (
                               <div className="text-xs text-green-600 mt-0.5">rebates deducted from balance</div>
                             )}
                           </div>
-
-                          {/* ── Subgrid row 3: Cost rows ── */}
-                          <div style={{ gridRow: 3 }} className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">
-                                {pkg.paidInFull ? "Total Financed" : "Upfront Today"}
-                              </span>
-                              <span className="font-bold text-[#1e3a5f]">
-                                {pkg.paidInFull ? fmt(pkgCost.totalCost) : (pkgCost.upfront === 0 ? "$0" : fmt(pkgCost.upfront))}
-                              </span>
-                            </div>
-
-                            {isHighEff && pkgCost.incentive > 0 ? (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Rebate Incentive</span>
-                                <span className="font-medium text-green-700">-{fmt(pkgCost.incentive)}</span>
-                              </div>
-                            ) : (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Rebate Incentive</span>
-                                <span className="text-muted-foreground text-xs">N/A</span>
-                              </div>
-                            )}
-
-                            {isHighEff && pkgCost.mechanicalIncentive > 0 ? (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Mechanical Incentive</span>
-                                <span className="font-medium text-green-700">up to +{fmt(pkgCost.mechanicalIncentive)}</span>
-                              </div>
-                            ) : (
-                              <div className="flex justify-between">
-                                <span className="text-muted-foreground">Mechanical Incentive</span>
-                                <span className="text-muted-foreground text-xs">—</span>
-                              </div>
-                            )}
-
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">
-                                {pkg.paidInFull ? "Monthly (84 mo via lender)" : `Monthly (${pkgCost.termMonths} mo @ 0%)`}
-                              </span>
-                              <span className="font-medium text-green-700">
-                                {monthlyDisplay > 0 ? `${fmt(monthlyDisplay)}/mo` : <span className="text-muted-foreground text-xs">None</span>}
-                              </span>
-                            </div>
-
-                            {pkgCost.termMonths === 120 && !pkg.paidInFull && (
-                              <div className="text-xs text-green-700 font-medium">✓ LMI extended term (120 months)</div>
-                            )}
-                          </div>
-                        </>
+                        </div>
                       );
-                    })()}
-
-                    {/* ── Subgrid row 4: Separator ── */}
-                    <div style={{ gridRow: 4 }}>
-                      <Separator />
-                    </div>
-
-                    {/* ── Subgrid row 5: Perks list ── */}
-                    <div style={{ gridRow: 5 }} className="space-y-1.5 text-xs">
-                      {isHighEff && (
-                        <div className="flex items-center gap-2 text-green-700">
-                          <TrendingDown className="h-3.5 w-3.5" />
-                          <span>Up to {fmt(pkg.maxIncentive)} Rebate Incentive</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-green-700">
-                        <Gift className="h-3.5 w-3.5" />
-                        <span>{fmt(pkg.giftCard)} Gift Card</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[#1e3a5f]">
-                        <Shield className="h-3.5 w-3.5" />
-                        <span>{pkg.warrantyYears}-Year Warranty Service</span>
-                      </div>
-                      {pkg.maintenanceYears > 0 && (
-                        <div className="flex items-center gap-2 text-[#1e3a5f]">
-                          <Zap className="h-3.5 w-3.5" />
-                          <span>{pkg.maintenanceYears}-Year Maintenance Included</span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2 text-[#ff6b35]">
-                        <Award className="h-3.5 w-3.5" />
-                        <span>$500 Assessment Credit Applied</span>
-                      </div>
-                    </div>
-
-                    {/* ── Subgrid row 6: Description ── */}
-                    <p style={{ gridRow: 6 }} className="text-xs text-muted-foreground leading-relaxed">{pkg.description}</p>
+                    })}
                   </div>
-                );
-              })}
-            </div>
+
+                  {/* ── Band 3: Cost rows ── */}
+                  <div className={gridCls}>
+                    {FINANCING_PACKAGES.map((pkg, i) => {
+                      const pc = pkgCosts[i];
+                      const monthlyDisplay = pc.termMonths === 120 ? pc.monthly120 : pc.monthly84;
+                      return (
+                        <div key={pkg.id} onClick={() => setSelectedPackage(pkg.id)}
+                          className="px-4 py-3 space-y-2 text-sm"
+                          style={colStyle(pkg)}
+                        >
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-xs">{pkg.paidInFull ? "Total Financed" : "Upfront Today"}</span>
+                            <span className="font-bold text-[#1e3a5f] text-sm">
+                              {pkg.paidInFull ? fmt(pc.totalCost) : (pc.upfront === 0 ? "$0" : fmt(pc.upfront))}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-xs">Rebate Incentive</span>
+                            <span className={`text-sm ${isHighEff && pc.incentive > 0 ? "font-medium text-green-700" : "text-muted-foreground text-xs"}`}>
+                              {isHighEff && pc.incentive > 0 ? `-${fmt(pc.incentive)}` : "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-xs">Mechanical Incentive</span>
+                            <span className={`text-sm ${isHighEff && pc.mechanicalIncentive > 0 ? "font-medium text-green-700" : "text-muted-foreground text-xs"}`}>
+                              {isHighEff && pc.mechanicalIncentive > 0 ? `up to +${fmt(pc.mechanicalIncentive)}` : "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground text-xs">{pkg.paidInFull ? "Monthly (84 mo)" : `Monthly (${pc.termMonths} mo @ 0%)`}</span>
+                            <span className="font-medium text-green-700 text-sm">
+                              {monthlyDisplay > 0 ? `${fmt(monthlyDisplay)}/mo` : <span className="text-muted-foreground text-xs">None</span>}
+                            </span>
+                          </div>
+                          {pc.termMonths === 120 && !pkg.paidInFull && (
+                            <div className="text-xs text-green-700 font-medium">✓ LMI extended term (120 mo)</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* ── Band 4: Separator ── */}
+                  <div className={gridCls}>
+                    {FINANCING_PACKAGES.map((pkg) => (
+                      <div key={pkg.id} onClick={() => setSelectedPackage(pkg.id)}
+                        className="px-4 py-1"
+                        style={colStyle(pkg)}
+                      >
+                        <Separator />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ── Band 5: Perks list ── */}
+                  <div className={gridCls}>
+                    {FINANCING_PACKAGES.map((pkg) => (
+                      <div key={pkg.id} onClick={() => setSelectedPackage(pkg.id)}
+                        className="px-4 py-3 space-y-1.5 text-xs"
+                        style={colStyle(pkg)}
+                      >
+                        {isHighEff && (
+                          <div className="flex items-center gap-2 text-green-700">
+                            <TrendingDown className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span>Up to {fmt(pkg.maxIncentive)} Rebate Incentive</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-green-700">
+                          <Gift className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span>{fmt(pkg.giftCard)} Gift Card</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[#1e3a5f]">
+                          <Shield className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span>{pkg.warrantyYears}-Year Warranty</span>
+                        </div>
+                        {pkg.maintenanceYears > 0 && (
+                          <div className="flex items-center gap-2 text-[#1e3a5f]">
+                            <Zap className="h-3.5 w-3.5 flex-shrink-0" />
+                            <span>{pkg.maintenanceYears}-Year Maintenance</span>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-[#ff6b35]">
+                          <Award className="h-3.5 w-3.5 flex-shrink-0" />
+                          <span>$500 Assessment Credit</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* ── Band 6: Description ── */}
+                  <div className={gridCls}>
+                    {FINANCING_PACKAGES.map((pkg) => (
+                      <div key={pkg.id} onClick={() => setSelectedPackage(pkg.id)}
+                        className="px-4 pt-2 pb-5"
+                        style={botStyle(pkg)}
+                      >
+                        <p className="text-xs text-muted-foreground leading-relaxed">{pkg.description}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                </div>
+              );
+            })()}
 
             {/* Selected package summary */}
             <Card className="bg-[#1e3a5f] text-white">
