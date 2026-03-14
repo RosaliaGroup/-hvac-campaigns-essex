@@ -698,3 +698,10 @@
 - [ ] Remove explainer slides carousel from Video Hub
 - [ ] Remove 15-second social clip section from Video Hub
 - [ ] Remove any other embedded video content from the site
+
+## SMS Opt-In — Rebate Calculator Results
+- [x] Add `calculator.sendResultsSms` tRPC procedure using Telnyx
+- [x] SMS message includes: rebate estimate, homeowner name, booking link, phone number
+- [x] Add phone number input + "Text Me My Results" button to results step UI
+- [x] Show success/error state after SMS send
+- [x] Write vitest for the SMS procedure (16 tests passing)

@@ -388,6 +388,78 @@ export const rebateCalculatorRouter = router({
     }),
 
   /**
+   * Send rebate results via SMS to the homeowner (public)
+   * Uses Telnyx to deliver a personalized summary with rebate estimate and booking link
+   */
+  sendResultsSms: publicProcedure
+    .input(
+      z.object({
+        phone: z.string().min(10),
+        firstName: z.string().min(1),
+        totalRebates: z.number(),
+        outOfPocket: z.number(),
+        selectedOption: z.enum(["high_efficiency", "standard"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const telnyxApiKey = process.env.TELNYX_API_KEY;
+      const fromNumber = process.env.TELNYX_FROM_NUMBER;
+
+      if (!telnyxApiKey || !fromNumber) {
+        console.error("Telnyx credentials not configured");
+        return { success: false, error: "SMS service not configured" };
+      }
+
+      // Normalize phone: strip non-digits, ensure E.164 format
+      const digits = input.phone.replace(/\D/g, "");
+      const toNumber = digits.startsWith("1") ? `+${digits}` : `+1${digits}`;
+
+      const optionLabel = input.selectedOption === "high_efficiency" ? "High-Efficiency" : "Standard";
+      const rebateFormatted = `$${input.totalRebates.toLocaleString()}`;
+      const oopFormatted = input.outOfPocket === 0 ? "$0 out of pocket" : `$${input.outOfPocket.toLocaleString()} out of pocket`;
+
+      const message = [
+        `Hi ${input.firstName}! Here are your NJ Clean Heat rebate results from Mechanical Enterprise:`,
+        ``,
+        `✅ ${optionLabel} Heat Pump`,
+        `💰 Total Rebates: ${rebateFormatted}`,
+        `🏠 Your Cost: ${oopFormatted}`,
+        ``,
+        `Ready to lock in your rebate? Book your FREE assessment:`,
+        `https://mechanicalenterprise.com`,
+        ``,
+        `Questions? Call us: (862) 419-1763`,
+        `Reply STOP to opt out.`,
+      ].join("\n");
+
+      try {
+        const response = await fetch("https://api.telnyx.com/v2/messages", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${telnyxApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fromNumber,
+            to: toNumber,
+            text: message,
+          }),
+        });
+
+        if (!response.ok) {
+          const err = await response.text();
+          console.error("Telnyx SMS error:", err);
+          return { success: false, error: "Failed to send SMS" };
+        }
+
+        return { success: true };
+      } catch (err) {
+        console.error("Telnyx fetch error:", err);
+        return { success: false, error: "Network error sending SMS" };
+      }
+    }),
+
+  /**
    * Autocomplete address suggestions (public) — for real-time dropdown as user types
    */
   autocompleteAddress: publicProcedure

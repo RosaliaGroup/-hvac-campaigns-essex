@@ -15,7 +15,7 @@ import Footer from "@/components/Footer";
 import {
   Home, MapPin, Thermometer, DollarSign, CheckCircle, ArrowRight, ArrowLeft,
   Zap, Award, Gift, Shield, Calendar, Phone, Mail, User, ChevronRight,
-  Star, TrendingDown, Clock, BadgeCheck, HelpCircle, Info, Sun
+  Star, TrendingDown, Clock, BadgeCheck, HelpCircle, Info, Sun, MessageSquare, Loader2
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -516,6 +516,9 @@ export default function RebateCalculator() {
     notes: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [smsPhone, setSmsPhone] = useState("");
+  const [smsSent, setSmsSent] = useState(false);
+  const [smsSending, setSmsSending] = useState(false);
 
   const submitAssessment = trpc.rebateCalculator.submitCalculation.useMutation({
     onSuccess: () => {
@@ -525,6 +528,41 @@ export default function RebateCalculator() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
   });
+
+  const sendResultsSms = trpc.rebateCalculator.sendResultsSms.useMutation({
+    onSuccess: (data) => {
+      setSmsSending(false);
+      if (data.success) {
+        setSmsSent(true);
+        toast({ title: "✅ Results sent!", description: "Check your phone for your rebate summary." });
+      } else {
+        toast({ title: "SMS failed", description: data.error ?? "Could not send SMS. Please try again.", variant: "destructive" });
+      }
+    },
+    onError: () => {
+      setSmsSending(false);
+      toast({ title: "SMS failed", description: "Could not send SMS. Please try again.", variant: "destructive" });
+    },
+  });
+
+  const handleSendSms = () => {
+    const digits = smsPhone.replace(/\D/g, "");
+    if (digits.length < 10) {
+      toast({ title: "Invalid phone", description: "Please enter a valid 10-digit US phone number.", variant: "destructive" });
+      return;
+    }
+    if (!activeQuote) return;
+    const nameParts = bookingForm.name.trim().split(" ");
+    const firstName = nameParts[0] || "there";
+    setSmsSending(true);
+    sendResultsSms.mutate({
+      phone: smsPhone,
+      firstName,
+      totalRebates: activeQuote.totalIncentive,
+      outOfPocket: activePkgCost.outOfPocket,
+      selectedOption: selectedEfficiency === "high" ? "high_efficiency" : "standard",
+    });
+  };
 
   // Server-side geocoding via tRPC (bypasses browser API key restrictions)
   const geocodeMutation = trpc.rebateCalculator.geocodeAddress.useMutation({
@@ -1588,6 +1626,50 @@ export default function RebateCalculator() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* ── SMS Opt-In ── */}
+            <div className="bg-gradient-to-r from-[#1e3a5f]/5 to-[#ff6b35]/5 border border-[#1e3a5f]/20 rounded-xl p-5">
+              <div className="flex items-start gap-3 mb-4">
+                <MessageSquare className="h-6 w-6 text-[#ff6b35] shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-bold text-[#1e3a5f] text-base">Text Me My Results</h3>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Get your rebate estimate, package details, and booking link sent straight to your phone.
+                  </p>
+                </div>
+              </div>
+              {smsSent ? (
+                <div className="flex items-center gap-2 text-green-700 font-medium text-sm bg-green-50 rounded-lg px-4 py-3">
+                  <CheckCircle className="h-5 w-5 shrink-0" />
+                  Results sent! Check your phone for your personalized rebate summary.
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    type="tel"
+                    placeholder="Your mobile number (e.g. 862-555-0100)"
+                    value={smsPhone}
+                    onChange={(e) => setSmsPhone(e.target.value)}
+                    className="flex-1"
+                    maxLength={14}
+                  />
+                  <Button
+                    onClick={handleSendSms}
+                    disabled={smsSending || smsPhone.replace(/\D/g, "").length < 10}
+                    className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white whitespace-nowrap shrink-0"
+                  >
+                    {smsSending ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending…</>
+                    ) : (
+                      <><MessageSquare className="mr-2 h-4 w-4" /> Text Me My Results</>
+                    )}
+                  </Button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                By entering your number you consent to receive a one-time SMS from Mechanical Enterprise. Reply STOP to opt out. Message &amp; data rates may apply.
+              </p>
+            </div>
 
             <div className="flex flex-col-reverse sm:flex-row justify-between gap-3">
               <Button variant="outline" className="w-full sm:w-auto" onClick={() => setStep(2)}><ArrowLeft className="mr-2 h-4 w-4" /> Back</Button>
