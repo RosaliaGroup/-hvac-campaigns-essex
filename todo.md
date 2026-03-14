@@ -734,3 +734,6 @@
 
 ## Navigation Update — Mar 14 2026
 - [x] Add "Rebate Calculator" link to top navigation bar (visible to all visitors)
+
+## Meta Title Fix — Mar 14 2026
+- [x] Remove "HVAC Lead Generation Campaigns - Essex County, NJ" from site meta title / OG tags — now shows "Mechanical Enterprise | Expert HVAC Solutions in New Jersey"
