@@ -660,6 +660,51 @@ export default function VideoHub() {
         </div>
       </section>
 
+      {/* ── Social Clip Preview ──────────────────────────────────────────── */}
+      <section className="py-14 bg-[#0f1e35] border-t border-white/10 text-white">
+        <div className="container">
+          <div className="text-center mb-8">
+            <Badge className="mb-3 bg-[#ff6b35] text-white">📱 YouTube Short / Instagram Reel</Badge>
+            <h2 className="text-2xl md:text-3xl font-bold mb-2">15-Second Social Clip</h2>
+            <p className="text-white/70 max-w-xl mx-auto text-sm">
+              Ready to post on YouTube Shorts and Instagram Reels. Download and upload to <strong>@MechanicalEnterprise-AH</strong>.
+            </p>
+          </div>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+            <div className="w-full max-w-xs rounded-2xl overflow-hidden shadow-2xl">
+              <video
+                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/social-clip-15sec_0d93fe9a.mp4"
+                className="w-full"
+                controls
+                muted
+                loop
+                playsInline
+              />
+            </div>
+            <div className="max-w-sm space-y-4">
+              <div className="bg-white/10 rounded-xl p-4 space-y-2">
+                <p className="font-semibold text-[#ff6b35]">📌 YouTube Shorts Caption</p>
+                <p className="text-sm text-white/80">NJ homeowners: up to $16,000 back on a new heat pump — $0 out of pocket via On-Bill Repayment. Heating + cooling, one system, all year. 📞 862-419-1763 #NJHeatPump #HVACRebates #NewJersey #HeatPump #EnergyEfficiency #NJCleanHeat</p>
+              </div>
+              <div className="bg-white/10 rounded-xl p-4 space-y-2">
+                <p className="font-semibold text-[#ff6b35]">📌 Instagram Reel Caption</p>
+                <p className="text-sm text-white/80">💰 Up to $16K back for NJ homeowners upgrading to a heat pump — and you pay $0 upfront. Our team handles everything from paperwork to installation. ⬇️ Book your free assessment at the link in bio. #NJHVAc #HeatPump #EnergyRebates #NJCleanHeat #MechanicalEnterprise</p>
+              </div>
+              <a
+                href="https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/social-clip-15sec_0d93fe9a.mp4"
+                download
+                target="_blank"
+                rel="noreferrer"
+              >
+                <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
+                  ⬇️ Download Social Clip
+                </Button>
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );

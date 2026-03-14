@@ -659,8 +659,14 @@
 - [ ] Generate remaining 4 videos once Video 1 is confirmed
 
 ## 3-Platform Video Production (Kling 3.0 + Nano Banana 2 + HeyGen)
-- [ ] Write Nano Banana 2 slide content for NJ Rebates explainer
-- [ ] Generate Nano Banana 2 animated explainer video/slides
-- [ ] Generate Kling 3.0 cinematic B-roll scenes (5 key scenes)
-- [ ] Provide HeyGen production guide with corrected script + Daisy avatar
-- [ ] Embed all assets on Video Hub page
+- [x] Write Nano Banana 2 slide content for NJ Rebates explainer
+- [x] Generate Nano Banana 2 animated explainer video/slides
+- [x] Generate Kling 3.0 cinematic B-roll scenes (3 key scenes)
+- [x] Provide HeyGen production guide with corrected script + Daisy avatar
+- [x] Embed all assets on Video Hub page (B-roll gallery + slide gallery)
+
+## Action Items — Video Launch & Publishing
+- [ ] Generate HeyGen Rebates avatar video (Daisy avatar, updated script) — see HeyGen guide below
+- [x] Create 15-second social clip with text overlay from Kling B-roll
+- [x] Final site checks and prepare for publishing
+- [x] Deliver YouTube upload package with title, description, tags, thumbnail
