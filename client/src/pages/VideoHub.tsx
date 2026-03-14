@@ -19,6 +19,8 @@ import {
   Star,
   Video,
   Lock,
+  Youtube,
+  Bell,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -38,6 +40,7 @@ interface VideoTopic {
   description: string;
   duration: string;
   youtubeId: string | null; // null = coming soon
+  previewVideoUrl?: string; // AI-generated preview video URL
   thumbnail: string;
   badge: string;
   badgeColor: string;
@@ -98,7 +101,8 @@ const VIDEOS: VideoTopic[] = [
     description:
       "New Jersey homeowners can stack federal tax credits, utility rebates, and On-Bill Repayment financing to get a brand-new heat pump with little to nothing out of pocket. We walk you through every dollar available.",
     duration: "1:30",
-    youtubeId: null, // Replace with real YouTube ID when uploaded
+    youtubeId: null, // Replace with real YouTube ID when uploaded — preview video available below
+    previewVideoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/nj-rebates-explainer_ee0faf4a.mp4",
     thumbnail:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/rebates-video-thumbnail-GNY8ywVaEBT2EcUiJh6YTa.png",
     badge: "Rebates & Incentives",
@@ -608,6 +612,14 @@ function VideoCard({ video, highlighted = false }: { video: VideoTopic; highligh
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
+        ) : playing && video.previewVideoUrl ? (
+          <video
+            className="w-full h-full object-cover"
+            src={video.previewVideoUrl}
+            autoPlay
+            controls
+            title={video.title}
+          />
         ) : (
           <>
             <img
@@ -625,15 +637,32 @@ function VideoCard({ video, highlighted = false }: { video: VideoTopic; highligh
                 >
                   <Play className="h-7 w-7 text-[#1e3a5f] ml-1" fill="currentColor" />
                 </button>
-              ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <div className="w-16 h-16 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center">
-                    <Lock className="h-6 w-6 text-white/70" />
+              ) : video.previewVideoUrl ? (
+                <button
+                  onClick={() => setPlaying(true)}
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="w-16 h-16 rounded-full bg-[#ff6b35]/90 hover:bg-[#ff6b35] flex items-center justify-center transition-transform hover:scale-110 shadow-xl">
+                    <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
                   </div>
-                  <span className="text-white/90 text-sm font-medium bg-black/50 px-3 py-1 rounded-full">
-                    Coming Soon
+                  <span className="text-white text-xs font-medium bg-[#ff6b35]/80 px-3 py-1 rounded-full">
+                    Watch Preview
                   </span>
-                </div>
+                </button>
+              ) : (
+                <a
+                  href="https://www.youtube.com/@MechanicalEnterprise-AH"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex flex-col items-center gap-2"
+                >
+                  <div className="w-16 h-16 rounded-full bg-red-600/90 hover:bg-red-600 flex items-center justify-center transition-transform hover:scale-110 shadow-xl">
+                    <Youtube className="h-7 w-7 text-white" />
+                  </div>
+                  <span className="text-white text-xs font-medium bg-black/60 px-3 py-1 rounded-full flex items-center gap-1">
+                    <Bell className="h-3 w-3" /> Subscribe to Watch
+                  </span>
+                </a>
               )}
             </div>
             {/* Duration badge */}

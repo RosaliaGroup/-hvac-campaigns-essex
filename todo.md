@@ -644,3 +644,11 @@
 - [x] Wire HeyGen CTA on Video Hub to trigger personalized video for logged-in users
 - [x] Add "Watch your personalized video" CTA on Rebate Calculator confirmation screen
 - [x] Display generated video URL in user profile / Video Hub
+
+## Video Hub — Unlock All 5 Cards
+- [x] Write script: How OBR Financing Works (60-sec)
+- [x] Write script: Solar + Heat Pump Savings (60-sec)
+- [x] Write script: What to Expect at Your Assessment (60-sec)
+- [x] Write script: Commercial HVAC Solutions (60-sec)
+- [x] Generate AI video for NJ Rebates Explained
+- [x] Unlock all 5 Video Hub cards (Rebates: AI preview video; others: YouTube subscribe CTA)
