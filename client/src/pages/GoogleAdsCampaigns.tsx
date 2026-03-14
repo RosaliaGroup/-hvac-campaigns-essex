@@ -193,7 +193,18 @@ export default function GoogleAdsCampaigns() {
       setConfirmCampaign(null);
     },
     onError: (err) => {
-      toast.error("Failed to create campaign", { description: err.message, duration: 10000 });
+      const isDeveloperTokenError =
+        err.message?.includes("DEVELOPER_TOKEN_NOT_APPROVED") ||
+        err.message?.includes("developer token");
+      if (isDeveloperTokenError) {
+        toast.error("Google Ads API access required", {
+          description:
+            "Your developer token needs Standard Access approval before it can write to live accounts. See the banner on this page for instructions.",
+          duration: 12000,
+        });
+      } else {
+        toast.error("Failed to create campaign", { description: err.message, duration: 10000 });
+      }
       setConfirmCampaign(null);
     },
   });
@@ -250,6 +261,34 @@ export default function GoogleAdsCampaigns() {
                 className="inline-flex items-center gap-1.5 text-sm text-[#1e3a5f] hover:underline"
               >
                 Open Google Ads <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Developer token upgrade notice — always visible */}
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-amber-900">Action required: Apply for Google Ads API Standard Access</p>
+            <p className="text-amber-800 mt-1">
+              Your developer token is currently at <strong>Test Access</strong> level, which only works with test accounts.
+              To push campaigns to your live account (AW-17768263516), you need to apply for <strong>Standard Access</strong>.
+            </p>
+            <ol className="mt-2 space-y-1 text-amber-800 list-decimal list-inside">
+              <li>Go to your Google Ads account → <strong>Tools &amp; Settings → API Center</strong></li>
+              <li>Click <strong>"Apply for Standard Access"</strong> and fill out the form</li>
+              <li>Describe use: <em>"Internal campaign management tool for our HVAC business"</em></li>
+              <li>Google typically approves within <strong>1–2 business days</strong></li>
+            </ol>
+            <div className="mt-3 flex gap-3 flex-wrap">
+              <a
+                href="https://ads.google.com/aw/apicenter"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-900 underline hover:text-amber-700"
+              >
+                Open Google Ads API Center <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
           </div>
