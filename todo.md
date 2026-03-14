@@ -731,3 +731,6 @@
 - [x] Update /rebate-calculator route: if no ?token= in URL, show RegistrationGate; if token present, load registration and pre-populate Step 1 fields
 - [x] Pre-populate Step 1: name, address, zip, phone, email from registration record
 - [x] Write vitest tests for register and getByToken procedures (21 tests passing)
+
+## Navigation Update — Mar 14 2026
+- [x] Add "Rebate Calculator" link to top navigation bar (visible to all visitors)

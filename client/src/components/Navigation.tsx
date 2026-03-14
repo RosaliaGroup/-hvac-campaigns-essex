@@ -18,6 +18,7 @@ export default function Navigation() {
     { href: "/residential", label: "Residential" },
     { href: "/commercial", label: "Commercial" },
     { href: "/rebate-guide", label: "Rebate Guide" },
+    { href: "/rebate-calculator", label: "Rebate Calculator" },
     { href: "/maintenance", label: "Maintenance" },
     { href: "/partnerships", label: "Partnerships" },
     { href: "/careers", label: "Careers" },
