@@ -717,3 +717,7 @@
 - [x] Oil tank question: if currentHeating === 'oil', ask tank location (above ground, basement, crawl space, buried) — add $2K decommissioning adder if applicable
 - [x] Remove "No — not right now" option from solar question (only Yes and Maybe)
 - [x] Remove solar info from confirmation/submitted screen (was not in original report)
+
+## Financing Card Fixes (Round 2)
+- [x] Option 1: remove monthly payment row (lender rate unknown)
+- [x] Option 3: update name and description — private financing of non-rebate balance, NOT utility OBR

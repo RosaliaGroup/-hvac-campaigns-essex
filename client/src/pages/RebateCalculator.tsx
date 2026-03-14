@@ -461,8 +461,8 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
   },
   {
     id: "njcleanheat_obr",
-    name: "Option 3 — Finance the Non-Rebate Part",
-    tagline: "$0 upfront — finance only what rebates don't cover",
+    name: "Option 3 — Finance the Balance",
+    tagline: "$0 upfront — privately finance only what rebates don't cover",
     costMultiplier: 1.30,
     upfrontPct: 0,
     maxIncentive: 14000,
@@ -471,9 +471,9 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
     warrantyYears: 2,
     maintenanceYears: 1,
     highlight: false,
-    description: "$0 upfront. The rebates cover a portion of the project cost and you finance only the remaining balance at 0% interest. LMI customers qualify for a 120-month term; standard customers use 84 months. Includes 1-year preventive maintenance, 2-year warranty, and a $100 gift card.",
+    description: "$0 upfront. Rebates reduce your balance and you privately finance only the remaining amount at 0% interest — not through your utility company. LMI customers qualify for 120 months; standard customers use 84 months. Includes 1-year preventive maintenance, 2-year warranty, and a $100 gift card.",
     creditApplied: 500,
-    paymentNote: "Finance only the non-rebate balance at 0% interest",
+    paymentNote: "Privately finance only the non-rebate balance at 0% interest",
     paidInFull: false,
   },
   {
@@ -1756,12 +1756,14 @@ export default function RebateCalculator() {
                               {isHighEff && pc.mechanicalIncentive > 0 ? `up to +${fmt(pc.mechanicalIncentive)}` : "—"}
                             </span>
                           </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground text-xs">{pkg.paidInFull ? "Monthly (84 mo)" : `Monthly (${pc.termMonths} mo @ 0%)`}</span>
-                            <span className="font-medium text-green-700 text-sm">
-                              {monthlyDisplay > 0 ? `${fmt(monthlyDisplay)}/mo` : <span className="text-muted-foreground text-xs">None</span>}
-                            </span>
-                          </div>
+                          {!pkg.paidInFull && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground text-xs">{`Monthly (${pc.termMonths} mo @ 0%)`}</span>
+                              <span className="font-medium text-green-700 text-sm">
+                                {monthlyDisplay > 0 ? `${fmt(monthlyDisplay)}/mo` : <span className="text-muted-foreground text-xs">None</span>}
+                              </span>
+                            </div>
+                          )}
                           {pc.termMonths === 120 && !pkg.paidInFull && (
                             <div className="text-xs text-green-700 font-medium">✓ LMI extended term (120 mo)</div>
                           )}
