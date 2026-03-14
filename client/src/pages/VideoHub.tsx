@@ -17,8 +17,6 @@ import {
   CheckCircle,
   ArrowRight,
   Star,
-  Video,
-  Lock,
   Youtube,
   Bell,
 } from "lucide-react";
@@ -40,7 +38,6 @@ interface VideoTopic {
   description: string;
   duration: string;
   youtubeId: string | null; // null = coming soon
-  previewVideoUrl?: string; // AI-generated preview video URL
   thumbnail: string;
   badge: string;
   badgeColor: string;
@@ -102,7 +99,6 @@ const VIDEOS: VideoTopic[] = [
       "New Jersey homeowners can stack federal tax credits, utility rebates, and On-Bill Repayment financing to get a brand-new heat pump with little to nothing out of pocket. We walk you through every dollar available.",
     duration: "1:30",
     youtubeId: null, // Replace with real YouTube ID when uploaded — preview video available below
-    previewVideoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/nj-rebates-explainer_ee0faf4a.mp4",
     thumbnail:
       "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/hook_generated_f14368ff.webp",
     badge: "Rebates & Incentives",
@@ -209,40 +205,6 @@ const INTERESTS_KEY = "me_video_interests";
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function VideoHub() {
-  const { user, isAuthenticated } = useAuth();
-
-  const [videoTopic, setVideoTopic] = useState<"rebates" | "financing" | "solar" | "assessment">("rebates");
-  const [generatedVideoId, setGeneratedVideoId] = useState<string | null>(null);
-  const [videoStatus, setVideoStatus] = useState<"idle" | "pending" | "processing" | "completed" | "failed">("idle");
-  const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
-
-  const generateVideo = trpc.heygen.generate.useMutation({
-    onSuccess: (data) => {
-      setGeneratedVideoId(data.heygenVideoId);
-      setVideoStatus("pending");
-    },
-    onError: () => setVideoStatus("failed"),
-  });
-
-  const { data: statusData, refetch: refetchStatus } = trpc.heygen.checkStatus.useQuery(
-    { heygenVideoId: generatedVideoId! },
-    {
-      enabled: !!generatedVideoId && (videoStatus === "pending" || videoStatus === "processing"),
-      refetchInterval: (query) => {
-        const s = query.state.data?.status;
-        return s === "completed" || s === "failed" ? false : 5000;
-      },
-    }
-  );
-
-  useEffect(() => {
-    if (!statusData) return;
-    setVideoStatus(statusData.status as typeof videoStatus);
-    if (statusData.status === "completed" && statusData.videoUrl) {
-      setGeneratedVideoUrl(statusData.videoUrl);
-    }
-  }, [statusData]);
-
   const [selectedInterests, setSelectedInterests] = useState<InterestKey[]>(() => {
     try {
       const stored = localStorage.getItem(INTERESTS_KEY);
@@ -293,7 +255,7 @@ export default function VideoHub() {
         <div className="container">
           <div className="max-w-3xl">
             <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">
-              <Video className="h-3 w-3 mr-1" /> Learning Hub
+              <BookOpen className="h-3 w-3 mr-1" /> Learning Hub
             </Badge>
             <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
               Your Personalized HVAC Learning Hub
@@ -467,244 +429,6 @@ export default function VideoHub() {
         </div>
       </section>
 
-      {/* ── HeyGen Personalized Video Generator ─────────────────────────── */}
-      <section className="py-16 bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white">
-        <div className="container">
-          <div className="max-w-2xl mx-auto text-center">
-            <Badge className="mb-4 bg-[#ff6b35] text-white">
-              <Video className="h-3 w-3 mr-1" /> Powered by HeyGen AI
-            </Badge>
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Get a Personalized Video for Your Home
-            </h2>
-            <p className="text-lg text-white/90 mb-8">
-              Receive a 60-second AI-generated video — addressed to you by name — walking
-              through your rebate options, financing, or assessment process.
-            </p>
-
-            {!isAuthenticated ? (
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-6">
-                <p className="text-white/90 mb-4">
-                  Sign in to generate your personalized video.
-                </p>
-                <Link href="/rebate-calculator">
-                  <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
-                    Start Your Rebate Calculator <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-              </div>
-            ) : videoStatus === "completed" && generatedVideoUrl ? (
-              <div className="bg-white rounded-2xl overflow-hidden shadow-2xl mb-6">
-                <video
-                  src={generatedVideoUrl}
-                  controls
-                  autoPlay
-                  className="w-full aspect-video"
-                />
-                <div className="p-4 text-[#1e3a5f]">
-                  <p className="font-semibold mb-3">Your personalized video is ready!</p>
-                  <div className="flex gap-3 justify-center flex-wrap">
-                    <a href={generatedVideoUrl} download target="_blank" rel="noreferrer">
-                      <Button variant="outline" className="border-[#1e3a5f] text-[#1e3a5f]">
-                        Download Video
-                      </Button>
-                    </a>
-                    <Button
-                      onClick={() => { setVideoStatus("idle"); setGeneratedVideoId(null); setGeneratedVideoUrl(null); }}
-                      className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white"
-                    >
-                      Generate Another
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : videoStatus === "pending" || videoStatus === "processing" ? (
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mb-6">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-12 h-12 rounded-full border-4 border-white/30 border-t-white animate-spin" />
-                  <p className="text-white font-semibold">Generating your personalized video…</p>
-                  <p className="text-white/70 text-sm">This takes about 2–3 minutes. You can leave this page and come back.</p>
-                </div>
-              </div>
-            ) : videoStatus === "failed" ? (
-              <div className="bg-red-500/20 rounded-2xl p-6 mb-6">
-                <p className="text-white mb-3">Video generation failed. Please try again.</p>
-                <Button
-                  onClick={() => setVideoStatus("idle")}
-                  className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white"
-                >
-                  Try Again
-                </Button>
-              </div>
-            ) : (
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-6 text-left">
-                <p className="text-white/80 text-sm italic mb-4">
-                  "Hi {user?.name?.split(" ")[0] ?? "there"} — based on your home in Essex County, you qualify for up to
-                  $16,000 in rebates and incentives. Here is exactly how to claim every dollar..."
-                </p>
-                <div className="mb-4">
-                  <p className="text-white/90 text-sm font-semibold mb-2">Choose your video topic:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(["rebates", "financing", "solar", "assessment"] as const).map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => setVideoTopic(t)}
-                        className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          videoTopic === t
-                            ? "bg-[#ff6b35] text-white"
-                            : "bg-white/10 text-white/80 hover:bg-white/20"
-                        }`}
-                      >
-                        {t === "rebates" && "💰 NJ Rebates"}
-                        {t === "financing" && "💳 OBR Financing"}
-                        {t === "solar" && "☀️ Solar + HVAC"}
-                        {t === "assessment" && "🏠 Free Assessment"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <Button
-                  size="lg"
-                  className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold"
-                  disabled={generateVideo.isPending}
-                  onClick={() =>
-                    generateVideo.mutate({
-                      topic: videoTopic,
-                      clientName: user?.name ?? "Valued Customer",
-                    })
-                  }
-                >
-                  {generateVideo.isPending ? (
-                    <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin mr-2" /> Submitting…</>
-                  ) : (
-                    <>Generate My Personalized Video <ArrowRight className="ml-2 h-5 w-5" /></>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Kling B-Roll Gallery ──────────────────────────────────────── */}
-      <section className="py-14 bg-[#0f1e35] text-white">
-        <div className="container">
-          <div className="text-center mb-8">
-            <Badge className="mb-3 bg-[#ff6b35] text-white">🎬 Cinematic B-Roll</Badge>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Behind the Story</h2>
-            <p className="text-white/70 max-w-xl mx-auto text-sm">
-              Cinematic scenes showing real NJ homeowners discovering rebates, our technicians at work, and families enjoying year-round comfort.
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-4">
-            {[
-              { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/kling-broll-scene1_4a877670.mp4", label: "Discovering Your Rebate" },
-              { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/kling-broll-scene2_ed5de037.mp4", label: "Expert Installation" },
-              { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/kling-broll-scene3_6db4c2c8.mp4", label: "Year-Round Comfort" },
-            ].map((scene) => (
-              <div key={scene.url} className="rounded-xl overflow-hidden bg-white/5">
-                <video
-                  src={scene.url}
-                  className="w-full aspect-video object-cover"
-                  controls
-                  muted
-                  loop
-                  playsInline
-                />
-                <p className="text-center text-white/80 text-sm py-2 font-medium">{scene.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Nano Banana Slide Gallery ─────────────────────────────────────── */}
-      <section className="py-14 bg-[#0f1e35] border-t border-white/10 text-white">
-        <div className="container">
-          <div className="text-center mb-8">
-            <Badge className="mb-3 bg-[#ff6b35] text-white">📊 Explainer Slides</Badge>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">NJ Rebates — Visual Breakdown</h2>
-            <p className="text-white/70 max-w-xl mx-auto text-sm">
-              Scroll through the full rebate explainer — every slide tells part of the story.
-            </p>
-          </div>
-          <div className="overflow-x-auto pb-4">
-            <div className="flex gap-4" style={{ width: "max-content" }}>
-              {[
-                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/hook_generated_f14368ff.webp", label: "Up to $16,000 Back" },
-                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/opportunity_generated_eb21207e.webp", label: "Three Stacked Incentives" },
-                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/window_units_generated_7930e870.webp", label: "Window Units? This Changes Everything" },
-                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/zero_out_of_pocket_generated_c473db49.webp", label: "$0 Out of Pocket" },
-                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/what_you_get_generated_367e5c8c.webp", label: "We Handle Everything" },
-                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/cta_generated_4b0e3981.webp", label: "Book Free Assessment" },
-                { url: "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/closing_generated_95f47e80.webp", label: "Mechanical Enterprise" },
-              ].map((slide) => (
-                <div key={slide.url} className="flex-shrink-0 w-72 rounded-xl overflow-hidden bg-white/5">
-                  <img src={slide.url} alt={slide.label} className="w-full aspect-video object-cover" />
-                  <p className="text-center text-white/80 text-xs py-2 font-medium px-2">{slide.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="text-center mt-6">
-            <a
-              href="https://www.youtube.com/@MechanicalEnterprise-AH"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Button className="bg-red-600 hover:bg-red-700 text-white">
-                <Youtube className="h-4 w-4 mr-2" /> Subscribe on YouTube for the Full Video
-              </Button>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Social Clip Preview ──────────────────────────────────────────── */}
-      <section className="py-14 bg-[#0f1e35] border-t border-white/10 text-white">
-        <div className="container">
-          <div className="text-center mb-8">
-            <Badge className="mb-3 bg-[#ff6b35] text-white">📱 YouTube Short / Instagram Reel</Badge>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">15-Second Social Clip</h2>
-            <p className="text-white/70 max-w-xl mx-auto text-sm">
-              Ready to post on YouTube Shorts and Instagram Reels. Download and upload to <strong>@MechanicalEnterprise-AH</strong>.
-            </p>
-          </div>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-            <div className="w-full max-w-xs rounded-2xl overflow-hidden shadow-2xl">
-              <video
-                src="https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/social-clip-15sec_0d93fe9a.mp4"
-                className="w-full"
-                controls
-                muted
-                loop
-                playsInline
-              />
-            </div>
-            <div className="max-w-sm space-y-4">
-              <div className="bg-white/10 rounded-xl p-4 space-y-2">
-                <p className="font-semibold text-[#ff6b35]">📌 YouTube Shorts Caption</p>
-                <p className="text-sm text-white/80">NJ homeowners: up to $16,000 back on a new heat pump — $0 out of pocket via On-Bill Repayment. Heating + cooling, one system, all year. 📞 862-419-1763 #NJHeatPump #HVACRebates #NewJersey #HeatPump #EnergyEfficiency #NJCleanHeat</p>
-              </div>
-              <div className="bg-white/10 rounded-xl p-4 space-y-2">
-                <p className="font-semibold text-[#ff6b35]">📌 Instagram Reel Caption</p>
-                <p className="text-sm text-white/80">💰 Up to $16K back for NJ homeowners upgrading to a heat pump — and you pay $0 upfront. Our team handles everything from paperwork to installation. ⬇️ Book your free assessment at the link in bio. #NJHVAc #HeatPump #EnergyRebates #NJCleanHeat #MechanicalEnterprise</p>
-              </div>
-              <a
-                href="https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/social-clip-15sec_0d93fe9a.mp4"
-                download
-                target="_blank"
-                rel="noreferrer"
-              >
-                <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
-                  ⬇️ Download Social Clip
-                </Button>
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
       <Footer />
     </div>
   );
@@ -731,14 +455,6 @@ function VideoCard({ video, highlighted = false }: { video: VideoTopic; highligh
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
-        ) : playing && video.previewVideoUrl ? (
-          <video
-            className="w-full h-full object-cover"
-            src={video.previewVideoUrl}
-            autoPlay
-            controls
-            title={video.title}
-          />
         ) : (
           <>
             <img
@@ -755,18 +471,6 @@ function VideoCard({ video, highlighted = false }: { video: VideoTopic; highligh
                   aria-label="Play video"
                 >
                   <Play className="h-7 w-7 text-[#1e3a5f] ml-1" fill="currentColor" />
-                </button>
-              ) : video.previewVideoUrl ? (
-                <button
-                  onClick={() => setPlaying(true)}
-                  className="flex flex-col items-center gap-2"
-                >
-                  <div className="w-16 h-16 rounded-full bg-[#ff6b35]/90 hover:bg-[#ff6b35] flex items-center justify-center transition-transform hover:scale-110 shadow-xl">
-                    <Play className="h-7 w-7 text-white ml-1" fill="currentColor" />
-                  </div>
-                  <span className="text-white text-xs font-medium bg-[#ff6b35]/80 px-3 py-1 rounded-full">
-                    Watch Preview
-                  </span>
                 </button>
               ) : (
                 <a

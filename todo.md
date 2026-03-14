@@ -692,3 +692,9 @@
 - [x] Fix typos on slide 5 (Mechanical Enterprise, Assessment, mechanicalenterprise.com) — regenerated with correct logo
 - [x] Fix Mechanical Enterprise logo — replaced with correct gear+flame+snowflake logo from site
 - [x] Fix Assessment Calculator tab — added ScrollToTop component in App.tsx, scrolls to top on every route change
+
+## Remove All Videos From Site
+- [ ] Remove all B-roll video players from Video Hub
+- [ ] Remove explainer slides carousel from Video Hub
+- [ ] Remove 15-second social clip section from Video Hub
+- [ ] Remove any other embedded video content from the site
