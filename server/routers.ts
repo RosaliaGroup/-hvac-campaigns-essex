@@ -33,6 +33,17 @@ export const appRouter = router({
         success: true,
       } as const;
     }),
+    saveVideoInterests: protectedProcedure
+      .input(z.object({ interests: z.array(z.string()) }))
+      .mutation(async ({ ctx, input }) => {
+        await db.saveUserVideoInterests(ctx.user.id, input.interests.join(','));
+        return { success: true };
+      }),
+    getVideoInterests: protectedProcedure.query(async ({ ctx }) => {
+      const user = await db.getUserById(ctx.user.id);
+      const raw = user?.videoInterests ?? '';
+      return { interests: raw ? raw.split(',') : [] };
+    }),
   }),
 
   // Lead management router

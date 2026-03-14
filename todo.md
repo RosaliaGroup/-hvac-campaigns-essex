@@ -626,3 +626,13 @@
 - [x] Solar CTA on confirmation screen when client said Yes/Maybe to solar
 - [x] Solar Interest column in Lead Dashboard / assessment submissions table
 - [x] Preferred contact method field (Call / Text / Email) in booking form
+
+## CMO Video Strategy — Personalized Video Hub
+- [x] Write Rebates video script (60-sec explainer + talking head version)
+- [x] Write content strategy for all 5 video topics
+- [x] Generate AI video visuals/assets for Rebates video
+- [x] Build personalized Video Hub page (interest selector + YouTube embeds)
+- [x] Add HeyGen talking-head CTA section
+- [x] Add user interest tracking to profile (checklist on registration/profile)
+- [x] Wire personalization logic (show relevant videos based on interests)
+- [x] Add lead capture CTA inside each video section

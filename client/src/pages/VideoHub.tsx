@@ -1,0 +1,557 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import Navigation from "@/components/Navigation";
+import Footer from "@/components/Footer";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { Link } from "wouter";
+import {
+  Play,
+  BookOpen,
+  Sun,
+  Wrench,
+  Building2,
+  Zap,
+  CheckCircle,
+  ArrowRight,
+  Star,
+  Video,
+  Lock,
+} from "lucide-react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type InterestKey =
+  | "rebates"
+  | "financing"
+  | "solar"
+  | "maintenance"
+  | "commercial"
+  | "assessment";
+
+interface VideoTopic {
+  id: string;
+  interest: InterestKey;
+  title: string;
+  description: string;
+  duration: string;
+  youtubeId: string | null; // null = coming soon
+  thumbnail: string;
+  badge: string;
+  badgeColor: string;
+  cta: string;
+  ctaHref: string;
+  keyPoints: string[];
+  isNew?: boolean;
+}
+
+// ─── Interest Categories ───────────────────────────────────────────────────────
+
+const INTERESTS: { key: InterestKey; label: string; icon: React.ReactNode; description: string }[] = [
+  {
+    key: "rebates",
+    label: "Rebates & Incentives",
+    icon: <BookOpen className="h-5 w-5" />,
+    description: "How to maximize your NJ incentives",
+  },
+  {
+    key: "financing",
+    label: "OBR Financing",
+    icon: <Zap className="h-5 w-5" />,
+    description: "$0 down, pay on your utility bill",
+  },
+  {
+    key: "solar",
+    label: "Solar + Heat Pump",
+    icon: <Sun className="h-5 w-5" />,
+    description: "The bundle that pays for itself",
+  },
+  {
+    key: "maintenance",
+    label: "Maintenance Plans",
+    icon: <Wrench className="h-5 w-5" />,
+    description: "Keep your system running perfectly",
+  },
+  {
+    key: "commercial",
+    label: "Commercial HVAC",
+    icon: <Building2 className="h-5 w-5" />,
+    description: "VRV/VRF and large-scale solutions",
+  },
+  {
+    key: "assessment",
+    label: "Free Assessment",
+    icon: <CheckCircle className="h-5 w-5" />,
+    description: "What to expect at your visit",
+  },
+];
+
+// ─── Video Library ─────────────────────────────────────────────────────────────
+
+const VIDEOS: VideoTopic[] = [
+  {
+    id: "rebates-explainer",
+    interest: "rebates",
+    title: "How to Get Up to $16,000 Back on a New Heat Pump in NJ",
+    description:
+      "New Jersey homeowners can stack federal tax credits, utility rebates, and On-Bill Repayment financing to get a brand-new heat pump with little to nothing out of pocket. We walk you through every dollar available.",
+    duration: "1:30",
+    youtubeId: null, // Replace with real YouTube ID when uploaded
+    thumbnail:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/rebates-video-thumbnail-GNY8ywVaEBT2EcUiJh6YTa.png",
+    badge: "Rebates & Incentives",
+    badgeColor: "bg-[#1e3a5f] text-white",
+    cta: "Calculate Your Rebate",
+    ctaHref: "/rebate-calculator",
+    keyPoints: [
+      "Up to $7,500 from NJ Whole Home Program",
+      "30% Federal Tax Credit (up to $2,000)",
+      "Additional utility rebates on top",
+      "Up to $16,000 total for LMI households",
+    ],
+    isNew: true,
+  },
+  {
+    id: "obr-financing",
+    interest: "financing",
+    title: "How OBR Financing Works: $0 Down, Pay on Your Bill",
+    description:
+      "On-Bill Repayment means you pay nothing upfront. The cost of your new heat pump is spread over your utility bill — often for less than your current energy costs. Here is exactly how it works.",
+    duration: "2:00",
+    youtubeId: null,
+    thumbnail:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/rebates-incentive-breakdown-oAAqu8xDQQMRA3cek2riot.png",
+    badge: "OBR Financing",
+    badgeColor: "bg-[#ff6b35] text-white",
+    cta: "See Your Monthly Payment",
+    ctaHref: "/rebate-calculator",
+    keyPoints: [
+      "$0 upfront — no deposit required",
+      "84-month term (120 months for LMI)",
+      "Payments added directly to utility bill",
+      "Often less than current monthly energy costs",
+    ],
+  },
+  {
+    id: "solar-bundle",
+    interest: "solar",
+    title: "Solar + Heat Pump: The NJ Bundle That Pays for Itself",
+    description:
+      "Combining a heat pump with solar panels creates a system that generates its own energy. See how NJ homeowners are eliminating their utility bills and getting paid back in under 9 years.",
+    duration: "2:30",
+    youtubeId: null,
+    thumbnail:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/rebates-hero-scene-J3aPJsXepLf9BkC8htkUtM.webp",
+    badge: "Solar + HVAC",
+    badgeColor: "bg-amber-500 text-white",
+    cta: "Book Solar + HVAC Assessment",
+    ctaHref: "/rebate-calculator",
+    keyPoints: [
+      "30% Federal Solar Tax Credit",
+      "$1,200–$1,800 average annual savings",
+      "6–9 year payback timeline",
+      "Heat pump + solar = near-zero utility bills",
+    ],
+  },
+  {
+    id: "assessment-walkthrough",
+    interest: "assessment",
+    title: "What to Expect at Your Free HVAC Assessment",
+    description:
+      "No pressure, no obligation, no cost. Your free assessment takes about 45 minutes. Here is exactly what our technician will do, what questions to have ready, and how we calculate your personalized proposal.",
+    duration: "1:45",
+    youtubeId: null,
+    thumbnail:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/rebates-hero-scene-2fcBXQM8zkWJZXbcPoYdBm.png",
+    badge: "Free Assessment",
+    badgeColor: "bg-green-600 text-white",
+    cta: "Book Your Free Assessment",
+    ctaHref: "/rebate-calculator",
+    keyPoints: [
+      "45-minute in-home visit",
+      "No obligation or pressure",
+      "Personalized rebate proposal included",
+      "We handle all paperwork",
+    ],
+  },
+  {
+    id: "commercial-vrv",
+    interest: "commercial",
+    title: "VRV/VRF Systems: The Future of Commercial HVAC",
+    description:
+      "Variable refrigerant flow technology delivers precise multi-zone climate control for commercial properties. Learn how Mechanical Enterprise has installed and maintained over 2.6 million sq ft of commercial space.",
+    duration: "3:00",
+    youtubeId: null,
+    thumbnail:
+      "https://d2xsxph8kpxj0f.cloudfront.net/310519663360032476/4ocuaVfrPR2qxUA9U855oL/rebates-incentive-breakdown-9XBJxUYTVCGjPPM9AbFKzc.webp",
+    badge: "Commercial",
+    badgeColor: "bg-[#1e3a5f] text-white",
+    cta: "Request Commercial Quote",
+    ctaHref: "/contact",
+    keyPoints: [
+      "Multi-zone precision climate control",
+      "Up to 40% energy savings vs. traditional systems",
+      "BIM technology integration",
+      "2.6M sq ft of commercial experience",
+    ],
+  },
+];
+
+// ─── Local storage key for persisting interests ────────────────────────────────
+const INTERESTS_KEY = "me_video_interests";
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
+export default function VideoHub() {
+  const { user, isAuthenticated } = useAuth();
+
+  const [selectedInterests, setSelectedInterests] = useState<InterestKey[]>(() => {
+    try {
+      const stored = localStorage.getItem(INTERESTS_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [activeFilter, setActiveFilter] = useState<InterestKey | "all">("all");
+  const [showInterestPicker, setShowInterestPicker] = useState(false);
+
+  // Persist interests to localStorage
+  useEffect(() => {
+    localStorage.setItem(INTERESTS_KEY, JSON.stringify(selectedInterests));
+  }, [selectedInterests]);
+
+  // Auto-open interest picker for new visitors with no interests saved
+  useEffect(() => {
+    if (selectedInterests.length === 0) {
+      setShowInterestPicker(true);
+    }
+  }, []);
+
+  const toggleInterest = (key: InterestKey) => {
+    setSelectedInterests((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  };
+
+  // Filter videos: if interests selected, show those first; then rest
+  const filteredVideos =
+    activeFilter === "all"
+      ? [
+          ...VIDEOS.filter((v) => selectedInterests.includes(v.interest)),
+          ...VIDEOS.filter((v) => !selectedInterests.includes(v.interest)),
+        ]
+      : VIDEOS.filter((v) => v.interest === activeFilter);
+
+  const recommendedVideos = VIDEOS.filter((v) => selectedInterests.includes(v.interest));
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white py-16">
+        <div className="container">
+          <div className="max-w-3xl">
+            <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">
+              <Video className="h-3 w-3 mr-1" /> Learning Hub
+            </Badge>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 leading-tight">
+              Your Personalized HVAC Learning Hub
+            </h1>
+            <p className="text-xl text-white/90 mb-6">
+              Watch short, expert videos on the topics that matter most to you — rebates,
+              financing, solar, and more. Each video ends with a clear next step to help you
+              save money on your home's comfort system.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Button
+                onClick={() => setShowInterestPicker(true)}
+                className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white"
+              >
+                Choose My Topics
+              </Button>
+              <Button
+                variant="outline"
+                className="bg-white/10 border-white text-white hover:bg-white/20"
+                onClick={() => setActiveFilter("all")}
+              >
+                Browse All Videos
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Interest Picker ───────────────────────────────────────────────── */}
+      {showInterestPicker && (
+        <section className="bg-white border-b border-gray-200 py-8">
+          <div className="container">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-xl font-bold text-[#1e3a5f] mb-2">
+                What are you most interested in?
+              </h2>
+              <p className="text-sm text-muted-foreground mb-5">
+                Select all that apply — we will show your most relevant videos first.
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-5">
+                {INTERESTS.map((interest) => {
+                  const isSelected = selectedInterests.includes(interest.key);
+                  return (
+                    <button
+                      key={interest.key}
+                      onClick={() => toggleInterest(interest.key)}
+                      className={`flex items-start gap-3 p-4 rounded-xl border-2 text-left transition-all ${
+                        isSelected
+                          ? "border-[#ff6b35] bg-[#ff6b35]/5"
+                          : "border-gray-200 hover:border-gray-300 bg-white"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 ${isSelected ? "text-[#ff6b35]" : "text-gray-400"}`}
+                      >
+                        {interest.icon}
+                      </span>
+                      <div>
+                        <div
+                          className={`font-semibold text-sm ${
+                            isSelected ? "text-[#ff6b35]" : "text-[#1e3a5f]"
+                          }`}
+                        >
+                          {interest.label}
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-0.5">
+                          {interest.description}
+                        </div>
+                      </div>
+                      {isSelected && (
+                        <CheckCircle className="h-4 w-4 text-[#ff6b35] ml-auto flex-shrink-0 mt-0.5" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setShowInterestPicker(false)}
+                  className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white"
+                  disabled={selectedInterests.length === 0}
+                >
+                  Show My Videos ({selectedInterests.length} selected)
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setSelectedInterests([]);
+                    setShowInterestPicker(false);
+                  }}
+                >
+                  Skip — show all
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Recommended for You ───────────────────────────────────────────── */}
+      {recommendedVideos.length > 0 && !showInterestPicker && (
+        <section className="py-10 bg-white border-b">
+          <div className="container">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-[#1e3a5f] flex items-center gap-2">
+                  <Star className="h-5 w-5 text-[#ff6b35]" /> Recommended for You
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Based on your selected interests
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowInterestPicker(true)}
+                className="text-[#ff6b35]"
+              >
+                Edit Interests
+              </Button>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {recommendedVideos.map((video) => (
+                <VideoCard key={video.id} video={video} highlighted />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Filter Bar ───────────────────────────────────────────────────── */}
+      <section className="bg-white border-b sticky top-0 z-10 shadow-sm">
+        <div className="container">
+          <div className="flex gap-2 overflow-x-auto py-3 no-scrollbar">
+            <button
+              onClick={() => setActiveFilter("all")}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                activeFilter === "all"
+                  ? "bg-[#1e3a5f] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              All Videos
+            </button>
+            {INTERESTS.map((interest) => (
+              <button
+                key={interest.key}
+                onClick={() => setActiveFilter(interest.key)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  activeFilter === interest.key
+                    ? "bg-[#ff6b35] text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {interest.icon}
+                {interest.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Video Grid ───────────────────────────────────────────────────── */}
+      <section className="py-12">
+        <div className="container">
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredVideos.map((video) => (
+              <VideoCard key={video.id} video={video} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HeyGen Personalized Video CTA ────────────────────────────────── */}
+      <section className="py-16 bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white">
+        <div className="container">
+          <div className="max-w-3xl mx-auto text-center">
+            <Badge className="mb-4 bg-[#ff6b35] text-white">Coming Soon</Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Get a Personalized Video for Your Home
+            </h2>
+            <p className="text-lg text-white/90 mb-6">
+              Soon, after you complete the Rebate Calculator, you will receive a personalized
+              60-second video showing your exact rebate breakdown, monthly payment, and
+              recommended financing option — delivered by name, just for your home.
+            </p>
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 mb-8 text-left max-w-xl mx-auto">
+              <p className="text-white/80 text-sm italic">
+                "Hi Maria — based on your home in Montclair, you qualify for $14,200 in
+                rebates and incentives. Here is exactly how to claim every dollar..."
+              </p>
+            </div>
+            <Link href="/rebate-calculator">
+              <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold">
+                Start Your Rebate Calculator <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <Footer />
+    </div>
+  );
+}
+
+// ─── Video Card Component ──────────────────────────────────────────────────────
+
+function VideoCard({ video, highlighted = false }: { video: VideoTopic; highlighted?: boolean }) {
+  const [playing, setPlaying] = useState(false);
+
+  return (
+    <Card
+      className={`overflow-hidden flex flex-col h-full transition-shadow hover:shadow-lg ${
+        highlighted ? "ring-2 ring-[#ff6b35]" : ""
+      }`}
+    >
+      {/* Thumbnail / Player */}
+      <div className="relative aspect-video bg-gray-900 overflow-hidden">
+        {playing && video.youtubeId ? (
+          <iframe
+            className="w-full h-full"
+            src={`https://www.youtube.com/embed/${video.youtubeId}?autoplay=1`}
+            title={video.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <>
+            <img
+              src={video.thumbnail}
+              alt={video.title}
+              className="w-full h-full object-cover"
+            />
+            {/* Overlay */}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+              {video.youtubeId ? (
+                <button
+                  onClick={() => setPlaying(true)}
+                  className="w-16 h-16 rounded-full bg-white/90 hover:bg-white flex items-center justify-center transition-transform hover:scale-110 shadow-xl"
+                  aria-label="Play video"
+                >
+                  <Play className="h-7 w-7 text-[#1e3a5f] ml-1" fill="currentColor" />
+                </button>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-16 h-16 rounded-full bg-white/20 border-2 border-white/50 flex items-center justify-center">
+                    <Lock className="h-6 w-6 text-white/70" />
+                  </div>
+                  <span className="text-white/90 text-sm font-medium bg-black/50 px-3 py-1 rounded-full">
+                    Coming Soon
+                  </span>
+                </div>
+              )}
+            </div>
+            {/* Duration badge */}
+            <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
+              {video.duration}
+            </div>
+            {/* New badge */}
+            {video.isNew && (
+              <div className="absolute top-2 left-2">
+                <Badge className="bg-[#ff6b35] text-white text-xs">New</Badge>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <CardHeader className="pb-2">
+        <div className="flex items-start justify-between gap-2 mb-1">
+          <Badge className={`text-xs ${video.badgeColor}`}>{video.badge}</Badge>
+        </div>
+        <CardTitle className="text-base leading-snug text-[#1e3a5f]">{video.title}</CardTitle>
+        <CardDescription className="text-sm line-clamp-2">{video.description}</CardDescription>
+      </CardHeader>
+
+      <CardContent className="flex-1 flex flex-col justify-between pt-0">
+        {/* Key Points */}
+        <ul className="space-y-1.5 mb-4">
+          {video.keyPoints.map((point, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+              <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+              {point}
+            </li>
+          ))}
+        </ul>
+
+        {/* CTA */}
+        <Link href={video.ctaHref}>
+          <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white text-sm">
+            {video.cta} <ArrowRight className="ml-1.5 h-4 w-4" />
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  );
+}

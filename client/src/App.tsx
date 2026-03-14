@@ -49,6 +49,7 @@ import ResetPassword from "./pages/ResetPassword";
 import TeamManagement from "./pages/TeamManagement";
 import NotFound from "./pages/NotFound";
 import AssessmentSubmissions from "./pages/AssessmentSubmissions";
+import VideoHub from "./pages/VideoHub";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -86,6 +87,7 @@ function Router() {
       <Route path={"/promos"} component={PromosLanding} />
       <Route path={"/qualify"} component={Qualify} />
       <Route path={"/rebate-calculator"} component={RebateCalculator} />
+      <Route path={"/video-hub"} component={VideoHub} />
 
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />

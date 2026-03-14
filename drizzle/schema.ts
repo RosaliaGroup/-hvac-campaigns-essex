@@ -20,6 +20,8 @@ export const users = mysqlTable("users", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+  /** Comma-separated list of video interest keys selected by the user */
+  videoInterests: text("videoInterests"),
 });
 
 export type User = typeof users.$inferSelect;
