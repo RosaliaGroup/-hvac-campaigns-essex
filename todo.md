@@ -670,3 +670,25 @@
 - [x] Create 15-second social clip with text overlay from Kling B-roll
 - [x] Final site checks and prepare for publishing
 - [x] Deliver YouTube upload package with title, description, tags, thumbnail
+
+## Before/After Documentary Video — Window AC → Heat Pump Transformation
+- [ ] Write full video script with 4 acts: Before (window AC), Assessment, Installation, After
+- [ ] Write Kling 3.0 generation prompts for each scene (8-10 scenes)
+- [ ] Generate all cinematic B-roll scenes via Kling 3.0
+- [ ] Generate voiceover audio (Google TTS or ElevenLabs)
+- [ ] Merge voiceover + B-roll into finished video with ffmpeg
+- [ ] Upload finished video to CDN
+- [ ] Add to Video Hub as new card
+- [ ] Deliver YouTube upload package (title, description, tags, thumbnail text)
+
+## Documentary Video V2 — Corrected (Window AC → Modern Mini-Split)
+- [ ] Research Mitsubishi/Daikin mini-split appearance for accurate Kling prompts
+- [ ] Write 8 corrected 10-second scene prompts (no looping, correct equipment, correct costumes)
+- [ ] Generate 8 Kling 3.0 scenes sequentially at 10s duration
+- [ ] Assemble with voiceover, title card, end screen
+- [ ] Upload to CDN and deliver
+
+## Bug Fixes — Mar 14 2026
+- [x] Fix typos on slide 5 (Mechanical Enterprise, Assessment, mechanicalenterprise.com) — regenerated with correct logo
+- [x] Fix Mechanical Enterprise logo — replaced with correct gear+flame+snowflake logo from site
+- [x] Fix Assessment Calculator tab — added ScrollToTop component in App.tsx, scrolls to top on every route change
