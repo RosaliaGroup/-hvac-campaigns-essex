@@ -461,8 +461,8 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
   },
   {
     id: "njcleanheat_obr",
-    name: "Option 3 — 100% OBR",
-    tagline: "$0 upfront — financed entirely through NJ Clean Heat",
+    name: "Option 3 — Client-Financed OBR",
+    tagline: "$0 upfront — you finance the OBR balance directly",
     costMultiplier: 1.30,
     upfrontPct: 0,
     maxIncentive: 14000,
@@ -471,9 +471,9 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
     warrantyYears: 2,
     maintenanceYears: 1,
     highlight: false,
-    description: "NJ Clean Heat On-Bill Repayment covers 100% of the project cost. Pay nothing upfront. Repayment added to your monthly utility bill at 0% interest. Includes 1-year preventive maintenance, 2-year warranty, and a $100 gift card.",
+    description: "Client finances the OBR balance directly — not through the utility company. $0 upfront. You receive the rebates and the remaining balance is repaid at 0% interest. Includes 1-year preventive maintenance, 2-year warranty, and a $100 gift card.",
     creditApplied: 500,
-    paymentNote: "Added to your monthly utility bill at 0% interest",
+    paymentNote: "Pay after rebates — client finances OBR balance directly at 0%",
     paidInFull: false,
   },
   {
@@ -1597,7 +1597,7 @@ export default function RebateCalculator() {
                 </tbody>
               </table>
               <div className="px-4 py-2 bg-gray-50 text-xs text-muted-foreground border-t rounded-b-xl">
-                Click any row to select that option. <strong>You Pay (Net)</strong> = total project cost minus rebates &amp; incentives. Monthly payments at 0% interest via NJ Clean Heat On-Bill Repayment.
+                Click any row to select that option. <strong>You Pay After Rebates</strong> = total project cost minus rebates &amp; incentives. Monthly payments at 0% interest.
               </div>
             </div>
 
@@ -1657,82 +1657,71 @@ export default function RebateCalculator() {
                       </div>
                     </div>
 
-                    {/* Primary figure: what the client actually pays (net) */}
+                    {/* ── Unified cost block: same rows for all 4 options ── */}
                     {(() => {
                       const netCostCard = pkg.paidInFull
                         ? pkgCost.totalCost - (isHighEff ? pkgCost.incentive + pkgCost.mechanicalIncentive : 0)
                         : pkgCost.upfront + pkgCost.remaining;
+                      const monthlyDisplay = pkgCost.termMonths === 120 ? pkgCost.monthly120 : pkgCost.monthly84;
                       return (
-                        <div className="rounded-lg px-3 py-2 mb-3 text-center bg-green-50 border border-green-200">
-                          <div className="text-xs text-green-700 font-medium">
-                            {pkg.paidInFull ? "You Pay (after rebates)" : "OBR Monthly Payment"}
+                        <>
+                          {/* Row 1: You Pay After Rebates (prominent green box) */}
+                          <div className="rounded-lg px-3 py-2 mb-3 text-center bg-green-50 border border-green-200">
+                            <div className="text-xs text-green-700 font-medium">You Pay After Rebates</div>
+                            <div className="text-2xl font-bold text-green-700">{fmt(netCostCard)}</div>
+                            {!pkg.paidInFull && isHighEff && pkgCost.incentive > 0 && (
+                              <div className="text-xs text-green-600 mt-0.5">rebates deducted from balance</div>
+                            )}
                           </div>
-                          <div className="text-2xl font-bold text-green-700">
-                            {pkg.paidInFull
-                              ? fmt(netCostCard)
-                              : `${fmt(pkgCost.termMonths === 120 ? pkgCost.monthly120 : pkgCost.monthly84)}/mo`
-                            }
-                          </div>
-                          {!pkg.paidInFull && (
-                            <div className="text-xs text-muted-foreground mt-0.5">
-                              {pkgCost.termMonths} months at 0% interest
+
+                          {/* Row 2: Upfront / Today */}
+                          <div className="space-y-2 text-sm mb-4">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Upfront Today</span>
+                              <span className="font-bold text-[#1e3a5f]">{pkgCost.upfront === 0 ? "$0" : fmt(pkgCost.upfront)}</span>
                             </div>
-                          )}
-                        </div>
+
+                            {/* Row 3: Rebate Incentive (high-eff only) */}
+                            {isHighEff && pkgCost.incentive > 0 ? (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Rebate Incentive</span>
+                                <span className="font-medium text-green-700">-{fmt(pkgCost.incentive)}</span>
+                              </div>
+                            ) : (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Rebate Incentive</span>
+                                <span className="text-muted-foreground text-xs">N/A</span>
+                              </div>
+                            )}
+
+                            {/* Row 4: Mechanical Incentive (Option 1 only) */}
+                            {isHighEff && pkgCost.mechanicalIncentive > 0 ? (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Mechanical Incentive</span>
+                                <span className="font-medium text-green-700">up to +{fmt(pkgCost.mechanicalIncentive)}</span>
+                              </div>
+                            ) : (
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Mechanical Incentive</span>
+                                <span className="text-muted-foreground text-xs">—</span>
+                              </div>
+                            )}
+
+                            {/* Row 5: Monthly payment */}
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Monthly ({pkgCost.termMonths} mo @ 0%)</span>
+                              <span className="font-medium text-green-700">
+                                {monthlyDisplay > 0 ? `${fmt(monthlyDisplay)}/mo` : <span className="text-muted-foreground text-xs">None</span>}
+                              </span>
+                            </div>
+
+                            {pkgCost.termMonths === 120 && (
+                              <div className="text-xs text-green-700 font-medium">✓ LMI extended term (120 months)</div>
+                            )}
+                          </div>
+                        </>
                       );
                     })()}
-
-                    <div className="space-y-2 text-sm mb-4">
-                      {pkg.paidInFull ? (
-                        // 3rd-party financing: paid in full, client receives rebates directly
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Monthly Payment (84 mo)</span>
-                            <span className="font-bold text-[#1e3a5f] text-base">{fmt(pkgCost.monthly84)}/mo</span>
-                          </div>
-                          {isHighEff && pkgCost.incentive > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">NJ Clean Heat Rebate (you receive)</span>
-                              <span className="font-medium text-green-700">+{fmt(pkgCost.incentive)} back</span>
-                            </div>
-                          )}
-                          {isHighEff && pkgCost.mechanicalIncentive > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Mechanical Incentive</span>
-                              <span className="font-medium text-green-700">up to +{fmt(pkgCost.mechanicalIncentive)} back</span>
-                            </div>
-                          )}
-                          <div className="text-xs text-blue-700 font-medium bg-blue-50 rounded px-2 py-1">
-                            ✓ Paid in full — Mechanical Enterprise gets paid right away
-                          </div>
-                        </>
-                      ) : (
-                        // OBR packages
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Upfront Payment</span>
-                            <span className="font-bold text-[#1e3a5f] text-base">{pkgCost.upfront === 0 ? "$0" : fmt(pkgCost.upfront)}</span>
-                          </div>
-                          {isHighEff && pkgCost.incentive > 0 && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Rebate Incentive</span>
-                              <span className="font-medium text-green-700">-{fmt(pkgCost.incentive)}</span>
-                            </div>
-                          )}
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">OBR Balance (0% interest)</span>
-                            <span className="font-medium">{fmt(pkgCost.remaining)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Monthly ({pkgCost.termMonths} months)</span>
-                            <span className="font-medium text-green-700">{fmt(pkgCost.termMonths === 120 ? pkgCost.monthly120 : pkgCost.monthly84)}/mo</span>
-                          </div>
-                          {pkgCost.termMonths === 120 && (
-                            <div className="text-xs text-green-700 font-medium">✓ LMI extended term (120 months)</div>
-                          )}
-                        </>
-                      )}
-                    </div>
 
                     <Separator className="my-3" />
 
@@ -1775,21 +1764,23 @@ export default function RebateCalculator() {
                 <div className="flex flex-wrap gap-6 justify-between items-center">
                   <div>
                     <div className="text-white/70 text-sm">Selected: {activePkg.name}</div>
-                    {activePkg.paidInFull ? (
-                      <>
-                        <div className="text-2xl font-bold mt-1">{fmt(activePkgCost.monthly84)}/mo</div>
-                        <div className="text-white/70 text-sm mt-1">via 3rd-party lender (84 months) — paid in full</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="text-2xl font-bold mt-1">
-                          {upfrontAmount === 0 ? "$0 Today" : `${fmt(upfrontAmount)} Today`}
-                        </div>
-                        <div className="text-white/70 text-sm mt-1">
-                          {monthlyOBR > 0 ? `Then ${fmt(monthlyOBR)}/month for ${obrTermMonths} months at 0% interest` : "No monthly payments"}
-                        </div>
-                      </>
-                    )}
+                    {(() => {
+                      const summaryNet = activePkg.paidInFull
+                        ? activePkgCost.totalCost - (selectedEfficiency === "high" ? activePkgCost.incentive + activePkgCost.mechanicalIncentive : 0)
+                        : activePkgCost.upfront + activePkgCost.remaining;
+                      const summaryMonthly = activePkgCost.termMonths === 120 ? activePkgCost.monthly120 : activePkgCost.monthly84;
+                      return (
+                        <>
+                          <div className="text-sm text-white/70">You Pay After Rebates</div>
+                          <div className="text-2xl font-bold mt-0.5">{fmt(summaryNet)}</div>
+                          <div className="text-white/70 text-sm mt-1">
+                            {summaryMonthly > 0
+                              ? `${fmt(summaryMonthly)}/mo for ${activePkgCost.termMonths} months at 0%`
+                              : activePkg.paidInFull ? `${fmt(activePkgCost.monthly84)}/mo via financing partner` : "No monthly payments"}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </div>
                   <div className="text-right">
                     <div className="text-white/70 text-sm">Total Project Cost</div>
