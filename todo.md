@@ -721,3 +721,13 @@
 ## Financing Card Fixes (Round 2)
 - [x] Option 1: remove monthly payment row (lender rate unknown)
 - [x] Option 3: update name and description — private financing of non-rebate balance, NOT utility OBR
+
+## Rebate Calculator Registration Gate
+- [x] Add `calculatorRegistrations` table to schema (firstName, lastName, email, phone, zip, token, tokenExpiresAt, address, createdAt)
+- [x] Run pnpm db:push to migrate
+- [x] Add `rebateCalculator.register` tRPC procedure: validate input, create record with UUID token, send SMS via Telnyx with link, send email via Resend with link
+- [x] Add `rebateCalculator.getByToken` tRPC procedure: look up registration by token, return personal details for pre-population
+- [x] Build CalculatorRegistrationGate component: form with firstName, lastName, email, phone, zip, address fields; on submit show confirmation screen with "Check your phone and email"
+- [x] Update /rebate-calculator route: if no ?token= in URL, show RegistrationGate; if token present, load registration and pre-populate Step 1 fields
+- [x] Pre-populate Step 1: name, address, zip, phone, email from registration record
+- [x] Write vitest tests for register and getByToken procedures (21 tests passing)

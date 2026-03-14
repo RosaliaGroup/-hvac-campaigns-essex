@@ -6,9 +6,10 @@ import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
 import { makeRequest, GeocodingResult } from "../_core/map";
 import { z } from "zod";
 import { getDb } from "../db";
-import { rebateCalculations } from "../../drizzle/schema";
+import { rebateCalculations, calculatorRegistrations } from "../../drizzle/schema";
 import { eq, desc } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
+import { randomUUID } from "crypto";
 
 async function requireDb() {
   const db = await getDb();
@@ -457,6 +458,178 @@ export const rebateCalculatorRouter = router({
         console.error("Telnyx fetch error:", err);
         return { success: false, error: "Network error sending SMS" };
       }
+    }),
+
+  /**
+   * Register a homeowner to access the Rebate Calculator.
+   * Creates a record, sends a personalized SMS + email with a unique access link.
+   */
+  register: publicProcedure
+    .input(
+      z.object({
+        firstName: z.string().min(1).max(100),
+        lastName: z.string().min(1).max(100),
+        email: z.string().email(),
+        phone: z.string().min(10).max(20),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        zip: z.string().optional(),
+        origin: z.string().url(), // window.location.origin passed from frontend
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+
+      // Normalize phone to E.164
+      const digits = input.phone.replace(/\D/g, "");
+      const phone = digits.startsWith("1") ? `+${digits}` : `+1${digits}`;
+
+      // Generate a unique token valid for 30 days
+      const token = randomUUID().replace(/-/g, "");
+      const tokenExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+      const calculatorUrl = `${input.origin}/rebate-calculator?token=${token}`;
+
+      // Insert registration record
+      await db.insert(calculatorRegistrations).values({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        phone,
+        address: input.address,
+        city: input.city,
+        zip: input.zip,
+        state: "NJ",
+        token,
+        tokenExpiresAt,
+        smsSent: false,
+        emailSent: false,
+        calculatorStarted: false,
+        calculatorCompleted: false,
+      });
+
+      let smsSent = false;
+      let emailSent = false;
+
+      // Send SMS via Telnyx
+      const telnyxApiKey = process.env.TELNYX_API_KEY;
+      const fromNumber = process.env.TELNYX_FROM_NUMBER;
+      if (telnyxApiKey && fromNumber) {
+        try {
+          const smsBody = [
+            `Hi ${input.firstName}! Your NJ Clean Heat Rebate Calculator is ready.`,
+            ``,
+            `Click your personalized link to see how much you can save:`,
+            calculatorUrl,
+            ``,
+            `Link valid for 30 days. Questions? Call (862) 419-1763`,
+            `Reply STOP to opt out.`,
+          ].join("\n");
+
+          const smsRes = await fetch("https://api.telnyx.com/v2/messages", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${telnyxApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ from: fromNumber, to: phone, text: smsBody }),
+          });
+          smsSent = smsRes.ok;
+        } catch (e) {
+          console.error("Registration SMS error:", e);
+        }
+      }
+
+      // Send email via Resend
+      const resendApiKey = process.env.RESEND_API_KEY;
+      if (resendApiKey) {
+        try {
+          const emailRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
+              to: [input.email],
+              subject: `${input.firstName}, your NJ Clean Heat Rebate Calculator is ready`,
+              html: `
+                <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                  <h2 style="color:#1e3a5f">Your Rebate Calculator Is Ready, ${input.firstName}!</h2>
+                  <p>We've set up a personalized rebate estimate for your home. Click the button below to see how much you could save with a new heat pump system.</p>
+                  <div style="text-align:center;margin:32px 0">
+                    <a href="${calculatorUrl}" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Open My Rebate Calculator</a>
+                  </div>
+                  <p style="color:#666;font-size:14px">Or copy this link: <a href="${calculatorUrl}">${calculatorUrl}</a></p>
+                  <p style="color:#666;font-size:14px">This link is valid for 30 days. Questions? Call us at <strong>(862) 419-1763</strong>.</p>
+                  <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+                  <p style="color:#999;font-size:12px">Mechanical Enterprise LLC &bull; Essex County, NJ &bull; <a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a></p>
+                </div>
+              `,
+            }),
+          });
+          emailSent = emailRes.ok;
+        } catch (e) {
+          console.error("Registration email error:", e);
+        }
+      }
+
+      // Update sent flags
+      await db
+        .update(calculatorRegistrations)
+        .set({ smsSent, emailSent })
+        .where(eq(calculatorRegistrations.token, token));
+
+      // Notify owner of new registration
+      await notifyOwner({
+        title: `📋 New Calculator Registration: ${input.firstName} ${input.lastName}`,
+        content: `A homeowner registered for the Rebate Calculator.\n\nName: ${input.firstName} ${input.lastName}\nEmail: ${input.email}\nPhone: ${phone}\nAddress: ${input.address ?? "N/A"}, ${input.city ?? ""} ${input.zip ?? ""}\n\nSMS sent: ${smsSent ? "✅" : "❌"}\nEmail sent: ${emailSent ? "✅" : "❌"}`,
+      });
+
+      return { success: true, smsSent, emailSent };
+    }),
+
+  /**
+   * Load a registration record by token (public).
+   * Called when homeowner clicks their personalized link.
+   * Marks the calculator as started and returns personal details for pre-population.
+   */
+  getByToken: publicProcedure
+    .input(z.object({ token: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const [row] = await db
+        .select()
+        .from(calculatorRegistrations)
+        .where(eq(calculatorRegistrations.token, input.token))
+        .limit(1);
+
+      if (!row) return { valid: false, error: "Link not found" };
+
+      if (row.tokenExpiresAt < new Date()) {
+        return { valid: false, error: "This link has expired. Please register again." };
+      }
+
+      // Mark calculator as started
+      if (!row.calculatorStarted) {
+        await db
+          .update(calculatorRegistrations)
+          .set({ calculatorStarted: true })
+          .where(eq(calculatorRegistrations.id, row.id));
+      }
+
+      return {
+        valid: true,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        email: row.email,
+        phone: row.phone,
+        address: row.address,
+        city: row.city,
+        zip: row.zip,
+        state: row.state,
+      };
     }),
 
   /**

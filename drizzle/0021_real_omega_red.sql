@@ -1,0 +1,21 @@
+CREATE TABLE `calculatorRegistrations` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`firstName` varchar(255) NOT NULL,
+	`lastName` varchar(255) NOT NULL,
+	`email` varchar(320) NOT NULL,
+	`phone` varchar(50) NOT NULL,
+	`address` varchar(500),
+	`city` varchar(255),
+	`state` varchar(50) DEFAULT 'NJ',
+	`zip` varchar(20),
+	`token` varchar(128) NOT NULL,
+	`tokenExpiresAt` timestamp NOT NULL,
+	`smsSent` boolean NOT NULL DEFAULT false,
+	`emailSent` boolean NOT NULL DEFAULT false,
+	`calculatorStarted` boolean NOT NULL DEFAULT false,
+	`calculatorCompleted` boolean NOT NULL DEFAULT false,
+	`createdAt` timestamp NOT NULL DEFAULT (now()),
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `calculatorRegistrations_id` PRIMARY KEY(`id`),
+	CONSTRAINT `calculatorRegistrations_token_unique` UNIQUE(`token`)
+);

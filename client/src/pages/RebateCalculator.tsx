@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import CalculatorRegistrationGate from "@/components/CalculatorRegistrationGate";
 
 import {
   Home, MapPin, Thermometer, DollarSign, CheckCircle, ArrowRight, ArrowLeft,
@@ -501,6 +502,22 @@ const STEP_LABELS = ["Home Details", "System Options", "Financing", "Book Assess
 
 export default function RebateCalculator() {
   const { toast } = useToast();
+
+  // ── Registration gate: read ?token= from URL ──────────────────────────────
+  const [token] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("token");
+  });
+
+  // Load registration data when token is present
+  const { data: registrationData, isLoading: registrationLoading } = trpc.rebateCalculator.getByToken.useQuery(
+    { token: token! },
+    { enabled: !!token }
+  );
+
+  // Show gate if no token provided
+  const showGate = !token;
+
   const [step, setStep] = useState(1);
   const addressInputRef = useRef<HTMLInputElement>(null);
   const [addressLookupStatus, setAddressLookupStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle');
@@ -542,6 +559,27 @@ export default function RebateCalculator() {
   const [smsPhone, setSmsPhone] = useState("");
   const [smsSent, setSmsSent] = useState(false);
   const [smsSending, setSmsSending] = useState(false);
+
+  // Pre-populate home details and booking form from registration data
+  useEffect(() => {
+    if (!registrationData || !registrationData.valid) return;
+    const reg = registrationData;
+    setHome(prev => ({
+      ...prev,
+      address: reg.address ?? prev.address,
+      city: reg.city ?? prev.city,
+      state: reg.state ?? prev.state,
+      zip: reg.zip ?? prev.zip,
+      ...(reg.zip && NJ_LMI_ZIPS.has(reg.zip) ? { incomeLevel: 'lmi' } : {}),
+    }));
+    setBookingForm(prev => ({
+      ...prev,
+      name: [reg.firstName, reg.lastName].filter(Boolean).join(' '),
+      email: reg.email ?? prev.email,
+      phone: reg.phone ?? prev.phone,
+    }));
+    setSmsPhone(reg.phone ?? '');
+  }, [registrationData]);
 
   const submitAssessment = trpc.rebateCalculator.submitCalculation.useMutation({
     onSuccess: () => {
@@ -789,6 +827,44 @@ export default function RebateCalculator() {
   };
 
   const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+  // Show registration gate if no token
+  if (showGate) {
+    return <CalculatorRegistrationGate />;
+  }
+
+  // Show loading spinner while token is being validated
+  if (registrationLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] flex items-center justify-center">
+        <div className="text-center text-white">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+          <p className="text-lg font-medium">Loading your personalized calculator…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if token is invalid or expired
+  if (registrationData && !registrationData.valid) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] flex items-center justify-center px-4">
+        <div className="bg-white rounded-xl p-8 max-w-md w-full text-center shadow-2xl">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h2 className="text-xl font-bold text-[#1e3a5f] mb-2">Link Expired or Invalid</h2>
+          <p className="text-muted-foreground mb-6">{registrationData.error ?? "This link is no longer valid. Please register again to get a new link."}</p>
+          <Button
+            className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white w-full"
+            onClick={() => window.location.href = window.location.pathname}
+          >
+            Register Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">

@@ -465,3 +465,32 @@ export const personalizedVideos = mysqlTable("personalizedVideos", {
 });
 export type PersonalizedVideo = typeof personalizedVideos.$inferSelect;
 export type InsertPersonalizedVideo = typeof personalizedVideos.$inferInsert;
+
+/**
+ * Calculator Registrations — homeowners register before accessing the Rebate Calculator.
+ * A unique token is emailed and texted to them; clicking the link pre-populates the tool.
+ */
+export const calculatorRegistrations = mysqlTable("calculatorRegistrations", {
+  id: int("id").autoincrement().primaryKey(),
+  // Personal details collected at registration
+  firstName: varchar("firstName", { length: 255 }).notNull(),
+  lastName: varchar("lastName", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }).notNull(),
+  phone: varchar("phone", { length: 50 }).notNull(),
+  address: varchar("address", { length: 500 }),
+  city: varchar("city", { length: 255 }),
+  state: varchar("state", { length: 50 }).default("NJ"),
+  zip: varchar("zip", { length: 20 }),
+  // Unique access token sent via SMS + email
+  token: varchar("token", { length: 128 }).notNull().unique(),
+  tokenExpiresAt: timestamp("tokenExpiresAt").notNull(),
+  // Tracking
+  smsSent: boolean("smsSent").default(false).notNull(),
+  emailSent: boolean("emailSent").default(false).notNull(),
+  calculatorStarted: boolean("calculatorStarted").default(false).notNull(),
+  calculatorCompleted: boolean("calculatorCompleted").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CalculatorRegistration = typeof calculatorRegistrations.$inferSelect;
+export type InsertCalculatorRegistration = typeof calculatorRegistrations.$inferInsert;
