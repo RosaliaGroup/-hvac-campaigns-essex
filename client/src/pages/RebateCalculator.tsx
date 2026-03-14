@@ -661,25 +661,31 @@ export default function RebateCalculator() {
     ? selectedSystem === "ducted" ? quotes.ducted : quotes.ductless
     : null;
 
-  // For standard efficiency: lower base cost but NO rebate incentives
+  // For standard efficiency: lower base cost, NO rebate incentives, lower energy savings (~60% of high-eff)
   const activeQuote = baseQuote
     ? selectedEfficiency === "high"
       ? baseQuote
-      : {
-          ...baseQuote,
-          efficiency: "standard" as const,
-          projectCost: Math.round(baseQuote.projectCost / 1.08),
-          taxAmount: Math.round((baseQuote.projectCost / 1.08) * 0.06625),
-          totalCost: Math.round((baseQuote.projectCost / 1.08) * 1.06625),
-          njcleanheatRebate: 0,
-          decommissionAdder: 0,
-          reductAdder: 0,
-          additionalAdder: 0,
-          totalIncentive: 0,
-          outOfPocket: Math.round((baseQuote.projectCost / 1.08) * 1.06625),
-          monthlyOBR84: Math.round(((baseQuote.projectCost / 1.08) * 1.06625) / 84),
-          monthlyOBR60: Math.round(((baseQuote.projectCost / 1.08) * 1.06625) / 60),
-        }
+      : (() => {
+          const stdProjectCost = Math.round(baseQuote.projectCost / 1.08);
+          const stdTotalCost = Math.round(stdProjectCost * 1.06625);
+          return {
+            ...baseQuote,
+            efficiency: "standard" as const,
+            projectCost: stdProjectCost,
+            taxAmount: Math.round(stdProjectCost * 0.06625),
+            totalCost: stdTotalCost,
+            njcleanheatRebate: 0,
+            decommissionAdder: 0,
+            reductAdder: 0,
+            additionalAdder: 0,
+            totalIncentive: 0,
+            outOfPocket: stdTotalCost,
+            monthlyOBR84: Math.round(stdTotalCost / 84),
+            monthlyOBR60: Math.round(stdTotalCost / 60),
+            // Standard efficiency saves ~28% vs high-efficiency ~50% — roughly 56% of high-eff savings
+            annualSavings: Math.round(baseQuote.annualSavings * 0.56),
+          };
+        })()
     : null;
 
   const activePkg = FINANCING_PACKAGES.find((p) => p.id === selectedPackage)!;
