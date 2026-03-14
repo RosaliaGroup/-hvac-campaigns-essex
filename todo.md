@@ -705,3 +705,15 @@
 - [x] Add phone number input + "Text Me My Results" button to results step UI
 - [x] Show success/error state after SMS send
 - [x] Write vitest for the SMS procedure (16 tests passing)
+
+## Rebate Calculator Revisions — Mar 14 2026
+- [x] Fix energy savings: high-efficiency and standard show same figure — standard should be ~40% lower (heat pump COP vs resistive/gas)
+- [x] Hide panel/disconnect adder line from rebate display — silently add to cost only, no line-item shown
+- [x] Add Federal Tax Credit tooltip after total (25C: up to $2,000 for heat pumps) with ? explaining homeowner applies separately
+- [x] Verify ducted vs ductless cost accuracy (ductless should be ~10-15% cheaper than ducted)
+- [x] Reorder financing packages: 3rd-party financing = Option 1 (cheapest, paid in full, Mechanical gets paid right away, client receives rebates directly, up to $2K additional Mechanical incentive); current Option 1 (deposit+OBR) = Option 3
+- [x] Option 1 (3rd-party financing): no OBR balance, paid in full, add up to $2K Mechanical incentive, client receives rebates directly
+- [x] Current Option 3 (100% OBR) becomes Option 3 — re-labeled appropriately
+- [x] Oil tank question: if currentHeating === 'oil', ask tank location (above ground, basement, crawl space, buried) — add $2K decommissioning adder if applicable
+- [x] Remove "No — not right now" option from solar question (only Yes and Maybe)
+- [x] Remove solar info from confirmation/submitted screen (was not in original report)
