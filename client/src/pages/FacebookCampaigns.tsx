@@ -34,6 +34,55 @@ interface FbCampaignDef {
   audienceSummary: string;
 }
 
+// Campaigns already created in Meta Ads Manager — these are the live IDs
+const LIVE_CAMPAIGNS = [
+  {
+    id: "rebate-hunter",
+    name: "ME — Rebate Hunter | Essex County",
+    tagline: "Homeowners who qualify for NJ heat pump rebates",
+    dailyBudget: 18,
+    color: "bg-emerald-500",
+    campaignId: "120240217091720786",
+    adSetId: "120240217093710786",
+    adId: "120240217095270786",
+    headline: "Up to $16,000 in NJ Rebates Available",
+    primaryText: "Essex County homeowners: Get up to $16K in NJ Clean Energy rebates for heat pump installation. Free estimate. WMBE certified. Call Mechanical Enterprise today.",
+    cta: "LEARN_MORE",
+    url: "https://mechanicalenterprise.com",
+    audienceSummary: "Ages 25–65 · Essex County NJ (40 zip codes) · Lowest cost bidding",
+  },
+  {
+    id: "oil-replacement",
+    name: "ME — Oil Replacement | Essex County",
+    tagline: "Oil heat homeowners ready to switch to a heat pump",
+    dailyBudget: 14,
+    color: "bg-orange-500",
+    campaignId: "120240217091870786",
+    adSetId: "120240217096990786",
+    adId: "120240217097790786",
+    headline: "Replace Your Oil Furnace — Save $3,000+/Year",
+    primaryText: "Switch from oil to a heat pump and save thousands annually. NJ rebates up to $16K available. Essex County HVAC experts. Free consultation.",
+    cta: "GET_QUOTE",
+    url: "https://mechanicalenterprise.com",
+    audienceSummary: "Ages 25–65 · Essex County NJ (40 zip codes) · Lowest cost bidding",
+  },
+  {
+    id: "hvac-replacement",
+    name: "ME — HVAC Replacement | Essex County",
+    tagline: "General HVAC replacement awareness in Essex County",
+    dailyBudget: 8,
+    color: "bg-blue-500",
+    campaignId: "120240217092350786",
+    adSetId: "120240217098210786",
+    adId: "120240217098820786",
+    headline: "New HVAC System — Essex County Specialists",
+    primaryText: "Mechanical Enterprise installs high-efficiency HVAC systems for Essex County homes and businesses. 20+ years experience. WMBE/SBE certified. Free estimate.",
+    cta: "GET_QUOTE",
+    url: "https://mechanicalenterprise.com",
+    audienceSummary: "Ages 25–65 · Essex County NJ (40 zip codes) · Lowest cost bidding",
+  },
+];
+
 const CAMPAIGNS: FbCampaignDef[] = [
   {
     id: "rebate-hunter",
@@ -108,6 +157,7 @@ export default function FacebookAdsCampaigns() {
   const [showSetup, setShowSetup] = useState(false);
   const [adAccountId, setAdAccountId] = useState("");
   const [pageId, setPageId] = useState("");
+  const [liveExpanded, setLiveExpanded] = useState<string | null>(null);
 
   const { data: connStatus, isLoading: connLoading, refetch: refetchConn } =
     trpc.metaAds.getConnectionStatus.useQuery();
@@ -318,9 +368,128 @@ export default function FacebookAdsCampaigns() {
           </div>
         )}
 
+        {/* Live Campaigns Already Created */}
+        <div className="space-y-4 mb-8">
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold text-[#1e3a5f]">✅ Campaigns Live in Meta Ads Manager</h2>
+            <a
+              href="https://adsmanager.facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-[#1877F2] hover:underline font-medium"
+            >
+              Open Meta Ads Manager <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          </div>
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 flex items-start gap-2">
+            <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <span>All 3 campaigns are built and <strong>paused</strong> in your Mechanical Enterprise ad account. Review each one below, then click <strong>Activate in Meta Ads</strong> to go live.</span>
+          </div>
+
+          {LIVE_CAMPAIGNS.map((camp) => {
+            const isExpanded = liveExpanded === camp.id;
+            return (
+              <div key={camp.id} className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                <div className="p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className={`w-2 self-stretch rounded-full ${camp.color} flex-shrink-0`} />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-bold text-[#1e3a5f]">{camp.name}</h3>
+                          <Badge className="bg-amber-100 text-amber-800 border-amber-200 gap-1 text-xs">
+                            PAUSED — Ready to Activate
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5">{camp.tagline}</p>
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <DollarSign className="h-3.5 w-3.5" />
+                            <strong className="text-[#1e3a5f]">${camp.dailyBudget}/day</strong>
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5" />
+                            Essex County, NJ
+                          </span>
+                          <span className="text-xs font-mono text-slate-400">Campaign ID: {camp.campaignId}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1.5 text-muted-foreground"
+                        onClick={() => setLiveExpanded(isExpanded ? null : camp.id)}
+                      >
+                        {isExpanded ? (
+                          <><ChevronUp className="h-4 w-4" /> Hide</>
+                        ) : (
+                          <><ChevronDown className="h-4 w-4" /> Preview Ad</>
+                        )}
+                      </Button>
+                      <a
+                        href={`https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=842920828353492&selected_campaign_ids=${camp.campaignId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Button size="sm" className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-1.5">
+                          <Rocket className="h-4 w-4" /> Activate in Meta Ads
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="border-t bg-slate-50 p-5 space-y-4 text-sm">
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Campaign ID</p>
+                        <p className="font-mono text-xs text-slate-600">{camp.campaignId}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Ad Set ID</p>
+                        <p className="font-mono text-xs text-slate-600">{camp.adSetId}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Ad ID</p>
+                        <p className="font-mono text-xs text-slate-600">{camp.adId}</p>
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Headline</p>
+                      <p className="font-semibold text-slate-800">{camp.headline}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Ad Copy</p>
+                      <p className="text-slate-700 leading-relaxed">{camp.primaryText}</p>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Audience</p>
+                        <p className="text-slate-700">{camp.audienceSummary}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Call to Action</p>
+                        <p className="text-slate-700">{camp.cta.replace(/_/g, " ")}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Landing page:</span>
+                      <a href={camp.url} target="_blank" rel="noopener noreferrer" className="text-[#1e3a5f] hover:underline font-medium">{camp.url}</a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
         {/* Campaign Cards */}
         <div className="space-y-4">
-          <h2 className="font-semibold text-[#1e3a5f]">Ready-to-Launch Campaigns</h2>
+          <h2 className="font-semibold text-[#1e3a5f] text-muted-foreground text-sm">Create Additional Campaigns</h2>
 
           {CAMPAIGNS.map((camp) => {
             const isExpanded = expandedId === camp.id;
