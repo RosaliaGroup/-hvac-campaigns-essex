@@ -9,12 +9,17 @@ import {
   createLeadCampaign,
 } from "../metaAds";
 import { saveAiVaCredentials, getAiVaCredentials } from "../db";
+import { ENV } from "../_core/env";
 
 const SERVICE_KEY = "meta_ads";
 
 async function getToken(): Promise<string | null> {
+  // First try DB (user-provided via OAuth flow)
   const creds = await getAiVaCredentials(SERVICE_KEY);
-  return creds["access_token"] ?? null;
+  if (creds["access_token"]) return creds["access_token"];
+  // Fall back to environment variable (set via secrets manager)
+  if (ENV.metaAccessToken) return ENV.metaAccessToken;
+  return null;
 }
 
 async function getAdAccountId(): Promise<string | null> {
