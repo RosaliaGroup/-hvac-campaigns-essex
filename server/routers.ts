@@ -9,6 +9,7 @@ import { handleVapiToolCalls } from "./integrations/vapiTools";
 import { handleIncomingSms } from "./integrations/twilio";
 import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
+import { metaAdsRouter } from "./routers/metaAds";
 import { teamAuthRouter } from "./routers/teamAuth";
 import { smsCampaignsRouter } from "./routers/smsCampaigns";
 import { rebateCalculatorRouter } from "./routers/rebateCalculator";
@@ -22,6 +23,7 @@ export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   googleAds: googleAdsRouter,
+  metaAds: metaAdsRouter,
   teamAuth: teamAuthRouter,
   smsCampaigns: smsCampaignsRouter,
   rebateCalculator: rebateCalculatorRouter,

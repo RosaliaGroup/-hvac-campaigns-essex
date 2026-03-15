@@ -8,6 +8,8 @@ import {
   Bot,
   BarChart3,
   ChevronRight,
+  Search,
+  Facebook,
 } from "lucide-react";
 
 const navItems = [
@@ -18,6 +20,8 @@ const navItems = [
   { label: "Lead Scoring", href: "/lead-scoring", icon: Star },
   { label: "AI VA", href: "/ai-va-dashboard", icon: Bot },
   { label: "Performance", href: "/campaign-performance", icon: BarChart3 },
+  { label: "Google Ads", href: "/google-ads-campaigns", icon: Search },
+  { label: "Facebook Ads", href: "/facebook-campaigns", icon: Facebook },
 ];
 
 export default function InternalNav() {
