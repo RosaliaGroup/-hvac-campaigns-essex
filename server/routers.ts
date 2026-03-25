@@ -14,6 +14,8 @@ import { teamAuthRouter } from "./routers/teamAuth";
 import { smsCampaignsRouter } from "./routers/smsCampaigns";
 import { rebateCalculatorRouter } from "./routers/rebateCalculator";
 import { heygenRouter } from "./routers/heygen";
+import { coursesRouter } from "./courses-router";
+import { paymentRouter } from "./payment-router";
 import { runCampaignAnalysis } from "./services/campaignEngine";
 import { generateSocialPost } from "./integrations/ai-content-generator";
 import { postToGoogleBusiness } from "./integrations/google-business";
@@ -28,6 +30,8 @@ export const appRouter = router({
   smsCampaigns: smsCampaignsRouter,
   rebateCalculator: rebateCalculatorRouter,
   heygen: heygenRouter,
+  courses: coursesRouter,
+  payment: paymentRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
