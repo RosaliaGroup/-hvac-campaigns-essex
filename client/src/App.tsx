@@ -51,6 +51,7 @@ import TeamManagement from "./pages/TeamManagement";
 import NotFound from "./pages/NotFound";
 import AssessmentSubmissions from "./pages/AssessmentSubmissions";
 import Courses from "./pages/Courses";
+import CourseDetail from "./pages/CourseDetail";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -99,6 +100,7 @@ function Router() {
       <Route path={"/qualify"} component={Qualify} />
       <Route path={"/rebate-calculator"} component={RebateCalculator} />
       <Route path={"/courses"} component={Courses} />
+      <Route path={"/courses/:id"} component={CourseDetail} />
 
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />

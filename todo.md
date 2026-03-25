@@ -737,3 +737,75 @@
 
 ## Meta Title Fix — Mar 14 2026
 - [x] Remove "HVAC Lead Generation Campaigns - Essex County, NJ" from site meta title / OG tags — now shows "Mechanical Enterprise | Expert HVAC Solutions in New Jersey"
+
+
+## Course Delivery & Certification System
+
+### Phase 1: Architecture & Database
+- [ ] Design course delivery system architecture
+- [ ] Create database schema for course content (lessons, videos, materials)
+- [ ] Create database schema for student progress tracking
+- [ ] Create database schema for quizzes and exam questions
+- [ ] Create database schema for certificates and completion records
+- [ ] Design enrollment and access control system
+- [ ] Run pnpm db:push to migrate new tables
+
+### Phase 2: Student Dashboard
+- [ ] Build student dashboard page with enrolled courses list
+- [ ] Display course progress bars and completion status
+- [ ] Show certificates earned and available
+- [ ] Create course card UI with start/continue button
+- [ ] Add course filtering and sorting options
+- [ ] Implement responsive design for mobile/desktop
+
+### Phase 3: Course Content Delivery
+- [ ] Create course lesson player component
+- [ ] Integrate video player (Vimeo/YouTube)
+- [ ] Build lesson navigation (previous/next)
+- [ ] Add downloadable course materials
+- [ ] Create lesson completion tracking
+- [ ] Build course outline/syllabus viewer
+- [ ] Add video playback progress tracking
+
+### Phase 4: Quiz & Exam System
+- [ ] Create quiz question types (multiple choice, true/false, fill-in-the-blank)
+- [ ] Build quiz UI with question display and answer selection
+- [ ] Implement quiz scoring and grading logic
+- [ ] Create practice quiz mode (unlimited attempts)
+- [ ] Create final exam mode (limited attempts, timed)
+- [ ] Build results page with score and feedback
+- [ ] Add question review functionality
+- [ ] Implement passing score requirements
+
+### Phase 5: Certificate Generation
+- [ ] Create certificate template design
+- [ ] Build certificate generation logic (PDF)
+- [ ] Implement certificate download functionality
+- [ ] Create certificate email delivery
+- [ ] Add certificate verification system
+- [ ] Build certificate display on student dashboard
+- [ ] Create certificate archive/history
+
+### Phase 6: Enrollment & Access Control
+- [ ] Update enrollment flow to create student records
+- [ ] Implement course access control (students only see enrolled courses)
+- [ ] Create enrollment confirmation email
+- [ ] Build course access restrictions (lock/unlock based on progress)
+- [ ] Add prerequisite course requirements
+- [ ] Create refund/unenroll functionality
+- [ ] Build enrollment history tracking
+
+### Phase 7: Testing & QA
+- [ ] Test complete enrollment workflow
+- [ ] Test course access and progress tracking
+- [ ] Test quiz and exam functionality
+- [ ] Test certificate generation and delivery
+- [ ] Test email notifications
+- [ ] Test access control and permissions
+- [ ] Performance testing with multiple students
+
+### Phase 8: Deployment & Launch
+- [ ] Deploy to production
+- [ ] Create user documentation
+- [ ] Set up monitoring and analytics
+- [ ] Present working system to stakeholder

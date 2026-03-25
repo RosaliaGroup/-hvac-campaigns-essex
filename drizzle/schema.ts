@@ -1,4 +1,4 @@
-import { boolean, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -494,3 +494,207 @@ export const calculatorRegistrations = mysqlTable("calculatorRegistrations", {
 });
 export type CalculatorRegistration = typeof calculatorRegistrations.$inferSelect;
 export type InsertCalculatorRegistration = typeof calculatorRegistrations.$inferInsert;
+
+
+/**
+ * Courses — HVAC training courses available for enrollment
+ */
+export const courses = mysqlTable("courses", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
+  category: varchar("category", { length: 100 }).notNull(), // 'epa_608', 'nate', 'fundamentals', 'advanced', 'specialty'
+  difficulty: mysqlEnum("difficulty", ["beginner", "intermediate", "advanced"]).notNull(),
+  duration_hours: int("duration_hours").notNull(),
+  price_per_course: int("price_per_course").notNull(), // in cents
+  certification_type: varchar("certification_type", { length: 255 }).notNull(),
+  instructor_name: varchar("instructor_name", { length: 255 }).notNull(),
+  instructor_bio: text("instructor_bio"),
+  instructor_image_url: text("instructor_image_url"),
+  rating: decimal("rating", { precision: 3, scale: 1 }).default("4.5"),
+  students_enrolled: int("students_enrolled").default(0),
+  is_active: boolean("is_active").default(true).notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type Course = typeof courses.$inferSelect;
+export type InsertCourse = typeof courses.$inferInsert;
+
+/**
+ * Course Lessons — individual lessons/modules within a course
+ */
+export const courseLessons = mysqlTable("courseLessons", {
+  id: int("id").autoincrement().primaryKey(),
+  course_id: int("course_id").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  lesson_number: int("lesson_number").notNull(), // 1, 2, 3, etc.
+  duration_minutes: int("duration_minutes").notNull(),
+  video_url: text("video_url"), // Vimeo or YouTube URL
+  video_duration: int("video_duration"), // in seconds
+  content_html: text("content_html"), // Rich text lesson content
+  learning_objectives: text("learning_objectives"), // JSON array
+  materials_url: text("materials_url"), // PDF or downloadable resources
+  is_locked: boolean("is_locked").default(false).notNull(), // Can be locked until previous lesson completed
+  order: int("order").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type CourseLesson = typeof courseLessons.$inferSelect;
+export type InsertCourseLesson = typeof courseLessons.$inferInsert;
+
+/**
+ * Course Enrollments — tracks which students are enrolled in which courses
+ */
+export const courseEnrollments = mysqlTable("courseEnrollments", {
+  id: int("id").autoincrement().primaryKey(),
+  user_id: int("user_id").notNull(),
+  course_id: int("course_id").notNull(),
+  enrollment_type: mysqlEnum("enrollment_type", ["one_time", "subscription"]).notNull(),
+  stripe_payment_intent_id: varchar("stripe_payment_intent_id", { length: 255 }),
+  stripe_subscription_id: varchar("stripe_subscription_id", { length: 255 }),
+  status: mysqlEnum("status", ["active", "completed", "cancelled", "refunded"]).default("active").notNull(),
+  progress_percentage: int("progress_percentage").default(0).notNull(),
+  lessons_completed: int("lessons_completed").default(0).notNull(),
+  exam_score: int("exam_score"), // Final exam score (0-100)
+  exam_passed: boolean("exam_passed").default(false).notNull(),
+  certificate_issued: boolean("certificate_issued").default(false).notNull(),
+  certificate_url: text("certificate_url"),
+  certificate_issued_at: timestamp("certificate_issued_at"),
+  started_at: timestamp("started_at").defaultNow().notNull(),
+  completed_at: timestamp("completed_at"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type CourseEnrollment = typeof courseEnrollments.$inferSelect;
+export type InsertCourseEnrollment = typeof courseEnrollments.$inferInsert;
+
+/**
+ * Student Progress — tracks progress through individual lessons
+ */
+export const studentProgress = mysqlTable("studentProgress", {
+  id: int("id").autoincrement().primaryKey(),
+  enrollment_id: int("enrollment_id").notNull(),
+  lesson_id: int("lesson_id").notNull(),
+  video_watched_seconds: int("video_watched_seconds").default(0).notNull(),
+  video_duration_seconds: int("video_duration_seconds").notNull(),
+  is_completed: boolean("is_completed").default(false).notNull(),
+  completed_at: timestamp("completed_at"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type StudentProgress = typeof studentProgress.$inferSelect;
+export type InsertStudentProgress = typeof studentProgress.$inferInsert;
+
+/**
+ * Quiz Questions — questions for practice quizzes and final exams
+ */
+export const quizQuestions = mysqlTable("quizQuestions", {
+  id: int("id").autoincrement().primaryKey(),
+  course_id: int("course_id").notNull(),
+  question_text: text("question_text").notNull(),
+  question_type: mysqlEnum("question_type", ["multiple_choice", "true_false", "fill_in_blank"]).notNull(),
+  options: text("options"), // JSON array of options for multiple choice
+  correct_answer: text("correct_answer").notNull(),
+  explanation: text("explanation"), // Explanation shown after answering
+  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).default("medium").notNull(),
+  is_exam_question: boolean("is_exam_question").default(false).notNull(), // true = appears on final exam
+  order: int("order").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+export type QuizQuestion = typeof quizQuestions.$inferSelect;
+export type InsertQuizQuestion = typeof quizQuestions.$inferInsert;
+
+/**
+ * Quiz Attempts — tracks student quiz/exam attempts and scores
+ */
+export const quizAttempts = mysqlTable("quizAttempts", {
+  id: int("id").autoincrement().primaryKey(),
+  enrollment_id: int("enrollment_id").notNull(),
+  course_id: int("course_id").notNull(),
+  is_final_exam: boolean("is_final_exam").default(false).notNull(),
+  score: int("score").notNull(), // 0-100
+  total_questions: int("total_questions").notNull(),
+  correct_answers: int("correct_answers").notNull(),
+  passed: boolean("passed").default(false).notNull(), // true if score >= passing_score
+  time_spent_seconds: int("time_spent_seconds"), // How long they spent on the quiz
+  started_at: timestamp("started_at").notNull(),
+  completed_at: timestamp("completed_at").notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+export type QuizAttempt = typeof quizAttempts.$inferSelect;
+export type InsertQuizAttempt = typeof quizAttempts.$inferInsert;
+
+/**
+ * Quiz Responses — individual question answers during a quiz attempt
+ */
+export const quizResponses = mysqlTable("quizResponses", {
+  id: int("id").autoincrement().primaryKey(),
+  attempt_id: int("attempt_id").notNull(),
+  question_id: int("question_id").notNull(),
+  student_answer: text("student_answer").notNull(),
+  is_correct: boolean("is_correct").notNull(),
+  time_spent_seconds: int("time_spent_seconds"), // Time spent on this question
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+export type QuizResponse = typeof quizResponses.$inferSelect;
+export type InsertQuizResponse = typeof quizResponses.$inferInsert;
+
+/**
+ * Certificates — issued certificates for completed courses
+ */
+export const certificates = mysqlTable("certificates", {
+  id: int("id").autoincrement().primaryKey(),
+  enrollment_id: int("enrollment_id").notNull(),
+  user_id: int("user_id").notNull(),
+  course_id: int("course_id").notNull(),
+  certificate_number: varchar("certificate_number", { length: 100 }).notNull().unique(), // Unique cert ID
+  student_name: varchar("student_name", { length: 255 }).notNull(),
+  course_title: varchar("course_title", { length: 255 }).notNull(),
+  certification_type: varchar("certification_type", { length: 255 }).notNull(),
+  issue_date: timestamp("issue_date").defaultNow().notNull(),
+  expiration_date: timestamp("expiration_date"), // null = no expiration
+  pdf_url: text("pdf_url"),
+  verification_token: varchar("verification_token", { length: 128 }).notNull().unique(),
+  is_verified: boolean("is_verified").default(true).notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+});
+export type Certificate = typeof certificates.$inferSelect;
+export type InsertCertificate = typeof certificates.$inferInsert;
+
+/**
+ * Subscription Plans — monthly subscription options
+ */
+export const subscriptionPlans = mysqlTable("subscriptionPlans", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(), // 'Starter', 'Professional', 'Premium'
+  description: text("description"),
+  price_per_month: int("price_per_month").notNull(), // in cents
+  max_courses: int("max_courses").notNull(), // -1 = unlimited
+  stripe_price_id: varchar("stripe_price_id", { length: 255 }).notNull(),
+  features: text("features"), // JSON array
+  is_active: boolean("is_active").default(true).notNull(),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type SubscriptionPlan = typeof subscriptionPlans.$inferSelect;
+export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
+
+/**
+ * User Subscriptions — tracks active subscriptions
+ */
+export const userSubscriptions = mysqlTable("userSubscriptions", {
+  id: int("id").autoincrement().primaryKey(),
+  user_id: int("user_id").notNull(),
+  plan_id: int("plan_id").notNull(),
+  stripe_subscription_id: varchar("stripe_subscription_id", { length: 255 }).notNull().unique(),
+  status: mysqlEnum("status", ["active", "past_due", "cancelled", "paused"]).default("active").notNull(),
+  current_period_start: timestamp("current_period_start").notNull(),
+  current_period_end: timestamp("current_period_end").notNull(),
+  cancelled_at: timestamp("cancelled_at"),
+  created_at: timestamp("created_at").defaultNow().notNull(),
+  updated_at: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+export type UserSubscription = typeof userSubscriptions.$inferSelect;
+export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;

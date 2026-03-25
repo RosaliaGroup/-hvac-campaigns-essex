@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookOpen, Award, Clock, Users, Star, Check } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 interface Course {
   id: string;
@@ -148,6 +149,7 @@ const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
 ];
 
 export default function Courses() {
+  const [, setLocation] = useLocation();
   const [pricingMode, setPricingMode] = useState<'pay-per-course' | 'subscription'>('pay-per-course');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('all');
@@ -299,7 +301,12 @@ export default function Courses() {
                           <span className="text-2xl font-bold text-[#ff6b35]">${course.price_per_course}</span>
                           <span className="text-sm text-gray-500">one-time</span>
                         </div>
-                        <Button className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90">Enroll Now</Button>
+                        <Button 
+                          onClick={() => setLocation(`/courses/${course.id}`)}
+                          className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90"
+                        >
+                          View Course
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
