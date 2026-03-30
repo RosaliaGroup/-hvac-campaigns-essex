@@ -438,7 +438,7 @@ const FINANCING_PACKAGES: FinancingPackage[] = [
     maintenanceYears: 3,
     highlight: true,
     badge: "BEST PRICE",
-    description: "Finance through our 3rd-party lending partner. Project is paid in full — no OBR balance. You receive the NJ Clean Heat rebates directly. Includes up to $2,000 additional Mechanical incentive, 3-year preventive maintenance, 5-year warranty, and a $500 gift card.",
+    description: "Finance through our 3rd-party lending partner. Project is paid in full — no OBR balance. You receive the rebates directly. Includes up to $2,000 additional Mechanical incentive, 3-year preventive maintenance, 5-year warranty, and a $500 gift card.",
     creditApplied: 500,
     paymentNote: "Monthly payments via 3rd-party lender — rebates come back to you",
     paidInFull: true,
@@ -837,6 +837,7 @@ export default function RebateCalculator() {
       clientSystemType: selectedSystem === "ducted" ? "Ducted" : "Ductless",
       clientOptionDescription: activePkg.description,
       clientMaintenanceYears: activePkg.maintenanceYears,
+      clientPreferredContact: bookingForm.preferredContact || undefined,
     });
   };
 

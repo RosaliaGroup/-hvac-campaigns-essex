@@ -172,6 +172,7 @@ export const rebateCalculatorRouter = router({
         clientSystemType: z.string().optional(),
         clientOptionDescription: z.string().optional(),
         clientMaintenanceYears: z.number().optional(),
+        clientPreferredContact: z.string().optional(),
         // Raw property data JSON
         propertyDataJson: z.string().optional(),
       })
@@ -324,7 +325,7 @@ export const rebateCalculatorRouter = router({
                       ${maintenanceLabel ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preventive Maintenance</td><td style="padding:8px 0;font-weight:bold;text-align:right">${maintenanceLabel}</td></tr>` : ""}
                       ${formattedDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Appointment Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedDate}</td></tr>` : ""}
                       ${formattedTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Appointment Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedTime}</td></tr>` : ""}
-                      ${input.preferredContact ? `<tr><td style="padding:8px 0;color:#666">Preferred Contact</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.preferredContact === "call" ? "📞 Phone Call" : input.preferredContact === "text" ? "💬 Text Message" : "✉️ Email"}</td></tr>` : ""}
+                      ${(() => { const pc = input.clientPreferredContact ?? input.preferredContact; if (!pc) return ""; const contactLabels: Record<string, string> = { call: "📞 Phone Call", phone_call: "📞 Phone Call", text: "💬 Text Message", text_message: "💬 Text Message", email: "✉️ Email" }; return `<tr><td style="padding:8px 0;color:#666">Preferred Contact</td><td style="padding:8px 0;font-weight:bold;text-align:right">${contactLabels[pc] ?? pc}</td></tr>`; })()}
                     </table>
                     ${emailOptionDescription ? `<p style="color:#555;font-size:13px;line-height:1.5">${emailOptionDescription}</p>` : ""}
                     <p style="color:#1e3a5f;font-size:14px;font-weight:bold;margin-top:16px">✓ Up to $16,000 Rebate Incentive&nbsp;&nbsp;✓ ${fmt(emailGiftCard)} Assessment Credit</p>
