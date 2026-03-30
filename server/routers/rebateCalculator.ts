@@ -247,6 +247,109 @@ export const rebateCalculatorRouter = router({
         });
       }
 
+      // Send email notifications via Resend
+      const resendApiKey = process.env.RESEND_API_KEY;
+      if (resendApiKey) {
+        const systemLabel = input.currentSystem.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        const optionLabel = input.selectedOption === "high_efficiency" ? "High-Efficiency" : "Standard";
+        const tierLabel = input.selectedPaymentTier === "full_finance" ? "100% Financed" : input.selectedPaymentTier === "deposit_12pct" ? "12% Deposit" : "Full Payment";
+        const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+
+        // 1. Client confirmation email
+        if (input.email) {
+          try {
+            await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${resendApiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
+                to: [input.email],
+                subject: `Your Rebate Estimate is Ready – Mechanical Enterprise`,
+                html: `
+                  <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                    <h2 style="color:#1e3a5f">Great news, ${input.firstName}! Your rebate estimate is ready.</h2>
+                    <p>Here's a summary of your personalized NJ Clean Heat rebate estimate:</p>
+                    <table style="width:100%;border-collapse:collapse;margin:20px 0">
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">System Selected</td><td style="padding:8px 0;font-weight:bold;text-align:right">${optionLabel}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Total Rebates</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">${fmt(option.totalRebates)}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Estimated Project Cost</td><td style="padding:8px 0;font-weight:bold;text-align:right">${fmt(option.totalProjectCost)}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Payment Option</td><td style="padding:8px 0;font-weight:bold;text-align:right">${tierLabel}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Your Out-of-Pocket</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(finalOutOfPocket)}</td></tr>
+                      ${giftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Bonus Gift Card</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#ff6b35">${fmt(giftCard)}</td></tr>` : ""}
+                      <tr><td style="padding:8px 0;color:#666">Warranty</td><td style="padding:8px 0;font-weight:bold;text-align:right">${warrantyYears} Years</td></tr>
+                    </table>
+                    ${input.assessmentRequested ? `<p style="color:#1e3a5f;font-weight:bold">You've requested a FREE home assessment — our team will reach out within 24 hours to schedule.</p>` : `<p>Ready to take the next step? Schedule a free home assessment to lock in your rebates.</p>`}
+                    <div style="text-align:center;margin:32px 0">
+                      <a href="https://mechanicalenterprise.com/rebate-calculator" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">View Your Estimate</a>
+                    </div>
+                    <p style="color:#666;font-size:14px">Questions? Call us at <strong>(862) 419-1763</strong> — we're happy to help.</p>
+                    <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+                    <p style="color:#999;font-size:12px">Mechanical Enterprise LLC &bull; Essex County, NJ &bull; <a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a></p>
+                  </div>
+                `,
+              }),
+            });
+          } catch (e) {
+            console.error("submitCalculation client email error:", e);
+          }
+        }
+
+        // 2. Sales team notification email
+        try {
+          const propTypeLabel = (input.propertyType ?? "single_family").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+          await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
+              to: ["sales@mechanicalenterprise.com"],
+              subject: `New Assessment Request – ${input.firstName} ${input.lastName ?? ""}`.trim(),
+              html: `
+                <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                  <h2 style="color:#1e3a5f">New Rebate Calculator Submission</h2>
+                  <h3 style="margin-bottom:4px">Contact Info</h3>
+                  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Name</td><td style="padding:6px 0">${input.firstName} ${input.lastName ?? ""}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Phone</td><td style="padding:6px 0">${input.phone ?? "N/A"}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Email</td><td style="padding:6px 0">${input.email ?? "N/A"}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Address</td><td style="padding:6px 0">${input.address}, ${input.city ?? ""} ${input.state ?? ""} ${input.zip ?? ""}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Contact</td><td style="padding:6px 0">${input.preferredContact ?? "Not specified"}</td></tr>
+                  </table>
+                  <h3 style="margin-bottom:4px">Property Details</h3>
+                  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Property Type</td><td style="padding:6px 0">${propTypeLabel}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Square Footage</td><td style="padding:6px 0">${input.squareFootage.toLocaleString()} sq ft</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Bedrooms</td><td style="padding:6px 0">${input.bedrooms}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Stories</td><td style="padding:6px 0">${input.stories ?? 1}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Current System</td><td style="padding:6px 0">${systemLabel}</td></tr>
+                  </table>
+                  <h3 style="margin-bottom:4px">Rebate Estimate</h3>
+                  <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Selected Option</td><td style="padding:6px 0">${optionLabel}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Payment Tier</td><td style="padding:6px 0">${tierLabel}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Project Cost</td><td style="padding:6px 0">${fmt(option.totalProjectCost)}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Total Rebates</td><td style="padding:6px 0;color:#16a34a;font-weight:bold">${fmt(option.totalRebates)}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Out of Pocket</td><td style="padding:6px 0;font-weight:bold">${fmt(finalOutOfPocket)}</td></tr>
+                    ${giftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Gift Card</td><td style="padding:6px 0">${fmt(giftCard)}</td></tr>` : ""}
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Assessment Requested</td><td style="padding:6px 0;font-weight:bold;color:${input.assessmentRequested ? "#16a34a" : "#666"}">${input.assessmentRequested ? "YES" : "No"}</td></tr>
+                    ${input.interestedInSolar ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Solar Interest</td><td style="padding:6px 0">${input.interestedInSolar}</td></tr>` : ""}
+                  </table>
+                  <p style="color:#999;font-size:12px">Log in to the <a href="https://mechanicalenterprise.com/assessment-submissions">dashboard</a> to follow up.</p>
+                </div>
+              `,
+            }),
+          });
+        } catch (e) {
+          console.error("submitCalculation sales email error:", e);
+        }
+      }
+
       return {
         id: (result as any).insertId,
         rebates,
