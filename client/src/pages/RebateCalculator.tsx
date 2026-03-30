@@ -834,6 +834,7 @@ export default function RebateCalculator() {
       clientSelectedTierLabel: activePkg.name,
       clientSystemType: selectedSystem === "ducted" ? "Ducted" : "Ductless",
       clientOptionDescription: activePkg.description,
+      clientMaintenanceYears: activePkg.maintenanceYears,
     });
   };
 

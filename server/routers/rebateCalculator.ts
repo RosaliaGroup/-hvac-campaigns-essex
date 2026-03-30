@@ -171,6 +171,7 @@ export const rebateCalculatorRouter = router({
         clientSelectedTierLabel: z.string().optional(),
         clientSystemType: z.string().optional(),
         clientOptionDescription: z.string().optional(),
+        clientMaintenanceYears: z.number().optional(),
         // Raw property data JSON
         propertyDataJson: z.string().optional(),
       })
@@ -289,6 +290,8 @@ export const rebateCalculatorRouter = router({
         const emailTierLabel = input.clientSelectedTierLabel ?? tierLabel;
         const emailSystemType = input.clientSystemType ?? (input.currentSystem.includes("electric") || input.currentSystem === "none" ? "Ductless" : "Ducted");
         const emailOptionDescription = input.clientOptionDescription ?? null;
+        const emailMaintenanceYears = input.clientMaintenanceYears ?? (emailTierLabel.includes("Option 1") ? 3 : emailTierLabel.includes("Option 2") ? 2 : emailTierLabel.includes("Option 3") ? 1 : 0);
+        const maintenanceLabel = emailMaintenanceYears > 0 ? `${emailMaintenanceYears}-Year Maintenance Plan` : null;
         const isOption1 = emailTierLabel.includes("Option 1") || input.selectedPaymentTier === "full_finance";
 
         // 1. Client confirmation email
@@ -318,6 +321,7 @@ export const rebateCalculatorRouter = router({
                       <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">You Pay After Rebates</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(emailOutOfPocket)}</td></tr>
                       ${emailGiftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Gift Card</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#ff6b35">${fmt(emailGiftCard)}</td></tr>` : ""}
                       <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Warranty</td><td style="padding:8px 0;font-weight:bold;text-align:right">${emailWarrantyYears} Years</td></tr>
+                      ${maintenanceLabel ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preventive Maintenance</td><td style="padding:8px 0;font-weight:bold;text-align:right">${maintenanceLabel}</td></tr>` : ""}
                       ${formattedDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Appointment Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedDate}</td></tr>` : ""}
                       ${formattedTime ? `<tr><td style="padding:8px 0;color:#666">Appointment Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedTime}</td></tr>` : ""}
                     </table>
