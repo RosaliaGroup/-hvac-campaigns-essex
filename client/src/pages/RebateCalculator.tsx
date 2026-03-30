@@ -821,8 +821,10 @@ export default function RebateCalculator() {
       panelHasSpace: home.panelHasSpace || undefined,
       // Solar interest
       interestedInSolar: home.interestedInSolar || undefined,
-      // Preferred contact method
+      // Preferred contact method and scheduling
       preferredContact: (bookingForm.preferredContact as "call" | "text" | "email") || undefined,
+      preferredDate: bookingForm.preferredDate || undefined,
+      preferredTime: bookingForm.preferredTime || undefined,
     });
   };
 
