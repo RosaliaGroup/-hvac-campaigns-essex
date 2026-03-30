@@ -255,7 +255,13 @@ export const rebateCalculatorRouter = router({
       if (resendApiKey) {
         const systemLabel = input.currentSystem.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
         const optionLabel = input.selectedOption === "high_efficiency" ? "High-Efficiency" : "Standard";
-        const tierLabel = input.selectedPaymentTier === "full_finance" ? "100% Financed" : input.selectedPaymentTier === "deposit_12pct" ? "12% Deposit" : "Full Payment";
+        const tierLabels: Record<string, string> = {
+          full_finance: "Option 1 — 3rd-Party Financing",
+          deposit_12pct: "Option 2 — Deposit",
+          full_payment: "Option 3 — Finance the Balance",
+          obr: "Option 4 — All Covered by NJ Clean Heat",
+        };
+        const tierLabel = tierLabels[input.selectedPaymentTier] ?? input.selectedPaymentTier;
         const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
         const formattedDate = input.preferredDate ? new Date(input.preferredDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
         const timeLabels: Record<string, string> = {
@@ -285,18 +291,17 @@ export const rebateCalculatorRouter = router({
                     <h3 style="color:#1e3a5f;margin-bottom:8px">Your Estimate Summary</h3>
                     <table style="width:100%;border-collapse:collapse;margin:16px 0">
                       <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">System</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.currentSystem.includes("electric") || input.currentSystem === "none" ? "Ductless" : "Ducted"}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Selected Package</td><td style="padding:8px 0;font-weight:bold;text-align:right">${optionLabel} — ${tierLabel}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Est. Rebate</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">${fmt(option.totalRebates)}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Selected Package</td><td style="padding:8px 0;font-weight:bold;text-align:right">${tierLabel}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Total Project Cost</td><td style="padding:8px 0;font-weight:bold;text-align:right">${fmt(option.totalProjectCost)}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">NJ Clean Heat Rebate</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">${fmt(option.totalRebates)}</td></tr>
+                      ${input.selectedPaymentTier === "full_finance" ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Mechanical Incentive</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">up to +$2,000</td></tr>` : ""}
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">You Pay After Rebates</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(finalOutOfPocket)}</td></tr>
                       ${giftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Gift Card</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#ff6b35">${fmt(giftCard)}</td></tr>` : ""}
-                      <tr><td style="padding:8px 0;color:#666">Out-of-Pocket</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(finalOutOfPocket)}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Warranty</td><td style="padding:8px 0;font-weight:bold;text-align:right">${warrantyYears} Years</td></tr>
+                      ${formattedDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Appointment Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedDate}</td></tr>` : ""}
+                      ${formattedTime ? `<tr><td style="padding:8px 0;color:#666">Appointment Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedTime}</td></tr>` : ""}
                     </table>
-                    ${formattedDate || formattedTime ? `
-                    <h3 style="color:#1e3a5f;margin-bottom:8px">Appointment Request</h3>
-                    <table style="width:100%;border-collapse:collapse;margin:16px 0">
-                      ${formattedDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preferred Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedDate}</td></tr>` : ""}
-                      ${formattedTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preferred Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedTime}</td></tr>` : ""}
-                    </table>
-                    ` : ""}
+                    ${input.selectedPaymentTier === "full_finance" ? `<p style="color:#666;font-size:13px;font-style:italic">Note: The Mechanical Incentive of up to $2,000 is applied through Option 1 (3rd-Party Financing) and will be confirmed during your assessment.</p>` : ""}
                     <div style="text-align:center;margin:32px 0">
                       <a href="https://mechanicalenterprise.com/rebate-calculator#assessment" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Schedule Your Free Assessment</a>
                     </div>
