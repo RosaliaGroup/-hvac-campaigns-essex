@@ -1,9 +1,55 @@
+import { useState } from "react";
 import { Link } from "wouter";
-import { Users, TrendingUp, FileText, Handshake, Building2, Home, Zap, DollarSign, Clock, CheckCircle2 } from "lucide-react";
+import { Users, TrendingUp, FileText, Handshake, Building2, Home, Zap, DollarSign, Clock, CheckCircle2, CheckCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 export default function Partnerships() {
+  const [form, setForm] = useState({
+    companyName: "",
+    contactName: "",
+    email: "",
+    phone: "",
+    partnershipType: "",
+    website: "",
+    message: "",
+  });
+  const [submitted, setSubmitted] = useState(false);
+
+  const createCapture = trpc.leadCaptures.create.useMutation({
+    onSuccess: () => {
+      setSubmitted(true);
+    },
+    onError: (error) => {
+      toast.error(`Failed to submit: ${error.message}`);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!form.contactName || !form.email || !form.phone) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    createCapture.mutate({
+      name: form.contactName,
+      email: form.email,
+      phone: form.phone,
+      captureType: "partnership_inquiry" as any,
+      pageUrl: window.location.href,
+      message: `Company: ${form.companyName}\nPartnership Type: ${form.partnershipType}\nWebsite: ${form.website}\nMessage: ${form.message}`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-slate-50">
       <Navigation />
@@ -465,22 +511,114 @@ export default function Partnerships() {
                 Fill out the form below to get started. We'll review your application and contact you within 24-48 hours to discuss next steps.
               </p>
             </div>
-            
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <iframe 
-                src="https://docs.google.com/forms/d/e/1FAIpQLSeRXfVVpxfmuAQkXBS4JADVyexOb5u8RaAfx3EO5uUcCF9HjA/viewform?embedded=true" 
-                width="100%" 
-                height="1200" 
-                frameBorder="0" 
-                marginHeight={0} 
-                marginWidth={0}
-                className="rounded-lg"
-              >
-                Loading…
-              </iframe>
-              <p className="text-sm text-slate-500 mt-4 text-center">
-                Form not loading? <a href="https://docs.google.com/forms/d/e/1FAIpQLSeRXfVVpxfmuAQkXBS4JADVyexOb5u8RaAfx3EO5uUcCF9HjA/viewform" target="_blank" rel="noopener noreferrer" className="text-[#ff6b35] hover:underline">Open in new window</a>
-              </p>
+
+            <div className="bg-white rounded-xl shadow-lg p-6 md:p-8">
+              {submitted ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold text-[#1e3a5f] mb-2">Application Received!</h3>
+                  <p className="text-slate-600">
+                    Thank you for your interest in partnering with us. We'll review your application and contact you within 24-48 hours.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="companyName">Company Name <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="companyName"
+                        required
+                        placeholder="Your Company LLC"
+                        value={form.companyName}
+                        onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="contactName">Contact Name <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="contactName"
+                        required
+                        placeholder="John Smith"
+                        value={form.contactName}
+                        onChange={(e) => setForm({ ...form, contactName: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="partnerEmail">Email <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="partnerEmail"
+                        type="email"
+                        required
+                        placeholder="john@company.com"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="partnerPhone">Phone <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="partnerPhone"
+                        type="tel"
+                        required
+                        placeholder="(555) 123-4567"
+                        value={form.phone}
+                        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="partnershipType">Partnership Type</Label>
+                      <Select value={form.partnershipType} onValueChange={(val) => setForm({ ...form, partnershipType: val })}>
+                        <SelectTrigger id="partnershipType">
+                          <SelectValue placeholder="Select partnership type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Referral Partner">Referral Partner</SelectItem>
+                          <SelectItem value="Subcontractor">Subcontractor</SelectItem>
+                          <SelectItem value="Supplier">Supplier</SelectItem>
+                          <SelectItem value="Real Estate Agent">Real Estate Agent</SelectItem>
+                          <SelectItem value="Property Manager">Property Manager</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Company Website</Label>
+                      <Input
+                        id="website"
+                        placeholder="https://yourcompany.com"
+                        value={form.website}
+                        onChange={(e) => setForm({ ...form, website: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="partnerMessage">Message / How would you like to partner?</Label>
+                    <Textarea
+                      id="partnerMessage"
+                      rows={4}
+                      placeholder="Tell us about your business and how you'd like to partner with us..."
+                      value={form.message}
+                      onChange={(e) => setForm({ ...form, message: e.target.value })}
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={createCapture.isPending}
+                    className="w-full bg-[#ff6b35] hover:bg-[#e55a25] text-white text-lg py-6 font-semibold"
+                  >
+                    {createCapture.isPending ? "Submitting..." : "Submit Partnership Application"}
+                  </Button>
+                </form>
+              )}
             </div>
           </div>
         </div>

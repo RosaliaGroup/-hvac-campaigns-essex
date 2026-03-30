@@ -15,7 +15,7 @@ import {
   Users, Phone, Mail, Clock, TrendingUp, Filter, Search,
   RefreshCw, CheckCircle, XCircle, Star, Calendar, MessageSquare,
   ChevronRight, BarChart3, Flame, Zap, Snowflake, ExternalLink,
-  PhoneCall, Globe, Facebook, AlertCircle, Eye
+  PhoneCall, Globe, Facebook, AlertCircle, Eye, ClipboardCheck, Handshake
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -38,6 +38,8 @@ const SOURCE_LABELS: Record<string, { label: string; icon: React.ReactNode; colo
   lp_fb_commercial: { label: "FB Commercial LP", icon: <Facebook className="h-3 w-3" />, color: "bg-blue-100 text-blue-700" },
   lp_rebate_guide: { label: "Rebate Guide LP", icon: <Star className="h-3 w-3" />, color: "bg-green-100 text-green-700" },
   lp_maintenance: { label: "Maintenance LP", icon: <CheckCircle className="h-3 w-3" />, color: "bg-teal-100 text-teal-700" },
+  career_application: { label: "Career Application", icon: <ClipboardCheck className="h-3 w-3" />, color: "bg-emerald-100 text-emerald-700" },
+  partnership_inquiry: { label: "Partnership Inquiry", icon: <Handshake className="h-3 w-3" />, color: "bg-violet-100 text-violet-700" },
 };
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
