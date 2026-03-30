@@ -99,7 +99,9 @@ function Router() {
       <Route path={"/lp/referral-partner"} component={LPReferralPartner} />
       <Route path={"/promos"} component={PromosLanding} />
       <Route path={"/qualify"} component={Qualify} />
+      <Route path={"/assessment"} component={Qualify} />
       <Route path={"/rebate-calculator"} component={RebateCalculator} />
+      <Route path={"/rebate-calc"} component={RebateCalculator} />
       <Route path={"/courses"} component={Courses} />
       <Route path={"/courses/:id"} component={CourseDetail} />
 

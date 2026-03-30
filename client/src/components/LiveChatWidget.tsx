@@ -13,8 +13,8 @@ const ORANGE = "#e8813a";
 const ORANGE_HOVER = "#d5732f";
 const PHONE = "(862) 419-1763";
 const PHONE_TEL = "tel:8624191763";
-const ASSESSMENT_URL = "https://mechanicalenterprise.com/residential";
-const REBATE_URL = "https://mechanicalenterprise.com/rebate-calc";
+const ASSESSMENT_URL = "/assessment";
+const REBATE_URL = "/rebate-calc";
 const LEAD_THRESHOLD = 2;
 const AUTO_OPEN_MS = 8_000;
 const AUTO_OPEN_KEY = "me_chat_auto_opened";
@@ -505,7 +505,7 @@ export default function LiveChatWidget() {
             {/* ── Final CTA: Book Assessment ─────────────────────── */}
             {menuLevel === "booking-assessment" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={ASSESSMENT_URL} target="_blank" rel="noopener noreferrer"
+                <a href={ASSESSMENT_URL}
                   style={primaryBtnStyle}
                   onMouseEnter={(e) => (e.currentTarget.style.background = ORANGE_HOVER)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
@@ -519,7 +519,7 @@ export default function LiveChatWidget() {
             {/* ── Final CTA: Rebate Calculator ───────────────────── */}
             {menuLevel === "booking-rebate" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={REBATE_URL} target="_blank" rel="noopener noreferrer"
+                <a href={REBATE_URL}
                   style={primaryBtnStyle}
                   onMouseEnter={(e) => (e.currentTarget.style.background = ORANGE_HOVER)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
