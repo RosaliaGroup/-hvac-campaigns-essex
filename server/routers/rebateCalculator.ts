@@ -257,6 +257,13 @@ export const rebateCalculatorRouter = router({
         const optionLabel = input.selectedOption === "high_efficiency" ? "High-Efficiency" : "Standard";
         const tierLabel = input.selectedPaymentTier === "full_finance" ? "100% Financed" : input.selectedPaymentTier === "deposit_12pct" ? "12% Deposit" : "Full Payment";
         const fmt = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+        const formattedDate = input.preferredDate ? new Date(input.preferredDate + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : null;
+        const timeLabels: Record<string, string> = {
+          morning: 'Morning (8am–12pm)',
+          afternoon: 'Afternoon (12pm–4pm)',
+          evening: 'Evening (4pm–7pm)',
+        };
+        const formattedTime = input.preferredTime ? (timeLabels[input.preferredTime] ?? input.preferredTime) : null;
 
         // 1. Client confirmation email
         if (input.email) {
@@ -283,11 +290,11 @@ export const rebateCalculatorRouter = router({
                       ${giftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Gift Card</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#ff6b35">${fmt(giftCard)}</td></tr>` : ""}
                       <tr><td style="padding:8px 0;color:#666">Out-of-Pocket</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(finalOutOfPocket)}</td></tr>
                     </table>
-                    ${input.preferredDate || input.preferredTime ? `
+                    ${formattedDate || formattedTime ? `
                     <h3 style="color:#1e3a5f;margin-bottom:8px">Appointment Request</h3>
                     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-                      ${input.preferredDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preferred Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.preferredDate}</td></tr>` : ""}
-                      ${input.preferredTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preferred Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.preferredTime}</td></tr>` : ""}
+                      ${formattedDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preferred Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedDate}</td></tr>` : ""}
+                      ${formattedTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preferred Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedTime}</td></tr>` : ""}
                     </table>
                     ` : ""}
                     <div style="text-align:center;margin:32px 0">
@@ -328,8 +335,8 @@ export const rebateCalculatorRouter = router({
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Email</td><td style="padding:6px 0">${input.email ?? "N/A"}</td></tr>
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Address</td><td style="padding:6px 0">${input.address}, ${input.city ?? ""} ${input.state ?? ""} ${input.zip ?? ""}</td></tr>
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Contact</td><td style="padding:6px 0">${input.preferredContact === "call" ? "Phone Call" : input.preferredContact === "text" ? "Text Message" : input.preferredContact === "email" ? "Email" : "Not specified"}</td></tr>
-                    ${input.preferredDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Date</td><td style="padding:6px 0;font-weight:bold">${input.preferredDate}</td></tr>` : ""}
-                    ${input.preferredTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Time</td><td style="padding:6px 0;font-weight:bold">${input.preferredTime}</td></tr>` : ""}
+                    ${formattedDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Date</td><td style="padding:6px 0;font-weight:bold">${formattedDate}</td></tr>` : ""}
+                    ${formattedTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Time</td><td style="padding:6px 0;font-weight:bold">${formattedTime}</td></tr>` : ""}
                   </table>
                   <h3 style="margin-bottom:4px">Property Details</h3>
                   <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
