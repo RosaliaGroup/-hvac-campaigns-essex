@@ -2,16 +2,19 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 type ChatMessage = { role: "user" | "assistant"; text: string };
-type MenuLevel = "main" | "residential" | "commercial" | "careers" | "partnership" | "courses" | "booking" | "question" | "none";
+type MenuLevel =
+  | "main" | "residential" | "commercial" | "careers" | "partnership" | "courses"
+  | "booking" | "booking-choice" | "booking-assessment" | "booking-rebate"
+  | "question" | "none";
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 const NAVY = "#0a1628";
 const ORANGE = "#e8813a";
 const ORANGE_HOVER = "#d5732f";
-const RED_TINT = "#d63c3c";
-const RED_TINT_HOVER = "#c02e2e";
-const CALENDLY_URL = "https://calendly.com/mechanicalenterprise";
 const PHONE = "(862) 419-1763";
+const PHONE_TEL = "tel:8624191763";
+const ASSESSMENT_URL = "https://mechanicalenterprise.com/residential";
+const REBATE_URL = "https://mechanicalenterprise.com/rebate-calc";
 const LEAD_THRESHOLD = 2;
 const AUTO_OPEN_MS = 8_000;
 const AUTO_OPEN_KEY = "me_chat_auto_opened";
@@ -83,47 +86,40 @@ const MENU_KEY_MAP: Record<string, MenuLevel> = {
   "📚 Courses": "courses",
 };
 
-/* ── Follow-up responses & booking config per option ───────────────── */
-type BookingConfig = {
-  jessicaSays: string;
-  primaryLabel: string;
-  primaryStyle?: "emergency";
-  showCallButton?: boolean;
-};
-
-const FOLLOW_UP_BOOKING: Record<string, BookingConfig> = {
+/* ── Follow-up one-liner per option ────────────────────────────────── */
+const FOLLOW_UP_REPLIES: Record<string, string> = {
   // Residential
-  "🆓 Free Assessment": { jessicaSays: "Perfect! A free assessment takes about 60 min and we handle all rebate paperwork.", primaryLabel: "📅 Book Free Assessment" },
-  "🔧 Service Call ($100)": { jessicaSays: "Got it — $100 flat rate, no hourly fees. Let's get you scheduled.", primaryLabel: "📅 Book Service Call" },
-  "🚨 Emergency ($175)": { jessicaSays: `We respond in 2-4 hours. $175 flat rate. Book now and we'll call you right back.`, primaryLabel: "📅 Book Emergency Call", primaryStyle: "emergency", showCallButton: true },
-  "💰 Rebate Calculator": { jessicaSays: "NJ homeowners can save up to $16K in rebates right now. Let's find what you qualify for.", primaryLabel: "📅 Book Rebate Consultation" },
-  "🔄 Maintenance Plan": { jessicaSays: "Our maintenance plans start at $19/mo and include priority scheduling plus 15% off repairs.", primaryLabel: "📅 Book Maintenance Setup" },
+  "🆓 Free Assessment": "Perfect! A free assessment takes about 60 min and we handle all rebate paperwork.",
+  "🔧 Service Call ($100)": "Got it — $100 flat rate, no hourly fees. Let's get you scheduled.",
+  "🚨 Emergency ($175)": "We respond in 2-4 hours. $175 flat rate — we'll call you right back.",
+  "💰 Rebate Calculator": "NJ homeowners can save up to $16K in rebates right now.",
+  "🔄 Maintenance Plan": "Plans start at $19/mo — includes priority scheduling plus 15% off repairs.",
   // Commercial
-  "🏭 VRV/VRF Systems": { jessicaSays: "We're one of NJ's top VRV/VRF specialists — ideal for multi-zone commercial buildings.", primaryLabel: "📅 Book Commercial Assessment" },
-  "🔧 Service & Repair": { jessicaSays: "We service all commercial HVAC brands with same-day availability most days.", primaryLabel: "📅 Book Commercial Assessment" },
-  "💸 80% Rebates": { jessicaSays: "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.", primaryLabel: "📅 Book Commercial Assessment" },
+  "🏭 VRV/VRF Systems": "We're one of NJ's top VRV/VRF specialists — ideal for multi-zone buildings.",
+  "🔧 Service & Repair": "We service all commercial HVAC brands with same-day availability most days.",
+  "💸 80% Rebates": "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.",
   // Careers
-  "🔩 HVAC Technician": { jessicaSays: "Our residential techs earn $55K-$85K with full benefits and a take-home van.", primaryLabel: "📋 Apply Now" },
-  "🏢 Commercial Tech": { jessicaSays: "Commercial techs start at $70K-$110K — VRF experience is a plus but we also train.", primaryLabel: "📋 Apply Now" },
-  "📋 Apply Now": { jessicaSays: "Great — let's get your application started!", primaryLabel: "📋 Apply Now" },
-  "💰 Pay & Benefits": { jessicaSays: "We offer top-of-market pay, health/dental/vision, 401k match, and paid training.", primaryLabel: "📋 Apply Now" },
+  "🔩 HVAC Technician": "Residential techs earn $55K-$85K with full benefits and a take-home van.",
+  "🏢 Commercial Tech": "Commercial techs start at $70K-$110K — VRF experience is a plus but we also train.",
+  "📋 Apply Now": "Great — let's get your application started!",
+  "💰 Pay & Benefits": "Top-of-market pay, health/dental/vision, 401k match, and paid training.",
   // Partnership
-  "🤝 Referral Partner ($200-$500)": { jessicaSays: "Earn $200-$500 per qualified referral — we handle everything after the intro.", primaryLabel: "📅 Schedule a Partner Call" },
-  "🏘️ Property Manager Program": { jessicaSays: "Property managers get priority service, volume pricing, and a dedicated account rep.", primaryLabel: "📅 Schedule a Partner Call" },
-  "🏗️ Contractor Program": { jessicaSays: "We sub-contract HVAC for GCs across NJ — licensed, insured, and always on schedule.", primaryLabel: "📅 Schedule a Partner Call" },
-  "📞 Talk to Someone": { jessicaSays: "Let's connect you with our partnerships team.", primaryLabel: "📅 Schedule a Partner Call" },
+  "🤝 Referral Partner ($200-$500)": "Earn $200-$500 per qualified referral — we handle everything after the intro.",
+  "🏘️ Property Manager Program": "Property managers get priority service, volume pricing, and a dedicated account rep.",
+  "🏗️ Contractor Program": "We sub-contract HVAC for GCs across NJ — licensed, insured, and always on schedule.",
+  "📞 Talk to Someone": "Let's connect you with our partnerships team.",
   // Courses
-  "📜 Certifications": { jessicaSays: "We offer EPA 608, OSHA 30, and manufacturer-specific certifications.", primaryLabel: "📅 Book a Course" },
-  "🎓 Training Programs": { jessicaSays: "Hands-on training from working master technicians — classes run monthly.", primaryLabel: "📅 Book a Course" },
-  "📅 Upcoming Schedule": { jessicaSays: "Next sessions start in two weeks — spots fill fast so booking early is best.", primaryLabel: "📅 Book a Course" },
-  "💲 Pricing": { jessicaSays: "Courses range from $299-$1,499 depending on certification level. Group discounts available.", primaryLabel: "📅 Book a Course" },
+  "📜 Certifications": "We offer EPA 608, OSHA 30, and manufacturer-specific certifications.",
+  "🎓 Training Programs": "Hands-on training from working master technicians — classes run monthly.",
+  "📅 Upcoming Schedule": "Next sessions start in two weeks — spots fill fast so booking early is best.",
+  "💲 Pricing": "Courses range from $299-$1,499 depending on certification level. Group discounts available.",
 };
 
 /* ── Jessica's free-text responses ─────────────────────────────────── */
 const JESSICA_FREETEXT = [
   "That's a great question — let me help with that. Would you like to book a time to discuss in detail?",
   "Absolutely, happy to clarify. Want me to set up a quick call with one of our specialists?",
-  "Good point! I can give you a general answer, but our team can dive deeper on a call. Want to book one?",
+  "Good point! Our team can dive deeper on a call — want to book one?",
   "Sure thing! For the most accurate info, I'd recommend a quick consult. Want to schedule one?",
   "I hear you! Let me connect you with someone who can walk through all the details.",
 ];
@@ -157,6 +153,9 @@ const primaryBtnStyle: React.CSSProperties = {
   fontWeight: 600,
   cursor: "pointer",
   transition: "background 0.15s",
+  textDecoration: "none",
+  textAlign: "center" as const,
+  display: "block",
 };
 
 const secondaryBtnStyle: React.CSSProperties = {
@@ -169,6 +168,13 @@ const secondaryBtnStyle: React.CSSProperties = {
   fontWeight: 500,
   cursor: "pointer",
   transition: "background 0.15s, color 0.15s",
+};
+
+const callLinkStyle: React.CSSProperties = {
+  fontSize: 13,
+  color: "#666",
+  textAlign: "center" as const,
+  marginTop: 2,
 };
 
 /* ── Component ─────────────────────────────────────────────────────── */
@@ -186,12 +192,9 @@ export default function LiveChatWidget() {
   const [submitting, setSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [menuLevel, setMenuLevel] = useState<MenuLevel>("main");
-  // Track which booking config to show when in "booking" state
-  const [activeBooking, setActiveBooking] = useState<BookingConfig | null>(null);
-  // Track the parent category so "← Back" works from booking/question states
-  const [parentCategory, setParentCategory] = useState<string | null>(null);
-  // Track free-text reply count for varied responses
   const [freetextCount, setFreetextCount] = useState(0);
+  // Stash the booking config so we can re-show it after a question
+  const [pendingBooking, setPendingBooking] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -213,77 +216,81 @@ export default function LiveChatWidget() {
   /* ── scroll to bottom ──────────────────────────────────────────── */
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, isTyping, showForm, menuLevel, activeBooking]);
+  }, [messages, isTyping, showForm, menuLevel]);
 
   /* ── focus input when panel opens ──────────────────────────────── */
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 200);
   }, [open]);
 
+  /* ── helpers ───────────────────────────────────────────────────── */
+  const typeThen = (delayBase: number, cb: () => void) => {
+    setIsTyping(true);
+    setTimeout(() => { setIsTyping(false); cb(); }, delayBase + Math.random() * 400);
+  };
+
+  const bumpUserCount = () => {
+    const newCount = userMsgCount + 1;
+    setUserMsgCount(newCount);
+    if (newCount >= LEAD_THRESHOLD && !formSubmitted) {
+      setTimeout(() => setShowForm(true), 800);
+    }
+  };
+
   /* ── handle main menu click ────────────────────────────────────── */
   const handleMainMenuClick = useCallback((label: string) => {
     const config = FOLLOW_UP_CONFIG[label];
     if (!config) return;
-    setParentCategory(label);
     setMessages((prev) => [...prev, { role: "user", text: label }]);
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
+    typeThen(600, () => {
       setMessages((prev) => [...prev, { role: "assistant", text: config.reply }]);
       setMenuLevel(MENU_KEY_MAP[label] ?? "none");
-    }, 600 + Math.random() * 400);
+    });
   }, []);
 
-  /* ── handle follow-up click → show booking ─────────────────────── */
+  /* ── handle follow-up click → show booking choice ──────────────── */
   const handleFollowUpClick = useCallback((label: string) => {
-    const booking = FOLLOW_UP_BOOKING[label];
-    if (!booking) return;
+    const reply = FOLLOW_UP_REPLIES[label];
+    if (!reply) return;
 
     setMessages((prev) => [...prev, { role: "user", text: label }]);
     setMenuLevel("none");
-    setIsTyping(true);
+    bumpUserCount();
 
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages((prev) => [...prev, { role: "assistant", text: booking.jessicaSays }]);
-      setActiveBooking(booking);
-      setMenuLevel("booking");
-
-      // Count toward lead threshold
-      const newCount = userMsgCount + 1;
-      setUserMsgCount(newCount);
-      if (newCount >= LEAD_THRESHOLD && !formSubmitted) {
-        setTimeout(() => setShowForm(true), 800);
-      }
-    }, 600 + Math.random() * 400);
+    typeThen(600, () => {
+      setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
+      // Now show the booking choice
+      typeThen(500, () => {
+        setMessages((prev) => [...prev, { role: "assistant", text: "Before I send you the link — what would you like to do?" }]);
+        setMenuLevel("booking-choice");
+      });
+    });
   }, [userMsgCount, formSubmitted]);
 
-  /* ── handle booking button click ───────────────────────────────── */
-  const handleBookingClick = useCallback(() => {
-    setMessages((prev) => [...prev, { role: "user", text: "I'd like to book an appointment" }]);
+  /* ── booking choice: Schedule Assessment ────────────────────────── */
+  const handleScheduleAssessment = useCallback(() => {
+    setMessages((prev) => [...prev, { role: "user", text: "📋 Schedule a Free Assessment" }]);
     setMenuLevel("none");
-    setActiveBooking(null);
-    setIsTyping(true);
+    typeThen(600, () => {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Here's your direct booking link — takes 2 minutes!" }]);
+      setMenuLevel("booking-assessment");
+    });
+  }, []);
 
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", text: `Great! You can book directly here 👉 Book Now or call us at ${PHONE} and we'll get you scheduled right away!` },
-      ]);
-      setMenuLevel("none");
-      // Show the calendar CTA after the message
-      setTimeout(() => {
-        setMenuLevel("booking");
-        setActiveBooking({ jessicaSays: "", primaryLabel: "📅 Open Booking Calendar", });
-      }, 100);
-    }, 600 + Math.random() * 400);
+  /* ── booking choice: Rebate Calculator ──────────────────────────── */
+  const handleRebateCalc = useCallback(() => {
+    setMessages((prev) => [...prev, { role: "user", text: "💰 See How Much I Qualify For" }]);
+    setMenuLevel("none");
+    typeThen(600, () => {
+      setMessages((prev) => [...prev, { role: "assistant", text: "Check your rebate estimate instantly — up to $16,000 for residential, 80% for commercial." }]);
+      setMenuLevel("booking-rebate");
+    });
   }, []);
 
   /* ── "I have a question first" ─────────────────────────────────── */
   const handleQuestionClick = useCallback(() => {
     setMenuLevel("question");
-    setActiveBooking(null);
+    setPendingBooking(true);
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
@@ -296,48 +303,42 @@ export default function LiveChatWidget() {
     const newCount = userMsgCount + 1;
     setUserMsgCount(newCount);
     setMessages((prev) => [...prev, { role: "user", text }]);
+    setMenuLevel("none");
 
-    setIsTyping(true);
     const ftIdx = freetextCount;
     setFreetextCount((c) => c + 1);
 
-    setTimeout(() => {
-      setIsTyping(false);
+    typeThen(1000, () => {
       const reply = getFreetextReply(ftIdx);
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
 
-      // After free-text response, re-show booking if we had one
-      if (activeBooking) {
-        setMenuLevel("booking");
+      // Re-show booking choice after answering a question
+      if (pendingBooking) {
+        typeThen(500, () => {
+          setMessages((prev) => [...prev, { role: "assistant", text: "Before I send you the link — what would you like to do?" }]);
+          setMenuLevel("booking-choice");
+        });
+        setPendingBooking(false);
       } else {
-        // Show a generic booking prompt
-        setActiveBooking({ jessicaSays: "", primaryLabel: "📅 Book an Appointment" });
-        setMenuLevel("booking");
+        // Generic: show booking choice
+        typeThen(500, () => {
+          setMessages((prev) => [...prev, { role: "assistant", text: "Before I send you the link — what would you like to do?" }]);
+          setMenuLevel("booking-choice");
+        });
       }
 
       if (newCount >= LEAD_THRESHOLD && !formSubmitted) {
         setTimeout(() => setShowForm(true), 800);
       }
-    }, 1000 + Math.random() * 800);
-  }, [input, userMsgCount, formSubmitted, freetextCount, activeBooking]);
+    });
+  }, [input, userMsgCount, formSubmitted, freetextCount, pendingBooking]);
 
-  /* ── back to main menu ─────────────────────────────────────────── */
+  /* ── back to main menu (always goes to top-level 5 options) ────── */
   const handleBack = useCallback(() => {
     setMessages((prev) => [...prev, { role: "assistant", text: "No problem! What else can I help you with?" }]);
     setMenuLevel("main");
-    setActiveBooking(null);
-    setParentCategory(null);
+    setPendingBooking(false);
   }, []);
-
-  /* ── back to parent category follow-ups ────────────────────────── */
-  const handleBackToCategory = useCallback(() => {
-    if (!parentCategory) { handleBack(); return; }
-    const config = FOLLOW_UP_CONFIG[parentCategory];
-    if (!config) { handleBack(); return; }
-    setMessages((prev) => [...prev, { role: "assistant", text: "Sure! What else were you looking at?" }]);
-    setMenuLevel(MENU_KEY_MAP[parentCategory] ?? "main");
-    setActiveBooking(null);
-  }, [parentCategory, handleBack]);
 
   /* ── get current follow-up buttons ─────────────────────────────── */
   const getFollowUpButtons = (): string[] | null => {
@@ -381,14 +382,9 @@ export default function LiveChatWidget() {
     ]);
   };
 
-  /* ── open calendly ─────────────────────────────────────────────── */
-  const openCalendly = () => window.open(CALENDLY_URL, "_blank", "noopener");
-
   /* ── render ────────────────────────────────────────────────────── */
   const followUpButtons = getFollowUpButtons();
   const isFollowUpMenu = followUpButtons !== null;
-  const isBookingMenu = menuLevel === "booking" && activeBooking;
-  const isEmergency = activeBooking?.primaryStyle === "emergency";
   const showBackButton = menuLevel !== "main" && menuLevel !== "none" && menuLevel !== "question" && !isTyping;
 
   return (
@@ -478,60 +474,66 @@ export default function LiveChatWidget() {
 
             {/* ── Follow-up menu buttons ─────────────────────────── */}
             {isFollowUpMenu && !isTyping && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                {followUpButtons.map((label) => (
+                  <button key={label} onClick={() => handleFollowUpClick(label)} style={quickReplyStyle}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
+                  >{label}</button>
+                ))}
+              </div>
+            )}
+
+            {/* ── Booking choice: Assessment vs Rebate ───────────── */}
+            {menuLevel === "booking-choice" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {followUpButtons.map((label) => (
-                    <button key={label} onClick={() => handleFollowUpClick(label)} style={quickReplyStyle}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
-                    >{label}</button>
-                  ))}
+                <button onClick={handleScheduleAssessment} style={secondaryBtnStyle}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
+                >📋 Schedule a Free Assessment</button>
+                <button onClick={handleRebateCalc} style={secondaryBtnStyle}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
+                >💰 See How Much I Qualify For</button>
+                <button onClick={handleQuestionClick} style={secondaryBtnStyle}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
+                >❓ I have a question first</button>
+              </div>
+            )}
+
+            {/* ── Final CTA: Book Assessment ─────────────────────── */}
+            {menuLevel === "booking-assessment" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={ASSESSMENT_URL} target="_blank" rel="noopener noreferrer"
+                  style={primaryBtnStyle}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = ORANGE_HOVER)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
+                >📅 Book Free Assessment →</a>
+                <div style={callLinkStyle}>
+                  Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a>
                 </div>
               </div>
             )}
 
-            {/* ── Booking CTA buttons ────────────────────────────── */}
-            {isBookingMenu && !isTyping && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
-                {/* Check if this is the final "Open Booking Calendar" state */}
-                {activeBooking.primaryLabel === "📅 Open Booking Calendar" ? (
-                  <button onClick={openCalendly}
-                    style={{ ...primaryBtnStyle }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = ORANGE_HOVER)}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
-                  >📅 Open Booking Calendar</button>
-                ) : (
-                  <>
-                    {/* Primary booking button */}
-                    <button onClick={activeBooking.primaryLabel === "📋 Apply Now" ? () => window.open("/careers", "_blank") : handleBookingClick}
-                      style={{ ...primaryBtnStyle, background: isEmergency ? RED_TINT : ORANGE }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = isEmergency ? RED_TINT_HOVER : ORANGE_HOVER)}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = isEmergency ? RED_TINT : ORANGE)}
-                    >{activeBooking.primaryLabel}</button>
-
-                    {/* Emergency: show call button instead of question */}
-                    {activeBooking.showCallButton ? (
-                      <a href={`tel:${PHONE.replace(/[^0-9]/g, "")}`}
-                        style={{ ...secondaryBtnStyle, textAlign: "center", textDecoration: "none", display: "block" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
-                      >📞 Call {PHONE} Now</a>
-                    ) : (
-                      <button onClick={handleQuestionClick}
-                        style={secondaryBtnStyle}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
-                      >❓ I have a question first</button>
-                    )}
-                  </>
-                )}
+            {/* ── Final CTA: Rebate Calculator ───────────────────── */}
+            {menuLevel === "booking-rebate" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={REBATE_URL} target="_blank" rel="noopener noreferrer"
+                  style={primaryBtnStyle}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = ORANGE_HOVER)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
+                >💰 Open Rebate Calculator →</a>
+                <div style={callLinkStyle}>
+                  Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a>
+                </div>
               </div>
             )}
 
-            {/* ── Back button (always visible after first selection) ── */}
+            {/* ── Back button (always → main menu) ───────────────── */}
             {showBackButton && (
               <div style={{ marginTop: 2 }}>
-                <button onClick={isBookingMenu ? handleBackToCategory : handleBack}
+                <button onClick={handleBack}
                   style={{ ...quickReplyStyle, border: `1.5px solid ${NAVY}`, color: NAVY, fontSize: 12 }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = "#fff"; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
