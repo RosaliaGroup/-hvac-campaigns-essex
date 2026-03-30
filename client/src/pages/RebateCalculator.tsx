@@ -825,6 +825,15 @@ export default function RebateCalculator() {
       preferredContact: (bookingForm.preferredContact as "call" | "text" | "email") || undefined,
       preferredDate: bookingForm.preferredDate || undefined,
       preferredTime: bookingForm.preferredTime || undefined,
+      // Client-side display values (what the user actually saw on screen)
+      clientTotalProjectCost: activePkgCost.totalCost,
+      clientTotalRebates: activePkgCost.incentive,
+      clientFinalOutOfPocket: activePkgCost.outOfPocket,
+      clientGiftCard: activePkg.giftCard,
+      clientWarrantyYears: activePkg.warrantyYears,
+      clientSelectedTierLabel: activePkg.name,
+      clientSystemType: selectedSystem === "ducted" ? "Ducted" : "Ductless",
+      clientOptionDescription: activePkg.description,
     });
   };
 

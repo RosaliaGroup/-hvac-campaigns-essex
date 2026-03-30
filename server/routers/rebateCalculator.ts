@@ -162,6 +162,15 @@ export const rebateCalculatorRouter = router({
         // Preferred appointment date/time
         preferredDate: z.string().optional(),
         preferredTime: z.string().optional(),
+        // Client-side display values (what the user saw on screen)
+        clientTotalProjectCost: z.number().optional(),
+        clientTotalRebates: z.number().optional(),
+        clientFinalOutOfPocket: z.number().optional(),
+        clientGiftCard: z.number().optional(),
+        clientWarrantyYears: z.number().optional(),
+        clientSelectedTierLabel: z.string().optional(),
+        clientSystemType: z.string().optional(),
+        clientOptionDescription: z.string().optional(),
         // Raw property data JSON
         propertyDataJson: z.string().optional(),
       })
@@ -271,6 +280,17 @@ export const rebateCalculatorRouter = router({
         };
         const formattedTime = input.preferredTime ? (timeLabels[input.preferredTime] ?? input.preferredTime) : null;
 
+        // Use client-side display values (what the user saw) with server fallbacks
+        const emailTotalCost = input.clientTotalProjectCost ?? option.totalProjectCost;
+        const emailRebate = input.clientTotalRebates ?? option.totalRebates;
+        const emailOutOfPocket = input.clientFinalOutOfPocket ?? finalOutOfPocket;
+        const emailGiftCard = input.clientGiftCard ?? giftCard;
+        const emailWarrantyYears = input.clientWarrantyYears ?? warrantyYears;
+        const emailTierLabel = input.clientSelectedTierLabel ?? tierLabel;
+        const emailSystemType = input.clientSystemType ?? (input.currentSystem.includes("electric") || input.currentSystem === "none" ? "Ductless" : "Ducted");
+        const emailOptionDescription = input.clientOptionDescription ?? null;
+        const isOption1 = emailTierLabel.includes("Option 1") || input.selectedPaymentTier === "full_finance";
+
         // 1. Client confirmation email
         if (input.email) {
           try {
@@ -290,22 +310,19 @@ export const rebateCalculatorRouter = router({
                     <p>Your free assessment has been requested. Our team will contact you within 24 hours to confirm your appointment.</p>
                     <h3 style="color:#1e3a5f;margin-bottom:8px">Your Estimate Summary</h3>
                     <table style="width:100%;border-collapse:collapse;margin:16px 0">
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">System</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.currentSystem.includes("electric") || input.currentSystem === "none" ? "Ductless" : "Ducted"}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Selected Package</td><td style="padding:8px 0;font-weight:bold;text-align:right">${tierLabel}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Total Project Cost</td><td style="padding:8px 0;font-weight:bold;text-align:right">${fmt(option.totalProjectCost)}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Eligible Rebates (up to)</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">${fmt(option.totalRebates)}</td></tr>
-                      ${input.selectedPaymentTier === "full_finance" ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Mechanical Incentive</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">up to +$2,000</td></tr>` : ""}
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">You Pay After Rebates</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(finalOutOfPocket)}</td></tr>
-                      ${giftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Gift Card</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#ff6b35">${fmt(giftCard)}</td></tr>` : ""}
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Warranty</td><td style="padding:8px 0;font-weight:bold;text-align:right">${warrantyYears} Years</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">System</td><td style="padding:8px 0;font-weight:bold;text-align:right">${emailSystemType}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Selected Package</td><td style="padding:8px 0;font-weight:bold;text-align:right">${emailTierLabel}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Total Project Cost</td><td style="padding:8px 0;font-weight:bold;text-align:right">${fmt(emailTotalCost)}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Eligible Rebates (up to)</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">${fmt(emailRebate)}</td></tr>
+                      ${isOption1 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Mechanical Incentive</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">up to +$2,000</td></tr>` : ""}
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">You Pay After Rebates</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(emailOutOfPocket)}</td></tr>
+                      ${emailGiftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Gift Card</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#ff6b35">${fmt(emailGiftCard)}</td></tr>` : ""}
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Warranty</td><td style="padding:8px 0;font-weight:bold;text-align:right">${emailWarrantyYears} Years</td></tr>
                       ${formattedDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Appointment Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedDate}</td></tr>` : ""}
                       ${formattedTime ? `<tr><td style="padding:8px 0;color:#666">Appointment Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedTime}</td></tr>` : ""}
                     </table>
-                    ${input.selectedPaymentTier === "full_finance" ? `<p style="color:#555;font-size:13px;line-height:1.5">Finance through our 3rd-party lending partner. Project is paid in full — no OBR balance. You receive the NJ Clean Heat rebates directly. Includes up to $2,000 additional Mechanical incentive, 3-year preventive maintenance, 5-year warranty, and a $500 gift card.</p>`
-                    : input.selectedPaymentTier === "deposit_12pct" ? `<p style="color:#555;font-size:13px;line-height:1.5">Pay a deposit upfront to secure your installation. Remaining balance after rebates is financed at 0% interest. Includes 2-year preventive maintenance, 3-year warranty, and a $200 gift card.</p>`
-                    : input.selectedPaymentTier === "full_payment" ? `<p style="color:#555;font-size:13px;line-height:1.5">$0 upfront. Rebates reduce your balance and you privately finance only the remaining amount at 0% interest — not through your utility company. LMI customers qualify for 120 months; standard customers use 84 months. Includes 1-year preventive maintenance, 2-year warranty, and a $100 gift card.</p>`
-                    : `<p style="color:#555;font-size:13px;line-height:1.5">100% covered by NJ Clean Heat program. No upfront cost. Includes 1-year warranty only. No preventive maintenance or gift card included.</p>`}
-                    <p style="color:#1e3a5f;font-size:14px;font-weight:bold;margin-top:16px">✓ Up to $16,000 Rebate Incentive&nbsp;&nbsp;✓ ${input.selectedPaymentTier === "full_finance" ? "$500" : input.selectedPaymentTier === "deposit_12pct" ? "$200" : input.selectedPaymentTier === "full_payment" ? "$100" : "$0"} Assessment Credit</p>
+                    ${emailOptionDescription ? `<p style="color:#555;font-size:13px;line-height:1.5">${emailOptionDescription}</p>` : ""}
+                    <p style="color:#1e3a5f;font-size:14px;font-weight:bold;margin-top:16px">✓ Up to $16,000 Rebate Incentive&nbsp;&nbsp;✓ ${fmt(emailGiftCard)} Assessment Credit</p>
                     <div style="text-align:center;margin:32px 0">
                       <a href="https://mechanicalenterprise.com/rebate-calculator#assessment" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Schedule Your Free Assessment</a>
                     </div>
@@ -355,14 +372,16 @@ export const rebateCalculatorRouter = router({
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Stories</td><td style="padding:6px 0">${input.stories ?? 1}</td></tr>
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Current System</td><td style="padding:6px 0">${systemLabel}</td></tr>
                   </table>
-                  <h3 style="margin-bottom:4px">Rebate Estimate</h3>
+                  <h3 style="margin-bottom:4px">Rebate Estimate (as shown to client)</h3>
                   <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
-                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Selected Option</td><td style="padding:6px 0">${optionLabel}</td></tr>
-                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Payment Tier</td><td style="padding:6px 0">${tierLabel}</td></tr>
-                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Project Cost</td><td style="padding:6px 0">${fmt(option.totalProjectCost)}</td></tr>
-                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Total Rebates</td><td style="padding:6px 0;color:#16a34a;font-weight:bold">${fmt(option.totalRebates)}</td></tr>
-                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Out of Pocket</td><td style="padding:6px 0;font-weight:bold">${fmt(finalOutOfPocket)}</td></tr>
-                    ${giftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Gift Card</td><td style="padding:6px 0">${fmt(giftCard)}</td></tr>` : ""}
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">System</td><td style="padding:6px 0">${emailSystemType}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Selected Package</td><td style="padding:6px 0;font-weight:bold">${emailTierLabel}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Project Cost</td><td style="padding:6px 0">${fmt(emailTotalCost)}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Eligible Rebates</td><td style="padding:6px 0;color:#16a34a;font-weight:bold">${fmt(emailRebate)}</td></tr>
+                    ${isOption1 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Mechanical Incentive</td><td style="padding:6px 0;color:#16a34a;font-weight:bold">up to +$2,000</td></tr>` : ""}
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Out of Pocket</td><td style="padding:6px 0;font-weight:bold">${fmt(emailOutOfPocket)}</td></tr>
+                    ${emailGiftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Gift Card</td><td style="padding:6px 0">${fmt(emailGiftCard)}</td></tr>` : ""}
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Warranty</td><td style="padding:6px 0">${emailWarrantyYears} Years</td></tr>
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Assessment Requested</td><td style="padding:6px 0;font-weight:bold;color:${input.assessmentRequested ? "#16a34a" : "#666"}">${input.assessmentRequested ? "YES" : "No"}</td></tr>
                     ${input.interestedInSolar ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Solar Interest</td><td style="padding:6px 0">${input.interestedInSolar}</td></tr>` : ""}
                   </table>
