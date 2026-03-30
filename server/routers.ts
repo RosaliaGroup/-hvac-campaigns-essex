@@ -135,7 +135,87 @@ export const appRouter = router({
           title: `New Lead Capture: ${input.captureType.replace(/_/g, ' ')}`,
           content: `A visitor has submitted their contact information:\n\n${contactInfo.join('\n')}\nCapture Type: ${input.captureType}\nPage: ${input.pageUrl || 'Unknown'}\nMessage: ${input.message || 'None'}\n\nLog in to your dashboard to follow up.`,
         });
-        
+
+        // Send email notifications via Resend
+        const resendApiKey = process.env.RESEND_API_KEY;
+        if (resendApiKey) {
+          const leadName = input.name || [input.firstName, input.lastName].filter(Boolean).join(' ') || "Homeowner";
+          const serviceLine = input.message?.split('\\n')?.[0]?.replace('Service: ', '') || "Not specified";
+          const timestamp = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'short' });
+
+          // 1. Client confirmation email
+          if (input.email) {
+            try {
+              await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${resendApiKey}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
+                  to: [input.email],
+                  subject: "We received your quote request – Mechanical Enterprise",
+                  html: `
+                    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                      <h2 style="color:#1e3a5f">Thank you, ${leadName}!</h2>
+                      <p>We've received your quote request and a member of our team will follow up with you within <strong>24 hours</strong>.</p>
+                      <h3 style="color:#1e3a5f;margin-bottom:8px">Your Request</h3>
+                      <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                        <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Name</td><td style="padding:8px 0;font-weight:bold;text-align:right">${leadName}</td></tr>
+                        <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Service Requested</td><td style="padding:8px 0;font-weight:bold;text-align:right">${serviceLine}</td></tr>
+                        ${input.phone ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Phone</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.phone}</td></tr>` : ""}
+                      </table>
+                      <p>Need immediate assistance? Give us a call — we're happy to help.</p>
+                      <div style="text-align:center;margin:32px 0">
+                        <a href="tel:8624191763" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Call Us Now: (862) 419-1763</a>
+                      </div>
+                      <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+                      <p style="color:#999;font-size:12px">Mechanical Enterprise LLC &bull; Essex County, NJ &bull; <a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a></p>
+                    </div>
+                  `,
+                }),
+              });
+            } catch (e) {
+              console.error("Quote request client email error:", e);
+            }
+          }
+
+          // 2. Sales team notification email
+          try {
+            await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${resendApiKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
+                to: ["sales@mechanicalenterprise.com"],
+                subject: `New Quote Request – ${leadName}`,
+                html: `
+                  <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                    <h2 style="color:#1e3a5f">New Quote Request</h2>
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Name</td><td style="padding:6px 0">${leadName}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Email</td><td style="padding:6px 0">${input.email ?? "N/A"}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Phone</td><td style="padding:6px 0">${input.phone ?? "N/A"}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Service Requested</td><td style="padding:6px 0;font-weight:bold">${serviceLine}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Message</td><td style="padding:6px 0">${input.message ?? "None"}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Page</td><td style="padding:6px 0">${input.pageUrl ?? "Unknown"}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Submitted</td><td style="padding:6px 0">${timestamp}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Source</td><td style="padding:6px 0">${input.captureType.replace(/_/g, " ")}</td></tr>
+                    </table>
+                    <p style="color:#999;font-size:12px">Log in to the <a href="https://mechanicalenterprise.com/lead-dashboard">dashboard</a> to follow up.</p>
+                  </div>
+                `,
+              }),
+            });
+          } catch (e) {
+            console.error("Quote request sales email error:", e);
+          }
+        }
+
         return { success: true };
       }),
     
