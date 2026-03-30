@@ -52,6 +52,7 @@ import NotFound from "./pages/NotFound";
 import AssessmentSubmissions from "./pages/AssessmentSubmissions";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
+import LiveChatWidget from "./components/LiveChatWidget";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -138,6 +139,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <LiveChatWidget />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
