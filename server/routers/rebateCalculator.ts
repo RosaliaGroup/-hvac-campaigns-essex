@@ -159,6 +159,9 @@ export const rebateCalculatorRouter = router({
         interestedInSolar: z.string().optional(),
         // Preferred contact method
         preferredContact: z.enum(["call", "text", "email"]).optional(),
+        // Preferred appointment date/time
+        preferredDate: z.string().optional(),
+        preferredTime: z.string().optional(),
         // Raw property data JSON
         propertyDataJson: z.string().optional(),
       })
@@ -271,7 +274,22 @@ export const rebateCalculatorRouter = router({
                 html: `
                   <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
                     <h2 style="color:#1e3a5f">${input.firstName}, your assessment request is confirmed!</h2>
-                    <p>Your free assessment has been requested. Our team will contact you within 24 hours to confirm your appointment. Based on your home details, you may qualify for up to <strong>$16,000</strong> in NJ Clean Heat rebates.</p>
+                    <p>Your free assessment has been requested. Our team will contact you within 24 hours to confirm your appointment.</p>
+                    <h3 style="color:#1e3a5f;margin-bottom:8px">Your Estimate Summary</h3>
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">System</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.currentSystem.includes("electric") || input.currentSystem === "none" ? "Ductless" : "Ducted"}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Selected Package</td><td style="padding:8px 0;font-weight:bold;text-align:right">${optionLabel} — ${tierLabel}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Est. Rebate</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">${fmt(option.totalRebates)}</td></tr>
+                      ${giftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Gift Card</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#ff6b35">${fmt(giftCard)}</td></tr>` : ""}
+                      <tr><td style="padding:8px 0;color:#666">Out-of-Pocket</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(finalOutOfPocket)}</td></tr>
+                    </table>
+                    ${input.preferredDate || input.preferredTime ? `
+                    <h3 style="color:#1e3a5f;margin-bottom:8px">Appointment Request</h3>
+                    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                      ${input.preferredDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preferred Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.preferredDate}</td></tr>` : ""}
+                      ${input.preferredTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preferred Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.preferredTime}</td></tr>` : ""}
+                    </table>
+                    ` : ""}
                     <div style="text-align:center;margin:32px 0">
                       <a href="https://mechanicalenterprise.com/rebate-calculator#assessment" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Schedule Your Free Assessment</a>
                     </div>
@@ -309,7 +327,9 @@ export const rebateCalculatorRouter = router({
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Phone</td><td style="padding:6px 0">${input.phone ?? "N/A"}</td></tr>
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Email</td><td style="padding:6px 0">${input.email ?? "N/A"}</td></tr>
                     <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Address</td><td style="padding:6px 0">${input.address}, ${input.city ?? ""} ${input.state ?? ""} ${input.zip ?? ""}</td></tr>
-                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Contact</td><td style="padding:6px 0">${input.preferredContact ?? "Not specified"}</td></tr>
+                    <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Contact</td><td style="padding:6px 0">${input.preferredContact === "call" ? "Phone Call" : input.preferredContact === "text" ? "Text Message" : input.preferredContact === "email" ? "Email" : "Not specified"}</td></tr>
+                    ${input.preferredDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Date</td><td style="padding:6px 0;font-weight:bold">${input.preferredDate}</td></tr>` : ""}
+                    ${input.preferredTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Preferred Time</td><td style="padding:6px 0;font-weight:bold">${input.preferredTime}</td></tr>` : ""}
                   </table>
                   <h3 style="margin-bottom:4px">Property Details</h3>
                   <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
