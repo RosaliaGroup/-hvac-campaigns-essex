@@ -828,7 +828,9 @@ export default function RebateCalculator() {
       // Client-side display values (what the user actually saw on screen)
       clientTotalProjectCost: activePkgCost.totalCost,
       clientTotalRebates: activePkgCost.incentive,
-      clientFinalOutOfPocket: activePkgCost.outOfPocket,
+      clientFinalOutOfPocket: activePkg.paidInFull
+        ? activePkgCost.totalCost - (selectedEfficiency === "high" ? activePkgCost.incentive + activePkgCost.mechanicalIncentive : 0)
+        : activePkgCost.upfront + activePkgCost.remaining,
       clientGiftCard: activePkg.giftCard,
       clientWarrantyYears: activePkg.warrantyYears,
       clientSelectedTierLabel: activePkg.name,

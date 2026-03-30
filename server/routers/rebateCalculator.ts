@@ -323,7 +323,8 @@ export const rebateCalculatorRouter = router({
                       <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Warranty</td><td style="padding:8px 0;font-weight:bold;text-align:right">${emailWarrantyYears} Years</td></tr>
                       ${maintenanceLabel ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Preventive Maintenance</td><td style="padding:8px 0;font-weight:bold;text-align:right">${maintenanceLabel}</td></tr>` : ""}
                       ${formattedDate ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Appointment Date</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedDate}</td></tr>` : ""}
-                      ${formattedTime ? `<tr><td style="padding:8px 0;color:#666">Appointment Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedTime}</td></tr>` : ""}
+                      ${formattedTime ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Appointment Time</td><td style="padding:8px 0;font-weight:bold;text-align:right">${formattedTime}</td></tr>` : ""}
+                      ${input.preferredContact ? `<tr><td style="padding:8px 0;color:#666">Preferred Contact</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.preferredContact === "call" ? "📞 Phone Call" : input.preferredContact === "text" ? "💬 Text Message" : "✉️ Email"}</td></tr>` : ""}
                     </table>
                     ${emailOptionDescription ? `<p style="color:#555;font-size:13px;line-height:1.5">${emailOptionDescription}</p>` : ""}
                     <p style="color:#1e3a5f;font-size:14px;font-weight:bold;margin-top:16px">✓ Up to $16,000 Rebate Incentive&nbsp;&nbsp;✓ ${fmt(emailGiftCard)} Assessment Credit</p>
