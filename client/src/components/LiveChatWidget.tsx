@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 type ChatMessage = { role: "user" | "assistant"; text: string };
+type MenuLevel = "main" | "residential" | "commercial" | "careers" | "partnership" | "courses" | "none";
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 const NAVY = "#0a1628";
@@ -10,6 +11,73 @@ const ORANGE_HOVER = "#d5732f";
 const LEAD_THRESHOLD = 2; // show form after this many user messages
 const AUTO_OPEN_MS = 8_000;
 const AUTO_OPEN_KEY = "me_chat_auto_opened";
+
+/* ── Quick-reply menus ─────────────────────────────────────────────── */
+const MAIN_MENU = [
+  "🏠 Residential",
+  "🏢 Commercial",
+  "💼 Careers",
+  "🤝 Partnership",
+  "📚 Courses",
+];
+
+const FOLLOW_UP_CONFIG: Record<string, { reply: string; buttons: string[] }> = {
+  "🏠 Residential": {
+    reply: "Great! What do you need help with for your home?",
+    buttons: [
+      "🆓 Free Assessment",
+      "🔧 Service Call ($100)",
+      "🚨 Emergency ($175)",
+      "💰 Rebate Calculator",
+      "🔄 Maintenance Plan",
+    ],
+  },
+  "🏢 Commercial": {
+    reply: "Got it! What can we help with for your commercial property?",
+    buttons: [
+      "🆓 Free Assessment",
+      "🏭 VRV/VRF Systems",
+      "🔧 Service & Repair",
+      "🚨 Emergency ($175)",
+      "💸 80% Rebates",
+    ],
+  },
+  "💼 Careers": {
+    reply: "We're hiring across NJ! What would you like to know?",
+    buttons: [
+      "🔩 HVAC Technician",
+      "🏢 Commercial Tech",
+      "📋 Apply Now",
+      "💰 Pay & Benefits",
+    ],
+  },
+  "🤝 Partnership": {
+    reply: "Awesome! We have several partnership programs. Which interests you?",
+    buttons: [
+      "🤝 Referral Partner ($200-$500)",
+      "🏘️ Property Manager Program",
+      "🏗️ Contractor Program",
+      "📞 Talk to Someone",
+    ],
+  },
+  "📚 Courses": {
+    reply: "We offer HVAC training and certification courses. What are you looking for?",
+    buttons: [
+      "📜 Certifications",
+      "🎓 Training Programs",
+      "📅 Upcoming Schedule",
+      "💲 Pricing",
+    ],
+  },
+};
+
+const MENU_KEY_MAP: Record<string, MenuLevel> = {
+  "🏠 Residential": "residential",
+  "🏢 Commercial": "commercial",
+  "💼 Careers": "careers",
+  "🤝 Partnership": "partnership",
+  "📚 Courses": "courses",
+};
 
 /* ── Jessica's canned responses ────────────────────────────────────── */
 const JESSICA_RESPONSES = [
@@ -24,11 +92,25 @@ function getJessicaReply(index: number): string {
   return JESSICA_RESPONSES[Math.min(index, JESSICA_RESPONSES.length - 1)];
 }
 
+/* ── Quick-reply button style ──────────────────────────────────────── */
+const quickReplyStyle: React.CSSProperties = {
+  padding: "8px 14px",
+  borderRadius: 20,
+  border: `1.5px solid ${ORANGE}`,
+  background: "#fff",
+  color: NAVY,
+  fontSize: 13,
+  fontWeight: 500,
+  cursor: "pointer",
+  transition: "background 0.15s, color 0.15s",
+  whiteSpace: "nowrap",
+};
+
 /* ── Component ─────────────────────────────────────────────────────── */
 export default function LiveChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", text: "Hi! I'm Jessica from Mechanical Enterprise. 👋 How can I help you with your HVAC needs today?" },
+    { role: "assistant", text: "Hi! I'm Jessica from Mechanical Enterprise. 👋 How can I help you today?" },
   ]);
   const [input, setInput] = useState("");
   const [userMsgCount, setUserMsgCount] = useState(0);
@@ -38,6 +120,7 @@ export default function LiveChatWidget() {
   const [formPhone, setFormPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [menuLevel, setMenuLevel] = useState<MenuLevel>("main");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,22 +142,18 @@ export default function LiveChatWidget() {
   /* ── scroll to bottom ──────────────────────────────────────────── */
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, isTyping, showForm]);
+  }, [messages, isTyping, showForm, menuLevel]);
 
   /* ── focus input when panel opens ──────────────────────────────── */
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 200);
   }, [open]);
 
-  /* ── send message ──────────────────────────────────────────────── */
-  const send = useCallback(() => {
-    const text = input.trim();
-    if (!text) return;
-
+  /* ── send a user message and get Jessica's reply ───────────────── */
+  const sendMessage = useCallback((text: string) => {
     const newCount = userMsgCount + 1;
     setUserMsgCount(newCount);
     setMessages((prev) => [...prev, { role: "user", text }]);
-    setInput("");
 
     // Simulate Jessica typing
     setIsTyping(true);
@@ -88,7 +167,59 @@ export default function LiveChatWidget() {
         setTimeout(() => setShowForm(true), 800);
       }
     }, 1000 + Math.random() * 800);
-  }, [input, userMsgCount, formSubmitted]);
+  }, [userMsgCount, formSubmitted]);
+
+  /* ── handle typed input submit ─────────────────────────────────── */
+  const send = useCallback(() => {
+    const text = input.trim();
+    if (!text) return;
+    setInput("");
+    setMenuLevel("none");
+    sendMessage(text);
+  }, [input, sendMessage]);
+
+  /* ── handle main menu quick-reply click ────────────────────────── */
+  const handleMainMenuClick = useCallback((label: string) => {
+    const config = FOLLOW_UP_CONFIG[label];
+    if (!config) return;
+
+    // Add the user's selection as a message
+    setMessages((prev) => [...prev, { role: "user", text: label }]);
+
+    // Show Jessica's follow-up reply
+    setIsTyping(true);
+    setTimeout(() => {
+      setIsTyping(false);
+      setMessages((prev) => [...prev, { role: "assistant", text: config.reply }]);
+      setMenuLevel(MENU_KEY_MAP[label] ?? "none");
+    }, 600 + Math.random() * 400);
+  }, []);
+
+  /* ── handle follow-up quick-reply click ────────────────────────── */
+  const handleFollowUpClick = useCallback((label: string) => {
+    setMenuLevel("none");
+    sendMessage(label);
+  }, [sendMessage]);
+
+  /* ── handle back to main menu ──────────────────────────────────── */
+  const handleBack = useCallback(() => {
+    setMessages((prev) => [...prev, { role: "assistant", text: "No problem! What else can I help you with?" }]);
+    setMenuLevel("main");
+  }, []);
+
+  /* ── get current follow-up buttons ─────────────────────────────── */
+  const getFollowUpButtons = (): string[] | null => {
+    const menuToLabel: Record<string, string> = {
+      residential: "🏠 Residential",
+      commercial: "🏢 Commercial",
+      careers: "💼 Careers",
+      partnership: "🤝 Partnership",
+      courses: "📚 Courses",
+    };
+    const label = menuToLabel[menuLevel];
+    if (!label) return null;
+    return FOLLOW_UP_CONFIG[label]?.buttons ?? null;
+  };
 
   /* ── submit lead form ──────────────────────────────────────────── */
   const submitForm = async (e: React.FormEvent) => {
@@ -119,6 +250,8 @@ export default function LiveChatWidget() {
   };
 
   /* ── render ────────────────────────────────────────────────────── */
+  const followUpButtons = getFollowUpButtons();
+
   return (
     <>
       {/* ── Floating bubble ──────────────────────────────────────── */}
@@ -152,7 +285,6 @@ export default function LiveChatWidget() {
             e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.25)";
           }}
         >
-          {/* Chat icon */}
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
           </svg>
@@ -291,6 +423,56 @@ export default function LiveChatWidget() {
                     />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* ── Quick-reply buttons: main menu ─────────────────── */}
+            {menuLevel === "main" && !isTyping && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                {MAIN_MENU.map((label) => (
+                  <button
+                    key={label}
+                    onClick={() => handleMainMenuClick(label)}
+                    style={quickReplyStyle}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── Quick-reply buttons: follow-up menu ────────────── */}
+            {followUpButtons && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {followUpButtons.map((label) => (
+                    <button
+                      key={label}
+                      onClick={() => handleFollowUpClick(label)}
+                      style={quickReplyStyle}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleBack}
+                  style={{
+                    ...quickReplyStyle,
+                    border: `1.5px solid ${NAVY}`,
+                    color: NAVY,
+                    alignSelf: "flex-start",
+                    fontSize: 12,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = "#fff"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
+                >
+                  ← Back
+                </button>
               </div>
             )}
 
