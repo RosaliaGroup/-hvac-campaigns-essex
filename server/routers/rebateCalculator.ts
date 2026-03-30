@@ -267,23 +267,13 @@ export const rebateCalculatorRouter = router({
               body: JSON.stringify({
                 from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
                 to: [input.email],
-                subject: `Your Rebate Estimate is Ready – Mechanical Enterprise`,
+                subject: `Your Assessment Request is Confirmed – Mechanical Enterprise`,
                 html: `
                   <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
-                    <h2 style="color:#1e3a5f">Great news, ${input.firstName}! Your rebate estimate is ready.</h2>
-                    <p>Here's a summary of your personalized NJ Clean Heat rebate estimate:</p>
-                    <table style="width:100%;border-collapse:collapse;margin:20px 0">
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">System Selected</td><td style="padding:8px 0;font-weight:bold;text-align:right">${optionLabel}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Total Rebates</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#16a34a">${fmt(option.totalRebates)}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Estimated Project Cost</td><td style="padding:8px 0;font-weight:bold;text-align:right">${fmt(option.totalProjectCost)}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Payment Option</td><td style="padding:8px 0;font-weight:bold;text-align:right">${tierLabel}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Your Out-of-Pocket</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#1e3a5f">${fmt(finalOutOfPocket)}</td></tr>
-                      ${giftCard > 0 ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Bonus Gift Card</td><td style="padding:8px 0;font-weight:bold;text-align:right;color:#ff6b35">${fmt(giftCard)}</td></tr>` : ""}
-                      <tr><td style="padding:8px 0;color:#666">Warranty</td><td style="padding:8px 0;font-weight:bold;text-align:right">${warrantyYears} Years</td></tr>
-                    </table>
-                    ${input.assessmentRequested ? `<p style="color:#1e3a5f;font-weight:bold">You've requested a FREE home assessment — our team will reach out within 24 hours to schedule.</p>` : `<p>Ready to take the next step? Schedule a free home assessment to lock in your rebates.</p>`}
+                    <h2 style="color:#1e3a5f">${input.firstName}, your assessment request is confirmed!</h2>
+                    <p>Your free assessment has been requested. Our team will contact you within 24 hours to confirm your appointment. Based on your home details, you may qualify for up to <strong>$16,000</strong> in NJ Clean Heat rebates.</p>
                     <div style="text-align:center;margin:32px 0">
-                      <a href="https://mechanicalenterprise.com/rebate-calculator" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">View Your Estimate</a>
+                      <a href="https://mechanicalenterprise.com/rebate-calculator#assessment" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Schedule Your Free Assessment</a>
                     </div>
                     <p style="color:#666;font-size:14px">Questions? Call us at <strong>(862) 419-1763</strong> — we're happy to help.</p>
                     <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
