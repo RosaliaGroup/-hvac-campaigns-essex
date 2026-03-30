@@ -139,9 +139,35 @@ export const appRouter = router({
         // Send email notifications via Resend
         const resendApiKey = process.env.RESEND_API_KEY;
         if (resendApiKey) {
-          const leadName = input.name || [input.firstName, input.lastName].filter(Boolean).join(' ') || "Homeowner";
-          const serviceLine = input.message?.split('\\n')?.[0]?.replace('Service: ', '') || "Not specified";
+          const leadName = input.name || [input.firstName, input.lastName].filter(Boolean).join(' ') || "Visitor";
           const timestamp = new Date().toLocaleString('en-US', { timeZone: 'America/New_York', dateStyle: 'full', timeStyle: 'short' });
+
+          // Parse message fields into a map for structured display
+          const msgFields: Record<string, string> = {};
+          (input.message ?? "").split('\n').forEach(line => {
+            const idx = line.indexOf(': ');
+            if (idx > 0) msgFields[line.slice(0, idx).trim()] = line.slice(idx + 2).trim();
+          });
+
+          // Determine email subject and content based on capture type
+          const isCareer = input.captureType === "career_application";
+          const isPartnership = input.captureType === "partnership_inquiry";
+          const clientSubject = isCareer
+            ? "We received your application – Mechanical Enterprise"
+            : isPartnership
+            ? "We received your partnership inquiry – Mechanical Enterprise"
+            : "We received your quote request – Mechanical Enterprise";
+          const clientBody = isCareer
+            ? "We've received your job application and our team will review it within <strong>3-5 business days</strong>."
+            : isPartnership
+            ? "We've received your partnership inquiry and will be in touch within <strong>24-48 hours</strong> to discuss next steps."
+            : "We've received your quote request and a member of our team will follow up with you within <strong>24 hours</strong>.";
+          const salesSubject = isCareer
+            ? `New Job Application – ${leadName}`
+            : isPartnership
+            ? `New Partnership Inquiry – ${leadName}`
+            : `New Quote Request – ${leadName}`;
+          const salesHeading = isCareer ? "New Job Application" : isPartnership ? "New Partnership Inquiry" : "New Quote Request";
 
           // 1. Client confirmation email
           if (input.email) {
@@ -155,17 +181,11 @@ export const appRouter = router({
                 body: JSON.stringify({
                   from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
                   to: [input.email],
-                  subject: "We received your quote request – Mechanical Enterprise",
+                  subject: clientSubject,
                   html: `
                     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
                       <h2 style="color:#1e3a5f">Thank you, ${leadName}!</h2>
-                      <p>We've received your quote request and a member of our team will follow up with you within <strong>24 hours</strong>.</p>
-                      <h3 style="color:#1e3a5f;margin-bottom:8px">Your Request</h3>
-                      <table style="width:100%;border-collapse:collapse;margin:16px 0">
-                        <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Name</td><td style="padding:8px 0;font-weight:bold;text-align:right">${leadName}</td></tr>
-                        <tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Service Requested</td><td style="padding:8px 0;font-weight:bold;text-align:right">${serviceLine}</td></tr>
-                        ${input.phone ? `<tr style="border-bottom:1px solid #eee"><td style="padding:8px 0;color:#666">Phone</td><td style="padding:8px 0;font-weight:bold;text-align:right">${input.phone}</td></tr>` : ""}
-                      </table>
+                      <p>${clientBody}</p>
                       <p>Need immediate assistance? Give us a call — we're happy to help.</p>
                       <div style="text-align:center;margin:32px 0">
                         <a href="tel:8624191763" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Call Us Now: (862) 419-1763</a>
@@ -177,12 +197,44 @@ export const appRouter = router({
                 }),
               });
             } catch (e) {
-              console.error("Quote request client email error:", e);
+              console.error("Lead capture client email error:", e);
             }
           }
 
           // 2. Sales team notification email
           try {
+            // Build details section based on capture type
+            let detailsHtml = "";
+            if (isCareer) {
+              detailsHtml = `
+                <h3 style="margin-bottom:4px">Application Details</h3>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Position</td><td style="padding:6px 0;font-weight:bold">${msgFields["Position"] ?? "Not specified"}</td></tr>
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Experience</td><td style="padding:6px 0">${msgFields["Experience"] ?? "Not specified"}</td></tr>
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Licensed/Certified</td><td style="padding:6px 0">${msgFields["Licensed"] ?? "Not specified"}</td></tr>
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Cover Letter</td><td style="padding:6px 0">${msgFields["Cover Letter"] ?? "None"}</td></tr>
+                </table>`;
+            } else if (isPartnership) {
+              detailsHtml = `
+                <h3 style="margin-bottom:4px">Partnership Details</h3>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Company</td><td style="padding:6px 0;font-weight:bold">${msgFields["Company"] ?? "Not specified"}</td></tr>
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Partnership Type</td><td style="padding:6px 0">${msgFields["Partnership Type"] ?? "Not specified"}</td></tr>
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Website</td><td style="padding:6px 0">${msgFields["Website"] ?? "N/A"}</td></tr>
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Message</td><td style="padding:6px 0">${msgFields["Message"] ?? "None"}</td></tr>
+                </table>`;
+            } else {
+              const serviceLine = msgFields["Service"] || "Not specified";
+              // Remove the "Service: X" prefix from message to avoid duplication
+              const cleanMessage = (input.message ?? "").replace(/^Service:.*\n\n?/, "").trim();
+              detailsHtml = `
+                <h3 style="margin-bottom:4px">Request Details</h3>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                  <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Service Requested</td><td style="padding:6px 0;font-weight:bold">${serviceLine}</td></tr>
+                  ${cleanMessage ? `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Message</td><td style="padding:6px 0">${cleanMessage}</td></tr>` : ""}
+                </table>`;
+            }
+
             await fetch("https://api.resend.com/emails", {
               method: "POST",
               headers: {
@@ -192,17 +244,19 @@ export const appRouter = router({
               body: JSON.stringify({
                 from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
                 to: ["sales@mechanicalenterprise.com"],
-                subject: `New Quote Request – ${leadName}`,
+                subject: salesSubject,
                 html: `
                   <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
-                    <h2 style="color:#1e3a5f">New Quote Request</h2>
-                    <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                    <h2 style="color:#1e3a5f">${salesHeading}</h2>
+                    <h3 style="margin-bottom:4px">Contact Info</h3>
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Name</td><td style="padding:6px 0">${leadName}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Email</td><td style="padding:6px 0">${input.email ?? "N/A"}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Phone</td><td style="padding:6px 0">${input.phone ?? "N/A"}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Service Requested</td><td style="padding:6px 0;font-weight:bold">${serviceLine}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Message</td><td style="padding:6px 0">${input.message ?? "None"}</td></tr>
-                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Page</td><td style="padding:6px 0">${input.pageUrl ?? "Unknown"}</td></tr>
+                    </table>
+                    ${detailsHtml}
+                    <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Page</td><td style="padding:6px 0">${input.pageUrl ?? "Unknown"}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Submitted</td><td style="padding:6px 0">${timestamp}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Source</td><td style="padding:6px 0">${input.captureType.replace(/_/g, " ")}</td></tr>
                     </table>
@@ -212,7 +266,7 @@ export const appRouter = router({
               }),
             });
           } catch (e) {
-            console.error("Quote request sales email error:", e);
+            console.error("Lead capture sales email error:", e);
           }
         }
 
