@@ -26,6 +26,7 @@ const SOURCE_LABELS: Record<string, { label: string; icon: React.ReactNode; colo
   newsletter: { label: "Newsletter", icon: <Mail className="h-3 w-3" />, color: "bg-green-100 text-green-700" },
   download_gate: { label: "Download", icon: <Globe className="h-3 w-3" />, color: "bg-yellow-100 text-yellow-700" },
   quick_quote: { label: "Quick Quote", icon: <Globe className="h-3 w-3" />, color: "bg-orange-100 text-orange-700" },
+  qualify_form: { label: "Qualify Form", icon: <Zap className="h-3 w-3" />, color: "bg-teal-100 text-teal-700" },
   exit_popup_residential: { label: "Residential Popup", icon: <Globe className="h-3 w-3" />, color: "bg-purple-100 text-purple-700" },
   exit_popup_commercial: { label: "Commercial Popup", icon: <Globe className="h-3 w-3" />, color: "bg-indigo-100 text-indigo-700" },
   scroll_popup_residential: { label: "Residential Scroll", icon: <Globe className="h-3 w-3" />, color: "bg-pink-100 text-pink-700" },

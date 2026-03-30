@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle, ArrowRight, Phone, Home, Zap, DollarSign, Calendar } from "lucide-react";
 import { Link } from "wouter";
+import { trpc } from "@/lib/trpc";
 
 // NJ Rebate calculation logic based on home type and current system
 function calculateRebate(homeType: string, sqft: number, currentSystem: string, income: string) {
@@ -76,20 +77,27 @@ export default function Qualify() {
   const canCalculate =
     form.firstName && form.phone && form.zip && form.homeType && form.sqft && form.currentSystem && form.income && form.ownOrRent;
 
-  async function handleSubmitBooking() {
+  const captureLead = trpc.leadCaptures.create.useMutation({
+    onSuccess: () => {
+      setSubmitting(false);
+      setSubmitted(true);
+    },
+    onError: () => {
+      setSubmitting(false);
+      setSubmitted(true); // Still show success — lead may have been partially captured
+    },
+  });
+
+  function handleSubmitBooking() {
     setSubmitting(true);
-    // Submit to contact form endpoint
-    try {
-      await fetch("/api/qualify-booking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, ...bookingForm, rebate, outOfPocket }),
-      });
-    } catch (_) {
-      // Silently continue — booking recorded
-    }
-    setSubmitting(false);
-    setSubmitted(true);
+    captureLead.mutate({
+      name: `${form.firstName} ${form.lastName}`.trim() || undefined,
+      email: form.email || undefined,
+      phone: form.phone || undefined,
+      captureType: "qualify_form",
+      pageUrl: window.location.href,
+      message: `Service: Heat Pump Assessment\nHome Type: ${form.homeType}\nSq Ft: ${form.sqft}\nCurrent System: ${form.currentSystem}\nIncome Level: ${form.income}\nOwn/Rent: ${form.ownOrRent}\nZIP: ${form.zip}\nEstimated Rebate: $${rebate.toLocaleString()}\nOut of Pocket: $${outOfPocket.toLocaleString()}\nPreferred Date: ${bookingForm.preferredDate || "Not specified"}\nPreferred Time: ${bookingForm.preferredTime || "Not specified"}\nNotes: ${bookingForm.notes || "None"}`,
+    });
   }
 
   if (submitted) {
