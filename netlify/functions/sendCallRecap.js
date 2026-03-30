@@ -4,14 +4,14 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { name, phone, message, transcript } = JSON.parse(event.body);
+    const { name, phone, caller_email, message, transcript } = JSON.parse(event.body);
 
     if (!name || !phone) {
       return { statusCode: 400, body: JSON.stringify({ error: "Name and phone are required" }) };
     }
 
     // Log the lead capture for now — integrate with CRM / email as needed
-    console.log("[Chat Lead]", JSON.stringify({ name, phone, message, transcript, timestamp: new Date().toISOString() }));
+    console.log("[Chat Lead]", JSON.stringify({ name, phone, caller_email, message, transcript, timestamp: new Date().toISOString() }));
 
     return {
       statusCode: 200,

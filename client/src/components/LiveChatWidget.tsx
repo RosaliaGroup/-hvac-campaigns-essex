@@ -2,9 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 type ChatMessage = { role: "user" | "assistant"; text: string };
+type FlowCategory = "residential" | "commercial" | "careers" | "partnership" | "courses" | null;
 type MenuLevel =
   | "main" | "residential" | "commercial" | "careers" | "partnership" | "courses"
-  | "booking" | "booking-choice" | "booking-assessment" | "booking-rebate"
+  | "booking-choice" | "booking-assessment" | "booking-rebate"
+  | "booking-apply" | "booking-call-hr" | "booking-partner-call" | "booking-partner-email"
+  | "booking-course" | "booking-course-email"
   | "question" | "none";
 
 /* ── Constants ─────────────────────────────────────────────────────── */
@@ -15,9 +18,13 @@ const PHONE = "(862) 419-1763";
 const PHONE_TEL = "tel:8624191763";
 const ASSESSMENT_URL = "/assessment";
 const REBATE_URL = "/rebate-calc";
-const LEAD_THRESHOLD = 2;
+const CAREERS_URL = "/careers";
+const CONTACT_URL = "/contact";
+const COURSES_URL = "/courses";
+const LEAD_FORM_THRESHOLD = 3; // show after 3 back-and-forth messages OR final action
 const AUTO_OPEN_MS = 8_000;
 const AUTO_OPEN_KEY = "me_chat_auto_opened";
+const GREETING = "Hi! I'm Jessica from Mechanical Enterprise. 👋 How can I help you today?";
 
 /* ── Quick-reply menus ─────────────────────────────────────────────── */
 const MAIN_MENU = [
@@ -31,50 +38,23 @@ const MAIN_MENU = [
 const FOLLOW_UP_CONFIG: Record<string, { reply: string; buttons: string[] }> = {
   "🏠 Residential": {
     reply: "Great! What do you need help with for your home?",
-    buttons: [
-      "🆓 Free Assessment",
-      "🔧 Service Call ($100)",
-      "🚨 Emergency ($175)",
-      "💰 Rebate Calculator",
-      "🔄 Maintenance Plan",
-    ],
+    buttons: ["🆓 Free Assessment", "🔧 Service Call ($100)", "🚨 Emergency ($175)", "💰 Rebate Calculator", "🔄 Maintenance Plan"],
   },
   "🏢 Commercial": {
     reply: "Got it! What can we help with for your commercial property?",
-    buttons: [
-      "🆓 Free Assessment",
-      "🏭 VRV/VRF Systems",
-      "🔧 Service & Repair",
-      "🚨 Emergency ($175)",
-      "💸 80% Rebates",
-    ],
+    buttons: ["🆓 Free Assessment", "🏭 VRV/VRF Systems", "🔧 Service & Repair", "🚨 Emergency ($175)", "💸 80% Rebates"],
   },
   "💼 Careers": {
     reply: "We're hiring across NJ! What would you like to know?",
-    buttons: [
-      "🔩 HVAC Technician",
-      "🏢 Commercial Tech",
-      "📋 Apply Now",
-      "💰 Pay & Benefits",
-    ],
+    buttons: ["🔩 HVAC Technician", "🏢 Commercial Tech", "📋 Apply Now", "💰 Pay & Benefits"],
   },
   "🤝 Partnership": {
     reply: "Awesome! We have several partnership programs. Which interests you?",
-    buttons: [
-      "🤝 Referral Partner ($200-$500)",
-      "🏘️ Property Manager Program",
-      "🏗️ Contractor Program",
-      "📞 Talk to Someone",
-    ],
+    buttons: ["🤝 Referral Partner ($200-$500)", "🏘️ Property Manager Program", "🏗️ Contractor Program", "📞 Talk to Someone"],
   },
   "📚 Courses": {
     reply: "We offer HVAC training and certification courses. What are you looking for?",
-    buttons: [
-      "📜 Certifications",
-      "🎓 Training Programs",
-      "📅 Upcoming Schedule",
-      "💲 Pricing",
-    ],
+    buttons: ["📜 Certifications", "🎓 Training Programs", "📅 Upcoming Schedule", "💲 Pricing"],
   },
 };
 
@@ -86,33 +66,45 @@ const MENU_KEY_MAP: Record<string, MenuLevel> = {
   "📚 Courses": "courses",
 };
 
+const CATEGORY_MAP: Record<string, FlowCategory> = {
+  "🏠 Residential": "residential",
+  "🏢 Commercial": "commercial",
+  "💼 Careers": "careers",
+  "🤝 Partnership": "partnership",
+  "📚 Courses": "courses",
+};
+
 /* ── Follow-up one-liner per option ────────────────────────────────── */
 const FOLLOW_UP_REPLIES: Record<string, string> = {
-  // Residential
   "🆓 Free Assessment": "Perfect! A free assessment takes about 60 min and we handle all rebate paperwork.",
   "🔧 Service Call ($100)": "Got it — $100 flat rate, no hourly fees. Let's get you scheduled.",
   "🚨 Emergency ($175)": "We respond in 2-4 hours. $175 flat rate — we'll call you right back.",
   "💰 Rebate Calculator": "NJ homeowners can save up to $16K in rebates right now.",
   "🔄 Maintenance Plan": "Plans start at $19/mo — includes priority scheduling plus 15% off repairs.",
-  // Commercial
   "🏭 VRV/VRF Systems": "We're one of NJ's top VRV/VRF specialists — ideal for multi-zone buildings.",
   "🔧 Service & Repair": "We service all commercial HVAC brands with same-day availability most days.",
   "💸 80% Rebates": "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.",
-  // Careers
   "🔩 HVAC Technician": "Residential techs earn $55K-$85K with full benefits and a take-home van.",
   "🏢 Commercial Tech": "Commercial techs start at $70K-$110K — VRF experience is a plus but we also train.",
   "📋 Apply Now": "Great — let's get your application started!",
   "💰 Pay & Benefits": "Top-of-market pay, health/dental/vision, 401k match, and paid training.",
-  // Partnership
   "🤝 Referral Partner ($200-$500)": "Earn $200-$500 per qualified referral — we handle everything after the intro.",
   "🏘️ Property Manager Program": "Property managers get priority service, volume pricing, and a dedicated account rep.",
   "🏗️ Contractor Program": "We sub-contract HVAC for GCs across NJ — licensed, insured, and always on schedule.",
   "📞 Talk to Someone": "Let's connect you with our partnerships team.",
-  // Courses
   "📜 Certifications": "We offer EPA 608, OSHA 30, and manufacturer-specific certifications.",
   "🎓 Training Programs": "Hands-on training from working master technicians — classes run monthly.",
   "📅 Upcoming Schedule": "Next sessions start in two weeks — spots fill fast so booking early is best.",
   "💲 Pricing": "Courses range from $299-$1,499 depending on certification level. Group discounts available.",
+};
+
+/* ── Context-aware booking prompts ─────────────────────────────────── */
+const BOOKING_PROMPT: Record<string, string> = {
+  residential: "What would you like to do next?",
+  commercial: "What would you like to do next?",
+  careers: "Ready to take the next step?",
+  partnership: "How would you like to connect?",
+  courses: "What would you like to do next?",
 };
 
 /* ── Jessica's free-text responses ─────────────────────────────────── */
@@ -130,70 +122,62 @@ function getFreetextReply(index: number): string {
 
 /* ── Shared button styles ──────────────────────────────────────────── */
 const quickReplyStyle: React.CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 20,
-  border: `1.5px solid ${ORANGE}`,
-  background: "#fff",
-  color: NAVY,
-  fontSize: 13,
-  fontWeight: 500,
-  cursor: "pointer",
-  transition: "background 0.15s, color 0.15s",
-  whiteSpace: "nowrap",
+  padding: "8px 14px", borderRadius: 20, border: `1.5px solid ${ORANGE}`,
+  background: "#fff", color: NAVY, fontSize: 13, fontWeight: 500,
+  cursor: "pointer", transition: "background 0.15s, color 0.15s", whiteSpace: "nowrap",
 };
 
 const primaryBtnStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "12px 16px",
-  borderRadius: 12,
-  border: "none",
-  background: ORANGE,
-  color: "#fff",
-  fontSize: 15,
-  fontWeight: 600,
-  cursor: "pointer",
-  transition: "background 0.15s",
-  textDecoration: "none",
-  textAlign: "center" as const,
-  display: "block",
+  width: "100%", padding: "12px 16px", borderRadius: 12, border: "none",
+  background: ORANGE, color: "#fff", fontSize: 15, fontWeight: 600,
+  cursor: "pointer", transition: "background 0.15s", textDecoration: "none",
+  textAlign: "center" as const, display: "block",
 };
 
 const secondaryBtnStyle: React.CSSProperties = {
-  padding: "8px 14px",
-  borderRadius: 20,
-  border: `1.5px solid ${ORANGE}`,
-  background: "#fff",
-  color: NAVY,
-  fontSize: 13,
-  fontWeight: 500,
-  cursor: "pointer",
-  transition: "background 0.15s, color 0.15s",
+  padding: "8px 14px", borderRadius: 20, border: `1.5px solid ${ORANGE}`,
+  background: "#fff", color: NAVY, fontSize: 13, fontWeight: 500,
+  cursor: "pointer", transition: "background 0.15s, color 0.15s",
 };
 
 const callLinkStyle: React.CSSProperties = {
-  fontSize: 13,
-  color: "#666",
-  textAlign: "center" as const,
-  marginTop: 2,
+  fontSize: 13, color: "#666", textAlign: "center" as const, marginTop: 2,
+};
+
+const inputFieldStyle: React.CSSProperties = {
+  padding: "9px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none",
+};
+
+/* ── Hover helpers ─────────────────────────────────────────────────── */
+const hoverOrange = {
+  onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; },
+  onMouseLeave: (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; },
+};
+const hoverOrangeBg = {
+  onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.background = ORANGE_HOVER; },
+  onMouseLeave: (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.background = ORANGE; },
+};
+const hoverNavy = {
+  onMouseEnter: (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = "#fff"; },
+  onMouseLeave: (e: React.MouseEvent<HTMLElement>) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; },
 };
 
 /* ── Component ─────────────────────────────────────────────────────── */
 export default function LiveChatWidget() {
   const [open, setOpen] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", text: "Hi! I'm Jessica from Mechanical Enterprise. 👋 How can I help you today?" },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([{ role: "assistant", text: GREETING }]);
   const [input, setInput] = useState("");
   const [userMsgCount, setUserMsgCount] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [formName, setFormName] = useState("");
   const [formPhone, setFormPhone] = useState("");
+  const [formEmail, setFormEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [menuLevel, setMenuLevel] = useState<MenuLevel>("main");
+  const [flowCategory, setFlowCategory] = useState<FlowCategory>(null);
   const [freetextCount, setFreetextCount] = useState(0);
-  // Stash the booking config so we can re-show it after a question
   const [pendingBooking, setPendingBooking] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -206,10 +190,7 @@ export default function LiveChatWidget() {
     const already = sessionStorage.getItem(AUTO_OPEN_KEY);
     if (already) return;
     autoOpenFired.current = true;
-    const t = setTimeout(() => {
-      setOpen(true);
-      sessionStorage.setItem(AUTO_OPEN_KEY, "1");
-    }, AUTO_OPEN_MS);
+    const t = setTimeout(() => { setOpen(true); sessionStorage.setItem(AUTO_OPEN_KEY, "1"); }, AUTO_OPEN_MS);
     return () => clearTimeout(t);
   }, []);
 
@@ -219,9 +200,7 @@ export default function LiveChatWidget() {
   }, [messages, isTyping, showForm, menuLevel]);
 
   /* ── focus input when panel opens ──────────────────────────────── */
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 200);
-  }, [open]);
+  useEffect(() => { if (open) setTimeout(() => inputRef.current?.focus(), 200); }, [open]);
 
   /* ── helpers ───────────────────────────────────────────────────── */
   const typeThen = (delayBase: number, cb: () => void) => {
@@ -229,63 +208,103 @@ export default function LiveChatWidget() {
     setTimeout(() => { setIsTyping(false); cb(); }, delayBase + Math.random() * 400);
   };
 
-  const bumpUserCount = () => {
-    const newCount = userMsgCount + 1;
-    setUserMsgCount(newCount);
-    if (newCount >= LEAD_THRESHOLD && !formSubmitted) {
-      setTimeout(() => setShowForm(true), 800);
-    }
-  };
+  const triggerLeadForm = useCallback(() => {
+    if (!formSubmitted) setShowForm(true);
+  }, [formSubmitted]);
+
+  /* ── reset chat for new category ───────────────────────────────── */
+  const resetChat = useCallback(() => {
+    setMessages([{ role: "assistant", text: GREETING }]);
+    setShowForm(false);
+    setPendingBooking(false);
+    setUserMsgCount(0);
+    setFreetextCount(0);
+  }, []);
 
   /* ── handle main menu click ────────────────────────────────────── */
   const handleMainMenuClick = useCallback((label: string) => {
     const config = FOLLOW_UP_CONFIG[label];
     if (!config) return;
-    setMessages((prev) => [...prev, { role: "user", text: label }]);
+
+    // Clear previous conversation, start fresh
+    resetChat();
+    setFlowCategory(CATEGORY_MAP[label] ?? null);
+
+    // Add the greeting + user selection + Jessica's reply
+    setMessages([{ role: "assistant", text: GREETING }, { role: "user", text: label }]);
     typeThen(600, () => {
       setMessages((prev) => [...prev, { role: "assistant", text: config.reply }]);
       setMenuLevel(MENU_KEY_MAP[label] ?? "none");
     });
-  }, []);
+  }, [resetChat]);
 
-  /* ── handle follow-up click → show booking choice ──────────────── */
+  /* ── handle follow-up click → show context-aware booking choice ── */
   const handleFollowUpClick = useCallback((label: string) => {
     const reply = FOLLOW_UP_REPLIES[label];
     if (!reply) return;
 
     setMessages((prev) => [...prev, { role: "user", text: label }]);
     setMenuLevel("none");
-    bumpUserCount();
+
+    const newCount = userMsgCount + 1;
+    setUserMsgCount(newCount);
 
     typeThen(600, () => {
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
-      // Now show the booking choice
       typeThen(500, () => {
-        setMessages((prev) => [...prev, { role: "assistant", text: "Before I send you the link — what would you like to do?" }]);
+        const prompt = BOOKING_PROMPT[flowCategory ?? "residential"] ?? "What would you like to do next?";
+        setMessages((prev) => [...prev, { role: "assistant", text: prompt }]);
         setMenuLevel("booking-choice");
       });
     });
-  }, [userMsgCount, formSubmitted]);
+  }, [userMsgCount, flowCategory]);
+
+  /* ── context-aware booking choice buttons ──────────────────────── */
+  const getBookingChoiceButtons = (): { label: string; handler: () => void }[] => {
+    switch (flowCategory) {
+      case "careers":
+        return [
+          { label: "📋 Apply Online Now", handler: () => handleFinalAction("📋 Apply Online Now", "Here's the link to apply — it only takes a few minutes!", "booking-apply") },
+          { label: "📞 Schedule a Call with HR", handler: () => handleFinalAction("📞 Schedule a Call with HR", "We'll have someone from our team reach out to you!", "booking-call-hr") },
+        ];
+      case "partnership":
+        return [
+          { label: "📅 Schedule a Partner Call", handler: () => handleFinalAction("📅 Schedule a Partner Call", "Let's get a call on the books with our partnerships team!", "booking-partner-call") },
+          { label: "📧 Email Us About Partnership", handler: () => handleFinalAction("📧 Email Us About Partnership", "Drop us a line and we'll get back to you within 24 hours!", "booking-partner-email") },
+        ];
+      case "courses":
+        return [
+          { label: "📅 Book a Course", handler: () => handleFinalAction("📅 Book a Course", "Here's where you can browse and book our courses!", "booking-course") },
+          { label: "📧 Get Course Info by Email", handler: () => handleFinalAction("📧 Get Course Info by Email", "We'll send you all the details — just leave your info below!", "booking-course-email") },
+        ];
+      default: // residential / commercial
+        return [
+          { label: "📋 Schedule a Free Assessment", handler: handleScheduleAssessment },
+          { label: "💰 See How Much I Qualify For", handler: handleRebateCalc },
+        ];
+    }
+  };
+
+  /* ── generic final action handler ──────────────────────────────── */
+  const handleFinalAction = useCallback((userText: string, jessicaText: string, nextMenu: MenuLevel) => {
+    setMessages((prev) => [...prev, { role: "user", text: userText }]);
+    setMenuLevel("none");
+    typeThen(600, () => {
+      setMessages((prev) => [...prev, { role: "assistant", text: jessicaText }]);
+      setMenuLevel(nextMenu);
+      triggerLeadForm();
+    });
+  }, [triggerLeadForm]);
 
   /* ── booking choice: Schedule Assessment ────────────────────────── */
   const handleScheduleAssessment = useCallback(() => {
-    setMessages((prev) => [...prev, { role: "user", text: "📋 Schedule a Free Assessment" }]);
-    setMenuLevel("none");
-    typeThen(600, () => {
-      setMessages((prev) => [...prev, { role: "assistant", text: "Here's your direct booking link — takes 2 minutes!" }]);
-      setMenuLevel("booking-assessment");
-    });
-  }, []);
+    handleFinalAction("📋 Schedule a Free Assessment", "Here's your direct booking link — takes 2 minutes!", "booking-assessment");
+  }, [handleFinalAction]);
 
   /* ── booking choice: Rebate Calculator ──────────────────────────── */
   const handleRebateCalc = useCallback(() => {
-    setMessages((prev) => [...prev, { role: "user", text: "💰 See How Much I Qualify For" }]);
-    setMenuLevel("none");
-    typeThen(600, () => {
-      setMessages((prev) => [...prev, { role: "assistant", text: "Check your rebate estimate instantly — up to $16,000 for residential, 80% for commercial." }]);
-      setMenuLevel("booking-rebate");
-    });
-  }, []);
+    handleFinalAction("💰 See How Much I Qualify For", "Check your rebate estimate instantly — up to $16,000 for residential, 80% for commercial.", "booking-rebate");
+  }, [handleFinalAction]);
 
   /* ── "I have a question first" ─────────────────────────────────── */
   const handleQuestionClick = useCallback(() => {
@@ -294,7 +313,7 @@ export default function LiveChatWidget() {
     setTimeout(() => inputRef.current?.focus(), 100);
   }, []);
 
-  /* ── send free-text message (from input bar) ───────────────────── */
+  /* ── send free-text message ────────────────────────────────────── */
   const send = useCallback(() => {
     const text = input.trim();
     if (!text) return;
@@ -312,44 +331,36 @@ export default function LiveChatWidget() {
       const reply = getFreetextReply(ftIdx);
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
 
-      // Re-show booking choice after answering a question
-      if (pendingBooking) {
-        typeThen(500, () => {
-          setMessages((prev) => [...prev, { role: "assistant", text: "Before I send you the link — what would you like to do?" }]);
-          setMenuLevel("booking-choice");
-        });
-        setPendingBooking(false);
-      } else {
-        // Generic: show booking choice
-        typeThen(500, () => {
-          setMessages((prev) => [...prev, { role: "assistant", text: "Before I send you the link — what would you like to do?" }]);
-          setMenuLevel("booking-choice");
-        });
-      }
+      // Re-show booking choice
+      typeThen(500, () => {
+        const prompt = BOOKING_PROMPT[flowCategory ?? "residential"] ?? "What would you like to do next?";
+        setMessages((prev) => [...prev, { role: "assistant", text: prompt }]);
+        setMenuLevel("booking-choice");
+      });
+      setPendingBooking(false);
 
-      if (newCount >= LEAD_THRESHOLD && !formSubmitted) {
-        setTimeout(() => setShowForm(true), 800);
+      // Show lead form after threshold of back-and-forth
+      if (newCount >= LEAD_FORM_THRESHOLD) {
+        triggerLeadForm();
       }
     });
-  }, [input, userMsgCount, formSubmitted, freetextCount, pendingBooking]);
+  }, [input, userMsgCount, freetextCount, flowCategory, triggerLeadForm]);
 
-  /* ── back to main menu (always goes to top-level 5 options) ────── */
+  /* ── back to main menu ─────────────────────────────────────────── */
   const handleBack = useCallback(() => {
     setMessages((prev) => [...prev, { role: "assistant", text: "No problem! What else can I help you with?" }]);
     setMenuLevel("main");
     setPendingBooking(false);
+    setFlowCategory(null);
   }, []);
 
   /* ── get current follow-up buttons ─────────────────────────────── */
   const getFollowUpButtons = (): string[] | null => {
-    const menuToLabel: Record<string, string> = {
-      residential: "🏠 Residential",
-      commercial: "🏢 Commercial",
-      careers: "💼 Careers",
-      partnership: "🤝 Partnership",
-      courses: "📚 Courses",
+    const map: Record<string, string> = {
+      residential: "🏠 Residential", commercial: "🏢 Commercial",
+      careers: "💼 Careers", partnership: "🤝 Partnership", courses: "📚 Courses",
     };
-    const label = menuToLabel[menuLevel];
+    const label = map[menuLevel];
     if (!label) return null;
     return FOLLOW_UP_CONFIG[label]?.buttons ?? null;
   };
@@ -357,7 +368,7 @@ export default function LiveChatWidget() {
   /* ── submit lead form ──────────────────────────────────────────── */
   const submitForm = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formName.trim() || !formPhone.trim()) return;
+    if (!formName.trim() || !formPhone.trim() || !formEmail.trim()) return;
     setSubmitting(true);
 
     const transcript = messages.map((m) => `${m.role === "user" ? "Visitor" : "Jessica"}: ${m.text}`).join("\n");
@@ -367,7 +378,13 @@ export default function LiveChatWidget() {
       await fetch("/.netlify/functions/sendCallRecap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: formName.trim(), phone: formPhone.trim(), message: lastUserMsg, transcript }),
+        body: JSON.stringify({
+          name: formName.trim(),
+          phone: formPhone.trim(),
+          caller_email: formEmail.trim(),
+          message: lastUserMsg,
+          transcript,
+        }),
       });
     } catch {
       // silently fail
@@ -391,9 +408,7 @@ export default function LiveChatWidget() {
     <>
       {/* ── Floating bubble ──────────────────────────────────────── */}
       {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="Open chat"
+        <button onClick={() => setOpen(true)} aria-label="Open chat"
           style={{
             position: "fixed", bottom: 24, right: 24, zIndex: 9999,
             width: 60, height: 60, borderRadius: "50%", background: ORANGE,
@@ -443,9 +458,7 @@ export default function LiveChatWidget() {
                   color: msg.role === "user" ? "#fff" : NAVY,
                   fontSize: 14, lineHeight: 1.5,
                   boxShadow: msg.role === "user" ? "none" : "0 1px 3px rgba(0,0,0,0.08)",
-                }}>
-                  {msg.text}
-                </div>
+                }}>{msg.text}</div>
               </div>
             ))}
 
@@ -460,73 +473,95 @@ export default function LiveChatWidget() {
               </div>
             )}
 
-            {/* ── Main menu buttons ──────────────────────────────── */}
+            {/* ── Main menu ──────────────────────────────────────── */}
             {menuLevel === "main" && !isTyping && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
                 {MAIN_MENU.map((label) => (
-                  <button key={label} onClick={() => handleMainMenuClick(label)} style={quickReplyStyle}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
-                  >{label}</button>
+                  <button key={label} onClick={() => handleMainMenuClick(label)} style={quickReplyStyle} {...hoverOrange}>{label}</button>
                 ))}
               </div>
             )}
 
-            {/* ── Follow-up menu buttons ─────────────────────────── */}
+            {/* ── Follow-up menu ─────────────────────────────────── */}
             {isFollowUpMenu && !isTyping && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
                 {followUpButtons.map((label) => (
-                  <button key={label} onClick={() => handleFollowUpClick(label)} style={quickReplyStyle}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
-                  >{label}</button>
+                  <button key={label} onClick={() => handleFollowUpClick(label)} style={quickReplyStyle} {...hoverOrange}>{label}</button>
                 ))}
               </div>
             )}
 
-            {/* ── Booking choice: Assessment vs Rebate ───────────── */}
+            {/* ── Context-aware booking choice ───────────────────── */}
             {menuLevel === "booking-choice" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 4 }}>
-                <button onClick={handleScheduleAssessment} style={secondaryBtnStyle}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
-                >📋 Schedule a Free Assessment</button>
-                <button onClick={handleRebateCalc} style={secondaryBtnStyle}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
-                >💰 See How Much I Qualify For</button>
-                <button onClick={handleQuestionClick} style={secondaryBtnStyle}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = ORANGE; e.currentTarget.style.color = "#fff"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
-                >❓ I have a question first</button>
+                {getBookingChoiceButtons().map(({ label, handler }) => (
+                  <button key={label} onClick={handler} style={secondaryBtnStyle} {...hoverOrange}>{label}</button>
+                ))}
+                <button onClick={handleQuestionClick} style={secondaryBtnStyle} {...hoverOrange}>❓ I have a question first</button>
               </div>
             )}
 
-            {/* ── Final CTA: Book Assessment ─────────────────────── */}
+            {/* ── Final CTA: Assessment ──────────────────────────── */}
             {menuLevel === "booking-assessment" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={ASSESSMENT_URL}
-                  style={primaryBtnStyle}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = ORANGE_HOVER)}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
-                >📅 Book Free Assessment →</a>
-                <div style={callLinkStyle}>
-                  Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a>
-                </div>
+                <a href={ASSESSMENT_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📅 Book Free Assessment →</a>
+                <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
 
             {/* ── Final CTA: Rebate Calculator ───────────────────── */}
             {menuLevel === "booking-rebate" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={REBATE_URL}
-                  style={primaryBtnStyle}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = ORANGE_HOVER)}
-                  onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
-                >💰 Open Rebate Calculator →</a>
-                <div style={callLinkStyle}>
-                  Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a>
-                </div>
+                <a href={REBATE_URL} style={primaryBtnStyle} {...hoverOrangeBg}>💰 Open Rebate Calculator →</a>
+                <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
+              </div>
+            )}
+
+            {/* ── Final CTA: Apply Now (Careers) ─────────────────── */}
+            {menuLevel === "booking-apply" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={CAREERS_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📋 Apply Online Now →</a>
+                <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
+              </div>
+            )}
+
+            {/* ── Final CTA: Call HR (Careers) ───────────────────── */}
+            {menuLevel === "booking-call-hr" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={PHONE_TEL} style={primaryBtnStyle} {...hoverOrangeBg}>📞 Call HR: {PHONE}</a>
+                <div style={callLinkStyle}>Or <a href={CONTACT_URL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>send us a message</a></div>
+              </div>
+            )}
+
+            {/* ── Final CTA: Partner Call ─────────────────────────── */}
+            {menuLevel === "booking-partner-call" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={CONTACT_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📅 Schedule a Partner Call →</a>
+                <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
+              </div>
+            )}
+
+            {/* ── Final CTA: Partner Email ────────────────────────── */}
+            {menuLevel === "booking-partner-email" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={CONTACT_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📧 Contact Our Partnership Team →</a>
+                <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
+              </div>
+            )}
+
+            {/* ── Final CTA: Book Course ──────────────────────────── */}
+            {menuLevel === "booking-course" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={COURSES_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📅 Browse & Book Courses →</a>
+                <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
+              </div>
+            )}
+
+            {/* ── Final CTA: Course Info Email ────────────────────── */}
+            {menuLevel === "booking-course-email" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={CONTACT_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📧 Request Course Info →</a>
+                <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
 
@@ -535,8 +570,7 @@ export default function LiveChatWidget() {
               <div style={{ marginTop: 2 }}>
                 <button onClick={handleBack}
                   style={{ ...quickReplyStyle, border: `1.5px solid ${NAVY}`, color: NAVY, fontSize: 12 }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = "#fff"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = NAVY; }}
+                  {...hoverNavy}
                 >← Back</button>
               </div>
             )}
@@ -548,12 +582,17 @@ export default function LiveChatWidget() {
                 <div style={{ fontSize: 13, color: "#666", marginBottom: 12 }}>Leave your info and we'll reach out shortly!</div>
                 <form onSubmit={submitForm} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                   <input type="text" placeholder="Your name" value={formName} onChange={(e) => setFormName(e.target.value)} required
-                    style={{ padding: "9px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none" }}
+                    style={inputFieldStyle}
                     onFocus={(e) => (e.currentTarget.style.borderColor = ORANGE)}
                     onBlur={(e) => (e.currentTarget.style.borderColor = "#ddd")}
                   />
                   <input type="tel" placeholder="Phone number" value={formPhone} onChange={(e) => setFormPhone(e.target.value)} required
-                    style={{ padding: "9px 12px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none" }}
+                    style={inputFieldStyle}
+                    onFocus={(e) => (e.currentTarget.style.borderColor = ORANGE)}
+                    onBlur={(e) => (e.currentTarget.style.borderColor = "#ddd")}
+                  />
+                  <input type="email" placeholder="Email address" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} required
+                    style={inputFieldStyle}
                     onFocus={(e) => (e.currentTarget.style.borderColor = ORANGE)}
                     onBlur={(e) => (e.currentTarget.style.borderColor = "#ddd")}
                   />
