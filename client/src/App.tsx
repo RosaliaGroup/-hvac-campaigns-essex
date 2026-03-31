@@ -55,6 +55,8 @@ import CourseDetail from "./pages/CourseDetail";
 import LiveChatWidget from "./components/LiveChatWidget";
 import CompetitorPage from "./pages/CompetitorPage";
 import CityPage from "./pages/CityPage";
+import ServicePage from "./pages/ServicePage";
+import LuxuryAreaPage from "./pages/LuxuryAreaPage";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -141,9 +143,9 @@ function Router() {
       <Route path={"/hvac-hillside-nj"} component={() => <CityPage city="Hillside" slug="hillside" />} />
       <Route path={"/hvac-union-nj"} component={() => <CityPage city="Union" slug="union" />} />
       <Route path={"/hvac-springfield-nj"} component={() => <CityPage city="Springfield" slug="springfield" />} />
-      <Route path={"/hvac-millburn-nj"} component={() => <CityPage city="Millburn" slug="millburn" />} />
-      <Route path={"/hvac-short-hills-nj"} component={() => <CityPage city="Short Hills" slug="short-hills" />} />
-      <Route path={"/hvac-summit-nj"} component={() => <CityPage city="Summit" slug="summit" />} />
+      <Route path={"/hvac-millburn-nj"} component={() => <LuxuryAreaPage area="Millburn" slug="millburn" county="Essex County" incomeContext="affluent Essex County suburb" />} />
+      <Route path={"/hvac-short-hills-nj"} component={() => <LuxuryAreaPage area="Short Hills" slug="short-hills" county="Essex County" incomeContext="one of NJ's most affluent communities" />} />
+      <Route path={"/hvac-summit-nj"} component={() => <LuxuryAreaPage area="Summit" slug="summit" county="Union County" incomeContext="affluent Union County suburb" />} />
       <Route path={"/hvac-westfield-nj"} component={() => <CityPage city="Westfield" slug="westfield" />} />
       <Route path={"/hvac-cranford-nj"} component={() => <CityPage city="Cranford" slug="cranford" />} />
       <Route path={"/hvac-clark-nj"} component={() => <CityPage city="Clark" slug="clark" />} />
@@ -163,6 +165,63 @@ function Router() {
       <Route path={"/hvac-ridgefield-nj"} component={() => <CityPage city="Ridgefield" slug="ridgefield" />} />
       <Route path={"/hvac-fairview-nj"} component={() => <CityPage city="Fairview" slug="fairview" />} />
       <Route path={"/hvac-cliffside-park-nj"} component={() => <CityPage city="Cliffside Park" slug="cliffside-park" />} />
+
+      {/* Service-specific pages */}
+      <Route path={"/heat-pump-installation-nj"} component={() => <ServicePage service="Heat Pump" slug="heat-pump-installation-nj" description="High-efficiency heat pump systems fully eligible for NJ rebates and federal tax credits. Replace your old heating system with a modern heat pump and qualify for up to $16,000 in NJ rebates plus a $2,000 federal tax credit. Heat pumps provide both heating and cooling in one system, reducing energy bills by up to 50%." />} />
+      <Route path={"/central-ac-installation-nj"} component={() => <ServicePage service="Central AC" slug="central-ac-installation-nj" description="New central air conditioning installation for NJ homes. Modern high-efficiency systems with SEER2 ratings of 15+ qualify for NJ rebates and federal tax credits. We handle sizing, installation, permits, and all rebate paperwork." />} />
+      <Route path={"/ductless-mini-split-installation-nj"} component={() => <ServicePage service="Ductless Mini-Split" slug="ductless-mini-split-installation-nj" description="Perfect for NJ homes without existing ductwork. Multi-zone ductless mini-split systems provide room-by-room temperature control with maximum energy efficiency. Fully eligible for NJ rebates up to $16,000 and federal tax credits." />} />
+      <Route path={"/hvac-system-replacement-nj"} component={() => <ServicePage service="Full HVAC System Replacement" slug="hvac-system-replacement-nj" description="Complete HVAC system replacement for NJ homes and businesses. We assess your current system, recommend the best replacement options, handle full installation, permits, inspections, and all rebate paperwork. Most homeowners qualify for significant rebates." />} />
+      <Route path={"/commercial-hvac-installation-nj"} component={() => <ServicePage service="Commercial HVAC" slug="commercial-hvac-installation-nj" description="Commercial HVAC installation for offices, retail stores, restaurants, healthcare facilities, and warehouses across NJ. Rebates can cover up to 80% of commercial installation costs. Free commercial assessment available." />} />
+      <Route path={"/vrv-vrf-installation-nj"} component={() => <ServicePage service="VRV/VRF System" slug="vrv-vrf-installation-nj" description="VRV/VRF variable refrigerant systems for NJ commercial properties. Multi-zone systems with individual room control, maximum energy efficiency, and rebates covering up to 80% of installation costs. Ideal for offices, retail, and multi-floor buildings." />} />
+      <Route path={"/heat-pump-rebates-nj"} component={() => <ServicePage service="Heat Pump Rebates NJ" slug="heat-pump-rebates-nj" description="NJ homeowners can qualify for up to $16,000 in heat pump rebates plus a $2,000 federal tax credit in 2026. We assess your exact eligibility, recommend qualifying equipment, and handle all rebate applications at no cost to you." />} />
+      <Route path={"/hvac-financing-nj"} component={() => <ServicePage service="HVAC Financing" slug="hvac-financing-nj" description="0% financing options available for NJ homeowners replacing their HVAC system. When combined with NJ rebates up to $16,000 and the federal tax credit up to $2,000, many homeowners pay $0 out of pocket for a brand new system." />} />
+
+      {/* Luxury area pages — premium messaging */}
+      <Route path={"/hvac-madison-nj"} component={() => <LuxuryAreaPage area="Madison" slug="madison" county="Morris County" incomeContext="affluent Morris County suburb" />} />
+      <Route path={"/hvac-chatham-nj"} component={() => <LuxuryAreaPage area="Chatham" slug="chatham" county="Morris County" incomeContext="upscale Morris County community" />} />
+      <Route path={"/hvac-mendham-nj"} component={() => <LuxuryAreaPage area="Mendham" slug="mendham" county="Morris County" incomeContext="luxury Morris County estate area" />} />
+      <Route path={"/hvac-bernardsville-nj"} component={() => <LuxuryAreaPage area="Bernardsville" slug="bernardsville" county="Somerset County" incomeContext="prestigious Somerset Hills area" />} />
+      <Route path={"/hvac-chester-nj"} component={() => <LuxuryAreaPage area="Chester" slug="chester" county="Morris County" incomeContext="affluent Morris County town" />} />
+      <Route path={"/hvac-harding-nj"} component={() => <LuxuryAreaPage area="Harding Township" slug="harding" county="Morris County" incomeContext="one of NJs wealthiest townships" />} />
+      <Route path={"/hvac-bedminster-nj"} component={() => <LuxuryAreaPage area="Bedminster" slug="bedminster" county="Somerset County" incomeContext="prestigious Somerset County estate area" />} />
+      <Route path={"/hvac-peapack-nj"} component={() => <LuxuryAreaPage area="Peapack-Gladstone" slug="peapack" county="Somerset County" incomeContext="prestigious equestrian estate community" />} />
+      <Route path={"/hvac-mountain-lakes-nj"} component={() => <LuxuryAreaPage area="Mountain Lakes" slug="mountain-lakes" county="Morris County" incomeContext="upscale Morris County lake community" />} />
+      <Route path={"/hvac-livingston-nj"} component={() => <LuxuryAreaPage area="Livingston" slug="livingston" county="Essex County" incomeContext="affluent Essex County suburb" />} />
+      <Route path={"/hvac-west-caldwell-nj"} component={() => <LuxuryAreaPage area="West Caldwell" slug="west-caldwell" county="Essex County" incomeContext="upscale Essex County town" />} />
+      <Route path={"/hvac-new-providence-nj"} component={() => <LuxuryAreaPage area="New Providence" slug="new-providence" county="Union County" incomeContext="affluent Union County suburb" />} />
+      <Route path={"/hvac-alpine-nj"} component={() => <LuxuryAreaPage area="Alpine" slug="alpine" county="Bergen County" incomeContext="one of the wealthiest zip codes in America" />} />
+      <Route path={"/hvac-saddle-river-nj"} component={() => <LuxuryAreaPage area="Saddle River" slug="saddle-river" county="Bergen County" incomeContext="ultra-luxury Bergen County estate area" />} />
+      <Route path={"/hvac-franklin-lakes-nj"} component={() => <LuxuryAreaPage area="Franklin Lakes" slug="franklin-lakes" county="Bergen County" incomeContext="affluent Bergen County community" />} />
+      <Route path={"/hvac-wyckoff-nj"} component={() => <LuxuryAreaPage area="Wyckoff" slug="wyckoff" county="Bergen County" incomeContext="upscale Bergen County suburb" />} />
+
+      {/* North NJ city pages — Morris County */}
+      <Route path={"/hvac-morristown-nj"} component={() => <CityPage city="Morristown" slug="morristown" />} />
+      <Route path={"/hvac-parsippany-nj"} component={() => <CityPage city="Parsippany" slug="parsippany" />} />
+      <Route path={"/hvac-dover-nj"} component={() => <CityPage city="Dover" slug="dover" />} />
+      <Route path={"/hvac-rockaway-nj"} component={() => <CityPage city="Rockaway" slug="rockaway" />} />
+      <Route path={"/hvac-denville-nj"} component={() => <CityPage city="Denville" slug="denville" />} />
+      <Route path={"/hvac-randolph-nj"} component={() => <CityPage city="Randolph" slug="randolph" />} />
+      <Route path={"/hvac-roxbury-nj"} component={() => <CityPage city="Roxbury" slug="roxbury" />} />
+      <Route path={"/hvac-mount-olive-nj"} component={() => <CityPage city="Mount Olive" slug="mount-olive" />} />
+      <Route path={"/hvac-boonton-nj"} component={() => <CityPage city="Boonton" slug="boonton" />} />
+      <Route path={"/hvac-butler-nj"} component={() => <CityPage city="Butler" slug="butler" />} />
+
+      {/* North NJ city pages — Passaic County */}
+      <Route path={"/hvac-wayne-nj"} component={() => <CityPage city="Wayne" slug="wayne" />} />
+      <Route path={"/hvac-pompton-lakes-nj"} component={() => <CityPage city="Pompton Lakes" slug="pompton-lakes" />} />
+      <Route path={"/hvac-wanaque-nj"} component={() => <CityPage city="Wanaque" slug="wanaque" />} />
+      <Route path={"/hvac-hawthorne-nj"} component={() => <CityPage city="Hawthorne" slug="hawthorne" />} />
+      <Route path={"/hvac-woodland-park-nj"} component={() => <CityPage city="Woodland Park" slug="woodland-park" />} />
+      <Route path={"/hvac-totowa-nj"} component={() => <CityPage city="Totowa" slug="totowa" />} />
+      <Route path={"/hvac-little-falls-nj"} component={() => <CityPage city="Little Falls" slug="little-falls" />} />
+      <Route path={"/hvac-west-milford-nj"} component={() => <CityPage city="West Milford" slug="west-milford" />} />
+
+      {/* North NJ city pages — Sussex County */}
+      <Route path={"/hvac-newton-nj"} component={() => <CityPage city="Newton" slug="newton" />} />
+      <Route path={"/hvac-sparta-nj"} component={() => <CityPage city="Sparta" slug="sparta" />} />
+      <Route path={"/hvac-hopatcong-nj"} component={() => <CityPage city="Hopatcong" slug="hopatcong" />} />
+      <Route path={"/hvac-sussex-nj"} component={() => <CityPage city="Sussex" slug="sussex" />} />
+      <Route path={"/hvac-hardyston-nj"} component={() => <CityPage city="Hardyston" slug="hardyston" />} />
 
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />
