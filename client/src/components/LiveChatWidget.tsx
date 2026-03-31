@@ -15,12 +15,15 @@ const NAVY = "#0a1628";
 const ORANGE = "#e8813a";
 const ORANGE_HOVER = "#d5732f";
 const PHONE = "(862) 419-1763";
-const PHONE_TEL = "tel:8624191763";
+const PHONE_TEL = "tel:+18624191763";
+const EMAIL = "sales@mechanicalenterprise.com";
+const EMAIL_HREF = "mailto:sales@mechanicalenterprise.com";
 const ASSESSMENT_URL = "/qualify";
 const REBATE_URL = "/rebate-calculator";
 const CAREERS_URL = "/careers";
 const CONTACT_URL = "/contact";
 const COURSES_URL = "/courses";
+const PARTNERSHIPS_URL = "/partnerships";
 const LEAD_FORM_THRESHOLD = 3; // show after 3 back-and-forth messages OR final action
 const AUTO_OPEN_MS = 8_000;
 const AUTO_OPEN_KEY = "me_chat_auto_opened";
@@ -547,14 +550,14 @@ export default function LiveChatWidget() {
             {menuLevel === "booking-call-hr" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
                 <a href={PHONE_TEL} style={primaryBtnStyle} {...hoverOrangeBg}>📞 Call HR: {PHONE}</a>
-                <div style={callLinkStyle}>Or <a href={CONTACT_URL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>send us a message</a></div>
+                <div style={callLinkStyle}>Or email us: <a href={EMAIL_HREF} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{EMAIL}</a></div>
               </div>
             )}
 
             {/* ── Final CTA: Partner Call ─────────────────────────── */}
             {menuLevel === "booking-partner-call" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={CONTACT_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📅 Schedule a Partner Call →</a>
+                <a href={PARTNERSHIPS_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📅 Schedule a Partner Call →</a>
                 <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
@@ -562,7 +565,7 @@ export default function LiveChatWidget() {
             {/* ── Final CTA: Partner Email ────────────────────────── */}
             {menuLevel === "booking-partner-email" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={CONTACT_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📧 Contact Our Partnership Team →</a>
+                <a href={EMAIL_HREF} style={primaryBtnStyle} {...hoverOrangeBg}>📧 Email Our Partnership Team →</a>
                 <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
@@ -578,7 +581,7 @@ export default function LiveChatWidget() {
             {/* ── Final CTA: Course Info Email ────────────────────── */}
             {menuLevel === "booking-course-email" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={CONTACT_URL} style={primaryBtnStyle} {...hoverOrangeBg}>📧 Request Course Info →</a>
+                <a href={EMAIL_HREF} style={primaryBtnStyle} {...hoverOrangeBg}>📧 Request Course Info →</a>
                 <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
