@@ -7,7 +7,7 @@ type MenuLevel =
   | "main" | "residential" | "commercial" | "careers" | "partnership" | "courses"
   | "booking-choice" | "booking-assessment" | "booking-rebate"
   | "booking-apply" | "booking-call-hr" | "booking-partner-call" | "booking-partner-email"
-  | "booking-course" | "booking-course-email"
+  | "booking-course" | "booking-course-email" | "booking-commercial-rebate"
   | "service-form"
   | "question" | "none";
 
@@ -22,6 +22,7 @@ const EMAIL_HREF = "mailto:sales@mechanicalenterprise.com";
 const BASE = "https://mechanicalenterprise.com";
 const ASSESSMENT_URL = `${BASE}/qualify`;
 const REBATE_URL = `${BASE}/rebate-calculator`;
+const COMMERCIAL_REBATE_URL = `${BASE}/commercial#rebate-calculator`;
 const CAREERS_URL = `${BASE}/careers`;
 const COURSES_URL = `${BASE}/courses`;
 const PARTNERSHIPS_URL = `${BASE}/partnerships#apply`;
@@ -247,11 +248,11 @@ export default function LiveChatWidget() {
   /* ── Direct-link options (skip booking choice) ─────────────────── */
   /* ── Options that skip to a direct CTA link ─────────────────────── */
   const getDirectLinkOption = (label: string): { reply: string; menu: MenuLevel } | null => {
-    if (label === "💰 Rebate Calculator") {
-      const reply = flowCategory === "commercial"
-        ? "Commercial properties can save up to 80% on HVAC costs through NJ rebate programs."
-        : "Check your estimate instantly — up to $16,000 residential, 80% commercial.";
-      return { reply, menu: "booking-rebate" };
+    if (label === "💰 Rebate Calculator" || label === "💸 80% Rebates") {
+      if (flowCategory === "commercial") {
+        return { reply: "Our commercial rebate calculator estimates your savings based on building size, current system, and property type.", menu: "booking-commercial-rebate" };
+      }
+      return { reply: "Check your estimate instantly — up to $16,000 residential, 80% commercial.", menu: "booking-rebate" };
     }
     return null;
   };
@@ -527,6 +528,12 @@ export default function LiveChatWidget() {
             {menuLevel === "booking-rebate" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
                 <a href={REBATE_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} {...hoverOrangeBg}>💰 Open Rebate Calculator →</a>
+                <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
+              </div>
+            )}
+            {menuLevel === "booking-commercial-rebate" && !isTyping && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+                <a href={COMMERCIAL_REBATE_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} {...hoverOrangeBg}>💰 Calculate My Commercial Rebate →</a>
                 <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
