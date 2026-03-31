@@ -97,7 +97,7 @@ function Slide0(){return(
     <div style={{fontSize:64,marginBottom:20}}>⚙️</div>
     <h1 style={{fontSize:52,fontWeight:900,color:"#fff",margin:"0 0 12px"}}>Mechanical Enterprise LLC</h1>
     <h2 style={{fontSize:26,fontWeight:600,color:orange,margin:"0 0 28px"}}>2026 Business Partner Presentation</h2>
-    <p style={{fontSize:18,color:"rgba(255,255,255,0.75)",maxWidth:640,lineHeight:1.7,margin:"0 0 40px"}}>Digital Platform · Market Position · Growth Strategy<br/>PSE&G Trade Ally PN#136 · WMBE/SBE Certified · Newark, NJ</p>
+    <p style={{fontSize:18,color:"rgba(255,255,255,0.75)",maxWidth:640,lineHeight:1.7,margin:"0 0 40px"}}>Digital Platform · Market Position · Growth Strategy<br/>PSE&G Trade Ally · WMBE/SBE Certified · Newark, NJ</p>
     <div style={{display:"flex",gap:48}}>
       {([["4","Active Installers"],["$350K","Revenue Per Installer"],["116","SEO Pages Live"],["15","NJ Counties Served"]] as const).map(([v,l])=>(<div key={l} style={{textAlign:"center"}}><div style={{fontSize:40,fontWeight:900,color:orange}}>{v}</div><div style={{fontSize:13,color:"rgba(255,255,255,0.6)",marginTop:4}}>{l}</div></div>))}
     </div>
@@ -169,7 +169,7 @@ function Slide4(){return(
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:20,marginBottom:32,textAlign:"center"}}>{([["$3.57B","North American heat pump market 2026"],["9.85%","CAGR projected growth through 2034"],["13M","US homes that would save switching"]] as const).map(([v,l])=>(<div key={l} style={{padding:24,background:"#f8fafc",borderRadius:12,border:"1px solid #e2e8f0"}}><div style={{fontSize:40,fontWeight:900,color:orange}}>{v}</div><div style={{fontSize:13,color:gray,marginTop:8}}>{l}</div></div>))}</div>
     <Grid cols={2}>
       <div>
-        <h3 style={{color:navy,fontWeight:800,marginBottom:12,marginTop:0}}>PSE&G Residential — Clean Heat PN#136</h3>
+        <h3 style={{color:navy,fontWeight:800,marginBottom:12,marginTop:0}}>PSE&G Residential — Clean Heat Program</h3>
         <Table headers={["Incentive","Amount"]} rows={[["Gas to Heat Pump (Non-LMI, 50%)","Up to $10,000"],["Gas to Heat Pump (LMI, 60%)","Up to $12,000"],["Decommissioning adder","Up to $2,000"],["Re-ducting adder (Manual D)","Up to $2,000"],["Additional ccASHP unit","$2,000 per unit"],["OBR Financing — Non LMI","0% / 84 months"],["OBR Financing — LMI","0% / 120 months"],["MAXIMUM (LMI + all adders)","$18,000"]]}/>
         <p style={{fontSize:11,color:gray,marginTop:4}}>PSE&G pays after project completion via OBR. Timeline: 8-9 weeks from job start.</p>
       </div>
@@ -310,7 +310,6 @@ function Slide11(){return(
           {icon:"✅",color:green,title:"Supplier Credit Lines — Active",text:"Ferguson HVAC + Johnstone Supply net-30/60. Materials ordered today, paid after job."},
           {icon:"💳",color:orange,title:"3rd Party Financing (Option 1)",text:"Push customers to Option 1 — we get paid immediately. Eliminates 8-9 week wait."},
           {icon:"🏦",color:"#7c3aed",title:"Acorn Finance — Customer Option",text:"Free to set up. Customer approved, Acorn pays us in 48 hours."},
-          {icon:"🏗️",color:navy,title:"Commercial — PSE&G Covers 80%",text:"Engineered Solutions: PSE&G funds up to 80%. Releases funds during construction."},
         ].map(({icon,color,title,text})=>(<div key={title} style={{border:`1px solid ${color}`,borderRadius:8,padding:12,marginBottom:10,background:"#f8fafc"}}><div style={{display:"flex",gap:8,alignItems:"flex-start"}}><span style={{fontSize:16}}>{icon}</span><div><h4 style={{color,fontWeight:700,margin:"0 0 4px",fontSize:13}}>{title}</h4><p style={{fontSize:12,color:gray,margin:0,lineHeight:1.4}}>{text}</p></div></div></div>))}
       </div>
       <div>
@@ -320,7 +319,7 @@ function Slide11(){return(
           <h4 style={{color:green,fontWeight:800,margin:"0 0 8px",fontSize:14}}>Path to $2.5M</h4>
           <Table headers={["Milestone","Revenue","When"]} rows={[["4 installers × $350K","$1.4M","Now"],["+ PSE&G pipeline","$500K","Q2 2026"],["+ Commercial jobs","$600K","Q3 2026"],["= Threshold","$2.5M","Q4 2026"]]}/>
         </div>
-        <div style={{padding:12,background:"#fff7ed",border:`1px solid ${orange}`,borderRadius:8}}><p style={{color:orange,fontWeight:700,fontSize:13,margin:0}}>The #1 constraint is not money — it is hiring speed. PSE&G funds jobs. Suppliers cover materials. We need installers and leads.</p></div>
+        <div style={{padding:12,background:"#fff7ed",border:`1px solid ${orange}`,borderRadius:8}}><p style={{color:orange,fontWeight:700,fontSize:13,margin:0}}>The #1 constraint is hiring speed. We need qualified installers now. Every week without a new installer = $29,166 in lost revenue.</p></div>
       </div>
     </Grid>
   </div>
@@ -359,13 +358,13 @@ function Slide13(){return(
 function Slide14(){return(
   <div style={slideWrap}>
     <H1>Completed PSE&G Projects — Our Track Record</H1>
-    <Sub>Real jobs executed. Real rebates processed. PSE&G Trade Ally PN#136 active.</Sub>
+    <Sub>Real jobs executed. Real rebates processed. PSE&G Trade Ally active.</Sub>
     <Grid cols={2}>
-      <Card border={orange}><Tag>PSE&G CLEAN HEAT — COMPLETED</Tag><h3 style={{color:navy,fontWeight:800,marginBottom:4,marginTop:8}}>Modern Building Group</h3><p style={{color:gray,fontSize:13,marginBottom:12}}>18 Whitman St, West Orange NJ · PSE&G Clean Heat Decarbonization</p><div style={{fontSize:36,fontWeight:900,color:orange,marginBottom:12}}>$39,950</div><ul style={{color:gray,fontSize:13,paddingLeft:16,margin:0}}><li style={{marginBottom:4}}>Program: PSE&G Clean Heat (PN#136)</li><li style={{marginBottom:4}}>PSE&G Rebate: $16,000</li><li style={{marginBottom:4}}>Full heat pump + re-ducting + decommissioning</li><li style={{marginBottom:4}}>2 zones — complete HVAC replacement</li><li>Original $12,218 → grew to $39,950</li></ul></Card>
+      <Card border={orange}><Tag>PSE&G CLEAN HEAT — COMPLETED</Tag><h3 style={{color:navy,fontWeight:800,marginBottom:4,marginTop:8}}>Modern Building Group</h3><p style={{color:gray,fontSize:13,marginBottom:12}}>18 Whitman St, West Orange NJ · PSE&G Clean Heat Decarbonization</p><div style={{fontSize:36,fontWeight:900,color:orange,marginBottom:12}}>$39,950</div><ul style={{color:gray,fontSize:13,paddingLeft:16,margin:0}}><li style={{marginBottom:4}}>Program: PSE&G Clean Heat</li><li style={{marginBottom:4}}>PSE&G Rebate: $16,000</li><li style={{marginBottom:4}}>Full heat pump + re-ducting + decommissioning</li><li style={{marginBottom:4}}>2 zones — complete HVAC replacement</li><li>Original $12,218 → grew to $39,950</li></ul></Card>
       <Card border={green}><Tag color={green}>RESIDENTIAL PSE&G — COMPLETED</Tag><h3 style={{color:navy,fontWeight:800,marginBottom:4,marginTop:8}}>Ufredo Molina</h3><p style={{color:gray,fontSize:13,marginBottom:12}}>175 Sunset Ave, North Arlington NJ · PSE&G Heat Pump + Electrical + Water Heater</p><div style={{fontSize:36,fontWeight:900,color:green,marginBottom:12}}>$49,036</div><ul style={{color:gray,fontSize:13,paddingLeft:16,margin:0}}><li style={{marginBottom:4}}>PSE&G Rebate: Up to $18,000 (LMI) / $16,000 (Non-LMI)</li><li style={{marginBottom:4}}>OBR Financing: 0% for 84-120 months</li><li style={{marginBottom:4}}>2 heat pump systems + panel upgrade</li><li>Tankless water heater</li></ul></Card>
     </Grid>
     <Table headers={["Contract","Value","PSE&G Rebate","Status"]} rows={[["Modern Building Group","$39,950","$16,000","✅ Completed"],["Ufredo Molina","$49,036","Up to $18,000","✅ Completed"],["Confirmed Total","$88,986","$34,000+",""],["Promised Pipeline","$1,500,000","Growing","In Progress"]]}/>
-    <div style={{padding:12,background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,textAlign:"center"}}><p style={{color:green,fontWeight:700,margin:0}}>Both jobs are PSE&G Clean Heat PN#136. As approved Trade Ally, every NJ gas customer is a potential project.</p></div>
+    <div style={{padding:12,background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,textAlign:"center"}}><p style={{color:green,fontWeight:700,margin:0}}>Both jobs are PSE&G Clean Heat program. As approved Trade Ally, every NJ gas customer is a potential project.</p></div>
   </div>
 )}
 
@@ -396,7 +395,7 @@ function Slide16(){return(
     <p style={{fontSize:18,color:"rgba(255,255,255,0.8)",maxWidth:700,lineHeight:1.7,marginBottom:32}}>Every installer adds $350,000 to top line.<br/>PSE&G funds residential jobs. At $2.5M, Mobilization Funding bridges any gap.<br/><strong style={{color:"#fff"}}>We need installers and leads — in that order.</strong></p>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,width:"100%",maxWidth:600}}>
       <div style={{padding:16,background:"rgba(255,255,255,0.08)",borderRadius:8,border:"1px solid rgba(255,255,255,0.15)"}}><div style={{fontWeight:700,color:"#fff",marginBottom:4}}>Mechanical Enterprise LLC</div><div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>(862) 419-1763</div><div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>sales@mechanicalenterprise.com</div><div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>mechanicalenterprise.com</div></div>
-      <div style={{padding:16,background:orange,borderRadius:8}}><div style={{fontWeight:700,color:"#fff",marginBottom:4}}>PSE&G Trade Ally PN#136</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>WMBE/SBE Certified</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>Newark, NJ · 15 Counties</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>March 31, 2026</div></div>
+      <div style={{padding:16,background:orange,borderRadius:8}}><div style={{fontWeight:700,color:"#fff",marginBottom:4}}>PSE&G Trade Ally</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>WMBE/SBE Certified</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>Newark, NJ · 15 Counties</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>March 31, 2026</div></div>
     </div>
   </div>
 )}
