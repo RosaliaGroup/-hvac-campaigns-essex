@@ -5,7 +5,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { blogPosts, type BlogSection } from "@/data/blogPosts";
-import NotFound from "./NotFound";
+import { Redirect } from "wouter";
 
 const BASE = "https://mechanicalenterprise.com";
 const PHONE = "(862) 419-1763";
@@ -82,7 +82,7 @@ export default function BlogPost({ slug }: { slug: string }) {
     ogUrl: `${BASE}/blog/${slug}`,
   });
 
-  if (!post) return <NotFound />;
+  if (!post) return <Redirect to="/blog" />;
 
   return (
     <div className="min-h-screen">

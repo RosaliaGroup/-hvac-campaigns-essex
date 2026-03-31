@@ -113,6 +113,7 @@ function Router() {
 
       {/* Blog */}
       <Route path={"/blog"} component={BlogIndex} />
+      <Route path={"/blog/nj-heat-pump-rebates-2026"} component={() => <BlogPost slug="nj-heat-pump-rebates-2026" />} />
       <Route path={"/blog/:slug"} component={({ params }: { params: { slug: string } }) => <BlogPost slug={params.slug} />} />
 
       {/* Competitor comparison pages — SEO conquest */}
