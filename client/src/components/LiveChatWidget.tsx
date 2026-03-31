@@ -44,7 +44,7 @@ const SERVICE_OPTIONS = new Set([
 ]);
 
 /* ── Quick-reply menus ─────────────────────────────────────────────── */
-const MAIN_MENU = ["🏠 Residential", "🏢 Commercial", "💼 Careers", "🤝 Partnership", "📚 Courses"];
+const MAIN_MENU = ["🏠 Residential", "🏢 Commercial", "💼 Careers", "🤝 Partnership"];
 
 const FOLLOW_UP_CONFIG: Record<string, { reply: string; buttons: string[] }> = {
   "🏠 Residential": {
@@ -88,10 +88,10 @@ const FOLLOW_UP_REPLIES: Record<string, string> = {
   "🏭 VRV/VRF Systems": "We're one of NJ's top VRV/VRF specialists — ideal for multi-zone buildings.",
   "🔧 Service & Repair": "We service all commercial HVAC brands with same-day availability. $200 flat rate — fill out the form below.",
   "💸 80% Rebates": "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.",
-  "🔩 HVAC Technician": "Residential techs earn $55K-$85K with full benefits and a take-home van.",
-  "🏢 Commercial Tech": "Commercial techs start at $70K-$110K — VRF experience is a plus but we also train.",
-  "📋 Apply Now": "Great — let's get your application started!",
-  "💰 Pay & Benefits": "Top-of-market pay, health/dental/vision, 401k match, and paid training.",
+  "🔩 HVAC Technician": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
+  "🏢 Commercial Tech": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
+  "📋 Apply Now": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
+  "💰 Pay & Benefits": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
   "🤝 Referral Partner ($200-$500)": "Earn $200-$500 per qualified referral — we handle everything after the intro.",
   "🏘️ Property Manager Program": "Property managers get priority service, volume pricing, and a dedicated account rep.",
   "🏗️ Contractor Program": "We sub-contract HVAC for GCs across NJ — licensed, insured, and always on schedule.",
@@ -539,7 +539,7 @@ export default function LiveChatWidget() {
             )}
             {menuLevel === "booking-apply" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={CAREERS_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} {...hoverOrangeBg}>💼 View Open Positions →</a>
+                <a href={CAREERS_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} {...hoverOrangeBg}>💼 View Careers & Apply →</a>
                 <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
