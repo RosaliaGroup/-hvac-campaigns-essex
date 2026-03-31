@@ -128,6 +128,7 @@ function SimpleTable({ headers, rows, compact }: { headers: string[]; rows: stri
                 <td key={ci} style={{
                   textAlign: ci === 0 ? "left" : "center", padding: compact ? "8px 10px" : "10px 14px",
                   borderBottom: "1px solid #e2e8f0", color: "#334155", fontWeight: ci === 0 ? 600 : 400,
+                  verticalAlign: "middle",
                 }}>{cell}</td>
               ))}
             </tr>
@@ -389,7 +390,7 @@ function Slide5() {
               ["Additional ccASHP Unit", "$2,000 per unit"],
               ["PSE&G OBR Financing \u2014 Non LMI", "0% / 84 months"],
               ["PSE&G OBR Financing \u2014 LMI", "0% / 120 months"],
-              ["Maximum Possible (LMI + all adders)", "Up to $18,450"],
+              ["Maximum Possible (LMI + all adders)", "Up to $18,000"],
             ]}
           />
         </div>
@@ -648,7 +649,7 @@ function Slide10() {
     { emoji: "\ud83d\udcd8", title: "Facebook/Instagram \u2014 Homeowner Rebate Ads", color: "#2563eb", items: [
       "Budget: $1,000/month",
       "Target: NJ homeowners 35-65, own home, income $60K+",
-      'Ad angle: "NJ is paying up to $18,450 to replace your old furnace. Find out if you qualify \u2014 free."',
+      'Ad angle: "NJ is paying up to $18,000 to replace your old furnace. Find out if you qualify \u2014 free."',
       "Expected: 15-20 leads/week",
       "Close rate: 15% = 2-3 installs/week",
     ]},
@@ -678,6 +679,34 @@ function Slide10() {
   return (
     <Slide>
       <SH sub="The math: 3 installs/week \u00d7 $350K avg \u00d7 52 weeks = $1.05M/year per installer">How We Get to 3 Installations Per Week</SH>
+
+      {/* HOW WE GET LEADS NOW */}
+      <div style={{ background: "#fef2f2", border: "2px solid #dc2626", borderRadius: 10, padding: "10px 14px", marginBottom: 14, textAlign: "center" }}>
+        <span style={{ fontSize: 14, fontWeight: 800, color: "#dc2626" }}>{"\ud83d\udea8"} HOW WE GET LEADS STARTING THIS WEEK</span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 14 }}>
+        {[
+          { when: "TODAY \u2014 $0", title: "Text Past Customers", text: '"PSE&G is now offering up to $18,000 to replace gas furnaces \u2014 no catch, no upfront cost. Want a free 10-min assessment?" Expected: 2-5 leads from 20 texts' },
+          { when: "THIS WEEK \u2014 $0", title: "Google Business Profile", text: "Post daily. Upload before/after photos. Request reviews from completed jobs. Expected: 1-3 leads/week within 30 days" },
+          { when: "THIS WEEK \u2014 $300", title: "Facebook Boost", text: "Boost best post $10/day. Target: NJ homeowners 35-65, 20mi of Newark. Expected: 5-10 leads first week" },
+          { when: "THIS WEEK \u2014 $0", title: "Nextdoor + FB Groups", text: '"We\'re PSE&G approved. PSE&G paying up to $18,000. Free assessment \u2014 no obligation." Expected: 3-8 leads/week' },
+          { when: "THIS WEEK \u2014 $0", title: "Call 10 RE Agents", text: '"When buyers ask about HVAC, we offer $18,000 in rebates. Can we be your preferred HVAC contractor?" Expected: 1-2 referrals/week in 60 days' },
+        ].map(a => (
+          <div key={a.title} style={{ background: "#fff", borderRadius: 8, padding: "10px 8px", border: "1px solid #e2e8f0" }}>
+            <div style={{ fontSize: 8, fontWeight: 800, color: "#dc2626", marginBottom: 3 }}>{a.when}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#1e3a5f", marginBottom: 4 }}>{a.title}</div>
+            <div style={{ fontSize: 8, color: "#475569", lineHeight: 1.4 }}>{a.text}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 6, marginBottom: 14, background: "#1e3a5f", borderRadius: 8, padding: "10px 8px" }}>
+        {[["Week 1", "5-15 leads"], ["Week 2", "10-20 leads"], ["Week 3", "15-25 leads"], ["Week 4", "20-30 leads"], ["Month 2", "30-50/week"]].map(([w, l]) => (
+          <div key={w} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#ff6b35" }}>{w}</div>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,.8)" }}>{l}</div>
+          </div>
+        ))}
+      </div>
 
       {/* Goal stat bar */}
       <div style={{
@@ -769,10 +798,9 @@ function Slide10() {
 function Slide11() {
   return (
     <Slide>
-      <SH sub="Every blog post is a 24/7 salesperson that never sleeps">Content Strategy \u2014 How 3 Blogs/Week Compounds Growth</SH>
+      <SH sub="Every blog post is a 24/7 salesperson that never sleeps">Content Strategy \u2014 1 Blog Per Day Compounds Growth</SH>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-        {/* Left: SEO timeline */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 14 }}>
         <div>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>SEO Impact Timeline (116 pages already indexed)</h3>
           <SimpleTable compact headers={["Timeframe", "Traffic", "Leads"]} rows={[
@@ -783,51 +811,51 @@ function Slide11() {
             ["Month 12", "500+ visits/day", "10-15/week organic"],
           ]} />
           <div style={{ fontSize: 10, color: "#475569", marginTop: 6, fontStyle: "italic" }}>
-            This is WITHOUT any additional blogs. 3 blogs/week ACCELERATES this timeline.
+            WITHOUT any additional blogs. 1 blog/day ACCELERATES this dramatically.
           </div>
         </div>
-
-        {/* Right: Blog compound math */}
         <div>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>3 Blogs/Week Compound Effect</h3>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>1 Blog/Day (7/week) Compound Effect</h3>
           <SimpleTable compact headers={["Month", "Total Articles", "Visits/day", "Leads/mo (2%)"]} rows={[
-            ["Month 1", "12", "20-30", "2-4"],
-            ["Month 3", "36", "80-120", "8-15"],
-            ["Month 6", "72", "300-500", "30-50"],
-            ["Month 12", "144", "1,000+", "100+"],
+            ["Month 1", "30 + 116", "50-80", "5-10"],
+            ["Month 3", "90 + 116", "200-350", "20-40"],
+            ["Month 6", "180 + 116", "600-900", "60-100"],
+            ["Month 12", "365 + 116", "2,000+", "200+"],
           ]} />
           <div style={{ marginTop: 8, background: "#f0fdf4", borderRadius: 6, padding: "8px 10px", fontSize: 10, color: "#166534", fontWeight: 600 }}>
-            At 100 organic leads/month + 25% close = 25 installs/month from SEO alone. At $29K avg = $725,000/month from content.
+            At 200 organic leads/month + 25% close = 50 installs/month from SEO alone. At $29K avg = $1,450,000/month from content.
           </div>
         </div>
       </div>
 
-      {/* Sample blog topics */}
-      <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Sample Weekly Content</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+      <div style={{ marginBottom: 14, background: "#fef2f2", borderRadius: 8, padding: "8px 12px", border: "1px solid #fecaca", fontSize: 10, color: "#991b1b", fontWeight: 600, textAlign: "center" }}>
+        1 blog/day vs competitors who post monthly = 365 articles/year vs their 12. Google rewards consistent fresh content. This is an unfair advantage we build starting today.
+      </div>
+
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Sample Week \u2014 7 Posts</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 14 }}>
         {[
-          { wk: "Week 1", posts: ["Does My NJ Home Qualify for the PSE&G $18,000 Heat Pump Rebate?", "Gas Furnace vs Heat Pump in NJ: Real Cost Comparison 2026", "Top 5 Signs Your NJ Boiler Needs Replacement"] },
-          { wk: "Week 2", posts: ["PSE&G Clean Heat Program Explained: What Newark Homeowners Need to Know", "How NJ Commercial Buildings Get Up to 80% HVAC Costs Covered by PSE&G", "West Orange HVAC Replacement: Complete Guide + Rebates"] },
-          { wk: "Week 3", posts: ["Is a Ductless Mini-Split Right for Your NJ Home?", "PSE&G OBR Financing: Pay $0 Upfront for Your Heat Pump", "Essex County Heat Pump Installation: Rebates + Timeline"] },
-        ].map(w => (
-          <div key={w.wk} style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px", border: "1px solid #e2e8f0" }}>
-            <div style={{ fontWeight: 700, fontSize: 11, color: "#1e3a5f", marginBottom: 6 }}>{w.wk}</div>
-            {w.posts.map((p, i) => (
-              <div key={i} style={{ fontSize: 9, color: "#475569", marginBottom: 4, paddingLeft: 10, position: "relative" }}>
-                <span style={{ position: "absolute", left: 0, color: "#ff6b35" }}>{"\u2022"}</span>{p}
-              </div>
-            ))}
+          { day: "Mon", title: "Does My NJ Home Qualify for PSE&G $18,000 Rebate?" },
+          { day: "Tue", title: "Gas Furnace vs Heat Pump NJ: Real Cost Comparison 2026" },
+          { day: "Wed", title: "PSE&G Clean Heat: What Newark Homeowners Need to Know" },
+          { day: "Thu", title: "Top Signs Your NJ Boiler Needs Replacement Now" },
+          { day: "Fri", title: "West Orange HVAC Replacement: Complete Guide + Rebates" },
+          { day: "Sat", title: "PSE&G OBR: Pay $0 Upfront for Your Heat Pump" },
+          { day: "Sun", title: "NJ Commercial Buildings: How PSE&G Covers 80% of HVAC" },
+        ].map(d => (
+          <div key={d.day} style={{ background: "#f8fafc", borderRadius: 6, padding: "8px 6px", border: "1px solid #e2e8f0", textAlign: "center" }}>
+            <div style={{ fontWeight: 800, fontSize: 10, color: "#ff6b35", marginBottom: 3 }}>{d.day}</div>
+            <div style={{ fontSize: 8, color: "#475569", lineHeight: 1.3 }}>{d.title}</div>
           </div>
         ))}
       </div>
 
-      {/* Bottom box */}
       <div style={{
         background: "#fff7ed", border: "2px solid #ff6b35", borderRadius: 10,
         padding: "12px 16px", textAlign: "center",
       }}>
         <p style={{ fontSize: 12, fontWeight: 700, color: "#1e3a5f", margin: 0 }}>
-          116 pages + 3 blogs/week + Google Ads targeting same keywords = leads from both <span style={{ color: "#ff6b35" }}>paid AND organic</span>. Organic traffic compounds forever. Ad traffic stops when you stop paying. Build both simultaneously.
+          116 existing pages + 365 new blogs/year = <span style={{ color: "#ff6b35" }}>481 pages working 24/7</span>. Competitors post once a month. We post every single day. This is how we own NJ HVAC search.
         </p>
       </div>
     </Slide>
@@ -1074,10 +1102,10 @@ function Slide15() {
    ================================================================ */
 function Slide16() {
   const cards = [
-    { emoji: "\u2705", title: "PSE&G Trade Ally PN#136", color: "#059669", text: "Approved PSE&G Trade Ally since 2025. Every NJ gas heating customer qualifies. We handle all paperwork, rebate filing, and program enrollment." },
-    { emoji: "\ud83d\udcc4", title: "Mobilization Funding", color: "#2563eb", text: "Signed PSE&G contracts can be funded at 70-80% upfront through Mobilization Funding. Repay when PSE&G pays after completion. Zero debt. Zero dilution." },
-    { emoji: "\ud83c\udfe6", title: "Project Financing Available", color: "#7c3aed", text: "With confirmed PSE&G contracts + supplier credit lines already active, we qualify for project financing through Mobilization Funding. 70-80% of contract value upfront." },
-    { emoji: "\ud83d\udcc8", title: "Pipeline Funds Itself", color: "#ff6b35", text: "PSE&G pays after completion. Mobilization Funding bridges the gap \u2014 70-80% of contract value upfront. Each job funds the next." },
+    { emoji: "\u2705", title: "PSE&G Instant Rebate", color: "#059669", text: "Rebate applied directly on invoice at installation. Customer pays net amount. PSE&G reimburses us through distributor same day. This IS our job financing \u2014 built into the program." },
+    { emoji: "\ud83c\udfe6", title: "Supplier Credit Lines Active", color: "#2563eb", text: "Ferguson HVAC + Johnstone Supply net-30/60 terms already established. Materials ordered today, paid after job completion. Zero cash out of pocket." },
+    { emoji: "\ud83d\udcb3", title: "Acorn Finance \u2014 Customer Option", color: "#7c3aed", text: "Customers who need financing apply through Acorn Finance. We get paid in 48 hours. Free to set up. Increases close rates. Works alongside PSE&G rebate." },
+    { emoji: "\ud83c\udfe2", title: "Commercial \u2014 PSE&G Covers 80%", color: "#ff6b35", text: "Engineered Solutions Program funds up to 80% of commercial HVAC projects. PSE&G releases funds during construction. Customer pays 0% over 60 months." },
   ];
 
   return (
@@ -1100,7 +1128,7 @@ function Slide16() {
         padding: "20px 24px",
       }}>
         <p style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", margin: "0 0 12px 0" }}>
-          The #1 constraint is not money \u2014 it is hiring speed and marketing execution. PSE&G funds the jobs. Suppliers cover materials. We need installers and leads \u2014 in that order.
+          The #1 constraint is not money \u2014 it is hiring speed and marketing execution. PSE&G funds residential jobs through instant rebates. PSE&G funds commercial jobs up to 80%. We need installers and leads \u2014 in that order.
         </p>
         <p style={{ fontSize: 14, fontWeight: 700, color: "#ff6b35", margin: 0 }}>
           Action: Begin hiring immediately. Every week without a technician = $15,000-$25,000 in unbilled capacity.
@@ -1230,7 +1258,7 @@ function Slide18() {
   const contracts = [
     {
       border: "#ff6b35",
-      badge: "\ud83c\udf31 PSE&G CLEAN HEAT PROGRAM",
+      badge: "\u2705 PSE&G CLEAN HEAT \u2014 COMPLETED",
       badgeBg: "#059669",
       project: "Modern Building Group \u2014 18 Whitman St, West Orange NJ",
       client: "Modern Building Group LLC / Fair Lawn NJ",
@@ -1246,7 +1274,7 @@ function Slide18() {
     },
     {
       border: "#059669",
-      badge: "\ud83c\udfe0 RESIDENTIAL PSE&G PROGRAM",
+      badge: "\u2705 RESIDENTIAL PSE&G \u2014 COMPLETED",
       badgeBg: "#2563eb",
       project: "Ufredo Molina \u2014 175 Sunset Ave, North Arlington NJ",
       client: "Residential Homeowner",
@@ -1254,7 +1282,7 @@ function Slide18() {
       value: "$49,036",
       date: "February 27, 2026",
       lines: [
-        "PSE&G Rebate: Up to $18,450 (LMI) / $16,450 (Non-LMI)",
+        "PSE&G Rebate: Up to $18,000 (LMI) / $16,000 (Non-LMI)",
         "OBR Financing: 0% for 84-120 months available",
         "2 heat pump systems + panel upgrade",
         "Tankless water heater",
@@ -1266,7 +1294,7 @@ function Slide18() {
     <Slide>
       <div style={{ textAlign: "center", marginBottom: 32 }}>
         <h1 style={{ fontSize: 32, fontWeight: 800, color: "#1e3a5f", margin: 0 }}>Real Contracts. Real Revenue. Right Now.</h1>
-        <p style={{ fontSize: 16, color: "#64748b", marginTop: 8 }}>Active pipeline as of March 31, 2026</p>
+        <p style={{ fontSize: 16, color: "#64748b", marginTop: 8 }}>Recent PSE&G Project Examples \u2014 Our Track Record</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 24 }}>
@@ -1309,7 +1337,7 @@ function Slide18() {
         padding: "14px 18px",
       }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", margin: 0, lineHeight: 1.6 }}>
-          {"\ud83d\udca1"} Both confirmed contracts are PSE&G Clean Heat program jobs (PN#136). As approved Trade Ally, every NJ gas customer is a potential project.
+          {"\ud83d\udca1"} These completed projects demonstrate our PSE&G Clean Heat execution capability. As approved Trade Ally PN#136, we replicate this model at scale \u2014 every NJ gas customer is a prospect.
         </p>
       </div>
 
@@ -1319,7 +1347,7 @@ function Slide18() {
         padding: "14px 18px",
       }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0, lineHeight: 1.6 }}>
-          {"\ud83c\udf31"} <strong>PSE&G CLEAN HEAT ADVANTAGE:</strong> We are an approved PSE&G Trade Ally. Every residential gas customer in NJ is a potential PSE&G decarbonization job. PSE&G covers up to $16,000 in rebates. 0% OBR financing available for customers. We handle all paperwork and program enrollment.
+          {"\ud83c\udf31"} <strong>PSE&G CLEAN HEAT ADVANTAGE:</strong> We are an approved PSE&G Trade Ally. Every residential gas customer in NJ is a potential PSE&G decarbonization job. PSE&G covers up to $18,000 in rebates (LMI with adders). 0% OBR financing available for customers. We handle all paperwork and program enrollment.
         </p>
       </div>
     </Slide>
