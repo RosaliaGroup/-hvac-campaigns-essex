@@ -54,6 +54,7 @@ import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import LiveChatWidget from "./components/LiveChatWidget";
 import CompetitorPage from "./pages/CompetitorPage";
+import CityPage from "./pages/CityPage";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -111,6 +112,57 @@ function Router() {
       <Route path={"/vs-gold-medal-service"} component={() => <CompetitorPage competitor="Gold Medal Service" slug="gold-medal-service" />} />
       <Route path={"/vs-horizon-services"} component={() => <CompetitorPage competitor="Horizon Services" slug="horizon-services" />} />
       <Route path={"/vs-hutchinson"} component={() => <CompetitorPage competitor="Hutchinson" slug="hutchinson" />} />
+
+      {/* City landing pages — local SEO */}
+      <Route path={"/hvac-newark-nj"} component={() => <CityPage city="Newark" slug="newark" />} />
+      <Route path={"/hvac-elizabeth-nj"} component={() => <CityPage city="Elizabeth" slug="elizabeth" />} />
+      <Route path={"/hvac-jersey-city-nj"} component={() => <CityPage city="Jersey City" slug="jersey-city" />} />
+      <Route path={"/hvac-hoboken-nj"} component={() => <CityPage city="Hoboken" slug="hoboken" />} />
+      <Route path={"/hvac-bayonne-nj"} component={() => <CityPage city="Bayonne" slug="bayonne" />} />
+      <Route path={"/hvac-kearny-nj"} component={() => <CityPage city="Kearny" slug="kearny" />} />
+      <Route path={"/hvac-harrison-nj"} component={() => <CityPage city="Harrison" slug="harrison" />} />
+      <Route path={"/hvac-east-orange-nj"} component={() => <CityPage city="East Orange" slug="east-orange" />} />
+      <Route path={"/hvac-orange-nj"} component={() => <CityPage city="Orange" slug="orange" />} />
+      <Route path={"/hvac-west-orange-nj"} component={() => <CityPage city="West Orange" slug="west-orange" />} />
+      <Route path={"/hvac-south-orange-nj"} component={() => <CityPage city="South Orange" slug="south-orange" />} />
+      <Route path={"/hvac-maplewood-nj"} component={() => <CityPage city="Maplewood" slug="maplewood" />} />
+      <Route path={"/hvac-irvington-nj"} component={() => <CityPage city="Irvington" slug="irvington" />} />
+      <Route path={"/hvac-bloomfield-nj"} component={() => <CityPage city="Bloomfield" slug="bloomfield" />} />
+      <Route path={"/hvac-nutley-nj"} component={() => <CityPage city="Nutley" slug="nutley" />} />
+      <Route path={"/hvac-belleville-nj"} component={() => <CityPage city="Belleville" slug="belleville" />} />
+      <Route path={"/hvac-montclair-nj"} component={() => <CityPage city="Montclair" slug="montclair" />} />
+      <Route path={"/hvac-clifton-nj"} component={() => <CityPage city="Clifton" slug="clifton" />} />
+      <Route path={"/hvac-passaic-nj"} component={() => <CityPage city="Passaic" slug="passaic" />} />
+      <Route path={"/hvac-garfield-nj"} component={() => <CityPage city="Garfield" slug="garfield" />} />
+      <Route path={"/hvac-linden-nj"} component={() => <CityPage city="Linden" slug="linden" />} />
+      <Route path={"/hvac-rahway-nj"} component={() => <CityPage city="Rahway" slug="rahway" />} />
+      <Route path={"/hvac-roselle-nj"} component={() => <CityPage city="Roselle" slug="roselle" />} />
+      <Route path={"/hvac-roselle-park-nj"} component={() => <CityPage city="Roselle Park" slug="roselle-park" />} />
+      <Route path={"/hvac-hillside-nj"} component={() => <CityPage city="Hillside" slug="hillside" />} />
+      <Route path={"/hvac-union-nj"} component={() => <CityPage city="Union" slug="union" />} />
+      <Route path={"/hvac-springfield-nj"} component={() => <CityPage city="Springfield" slug="springfield" />} />
+      <Route path={"/hvac-millburn-nj"} component={() => <CityPage city="Millburn" slug="millburn" />} />
+      <Route path={"/hvac-short-hills-nj"} component={() => <CityPage city="Short Hills" slug="short-hills" />} />
+      <Route path={"/hvac-summit-nj"} component={() => <CityPage city="Summit" slug="summit" />} />
+      <Route path={"/hvac-westfield-nj"} component={() => <CityPage city="Westfield" slug="westfield" />} />
+      <Route path={"/hvac-cranford-nj"} component={() => <CityPage city="Cranford" slug="cranford" />} />
+      <Route path={"/hvac-clark-nj"} component={() => <CityPage city="Clark" slug="clark" />} />
+      <Route path={"/hvac-woodbridge-nj"} component={() => <CityPage city="Woodbridge" slug="woodbridge" />} />
+      <Route path={"/hvac-secaucus-nj"} component={() => <CityPage city="Secaucus" slug="secaucus" />} />
+      <Route path={"/hvac-north-bergen-nj"} component={() => <CityPage city="North Bergen" slug="north-bergen" />} />
+      <Route path={"/hvac-weehawken-nj"} component={() => <CityPage city="Weehawken" slug="weehawken" />} />
+      <Route path={"/hvac-union-city-nj"} component={() => <CityPage city="Union City" slug="union-city" />} />
+      <Route path={"/hvac-west-new-york-nj"} component={() => <CityPage city="West New York" slug="west-new-york" />} />
+      <Route path={"/hvac-guttenberg-nj"} component={() => <CityPage city="Guttenberg" slug="guttenberg" />} />
+      <Route path={"/hvac-hackensack-nj"} component={() => <CityPage city="Hackensack" slug="hackensack" />} />
+      <Route path={"/hvac-teaneck-nj"} component={() => <CityPage city="Teaneck" slug="teaneck" />} />
+      <Route path={"/hvac-englewood-nj"} component={() => <CityPage city="Englewood" slug="englewood" />} />
+      <Route path={"/hvac-fort-lee-nj"} component={() => <CityPage city="Fort Lee" slug="fort-lee" />} />
+      <Route path={"/hvac-edgewater-nj"} component={() => <CityPage city="Edgewater" slug="edgewater" />} />
+      <Route path={"/hvac-palisades-park-nj"} component={() => <CityPage city="Palisades Park" slug="palisades-park" />} />
+      <Route path={"/hvac-ridgefield-nj"} component={() => <CityPage city="Ridgefield" slug="ridgefield" />} />
+      <Route path={"/hvac-fairview-nj"} component={() => <CityPage city="Fairview" slug="fairview" />} />
+      <Route path={"/hvac-cliffside-park-nj"} component={() => <CityPage city="Cliffside Park" slug="cliffside-park" />} />
 
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />
