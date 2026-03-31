@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const PASSWORD = "mechanicalenterprise2026";
-const TOTAL_SLIDES = 13;
+const TOTAL_SLIDES = 14;
 
 /* ================================================================
    PASSWORD GATE
@@ -762,9 +762,50 @@ function Slide12() {
 }
 
 /* ================================================================
-   SLIDE 13 — 5-YEAR PATH TO 8 FIGURES
+   SLIDE 13 — CAPITAL STRATEGY
    ================================================================ */
 function Slide13() {
+  const cards = [
+    { emoji: "\u2705", title: "$1M Cash Reserve", color: "#059669", text: "We maintain $500K+ in reserve at all times to front materials on large commercial VRF/VRF jobs ($35K-$150K per job) without touching credit." },
+    { emoji: "\ud83d\udcc4", title: "Invoice Factoring Available", color: "#2563eb", text: "The $1.5M in committed contracts can be factored at 85% upfront = $1.275M immediate cash when jobs begin. Zero debt. Zero dilution." },
+    { emoji: "\ud83c\udfe6", title: "Line of Credit \u2014 Easy to Get", color: "#7c3aed", text: "With $1M in the bank + $3M pipeline we qualify for a $500K business line of credit at our bank same week. Use only when needed for specific jobs. Cost: ~8-10% on what we draw." },
+    { emoji: "\ud83d\udcc8", title: "Pipeline Funds Itself", color: "#ff6b35", text: "$3M pipeline at 15-20% net margin = $450K-$600K profit reinvested into Q3-Q4 growth. Each quarter funds the next." },
+  ];
+
+  return (
+    <Slide>
+      <SH sub="">No Dilution. No Debt. Self-Funded Growth.</SH>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 28 }}>
+        {cards.map(c => (
+          <div key={c.title} style={{
+            background: "#fff", borderRadius: 12, padding: 20,
+            border: "1px solid #e2e8f0", borderLeft: `5px solid ${c.color}`,
+          }}>
+            <div style={{ fontSize: 28, marginBottom: 6 }}>{c.emoji}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: c.color, marginBottom: 8 }}>{c.title}</div>
+            <p style={{ fontSize: 13, color: "#475569", margin: 0, lineHeight: 1.6 }}>{c.text}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{
+        background: "#fff7ed", border: "2px solid #ff6b35", borderRadius: 12,
+        padding: "20px 24px",
+      }}>
+        <p style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", margin: "0 0 12px 0" }}>
+          The #1 constraint is not money \u2014 it is execution speed. Hiring qualified technicians fast enough to fulfill the pipeline before competitors notice.
+        </p>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#ff6b35", margin: 0 }}>
+          Action: Begin hiring immediately. Every week without a technician = $15,000-$25,000 in unbilled capacity.
+        </p>
+      </div>
+    </Slide>
+  );
+}
+
+/* ================================================================
+   SLIDE 14 — 5-YEAR PATH TO $25M+
+   ================================================================ */
+function Slide14() {
   const years = [
     { year: "2026", label: "EXECUTE ON PIPELINE", color: "#ff6b35", revenue: "$5M-$8M", highlight: "\u26a1 $3M ALREADY COMMITTED \u2014 Q2-Q3 2026", milestones: [
       "$3M in committed pipeline \u2014 Q2-Q3 2026", "116 SEO pages ranking \u2014 new inbound leads",
@@ -896,7 +937,7 @@ function Slide13() {
 /* ================================================================
    SLIDES ARRAY
    ================================================================ */
-const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13];
+const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14];
 
 /* ================================================================
    MAIN PRESENTATION COMPONENT
