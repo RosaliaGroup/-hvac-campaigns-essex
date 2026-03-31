@@ -463,16 +463,21 @@ function Slide6() {
 function Slide7() {
   return (
     <Slide>
-      <SH sub="">Revenue Potential — Installation Focus</SH>
-      <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1e3a5f", marginBottom: 12 }}>Average Job Values</h3>
-        <SimpleTable compact headers={["Service", "Value"]} rows={[
-          ["Residential Heat Pump", "$8,000"],
-          ["Ductless Mini-Split", "$5,000"],
-          ["Full System Replacement", "$12,000"],
-          ["Commercial VRV/VRF (small)", "$35,000"],
-          ["Commercial VRV/VRF (large)", "$150,000"],
-        ]} />
+      <SH sub="">Revenue Model — $350K Per Installer Per Year</SH>
+      <div style={{ marginBottom: 20 }}>
+        <SimpleTable headers={["Year", "Installers", "Installer Revenue", "Monthly Run Rate"]} rows={[
+          ["2026", "3-8", "$1.05M-$2.8M", "$87K-$233K"],
+          ["2027", "12", "$4,200,000", "$350,000"],
+          ["2028", "20", "$7,000,000", "$583,333"],
+          ["2029", "30", "$10,500,000", "$875,000"],
+          ["2030", "50+", "$17,500,000+", "$1,458,333+"],
+        ]} compact />
+      </div>
+      <div style={{
+        marginBottom: 20, fontSize: 12, color: "#475569", padding: "10px 14px",
+        background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0",
+      }}>
+        Revenue model based on $350K per installer per year. Does NOT include commercial VRV/VRF jobs, courses revenue, maintenance subscriptions, or partnership income — all of which are additive.
       </div>
       {/* Pipeline highlight */}
       <div style={{
@@ -483,24 +488,25 @@ function Slide7() {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
         {[
-          { title: "Conservative", subtitle: "Pipeline + 20 leads/week", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", line1: "$3M committed pipeline", line2: "+ $1.5M new inbound leads", total: "2026 Total: $4.5M+" },
-          { title: "Moderate", subtitle: "Pipeline + Google Ads + SEO", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", line1: "$3M committed pipeline", line2: "+ $3M new business", total: "2026 Total: $6M+" },
-          { title: "Aggressive", subtitle: "Pipeline + full marketing", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", line1: "$3M committed pipeline", line2: "+ $5M new business", total: "2026 Total: $8M+" },
+          { title: "Conservative", subtitle: "3 installers + $3M pipeline", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", lines: ["3 installers \u00d7 $350K = $1.05M new revenue", "+ $3M committed pipeline"], total: "2026 Total: $4M+" },
+          { title: "Moderate", subtitle: "5 installers + pipeline + ads", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", lines: ["5 installers \u00d7 $350K = $1.75M", "+ $3M pipeline + $1M commercial"], total: "2026 Total: $5.75M+" },
+          { title: "Aggressive", subtitle: "8 installers + full scale", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", lines: ["8 installers \u00d7 $350K = $2.8M", "+ $3M pipeline + $2M commercial"], total: "2026 Total: $7.8M+" },
         ].map(s => (
           <div key={s.title} style={{ background: s.bg, border: `2px solid ${s.border}`, borderRadius: 12, padding: 20 }}>
             <div style={{ fontWeight: 800, fontSize: 16, color: s.color, marginBottom: 4 }}>{s.title}</div>
             <div style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>{s.subtitle}</div>
-            <div style={{ fontSize: 13, color: "#334155", marginBottom: 4, fontWeight: 600 }}>{s.line1}</div>
-            <div style={{ fontSize: 13, color: "#475569", marginBottom: 12 }}>{s.line2}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.total}</div>
+            {s.lines.map((l, i) => (
+              <div key={i} style={{ fontSize: 13, color: i === 0 ? "#334155" : "#475569", marginBottom: 4, fontWeight: i === 0 ? 600 : 400 }}>{l}</div>
+            ))}
+            <div style={{ fontSize: 20, fontWeight: 800, color: s.color, marginTop: 8 }}>{s.total}</div>
           </div>
         ))}
       </div>
       <div style={{
-        marginTop: 20, textAlign: "center", fontSize: 13, fontWeight: 600,
-        color: "#475569", padding: "12px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0",
+        marginTop: 20, textAlign: "center", fontSize: 14, fontWeight: 700,
+        color: "#ff6b35", padding: "12px", background: "#fff7ed", borderRadius: 8, border: "1px solid #fed7aa",
       }}>
-        Pipeline confirmed as of March 2026. New inbound leads from digital infrastructure are additive to existing commitments.
+        "1 new installer hired = $350K added to top line. Hiring is the highest ROI investment we can make."
       </div>
     </Slide>
   );
@@ -798,6 +804,14 @@ function Slide13() {
           Action: Begin hiring immediately. Every week without a technician = $15,000-$25,000 in unbilled capacity.
         </p>
       </div>
+      <div style={{
+        marginTop: 16, background: "#eff6ff", border: "2px solid #bfdbfe", borderRadius: 12,
+        padding: "16px 20px",
+      }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#1e3a5f", margin: 0 }}>
+          {"\ud83d\udca1"} Key Insight: Cost to hire 1 installer {"\u2248"} $65,000/year. Revenue generated: $350,000/year. Net return per hire: <span style={{ color: "#059669" }}>$285,000</span>. Every month we delay hiring = <span style={{ color: "#dc2626" }}>$29,166 in lost revenue</span>.
+        </p>
+      </div>
     </Slide>
   );
 }
@@ -807,39 +821,33 @@ function Slide13() {
    ================================================================ */
 function Slide14() {
   const years = [
-    { year: "2026", label: "EXECUTE ON PIPELINE", color: "#ff6b35", revenue: "$5M-$8M", highlight: "\u26a1 $3M ALREADY COMMITTED \u2014 Q2-Q3 2026", milestones: [
-      "$3M in committed pipeline \u2014 Q2-Q3 2026", "116 SEO pages ranking \u2014 new inbound leads",
-      "Google Ads: 25+ additional leads/week", "50 Google reviews \u2014 map pack top 3",
-      "3-5 installation technicians hired", "ServiceTitan fully integrated ($1,300/month)",
-      "Commercial VRV/VRF jobs in pipeline", "Courses platform live and enrolling", "BPI certification secured",
-    ], foundation: "Digital infrastructure live, payments automated, AI handling 24/7" },
-    { year: "2027", label: "DOMINATE LOCAL MARKET", color: "#2563eb", revenue: "$8M-$12M", highlight: "", milestones: [
-      "200+ SEO pages (add Central NJ, Shore)", "#1 map pack for NJ HVAC searches",
-      "5-7 installation technicians", "Commercial pipeline: 2-3 VRF jobs/month",
-      "Maintenance subscription: 500+ members", "Courses: 1,000+ enrolled students",
-      "Partnership network: 50+ active referrers", "Carrier/Trane/Lennox preferred dealer status",
-      "Average job value: $12,000+",
+    { year: "2026", label: "EXECUTE ON PIPELINE", color: "#ff6b35", revenue: "$4M-$5M", highlight: "\u26a1 $3M COMMITTED + 3-5 installers", milestones: [
+      "3-5 installers \u00d7 $350K = $1.05M-$1.75M new", "$3M committed pipeline \u2014 Q2-Q3 2026",
+      "Key hire: 3 installers + 1 BPI auditor", "$350K/installer model proven",
+      "ServiceTitan fully integrated ($1,300/mo)", "50 Google reviews \u2014 map pack top 3",
+      "Courses platform live and enrolling", "BPI certification secured",
+    ], foundation: "$350K/installer model proven, pipeline funding growth" },
+    { year: "2027", label: "DOMINATE LOCAL MARKET", color: "#2563eb", revenue: "$4.2M-$6M", highlight: "", milestones: [
+      "12 installers \u00d7 $350K = $4.2M", "Commercial pipeline growing",
+      "Courses revenue starting", "Map pack top 3 \u2192 40+ leads/week",
+      "200+ SEO pages (Central NJ, Shore)", "Carrier/Trane/Lennox preferred dealer",
+      "Maintenance subscription: 500+ members", "Partnership network: 50+ referrers",
     ], foundation: "Brand authority established, recurring revenue streams active" },
-    { year: "2028", label: "EXPAND GEOGRAPHY", color: "#7c3aed", revenue: "$12M-$16M", highlight: "", milestones: [
-      "Expand to Central NJ (full coverage)", "Shore area HVAC market penetration",
-      "10-15 technicians across NJ", "Second service hub (Central NJ)",
-      "Commercial: target multi-family/apartments", "Government contracts (WMBE/SBE advantage)",
-      "Courses: industry-recognized certification", "1,000+ Google reviews", "Revenue per technician: $400K+",
+    { year: "2028", label: "EXPAND GEOGRAPHY", color: "#7c3aed", revenue: "$7M-$10M", highlight: "", milestones: [
+      "20-25 installers \u00d7 $350K = $7M-$8.75M", "2nd service hub Central NJ",
+      "Government contracts (WMBE advantage)", "Commercial VRV/VRF: 2-3 jobs/month",
+      "Shore area HVAC market penetration", "1,000+ Google reviews",
     ], foundation: "Multi-location operations, government contract pipeline" },
-    { year: "2029", label: "VERTICAL INTEGRATION", color: "#059669", revenue: "$16M-$22M", highlight: "", milestones: [
-      "Launch HVAC equipment supply/distribution", "Franchise model development",
-      "Training center physical location", "20+ technicians",
-      "Commercial accounts: hospitals, schools, government buildings",
-      "Private label maintenance products", "Acquire 1-2 smaller NJ HVAC companies",
-      "Real estate HVAC partnership program",
+    { year: "2029", label: "VERTICAL INTEGRATION", color: "#059669", revenue: "$10.5M-$14M", highlight: "", milestones: [
+      "30-40 installers \u00d7 $350K = $10.5M-$14M", "Franchise model launched",
+      "Equipment distribution revenue", "Courses: national reach",
+      "Training center physical location", "Acquire 1-2 smaller NJ HVAC companies",
     ], foundation: "Beyond service \u2014 becoming an HVAC ecosystem company" },
-    { year: "2030", label: "$25M+ REVENUE", color: "#dc2626", revenue: "$25M-$35M", highlight: "", milestones: [
-      "NJ market leadership position", "Franchise: 3-5 licensed locations",
-      "Courses platform: national reach", "Equipment distribution revenue stream",
-      "30+ employees", "EBITDA margin: 15-20%",
-      "Strategic acquisition target OR private equity interest",
-      'Brand: "The NJ Heat Pump Company"',
-    ], foundation: "Multiple revenue streams, defensible market position, acquisition-ready infrastructure" },
+    { year: "2030", label: "$17.5M+ REVENUE", color: "#dc2626", revenue: "$17.5M-$25M+", highlight: "", milestones: [
+      "50+ installers \u00d7 $350K = $17.5M+", "Multiple revenue streams additive",
+      "3-5 franchise locations", "EBITDA margin: 15-20%",
+      "Acquisition target or PE interest", 'Brand: "The NJ Heat Pump Company"',
+    ], foundation: "Multiple revenue streams, defensible market position, acquisition-ready" },
   ];
 
   const reasons = [
@@ -854,8 +862,8 @@ function Slide14() {
     <Slide bg="linear-gradient(135deg, #0f2744 0%, #1e3a5f 100%)">
       <div style={{ color: "#fff" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>From $3M to $25M \u2014 The Roadmap</h1>
-          <p style={{ fontSize: 16, color: "rgba(255,255,255,.7)", marginTop: 8 }}>How Mechanical Enterprise reaches $25M+ by 2030</p>
+          <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>From 1 Installer to 50 \u2014 The Path to $17.5M+</h1>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,.7)", marginTop: 8 }}>5-Year Path \u2014 Built on $350K Per Installer</p>
         </div>
 
         {/* Timeline */}
@@ -912,10 +920,12 @@ function Slide14() {
           textAlign: "center", padding: "16px 24px",
           background: "rgba(255,107,53,.15)", borderRadius: 10, border: "1px solid rgba(255,107,53,.3)",
         }}>
-          <p style={{ fontSize: 15, fontWeight: 700, color: "#ff6b35", margin: 0, lineHeight: 1.6 }}>
-            The question is not whether this is possible.<br />
-            The infrastructure is built. The market is moving our way.<br />
-            The question is: how fast do we execute?
+          <p style={{ fontSize: 15, fontWeight: 700, color: "#ff6b35", margin: "0 0 8px 0", lineHeight: 1.6 }}>
+            The math is simple: Every installer we hire = $350,000 in annual revenue.<br />
+            Hire fast. Train right. Scale the model.
+          </p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.8)", margin: 0 }}>
+            2026 Goal: 8 installers by Q4 = $2.8M new revenue + $3M pipeline = $5.8M total
           </p>
         </div>
 
