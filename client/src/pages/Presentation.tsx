@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const PASSWORD = "mechanicalenterprise2026";
-const TOTAL_SLIDES = 16;
+const TOTAL_SLIDES = 17;
 
 /* ================================================================
    PASSWORD GATE
@@ -957,9 +957,164 @@ function Slide14() {
 }
 
 /* ================================================================
-   SLIDE 15 — ACTIVE PIPELINE
+   SLIDE 15 — PROJECT FINANCING STRATEGY
    ================================================================ */
 function Slide15() {
+  return (
+    <Slide>
+      <SH sub="">How We Finance Large Jobs — Zero Cash Upfront</SH>
+
+      {/* The Problem */}
+      <div style={{
+        background: "#fef2f2", border: "2px solid #fecaca", borderRadius: 10,
+        padding: "14px 18px", marginBottom: 20, textAlign: "center",
+      }}>
+        <p style={{ fontSize: 14, fontWeight: 700, color: "#991b1b", margin: 0 }}>
+          The Challenge: PSE&G pays AFTER job completion. Large jobs require $20K-$150K in materials upfront. We need project financing to bridge the gap.
+        </p>
+      </div>
+
+      {/* 3-Layer Financing Stack */}
+      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", marginBottom: 12 }}>Our 3-Layer Financing Stack</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 16 }}>
+        {/* Layer 1 */}
+        <div style={{ background: "#fff", borderRadius: 10, padding: "16px 14px", border: "2px solid #059669", borderTop: "4px solid #059669" }}>
+          <div style={{ fontSize: 24, marginBottom: 4 }}>{"\ud83c\udfd7\ufe0f"}</div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: "#059669", marginBottom: 2 }}>Mobilization Funding — Primary</div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Fund any signed contract upfront</div>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {[
+              "Lends 70-80% of signed contract value immediately",
+              "Repay when PSE&G/client pays after completion",
+              "Requires: signed contract + 2 years in business",
+              "Works on PSE&G Clean Heat contracts \u2705",
+              "Works on commercial VRV/ERV contracts \u2705",
+              "No citizenship requirement \u2014 business based",
+            ].map((t, i) => (
+              <li key={i} style={{ fontSize: 10, color: "#334155", marginBottom: 3, paddingLeft: 10, position: "relative" }}>
+                <span style={{ position: "absolute", left: 0, color: "#059669" }}>{"\u2022"}</span>{t}
+              </li>
+            ))}
+          </ul>
+          <div style={{ fontSize: 9, color: "#64748b", marginTop: 6 }}>mobilizationfunding.com</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#059669", marginTop: 4 }}>Use for: Every job over $15,000</div>
+        </div>
+        {/* Layer 2 */}
+        <div style={{ background: "#fff", borderRadius: 10, padding: "16px 14px", border: "2px solid #2563eb", borderTop: "4px solid #2563eb" }}>
+          <div style={{ fontSize: 24, marginBottom: 4 }}>{"\ud83c\udfe6"}</div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: "#2563eb", marginBottom: 2 }}>Supplier Credit Lines — Already Active</div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Materials on net-30/60 terms</div>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {[
+              "Lines of credit already established \u2705",
+              "Ferguson HVAC, Johnstone Supply",
+              "$50K-$200K in materials on credit",
+              "Pay after client pays \u2014 zero upfront cost",
+              "Stack with Mobilization Funding on large jobs",
+            ].map((t, i) => (
+              <li key={i} style={{ fontSize: 10, color: "#334155", marginBottom: 3, paddingLeft: 10, position: "relative" }}>
+                <span style={{ position: "absolute", left: 0, color: "#2563eb" }}>{"\u2022"}</span>{t}
+              </li>
+            ))}
+          </ul>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#2563eb", marginTop: 8 }}>Use for: All material purchases</div>
+        </div>
+        {/* Layer 3 */}
+        <div style={{ background: "#fff", borderRadius: 10, padding: "16px 14px", border: "2px solid #ff6b35", borderTop: "4px solid #ff6b35" }}>
+          <div style={{ fontSize: 24, marginBottom: 4 }}>{"\ud83d\udcb3"}</div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: "#ff6b35", marginBottom: 2 }}>Acorn Finance — Customer Financing</div>
+          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Customer gets loan, you get paid in 48hrs</div>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            {[
+              "Free to set up as contractor \u2014 no monthly fees",
+              "Customer applies \u2192 gets approved in minutes",
+              "Acorn pays YOU directly in 1-2 business days",
+              "Customer pays Acorn monthly \u2014 not your problem",
+              "Increases close rates \u2014 removes price objection",
+              "0% APR promotional options available",
+            ].map((t, i) => (
+              <li key={i} style={{ fontSize: 10, color: "#334155", marginBottom: 3, paddingLeft: 10, position: "relative" }}>
+                <span style={{ position: "absolute", left: 0, color: "#ff6b35" }}>{"\u2022"}</span>{t}
+              </li>
+            ))}
+          </ul>
+          <div style={{ fontSize: 9, color: "#64748b", marginTop: 6 }}>acornfinance.com</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#ff6b35", marginTop: 4 }}>Use for: All residential jobs</div>
+        </div>
+      </div>
+
+      {/* Pursuit Lending */}
+      <div style={{ background: "#f8fafc", borderRadius: 10, padding: "12px 16px", border: "1px solid #cbd5e1", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 18 }}>{"\ud83d\udccb"}</span>
+          <span style={{ fontWeight: 800, fontSize: 13, color: "#1e3a5f" }}>Pursuit Lending — Government Contracts</span>
+          <span style={{ background: "#ff6b35", color: "#fff", borderRadius: 4, padding: "2px 8px", fontSize: 9, fontWeight: 700 }}>FOR FUTURE PUBLIC WORKS JOBS</span>
+        </div>
+        <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
+          Bridge to Success: up to $200K — NY State MWBE contracts. Contact: Manny Maysonet (838) 202-7181 / contractor@pursuitlending.com. 4-6 weeks to fund, Prime + 4% (8.75%). NOTE: Bridge to Success = NY State contracts only. PSE&G jobs = call Manny to confirm eligibility. Best use: when we win school/government HVAC contracts.
+        </div>
+      </div>
+
+      {/* How a typical PSE&G job gets financed */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 10 }}>How a Typical PSE&G Job Gets Financed</h3>
+          {[
+            "Win PSE&G Clean Heat job ($40K-$50K contract)",
+            "Apply to Mobilization Funding with signed contract \u2192 Receive 75% = $30K-$37K within days",
+            "Use supplier credit line for remaining materials \u2192 $0 out of pocket",
+            "Complete installation (2-3 weeks)",
+            "PSE&G inspection + approval",
+            "PSE&G pays ($16K-$18K rebate direct to us) + Customer pays remaining balance",
+            "Repay Mobilization Funding from proceeds",
+            "NET PROFIT: $8K-$15K per job, zero cash invested",
+          ].map((t, i) => (
+            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
+              <div style={{
+                minWidth: 22, height: 22, borderRadius: "50%",
+                background: i === 7 ? "#059669" : "#ff6b35",
+                color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 700, fontSize: 10, flexShrink: 0,
+              }}>{i + 1}</div>
+              <p style={{ fontSize: 10, color: "#334155", margin: 0, paddingTop: 3, fontWeight: i === 7 ? 800 : 400 }}>{t}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Scale projection */}
+        <div style={{ background: "#0f2744", borderRadius: 10, padding: "18px 16px", color: "#fff" }}>
+          <h3 style={{ fontSize: 14, fontWeight: 700, color: "#ff6b35", marginBottom: 14, textAlign: "center" }}>What This Model Enables</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+            {[
+              { big: "3 jobs/week", sub: "With financing stack", detail: "= $87,500/month" },
+              { big: "$0 upfront", sub: "Materials on credit", detail: "Mobilization covers labor" },
+              { big: "$450K+", sub: "Annual profit", detail: "After all financing costs" },
+            ].map(s => (
+              <div key={s.big} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "#ff6b35" }}>{s.big}</div>
+                <div style={{ fontSize: 9, color: "rgba(255,255,255,.7)", marginTop: 2 }}>{s.sub}</div>
+                <div style={{ fontSize: 9, color: "rgba(255,255,255,.5)", marginTop: 2 }}>{s.detail}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{
+            background: "rgba(255,107,53,.2)", borderRadius: 8, padding: "10px 12px",
+            border: "1px solid rgba(255,107,53,.3)", textAlign: "center",
+          }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: "#ff6b35", margin: 0, lineHeight: 1.5 }}>
+              We don't need cash to grow.<br />We need signed contracts.<br />The financing follows the contract.
+            </p>
+          </div>
+        </div>
+      </div>
+    </Slide>
+  );
+}
+
+/* ================================================================
+   SLIDE 16 — ACTIVE PIPELINE
+   ================================================================ */
+function Slide16() {
   const contracts = [
     {
       border: "#1e3a5f",
@@ -1082,9 +1237,9 @@ function Slide15() {
 }
 
 /* ================================================================
-   SLIDE 16 — 5-YEAR PATH
+   SLIDE 17 — 5-YEAR PATH
    ================================================================ */
-function Slide16() {
+function Slide17() {
   const years = [
     { year: "2026", label: "EXECUTE ON PIPELINE", color: "#ff6b35", revenue: "$4M-$5M", highlight: "\u26a1 $3M COMMITTED + 3-5 installers", milestones: [
       "3-5 installers \u00d7 $350K = $1.05M-$1.75M new", "$3M committed pipeline \u2014 Q2-Q3 2026",
@@ -1212,7 +1367,7 @@ function Slide16() {
 /* ================================================================
    SLIDES ARRAY
    ================================================================ */
-const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14, Slide15, Slide16];
+const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14, Slide15, Slide16, Slide17];
 
 /* ================================================================
    MAIN PRESENTATION COMPONENT
