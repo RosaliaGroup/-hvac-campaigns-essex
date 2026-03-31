@@ -26,10 +26,10 @@ const CAREERS_URL = `${BASE}/careers`;
 const COURSES_URL = `${BASE}/courses`;
 const PARTNERSHIPS_URL = `${BASE}/partnerships#apply`;
 /* ── Stripe payment links (placeholders — replace with real links) ── */
-const STRIPE_RESIDENTIAL_STANDARD = "https://buy.stripe.com/RESIDENTIAL_STANDARD";
-const STRIPE_RESIDENTIAL_EMERGENCY = "https://buy.stripe.com/RESIDENTIAL_EMERGENCY";
-const STRIPE_COMMERCIAL_STANDARD = "https://buy.stripe.com/COMMERCIAL_STANDARD";
-const STRIPE_COMMERCIAL_EMERGENCY = "https://buy.stripe.com/COMMERCIAL_EMERGENCY";
+const STRIPE_RESIDENTIAL_STANDARD = "https://buy.stripe.com/7sY8wIcuM0hz7M17I40oM03";
+const STRIPE_RESIDENTIAL_EMERGENCY = "https://buy.stripe.com/aFaeV6dyQ1lDgix1jG0oM02";
+const STRIPE_COMMERCIAL_STANDARD = "https://buy.stripe.com/8x2aEQ3Yg7K14zP5zW0oM01";
+const STRIPE_COMMERCIAL_EMERGENCY = "https://buy.stripe.com/5kQaEQfGYaWd9U90fC0oM00";
 
 const LEAD_FORM_THRESHOLD = 3;
 const AUTO_OPEN_MS = 8_000;
