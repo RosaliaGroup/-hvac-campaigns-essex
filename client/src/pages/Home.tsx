@@ -257,6 +257,11 @@ export default function Home() {
                     Residential Campaigns <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
+                <a href="https://mechanicalenterprise.com/rebate-calculator" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="w-full border-[#ff6b35] text-[#ff6b35] hover:bg-[#ff6b35]/10">
+                    🏠 Rebate Calculator — Up to $16K
+                  </Button>
+                </a>
               </CardContent>
             </Card>
 
@@ -281,6 +286,11 @@ export default function Home() {
                     Commercial Campaigns <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
+                <a href="https://mechanicalenterprise.com/commercial#rebate-calculator" target="_blank" rel="noopener noreferrer">
+                  <Button variant="outline" className="w-full border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/10">
+                    🏢 Commercial Rebates — Up to 80%
+                  </Button>
+                </a>
               </CardContent>
             </Card>
           </div>
