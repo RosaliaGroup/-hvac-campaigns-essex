@@ -53,6 +53,7 @@ import AssessmentSubmissions from "./pages/AssessmentSubmissions";
 import Courses from "./pages/Courses";
 import CourseDetail from "./pages/CourseDetail";
 import LiveChatWidget from "./components/LiveChatWidget";
+import CompetitorPage from "./pages/CompetitorPage";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -104,6 +105,12 @@ function Router() {
       <Route path={"/rebate-calc"} component={RebateCalculator} />
       <Route path={"/courses"} component={Courses} />
       <Route path={"/courses/:id"} component={CourseDetail} />
+
+      {/* Competitor comparison pages — SEO conquest */}
+      <Route path={"/vs-aj-perri"} component={() => <CompetitorPage competitor="A.J. Perri" slug="aj-perri" />} />
+      <Route path={"/vs-gold-medal-service"} component={() => <CompetitorPage competitor="Gold Medal Service" slug="gold-medal-service" />} />
+      <Route path={"/vs-horizon-services"} component={() => <CompetitorPage competitor="Horizon Services" slug="horizon-services" />} />
+      <Route path={"/vs-hutchinson"} component={() => <CompetitorPage competitor="Hutchinson" slug="hutchinson" />} />
 
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />
