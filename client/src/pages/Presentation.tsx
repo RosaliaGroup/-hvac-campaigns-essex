@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const PASSWORD = "mechanicalenterprise2026";
-const TOTAL_SLIDES = 12;
+const TOTAL_SLIDES = 13;
 
 /* ================================================================
    PASSWORD GATE
@@ -250,7 +250,7 @@ function Slide2() {
           "Lead Scoring System",
           "Assessment Submissions",
           "Campaign Performance",
-          "HubSpot CRM integration",
+          "ServiceTitan CRM integration",
         ]} />
       </div>
     </Slide>
@@ -626,7 +626,7 @@ function Slide10() {
       "Add Central NJ + Shore area pages",
       "Email nurture sequence for leads",
       "Launch courses \u2014 first paid enrollment",
-      "HubSpot full CRM integration",
+      "ServiceTitan full integration",
     ]},
     { title: "Month 3 \u2014 SCALE", color: "#059669", items: [
       "50 Google reviews \u2014 map pack top 3",
@@ -677,8 +677,8 @@ function Slide11() {
             ["Netlify Hosting", "$0-45/month"],
             ["Vapi AI Calls", "~$100/month"],
             ["Stripe Fees", "2.9% revenue"],
-            ["HubSpot CRM", "TBD"],
-            ["Total Tech Stack", "<$500/month"],
+            ["ServiceTitan", "~$400/month"],
+            ["Total Tech Stack", "~$650/month"],
           ]} />
         </div>
         <div>
@@ -714,37 +714,159 @@ function Slide11() {
 }
 
 /* ================================================================
-   SLIDE 12 — CONCLUSION
+   SLIDE 12 — SERVICETITAN INTEGRATION
    ================================================================ */
 function Slide12() {
+  const benefits = [
+    { emoji: "\ud83d\udccb", title: "Job Management", color: "#1e3a5f", text: "Every lead, booking, and job tracked in one place. Dispatch, scheduling, and technician management. Real-time job status visible to the whole team. Integrates directly with our booking system." },
+    { emoji: "\ud83d\udcb0", title: "Revenue Tracking", color: "#ff6b35", text: "Every invoice, payment, and job value tracked. Stripe payments sync with ServiceTitan records. Know your revenue, margins, and top technicians at any moment. Essential for scaling to 8 figures." },
+    { emoji: "\ud83d\udcca", title: "Performance Analytics", color: "#7c3aed", text: "Track close rates, average job value, lead sources. Know which marketing channels drive most revenue. Identify top performers and underperforming areas. Data-driven decisions at every level." },
+    { emoji: "\ud83d\udd17", title: "Platform Integration", color: "#059669", text: "ServiceTitan + Jessica AI + Stripe + our website = fully automated lead-to-payment pipeline. Customer books \u2192 ServiceTitan creates job \u2192 Tech dispatched \u2192 Invoice sent \u2192 Payment collected. Zero manual data entry." },
+  ];
+
   return (
-    <Slide bg="linear-gradient(135deg, #1e3a5f 0%, #0f2744 100%)">
-      <div style={{ textAlign: "center", color: "#fff" }}>
-        <h1 style={{ fontSize: 48, fontWeight: 800, marginBottom: 8 }}>The Infrastructure is Built</h1>
-        <p style={{ fontSize: 24, color: "rgba(255,255,255,.7)", marginBottom: 48 }}>Now We Execute</p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 600, margin: "0 auto 48px" }}>
-          {[
-            "116 SEO pages live and indexing",
-            "AI + payments + email fully automated",
-            "NJ rebate window open \u2014 competitors sleeping",
-          ].map(t => (
-            <div key={t} style={{
-              fontSize: 20, fontWeight: 700, color: "#fff",
-              background: "rgba(255,255,255,.1)", borderRadius: 8, padding: "14px 20px",
-              border: "1px solid rgba(255,255,255,.15)",
-            }}>{t}</div>
+    <Slide>
+      <SH sub="">ServiceTitan \u2014 The Operating System for Scale</SH>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 28 }}>
+        {benefits.map(b => (
+          <div key={b.title} style={{
+            background: "#fff", borderRadius: 12, padding: 20,
+            border: "1px solid #e2e8f0", borderLeft: `5px solid ${b.color}`,
+          }}>
+            <div style={{ fontSize: 28, marginBottom: 6 }}>{b.emoji}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: b.color, marginBottom: 8 }}>{b.title}</div>
+            <p style={{ fontSize: 13, color: "#475569", margin: 0, lineHeight: 1.6 }}>{b.text}</p>
+          </div>
+        ))}
+      </div>
+      <div style={{
+        background: "#fff7ed", border: "2px solid #ff6b35", borderRadius: 12,
+        padding: "20px 24px", textAlign: "center",
+      }}>
+        <p style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", margin: 0 }}>
+          Industry data: HVAC companies using ServiceTitan report average revenue increase of <span style={{ color: "#ff6b35" }}>23% in year 1</span> and technician productivity gains of <span style={{ color: "#ff6b35" }}>20-30%</span>.
+        </p>
+      </div>
+    </Slide>
+  );
+}
+
+/* ================================================================
+   SLIDE 13 — 5-YEAR PATH TO 8 FIGURES
+   ================================================================ */
+function Slide13() {
+  const years = [
+    { year: "2026", label: "BUILD THE MACHINE", color: "#ff6b35", revenue: "$1.5M-$2.4M", milestones: [
+      "116 SEO pages ranking", "20+ leads/week from organic", "Google Ads generating 25+ leads/week",
+      "50 Google reviews \u2014 map pack top 3", "2-3 installation technicians", "ServiceTitan fully integrated",
+      "First commercial VRV/VRF jobs closed", "Courses platform generating revenue", "BPI certification secured",
+    ], foundation: "Digital infrastructure live, payments automated, AI handling 24/7" },
+    { year: "2027", label: "DOMINATE LOCAL MARKET", color: "#2563eb", revenue: "$3M-$5M", milestones: [
+      "200+ SEO pages (add Central NJ, Shore)", "#1 map pack for NJ HVAC searches",
+      "5-7 installation technicians", "Commercial pipeline: 2-3 VRF jobs/month",
+      "Maintenance subscription: 500+ members", "Courses: 1,000+ enrolled students",
+      "Partnership network: 50+ active referrers", "Carrier/Trane/Lennox preferred dealer status",
+      "Average job value: $12,000+",
+    ], foundation: "Brand authority established, recurring revenue streams active" },
+    { year: "2028", label: "EXPAND GEOGRAPHY", color: "#7c3aed", revenue: "$5M-$7M", milestones: [
+      "Expand to Central NJ (full coverage)", "Shore area HVAC market penetration",
+      "10-15 technicians across NJ", "Second service hub (Central NJ)",
+      "Commercial: target multi-family/apartments", "Government contracts (WMBE/SBE advantage)",
+      "Courses: industry-recognized certification", "1,000+ Google reviews", "Revenue per technician: $400K+",
+    ], foundation: "Multi-location operations, government contract pipeline" },
+    { year: "2029", label: "VERTICAL INTEGRATION", color: "#059669", revenue: "$7M-$9M", milestones: [
+      "Launch HVAC equipment supply/distribution", "Franchise model development",
+      "Training center physical location", "20+ technicians",
+      "Commercial accounts: hospitals, schools, government buildings",
+      "Private label maintenance products", "Acquire 1-2 smaller NJ HVAC companies",
+      "Real estate HVAC partnership program",
+    ], foundation: "Beyond service \u2014 becoming an HVAC ecosystem company" },
+    { year: "2030", label: "8 FIGURES", color: "#dc2626", revenue: "$10M-$15M", milestones: [
+      "NJ market leadership position", "Franchise: 3-5 licensed locations",
+      "Courses platform: national reach", "Equipment distribution revenue stream",
+      "30+ employees", "EBITDA margin: 15-20%",
+      "Strategic acquisition target OR private equity interest",
+      'Brand: "The NJ Heat Pump Company"',
+    ], foundation: "Multiple revenue streams, defensible market position, acquisition-ready infrastructure" },
+  ];
+
+  const reasons = [
+    { emoji: "\ud83c\udfd7\ufe0f", title: "Infrastructure Already Built", text: "Most companies spend years building what we built in 30 days. We start at year 3 of most competitors' journey." },
+    { emoji: "\ud83d\udcc8", title: "Market Tailwind", text: "Heat pump market growing 9.85% annually. NJ mandating electrification. Rebates creating urgency. We're in the right market at the right time." },
+    { emoji: "\ud83e\udd16", title: "AI Advantage", text: "Jessica AI scales without headcount. Every new lead costs us less per unit. Competitors can't replicate this quickly." },
+    { emoji: "\ud83d\udcda", title: "Courses = Defensible Moat", text: "Industry training creates brand authority, recurring revenue, and a pipeline of certified technicians who know our systems." },
+    { emoji: "\ud83c\udfc6", title: "WMBE/SBE Certification", text: "Government contracts, diversity supplier programs, and preferred vendor status create revenue streams unavailable to most HVAC competitors." },
+  ];
+
+  return (
+    <Slide bg="linear-gradient(135deg, #0f2744 0%, #1e3a5f 100%)">
+      <div style={{ color: "#fff" }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>From $0 to 8 Figures \u2014 The Roadmap</h1>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,.7)", marginTop: 8 }}>How Mechanical Enterprise reaches $10M+ by 2030</p>
+        </div>
+
+        {/* Timeline */}
+        <div style={{ display: "flex", gap: 12, marginBottom: 32, overflowX: "auto" }}>
+          {years.map(y => (
+            <div key={y.year} style={{
+              flex: "1 1 0", minWidth: 190, background: "rgba(255,255,255,.07)",
+              borderRadius: 10, padding: "16px 14px", borderTop: `4px solid ${y.color}`,
+            }}>
+              <div style={{ fontWeight: 800, fontSize: 14, color: y.color }}>{y.year}</div>
+              <div style={{ fontWeight: 700, fontSize: 11, color: "rgba(255,255,255,.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>{y.label}</div>
+              <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", marginBottom: 8 }}>{y.revenue}</div>
+              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 8px 0" }}>
+                {y.milestones.slice(0, 5).map((m, i) => (
+                  <li key={i} style={{ fontSize: 10, color: "rgba(255,255,255,.75)", marginBottom: 3, paddingLeft: 10, position: "relative" }}>
+                    <span style={{ position: "absolute", left: 0, color: y.color }}>&#8226;</span>{m}
+                  </li>
+                ))}
+                {y.milestones.length > 5 && (
+                  <li style={{ fontSize: 10, color: "rgba(255,255,255,.5)", paddingLeft: 10 }}>+{y.milestones.length - 5} more milestones</li>
+                )}
+              </ul>
+              <div style={{ fontSize: 9, color: "rgba(255,255,255,.5)", fontStyle: "italic", borderTop: "1px solid rgba(255,255,255,.1)", paddingTop: 6 }}>
+                {y.foundation}
+              </div>
+            </div>
           ))}
         </div>
-        <div style={{
-          display: "inline-block", background: "#ff6b35", borderRadius: 10,
-          padding: "14px 32px", fontSize: 20, fontWeight: 800, marginBottom: 48,
-        }}>
-          Target: $3.6M annual revenue by Q4 2026
+
+        {/* What makes this achievable */}
+        <div style={{ marginBottom: 24 }}>
+          <h3 style={{ fontSize: 16, fontWeight: 700, color: "#ff6b35", textAlign: "center", marginBottom: 16 }}>WHAT MAKES THIS ACHIEVABLE</h3>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+            {reasons.map(r => (
+              <div key={r.title} style={{
+                background: "rgba(255,255,255,.06)", borderRadius: 8, padding: "12px 10px",
+                border: "1px solid rgba(255,255,255,.1)",
+              }}>
+                <div style={{ fontSize: 20, marginBottom: 4 }}>{r.emoji}</div>
+                <div style={{ fontWeight: 700, fontSize: 11, color: "#ff6b35", marginBottom: 4 }}>{r.title}</div>
+                <p style={{ fontSize: 10, color: "rgba(255,255,255,.7)", margin: 0, lineHeight: 1.5 }}>{r.text}</p>
+              </div>
+            ))}
+          </div>
         </div>
-        <div style={{ borderTop: "1px solid rgba(255,255,255,.2)", paddingTop: 32 }}>
-          <div style={{ fontSize: 28, marginBottom: 8 }}>&#9881;&#65039;</div>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Mechanical Enterprise LLC</div>
-          <div style={{ display: "flex", justifyContent: "center", gap: 32, flexWrap: "wrap", fontSize: 14, color: "rgba(255,255,255,.8)" }}>
+
+        {/* Bottom quote */}
+        <div style={{
+          textAlign: "center", padding: "16px 24px",
+          background: "rgba(255,107,53,.15)", borderRadius: 10, border: "1px solid rgba(255,107,53,.3)",
+        }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: "#ff6b35", margin: 0, lineHeight: 1.6 }}>
+            The question is not whether this is possible.<br />
+            The infrastructure is built. The market is moving our way.<br />
+            The question is: how fast do we execute?
+          </p>
+        </div>
+
+        {/* Contact footer */}
+        <div style={{ textAlign: "center", marginTop: 24, borderTop: "1px solid rgba(255,255,255,.15)", paddingTop: 20 }}>
+          <div style={{ fontSize: 22, marginBottom: 4 }}>&#9881;&#65039;</div>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Mechanical Enterprise LLC</div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap", fontSize: 12, color: "rgba(255,255,255,.7)" }}>
             <span>&#128222; (862) 419-1763</span>
             <span>&#128231; sales@mechanicalenterprise.com</span>
             <span>&#127760; mechanicalenterprise.com</span>
@@ -758,7 +880,7 @@ function Slide12() {
 /* ================================================================
    SLIDES ARRAY
    ================================================================ */
-const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12];
+const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13];
 
 /* ================================================================
    MAIN PRESENTATION COMPONENT
