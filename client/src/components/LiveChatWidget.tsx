@@ -25,6 +25,12 @@ const REBATE_URL = `${BASE}/rebate-calculator`;
 const CAREERS_URL = `${BASE}/careers`;
 const COURSES_URL = `${BASE}/courses`;
 const PARTNERSHIPS_URL = `${BASE}/partnerships#apply`;
+/* ── Stripe payment links (placeholders — replace with real links) ── */
+const STRIPE_RESIDENTIAL_STANDARD = "https://buy.stripe.com/RESIDENTIAL_STANDARD";
+const STRIPE_RESIDENTIAL_EMERGENCY = "https://buy.stripe.com/RESIDENTIAL_EMERGENCY";
+const STRIPE_COMMERCIAL_STANDARD = "https://buy.stripe.com/COMMERCIAL_STANDARD";
+const STRIPE_COMMERCIAL_EMERGENCY = "https://buy.stripe.com/COMMERCIAL_EMERGENCY";
+
 const LEAD_FORM_THRESHOLD = 3;
 const AUTO_OPEN_MS = 8_000;
 const AUTO_OPEN_KEY = "me_chat_auto_opened";
@@ -172,18 +178,20 @@ export default function LiveChatWidget() {
   const [svcPhone, setSvcPhone] = useState("");
   const [svcEmail, setSvcEmail] = useState("");
   const [svcAddress, setSvcAddress] = useState("");
-  const [svcType, setSvcType] = useState("Repair");
+  const [svcType, setSvcType] = useState("AC Repair");
   const [svcEmergency, setSvcEmergency] = useState(false);
   const [svcDate, setSvcDate] = useState("");
   const [svcMessage, setSvcMessage] = useState("");
   const [svcSubmitting, setSvcSubmitting] = useState(false);
   const [svcSubmitted, setSvcSubmitted] = useState(false);
+  const [svcValidationError, setSvcValidationError] = useState(false);
   // Commercial-only fields
   const [svcCompany, setSvcCompany] = useState("");
-  const [svcPropertyType, setSvcPropertyType] = useState("Office");
-  const [svcSqft, setSvcSqft] = useState("Under 2,000");
-  const [svcUnits, setSvcUnits] = useState("");
+  const [svcPropertyType, setSvcPropertyType] = useState("Office Building");
+  const [svcSqft, setSvcSqft] = useState("Under 2,000 sq ft");
+  const [svcFloors, setSvcFloors] = useState("");
   const [svcCurrentSystem, setSvcCurrentSystem] = useState("Unknown");
+  const [svcServiceNeeded, setSvcServiceNeeded] = useState("Repair");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -217,9 +225,10 @@ export default function LiveChatWidget() {
     setMessages([{ role: "assistant", text: GREETING }]);
     setShowForm(false); setPendingBooking(false); setUserMsgCount(0); setFreetextCount(0);
     setSvcSubmitted(false); setSvcName(""); setSvcPhone(""); setSvcEmail("");
-    setSvcAddress(""); setSvcType("Repair"); setSvcEmergency(false); setSvcDate("");
-    setSvcMessage(""); setSvcCompany(""); setSvcPropertyType("Office");
-    setSvcSqft("Under 2,000"); setSvcUnits(""); setSvcCurrentSystem("Unknown");
+    setSvcAddress(""); setSvcType("AC Repair"); setSvcEmergency(false); setSvcDate("");
+    setSvcMessage(""); setSvcCompany(""); setSvcPropertyType("Office Building");
+    setSvcSqft("Under 2,000 sq ft"); setSvcFloors(""); setSvcCurrentSystem("Unknown");
+    setSvcServiceNeeded("Repair"); setSvcValidationError(false);
   }, []);
 
   /* ── main menu click ───────────────────────────────────────────── */
@@ -344,30 +353,74 @@ export default function LiveChatWidget() {
     setMessages((p) => [...p, { role: "assistant", text: `Thanks, ${formName.trim()}! We'll reach out shortly. Anything else I can help with?` }]);
   };
 
-  /* ── submit service booking form ───────────────────────────────── */
-  const submitServiceForm = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!svcName.trim() || !svcPhone.trim() || !svcEmail.trim() || !svcAddress.trim()) return;
+  /* ── validate service form ──────────────────────────────────────── */
+  const isValidPhone = (p: string) => /^[\d\s()+-]{7,}$/.test(p.trim());
+  const isValidEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim());
+
+  const validateServiceForm = (): boolean => {
+    if (!svcName.trim() || !svcPhone.trim() || !svcEmail.trim() || !svcAddress.trim()) return false;
+    if (!isValidPhone(svcPhone)) return false;
+    if (!isValidEmail(svcEmail)) return false;
+    if (isCommercial && !svcCompany.trim()) return false;
+    return true;
+  };
+
+  /* ── build service form summary ──────────────────────────────── */
+  const buildServiceSummary = (): string => {
+    const lines = [
+      `Name: ${svcName.trim()}`,
+      `Phone: ${svcPhone.trim()}`,
+      `Email: ${svcEmail.trim()}`,
+      `Address: ${svcAddress.trim()}`,
+    ];
+    if (isCommercial) {
+      lines.push(`Company: ${svcCompany.trim()}`);
+      lines.push(`Property Type: ${svcPropertyType}`);
+      lines.push(`Square Footage: ${svcSqft}`);
+      if (svcFloors) lines.push(`Floors: ${svcFloors}`);
+      lines.push(`Current HVAC: ${svcCurrentSystem}`);
+      lines.push(`Service Needed: ${svcServiceNeeded}`);
+    } else {
+      lines.push(`Service Type: ${svcType}`);
+    }
+    lines.push(`Emergency: ${svcEmergency ? "Yes" : "No"}`);
+    if (svcDate) lines.push(`Preferred Date: ${svcDate}`);
+    if (svcMessage.trim()) lines.push(`Details: ${svcMessage.trim()}`);
+    lines.push(`Price: ${svcEmergency ? emergencyPrice : regularPrice} flat rate`);
+    return lines.join("\n");
+  };
+
+  /* ── submit service form + open Stripe ────────────────────────── */
+  const handlePayAndBook = async () => {
+    if (!validateServiceForm()) {
+      setSvcValidationError(true);
+      setTimeout(() => setSvcValidationError(false), 600);
+      return;
+    }
     setSvcSubmitting(true);
 
-    const payload: Record<string, string | boolean> = {
-      name: svcName.trim(), phone: svcPhone.trim(), caller_email: svcEmail.trim(),
-      address: svcAddress.trim(), service_type: svcType, is_emergency: svcEmergency,
-      preferred_date: svcDate, message: svcMessage.trim(),
-      category: isCommercial ? "commercial" : "residential",
+    const appointmentType = isCommercial ? "Commercial Service Call" : "Residential Service Call";
+    const payload = {
+      caller_name: svcName.trim(),
+      caller_phone: svcPhone.trim(),
+      caller_email: svcEmail.trim(),
+      appointment_type: appointmentType,
+      call_summary: buildServiceSummary(),
+      outcome: "booked",
+      transcript: messages.map((m) => `${m.role === "user" ? "Visitor" : "Jessica"}: ${m.text}`).join("\n"),
     };
-    if (isCommercial) {
-      payload.company_name = svcCompany.trim();
-      payload.property_type = svcPropertyType;
-      payload.square_footage = svcSqft;
-      payload.units_floors = svcUnits;
-      payload.current_system = svcCurrentSystem;
-    }
-
-    const transcript = messages.map((m) => `${m.role === "user" ? "Visitor" : "Jessica"}: ${m.text}`).join("\n");
-    payload.transcript = transcript;
 
     try { await fetch("/.netlify/functions/sendCallRecap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch {}
+
+    // Open Stripe payment link
+    let stripeUrl: string;
+    if (isCommercial) {
+      stripeUrl = svcEmergency ? STRIPE_COMMERCIAL_EMERGENCY : STRIPE_COMMERCIAL_STANDARD;
+    } else {
+      stripeUrl = svcEmergency ? STRIPE_RESIDENTIAL_EMERGENCY : STRIPE_RESIDENTIAL_STANDARD;
+    }
+    window.open(stripeUrl, "_blank", "noopener");
+
     setSvcSubmitting(false); setSvcSubmitted(true);
     setMenuLevel("none");
     setMessages((p) => [...p, { role: "assistant", text: `✅ Booked! We'll confirm within 1 hour. Questions? Call ${PHONE}` }]);
@@ -498,61 +551,85 @@ export default function LiveChatWidget() {
 
             {/* ── INLINE SERVICE BOOKING FORM ────────────────────── */}
             {menuLevel === "service-form" && !isTyping && !svcSubmitted && (
-              <div style={formCardStyle}>
-                <div style={{ fontWeight: 600, fontSize: 14, color: NAVY, marginBottom: 4 }}>
+              <div style={{ ...formCardStyle, animation: svcValidationError ? "me-shake 0.4s" : undefined }}>
+                <div style={{ fontWeight: 600, fontSize: 15, color: NAVY, marginBottom: 2 }}>
                   {isCommercial ? "Book Commercial Service" : "Book Service Call"}
                 </div>
-                {svcEmergency && (
-                  <div style={{ fontSize: 13, color: "#d63c3c", fontWeight: 600, marginBottom: 8 }}>
-                    Emergency rate: {emergencyPrice} flat
+                {svcEmergency ? (
+                  <div style={{ fontSize: 13, color: "#d63c3c", fontWeight: 600, marginBottom: 10 }}>
+                    🚨 Emergency Rate: {emergencyPrice} flat — 2-4 hr response
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>
+                    ✅ Standard Rate: {regularPrice} flat — scheduled appointment
                   </div>
                 )}
-                {!svcEmergency && (
-                  <div style={{ fontSize: 13, color: "#666", marginBottom: 8 }}>
-                    Service rate: {regularPrice} flat — no hourly fees
-                  </div>
-                )}
-                <form onSubmit={submitServiceForm} style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <input type="text" placeholder="Full Name" value={svcName} onChange={(e) => setSvcName(e.target.value)} required style={inputFieldStyle} {...focusBorder} />
-                  <input type="tel" placeholder="Phone" value={svcPhone} onChange={(e) => setSvcPhone(e.target.value)} required style={inputFieldStyle} {...focusBorder} />
-                  <input type="email" placeholder="Email" value={svcEmail} onChange={(e) => setSvcEmail(e.target.value)} required style={inputFieldStyle} {...focusBorder} />
-                  <input type="text" placeholder="Service Address" value={svcAddress} onChange={(e) => setSvcAddress(e.target.value)} required style={inputFieldStyle} {...focusBorder} />
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {/* Required fields with * */}
+                  <input type="text" placeholder="Full Name *" value={svcName} onChange={(e) => setSvcName(e.target.value)}
+                    style={{ ...inputFieldStyle, borderColor: svcValidationError && !svcName.trim() ? "#d63c3c" : "#ddd" }} {...focusBorder} />
+                  <input type="tel" placeholder="Phone *" value={svcPhone} onChange={(e) => setSvcPhone(e.target.value)}
+                    style={{ ...inputFieldStyle, borderColor: svcValidationError && (!svcPhone.trim() || !isValidPhone(svcPhone)) ? "#d63c3c" : "#ddd" }} {...focusBorder} />
+                  <input type="email" placeholder="Email *" value={svcEmail} onChange={(e) => setSvcEmail(e.target.value)}
+                    style={{ ...inputFieldStyle, borderColor: svcValidationError && (!svcEmail.trim() || !isValidEmail(svcEmail)) ? "#d63c3c" : "#ddd" }} {...focusBorder} />
+                  <input type="text" placeholder={isCommercial ? "Property Address *" : "Home Address *"} value={svcAddress} onChange={(e) => setSvcAddress(e.target.value)}
+                    style={{ ...inputFieldStyle, borderColor: svcValidationError && !svcAddress.trim() ? "#d63c3c" : "#ddd" }} {...focusBorder} />
 
+                  {/* ── Commercial-only fields ──────────────────────── */}
                   {isCommercial && (
                     <>
-                      <input type="text" placeholder="Company Name" value={svcCompany} onChange={(e) => setSvcCompany(e.target.value)} style={inputFieldStyle} {...focusBorder} />
+                      <input type="text" placeholder="Company Name *" value={svcCompany} onChange={(e) => setSvcCompany(e.target.value)}
+                        style={{ ...inputFieldStyle, borderColor: svcValidationError && !svcCompany.trim() ? "#d63c3c" : "#ddd" }} {...focusBorder} />
                       <select value={svcPropertyType} onChange={(e) => setSvcPropertyType(e.target.value)} style={selectStyle} {...focusBorder}>
-                        {["Office", "Retail", "Restaurant", "Healthcare", "Warehouse", "Other"].map((o) => <option key={o}>{o}</option>)}
+                        {["Office Building", "Retail Store", "Restaurant", "Healthcare Facility", "Warehouse", "Industrial", "Multi-Family", "Other"].map((o) => <option key={o}>{o}</option>)}
                       </select>
                       <select value={svcSqft} onChange={(e) => setSvcSqft(e.target.value)} style={selectStyle} {...focusBorder}>
-                        {["Under 2,000", "2,000-5,000", "5,000-10,000", "10,000-50,000", "50,000+"].map((o) => <option key={o}>{o}</option>)}
+                        {["Under 2,000 sq ft", "2,000 – 5,000 sq ft", "5,000 – 10,000 sq ft", "10,000 – 25,000 sq ft", "25,000 – 50,000 sq ft", "50,000+ sq ft"].map((o) => <option key={o}>{o}</option>)}
                       </select>
-                      <input type="number" placeholder="Number of Units/Floors" value={svcUnits} onChange={(e) => setSvcUnits(e.target.value)} style={inputFieldStyle} {...focusBorder} />
+                      <input type="number" placeholder="Number of Floors" min={1} value={svcFloors} onChange={(e) => setSvcFloors(e.target.value)} style={inputFieldStyle} {...focusBorder} />
                       <select value={svcCurrentSystem} onChange={(e) => setSvcCurrentSystem(e.target.value)} style={selectStyle} {...focusBorder}>
-                        {["VRV/VRF", "Chiller", "Rooftop Unit", "Split System", "Other", "Unknown"].map((o) => <option key={o}>{o}</option>)}
+                        {["VRV/VRF", "Chiller", "Rooftop Unit (RTU)", "Split System", "Boiler", "Fan Coil", "Unknown", "Other"].map((o) => <option key={o}>{o}</option>)}
+                      </select>
+                      <select value={svcServiceNeeded} onChange={(e) => setSvcServiceNeeded(e.target.value)} style={selectStyle} {...focusBorder}>
+                        {["Repair", "Emergency Repair", "Maintenance", "New Installation", "System Upgrade", "Inspection", "Other"].map((o) => <option key={o}>{o}</option>)}
                       </select>
                     </>
                   )}
 
-                  <select value={svcType} onChange={(e) => setSvcType(e.target.value)} style={selectStyle} {...focusBorder}>
-                    {["Repair", "Maintenance", "Installation", "Other"].map((o) => <option key={o}>{o}</option>)}
-                  </select>
+                  {/* ── Residential service type ───────────────────── */}
+                  {!isCommercial && (
+                    <select value={svcType} onChange={(e) => setSvcType(e.target.value)} style={selectStyle} {...focusBorder}>
+                      {["AC Repair", "Heating Repair", "Maintenance", "Installation", "No Heat", "No AC", "Strange Noise", "Leak", "Other"].map((o) => <option key={o}>{o}</option>)}
+                    </select>
+                  )}
 
+                  {/* ── Emergency toggle ────────────────────────────── */}
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: NAVY, cursor: "pointer" }}>
                     <input type="checkbox" checked={svcEmergency} onChange={(e) => setSvcEmergency(e.target.checked)} style={{ accentColor: ORANGE, width: 18, height: 18 }} />
                     Is this an emergency?
-                    {svcEmergency && <span style={{ color: "#d63c3c", fontWeight: 600 }}>({emergencyPrice})</span>}
                   </label>
 
-                  <input type="date" value={svcDate} onChange={(e) => setSvcDate(e.target.value)} style={inputFieldStyle} {...focusBorder} />
-                  <textarea placeholder="Message / details (optional)" value={svcMessage} onChange={(e) => setSvcMessage(e.target.value)} rows={2} style={{ ...inputFieldStyle, resize: "vertical" as const }} {...focusBorder} />
+                  <input type="date" placeholder="Preferred Date" value={svcDate} onChange={(e) => setSvcDate(e.target.value)} style={inputFieldStyle} {...focusBorder} />
+                  <textarea placeholder="Additional Details (optional)" value={svcMessage} onChange={(e) => setSvcMessage(e.target.value)} rows={2} style={{ ...inputFieldStyle, resize: "vertical" as const }} {...focusBorder} />
 
-                  <button type="submit" disabled={svcSubmitting}
-                    style={{ padding: "12px", background: ORANGE, color: "#fff", border: "none", borderRadius: 8, fontWeight: 600, fontSize: 15, cursor: svcSubmitting ? "wait" : "pointer", opacity: svcSubmitting ? 0.7 : 1, transition: "background 0.2s" }}
+                  {/* ── Price summary box ───────────────────────────── */}
+                  <div style={{ border: `2px solid ${ORANGE}`, borderRadius: 8, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 14, color: NAVY, fontWeight: 500 }}>
+                      {isCommercial ? "Commercial" : ""} {svcEmergency ? "Emergency" : "Service Call"}
+                    </span>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: NAVY }}>
+                      {svcEmergency ? emergencyPrice : regularPrice}
+                    </span>
+                  </div>
+
+                  {/* ── Pay & Book button ───────────────────────────── */}
+                  <button type="button" onClick={handlePayAndBook} disabled={svcSubmitting}
+                    style={{ padding: "14px", background: ORANGE, color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 16, cursor: svcSubmitting ? "wait" : "pointer", opacity: svcSubmitting ? 0.7 : 1, transition: "background 0.2s", width: "100%" }}
                     onMouseEnter={(e) => { if (!svcSubmitting) e.currentTarget.style.background = ORANGE_HOVER; }}
                     onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
-                  >{svcSubmitting ? "Submitting…" : "📅 Book Service Call"}</button>
-                </form>
+                  >{svcSubmitting ? "Processing…" : "💳 Pay & Confirm Booking"}</button>
+                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>Payment secures your appointment slot</div>
+                </div>
               </div>
             )}
 
@@ -602,6 +679,13 @@ export default function LiveChatWidget() {
         @keyframes me-bounce {
           0%, 60%, 100% { transform: translateY(0); }
           30% { transform: translateY(-4px); }
+        }
+        @keyframes me-shake {
+          0%, 100% { transform: translateX(0); }
+          20% { transform: translateX(-6px); }
+          40% { transform: translateX(6px); }
+          60% { transform: translateX(-4px); }
+          80% { transform: translateX(4px); }
         }
       `}</style>
     </>
