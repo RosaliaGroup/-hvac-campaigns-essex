@@ -474,26 +474,33 @@ function Slide7() {
           ["Commercial VRV/VRF (large)", "$150,000"],
         ]} />
       </div>
+      {/* Pipeline highlight */}
+      <div style={{
+        background: "#ff6b35", borderRadius: 10, padding: "14px 20px",
+        textAlign: "center", marginBottom: 20,
+      }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>&#9889; $3M ALREADY COMMITTED — Q2-Q3 2026</span>
+      </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
         {[
-          { title: "Conservative", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", leads: "20 leads/week, 20% close", installs: "4 installs/week \u00d7 $8,000 = $32,000/week", monthly: "$128,000", annual: "$1.5M+" },
-          { title: "Moderate", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", leads: "30 leads/week, 25% close", installs: "7-8 installs/week \u00d7 $10,000 = $75,000/week", monthly: "$300,000", annual: "$3.6M+" },
-          { title: "Aggressive", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", leads: "50 leads/week, 30% close", installs: "15 installs/week \u00d7 $12,000 = $180,000/week", monthly: "$720,000", annual: "$8.6M+" },
+          { title: "Conservative", subtitle: "Pipeline + 20 leads/week", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", line1: "$3M committed pipeline", line2: "+ $1.5M new inbound leads", total: "2026 Total: $4.5M+" },
+          { title: "Moderate", subtitle: "Pipeline + Google Ads + SEO", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", line1: "$3M committed pipeline", line2: "+ $3M new business", total: "2026 Total: $6M+" },
+          { title: "Aggressive", subtitle: "Pipeline + full marketing", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", line1: "$3M committed pipeline", line2: "+ $5M new business", total: "2026 Total: $8M+" },
         ].map(s => (
           <div key={s.title} style={{ background: s.bg, border: `2px solid ${s.border}`, borderRadius: 12, padding: 20 }}>
-            <div style={{ fontWeight: 800, fontSize: 16, color: s.color, marginBottom: 12 }}>{s.title}</div>
-            <div style={{ fontSize: 12, color: "#475569", marginBottom: 6 }}>{s.leads}</div>
-            <div style={{ fontSize: 12, color: "#475569", marginBottom: 12 }}>{s.installs}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#334155" }}>Monthly: {s.monthly}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: s.color, marginTop: 4 }}>Annual: {s.annual}</div>
+            <div style={{ fontWeight: 800, fontSize: 16, color: s.color, marginBottom: 4 }}>{s.title}</div>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 12 }}>{s.subtitle}</div>
+            <div style={{ fontSize: 13, color: "#334155", marginBottom: 4, fontWeight: 600 }}>{s.line1}</div>
+            <div style={{ fontSize: 13, color: "#475569", marginBottom: 12 }}>{s.line2}</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: s.color }}>{s.total}</div>
           </div>
         ))}
       </div>
       <div style={{
-        marginTop: 20, textAlign: "center", fontSize: 14, fontWeight: 700,
-        color: "#ff6b35", padding: "12px", background: "#fff7ed", borderRadius: 8, border: "1px solid #fed7aa",
+        marginTop: 20, textAlign: "center", fontSize: 13, fontWeight: 600,
+        color: "#475569", padding: "12px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0",
       }}>
-        "1 commercial VRV/VRF job = 10+ residential installs"
+        Pipeline confirmed as of March 2026. New inbound leads from digital infrastructure are additive to existing commitments.
       </div>
     </Slide>
   );
@@ -669,7 +676,7 @@ function Slide10() {
 function Slide11() {
   return (
     <Slide>
-      <SH sub="">Investment to Hit $3.6M Annual Revenue</SH>
+      <SH sub="">Investment to Scale on $3M Pipeline</SH>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, marginBottom: 28 }}>
         <div>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", marginBottom: 12 }}>Current Tech Stack Cost</h3>
@@ -677,8 +684,8 @@ function Slide11() {
             ["Netlify Hosting", "$0-45/month"],
             ["Vapi AI Calls", "~$100/month"],
             ["Stripe Fees", "2.9% revenue"],
-            ["ServiceTitan", "~$400/month"],
-            ["Total Tech Stack", "~$650/month"],
+            ["ServiceTitan CRM", "$1,300/month"],
+            ["Total Tech Stack", "~$1,500/month"],
           ]} />
         </div>
         <div>
@@ -695,11 +702,14 @@ function Slide11() {
         background: "#f0fdf4", border: "2px solid #bbf7d0", borderRadius: 12,
         padding: 24, textAlign: "center", marginBottom: 28,
       }}>
-        <h3 style={{ fontSize: 16, fontWeight: 700, color: "#166534", marginBottom: 8 }}>ROI Calculation</h3>
+        <h3 style={{ fontSize: 16, fontWeight: 700, color: "#166534", marginBottom: 8 }}>Tech Stack ROI</h3>
         <p style={{ fontSize: 14, color: "#166534", margin: 0 }}>
-          $5,000 ad spend &rarr; 25 leads &rarr; 6 installs &times; $10,000 avg = <strong>$60,000 revenue</strong>
+          $1,500/month tech stack on $3M confirmed pipeline = <strong>0.6% overhead</strong>
         </p>
-        <p style={{ fontSize: 22, fontWeight: 800, color: "#059669", marginTop: 8 }}>ROI: 12:1 on ad spend</p>
+        <p style={{ fontSize: 14, color: "#166534", marginTop: 4 }}>
+          Industry standard is 8-12% for tech/admin overhead
+        </p>
+        <p style={{ fontSize: 22, fontWeight: 800, color: "#059669", marginTop: 8 }}>Ad ROI: 12:1 on $5K/month spend</p>
       </div>
       <div>
         <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", marginBottom: 12 }}>Hiring Plan</h3>
@@ -756,32 +766,33 @@ function Slide12() {
    ================================================================ */
 function Slide13() {
   const years = [
-    { year: "2026", label: "BUILD THE MACHINE", color: "#ff6b35", revenue: "$1.5M-$2.4M", milestones: [
-      "116 SEO pages ranking", "20+ leads/week from organic", "Google Ads generating 25+ leads/week",
-      "50 Google reviews \u2014 map pack top 3", "2-3 installation technicians", "ServiceTitan fully integrated",
-      "First commercial VRV/VRF jobs closed", "Courses platform generating revenue", "BPI certification secured",
+    { year: "2026", label: "EXECUTE ON PIPELINE", color: "#ff6b35", revenue: "$5M-$8M", highlight: "\u26a1 $3M ALREADY COMMITTED \u2014 Q2-Q3 2026", milestones: [
+      "$3M in committed pipeline \u2014 Q2-Q3 2026", "116 SEO pages ranking \u2014 new inbound leads",
+      "Google Ads: 25+ additional leads/week", "50 Google reviews \u2014 map pack top 3",
+      "3-5 installation technicians hired", "ServiceTitan fully integrated ($1,300/month)",
+      "Commercial VRV/VRF jobs in pipeline", "Courses platform live and enrolling", "BPI certification secured",
     ], foundation: "Digital infrastructure live, payments automated, AI handling 24/7" },
-    { year: "2027", label: "DOMINATE LOCAL MARKET", color: "#2563eb", revenue: "$3M-$5M", milestones: [
+    { year: "2027", label: "DOMINATE LOCAL MARKET", color: "#2563eb", revenue: "$8M-$12M", highlight: "", milestones: [
       "200+ SEO pages (add Central NJ, Shore)", "#1 map pack for NJ HVAC searches",
       "5-7 installation technicians", "Commercial pipeline: 2-3 VRF jobs/month",
       "Maintenance subscription: 500+ members", "Courses: 1,000+ enrolled students",
       "Partnership network: 50+ active referrers", "Carrier/Trane/Lennox preferred dealer status",
       "Average job value: $12,000+",
     ], foundation: "Brand authority established, recurring revenue streams active" },
-    { year: "2028", label: "EXPAND GEOGRAPHY", color: "#7c3aed", revenue: "$5M-$7M", milestones: [
+    { year: "2028", label: "EXPAND GEOGRAPHY", color: "#7c3aed", revenue: "$12M-$16M", highlight: "", milestones: [
       "Expand to Central NJ (full coverage)", "Shore area HVAC market penetration",
       "10-15 technicians across NJ", "Second service hub (Central NJ)",
       "Commercial: target multi-family/apartments", "Government contracts (WMBE/SBE advantage)",
       "Courses: industry-recognized certification", "1,000+ Google reviews", "Revenue per technician: $400K+",
     ], foundation: "Multi-location operations, government contract pipeline" },
-    { year: "2029", label: "VERTICAL INTEGRATION", color: "#059669", revenue: "$7M-$9M", milestones: [
+    { year: "2029", label: "VERTICAL INTEGRATION", color: "#059669", revenue: "$16M-$22M", highlight: "", milestones: [
       "Launch HVAC equipment supply/distribution", "Franchise model development",
       "Training center physical location", "20+ technicians",
       "Commercial accounts: hospitals, schools, government buildings",
       "Private label maintenance products", "Acquire 1-2 smaller NJ HVAC companies",
       "Real estate HVAC partnership program",
     ], foundation: "Beyond service \u2014 becoming an HVAC ecosystem company" },
-    { year: "2030", label: "8 FIGURES", color: "#dc2626", revenue: "$10M-$15M", milestones: [
+    { year: "2030", label: "$25M+ REVENUE", color: "#dc2626", revenue: "$25M-$35M", highlight: "", milestones: [
       "NJ market leadership position", "Franchise: 3-5 licensed locations",
       "Courses platform: national reach", "Equipment distribution revenue stream",
       "30+ employees", "EBITDA margin: 15-20%",
@@ -802,8 +813,8 @@ function Slide13() {
     <Slide bg="linear-gradient(135deg, #0f2744 0%, #1e3a5f 100%)">
       <div style={{ color: "#fff" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>From $0 to 8 Figures \u2014 The Roadmap</h1>
-          <p style={{ fontSize: 16, color: "rgba(255,255,255,.7)", marginTop: 8 }}>How Mechanical Enterprise reaches $10M+ by 2030</p>
+          <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>From $3M to $25M \u2014 The Roadmap</h1>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,.7)", marginTop: 8 }}>How Mechanical Enterprise reaches $25M+ by 2030</p>
         </div>
 
         {/* Timeline */}
@@ -816,6 +827,11 @@ function Slide13() {
               <div style={{ fontWeight: 800, fontSize: 14, color: y.color }}>{y.year}</div>
               <div style={{ fontWeight: 700, fontSize: 11, color: "rgba(255,255,255,.6)", marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>{y.label}</div>
               <div style={{ fontWeight: 800, fontSize: 18, color: "#fff", marginBottom: 8 }}>{y.revenue}</div>
+              {y.highlight && (
+                <div style={{ background: "#ff6b35", borderRadius: 6, padding: "6px 8px", marginBottom: 8, textAlign: "center" }}>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: "#fff" }}>{y.highlight}</span>
+                </div>
+              )}
               <ul style={{ listStyle: "none", padding: 0, margin: "0 0 8px 0" }}>
                 {y.milestones.slice(0, 5).map((m, i) => (
                   <li key={i} style={{ fontSize: 10, color: "rgba(255,255,255,.75)", marginBottom: 3, paddingLeft: 10, position: "relative" }}>
