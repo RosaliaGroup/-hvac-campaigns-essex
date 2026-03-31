@@ -52,7 +52,7 @@ const FOLLOW_UP_CONFIG: Record<string, { reply: string; buttons: string[] }> = {
   },
   "🏢 Commercial": {
     reply: "Got it! What can we help with for your commercial property?",
-    buttons: ["🆓 Free Assessment", "🏭 VRV/VRF Systems", "🔧 Service & Repair", "🚨 Emergency ($175)", "💸 80% Rebates"],
+    buttons: ["🆓 Free Assessment", "🏭 VRV/VRF Systems", "🔧 Service & Repair", "🚨 Emergency ($175)", "💸 80% Rebates", "💰 Rebate Calculator"],
   },
   "💼 Careers": {
     reply: "We're hiring across NJ! What would you like to know?",
@@ -94,7 +94,7 @@ const FOLLOW_UP_REPLIES: Record<string, string> = {
   "🤝 Referral Partner ($200-$500)": "Earn $200-$500 per qualified referral — we handle everything after the intro.",
   "🏘️ Property Manager Program": "Property managers get priority service, volume pricing, and a dedicated account rep.",
   "🏗️ Contractor Program": "We sub-contract HVAC for GCs across NJ — licensed, insured, and always on schedule.",
-  "📞 Talk to Someone": "Let's connect you with our partnerships team.",
+  "📞 Talk to Someone": "Fill out the form and we'll be in touch within 24-48 hours!",
   "📜 Certifications": "We offer EPA 608, OSHA 30, and manufacturer-specific certifications.",
   "🎓 Training Programs": "Hands-on training from working master technicians — classes run monthly.",
   "📅 Upcoming Schedule": "Next sessions start in two weeks — spots fill fast so booking early is best.",
@@ -245,8 +245,15 @@ export default function LiveChatWidget() {
   }, [resetChat]);
 
   /* ── Direct-link options (skip booking choice) ─────────────────── */
-  const DIRECT_LINK_OPTIONS: Record<string, { reply: string; menu: MenuLevel }> = {
-    "💰 Rebate Calculator": { reply: "Check your estimate instantly — up to $16,000 residential, 80% commercial.", menu: "booking-rebate" },
+  /* ── Options that skip to a direct CTA link ─────────────────────── */
+  const getDirectLinkOption = (label: string): { reply: string; menu: MenuLevel } | null => {
+    if (label === "💰 Rebate Calculator") {
+      const reply = flowCategory === "commercial"
+        ? "Commercial properties can save up to 80% on HVAC costs through NJ rebate programs."
+        : "Check your estimate instantly — up to $16,000 residential, 80% commercial.";
+      return { reply, menu: "booking-rebate" };
+    }
+    return null;
   };
 
   /* ── follow-up click ───────────────────────────────────────────── */
@@ -259,7 +266,7 @@ export default function LiveChatWidget() {
     setUserMsgCount((c) => c + 1);
 
     // Direct link (rebate calc)
-    const direct = DIRECT_LINK_OPTIONS[label];
+    const direct = getDirectLinkOption(label);
     if (direct) {
       typeThen(600, () => { setMessages((p) => [...p, { role: "assistant", text: direct.reply }]); setMenuLevel(direct.menu); });
       return;
@@ -267,11 +274,22 @@ export default function LiveChatWidget() {
 
     // Service options → inline form
     if (SERVICE_OPTIONS.has(label)) {
-      // Pre-set emergency toggle
       if (label.includes("Emergency")) setSvcEmergency(true);
       if (label.includes("Maintenance")) setSvcType("Maintenance");
       else if (label.includes("Service") || label.includes("Repair")) setSvcType("Repair");
       typeThen(600, () => { setMessages((p) => [...p, { role: "assistant", text: reply }]); setMenuLevel("service-form"); });
+      return;
+    }
+
+    // Careers → all options go straight to careers link
+    if (flowCategory === "careers") {
+      typeThen(600, () => { setMessages((p) => [...p, { role: "assistant", text: reply }]); setMenuLevel("booking-apply"); });
+      return;
+    }
+
+    // Partnership → all options go straight to partnership apply link
+    if (flowCategory === "partnership") {
+      typeThen(600, () => { setMessages((p) => [...p, { role: "assistant", text: reply }]); setMenuLevel("booking-partner-call"); });
       return;
     }
 
@@ -310,8 +328,8 @@ export default function LiveChatWidget() {
   const handleFinalAction = useCallback((userText: string, jessicaText: string, nextMenu: MenuLevel) => {
     setMessages((p) => [...p, { role: "user", text: userText }]);
     setMenuLevel("none");
-    typeThen(600, () => { setMessages((p) => [...p, { role: "assistant", text: jessicaText }]); setMenuLevel(nextMenu); triggerLeadForm(); });
-  }, [triggerLeadForm]);
+    typeThen(600, () => { setMessages((p) => [...p, { role: "assistant", text: jessicaText }]); setMenuLevel(nextMenu); });
+  }, []);
 
   const handleQuestionClick = useCallback(() => { setMenuLevel("question"); setPendingBooking(true); setTimeout(() => inputRef.current?.focus(), 100); }, []);
 
@@ -514,7 +532,7 @@ export default function LiveChatWidget() {
             )}
             {menuLevel === "booking-apply" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={CAREERS_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} {...hoverOrangeBg}>📋 Apply Online Now →</a>
+                <a href={CAREERS_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} {...hoverOrangeBg}>💼 View Open Positions →</a>
                 <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
@@ -526,7 +544,7 @@ export default function LiveChatWidget() {
             )}
             {menuLevel === "booking-partner-call" && !isTyping && (
               <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
-                <a href={PARTNERSHIPS_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} {...hoverOrangeBg}>📅 Schedule a Partner Call →</a>
+                <a href={PARTNERSHIPS_URL} target="_blank" rel="noopener noreferrer" style={primaryBtnStyle} {...hoverOrangeBg}>🤝 Apply to Become a Partner →</a>
                 <div style={callLinkStyle}>Or call us directly: <a href={PHONE_TEL} style={{ color: ORANGE, textDecoration: "none", fontWeight: 500 }}>{PHONE}</a></div>
               </div>
             )}
