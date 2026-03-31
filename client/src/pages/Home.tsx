@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { useSEO } from "@/hooks/useSEO";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,8 +17,27 @@ export default function Home() {
   // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
   let { user, loading, error, isAuthenticated, logout } = useAuth();
 
+  useSEO({
+    title: "HVAC Contractor Newark NJ | Heat Pumps & AC Repair | Mechanical Enterprise",
+    description: "NJ's trusted HVAC experts. Free assessments, rebates up to $16K, $100 flat service calls. Serving 15 NJ counties. Call (862) 419-1763.",
+    ogUrl: "https://mechanicalenterprise.com",
+  });
+
   return (
     <div className="min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "HVACBusiness",
+        "name": "Mechanical Enterprise LLC",
+        "telephone": "(862) 419-1763",
+        "email": "sales@mechanicalenterprise.com",
+        "url": "https://mechanicalenterprise.com",
+        "address": { "@type": "PostalAddress", "addressLocality": "Newark", "addressRegion": "NJ", "addressCountry": "US" },
+        "areaServed": "New Jersey",
+        "priceRange": "$100-$275",
+        "openingHours": "Mo-Su 00:00-23:59",
+        "description": "Expert HVAC solutions in NJ. Heat pumps, VRV/VRF systems, free assessments with rebates up to $16,000."
+      }) }} />
       <ExitIntentPopup />
       <Navigation />
       

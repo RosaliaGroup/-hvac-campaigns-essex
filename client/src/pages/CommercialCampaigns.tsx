@@ -7,11 +7,18 @@ import Footer from "@/components/Footer";
 import RebateCalculator from "@/components/RebateCalculator";
 import CaseStudies from "@/components/CaseStudies";
 import ScrollRebatePopup from "@/components/ScrollRebatePopup";
+import { useSEO } from "@/hooks/useSEO";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Commercial focus with professional, ROI-driven tone */
 
 export default function CommercialCampaigns() {
+  useSEO({
+    title: "Commercial HVAC Newark NJ | VRV/VRF Systems | 80% Rebates Available",
+    description: "Commercial HVAC installation, VRV/VRF systems, and repair for NJ businesses. Rebates up to 80% of costs. Free commercial assessment.",
+    ogUrl: "https://mechanicalenterprise.com/commercial",
+  });
+
   return (
     <div className="min-h-screen">
       <ScrollRebatePopup pageType="commercial" />

@@ -10,8 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Partnerships() {
+  useSEO({
+    title: "HVAC Referral Partner Program NJ | Earn $200-$500 Per Referral",
+    description: "Partner with Mechanical Enterprise. Earn $200-$500 per residential referral, $500 for commercial. NJ HVAC referral program. Apply now.",
+    ogUrl: "https://mechanicalenterprise.com/partnerships",
+  });
   const [form, setForm] = useState({
     companyName: "",
     contactName: "",

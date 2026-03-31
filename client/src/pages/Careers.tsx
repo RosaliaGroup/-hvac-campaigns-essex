@@ -11,8 +11,14 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function Careers() {
+  useSEO({
+    title: "HVAC Jobs Newark NJ | $55K-$85K | Mechanical Enterprise Careers",
+    description: "Join Mechanical Enterprise. HVAC technician jobs in NJ. Competitive pay, full benefits, take-home van. Apply today.",
+    ogUrl: "https://mechanicalenterprise.com/careers",
+  });
   const [form, setForm] = useState({
     name: "",
     email: "",

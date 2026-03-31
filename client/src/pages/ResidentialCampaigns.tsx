@@ -6,11 +6,18 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ResidentialCaseStudies from "@/components/ResidentialCaseStudies";
 import ScrollRebatePopup from "@/components/ScrollRebatePopup";
+import { useSEO } from "@/hooks/useSEO";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Residential focus with warm, family-friendly tone */
 
 export default function ResidentialCampaigns() {
+  useSEO({
+    title: "Residential HVAC & Heat Pump Installation NJ | Up to $16K Rebates",
+    description: "Free HVAC assessments for NJ homeowners. Heat pump installation with rebates up to $16,000. $100 flat service calls. Book online today.",
+    ogUrl: "https://mechanicalenterprise.com/residential",
+  });
+
   return (
     <div className="min-h-screen">
       <ScrollRebatePopup pageType="residential" />
