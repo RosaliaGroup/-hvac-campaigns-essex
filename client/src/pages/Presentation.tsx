@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const PASSWORD = "mechanicalenterprise2026";
-const TOTAL_SLIDES = 14;
+const TOTAL_SLIDES = 15;
 
 /* ================================================================
    PASSWORD GATE
@@ -817,9 +817,134 @@ function Slide13() {
 }
 
 /* ================================================================
-   SLIDE 14 — 5-YEAR PATH TO $25M+
+   SLIDE 14 — ACTIVE PIPELINE
    ================================================================ */
 function Slide14() {
+  const contracts = [
+    {
+      border: "#1e3a5f",
+      badge: "\ud83c\udfe2 COMMERCIAL \u2014 FLAGSHIP PROJECT",
+      badgeBg: "#1e3a5f",
+      project: "Avatar Tech \u2014 84 Cluster Ave, Newark NJ",
+      client: "Avatar Tech / 142 Lafayette St Newark",
+      type: "VRV/ERV Commercial Installation",
+      value: "$994,500",
+      date: "Signed: November 10, 2025",
+      lines: [
+        "HVAC Equipment Installation: $455,000",
+        "Electrical Work: $250,000",
+        "Permits, Engineers, Architect: $68,000",
+        "Masonry, Fence, Finishes: $89,000",
+        "Boiler Demolition: $18,500",
+        "Structural Steel: $49,000",
+        "Project Management: $65,000",
+      ],
+    },
+    {
+      border: "#ff6b35",
+      badge: "\ud83c\udf31 PSE&G CLEAN HEAT PROGRAM",
+      badgeBg: "#059669",
+      project: "Modern Building Group \u2014 18 Whitman St, West Orange NJ",
+      client: "Modern Building Group LLC / Fair Lawn NJ",
+      type: "PSE&G Clean Heat Decarbonization",
+      value: "$39,950",
+      date: "Original: $12,218 \u2192 Updated: $39,950",
+      lines: [
+        "Program: PSE&G Clean Heat (PN#136)",
+        "PSE&G Rebate: $16,000",
+        "Full heat pump installation, re-ducting",
+        "Decommissioning \u2014 2 zones",
+      ],
+    },
+    {
+      border: "#059669",
+      badge: "\ud83c\udfe0 RESIDENTIAL PSE&G PROGRAM",
+      badgeBg: "#2563eb",
+      project: "Ufredo Molina \u2014 175 Sunset Ave, North Arlington NJ",
+      client: "Residential Homeowner",
+      type: "PSE&G Heat Pump + Electrical + Water Heater",
+      value: "$49,036",
+      date: "February 27, 2026",
+      lines: [
+        "PSE&G Rebate: Up to $18,450 (LMI) / $16,450 (Non-LMI)",
+        "OBR Financing: 0% for 84-120 months available",
+        "2 heat pump systems + panel upgrade",
+        "Tankless water heater",
+      ],
+    },
+  ];
+
+  return (
+    <Slide>
+      <div style={{ textAlign: "center", marginBottom: 32 }}>
+        <h1 style={{ fontSize: 32, fontWeight: 800, color: "#1e3a5f", margin: 0 }}>Real Contracts. Real Revenue. Right Now.</h1>
+        <p style={{ fontSize: 16, color: "#64748b", marginTop: 8 }}>Active pipeline as of March 31, 2026</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+        {contracts.map(c => (
+          <div key={c.project} style={{
+            background: "#fff", borderRadius: 12, padding: "18px 16px",
+            border: `2px solid ${c.border}`, display: "flex", flexDirection: "column",
+          }}>
+            <div style={{
+              display: "inline-block", background: c.badgeBg, color: "#fff",
+              borderRadius: 6, padding: "4px 10px", fontSize: 10, fontWeight: 800,
+              marginBottom: 10, alignSelf: "flex-start", letterSpacing: 0.5,
+            }}>{c.badge}</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 4 }}>{c.project}</div>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 2 }}>{c.client}</div>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>{c.type}</div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: c.border, marginBottom: 4 }}>{c.value}</div>
+            <div style={{ fontSize: 11, color: "#64748b", marginBottom: 10 }}>{c.date}</div>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {c.lines.map((l, i) => (
+                <li key={i} style={{ fontSize: 11, color: "#475569", marginBottom: 3, paddingLeft: 12, position: "relative" }}>
+                  <span style={{ position: "absolute", left: 0, color: c.border }}>&#8226;</span>{l}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Totals table */}
+      <SimpleTable compact headers={["Contract", "Value"]} rows={[
+        ["Avatar Tech (Commercial VRV/ERV)", "$994,500"],
+        ["Modern Building Group (PSE&G)", "$39,950"],
+        ["Ufredo Molina (PSE&G Residential)", "$49,036"],
+        ["CONFIRMED PIPELINE TOTAL", "$1,083,486"],
+        ["Additional promised pipeline", "$1,500,000"],
+        ["Q2-Q3 2026 target", "$3,000,000"],
+      ]} />
+
+      {/* Insight box */}
+      <div style={{
+        marginTop: 16, background: "#fff7ed", border: "2px solid #ff6b35", borderRadius: 12,
+        padding: "14px 18px",
+      }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", margin: 0, lineHeight: 1.6 }}>
+          {"\ud83d\udca1"} <strong>KEY INSIGHT:</strong> The Avatar Tech job alone ($994,500) proves we can execute full general contractor scope \u2014 HVAC + Electrical + Structural + Permits + PM. This is NOT a residential installer business. This is a <span style={{ color: "#ff6b35" }}>full-service mechanical contractor</span>.
+        </p>
+      </div>
+
+      {/* PSE&G box */}
+      <div style={{
+        marginTop: 12, background: "#f0fdf4", border: "2px solid #059669", borderRadius: 12,
+        padding: "14px 18px",
+      }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0, lineHeight: 1.6 }}>
+          {"\ud83c\udf31"} <strong>PSE&G CLEAN HEAT ADVANTAGE:</strong> We are an approved PSE&G Trade Ally. Every residential gas customer in NJ is a potential PSE&G decarbonization job. PSE&G covers up to $16,000 in rebates. 0% OBR financing available for customers. We handle all paperwork and program enrollment.
+        </p>
+      </div>
+    </Slide>
+  );
+}
+
+/* ================================================================
+   SLIDE 15 — 5-YEAR PATH
+   ================================================================ */
+function Slide15() {
   const years = [
     { year: "2026", label: "EXECUTE ON PIPELINE", color: "#ff6b35", revenue: "$4M-$5M", highlight: "\u26a1 $3M COMMITTED + 3-5 installers", milestones: [
       "3-5 installers \u00d7 $350K = $1.05M-$1.75M new", "$3M committed pipeline \u2014 Q2-Q3 2026",
@@ -947,7 +1072,7 @@ function Slide14() {
 /* ================================================================
    SLIDES ARRAY
    ================================================================ */
-const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14];
+const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14, Slide15];
 
 /* ================================================================
    MAIN PRESENTATION COMPONENT
