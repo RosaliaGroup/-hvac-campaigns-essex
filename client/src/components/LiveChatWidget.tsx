@@ -16,8 +16,8 @@ const ORANGE = "#e8813a";
 const ORANGE_HOVER = "#d5732f";
 const PHONE = "(862) 419-1763";
 const PHONE_TEL = "tel:8624191763";
-const ASSESSMENT_URL = "/assessment";
-const REBATE_URL = "/rebate-calc";
+const ASSESSMENT_URL = "/qualify";
+const REBATE_URL = "/rebate-calculator";
 const CAREERS_URL = "/careers";
 const CONTACT_URL = "/contact";
 const COURSES_URL = "/courses";
@@ -238,6 +238,14 @@ export default function LiveChatWidget() {
     });
   }, [resetChat]);
 
+  /* ── Options that skip booking-choice and go straight to a CTA ──── */
+  const DIRECT_LINK_OPTIONS: Record<string, { reply: string; menu: MenuLevel }> = {
+    "💰 Rebate Calculator": {
+      reply: "Check your estimate instantly — up to $16,000 residential, 80% commercial.",
+      menu: "booking-rebate",
+    },
+  };
+
   /* ── handle follow-up click → show context-aware booking choice ── */
   const handleFollowUpClick = useCallback((label: string) => {
     const reply = FOLLOW_UP_REPLIES[label];
@@ -248,6 +256,16 @@ export default function LiveChatWidget() {
 
     const newCount = userMsgCount + 1;
     setUserMsgCount(newCount);
+
+    // Check if this option should skip the booking-choice step
+    const directLink = DIRECT_LINK_OPTIONS[label];
+    if (directLink) {
+      typeThen(600, () => {
+        setMessages((prev) => [...prev, { role: "assistant", text: directLink.reply }]);
+        setMenuLevel(directLink.menu);
+      });
+      return;
+    }
 
     typeThen(600, () => {
       setMessages((prev) => [...prev, { role: "assistant", text: reply }]);
