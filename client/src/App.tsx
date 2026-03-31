@@ -59,6 +59,7 @@ import ServicePage from "./pages/ServicePage";
 import LuxuryAreaPage from "./pages/LuxuryAreaPage";
 import BlogIndex from "./pages/BlogIndex";
 import BlogPost from "./pages/BlogPost";
+import Presentation from "./pages/Presentation";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -251,6 +252,7 @@ function Router() {
       <Route path={"/team-management"} component={protect(TeamManagement)} />
       <Route path={"/assessment-submissions"} component={protect(AssessmentSubmissions)} />
 
+      <Route path={"/presentation-2026"} component={Presentation} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
