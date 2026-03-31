@@ -243,7 +243,7 @@ function Slide2() {
           "AI VA Dashboard + Settings",
           "AI Assistant Prompts library",
           "AI Script Manager",
-          "Lead capture \u2192 email notification",
+          "Lead capture → email notification",
         ]} />
         <InfoCard emoji="&#128202;" title="Lead Management" color="#1e3a5f" items={[
           "Lead Dashboard",
@@ -263,22 +263,22 @@ function Slide2() {
    ================================================================ */
 function Slide3() {
   const lps = [
-    ["\ud83d\udd25", "/lp/heat-pump-rebates", "Heat Pump Rebates"],
-    ["\ud83c\udfe2", "/lp/commercial-vrv", "Commercial VRV/VRF"],
-    ["\ud83d\udea8", "/lp/emergency-hvac", "Emergency HVAC"],
-    ["\ud83d\udcd8", "/lp/fb-residential", "Facebook Residential"],
-    ["\ud83d\udcd8", "/lp/fb-commercial", "Facebook Commercial"],
-    ["\ud83d\udcd6", "/lp/rebate-guide", "Rebate Guide"],
-    ["\ud83d\udd27", "/lp/maintenance-offer", "Maintenance Offer"],
-    ["\ud83e\udd1d", "/lp/referral-partner", "Referral Partner"],
+    ["🔥", "/lp/heat-pump-rebates", "Heat Pump Rebates"],
+    ["🏢", "/lp/commercial-vrv", "Commercial VRV/VRF"],
+    ["🚨", "/lp/emergency-hvac", "Emergency HVAC"],
+    ["📘", "/lp/fb-residential", "Facebook Residential"],
+    ["📘", "/lp/fb-commercial", "Facebook Commercial"],
+    ["📖", "/lp/rebate-guide", "Rebate Guide"],
+    ["🔧", "/lp/maintenance-offer", "Maintenance Offer"],
+    ["🤝", "/lp/referral-partner", "Referral Partner"],
   ];
   const seo = [
-    ["\ud83d\udccd", "49 city pages \u2014 20mi radius of Newark"],
-    ["\ud83d\udccd", "23 North NJ cities (Morris, Passaic, Sussex)"],
-    ["\ud83c\udfc6", "18 luxury area pages (Alpine, Saddle River, Bernardsville, Short Hills, Ridgewood, etc.)"],
-    ["\u2699\ufe0f", "8 service pages (Heat Pump, Mini-Split, VRF, Full Replacement, Commercial, Financing)"],
-    ["\u2694\ufe0f", "4 competitor conquest pages (AJ Perri, Gold Medal, Horizon, Hutchinson)"],
-    ["\ud83d\udcdd", "Blog \u2014 launched March 31, 2026"],
+    ["📍", "49 city pages — 20mi radius of Newark"],
+    ["📍", "23 North NJ cities (Morris, Passaic, Sussex)"],
+    ["🏆", "18 luxury area pages (Alpine, Saddle River, Bernardsville, Short Hills, Ridgewood, etc.)"],
+    ["\u2699️", "8 service pages (Heat Pump, Mini-Split, VRF, Full Replacement, Commercial, Financing)"],
+    ["\u2694️", "4 competitor conquest pages (AJ Perri, Gold Medal, Horizon, Hutchinson)"],
+    ["📝", "Blog — launched March 31, 2026"],
   ];
 
   return (
@@ -383,13 +383,13 @@ function Slide5() {
           <SimpleTable
             headers={["Program", "Amount"]}
             rows={[
-              ["PSE&G Clean Heat \u2014 Non LMI (50%)", "Up to $10,000"],
-              ["PSE&G Clean Heat \u2014 LMI (60%)", "Up to $12,000"],
+              ["PSE&G Clean Heat — Non LMI (50%)", "Up to $10,000"],
+              ["PSE&G Clean Heat — LMI (60%)", "Up to $12,000"],
               ["Decommissioning Adder", "Up to $2,000"],
               ["Re-ducting Adder (Manual D)", "Up to $2,000"],
               ["Additional ccASHP Unit", "$2,000 per unit"],
-              ["PSE&G OBR Financing \u2014 Non LMI", "0% / 84 months"],
-              ["PSE&G OBR Financing \u2014 LMI", "0% / 120 months"],
+              ["PSE&G OBR Financing — Non LMI", "0% / 84 months"],
+              ["PSE&G OBR Financing — LMI", "0% / 120 months"],
               ["Maximum Possible (LMI + all adders)", "Up to $18,000"],
             ]}
           />
@@ -398,7 +398,7 @@ function Slide5() {
           <h3 style={{ fontSize: 16, fontWeight: 700, color: "#1e3a5f", marginBottom: 12 }}>Key Market Facts</h3>
           <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
             {[
-              "Federal 25C tax credit expired Dec 2025 \u2014 urgency to act on state rebates NOW",
+              "Federal 25C tax credit expired Dec 2025 — urgency to act on state rebates NOW",
               "NJ Clean Energy Master Plan mandates electrification",
               "Heat pump homes gaining higher resale values",
               "Commercial rebates cover up to 80% of costs",
@@ -420,14 +420,14 @@ function Slide5() {
    ================================================================ */
 function Slide6() {
   const features = [
-    ["Rebate Specialization", "\u2705 Core focus", "\u26a0\ufe0f Limited", "\u26a0\ufe0f Limited"],
-    ["AI Chat 24/7", "\u2705 Live", "\u274c No", "\u274c No"],
-    ["Online Payment", "\u2705 Stripe live", "\u274c No", "\u274c No"],
-    ["SEO Landing Pages", "\u2705 116 pages", "\u26a0\ufe0f Generic", "\u26a0\ufe0f Generic"],
-    ["Course Platform", "\u2705 Full LMS", "\u274c No", "\u274c No"],
-    ["WMBE/SBE Certified", "\u2705 Certified", "\u274c No", "\u274c No"],
-    ["Booking Automation", "\u2705 Full flow", "\u274c No", "\u274c No"],
-    ["Lead Scoring System", "\u2705 Built", "\u274c No", "\u274c No"],
+    ["Rebate Specialization", "✅ Core focus", "⚠️ Limited", "⚠️ Limited"],
+    ["AI Chat 24/7", "✅ Live", "❌ No", "❌ No"],
+    ["Online Payment", "✅ Stripe live", "❌ No", "❌ No"],
+    ["SEO Landing Pages", "✅ 116 pages", "⚠️ Generic", "⚠️ Generic"],
+    ["Course Platform", "✅ Full LMS", "❌ No", "❌ No"],
+    ["WMBE/SBE Certified", "✅ Certified", "❌ No", "❌ No"],
+    ["Booking Automation", "✅ Full flow", "❌ No", "❌ No"],
+    ["Lead Scoring System", "✅ Built", "❌ No", "❌ No"],
   ];
 
   return (
@@ -440,7 +440,7 @@ function Slide6() {
       />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginTop: 24 }}>
         {[
-          ["AJ Perri", "$58.7M revenue, 300 techs \u2014 NO rebate focus"],
+          ["AJ Perri", "$58.7M revenue, 300 techs — NO rebate focus"],
           ["Gold Medal", "BBB complaints, NO AI, NO online payment"],
           ["Horizon/Hutchinson", "Regional chains, generic approach"],
         ].map(([name, desc]) => (
@@ -488,13 +488,13 @@ function Slide7() {
         background: "#ff6b35", borderRadius: 10, padding: "14px 20px",
         textAlign: "center", marginBottom: 20,
       }}>
-        <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>{"\ud83c\udfaf"} 2026: 4 INSTALLERS NOW {"\u2192"} 8 BY Q4 = $1.4M-$2.8M</span>
+        <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>{"🎯"} 2026: 4 INSTALLERS NOW {"→"} 8 BY Q4 = $1.4M-$2.8M</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
         {[
-          { title: "Conservative", subtitle: "4 installers + confirmed contracts", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", lines: ["4 installers \u00d7 $350K = $1.4M", "+ $88K confirmed contracts"], total: "2026 Total: $1.4M+" },
-          { title: "Moderate", subtitle: "6 installers + PSE&G pipeline", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", lines: ["6 installers \u00d7 $350K = $2.1M", "+ PSE&G Clean Heat pipeline"], total: "2026 Total: $2.1M+" },
-          { title: "Aggressive (TARGET)", subtitle: "8 installers + full marketing", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", lines: ["8 installers \u00d7 $350K = $2.8M", "+ Commercial Engineered Solutions"], total: "2026 Total: $2.8M+" },
+          { title: "Conservative", subtitle: "4 installers + confirmed contracts", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", lines: ["4 installers × $350K = $1.4M", "+ $88K confirmed contracts"], total: "2026 Total: $1.4M+" },
+          { title: "Moderate", subtitle: "6 installers + PSE&G pipeline", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", lines: ["6 installers × $350K = $2.1M", "+ PSE&G Clean Heat pipeline"], total: "2026 Total: $2.1M+" },
+          { title: "Aggressive (TARGET)", subtitle: "8 installers + full marketing", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", lines: ["8 installers × $350K = $2.8M", "+ Commercial Engineered Solutions"], total: "2026 Total: $2.8M+" },
         ].map(s => (
           <div key={s.title} style={{ background: s.bg, border: `2px solid ${s.border}`, borderRadius: 12, padding: 20 }}>
             <div style={{ fontWeight: 800, fontSize: 16, color: s.color, marginBottom: 4 }}>{s.title}</div>
@@ -564,32 +564,32 @@ function Slide8() {
    ================================================================ */
 function Slide9() {
   const moves = [
-    { emoji: "\ud83c\udfc6", title: "Rebate Specialist Positioning", color: "#ff6b35", items: [
-      'Primary message: "$16K in rebates \u2014 we handle everything"',
+    { emoji: "🏆", title: "Rebate Specialist Positioning", color: "#ff6b35", items: [
+      'Primary message: "$16K in rebates — we handle everything"',
       "Action: Scale PSE&G Clean Heat Trade Ally program (PN#136)",
       "Why: No major competitor owns this position",
       "Revenue impact: 3x conversion rate vs generic HVAC",
     ]},
-    { emoji: "\ud83d\udc8e", title: "Luxury Market Expansion", color: "#7c3aed", items: [
+    { emoji: "💎", title: "Luxury Market Expansion", color: "#7c3aed", items: [
       "Target: Alpine, Saddle River, Bernardsville, Short Hills, Ridgewood, Peapack-Gladstone",
       "Average job: $20,000-$50,000",
       "Action: Carrier + Trane + Lennox dealer agreements",
       "18 luxury pages already live and indexed",
     ]},
-    { emoji: "\ud83c\udfe2", title: "Commercial Pipeline", color: "#1e3a5f", items: [
+    { emoji: "🏢", title: "Commercial Pipeline", color: "#1e3a5f", items: [
       "Target: Property managers, office buildings, restaurants, healthcare, retail chains",
       "Average job: $35,000-$150,000",
       "Rebates: up to 80% covered",
       "Action: Commercial referral partner network",
     ]},
-    { emoji: "\ud83d\udcda", title: "Courses as Revenue Stream", color: "#059669", items: [
+    { emoji: "📚", title: "Courses as Revenue Stream", color: "#059669", items: [
       "Full LMS already built",
       "Target: HVAC technicians, contractors, homeowners",
-      "6 categories \u00d7 multiple courses",
+      "6 categories × multiple courses",
       "Certifications, rebate sales training",
       "Recurring revenue: course subscriptions",
     ]},
-    { emoji: "\ud83e\udd16", title: "AI-First Scaling", color: "#dc2626", items: [
+    { emoji: "🤖", title: "AI-First Scaling", color: "#dc2626", items: [
       "Jessica AI on phones + chat + SMS",
       "Book appointments without headcount",
       "Stripe payment before truck rolls",
@@ -627,47 +627,47 @@ function Slide9() {
    ================================================================ */
 function Slide10() {
   const channels = [
-    ["PSE&G Program (PN#136)", "\u2705 Active", "1-2", "Scale up"],
-    ["SEO \u2014 116 pages", "\u2705 Live", "0-2", "Growing"],
-    ["Google Business Profile", "\u2705 Live", "0-1", "Need reviews"],
-    ["Chat Widget (Jessica AI)", "\u2705 Live", "0-1", "Optimizing"],
-    ["Google Ads", "\u23f3 Paused", "0", "LAUNCH NOW"],
-    ["Facebook/Instagram Ads", "\u23f3 Needed", "0", "LAUNCH NOW"],
-    ["Referral Partners", "\u23f3 Needed", "0", "BUILD NOW"],
-    ["Thumbtack/Angi", "\u23f3 Needed", "0", "ACTIVATE"],
-    ["Real Estate Agents", "\u23f3 Needed", "0", "BUILD NOW"],
+    ["PSE&G Program (PN#136)", "✅ Active", "1-2", "Scale up"],
+    ["SEO — 116 pages", "✅ Live", "0-2", "Growing"],
+    ["Google Business Profile", "✅ Live", "0-1", "Need reviews"],
+    ["Chat Widget (Jessica AI)", "✅ Live", "0-1", "Optimizing"],
+    ["Google Ads", "⏳ Paused", "0", "LAUNCH NOW"],
+    ["Facebook/Instagram Ads", "⏳ Needed", "0", "LAUNCH NOW"],
+    ["Referral Partners", "⏳ Needed", "0", "BUILD NOW"],
+    ["Thumbtack/Angi", "⏳ Needed", "0", "ACTIVATE"],
+    ["Real Estate Agents", "⏳ Needed", "0", "BUILD NOW"],
   ];
 
   const campaigns = [
-    { emoji: "\ud83d\udd0d", title: "Google Ads \u2014 PSE&G Rebate Keywords", color: "#1e3a5f", items: [
+    { emoji: "🔍", title: "Google Ads — PSE&G Rebate Keywords", color: "#1e3a5f", items: [
       "Budget: $1,500/month",
       'Keywords: "PSE&G heat pump rebate", "heat pump installation NJ", "replace gas furnace NJ", "free HVAC assessment NJ"',
       "Expected: 8-12 leads/week",
       "Close rate: 25% = 2-3 installs/week",
-      "ROI: $1,500 spend \u2192 $21,000+ revenue",
+      "ROI: $1,500 spend → $21,000+ revenue",
     ]},
-    { emoji: "\ud83d\udcd8", title: "Facebook/Instagram \u2014 Homeowner Rebate Ads", color: "#2563eb", items: [
+    { emoji: "📘", title: "Facebook/Instagram — Homeowner Rebate Ads", color: "#2563eb", items: [
       "Budget: $1,000/month",
       "Target: NJ homeowners 35-65, own home, income $60K+",
-      'Ad angle: "NJ is paying up to $18,000 to replace your old furnace. Find out if you qualify \u2014 free."',
+      'Ad angle: "NJ is paying up to $18,000 to replace your old furnace. Find out if you qualify — free."',
       "Expected: 15-20 leads/week",
       "Close rate: 15% = 2-3 installs/week",
     ]},
-    { emoji: "\ud83e\udd1d", title: "PSE&G Program \u2014 Referral Network", color: "#059669", items: [
+    { emoji: "🤝", title: "PSE&G Program — Referral Network", color: "#059669", items: [
       "Budget: $0 (referral fees from job revenue)",
       "Partners: Real estate agents, property managers, plumbers, electricians, roofers",
       "Referral fee: $200-$500 per closed install",
       "Expected: 3-5 referrals/week from 20 active partners",
       "Close rate: 40% = 1-2 installs/week",
     ]},
-    { emoji: "\u2b50", title: "Google Reviews \u2014 Map Pack Domination", color: "#ff6b35", items: [
+    { emoji: "⭐", title: "Google Reviews — Map Pack Domination", color: "#ff6b35", items: [
       "Budget: $0",
       "Action: Text all past customers for Google reviews",
-      "Goal: 10 reviews in 30 days \u2192 50 in 90 days",
+      "Goal: 10 reviews in 30 days → 50 in 90 days",
       "Impact: Top 3 map pack = 60% of all local HVAC clicks",
       "Expected: 3-5 additional leads/week at $0 ad cost",
     ]},
-    { emoji: "\ud83d\udccb", title: "Thumbtack + Angi + HomeAdvisor", color: "#7c3aed", items: [
+    { emoji: "📋", title: "Thumbtack + Angi + HomeAdvisor", color: "#7c3aed", items: [
       "Budget: $300-$500/month",
       "Action: Create profiles, upload photos, get reviews",
       "Target: NJ homeowners searching for HVAC replacement",
@@ -678,19 +678,19 @@ function Slide10() {
 
   return (
     <Slide>
-      <SH sub="The math: 3 installs/week \u00d7 $350K avg \u00d7 52 weeks = $1.05M/year per installer">How We Get to 3 Installations Per Week</SH>
+      <SH sub="The math: 3 installs/week × $350K avg × 52 weeks = $1.05M/year per installer">How We Get to 3 Installations Per Week</SH>
 
       {/* HOW WE GET LEADS NOW */}
       <div style={{ background: "#fef2f2", border: "2px solid #dc2626", borderRadius: 10, padding: "10px 14px", marginBottom: 14, textAlign: "center" }}>
-        <span style={{ fontSize: 14, fontWeight: 800, color: "#dc2626" }}>{"\ud83d\udea8"} HOW WE GET LEADS STARTING THIS WEEK</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: "#dc2626" }}>{"🚨"} HOW WE GET LEADS STARTING THIS WEEK</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8, marginBottom: 14 }}>
         {[
-          { when: "TODAY \u2014 $0", title: "Text Past Customers", text: '"PSE&G is now offering up to $18,000 to replace gas furnaces \u2014 no catch, no upfront cost. Want a free 10-min assessment?" Expected: 2-5 leads from 20 texts' },
-          { when: "THIS WEEK \u2014 $0", title: "Google Business Profile", text: "Post daily. Upload before/after photos. Request reviews from completed jobs. Expected: 1-3 leads/week within 30 days" },
-          { when: "THIS WEEK \u2014 $300", title: "Facebook Boost", text: "Boost best post $10/day. Target: NJ homeowners 35-65, 20mi of Newark. Expected: 5-10 leads first week" },
-          { when: "THIS WEEK \u2014 $0", title: "Nextdoor + FB Groups", text: '"We\'re PSE&G approved. PSE&G paying up to $18,000. Free assessment \u2014 no obligation." Expected: 3-8 leads/week' },
-          { when: "THIS WEEK \u2014 $0", title: "Call 10 RE Agents", text: '"When buyers ask about HVAC, we offer $18,000 in rebates. Can we be your preferred HVAC contractor?" Expected: 1-2 referrals/week in 60 days' },
+          { when: "TODAY — $0", title: "Text Past Customers", text: '"PSE&G is now offering up to $18,000 to replace gas furnaces — no catch, no upfront cost. Want a free 10-min assessment?" Expected: 2-5 leads from 20 texts' },
+          { when: "THIS WEEK — $0", title: "Google Business Profile", text: "Post daily. Upload before/after photos. Request reviews from completed jobs. Expected: 1-3 leads/week within 30 days" },
+          { when: "THIS WEEK — $300", title: "Facebook Boost", text: "Boost best post $10/day. Target: NJ homeowners 35-65, 20mi of Newark. Expected: 5-10 leads first week" },
+          { when: "THIS WEEK — $0", title: "Nextdoor + FB Groups", text: '"We\'re PSE&G approved. PSE&G paying up to $18,000. Free assessment — no obligation." Expected: 3-8 leads/week' },
+          { when: "THIS WEEK — $0", title: "Call 10 RE Agents", text: '"When buyers ask about HVAC, we offer $18,000 in rebates. Can we be your preferred HVAC contractor?" Expected: 1-2 referrals/week in 60 days' },
         ].map(a => (
           <div key={a.title} style={{ background: "#fff", borderRadius: 8, padding: "10px 8px", border: "1px solid #e2e8f0" }}>
             <div style={{ fontSize: 8, fontWeight: 800, color: "#dc2626", marginBottom: 3 }}>{a.when}</div>
@@ -798,14 +798,14 @@ function Slide10() {
 function Slide11() {
   return (
     <Slide>
-      <SH sub="Every blog post is a 24/7 salesperson that never sleeps">Content Strategy \u2014 1 Blog Per Day Compounds Growth</SH>
+      <SH sub="Every blog post is a 24/7 salesperson that never sleeps">Content Strategy — 1 Blog Per Day Compounds Growth</SH>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 14 }}>
         <div>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>SEO Impact Timeline (116 pages already indexed)</h3>
           <SimpleTable compact headers={["Timeframe", "Traffic", "Leads"]} rows={[
             ["Month 1-2", "Pages indexed, near zero", "0"],
-            ["Month 3-4", "First rankings \u2014 5-10 visits/day", "1-2/week"],
+            ["Month 3-4", "First rankings — 5-10 visits/day", "1-2/week"],
             ["Month 6", "50-100 visits/day", "2-3/week"],
             ["Month 9", "200+ visits/day", "5-8/week"],
             ["Month 12", "500+ visits/day", "10-15/week organic"],
@@ -832,7 +832,7 @@ function Slide11() {
         1 blog/day vs competitors who post monthly = 365 articles/year vs their 12. Google rewards consistent fresh content. This is an unfair advantage we build starting today.
       </div>
 
-      <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Sample Week \u2014 7 Posts</h3>
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Sample Week — 7 Posts</h3>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 14 }}>
         {[
           { day: "Mon", title: "Does My NJ Home Qualify for PSE&G $18,000 Rebate?" },
@@ -868,7 +868,7 @@ function Slide11() {
 function Slide12() {
   return (
     <Slide>
-      <SH sub='Most NJ homeowners don&apos;t know they can get $18,000 to replace their furnace. We&apos;re going to tell them.'>Social Media Strategy \u2014 The No Catch Campaign</SH>
+      <SH sub='Most NJ homeowners don&apos;t know they can get $18,000 to replace their furnace. We&apos;re going to tell them.'>Social Media Strategy — The No Catch Campaign</SH>
 
       {/* Campaign concept */}
       <div style={{
@@ -886,9 +886,9 @@ function Slide12() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
         {[
           { title: "Facebook/Instagram", sub: "$1,000/month", color: "#2563eb", items: ["NJ homeowners 35-65, own home, income $50K+", 'Video: "We replaced this family\'s furnace for $0"', "Carousel: Before/After with rebate overlay", "3 posts/week organic + paid boosting", "Goal: 15-20 leads/week"] },
-          { title: "Google Search Ads", sub: "$1,500/month", color: "#059669", items: ['"PSE&G heat pump rebate", "replace gas furnace NJ"', '"$18000 heat pump rebate NJ"', 'Ad: "NJ Pays Up to $18,000 \u2014 See If You Qualify"', "Goal: 8-12 leads/week"] },
-          { title: "TikTok/Reels", sub: "$0 \u2014 Organic", color: "#7c3aed", items: ["30-60 second job site walkthroughs", '"We just saved this family $18,000"', '"PSE&G rebate explained in 60 seconds"', "3-5 reels/week", "Goal: 5-10 inbound DMs/week"] },
-          { title: "Google Business Profile", sub: "$0 \u2014 Free", color: "#ff6b35", items: ["Weekly updates with job completions", "Before/after photos every job", "Customer review requests post-install", "Q&A for PSE&G rebate questions", "Goal: Map pack top 3"] },
+          { title: "Google Search Ads", sub: "$1,500/month", color: "#059669", items: ['"PSE&G heat pump rebate", "replace gas furnace NJ"', '"$18000 heat pump rebate NJ"', 'Ad: "NJ Pays Up to $18,000 — See If You Qualify"', "Goal: 8-12 leads/week"] },
+          { title: "TikTok/Reels", sub: "$0 — Organic", color: "#7c3aed", items: ["30-60 second job site walkthroughs", '"We just saved this family $18,000"', '"PSE&G rebate explained in 60 seconds"', "3-5 reels/week", "Goal: 5-10 inbound DMs/week"] },
+          { title: "Google Business Profile", sub: "$0 — Free", color: "#ff6b35", items: ["Weekly updates with job completions", "Before/after photos every job", "Customer review requests post-install", "Q&A for PSE&G rebate questions", "Goal: Map pack top 3"] },
         ].map(p => (
           <div key={p.title} style={{ background: "#fff", borderRadius: 8, padding: "12px 10px", border: "1px solid #e2e8f0", borderTop: `3px solid ${p.color}` }}>
             <div style={{ fontWeight: 800, fontSize: 11, color: p.color, marginBottom: 2 }}>{p.title}</div>
@@ -896,7 +896,7 @@ function Slide12() {
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
               {p.items.map((t, i) => (
                 <li key={i} style={{ fontSize: 9, color: "#334155", marginBottom: 2, paddingLeft: 8, position: "relative" }}>
-                  <span style={{ position: "absolute", left: 0, color: p.color }}>{"\u2022"}</span>{t}
+                  <span style={{ position: "absolute", left: 0, color: p.color }}>{"•"}</span>{t}
                 </li>
               ))}
             </ul>
@@ -911,7 +911,7 @@ function Slide12() {
           { name: "No Catch", headline: "PSE&G Is Paying Up to $18,000 to Replace Your Furnace", sub: "No catch. No trick. Just a free assessment + we handle all the paperwork." },
           { name: "Do The Math", headline: "Your Gas Bill: $300+. Heat Pump Bill: $80.", sub: "PSE&G pays up to $18K toward the switch. Monthly payment: as low as $0 with OBR." },
           { name: "Neighbors Did It", headline: "[City] Family Replaced Their Furnace for $0 Out of Pocket", sub: "PSE&G Clean Heat covers up to $18,000. We handled every form." },
-          { name: "Commercial", headline: "PSE&G Will Cover 80% of Your Building\u2019s HVAC Upgrade", sub: "Free audit. Free design. PSE&G funds construction. You pay 0% over 5 years." },
+          { name: "Commercial", headline: "PSE&G Will Cover 80% of Your Building’s HVAC Upgrade", sub: "Free audit. Free design. PSE&G funds construction. You pay 0% over 5 years." },
         ].map(a => (
           <div key={a.name} style={{ background: "#f8fafc", borderRadius: 8, padding: "10px", border: "1px solid #e2e8f0" }}>
             <div style={{ fontWeight: 700, fontSize: 10, color: "#ff6b35", marginBottom: 4 }}>{a.name}</div>
@@ -942,7 +942,7 @@ function Slide12() {
             Marketing matches capacity perfectly.
           </p>
           <p style={{ fontSize: 12, fontWeight: 800, color: "#ff6b35", margin: 0 }}>
-            $2,500/mo {"\u2192"} 12 installs/week {"\u2192"} $348K/week {"\u2192"} $17.5M+ annual potential
+            $2,500/mo {"→"} 12 installs/week {"→"} $348K/week {"→"} $17.5M+ annual potential
           </p>
         </div>
       </div>
@@ -955,27 +955,27 @@ function Slide12() {
    ================================================================ */
 function Slide13() {
   const months = [
-    { title: "Month 1 \u2014 LAUNCH MARKETING", color: "#ff6b35", items: [
-      "Launch Google Ads ($1,500/month) \u2014 rebate keywords",
-      "Launch Facebook Ads ($1,000/month) \u2014 homeowner rebate angle",
+    { title: "Month 1 — LAUNCH MARKETING", color: "#ff6b35", items: [
+      "Launch Google Ads ($1,500/month) — rebate keywords",
+      "Launch Facebook Ads ($1,000/month) — homeowner rebate angle",
       "Create Thumbtack + Angi profiles",
       "Text ALL past customers for Google reviews (goal: 10)",
-      "Build referral network \u2014 10 real estate agents this month",
+      "Build referral network — 10 real estate agents this month",
       "Hire 1 additional installer immediately",
-      "Activate PSE&G program marketing \u2014 door knocking areas",
+      "Activate PSE&G program marketing — door knocking areas",
       "Connect Vapi Jessica to phone number",
     ]},
-    { title: "Month 2 \u2014 SCALE TO 3 INSTALLS/WEEK", color: "#2563eb", items: [
-      "25+ Google reviews \u2014 enter map pack",
+    { title: "Month 2 — SCALE TO 3 INSTALLS/WEEK", color: "#2563eb", items: [
+      "25+ Google reviews — enter map pack",
       "Optimize Google Ads based on Month 1 data",
       "20 active referral partners",
       "Hire 2nd installer when hitting 6 installs/week",
       "ServiceTitan fully tracking all jobs and leads",
       "Blog posts targeting PSE&G rebate keywords",
     ]},
-    { title: "Month 3 \u2014 HIT $87K/MONTH", color: "#059669", items: [
+    { title: "Month 3 — HIT $87K/MONTH", color: "#059669", items: [
       "3+ installs/week consistently",
-      "50 Google reviews \u2014 map pack top 3",
+      "50 Google reviews — map pack top 3",
       "3 installers working",
       "$87,500/month revenue run rate",
       "Expand to North NJ PSE&G territory",
@@ -995,7 +995,7 @@ function Slide13() {
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
               {m.items.map((item, i) => (
                 <li key={i} style={{ fontSize: 13, color: "#334155", marginBottom: 10, paddingLeft: 22, position: "relative" }}>
-                  <span style={{ position: "absolute", left: 0, fontSize: 16 }}>{"\u2610"}</span>{item}
+                  <span style={{ position: "absolute", left: 0, fontSize: 16 }}>{"☐"}</span>{item}
                 </li>
               ))}
             </ul>
@@ -1064,15 +1064,15 @@ function Slide14() {
    ================================================================ */
 function Slide15() {
   const benefits = [
-    { emoji: "\ud83d\udccb", title: "Job Management", color: "#1e3a5f", text: "Every lead, booking, and job tracked in one place. Dispatch, scheduling, and technician management. Real-time job status visible to the whole team. Integrates directly with our booking system." },
+    { emoji: "📋", title: "Job Management", color: "#1e3a5f", text: "Every lead, booking, and job tracked in one place. Dispatch, scheduling, and technician management. Real-time job status visible to the whole team. Integrates directly with our booking system." },
     { emoji: "\ud83d\udcb0", title: "Revenue Tracking", color: "#ff6b35", text: "Every invoice, payment, and job value tracked. Stripe payments sync with ServiceTitan records. Know your revenue, margins, and top technicians at any moment. Essential for scaling to 8 figures." },
     { emoji: "\ud83d\udcca", title: "Performance Analytics", color: "#7c3aed", text: "Track close rates, average job value, lead sources. Know which marketing channels drive most revenue. Identify top performers and underperforming areas. Data-driven decisions at every level." },
-    { emoji: "\ud83d\udd17", title: "Platform Integration", color: "#059669", text: "ServiceTitan + Jessica AI + Stripe + our website = fully automated lead-to-payment pipeline. Customer books \u2192 ServiceTitan creates job \u2192 Tech dispatched \u2192 Invoice sent \u2192 Payment collected. Zero manual data entry." },
+    { emoji: "\ud83d\udd17", title: "Platform Integration", color: "#059669", text: "ServiceTitan + Jessica AI + Stripe + our website = fully automated lead-to-payment pipeline. Customer books → ServiceTitan creates job → Tech dispatched → Invoice sent → Payment collected. Zero manual data entry." },
   ];
 
   return (
     <Slide>
-      <SH sub="">ServiceTitan \u2014 The Operating System for Scale</SH>
+      <SH sub="">ServiceTitan — The Operating System for Scale</SH>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 28 }}>
         {benefits.map(b => (
           <div key={b.title} style={{
@@ -1102,10 +1102,10 @@ function Slide15() {
    ================================================================ */
 function Slide16() {
   const cards = [
-    { emoji: "\u2705", title: "PSE&G Instant Rebate", color: "#059669", text: "Rebate applied directly on invoice at installation. Customer pays net amount. PSE&G reimburses us through distributor same day. This IS our job financing \u2014 built into the program." },
-    { emoji: "\ud83c\udfe6", title: "Supplier Credit Lines Active", color: "#2563eb", text: "Ferguson HVAC + Johnstone Supply net-30/60 terms already established. Materials ordered today, paid after job completion. Zero cash out of pocket." },
-    { emoji: "\ud83d\udcb3", title: "Acorn Finance \u2014 Customer Option", color: "#7c3aed", text: "Customers who need financing apply through Acorn Finance. We get paid in 48 hours. Free to set up. Increases close rates. Works alongside PSE&G rebate." },
-    { emoji: "\ud83c\udfe2", title: "Commercial \u2014 PSE&G Covers 80%", color: "#ff6b35", text: "Engineered Solutions Program funds up to 80% of commercial HVAC projects. PSE&G releases funds during construction. Customer pays 0% over 60 months." },
+    { emoji: "✅", title: "PSE&G Instant Rebate", color: "#059669", text: "Rebate applied directly on invoice at installation. Customer pays net amount. PSE&G reimburses us through distributor same day. This IS our job financing — built into the program." },
+    { emoji: "🏦", title: "Supplier Credit Lines Active", color: "#2563eb", text: "Ferguson HVAC + Johnstone Supply net-30/60 terms already established. Materials ordered today, paid after job completion. Zero cash out of pocket." },
+    { emoji: "💳", title: "Acorn Finance — Customer Option", color: "#7c3aed", text: "Customers who need financing apply through Acorn Finance. We get paid in 48 hours. Free to set up. Increases close rates. Works alongside PSE&G rebate." },
+    { emoji: "🏢", title: "Commercial — PSE&G Covers 80%", color: "#ff6b35", text: "Engineered Solutions Program funds up to 80% of commercial HVAC projects. PSE&G releases funds during construction. Customer pays 0% over 60 months." },
   ];
 
   return (
@@ -1128,7 +1128,7 @@ function Slide16() {
         padding: "20px 24px",
       }}>
         <p style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", margin: "0 0 12px 0" }}>
-          The #1 constraint is not money \u2014 it is hiring speed and marketing execution. PSE&G funds residential jobs through instant rebates. PSE&G funds commercial jobs up to 80%. We need installers and leads \u2014 in that order.
+          The #1 constraint is not money — it is hiring speed and marketing execution. PSE&G funds residential jobs through instant rebates. PSE&G funds commercial jobs up to 80%. We need installers and leads — in that order.
         </p>
         <p style={{ fontSize: 14, fontWeight: 700, color: "#ff6b35", margin: 0 }}>
           Action: Begin hiring immediately. Every week without a technician = $15,000-$25,000 in unbilled capacity.
@@ -1139,7 +1139,7 @@ function Slide16() {
         padding: "16px 20px",
       }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: "#1e3a5f", margin: 0 }}>
-          {"\ud83d\udca1"} Cost to hire 1 installer: ~$65,000/year. Revenue generated: $350,000/year. Net return per hire: <span style={{ color: "#059669" }}>$285,000</span>. Every month without a new installer = <span style={{ color: "#dc2626" }}>$29,166 in lost revenue</span>.
+          {"💡"} Cost to hire 1 installer: ~$65,000/year. Revenue generated: $350,000/year. Net return per hire: <span style={{ color: "#059669" }}>$285,000</span>. Every month without a new installer = <span style={{ color: "#dc2626" }}>$29,166 in lost revenue</span>.
         </p>
       </div>
     </Slide>
@@ -1158,7 +1158,7 @@ function Slide17() {
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {items.map((t, i) => (
           <li key={i} style={{ fontSize: 9, color: "#334155", marginBottom: 2, paddingLeft: 9, position: "relative" }}>
-            <span style={{ position: "absolute", left: 0, color }}>{"\u2022"}</span>{t}
+            <span style={{ position: "absolute", left: 0, color }}>{"•"}</span>{t}
           </li>
         ))}
       </ul>
@@ -1180,31 +1180,31 @@ function Slide17() {
 
   return (
     <Slide>
-      <SH sub="">How Every Job Gets Paid \u2014 Zero Cash Upfront</SH>
+      <SH sub="">How Every Job Gets Paid — Zero Cash Upfront</SH>
 
       {/* 4-Layer Stack */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
-        {fLayer("\ud83c\udf31", "PSE&G Instant Rebate \u2014 Built-in Financing", "Rebate applied at installation on invoice", "#059669", [
+        {fLayer("🌱", "PSE&G Instant Rebate — Built-in Financing", "Rebate applied at installation on invoice", "#059669", [
           "Customer pays NET amount after rebate",
           "PSE&G reimburses contractor through distributor same day",
-          "No deposit needed \u2014 rebate covers the gap",
+          "No deposit needed — rebate covers the gap",
           "Residential: up to $18,000 instant",
-          "This IS the financing for PSE&G jobs \u2705",
+          "This IS the financing for PSE&G jobs ✅",
         ])}
-        {fLayer("\ud83c\udfe6", "Supplier Credit Lines \u2014 Already Active", "Materials on net-30/60 terms", "#2563eb", [
+        {fLayer("🏦", "Supplier Credit Lines — Already Active", "Materials on net-30/60 terms", "#2563eb", [
           "Ferguson HVAC + Johnstone Supply",
-          "Net-30/60 terms already established \u2705",
-          "Materials ordered \u2192 paid after job completion",
+          "Net-30/60 terms already established ✅",
+          "Materials ordered → paid after job completion",
           "Covers full material cost on every job",
         ])}
-        {fLayer("\ud83d\udcb3", "Acorn Finance \u2014 Customer Financing", "Customer gets loan, you get paid in 48hrs", "#ff6b35", [
+        {fLayer("💳", "Acorn Finance — Customer Financing", "Customer gets loan, you get paid in 48hrs", "#ff6b35", [
           "Offer to customers who need to finance their share",
           "Customer approved in minutes",
           "You get paid in 48 hours",
-          "Free to set up \u2014 no monthly fees",
+          "Free to set up — no monthly fees",
           "Works alongside PSE&G rebate",
         ], "acornfinance.com")}
-        {fLayer("\ud83c\udfe2", "PSE&G Engineered Solutions \u2014 Commercial", "PSE&G funds up to 80% of commercial jobs", "#1e3a5f", [
+        {fLayer("🏢", "PSE&G Engineered Solutions — Commercial", "PSE&G funds up to 80% of commercial jobs", "#1e3a5f", [
           "PSE&G FUNDS UP TO 80% OF COMMERCIAL JOBS",
           "Free audit, free design documents",
           "PSE&G releases funds during construction",
@@ -1223,11 +1223,11 @@ function Slide17() {
           "Customer pays net balance at completion",
           "PSE&G reimburses you through distributor same day",
           "Pay supplier from proceeds (net-30 not yet due)",
-          "NET PROFIT: $8K-$15K \u2014 zero cash invested",
+          "NET PROFIT: $8K-$15K — zero cash invested",
         ])}
         {stepList("How a Commercial Engineered Solutions Job Works:", [
           "Identify commercial building (school, hospital, multifamily)",
-          "Contact PSE&G \u2014 they do free energy audit",
+          "Contact PSE&G — they do free energy audit",
           "PSE&G produces bid-ready design documents",
           "You win installation contract",
           "PSE&G releases funds during construction milestones",
@@ -1243,7 +1243,7 @@ function Slide17() {
         padding: "12px 16px", textAlign: "center",
       }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", margin: 0, lineHeight: 1.6 }}>
-          We don't need outside financing. <span style={{ color: "#ff6b35" }}>PSE&G IS the financing</span> \u2014 on both residential and commercial jobs.<br />
+          We don't need outside financing. <span style={{ color: "#ff6b35" }}>PSE&G IS the financing</span> — on both residential and commercial jobs.<br />
           Residential: instant rebate at install. Commercial: PSE&G funds up to 80% of the project.
         </p>
       </div>
@@ -1258,25 +1258,25 @@ function Slide18() {
   const contracts = [
     {
       border: "#ff6b35",
-      badge: "\u2705 PSE&G CLEAN HEAT \u2014 COMPLETED",
+      badge: "✅ PSE&G CLEAN HEAT — COMPLETED",
       badgeBg: "#059669",
-      project: "Modern Building Group \u2014 18 Whitman St, West Orange NJ",
+      project: "Modern Building Group — 18 Whitman St, West Orange NJ",
       client: "Modern Building Group LLC / Fair Lawn NJ",
       type: "PSE&G Clean Heat Decarbonization",
       value: "$39,950",
-      date: "Original: $12,218 \u2192 Updated: $39,950",
+      date: "Original: $12,218 → Updated: $39,950",
       lines: [
         "Program: PSE&G Clean Heat (PN#136)",
         "PSE&G Rebate: $16,000",
         "Full heat pump installation, re-ducting",
-        "Decommissioning \u2014 2 zones",
+        "Decommissioning — 2 zones",
       ],
     },
     {
       border: "#059669",
-      badge: "\u2705 RESIDENTIAL PSE&G \u2014 COMPLETED",
+      badge: "✅ RESIDENTIAL PSE&G — COMPLETED",
       badgeBg: "#2563eb",
-      project: "Ufredo Molina \u2014 175 Sunset Ave, North Arlington NJ",
+      project: "Ufredo Molina — 175 Sunset Ave, North Arlington NJ",
       client: "Residential Homeowner",
       type: "PSE&G Heat Pump + Electrical + Water Heater",
       value: "$49,036",
@@ -1294,7 +1294,7 @@ function Slide18() {
     <Slide>
       <div style={{ textAlign: "center", marginBottom: 32 }}>
         <h1 style={{ fontSize: 32, fontWeight: 800, color: "#1e3a5f", margin: 0 }}>Real Contracts. Real Revenue. Right Now.</h1>
-        <p style={{ fontSize: 16, color: "#64748b", marginTop: 8 }}>Recent PSE&G Project Examples \u2014 Our Track Record</p>
+        <p style={{ fontSize: 16, color: "#64748b", marginTop: 8 }}>Recent PSE&G Project Examples — Our Track Record</p>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 24 }}>
@@ -1337,7 +1337,7 @@ function Slide18() {
         padding: "14px 18px",
       }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", margin: 0, lineHeight: 1.6 }}>
-          {"\ud83d\udca1"} These completed projects demonstrate our PSE&G Clean Heat execution capability. As approved Trade Ally PN#136, we replicate this model at scale \u2014 every NJ gas customer is a prospect.
+          {"💡"} These completed projects demonstrate our PSE&G Clean Heat execution capability. As approved Trade Ally PN#136, we replicate this model at scale — every NJ gas customer is a prospect.
         </p>
       </div>
 
@@ -1347,7 +1347,7 @@ function Slide18() {
         padding: "14px 18px",
       }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: "#166534", margin: 0, lineHeight: 1.6 }}>
-          {"\ud83c\udf31"} <strong>PSE&G CLEAN HEAT ADVANTAGE:</strong> We are an approved PSE&G Trade Ally. Every residential gas customer in NJ is a potential PSE&G decarbonization job. PSE&G covers up to $18,000 in rebates (LMI with adders). 0% OBR financing available for customers. We handle all paperwork and program enrollment.
+          {"🌱"} <strong>PSE&G CLEAN HEAT ADVANTAGE:</strong> We are an approved PSE&G Trade Ally. Every residential gas customer in NJ is a potential PSE&G decarbonization job. PSE&G covers up to $18,000 in rebates (LMI with adders). 0% OBR financing available for customers. We handle all paperwork and program enrollment.
         </p>
       </div>
     </Slide>
@@ -1359,48 +1359,48 @@ function Slide18() {
    ================================================================ */
 function Slide19() {
   const years = [
-    { year: "2026", label: "4 NOW \u2192 8 BY Q4", color: "#ff6b35", revenue: "$1.4M-$2.8M", highlight: "\u26a1 4 INSTALLERS NOW \u2192 8 BY Q4", milestones: [
-      "4 installers operating \u2014 $1.4M baseline", "PSE&G Clean Heat \u2014 instant rebate model",
-      "3 blogs/week \u2014 SEO compounding", "No Catch social campaign launched",
-      "Target: 8 installers by Q4 2026", "50 Google reviews \u2014 map pack top 3",
+    { year: "2026", label: "4 NOW → 8 BY Q4", color: "#ff6b35", revenue: "$1.4M-$2.8M", highlight: "⚡ 4 INSTALLERS NOW → 8 BY Q4", milestones: [
+      "4 installers operating — $1.4M baseline", "PSE&G Clean Heat — instant rebate model",
+      "3 blogs/week — SEO compounding", "No Catch social campaign launched",
+      "Target: 8 installers by Q4 2026", "50 Google reviews — map pack top 3",
     ], foundation: "PSE&G funds jobs, suppliers cover materials, hire + market" },
     { year: "2027", label: "DOMINATE LOCAL MARKET", color: "#2563eb", revenue: "$4.2M-$6M", highlight: "", milestones: [
-      "12 installers \u00d7 $350K = $4.2M", "Engineered Solutions \u2014 first school/hospital job",
-      "SEO generating 50+ organic leads/month", "Map pack top 3 \u2192 40+ leads/week",
+      "12 installers × $350K = $4.2M", "Engineered Solutions — first school/hospital job",
+      "SEO generating 50+ organic leads/month", "Map pack top 3 → 40+ leads/week",
       "200+ SEO pages (Central NJ, Shore)", "Carrier/Trane/Lennox preferred dealer",
       "Maintenance subscription: 500+ members", "Partnership network: 50+ referrers",
     ], foundation: "Brand authority established, recurring revenue streams active" },
     { year: "2028", label: "EXPAND GEOGRAPHY", color: "#7c3aed", revenue: "$7M-$10M", highlight: "", milestones: [
-      "20-25 installers \u00d7 $350K = $7M-$8.75M", "2nd service hub Central NJ",
+      "20-25 installers × $350K = $7M-$8.75M", "2nd service hub Central NJ",
       "Government contracts (WMBE advantage)", "Commercial VRV/VRF: 2-3 jobs/month",
       "Shore area HVAC market penetration", "1,000+ Google reviews",
     ], foundation: "Multi-location operations, government contract pipeline" },
     { year: "2029", label: "VERTICAL INTEGRATION", color: "#059669", revenue: "$10.5M-$14M", highlight: "", milestones: [
-      "30-40 installers \u00d7 $350K = $10.5M-$14M", "Franchise model launched",
+      "30-40 installers × $350K = $10.5M-$14M", "Franchise model launched",
       "Equipment distribution revenue", "Courses: national reach",
       "Training center physical location", "Acquire 1-2 smaller NJ HVAC companies",
-    ], foundation: "Beyond service \u2014 becoming an HVAC ecosystem company" },
+    ], foundation: "Beyond service — becoming an HVAC ecosystem company" },
     { year: "2030", label: "$17.5M+ REVENUE", color: "#dc2626", revenue: "$17.5M-$25M+", highlight: "", milestones: [
-      "50+ installers \u00d7 $350K = $17.5M+", "Multiple revenue streams additive",
+      "50+ installers × $350K = $17.5M+", "Multiple revenue streams additive",
       "3-5 franchise locations", "EBITDA margin: 15-20%",
       "Acquisition target or PE interest", 'Brand: "The NJ Heat Pump Company"',
     ], foundation: "Multiple revenue streams, defensible market position, acquisition-ready" },
   ];
 
   const reasons = [
-    { emoji: "\ud83c\udfd7\ufe0f", title: "Infrastructure Already Built", text: "Most companies spend years building what we built in 30 days. We start at year 3 of most competitors' journey." },
-    { emoji: "\ud83d\udcc8", title: "Market Tailwind", text: "Heat pump market growing 9.85% annually. NJ mandating electrification. Rebates creating urgency. We're in the right market at the right time." },
-    { emoji: "\ud83e\udd16", title: "AI Advantage", text: "Jessica AI scales without headcount. Every new lead costs us less per unit. Competitors can't replicate this quickly." },
-    { emoji: "\ud83d\udcda", title: "Courses = Defensible Moat", text: "Industry training creates brand authority, recurring revenue, and a pipeline of certified technicians who know our systems." },
-    { emoji: "\ud83c\udfc6", title: "WMBE/SBE Certification", text: "Government contracts, diversity supplier programs, and preferred vendor status create revenue streams unavailable to most HVAC competitors." },
+    { emoji: "🏗️", title: "Infrastructure Already Built", text: "Most companies spend years building what we built in 30 days. We start at year 3 of most competitors' journey." },
+    { emoji: "📈", title: "Market Tailwind", text: "Heat pump market growing 9.85% annually. NJ mandating electrification. Rebates creating urgency. We're in the right market at the right time." },
+    { emoji: "🤖", title: "AI Advantage", text: "Jessica AI scales without headcount. Every new lead costs us less per unit. Competitors can't replicate this quickly." },
+    { emoji: "📚", title: "Courses = Defensible Moat", text: "Industry training creates brand authority, recurring revenue, and a pipeline of certified technicians who know our systems." },
+    { emoji: "🏆", title: "WMBE/SBE Certification", text: "Government contracts, diversity supplier programs, and preferred vendor status create revenue streams unavailable to most HVAC competitors." },
   ];
 
   return (
     <Slide bg="linear-gradient(135deg, #0f2744 0%, #1e3a5f 100%)">
       <div style={{ color: "#fff" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>From 1 Installer to 50 \u2014 The Path to $17.5M+</h1>
-          <p style={{ fontSize: 16, color: "rgba(255,255,255,.7)", marginTop: 8 }}>5-Year Path \u2014 Built on $350K Per Installer</p>
+          <h1 style={{ fontSize: 36, fontWeight: 800, margin: 0 }}>From 1 Installer to 50 — The Path to $17.5M+</h1>
+          <p style={{ fontSize: 16, color: "rgba(255,255,255,.7)", marginTop: 8 }}>5-Year Path — Built on $350K Per Installer</p>
         </div>
 
         {/* Timeline */}
@@ -1462,7 +1462,7 @@ function Slide19() {
             Hire fast. Train right. Scale the model.
           </p>
           <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.8)", margin: 0 }}>
-            2026 Goal: 4 installers now {"\u2192"} 8 by Q4 = $1.4M-$2.8M revenue
+            2026 Goal: 4 installers now {"→"} 8 by Q4 = $1.4M-$2.8M revenue
           </p>
         </div>
 
