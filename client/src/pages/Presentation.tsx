@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const PASSWORD = "mechanicalenterprise2026";
-const TOTAL_SLIDES = 17;
+const TOTAL_SLIDES = 19;
 
 /* ================================================================
    PASSWORD GATE
@@ -469,7 +469,7 @@ function Slide7() {
       <SH sub="">Revenue Model — $350K Per Installer Per Year</SH>
       <div style={{ marginBottom: 20 }}>
         <SimpleTable headers={["Year", "Installers", "Installer Revenue", "Monthly Run Rate"]} rows={[
-          ["2026", "2-3", "$700K-$1.05M", "$58K-$87K"],
+          ["2026", "4-8", "$1.4M-$2.8M", "$116K-$233K"],
           ["2027", "12", "$4,200,000", "$350,000"],
           ["2028", "20", "$7,000,000", "$583,333"],
           ["2029", "30", "$10,500,000", "$875,000"],
@@ -487,13 +487,13 @@ function Slide7() {
         background: "#ff6b35", borderRadius: 10, padding: "14px 20px",
         textAlign: "center", marginBottom: 20,
       }}>
-        <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>{"\ud83c\udfaf"} 2026 TARGET: $1M-$1.5M — PATH TO 3 INSTALLS/WEEK</span>
+        <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>{"\ud83c\udfaf"} 2026: 4 INSTALLERS NOW {"\u2192"} 8 BY Q4 = $1.4M-$2.8M</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
         {[
-          { title: "Conservative", subtitle: "2 installers + confirmed contracts", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", lines: ["2 installers \u00d7 $350K = $700K", "+ $88K confirmed contracts"], total: "2026 Total: $800K-$1M" },
-          { title: "Moderate", subtitle: "3 installers + pipeline conversion", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", lines: ["3 installers \u00d7 $350K = $1.05M", "+ $500K pipeline conversion"], total: "2026 Total: $1.5M" },
-          { title: "Aggressive (TARGET)", subtitle: "3 installers + PSE&G + pipeline", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", lines: ["3 installers \u00d7 $350K = $1.05M", "+ $800K PSE&G + pipeline"], total: "2026 Total: $1.5M+" },
+          { title: "Conservative", subtitle: "4 installers + confirmed contracts", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", lines: ["4 installers \u00d7 $350K = $1.4M", "+ $88K confirmed contracts"], total: "2026 Total: $1.4M+" },
+          { title: "Moderate", subtitle: "6 installers + PSE&G pipeline", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", lines: ["6 installers \u00d7 $350K = $2.1M", "+ PSE&G Clean Heat pipeline"], total: "2026 Total: $2.1M+" },
+          { title: "Aggressive (TARGET)", subtitle: "8 installers + full marketing", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", lines: ["8 installers \u00d7 $350K = $2.8M", "+ Commercial Engineered Solutions"], total: "2026 Total: $2.8M+" },
         ].map(s => (
           <div key={s.title} style={{ background: s.bg, border: `2px solid ${s.border}`, borderRadius: 12, padding: 20 }}>
             <div style={{ fontWeight: 800, fontSize: 16, color: s.color, marginBottom: 4 }}>{s.title}</div>
@@ -764,9 +764,168 @@ function Slide10() {
 }
 
 /* ================================================================
-   SLIDE 11 — 90 DAY ACTION PLAN
+   SLIDE 11 — BLOG + SEO CONTENT STRATEGY
    ================================================================ */
 function Slide11() {
+  return (
+    <Slide>
+      <SH sub="Every blog post is a 24/7 salesperson that never sleeps">Content Strategy \u2014 How 3 Blogs/Week Compounds Growth</SH>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        {/* Left: SEO timeline */}
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>SEO Impact Timeline (116 pages already indexed)</h3>
+          <SimpleTable compact headers={["Timeframe", "Traffic", "Leads"]} rows={[
+            ["Month 1-2", "Pages indexed, near zero", "0"],
+            ["Month 3-4", "First rankings \u2014 5-10 visits/day", "1-2/week"],
+            ["Month 6", "50-100 visits/day", "2-3/week"],
+            ["Month 9", "200+ visits/day", "5-8/week"],
+            ["Month 12", "500+ visits/day", "10-15/week organic"],
+          ]} />
+          <div style={{ fontSize: 10, color: "#475569", marginTop: 6, fontStyle: "italic" }}>
+            This is WITHOUT any additional blogs. 3 blogs/week ACCELERATES this timeline.
+          </div>
+        </div>
+
+        {/* Right: Blog compound math */}
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>3 Blogs/Week Compound Effect</h3>
+          <SimpleTable compact headers={["Month", "Total Articles", "Visits/day", "Leads/mo (2%)"]} rows={[
+            ["Month 1", "12", "20-30", "2-4"],
+            ["Month 3", "36", "80-120", "8-15"],
+            ["Month 6", "72", "300-500", "30-50"],
+            ["Month 12", "144", "1,000+", "100+"],
+          ]} />
+          <div style={{ marginTop: 8, background: "#f0fdf4", borderRadius: 6, padding: "8px 10px", fontSize: 10, color: "#166534", fontWeight: 600 }}>
+            At 100 organic leads/month + 25% close = 25 installs/month from SEO alone. At $29K avg = $725,000/month from content.
+          </div>
+        </div>
+      </div>
+
+      {/* Sample blog topics */}
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Sample Weekly Content</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
+        {[
+          { wk: "Week 1", posts: ["Does My NJ Home Qualify for the PSE&G $18,000 Heat Pump Rebate?", "Gas Furnace vs Heat Pump in NJ: Real Cost Comparison 2026", "Top 5 Signs Your NJ Boiler Needs Replacement"] },
+          { wk: "Week 2", posts: ["PSE&G Clean Heat Program Explained: What Newark Homeowners Need to Know", "How NJ Commercial Buildings Get Up to 80% HVAC Costs Covered by PSE&G", "West Orange HVAC Replacement: Complete Guide + Rebates"] },
+          { wk: "Week 3", posts: ["Is a Ductless Mini-Split Right for Your NJ Home?", "PSE&G OBR Financing: Pay $0 Upfront for Your Heat Pump", "Essex County Heat Pump Installation: Rebates + Timeline"] },
+        ].map(w => (
+          <div key={w.wk} style={{ background: "#f8fafc", borderRadius: 8, padding: "10px 12px", border: "1px solid #e2e8f0" }}>
+            <div style={{ fontWeight: 700, fontSize: 11, color: "#1e3a5f", marginBottom: 6 }}>{w.wk}</div>
+            {w.posts.map((p, i) => (
+              <div key={i} style={{ fontSize: 9, color: "#475569", marginBottom: 4, paddingLeft: 10, position: "relative" }}>
+                <span style={{ position: "absolute", left: 0, color: "#ff6b35" }}>{"\u2022"}</span>{p}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom box */}
+      <div style={{
+        background: "#fff7ed", border: "2px solid #ff6b35", borderRadius: 10,
+        padding: "12px 16px", textAlign: "center",
+      }}>
+        <p style={{ fontSize: 12, fontWeight: 700, color: "#1e3a5f", margin: 0 }}>
+          116 pages + 3 blogs/week + Google Ads targeting same keywords = leads from both <span style={{ color: "#ff6b35" }}>paid AND organic</span>. Organic traffic compounds forever. Ad traffic stops when you stop paying. Build both simultaneously.
+        </p>
+      </div>
+    </Slide>
+  );
+}
+
+/* ================================================================
+   SLIDE 12 — SOCIAL MEDIA: NO CATCH CAMPAIGN
+   ================================================================ */
+function Slide12() {
+  return (
+    <Slide>
+      <SH sub='Most NJ homeowners don&apos;t know they can get $18,000 to replace their furnace. We&apos;re going to tell them.'>Social Media Strategy \u2014 The No Catch Campaign</SH>
+
+      {/* Campaign concept */}
+      <div style={{
+        background: "#ff6b35", borderRadius: 10, padding: "16px 20px",
+        textAlign: "center", marginBottom: 16, color: "#fff",
+      }}>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6 }}>THE MESSAGE:</div>
+        <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.5 }}>
+          PSE&G will pay up to $18,000 to replace your gas furnace with a heat pump.<br />
+          No catch. No trick. No gimmick. Just fill out a form and we do the rest.
+        </div>
+      </div>
+
+      {/* 4 platform cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
+        {[
+          { title: "Facebook/Instagram", sub: "$1,000/month", color: "#2563eb", items: ["NJ homeowners 35-65, own home, income $50K+", 'Video: "We replaced this family\'s furnace for $0"', "Carousel: Before/After with rebate overlay", "3 posts/week organic + paid boosting", "Goal: 15-20 leads/week"] },
+          { title: "Google Search Ads", sub: "$1,500/month", color: "#059669", items: ['"PSE&G heat pump rebate", "replace gas furnace NJ"', '"$18000 heat pump rebate NJ"', 'Ad: "NJ Pays Up to $18,000 \u2014 See If You Qualify"', "Goal: 8-12 leads/week"] },
+          { title: "TikTok/Reels", sub: "$0 \u2014 Organic", color: "#7c3aed", items: ["30-60 second job site walkthroughs", '"We just saved this family $18,000"', '"PSE&G rebate explained in 60 seconds"', "3-5 reels/week", "Goal: 5-10 inbound DMs/week"] },
+          { title: "Google Business Profile", sub: "$0 \u2014 Free", color: "#ff6b35", items: ["Weekly updates with job completions", "Before/after photos every job", "Customer review requests post-install", "Q&A for PSE&G rebate questions", "Goal: Map pack top 3"] },
+        ].map(p => (
+          <div key={p.title} style={{ background: "#fff", borderRadius: 8, padding: "12px 10px", border: "1px solid #e2e8f0", borderTop: `3px solid ${p.color}` }}>
+            <div style={{ fontWeight: 800, fontSize: 11, color: p.color, marginBottom: 2 }}>{p.title}</div>
+            <div style={{ fontSize: 9, color: "#64748b", marginBottom: 6 }}>{p.sub}</div>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {p.items.map((t, i) => (
+                <li key={i} style={{ fontSize: 9, color: "#334155", marginBottom: 2, paddingLeft: 8, position: "relative" }}>
+                  <span style={{ position: "absolute", left: 0, color: p.color }}>{"\u2022"}</span>{t}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Ad concepts */}
+      <h3 style={{ fontSize: 12, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Ad Concepts</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 14 }}>
+        {[
+          { name: "No Catch", headline: "PSE&G Is Paying Up to $18,000 to Replace Your Furnace", sub: "No catch. No trick. Just a free assessment + we handle all the paperwork." },
+          { name: "Do The Math", headline: "Your Gas Bill: $300+. Heat Pump Bill: $80.", sub: "PSE&G pays up to $18K toward the switch. Monthly payment: as low as $0 with OBR." },
+          { name: "Neighbors Did It", headline: "[City] Family Replaced Their Furnace for $0 Out of Pocket", sub: "PSE&G Clean Heat covers up to $18,000. We handled every form." },
+          { name: "Commercial", headline: "PSE&G Will Cover 80% of Your Building\u2019s HVAC Upgrade", sub: "Free audit. Free design. PSE&G funds construction. You pay 0% over 5 years." },
+        ].map(a => (
+          <div key={a.name} style={{ background: "#f8fafc", borderRadius: 8, padding: "10px", border: "1px solid #e2e8f0" }}>
+            <div style={{ fontWeight: 700, fontSize: 10, color: "#ff6b35", marginBottom: 4 }}>{a.name}</div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#1e3a5f", marginBottom: 3 }}>{a.headline}</div>
+            <div style={{ fontSize: 9, color: "#475569" }}>{a.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Combined lead projection + bottom box */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+        <SimpleTable compact headers={["Channel", "Leads/wk", "Cost/mo"]} rows={[
+          ["Facebook/Instagram Ads", "15-20", "$1,000"],
+          ["Google Search Ads", "8-12", "$1,500"],
+          ["Organic SEO (growing)", "5-10", "$0"],
+          ["TikTok/Reels organic", "3-5", "$0"],
+          ["Google Business Profile", "3-5", "$0"],
+          ["Referral network", "2-4", "$300/install"],
+          ["TOTAL", "36-56/week", "$2,500/month"],
+        ]} />
+        <div style={{
+          background: "#fff7ed", border: "2px solid #ff6b35", borderRadius: 10,
+          padding: "12px 14px", display: "flex", flexDirection: "column", justifyContent: "center",
+        }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#1e3a5f", margin: "0 0 6px 0", lineHeight: 1.5 }}>
+            At 25% close: 9-14 installs/week<br />
+            At 4 installers doing 3/week: 12 installs/week capacity<br />
+            Marketing matches capacity perfectly.
+          </p>
+          <p style={{ fontSize: 12, fontWeight: 800, color: "#ff6b35", margin: 0 }}>
+            $2,500/mo {"\u2192"} 12 installs/week {"\u2192"} $348K/week {"\u2192"} $17.5M+ annual potential
+          </p>
+        </div>
+      </div>
+    </Slide>
+  );
+}
+
+/* ================================================================
+   SLIDE 13 — 90 DAY ACTION PLAN
+   ================================================================ */
+function Slide13() {
   const months = [
     { title: "Month 1 \u2014 LAUNCH MARKETING", color: "#ff6b35", items: [
       "Launch Google Ads ($1,500/month) \u2014 rebate keywords",
@@ -820,9 +979,9 @@ function Slide11() {
 }
 
 /* ================================================================
-   SLIDE 12 — INVESTMENT NEEDED
+   SLIDE 14 — INVESTMENT NEEDED
    ================================================================ */
-function Slide12() {
+function Slide14() {
   return (
     <Slide>
       <SH sub="">Investment to Scale on $3M Pipeline</SH>
@@ -873,9 +1032,9 @@ function Slide12() {
 }
 
 /* ================================================================
-   SLIDE 13 — SERVICETITAN INTEGRATION
+   SLIDE 15 — SERVICETITAN INTEGRATION
    ================================================================ */
-function Slide13() {
+function Slide15() {
   const benefits = [
     { emoji: "\ud83d\udccb", title: "Job Management", color: "#1e3a5f", text: "Every lead, booking, and job tracked in one place. Dispatch, scheduling, and technician management. Real-time job status visible to the whole team. Integrates directly with our booking system." },
     { emoji: "\ud83d\udcb0", title: "Revenue Tracking", color: "#ff6b35", text: "Every invoice, payment, and job value tracked. Stripe payments sync with ServiceTitan records. Know your revenue, margins, and top technicians at any moment. Essential for scaling to 8 figures." },
@@ -911,9 +1070,9 @@ function Slide13() {
 }
 
 /* ================================================================
-   SLIDE 14 — CAPITAL STRATEGY
+   SLIDE 16 — CAPITAL STRATEGY
    ================================================================ */
-function Slide14() {
+function Slide16() {
   const cards = [
     { emoji: "\u2705", title: "PSE&G Trade Ally PN#136", color: "#059669", text: "Approved PSE&G Trade Ally since 2025. Every NJ gas heating customer qualifies. We handle all paperwork, rebate filing, and program enrollment." },
     { emoji: "\ud83d\udcc4", title: "Mobilization Funding", color: "#2563eb", text: "Signed PSE&G contracts can be funded at 70-80% upfront through Mobilization Funding. Repay when PSE&G pays after completion. Zero debt. Zero dilution." },
@@ -941,7 +1100,7 @@ function Slide14() {
         padding: "20px 24px",
       }}>
         <p style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", margin: "0 0 12px 0" }}>
-          The #1 constraint is not money \u2014 it is execution speed. Hiring qualified technicians fast enough to fulfill the pipeline before competitors notice.
+          The #1 constraint is not money \u2014 it is hiring speed and marketing execution. PSE&G funds the jobs. Suppliers cover materials. We need installers and leads \u2014 in that order.
         </p>
         <p style={{ fontSize: 14, fontWeight: 700, color: "#ff6b35", margin: 0 }}>
           Action: Begin hiring immediately. Every week without a technician = $15,000-$25,000 in unbilled capacity.
@@ -952,7 +1111,7 @@ function Slide14() {
         padding: "16px 20px",
       }}>
         <p style={{ fontSize: 14, fontWeight: 700, color: "#1e3a5f", margin: 0 }}>
-          {"\ud83d\udca1"} Key Insight: Cost to hire 1 installer {"\u2248"} $65,000/year. Revenue generated: $350,000/year. Net return per hire: <span style={{ color: "#059669" }}>$285,000</span>. Every month we delay hiring = <span style={{ color: "#dc2626" }}>$29,166 in lost revenue</span>.
+          {"\ud83d\udca1"} Cost to hire 1 installer: ~$65,000/year. Revenue generated: $350,000/year. Net return per hire: <span style={{ color: "#059669" }}>$285,000</span>. Every month without a new installer = <span style={{ color: "#dc2626" }}>$29,166 in lost revenue</span>.
         </p>
       </div>
     </Slide>
@@ -960,164 +1119,114 @@ function Slide14() {
 }
 
 /* ================================================================
-   SLIDE 15 — PROJECT FINANCING STRATEGY
+   SLIDE 17 — PROJECT FINANCING STRATEGY
    ================================================================ */
-function Slide15() {
+function Slide17() {
+  const fLayer = (emoji: string, title: string, sub: string, color: string, items: string[], note?: string) => (
+    <div style={{ background: "#fff", borderRadius: 10, padding: "14px 12px", border: `2px solid ${color}`, borderTop: `4px solid ${color}` }}>
+      <div style={{ fontSize: 22, marginBottom: 2 }}>{emoji}</div>
+      <div style={{ fontWeight: 800, fontSize: 11, color, marginBottom: 2 }}>{title}</div>
+      <div style={{ fontSize: 9, color: "#64748b", marginBottom: 6 }}>{sub}</div>
+      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+        {items.map((t, i) => (
+          <li key={i} style={{ fontSize: 9, color: "#334155", marginBottom: 2, paddingLeft: 9, position: "relative" }}>
+            <span style={{ position: "absolute", left: 0, color }}>{"\u2022"}</span>{t}
+          </li>
+        ))}
+      </ul>
+      {note && <div style={{ fontSize: 9, color: "#64748b", marginTop: 4 }}>{note}</div>}
+    </div>
+  );
+
+  const stepList = (title: string, steps: string[]) => (
+    <div>
+      <h3 style={{ fontSize: 12, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>{title}</h3>
+      {steps.map((t, i) => (
+        <div key={i} style={{ display: "flex", gap: 6, marginBottom: 4, alignItems: "flex-start" }}>
+          <div style={{ minWidth: 18, height: 18, borderRadius: "50%", background: i === steps.length - 1 ? "#059669" : "#ff6b35", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 9, flexShrink: 0 }}>{i + 1}</div>
+          <p style={{ fontSize: 9, color: "#334155", margin: 0, paddingTop: 2, fontWeight: i === steps.length - 1 ? 800 : 400 }}>{t}</p>
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <Slide>
-      <SH sub="">How We Finance Large Jobs — Zero Cash Upfront</SH>
+      <SH sub="">How Every Job Gets Paid \u2014 Zero Cash Upfront</SH>
 
-      {/* The Problem */}
+      {/* 4-Layer Stack */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+        {fLayer("\ud83c\udf31", "PSE&G Instant Rebate \u2014 Built-in Financing", "Rebate applied at installation on invoice", "#059669", [
+          "Customer pays NET amount after rebate",
+          "PSE&G reimburses contractor through distributor same day",
+          "No deposit needed \u2014 rebate covers the gap",
+          "Residential: up to $18,000 instant",
+          "This IS the financing for PSE&G jobs \u2705",
+        ])}
+        {fLayer("\ud83c\udfe6", "Supplier Credit Lines \u2014 Already Active", "Materials on net-30/60 terms", "#2563eb", [
+          "Ferguson HVAC + Johnstone Supply",
+          "Net-30/60 terms already established \u2705",
+          "Materials ordered \u2192 paid after job completion",
+          "Covers full material cost on every job",
+        ])}
+        {fLayer("\ud83d\udcb3", "Acorn Finance \u2014 Customer Financing", "Customer gets loan, you get paid in 48hrs", "#ff6b35", [
+          "Offer to customers who need to finance their share",
+          "Customer approved in minutes",
+          "You get paid in 48 hours",
+          "Free to set up \u2014 no monthly fees",
+          "Works alongside PSE&G rebate",
+        ], "acornfinance.com")}
+        {fLayer("\ud83c\udfe2", "PSE&G Engineered Solutions \u2014 Commercial", "PSE&G funds up to 80% of commercial jobs", "#1e3a5f", [
+          "PSE&G FUNDS UP TO 80% OF COMMERCIAL JOBS",
+          "Free audit, free design documents",
+          "PSE&G releases funds during construction",
+          "Customer pays 0% over 60 months",
+          "Zero financing needed from you",
+        ])}
+      </div>
+
+      {/* Two payment flows side by side */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+        {stepList("How a Residential PSE&G Job Gets Paid:", [
+          "Win PSE&G Clean Heat job ($40K-$50K)",
+          "Order materials on supplier credit (net-30)",
+          "Complete installation (3-4 days)",
+          "Apply $10K-$18K instant rebate on invoice",
+          "Customer pays net balance at completion",
+          "PSE&G reimburses you through distributor same day",
+          "Pay supplier from proceeds (net-30 not yet due)",
+          "NET PROFIT: $8K-$15K \u2014 zero cash invested",
+        ])}
+        {stepList("How a Commercial Engineered Solutions Job Works:", [
+          "Identify commercial building (school, hospital, multifamily)",
+          "Contact PSE&G \u2014 they do free energy audit",
+          "PSE&G produces bid-ready design documents",
+          "You win installation contract",
+          "PSE&G releases funds during construction milestones",
+          "PSE&G covers up to 80% of project cost",
+          "Customer pays remaining 20% at 0% over 60 months",
+          "You get paid by PSE&G throughout construction",
+        ])}
+      </div>
+
+      {/* Bottom box */}
       <div style={{
-        background: "#fef2f2", border: "2px solid #fecaca", borderRadius: 10,
-        padding: "14px 18px", marginBottom: 20, textAlign: "center",
+        background: "#fff7ed", border: "2px solid #ff6b35", borderRadius: 10,
+        padding: "12px 16px", textAlign: "center",
       }}>
-        <p style={{ fontSize: 14, fontWeight: 700, color: "#991b1b", margin: 0 }}>
-          The Challenge: PSE&G pays AFTER job completion. Large jobs require $20K-$150K in materials upfront. We need project financing to bridge the gap.
+        <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", margin: 0, lineHeight: 1.6 }}>
+          We don't need outside financing. <span style={{ color: "#ff6b35" }}>PSE&G IS the financing</span> \u2014 on both residential and commercial jobs.<br />
+          Residential: instant rebate at install. Commercial: PSE&G funds up to 80% of the project.
         </p>
-      </div>
-
-      {/* 3-Layer Financing Stack */}
-      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#1e3a5f", marginBottom: 12 }}>Our 3-Layer Financing Stack</h3>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 16 }}>
-        {/* Layer 1 */}
-        <div style={{ background: "#fff", borderRadius: 10, padding: "16px 14px", border: "2px solid #059669", borderTop: "4px solid #059669" }}>
-          <div style={{ fontSize: 24, marginBottom: 4 }}>{"\ud83c\udfd7\ufe0f"}</div>
-          <div style={{ fontWeight: 800, fontSize: 13, color: "#059669", marginBottom: 2 }}>Mobilization Funding — Primary</div>
-          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Fund any signed contract upfront</div>
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {[
-              "Lends 70-80% of signed contract value immediately",
-              "Repay when PSE&G/client pays after completion",
-              "Requires: signed contract + 2 years in business",
-              "Works on PSE&G Clean Heat contracts \u2705",
-              "Works on commercial VRV/ERV contracts \u2705",
-              "No citizenship requirement \u2014 business based",
-            ].map((t, i) => (
-              <li key={i} style={{ fontSize: 10, color: "#334155", marginBottom: 3, paddingLeft: 10, position: "relative" }}>
-                <span style={{ position: "absolute", left: 0, color: "#059669" }}>{"\u2022"}</span>{t}
-              </li>
-            ))}
-          </ul>
-          <div style={{ fontSize: 9, color: "#64748b", marginTop: 6 }}>mobilizationfunding.com</div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#059669", marginTop: 4 }}>Use for: Every job over $15,000</div>
-        </div>
-        {/* Layer 2 */}
-        <div style={{ background: "#fff", borderRadius: 10, padding: "16px 14px", border: "2px solid #2563eb", borderTop: "4px solid #2563eb" }}>
-          <div style={{ fontSize: 24, marginBottom: 4 }}>{"\ud83c\udfe6"}</div>
-          <div style={{ fontWeight: 800, fontSize: 13, color: "#2563eb", marginBottom: 2 }}>Supplier Credit Lines — Already Active</div>
-          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Materials on net-30/60 terms</div>
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {[
-              "Lines of credit already established \u2705",
-              "Ferguson HVAC, Johnstone Supply",
-              "$50K-$200K in materials on credit",
-              "Pay after client pays \u2014 zero upfront cost",
-              "Stack with Mobilization Funding on large jobs",
-            ].map((t, i) => (
-              <li key={i} style={{ fontSize: 10, color: "#334155", marginBottom: 3, paddingLeft: 10, position: "relative" }}>
-                <span style={{ position: "absolute", left: 0, color: "#2563eb" }}>{"\u2022"}</span>{t}
-              </li>
-            ))}
-          </ul>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#2563eb", marginTop: 8 }}>Use for: All material purchases</div>
-        </div>
-        {/* Layer 3 */}
-        <div style={{ background: "#fff", borderRadius: 10, padding: "16px 14px", border: "2px solid #ff6b35", borderTop: "4px solid #ff6b35" }}>
-          <div style={{ fontSize: 24, marginBottom: 4 }}>{"\ud83d\udcb3"}</div>
-          <div style={{ fontWeight: 800, fontSize: 13, color: "#ff6b35", marginBottom: 2 }}>Acorn Finance — Customer Financing</div>
-          <div style={{ fontSize: 10, color: "#64748b", marginBottom: 8 }}>Customer gets loan, you get paid in 48hrs</div>
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-            {[
-              "Free to set up as contractor \u2014 no monthly fees",
-              "Customer applies \u2192 gets approved in minutes",
-              "Acorn pays YOU directly in 1-2 business days",
-              "Customer pays Acorn monthly \u2014 not your problem",
-              "Increases close rates \u2014 removes price objection",
-              "0% APR promotional options available",
-            ].map((t, i) => (
-              <li key={i} style={{ fontSize: 10, color: "#334155", marginBottom: 3, paddingLeft: 10, position: "relative" }}>
-                <span style={{ position: "absolute", left: 0, color: "#ff6b35" }}>{"\u2022"}</span>{t}
-              </li>
-            ))}
-          </ul>
-          <div style={{ fontSize: 9, color: "#64748b", marginTop: 6 }}>acornfinance.com</div>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#ff6b35", marginTop: 4 }}>Use for: All residential jobs</div>
-        </div>
-      </div>
-
-      {/* Pursuit Lending */}
-      <div style={{ background: "#f8fafc", borderRadius: 10, padding: "12px 16px", border: "1px solid #cbd5e1", marginBottom: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 18 }}>{"\ud83d\udccb"}</span>
-          <span style={{ fontWeight: 800, fontSize: 13, color: "#1e3a5f" }}>Pursuit Lending — Government Contracts</span>
-          <span style={{ background: "#ff6b35", color: "#fff", borderRadius: 4, padding: "2px 8px", fontSize: 9, fontWeight: 700 }}>FOR FUTURE PUBLIC WORKS JOBS</span>
-        </div>
-        <div style={{ fontSize: 10, color: "#475569", lineHeight: 1.6 }}>
-          Bridge to Success: up to $200K — NY State MWBE contracts. Contact: Manny Maysonet (838) 202-7181 / contractor@pursuitlending.com. 4-6 weeks to fund, Prime + 4% (8.75%). NOTE: Bridge to Success = NY State contracts only. PSE&G jobs = call Manny to confirm eligibility. Best use: when we win school/government HVAC contracts.
-        </div>
-      </div>
-
-      {/* How a typical PSE&G job gets financed */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 10 }}>How a Typical PSE&G Job Gets Financed</h3>
-          {[
-            "Win PSE&G Clean Heat job ($40K-$50K contract)",
-            "Apply to Mobilization Funding with signed contract \u2192 Receive 75% = $30K-$37K within days",
-            "Use supplier credit line for remaining materials \u2192 $0 out of pocket",
-            "Complete installation (2-3 weeks)",
-            "PSE&G inspection + approval",
-            "PSE&G pays ($16K-$18K rebate direct to us) + Customer pays remaining balance",
-            "Repay Mobilization Funding from proceeds",
-            "NET PROFIT: $8K-$15K per job, zero cash invested",
-          ].map((t, i) => (
-            <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "flex-start" }}>
-              <div style={{
-                minWidth: 22, height: 22, borderRadius: "50%",
-                background: i === 7 ? "#059669" : "#ff6b35",
-                color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
-                fontWeight: 700, fontSize: 10, flexShrink: 0,
-              }}>{i + 1}</div>
-              <p style={{ fontSize: 10, color: "#334155", margin: 0, paddingTop: 3, fontWeight: i === 7 ? 800 : 400 }}>{t}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Scale projection */}
-        <div style={{ background: "#0f2744", borderRadius: 10, padding: "18px 16px", color: "#fff" }}>
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: "#ff6b35", marginBottom: 14, textAlign: "center" }}>What This Model Enables</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 16 }}>
-            {[
-              { big: "3 jobs/week", sub: "With financing stack", detail: "= $87,500/month" },
-              { big: "$0 upfront", sub: "Materials on credit", detail: "Mobilization covers labor" },
-              { big: "$450K+", sub: "Annual profit", detail: "After all financing costs" },
-            ].map(s => (
-              <div key={s.big} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 18, fontWeight: 800, color: "#ff6b35" }}>{s.big}</div>
-                <div style={{ fontSize: 9, color: "rgba(255,255,255,.7)", marginTop: 2 }}>{s.sub}</div>
-                <div style={{ fontSize: 9, color: "rgba(255,255,255,.5)", marginTop: 2 }}>{s.detail}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{
-            background: "rgba(255,107,53,.2)", borderRadius: 8, padding: "10px 12px",
-            border: "1px solid rgba(255,107,53,.3)", textAlign: "center",
-          }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: "#ff6b35", margin: 0, lineHeight: 1.5 }}>
-              We don't need cash to grow.<br />We need signed contracts.<br />The financing follows the contract.
-            </p>
-          </div>
-        </div>
       </div>
     </Slide>
   );
 }
 
 /* ================================================================
-   SLIDE 16 — ACTIVE PIPELINE
+   SLIDE 18 — ACTIVE PIPELINE
    ================================================================ */
-function Slide16() {
+function Slide18() {
   const contracts = [
     {
       border: "#ff6b35",
@@ -1218,19 +1327,18 @@ function Slide16() {
 }
 
 /* ================================================================
-   SLIDE 17 — 5-YEAR PATH
+   SLIDE 19 — 5-YEAR PATH
    ================================================================ */
-function Slide17() {
+function Slide19() {
   const years = [
-    { year: "2026", label: "EXECUTE ON PIPELINE", color: "#ff6b35", revenue: "$4M-$5M", highlight: "\u26a1 $3M COMMITTED + 3-5 installers", milestones: [
-      "3-5 installers \u00d7 $350K = $1.05M-$1.75M new", "$3M committed pipeline \u2014 Q2-Q3 2026",
-      "Key hire: 3 installers + 1 BPI auditor", "$350K/installer model proven",
-      "ServiceTitan fully integrated ($1,300/mo)", "50 Google reviews \u2014 map pack top 3",
-      "Courses platform live and enrolling", "BPI certification secured",
-    ], foundation: "$350K/installer model proven, pipeline funding growth" },
+    { year: "2026", label: "4 NOW \u2192 8 BY Q4", color: "#ff6b35", revenue: "$1.4M-$2.8M", highlight: "\u26a1 4 INSTALLERS NOW \u2192 8 BY Q4", milestones: [
+      "4 installers operating \u2014 $1.4M baseline", "PSE&G Clean Heat \u2014 instant rebate model",
+      "3 blogs/week \u2014 SEO compounding", "No Catch social campaign launched",
+      "Target: 8 installers by Q4 2026", "50 Google reviews \u2014 map pack top 3",
+    ], foundation: "PSE&G funds jobs, suppliers cover materials, hire + market" },
     { year: "2027", label: "DOMINATE LOCAL MARKET", color: "#2563eb", revenue: "$4.2M-$6M", highlight: "", milestones: [
-      "12 installers \u00d7 $350K = $4.2M", "Commercial pipeline growing",
-      "Courses revenue starting", "Map pack top 3 \u2192 40+ leads/week",
+      "12 installers \u00d7 $350K = $4.2M", "Engineered Solutions \u2014 first school/hospital job",
+      "SEO generating 50+ organic leads/month", "Map pack top 3 \u2192 40+ leads/week",
       "200+ SEO pages (Central NJ, Shore)", "Carrier/Trane/Lennox preferred dealer",
       "Maintenance subscription: 500+ members", "Partnership network: 50+ referrers",
     ], foundation: "Brand authority established, recurring revenue streams active" },
@@ -1326,7 +1434,7 @@ function Slide17() {
             Hire fast. Train right. Scale the model.
           </p>
           <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.8)", margin: 0 }}>
-            2026 Goal: 3 installers by Q4 = $1.05M new revenue + $88K confirmed = path to $1.5M
+            2026 Goal: 4 installers now {"\u2192"} 8 by Q4 = $1.4M-$2.8M revenue
           </p>
         </div>
 
@@ -1348,7 +1456,7 @@ function Slide17() {
 /* ================================================================
    SLIDES ARRAY
    ================================================================ */
-const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14, Slide15, Slide16, Slide17];
+const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14, Slide15, Slide16, Slide17, Slide18, Slide19];
 
 /* ================================================================
    MAIN PRESENTATION COMPONENT
