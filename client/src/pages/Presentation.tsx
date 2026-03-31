@@ -217,7 +217,7 @@ function Slide6(){return(
       <Card border={navy} bg="#eff6ff"><h4 style={{color:navy,fontWeight:700,marginBottom:8,marginTop:0}}>Moderate</h4><p style={{fontSize:12,color:gray,marginBottom:8}}>6 installers × $350K + PSE&G pipeline</p><p style={{fontSize:22,fontWeight:900,color:navy,margin:0}}>$2M+</p></Card>
       <Card border={orange} bg="#fff7ed"><h4 style={{color:orange,fontWeight:700,marginBottom:8,marginTop:0}}>Aggressive (Target)</h4><p style={{fontSize:12,color:gray,marginBottom:8}}>8 installers × $350K + commercial</p><p style={{fontSize:22,fontWeight:900,color:orange,margin:0}}>$2.8M+</p></Card>
     </Grid>
-    <div style={{padding:12,background:"#fff7ed",border:`1px solid ${orange}`,borderRadius:8,textAlign:"center"}}><p style={{color:orange,fontWeight:700,margin:0}}>1 new installer = $350K top line. Every month delayed = $29,166 lost revenue.</p></div>
+    <div style={{padding:12,background:"#fff7ed",border:`1px solid ${orange}`,borderRadius:8,textAlign:"center"}}><p style={{color:orange,fontWeight:700,margin:0}}>1 new installer = $350K top line. Scaling requires bridging the 8-9 week PSE&G payment cycle.</p></div>
   </div>
 )}
 
@@ -319,7 +319,7 @@ function Slide11(){return(
           <h4 style={{color:green,fontWeight:800,margin:"0 0 8px",fontSize:14}}>Path to $2.5M</h4>
           <Table headers={["Milestone","Revenue","When"]} rows={[["4 installers × $350K","$1.4M","Now"],["+ PSE&G pipeline","$500K","Q2 2026"],["+ Commercial jobs","$600K","Q3 2026"],["= Threshold","$2.5M","Q4 2026"]]}/>
         </div>
-        <div style={{padding:12,background:"#fff7ed",border:`1px solid ${orange}`,borderRadius:8}}><p style={{color:orange,fontWeight:700,fontSize:13,margin:0}}>The #1 constraint is hiring speed. We need qualified installers now. Every week without a new installer = $29,166 in lost revenue.</p></div>
+        <div style={{padding:12,background:"#fff7ed",border:`1px solid ${orange}`,borderRadius:8}}><p style={{color:orange,fontWeight:700,fontSize:13,margin:0}}>The #1 constraint is project funding. Securing financing to bridge the 8-9 week PSE&G payment cycle is the key to scaling.</p></div>
       </div>
     </Grid>
   </div>
@@ -392,7 +392,7 @@ function Slide16(){return(
       {([["$350K","Revenue per installer per year","4 installers operating now"],["$18,000","PSE&G max residential rebate","Instant — we handle all paperwork"],["80%","PSE&G covers commercial projects","Schools, hospitals, multifamily"]] as const).map(([v,l,sub])=>(<div key={v} style={{padding:24,background:"rgba(255,255,255,0.08)",borderRadius:12,border:"1px solid rgba(255,255,255,0.1)"}}><div style={{fontSize:40,fontWeight:900,color:orange}}>{v}</div><div style={{fontSize:13,color:"rgba(255,255,255,0.8)",marginTop:8,fontWeight:600}}>{l}</div><div style={{fontSize:12,color:"rgba(255,255,255,0.5)",marginTop:4}}>{sub}</div></div>))}
     </div>
     <div style={{background:orange,borderRadius:12,padding:"16px 32px",marginBottom:28}}><p style={{color:"#fff",fontWeight:900,fontSize:20,margin:0}}>2026 GOAL: 8 INSTALLERS × $350K = $2.8M REVENUE</p></div>
-    <p style={{fontSize:18,color:"rgba(255,255,255,0.8)",maxWidth:700,lineHeight:1.7,marginBottom:32}}>Every installer adds $350,000 to top line.<br/>PSE&G rebates reduce customer costs significantly. At $2.5M, Mobilization Funding unlocks.<br/><strong style={{color:"#fff"}}>The key to growth is hiring qualified installers and running consistent marketing.</strong></p>
+    <p style={{fontSize:18,color:"rgba(255,255,255,0.8)",maxWidth:700,lineHeight:1.7,marginBottom:32}}>Every installer adds $350,000 to top line.<br/>PSE&G rebates reduce customer costs significantly. At $2.5M, Mobilization Funding unlocks.<br/><strong style={{color:"#fff"}}>The #1 constraint is project funding. We bridge this with supplier credit, 3rd party financing (Option 1), and Mobilization Funding at $2.5M gross revenue.</strong></p>
     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,width:"100%",maxWidth:600}}>
       <div style={{padding:16,background:"rgba(255,255,255,0.08)",borderRadius:8,border:"1px solid rgba(255,255,255,0.15)"}}><div style={{fontWeight:700,color:"#fff",marginBottom:4}}>Mechanical Enterprise LLC</div><div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>(862) 419-1763</div><div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>sales@mechanicalenterprise.com</div><div style={{fontSize:13,color:"rgba(255,255,255,0.7)"}}>mechanicalenterprise.com</div></div>
       <div style={{padding:16,background:orange,borderRadius:8}}><div style={{fontWeight:700,color:"#fff",marginBottom:4}}>PSE&G Trade Ally</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>WMBE/SBE Certified</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>Newark, NJ · 15 Counties</div><div style={{fontSize:13,color:"rgba(255,255,255,0.9)"}}>March 31, 2026</div></div>
