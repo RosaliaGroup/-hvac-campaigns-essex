@@ -382,11 +382,14 @@ function Slide5() {
           <SimpleTable
             headers={["Program", "Amount"]}
             rows={[
-              ["NJ Whole Home Program", "Up to $7,500"],
-              ["PSE&G Utility Rebate", "Up to $900"],
-              ["JCP&L Utility Rebate", "Up to $1,000"],
-              ["ACE Utility Rebate", "Up to $1,300"],
-              ["0% Financing Available", "Up to $25,000"],
+              ["PSE&G Clean Heat \u2014 Non LMI (50%)", "Up to $10,000"],
+              ["PSE&G Clean Heat \u2014 LMI (60%)", "Up to $12,000"],
+              ["Decommissioning Adder", "Up to $2,000"],
+              ["Re-ducting Adder (Manual D)", "Up to $2,000"],
+              ["Additional ccASHP Unit", "$2,000 per unit"],
+              ["PSE&G OBR Financing \u2014 Non LMI", "0% / 84 months"],
+              ["PSE&G OBR Financing \u2014 LMI", "0% / 120 months"],
+              ["Maximum Possible (LMI + all adders)", "Up to $18,450"],
             ]}
           />
         </div>
@@ -562,7 +565,7 @@ function Slide9() {
   const moves = [
     { emoji: "\ud83c\udfc6", title: "Rebate Specialist Positioning", color: "#ff6b35", items: [
       'Primary message: "$16K in rebates \u2014 we handle everything"',
-      "Action: Get BPI certification for NJ Whole Home program",
+      "Action: Scale PSE&G Clean Heat Trade Ally program (PN#136)",
       "Why: No major competitor owns this position",
       "Revenue impact: 3x conversion rate vs generic HVAC",
     ]},
@@ -912,10 +915,10 @@ function Slide13() {
    ================================================================ */
 function Slide14() {
   const cards = [
-    { emoji: "\u2705", title: "$1M Cash Reserve", color: "#059669", text: "We maintain $500K+ in reserve at all times to front materials on large commercial VRF/VRF jobs ($35K-$150K per job) without touching credit." },
-    { emoji: "\ud83d\udcc4", title: "Invoice Factoring Available", color: "#2563eb", text: "The $1.5M in committed contracts can be factored at 85% upfront = $1.275M immediate cash when jobs begin. Zero debt. Zero dilution." },
-    { emoji: "\ud83c\udfe6", title: "Line of Credit \u2014 Easy to Get", color: "#7c3aed", text: "With $1M in the bank + $3M pipeline we qualify for a $500K business line of credit at our bank same week. Use only when needed for specific jobs. Cost: ~8-10% on what we draw." },
-    { emoji: "\ud83d\udcc8", title: "Pipeline Funds Itself", color: "#ff6b35", text: "$3M pipeline at 15-20% net margin = $450K-$600K profit reinvested into Q3-Q4 growth. Each quarter funds the next." },
+    { emoji: "\u2705", title: "PSE&G Trade Ally PN#136", color: "#059669", text: "Approved PSE&G Trade Ally since 2025. Every NJ gas heating customer qualifies. We handle all paperwork, rebate filing, and program enrollment." },
+    { emoji: "\ud83d\udcc4", title: "Mobilization Funding", color: "#2563eb", text: "Signed PSE&G contracts can be funded at 70-80% upfront through Mobilization Funding. Repay when PSE&G pays after completion. Zero debt. Zero dilution." },
+    { emoji: "\ud83c\udfe6", title: "Project Financing Available", color: "#7c3aed", text: "With confirmed PSE&G contracts + supplier credit lines already active, we qualify for project financing through Mobilization Funding. 70-80% of contract value upfront." },
+    { emoji: "\ud83d\udcc8", title: "Pipeline Funds Itself", color: "#ff6b35", text: "PSE&G pays after completion. Mobilization Funding bridges the gap \u2014 70-80% of contract value upfront. Each job funds the next." },
   ];
 
   return (
@@ -1117,25 +1120,6 @@ function Slide15() {
 function Slide16() {
   const contracts = [
     {
-      border: "#1e3a5f",
-      badge: "\ud83c\udfe2 COMMERCIAL \u2014 FLAGSHIP PROJECT",
-      badgeBg: "#1e3a5f",
-      project: "Avatar Tech \u2014 84 Cluster Ave, Newark NJ",
-      client: "Avatar Tech / 142 Lafayette St Newark",
-      type: "VRV/ERV Commercial Installation",
-      value: "$994,500",
-      date: "Signed: November 10, 2025",
-      lines: [
-        "HVAC Equipment Installation: $455,000",
-        "Electrical Work: $250,000",
-        "Permits, Engineers, Architect: $68,000",
-        "Masonry, Fence, Finishes: $89,000",
-        "Boiler Demolition: $18,500",
-        "Structural Steel: $49,000",
-        "Project Management: $65,000",
-      ],
-    },
-    {
       border: "#ff6b35",
       badge: "\ud83c\udf31 PSE&G CLEAN HEAT PROGRAM",
       badgeBg: "#059669",
@@ -1176,7 +1160,7 @@ function Slide16() {
         <p style={{ fontSize: 16, color: "#64748b", marginTop: 8 }}>Active pipeline as of March 31, 2026</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 24 }}>
         {contracts.map(c => (
           <div key={c.project} style={{
             background: "#fff", borderRadius: 12, padding: "18px 16px",
@@ -1205,12 +1189,9 @@ function Slide16() {
 
       {/* Totals table */}
       <SimpleTable compact headers={["Contract", "Value"]} rows={[
-        ["Avatar Tech (Commercial VRV/ERV)", "$994,500"],
-        ["Modern Building Group (PSE&G)", "$39,950"],
+        ["Modern Building Group (PSE&G Clean Heat)", "$39,950"],
         ["Ufredo Molina (PSE&G Residential)", "$49,036"],
-        ["CONFIRMED PIPELINE TOTAL", "$1,083,486"],
-        ["Additional promised pipeline", "$1,500,000"],
-        ["Q2-Q3 2026 target", "$3,000,000"],
+        ["CONFIRMED PIPELINE TOTAL", "$88,986"],
       ]} />
 
       {/* Insight box */}
@@ -1219,7 +1200,7 @@ function Slide16() {
         padding: "14px 18px",
       }}>
         <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", margin: 0, lineHeight: 1.6 }}>
-          {"\ud83d\udca1"} <strong>KEY INSIGHT:</strong> The Avatar Tech job alone ($994,500) proves we can execute full general contractor scope \u2014 HVAC + Electrical + Structural + Permits + PM. This is NOT a residential installer business. This is a <span style={{ color: "#ff6b35" }}>full-service mechanical contractor</span>.
+          {"\ud83d\udca1"} Both confirmed contracts are PSE&G Clean Heat program jobs (PN#136). As approved Trade Ally, every NJ gas customer is a potential project.
         </p>
       </div>
 
@@ -1345,7 +1326,7 @@ function Slide17() {
             Hire fast. Train right. Scale the model.
           </p>
           <p style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,.8)", margin: 0 }}>
-            2026 Goal: 8 installers by Q4 = $2.8M new revenue + $3M pipeline = $5.8M total
+            2026 Goal: 3 installers by Q4 = $1.05M new revenue + $88K confirmed = path to $1.5M
           </p>
         </div>
 
