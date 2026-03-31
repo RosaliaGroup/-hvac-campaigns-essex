@@ -57,6 +57,8 @@ import CompetitorPage from "./pages/CompetitorPage";
 import CityPage from "./pages/CityPage";
 import ServicePage from "./pages/ServicePage";
 import LuxuryAreaPage from "./pages/LuxuryAreaPage";
+import BlogIndex from "./pages/BlogIndex";
+import BlogPost from "./pages/BlogPost";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -108,6 +110,10 @@ function Router() {
       <Route path={"/rebate-calc"} component={RebateCalculator} />
       <Route path={"/courses"} component={Courses} />
       <Route path={"/courses/:id"} component={CourseDetail} />
+
+      {/* Blog */}
+      <Route path={"/blog"} component={BlogIndex} />
+      <Route path={"/blog/:slug"} component={({ params }: { params: { slug: string } }) => <BlogPost slug={params.slug} />} />
 
       {/* Competitor comparison pages — SEO conquest */}
       <Route path={"/vs-aj-perri"} component={() => <CompetitorPage competitor="A.J. Perri" slug="aj-perri" />} />
