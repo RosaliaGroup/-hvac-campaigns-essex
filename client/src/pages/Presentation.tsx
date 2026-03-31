@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 
 const PASSWORD = "mechanicalenterprise2026";
-const TOTAL_SLIDES = 15;
+const TOTAL_SLIDES = 16;
 
 /* ================================================================
    PASSWORD GATE
@@ -466,7 +466,7 @@ function Slide7() {
       <SH sub="">Revenue Model — $350K Per Installer Per Year</SH>
       <div style={{ marginBottom: 20 }}>
         <SimpleTable headers={["Year", "Installers", "Installer Revenue", "Monthly Run Rate"]} rows={[
-          ["2026", "3-8", "$1.05M-$2.8M", "$87K-$233K"],
+          ["2026", "2-3", "$700K-$1.05M", "$58K-$87K"],
           ["2027", "12", "$4,200,000", "$350,000"],
           ["2028", "20", "$7,000,000", "$583,333"],
           ["2029", "30", "$10,500,000", "$875,000"],
@@ -484,13 +484,13 @@ function Slide7() {
         background: "#ff6b35", borderRadius: 10, padding: "14px 20px",
         textAlign: "center", marginBottom: 20,
       }}>
-        <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>&#9889; $3M ALREADY COMMITTED — Q2-Q3 2026</span>
+        <span style={{ fontSize: 16, fontWeight: 800, color: "#fff" }}>{"\ud83c\udfaf"} 2026 TARGET: $1M-$1.5M — PATH TO 3 INSTALLS/WEEK</span>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 }}>
         {[
-          { title: "Conservative", subtitle: "3 installers + $3M pipeline", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", lines: ["3 installers \u00d7 $350K = $1.05M new revenue", "+ $3M committed pipeline"], total: "2026 Total: $4M+" },
-          { title: "Moderate", subtitle: "5 installers + pipeline + ads", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", lines: ["5 installers \u00d7 $350K = $1.75M", "+ $3M pipeline + $1M commercial"], total: "2026 Total: $5.75M+" },
-          { title: "Aggressive", subtitle: "8 installers + full scale", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", lines: ["8 installers \u00d7 $350K = $2.8M", "+ $3M pipeline + $2M commercial"], total: "2026 Total: $7.8M+" },
+          { title: "Conservative", subtitle: "2 installers + confirmed contracts", color: "#059669", bg: "#f0fdf4", border: "#bbf7d0", lines: ["2 installers \u00d7 $350K = $700K", "+ $88K confirmed contracts"], total: "2026 Total: $800K-$1M" },
+          { title: "Moderate", subtitle: "3 installers + pipeline conversion", color: "#2563eb", bg: "#eff6ff", border: "#bfdbfe", lines: ["3 installers \u00d7 $350K = $1.05M", "+ $500K pipeline conversion"], total: "2026 Total: $1.5M" },
+          { title: "Aggressive (TARGET)", subtitle: "3 installers + PSE&G + pipeline", color: "#dc2626", bg: "#fef2f2", border: "#fecaca", lines: ["3 installers \u00d7 $350K = $1.05M", "+ $800K PSE&G + pipeline"], total: "2026 Total: $1.5M+" },
         ].map(s => (
           <div key={s.title} style={{ background: s.bg, border: `2px solid ${s.border}`, borderRadius: 12, padding: 20 }}>
             <div style={{ fontWeight: 800, fontSize: 16, color: s.color, marginBottom: 4 }}>{s.title}</div>
@@ -619,36 +619,176 @@ function Slide9() {
 }
 
 /* ================================================================
-   SLIDE 10 — 90 DAY ACTION PLAN
+   SLIDE 10 — MARKETING STRATEGY
    ================================================================ */
 function Slide10() {
+  const channels = [
+    ["PSE&G Program (PN#136)", "\u2705 Active", "1-2", "Scale up"],
+    ["SEO \u2014 116 pages", "\u2705 Live", "0-2", "Growing"],
+    ["Google Business Profile", "\u2705 Live", "0-1", "Need reviews"],
+    ["Chat Widget (Jessica AI)", "\u2705 Live", "0-1", "Optimizing"],
+    ["Google Ads", "\u23f3 Paused", "0", "LAUNCH NOW"],
+    ["Facebook/Instagram Ads", "\u23f3 Needed", "0", "LAUNCH NOW"],
+    ["Referral Partners", "\u23f3 Needed", "0", "BUILD NOW"],
+    ["Thumbtack/Angi", "\u23f3 Needed", "0", "ACTIVATE"],
+    ["Real Estate Agents", "\u23f3 Needed", "0", "BUILD NOW"],
+  ];
+
+  const campaigns = [
+    { emoji: "\ud83d\udd0d", title: "Google Ads \u2014 PSE&G Rebate Keywords", color: "#1e3a5f", items: [
+      "Budget: $1,500/month",
+      'Keywords: "PSE&G heat pump rebate", "heat pump installation NJ", "replace gas furnace NJ", "free HVAC assessment NJ"',
+      "Expected: 8-12 leads/week",
+      "Close rate: 25% = 2-3 installs/week",
+      "ROI: $1,500 spend \u2192 $21,000+ revenue",
+    ]},
+    { emoji: "\ud83d\udcd8", title: "Facebook/Instagram \u2014 Homeowner Rebate Ads", color: "#2563eb", items: [
+      "Budget: $1,000/month",
+      "Target: NJ homeowners 35-65, own home, income $60K+",
+      'Ad angle: "NJ is paying up to $18,450 to replace your old furnace. Find out if you qualify \u2014 free."',
+      "Expected: 15-20 leads/week",
+      "Close rate: 15% = 2-3 installs/week",
+    ]},
+    { emoji: "\ud83e\udd1d", title: "PSE&G Program \u2014 Referral Network", color: "#059669", items: [
+      "Budget: $0 (referral fees from job revenue)",
+      "Partners: Real estate agents, property managers, plumbers, electricians, roofers",
+      "Referral fee: $200-$500 per closed install",
+      "Expected: 3-5 referrals/week from 20 active partners",
+      "Close rate: 40% = 1-2 installs/week",
+    ]},
+    { emoji: "\u2b50", title: "Google Reviews \u2014 Map Pack Domination", color: "#ff6b35", items: [
+      "Budget: $0",
+      "Action: Text all past customers for Google reviews",
+      "Goal: 10 reviews in 30 days \u2192 50 in 90 days",
+      "Impact: Top 3 map pack = 60% of all local HVAC clicks",
+      "Expected: 3-5 additional leads/week at $0 ad cost",
+    ]},
+    { emoji: "\ud83d\udccb", title: "Thumbtack + Angi + HomeAdvisor", color: "#7c3aed", items: [
+      "Budget: $300-$500/month",
+      "Action: Create profiles, upload photos, get reviews",
+      "Target: NJ homeowners searching for HVAC replacement",
+      "Expected: 3-5 leads/week",
+      "Close rate: 20% = 1 install/week",
+    ]},
+  ];
+
+  return (
+    <Slide>
+      <SH sub="The math: 3 installs/week \u00d7 $350K avg \u00d7 52 weeks = $1.05M/year per installer">How We Get to 3 Installations Per Week</SH>
+
+      {/* Goal stat bar */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20,
+        background: "#ff6b35", borderRadius: 10, padding: "14px 12px",
+      }}>
+        {[["3", "Installs/Week"], ["$1,050", "Billed/Day"], ["$87,500", "Monthly Revenue"], ["$1.05M", "Annual/Installer"]].map(([v, l]) => (
+          <div key={l} style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>{v}</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,.8)" }}>{l}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Current channels table */}
+      <div style={{ marginBottom: 20 }}>
+        <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Current Lead Sources & Gaps</h3>
+        <SimpleTable compact headers={["Channel", "Status", "Leads/wk", "Action"]} rows={channels} />
+      </div>
+
+      {/* 5 campaigns */}
+      <h3 style={{ fontSize: 14, fontWeight: 700, color: "#1e3a5f", marginBottom: 10 }}>5 Campaigns to Launch Immediately</h3>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 20 }}>
+        {campaigns.map(c => (
+          <div key={c.title} style={{
+            background: "#fff", borderRadius: 10, padding: "12px 10px",
+            border: "1px solid #e2e8f0", borderTop: `3px solid ${c.color}`,
+          }}>
+            <div style={{ fontSize: 18, marginBottom: 2 }}>{c.emoji}</div>
+            <div style={{ fontWeight: 700, fontSize: 10, color: c.color, marginBottom: 6 }}>{c.title}</div>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {c.items.map((item, i) => (
+                <li key={i} style={{ fontSize: 9, color: "#475569", marginBottom: 3, paddingLeft: 8, position: "relative" }}>
+                  <span style={{ position: "absolute", left: 0, color: c.color }}>&#8226;</span>{item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Combined projection */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Combined: How We Hit 3+ Installs/Week</h3>
+          <SimpleTable compact headers={["Channel", "Leads/wk", "Installs/wk"]} rows={[
+            ["Google Ads", "8-12", "2-3"],
+            ["Facebook Ads", "15-20", "2-3"],
+            ["PSE&G Referral Network", "3-5", "1-2"],
+            ["Google Reviews/Maps", "3-5", "1"],
+            ["Thumbtack/Angi", "3-5", "1"],
+            ["SEO organic (growing)", "5-10", "1-2"],
+            ["TOTAL", "37-57/week", "8-12/week"],
+          ]} />
+          <div style={{ fontSize: 10, color: "#475569", marginTop: 6, lineHeight: 1.5 }}>
+            At 3 installs/week we need 1 installer. At 6/week we need 2. At 12/week we need 4. Marketing scales before hiring scales.
+          </div>
+        </div>
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", marginBottom: 8 }}>Total Marketing Budget Needed</h3>
+          <SimpleTable compact headers={["Channel", "Cost"]} rows={[
+            ["Google Ads", "$1,500/month"],
+            ["Facebook/Instagram Ads", "$1,000/month"],
+            ["Thumbtack/Angi", "$400/month"],
+            ["Referral fees (per job)", "~$300/install"],
+            ["Total Monthly Ad Spend", "$2,900/month"],
+            ["Revenue at 3 installs/wk", "$87,500/month"],
+            ["ROI on ad spend", "30:1"],
+          ]} />
+        </div>
+      </div>
+
+      {/* Bottom highlight */}
+      <div style={{
+        background: "#fff7ed", border: "2px solid #ff6b35", borderRadius: 10,
+        padding: "12px 16px", textAlign: "center",
+      }}>
+        <p style={{ fontSize: 13, fontWeight: 700, color: "#1e3a5f", margin: 0 }}>
+          3 installs/week requires $2,900/month in ads. 3 installs/week generates $87,500/month in revenue. Every $1 spent on ads returns <span style={{ color: "#ff6b35" }}>$30 in revenue</span>. This is the highest ROI use of capital available to us.
+        </p>
+      </div>
+    </Slide>
+  );
+}
+
+/* ================================================================
+   SLIDE 11 — 90 DAY ACTION PLAN
+   ================================================================ */
+function Slide11() {
   const months = [
-    { title: "Month 1 \u2014 ACTIVATE", color: "#ff6b35", items: [
-      "10 Google reviews (text Thumbtack customers)",
-      "Resume paused Google Ads campaign",
-      "Get BPI certification",
+    { title: "Month 1 \u2014 LAUNCH MARKETING", color: "#ff6b35", items: [
+      "Launch Google Ads ($1,500/month) \u2014 rebate keywords",
+      "Launch Facebook Ads ($1,000/month) \u2014 homeowner rebate angle",
+      "Create Thumbtack + Angi profiles",
+      "Text ALL past customers for Google reviews (goal: 10)",
+      "Build referral network \u2014 10 real estate agents this month",
+      "Hire 1 additional installer immediately",
+      "Activate PSE&G program marketing \u2014 door knocking areas",
       "Connect Vapi Jessica to phone number",
-      "Publish 4 more blog posts",
-      "Get Carrier/Trane/Lennox dealer agreements",
-      "Launch Facebook ads for rebates",
     ]},
-    { title: "Month 2 \u2014 GROW", color: "#2563eb", items: [
-      "25+ Google reviews \u2014 map pack entry",
-      "Launch commercial referral network",
-      "First commercial VRV/VRF pipeline",
-      "Add Central NJ + Shore area pages",
-      "Email nurture sequence for leads",
-      "Launch courses \u2014 first paid enrollment",
-      "ServiceTitan full integration",
+    { title: "Month 2 \u2014 SCALE TO 3 INSTALLS/WEEK", color: "#2563eb", items: [
+      "25+ Google reviews \u2014 enter map pack",
+      "Optimize Google Ads based on Month 1 data",
+      "20 active referral partners",
+      "Hire 2nd installer when hitting 6 installs/week",
+      "ServiceTitan fully tracking all jobs and leads",
+      "Blog posts targeting PSE&G rebate keywords",
     ]},
-    { title: "Month 3 \u2014 SCALE", color: "#059669", items: [
+    { title: "Month 3 \u2014 HIT $87K/MONTH", color: "#059669", items: [
+      "3+ installs/week consistently",
       "50 Google reviews \u2014 map pack top 3",
-      "2 additional installation technicians",
-      "Maintenance plan subscription launched",
-      "Real estate agent partnership program",
-      "Multi-family property owner targeting",
-      "200+ SEO pages live",
-      "$200K+ monthly revenue target",
+      "3 installers working",
+      "$87,500/month revenue run rate",
+      "Expand to North NJ PSE&G territory",
     ]},
   ];
 
@@ -677,9 +817,9 @@ function Slide10() {
 }
 
 /* ================================================================
-   SLIDE 11 — INVESTMENT NEEDED
+   SLIDE 12 — INVESTMENT NEEDED
    ================================================================ */
-function Slide11() {
+function Slide12() {
   return (
     <Slide>
       <SH sub="">Investment to Scale on $3M Pipeline</SH>
@@ -730,9 +870,9 @@ function Slide11() {
 }
 
 /* ================================================================
-   SLIDE 12 — SERVICETITAN INTEGRATION
+   SLIDE 13 — SERVICETITAN INTEGRATION
    ================================================================ */
-function Slide12() {
+function Slide13() {
   const benefits = [
     { emoji: "\ud83d\udccb", title: "Job Management", color: "#1e3a5f", text: "Every lead, booking, and job tracked in one place. Dispatch, scheduling, and technician management. Real-time job status visible to the whole team. Integrates directly with our booking system." },
     { emoji: "\ud83d\udcb0", title: "Revenue Tracking", color: "#ff6b35", text: "Every invoice, payment, and job value tracked. Stripe payments sync with ServiceTitan records. Know your revenue, margins, and top technicians at any moment. Essential for scaling to 8 figures." },
@@ -768,9 +908,9 @@ function Slide12() {
 }
 
 /* ================================================================
-   SLIDE 13 — CAPITAL STRATEGY
+   SLIDE 14 — CAPITAL STRATEGY
    ================================================================ */
-function Slide13() {
+function Slide14() {
   const cards = [
     { emoji: "\u2705", title: "$1M Cash Reserve", color: "#059669", text: "We maintain $500K+ in reserve at all times to front materials on large commercial VRF/VRF jobs ($35K-$150K per job) without touching credit." },
     { emoji: "\ud83d\udcc4", title: "Invoice Factoring Available", color: "#2563eb", text: "The $1.5M in committed contracts can be factored at 85% upfront = $1.275M immediate cash when jobs begin. Zero debt. Zero dilution." },
@@ -817,9 +957,9 @@ function Slide13() {
 }
 
 /* ================================================================
-   SLIDE 14 — ACTIVE PIPELINE
+   SLIDE 15 — ACTIVE PIPELINE
    ================================================================ */
-function Slide14() {
+function Slide15() {
   const contracts = [
     {
       border: "#1e3a5f",
@@ -942,9 +1082,9 @@ function Slide14() {
 }
 
 /* ================================================================
-   SLIDE 15 — 5-YEAR PATH
+   SLIDE 16 — 5-YEAR PATH
    ================================================================ */
-function Slide15() {
+function Slide16() {
   const years = [
     { year: "2026", label: "EXECUTE ON PIPELINE", color: "#ff6b35", revenue: "$4M-$5M", highlight: "\u26a1 $3M COMMITTED + 3-5 installers", milestones: [
       "3-5 installers \u00d7 $350K = $1.05M-$1.75M new", "$3M committed pipeline \u2014 Q2-Q3 2026",
@@ -1072,7 +1212,7 @@ function Slide15() {
 /* ================================================================
    SLIDES ARRAY
    ================================================================ */
-const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14, Slide15];
+const SLIDES = [Slide1, Slide2, Slide3, Slide4, Slide5, Slide6, Slide7, Slide8, Slide9, Slide10, Slide11, Slide12, Slide13, Slide14, Slide15, Slide16];
 
 /* ================================================================
    MAIN PRESENTATION COMPONENT
