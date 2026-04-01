@@ -1,8 +1,8 @@
 export interface CampaignTemplate {
   id: string;
   name: string;
-  category: 'emergency' | 'installation' | 'maintenance' | 'rebates' | 'partnerships' | 'commercial' | 'nextdoor';
-  platform: 'google-search' | 'facebook' | 'instagram' | 'youtube' | 'google-business' | 'nextdoor';
+  category: 'emergency' | 'installation' | 'maintenance' | 'rebates' | 'partnerships' | 'commercial' | 'nextdoor' | 'nonprofit' | 'lighting';
+  platform: 'google-search' | 'facebook' | 'instagram' | 'youtube' | 'google-business' | 'nextdoor' | 'linkedin' | 'email' | 'google-display';
   adType: string;
   content: {
     headline?: string;
@@ -388,6 +388,293 @@ export const campaignTemplates: CampaignTemplate[] = [
     targetAudience: 'Neighbors interested in earning referral income in Essex County',
     estimatedBudget: '$5-10 per day (Nextdoor Local Deal)',
   },
+
+  // ─── NONPROFIT + LIGHTING CAMPAIGNS (#171-190) ─────────────────────────
+  {
+    id: 'nonprofit-churches-171',
+    name: 'Churches — Lighting 100% + HVAC 80%',
+    category: 'nonprofit',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'Churches: Your Lighting Is 100% Covered. HVAC Up to 80%. $0 Out of Pocket.',
+      primaryText: 'The NJ Direct Install Program covers 100% of lighting upgrades for houses of worship — no OBR, no cost, zero. HVAC replacement is covered up to 80%, with the balance on OBR. If your church has multiple buildings, each one qualifies separately. Free assessment, we handle every form.',
+      cta: 'Free Assessment for Your Church',
+    },
+    targetAudience: 'Church administrators, pastors, facilities directors in NJ',
+    estimatedBudget: '$35/day',
+  },
+  {
+    id: 'nonprofit-mosques-172',
+    name: 'Mosques & Islamic Centers',
+    category: 'nonprofit',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'Mosques and Islamic Centers: 100% Lighting Coverage + 80% HVAC Through NJ Direct Install.',
+      primaryText: 'The NJ Direct Install Program fully covers lighting upgrades for Islamic centers and mosques — 100%, no cost. HVAC up to 80% covered, balance on OBR. Multiple buildings each qualify. Free assessment, no obligation, we handle all paperwork.',
+      cta: 'Book Free Assessment',
+    },
+    targetAudience: 'Mosque administrators, Islamic center directors in NJ',
+    estimatedBudget: '$35/day',
+  },
+  {
+    id: 'nonprofit-synagogues-173',
+    name: 'Synagogues & Jewish Organizations',
+    category: 'nonprofit',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'Synagogues: NJ Covers 100% of Your Lighting and Up to 80% of HVAC.',
+      primaryText: 'Jewish community centers, synagogues, and affiliated organizations qualify for full lighting coverage under NJ Direct Install — 100% at no cost. HVAC up to 80% covered. Balance on OBR. Multiple facilities each qualify. We handle all paperwork.',
+      cta: 'Free Synagogue Assessment',
+    },
+    targetAudience: 'Synagogue administrators, JCC directors, Jewish organization leaders in NJ',
+    estimatedBudget: '$35/day',
+  },
+  {
+    id: 'nonprofit-community-centers-174',
+    name: 'Community Centers — Large Portfolio',
+    category: 'nonprofit',
+    platform: 'linkedin',
+    adType: 'Sponsored Content',
+    content: {
+      headline: 'Community Centers: Every Building Qualifies. Lighting 100% Free. HVAC 80% Off.',
+      primaryText: 'If your organization runs multiple community centers across NJ, every single building qualifies for Direct Install separately. Lighting: 100% covered, no cost. HVAC: up to 80% covered, balance on OBR. One free assessment per property. We coordinate multi-building rollouts.',
+      cta: 'Multi-Building Assessment',
+    },
+    targetAudience: 'Community center directors, nonprofit executives with multiple NJ facilities',
+    estimatedBudget: '$35/day',
+  },
+  {
+    id: 'nonprofit-food-banks-175',
+    name: 'Food Banks & Social Services',
+    category: 'nonprofit',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'Food Banks and Social Service Nonprofits: NJ Pays 100% of Lighting + 80% of HVAC.',
+      primaryText: 'Your mission is serving people — not managing energy costs. The Direct Install Program covers 100% of lighting and up to 80% of HVAC for qualifying nonprofits. OBR for the HVAC balance. Free assessment. Every dollar you save goes back to your mission.',
+      cta: 'Save More for Your Mission',
+    },
+    targetAudience: 'Food bank directors, social service nonprofit executives in NJ',
+    estimatedBudget: '$35/day',
+  },
+  {
+    id: 'nonprofit-hospitals-176',
+    name: 'Hospitals & Health Nonprofits',
+    category: 'nonprofit',
+    platform: 'linkedin',
+    adType: 'Sponsored Content',
+    content: {
+      headline: 'Nonprofit Health Organizations: Lighting 100% Covered. HVAC Up to 80% Off.',
+      primaryText: 'Nonprofit hospitals, clinics, and health organizations qualify for NJ Direct Install. Lighting: 100% covered at zero cost. HVAC: up to 80% covered, balance on OBR. Multiple facilities each qualify. Free assessment, Mechanical Enterprise handles all applications.',
+      cta: 'Healthcare Nonprofit Assessment',
+    },
+    targetAudience: 'Nonprofit hospital administrators, clinic directors, health org executives in NJ',
+    estimatedBudget: '$35/day',
+  },
+  {
+    id: 'nonprofit-education-177',
+    name: 'Education Nonprofits & Charter Schools',
+    category: 'nonprofit',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'Charter Schools and Education Nonprofits: 100% Lighting + 80% HVAC — NJ Pays.',
+      primaryText: 'Charter schools, tutoring centers, and education nonprofits qualify for full lighting coverage — 100% at no cost under Direct Install. HVAC up to 80% covered, balance on OBR. Each building qualifies separately. Free assessment, better learning environments for your students.',
+      cta: 'Education Nonprofit Assessment',
+    },
+    targetAudience: 'Charter school administrators, education nonprofit directors in NJ',
+    estimatedBudget: '$35/day',
+  },
+  {
+    id: 'nonprofit-portfolio-exec-178',
+    name: 'Large Nonprofit Portfolios — Executive Director',
+    category: 'nonprofit',
+    platform: 'linkedin',
+    adType: 'Sponsored Content',
+    content: {
+      headline: 'Executive Directors: Every Building in Your Portfolio Qualifies for Free Lighting and 80% Off HVAC.',
+      primaryText: 'If you oversee multiple NJ facilities, this is the most impactful thing you can do for your organization\'s finances this year. Direct Install covers 100% of lighting — no cost, no OBR. HVAC up to 80% covered. Each building qualifies separately. We assess, apply, and install. You focus on your mission.',
+      cta: 'Portfolio Assessment for Nonprofits',
+    },
+    targetAudience: 'Executive directors, COOs, and facilities VPs at NJ nonprofits with 3+ buildings',
+    estimatedBudget: '$35/day',
+  },
+
+  // ─── LIGHTING-FIRST CAMPAIGNS (#179–186) ──────────────────────────────────
+  {
+    id: 'lighting-100-free-hook-179',
+    name: 'Lighting 100% Free — Lead Hook',
+    category: 'lighting',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'NJ Is Replacing Your Commercial Lighting for Free. 100%. Zero Cost.',
+      primaryText: 'Not 80%. Not 50%. 100%. The NJ Direct Install Program covers commercial and nonprofit lighting upgrades completely — no out of pocket, no On-Bill Repayment. New LED lighting, zero cost. HVAC is covered up to 80% on the same visit. Free assessment.',
+      cta: 'Get Free Lighting Today',
+    },
+    targetAudience: 'NJ business owners, commercial property managers, nonprofit directors',
+    estimatedBudget: '$25/day',
+  },
+  {
+    id: 'lighting-hvac-bundle-180',
+    name: 'Lighting + HVAC Bundle',
+    category: 'lighting',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'Replace Your Lights for Free. Replace Your HVAC for 80% Off. Same Program.',
+      primaryText: 'The NJ Direct Install Program covers both in one visit. Lighting: 100% free, no OBR. HVAC: up to 80% covered, balance on OBR. Bundle both on the same assessment and installation. Mechanical Enterprise coordinates everything.',
+      cta: 'Bundle Lighting + HVAC Assessment',
+    },
+    targetAudience: 'NJ business owners needing both lighting and HVAC upgrades',
+    estimatedBudget: '$25/day',
+  },
+  {
+    id: 'lighting-high-electric-181',
+    name: 'High Electric Bill — Lighting',
+    category: 'lighting',
+    platform: 'google-display',
+    adType: 'Display Ad',
+    content: {
+      headline: '30% of Your Electric Bill Is Lighting. NJ Will Replace It for Free.',
+      primaryText: 'Commercial lighting typically accounts for 30-40% of your electric bill. The Direct Install Program replaces all qualifying commercial lighting with LED at 100% coverage — zero cost, zero OBR. Lower bills from day one. Free assessment.',
+      cta: 'Free Lighting Assessment',
+    },
+    targetAudience: 'NJ commercial property owners with high electric bills',
+    estimatedBudget: '$25/day',
+  },
+  {
+    id: 'lighting-fluorescent-replace-182',
+    name: 'Old Fluorescent Lights — Replace Free',
+    category: 'lighting',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'Still Running Fluorescent Lights? NJ Will Replace Them for Free.',
+      primaryText: 'Fluorescent and older commercial lighting costs 3-4x more to run than modern LED. Direct Install covers 100% of the replacement — no cost, no OBR, no financing. Just free new lighting. HVAC covered up to 80% in the same program. Free assessment.',
+      cta: 'Replace Your Lights for Free',
+    },
+    targetAudience: 'NJ businesses and nonprofits still using fluorescent lighting',
+    estimatedBudget: '$25/day',
+  },
+  {
+    id: 'lighting-warehouse-183',
+    name: 'Warehouse Lighting — 100% Free',
+    category: 'lighting',
+    platform: 'linkedin',
+    adType: 'Sponsored Content',
+    content: {
+      headline: 'Warehouse Owners: Replace All Your Lighting for $0. NJ Direct Install.',
+      primaryText: 'High-bay warehouse lighting is expensive to run and expensive to replace — unless you use Direct Install. 100% coverage for qualifying warehouse lighting. Zero cost. Add HVAC and get up to 80% covered too. Free commercial assessment.',
+      cta: 'Free Warehouse Lighting Assessment',
+    },
+    targetAudience: 'Warehouse owners, distribution center managers, logistics operators in NJ',
+    estimatedBudget: '$25/day',
+  },
+  {
+    id: 'lighting-parking-lot-184',
+    name: 'Parking Lot & Exterior Lighting',
+    category: 'lighting',
+    platform: 'google-display',
+    adType: 'Display Ad',
+    content: {
+      headline: 'Parking Lot Lights? NJ Covers 100% of Exterior Commercial Lighting Replacement.',
+      primaryText: 'Exterior and parking lot lighting qualifies for 100% coverage under Direct Install. Zero cost, zero OBR. New LED exterior lights that use 70% less energy and last 10x longer. Free assessment for your property.',
+      cta: 'Replace Exterior Lights for Free',
+    },
+    targetAudience: 'NJ commercial property owners with parking lots and exterior lighting',
+    estimatedBudget: '$25/day',
+  },
+  {
+    id: 'lighting-retail-185',
+    name: 'Retail Lighting — Store Owners',
+    category: 'lighting',
+    platform: 'facebook',
+    adType: 'Lead Ad',
+    content: {
+      headline: 'Retail Store Owners: New Lighting Makes Products Look Better. NJ Pays 100%.',
+      primaryText: 'Modern LED retail lighting increases product visibility and customer dwell time — and NJ covers 100% of the cost through Direct Install. No cost, no OBR, no financing. Better lighting, lower bills, zero out of pocket. Free assessment.',
+      cta: 'Free Retail Lighting Assessment',
+    },
+    targetAudience: 'NJ retail store owners, boutique owners, shop managers',
+    estimatedBudget: '$25/day',
+  },
+  {
+    id: 'lighting-office-productivity-186',
+    name: 'Office Lighting — Productivity',
+    category: 'lighting',
+    platform: 'linkedin',
+    adType: 'Sponsored Content',
+    content: {
+      headline: 'Better Office Lighting Improves Productivity. NJ Pays 100% to Install It.',
+      primaryText: 'Studies show proper lighting improves worker productivity by up to 20%. Direct Install covers 100% of commercial office lighting — zero cost, zero OBR. Better environment for your team, lower energy bills, no cost. Free assessment.',
+      cta: 'Free Office Lighting Assessment',
+    },
+    targetAudience: 'NJ office managers, commercial tenants, business owners',
+    estimatedBudget: '$25/day',
+  },
+
+  // ─── NONPROFIT RETARGETING + EMAIL (#187–190) ─────────────────────────────
+  {
+    id: 'nonprofit-retarget-lighting-187',
+    name: 'Nonprofit Retarget — Lighting Hook',
+    category: 'nonprofit',
+    platform: 'facebook',
+    adType: 'Retargeting Ad',
+    content: {
+      headline: 'You Saw the 80% HVAC Coverage. Did You Know Lighting Is 100% Free?',
+      primaryText: 'Most nonprofits focus on the HVAC rebate — and it\'s great. But the lighting coverage is even better: 100%, no cost, no OBR. If your organization has multiple buildings, every single one qualifies. Free assessment.',
+      cta: 'Get the Full Picture',
+    },
+    targetAudience: 'Retarget: visitors to /commercial who work at nonprofits',
+    estimatedBudget: '$15/day',
+  },
+  {
+    id: 'nonprofit-retarget-portfolio-188',
+    name: 'Nonprofit Retarget — Portfolio Play',
+    category: 'nonprofit',
+    platform: 'facebook',
+    adType: 'Retargeting Ad',
+    content: {
+      headline: '5 Buildings? 10 Buildings? Every One Qualifies for Free Lighting and 80% Off HVAC.',
+      primaryText: 'Nonprofits with large building portfolios are leaving the most money on the table. Each building qualifies for Direct Install separately. Lighting 100% free per building. HVAC up to 80% per building. One coordinated assessment. We manage the whole rollout.',
+      cta: 'Start the Portfolio Assessment',
+    },
+    targetAudience: 'Retarget: nonprofit executives who visited site but did not convert',
+    estimatedBudget: '$15/day',
+  },
+  {
+    id: 'nonprofit-email-day1-189',
+    name: 'Email — Nonprofit Executive Day 1',
+    category: 'nonprofit',
+    platform: 'email',
+    adType: 'Cold Email',
+    content: {
+      headline: "Your nonprofit's lighting is 100% covered — and HVAC is 80% off",
+      primaryText: "Hi [Name], I'm reaching out because I think your organization is leaving significant money on the table. Through the NJ Direct Install Program: Commercial and nonprofit lighting is covered at 100% — no cost, no financing, no OBR. Just free new LED lighting. HVAC replacement is covered up to 80%. The remaining balance goes on your utility bill via On-Bill Repayment — typically less than your current energy savings. If your organization operates multiple buildings in NJ, every building qualifies separately. We've helped churches, community centers, charter schools, and nonprofits across Essex County access these programs. The assessment is free, takes 30 minutes per building, and we handle every piece of paperwork. Can I schedule a walkthrough this week? — Mechanical Enterprise (862) 419-1763 | PSE&G Trade Ally PN#136 | WMBE Certified",
+      cta: 'Reply to Schedule',
+    },
+    targetAudience: 'NJ nonprofit executive directors, facilities managers — cold outreach',
+    estimatedBudget: '$15/day',
+  },
+  {
+    id: 'nonprofit-email-board-day7-190',
+    name: 'Email — Nonprofit Board Member Day 7',
+    category: 'nonprofit',
+    platform: 'email',
+    adType: 'Follow-up Email',
+    content: {
+      headline: 'Board meeting agenda item: Free lighting + 80% HVAC for all our buildings',
+      primaryText: "Hi [Name], this is worth bringing to your next board meeting. The NJ Direct Install Program offers: 100% lighting coverage — every qualifying building, zero cost. Up to 80% HVAC coverage — remaining balance on utility bill via OBR. Each building in your portfolio qualifies separately. For an organization with 5 buildings, we're talking about potentially $200,000\u2013$500,000 in covered improvements at effectively zero net cost. We'll prepare a full building-by-building breakdown for your board presentation — free, no obligation. Mechanical Enterprise has completed this process for nonprofits across NJ. PSE&G Trade Ally PN#136 | WMBE/SBE Certified | (862) 419-1763",
+      cta: 'Request Board Presentation Package',
+    },
+    targetAudience: 'NJ nonprofit board members, trustees — follow-up sequence',
+    estimatedBudget: '$15/day',
+  },
+
 ];
 
 export const platformLinks: Record<string, string> = {

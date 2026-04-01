@@ -374,4 +374,38 @@ export const blogPosts: BlogPostData[] = [
       { type: "cta_box", content: "Answered yes to 3+ questions? Your free assessment takes 20 minutes and there's zero obligation.", buttonText: "Book My Free Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com" },
     ],
   },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 12 — Nonprofit Lighting + HVAC Direct Install
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Nonprofits: Your Lighting Is 100% Free and HVAC Is 80% Off — Here's How",
+    slug: "nj-nonprofit-lighting-hvac-direct-install",
+    date: "March 31, 2026",
+    readTime: "6 min read",
+    category: "Commercial",
+    metaDescription: "NJ Direct Install Program covers 100% of lighting and up to 80% of HVAC for nonprofits. Every building qualifies separately. Free assessment. Mechanical Enterprise handles all paperwork.",
+    excerpt: "NJ nonprofits can get lighting replaced for free — 100% covered — and HVAC for 80% off. Every building in your portfolio qualifies separately.",
+    sections: [
+      { type: "intro", content: "Here's the most powerful number in NJ energy programs right now: 100%. That's how much of your nonprofit's commercial lighting is covered under the NJ Direct Install Program. Not 80%. Not a rebate you apply for and wait months to receive. One hundred percent — installed, done, zero cost, zero On-Bill Repayment. And that's just the lighting. HVAC is covered up to 80%, with the remaining balance on OBR. If your organization operates multiple buildings, every single one qualifies separately." },
+      { type: "h2", content: "Who Qualifies for the NJ Direct Install Program?" },
+      { type: "paragraph", content: "Any 501(c)(3) nonprofit organization operating commercial space in New Jersey qualifies. This includes churches, mosques, synagogues, and houses of worship of all faiths. Community centers and recreation facilities. Charter schools, tutoring centers, and education nonprofits. Food banks, shelters, and social service organizations. Nonprofit hospitals, clinics, and health organizations. Arts organizations, museums, and cultural institutions. If you have a commercial electric meter and a 501(c)(3) designation, you almost certainly qualify." },
+      { type: "checklist", items: ["Churches, mosques, synagogues, and all houses of worship", "Community centers and recreation facilities", "Charter schools and education nonprofits", "Food banks, shelters, and social service organizations", "Nonprofit hospitals and health clinics", "Arts organizations, museums, and cultural institutions", "Any NJ 501(c)(3) with a commercial electric meter"] },
+      { type: "h2", content: "Lighting Coverage: 100% Free — No OBR" },
+      { type: "paragraph", content: "Let's be very clear about what 100% means: you pay nothing. No upfront cost. No On-Bill Repayment. No financing. No monthly payments. The Direct Install Program replaces your existing commercial lighting — interior fluorescents, exterior building lights, parking lot lights, all of it — with modern LED fixtures at zero cost to your organization. The energy savings start immediately on your next electric bill." },
+      { type: "stat_box", content: "Lighting Coverage: 100% Free | OBR Required: No | Out of Pocket: $0 | Energy Savings: 40-70%" },
+      { type: "h2", content: "HVAC Coverage: Up to 80% — OBR for the Balance" },
+      { type: "paragraph", content: "HVAC replacement through Direct Install covers up to 80% of total installation cost. The remaining 20% is covered via On-Bill Repayment — added to your utility bill at 0% interest over 5-10 years. In most cases, the energy savings from your new system exceed the OBR payment, meaning your total utility bill goes down from day one even with the repayment included. This covers heat pumps, VRV/VRF systems, rooftop units, and full HVAC system replacement." },
+      { type: "h2", content: "The Portfolio Play: Every Building Qualifies Separately" },
+      { type: "paragraph", content: "This is where the program becomes transformational for larger nonprofits. If your organization operates 5 buildings, each building qualifies for Direct Install independently. Five buildings means five separate 100% lighting coverages and five separate 80% HVAC coverages. For a nonprofit with 5 mid-size buildings, we're talking about $200,000-$500,000 in total covered improvements across the portfolio." },
+      { type: "numbered_list", items: ["Building 1 — Community center: Lighting $15,000 (100% free) + HVAC $60,000 (80% = $48,000 covered)", "Building 2 — Administrative office: Lighting $8,000 (100% free) + HVAC $35,000 (80% = $28,000 covered)", "Building 3 — Youth center: Lighting $12,000 (100% free) + HVAC $45,000 (80% = $36,000 covered)", "Building 4 — Warehouse/food bank: Lighting $20,000 (100% free) + HVAC $25,000 (80% = $20,000 covered)", "Building 5 — Worship space: Lighting $18,000 (100% free) + HVAC $55,000 (80% = $44,000 covered)", "Total portfolio: $73,000 free lighting + $176,000 HVAC covered = $249,000 in covered improvements"] },
+      { type: "h2", content: "We Handle All the Paperwork" },
+      { type: "paragraph", content: "Mechanical Enterprise is a PSE&G Trade Ally (PN#136) and WMBE/SBE Certified contractor. We handle every piece of the Direct Install process for your nonprofit: the initial assessment (free, 30 minutes per building), the program application, equipment specification, installation scheduling, and all post-installation documentation. Your facilities team doesn't fill out a single form. For multi-building portfolios, we assign a dedicated project coordinator who manages the entire rollout." },
+      { type: "h2", content: "FAQ: Common Nonprofit Questions" },
+      { type: "paragraph", content: "Does my church qualify for free lighting? Yes — all houses of worship with a commercial electric meter qualify for 100% lighting coverage under Direct Install. No cost, no OBR." },
+      { type: "paragraph", content: "Can we get both lighting and HVAC covered? Absolutely. Both are part of the same program and can be assessed and installed in a single coordinated project. Lighting at 100% and HVAC at up to 80%." },
+      { type: "paragraph", content: "What if we have 10 buildings? Every building qualifies separately. We coordinate multi-building rollouts and can phase the work to minimize disruption. The more buildings you have, the more your organization saves." },
+      { type: "cta_box", content: "Find out what your nonprofit qualifies for. Free assessment — 30 minutes per building, we handle every form.", buttonText: "Book Free Nonprofit Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
 ];

@@ -396,6 +396,54 @@ export default function CommercialCampaigns() {
         </div>
       </section>
 
+      {/* Nonprofit Direct Install Section */}
+      <section className="py-20 bg-white" id="nonprofit">
+        <div className="container">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-[#ff6b35] text-white text-base px-4 py-2">NJ Direct Install Program</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">Nonprofits: Lighting Is 100% Free. HVAC Is 80% Off.</h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Every building in your portfolio qualifies separately under the NJ Direct Install Program.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto mb-12">
+            <Card className="border-t-4 border-t-[#ff6b35]">
+              <CardHeader>
+                <CardTitle className="text-2xl text-[#1e3a5f]">💡 Lighting</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-[#ff6b35] mb-2">100% Covered</p>
+                <p className="text-muted-foreground">$0 cost, no OBR needed. Includes interior, exterior, and parking lot lighting. Full LED upgrade at zero out of pocket.</p>
+              </CardContent>
+            </Card>
+            <Card className="border-t-4 border-t-[#1e3a5f]">
+              <CardHeader>
+                <CardTitle className="text-2xl text-[#1e3a5f]">❄️ HVAC</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-[#1e3a5f] mb-2">Up to 80% Off</p>
+                <p className="text-muted-foreground">Remaining balance covered via On-Bill Repayment. Applies per building. Heat pumps, VRV/VRF, and full system replacement.</p>
+              </CardContent>
+            </Card>
+            <Card className="border-t-4 border-t-green-500">
+              <CardHeader>
+                <CardTitle className="text-2xl text-[#1e3a5f]">🏢 Portfolio</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-green-600 mb-2">Per Building</p>
+                <p className="text-muted-foreground">Each building qualifies separately. We coordinate multi-building rollouts. One assessment per property, one point of contact.</p>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="text-center">
+            <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-lg px-8 py-6 mb-4">
+              <a href="https://mechanicalenterprise.com/commercial" className="text-white no-underline">Book Free Nonprofit Assessment</a>
+            </Button>
+            <p className="text-sm text-muted-foreground">PSE&G Trade Ally PN#136 | WMBE Certified | SBE Certified | Serving NJ Nonprofits</p>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );
