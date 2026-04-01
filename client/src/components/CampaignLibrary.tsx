@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { campaignTemplates, platformLinks, platformInstructions, CampaignTemplate } from "@/data/campaignTemplates";
+import { directInstallCampaigns } from "@/data/directInstallCampaigns";
 import { ExternalLink, Copy, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,26 +44,49 @@ export default function CampaignLibrary() {
     }
   };
 
+  // Convert directInstallCampaigns to CampaignTemplate format for unified display
+  const diTemplates: CampaignTemplate[] = directInstallCampaigns.map((c) => ({
+    id: `di-${c.id}`,
+    name: c.name,
+    category: 'lighting' as const,
+    platform: 'google-search' as const,
+    adType: 'Search Ad',
+    content: {
+      headline: c.headline_1,
+      headline2: c.headline_2,
+      headline3: c.headline_3,
+      description: c.description_1,
+      description2: c.description_2,
+      cta: 'Free Assessment',
+    },
+    targetAudience: c.audience,
+    estimatedBudget: `$${Math.round(c.budget_monthly / 30)}/day`,
+  }));
+
+  const allCampaigns = [...campaignTemplates, ...diTemplates];
+
   const filterByCategory = (category: string) => {
-    if (category === 'all') return campaignTemplates;
-    return campaignTemplates.filter(t => t.category === category);
+    if (category === 'all') return allCampaigns;
+    return allCampaigns.filter(t => t.category === category);
   };
 
   return (
     <div className="space-y-6">
       <Tabs defaultValue="all" className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="all">All</TabsTrigger>
+        <TabsList className="flex flex-wrap gap-1">
+          <TabsTrigger value="all">All ({allCampaigns.length})</TabsTrigger>
           <TabsTrigger value="emergency">Emergency</TabsTrigger>
           <TabsTrigger value="installation">Installation</TabsTrigger>
           <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
           <TabsTrigger value="rebates">Rebates</TabsTrigger>
           <TabsTrigger value="commercial">Commercial</TabsTrigger>
+          <TabsTrigger value="nonprofit">Nonprofit</TabsTrigger>
+          <TabsTrigger value="lighting">Lighting/DI</TabsTrigger>
           <TabsTrigger value="partnerships">Partners</TabsTrigger>
           <TabsTrigger value="nextdoor">Nextdoor</TabsTrigger>
         </TabsList>
 
-        {['all', 'emergency', 'installation', 'maintenance', 'rebates', 'commercial', 'partnerships', 'nextdoor'].map(category => (
+        {['all', 'emergency', 'installation', 'maintenance', 'rebates', 'commercial', 'nonprofit', 'lighting', 'partnerships', 'nextdoor'].map(category => (
           <TabsContent key={category} value={category} className="space-y-4">
             <div className="grid md:grid-cols-2 gap-4">
               {filterByCategory(category).map(template => (
