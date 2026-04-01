@@ -21,6 +21,12 @@
   force = true
 
 [[redirects]]
+  from = "/google-ads-import.csv"
+  to = "/google-ads-import.csv"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
