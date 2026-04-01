@@ -265,7 +265,7 @@ export const blogPosts: BlogPostData[] = [
     sections: [
       { type: "intro", content: "What if you could replace your entire heating and cooling system with zero money upfront — and your monthly utility bill actually went down? That's not a gimmick. It's NJ's on-bill repayment program, and when combined with available rebates, it's making HVAC upgrades genuinely free for many NJ homeowners." },
       { type: "h2", content: "How On-Bill Repayment Works" },
-      { type: "paragraph", content: "On-bill repayment is simple: after your rebates are applied, any remaining installation cost is financed at 0% interest and added to your monthly utility bill. There's no separate loan, no credit check in most cases, and no lump-sum payment due. The payments are spread over 5-10 years and appear as a line item on your existing PSE&G, JCP&L, or ACE bill." },
+      { type: "paragraph", content: "On-bill repayment is simple: after your rebates are applied, any remaining installation cost is financed at 0% interest and added to your monthly utility bill. There's no separate loan, no credit check in most cases, and no lump-sum payment due. The payments are spread over 5-10 years and appear as a line item on your existing PSE&G, JCP&L, or ACE bill. Commercial property owners can also use OBR through the [Direct Install Program](/blog/on-bill-repayment-commercial-hvac-nj)." },
       { type: "h2", content: "Who Qualifies" },
       { type: "paragraph", content: "To qualify for on-bill repayment, you must own your home (not renting), have the utility account in your name, be current on your utility payments (no outstanding balance), and install qualifying equipment through a participating contractor. There is no minimum credit score requirement in most cases — the financing is secured by your utility account, not a traditional credit check." },
       { type: "checklist", items: ["Own your home (not renting)", "Utility account in your name", "Current on utility payments (no outstanding balance)", "Install qualifying equipment", "Use a participating contractor (Mechanical Enterprise qualifies)"] },
@@ -297,7 +297,7 @@ export const blogPosts: BlogPostData[] = [
     sections: [
       { type: "intro", content: "If you own or manage a commercial property in New Jersey, the 2026 rebate landscape is remarkable. Between utility programs, state incentives, and federal credits, commercial buildings can receive rebates covering up to 80% of a new HVAC system's total cost. Here's how it works." },
       { type: "h2", content: "Commercial Decarbonization Program Overview" },
-      { type: "paragraph", content: "NJ's commercial decarbonization program targets buildings that currently use fossil fuel heating systems. The program provides significant financial incentives for commercial property owners who transition to high-efficiency heat pump or VRV/VRF systems. Unlike residential programs which cap at specific dollar amounts, commercial rebates are calculated as a percentage of total project cost — and that percentage can reach 80%." },
+      { type: "paragraph", content: "NJ's commercial decarbonization program targets buildings that currently use fossil fuel heating systems. The program provides significant financial incentives for commercial property owners who transition to high-efficiency heat pump or VRV/VRF systems. Unlike residential programs which cap at specific dollar amounts, commercial rebates are calculated as a percentage of total project cost \u2014 and that percentage can reach 80%. For a complete breakdown of the [NJ Direct Install Program](/blog/nj-direct-install-program-commercial-guide), see our commercial guide." },
       { type: "stat_box", content: "Commercial Rebate: Up to 80% of Cost | Federal Credit: 30% (up to $5/sq ft) | PSE&G Commercial: Additional Incentives" },
       { type: "h2", content: "Qualifying Building Types" },
       { type: "paragraph", content: "Almost every commercial building type qualifies: office buildings, retail stores, restaurants, healthcare facilities, warehouses, industrial buildings, multi-family residential (5+ units), houses of worship, and non-profit facilities. The building must currently use a fossil fuel heating system (gas, oil, or propane) and be located in an NJ utility service territory." },
@@ -406,6 +406,278 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Can we get both lighting and HVAC covered? Absolutely. Both are part of the same program and can be assessed and installed in a single coordinated project. Lighting at 100% and HVAC at up to 80%." },
       { type: "paragraph", content: "What if we have 10 buildings? Every building qualifies separately. We coordinate multi-building rollouts and can phase the work to minimize disruption. The more buildings you have, the more your organization saves." },
       { type: "cta_box", content: "Find out what your nonprofit qualifies for. Free assessment — 30 minutes per building, we handle every form.", buttonText: "Book Free Nonprofit Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 13 — NJ Direct Install Complete Guide
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "The NJ Direct Install Program: Complete Guide for Commercial Property Owners (2026)",
+    slug: "nj-direct-install-program-commercial-guide",
+    date: "March 31, 2026",
+    readTime: "8 min read",
+    category: "Commercial",
+    metaDescription: "NJ Direct Install Program covers up to 80% of commercial HVAC and 100% of lighting for NJ businesses. Complete guide for property owners. Free assessment.",
+    excerpt: "The most underused commercial energy incentive in NJ. Here's everything property owners need to know in 2026 \u2014 real numbers, no jargon.",
+    sections: [
+      { type: "intro", content: "The NJ Direct Install Program is the single most valuable energy incentive available to commercial property owners in New Jersey \u2014 and most don't know it exists. It covers up to 80% of your HVAC replacement cost and [100% of your lighting](/blog/commercial-lighting-100-percent-free-nj) at zero cost. Here's the complete guide." },
+      { type: "h2", content: "What Is the NJ Direct Install Program?" },
+      { type: "paragraph", content: "Direct Install is a state-administered program that pays for energy efficiency upgrades in commercial and nonprofit buildings. Unlike residential rebates where you pay first and get reimbursed, Direct Install covers costs upfront \u2014 you never write a check for the covered portion. HVAC replacement is covered at up to 80%. The remaining 20% goes on [On-Bill Repayment (OBR)](/blog/on-bill-repayment-commercial-hvac-nj) at 0% interest, added directly to your utility bill." },
+      { type: "h2", content: "Who Qualifies?" },
+      { type: "paragraph", content: "Any commercial or nonprofit property in NJ with a commercial electric meter qualifies. This includes [restaurants](/blog/restaurant-hvac-lighting-direct-install-nj), [office buildings](/blog/office-building-direct-install-nj), retail stores, [warehouses](/blog/warehouse-lighting-hvac-direct-install-nj), healthcare facilities, houses of worship, schools, and any 501(c)(3) nonprofit. There are no income limits and no minimum or maximum project size." },
+      { type: "h2", content: "HVAC: 80% Covered, OBR for Balance" },
+      { type: "paragraph", content: "Direct Install covers up to 80% of qualifying HVAC replacement \u2014 heat pumps, VRV/VRF systems, rooftop units, split systems, and more. The remaining 20% is financed through OBR at 0% interest over 5-7 years. In most cases, your energy savings exceed the OBR payment, meaning your total utility bill actually goes down from day one." },
+      { type: "h2", content: "Lighting: 100% Free, No OBR" },
+      { type: "paragraph", content: "This is the part most property owners miss: [commercial lighting is covered at 100%](/blog/commercial-lighting-100-percent-free-nj) \u2014 no cost, no OBR, no financing. Interior LED, high-bay warehouse lighting, exterior building lights, parking lot lights, and emergency lighting are all covered. You can get lighting done without touching your HVAC, or bundle both in one project." },
+      { type: "stat_box", content: "Direct Install HVAC: Up to 80% | OBR for Balance: 0% Interest | Lighting: 100% Free | Net Upfront Cost: $0" },
+      { type: "h2", content: "Can You Get Both in One Visit?" },
+      { type: "paragraph", content: "Yes. We assess lighting and HVAC simultaneously during your free walkthrough. Both are part of the same program and can be installed in a single coordinated project. Most property owners bundle both because the lighting is free and the combined energy savings make the HVAC OBR payments negligible." },
+      { type: "h2", content: "How to Apply: 6 Steps" },
+      { type: "numbered_list", items: ["Schedule a free assessment \u2014 we visit your property and evaluate lighting + HVAC", "We calculate your exact coverage amounts and projected energy savings", "We submit the Direct Install application on your behalf", "After approval, we schedule installation around your business hours", "Lighting installed (100% free) and HVAC installed (80% covered)", "OBR for HVAC balance begins on your next utility bill \u2014 typically less than your savings"] },
+      { type: "h2", content: "Real Example: 5,000 Sq Ft Newark Office" },
+      { type: "paragraph", content: "A Newark office building replaced aging HVAC and fluorescent lighting through Direct Install. HVAC project: $45,000 total, $36,000 covered (80%), OBR payment $180/month over 5 years. Monthly energy savings: $310. Net monthly benefit: +$130. Lighting project: $12,000 value, $0 cost, saves additional $180/month. Combined: the property owner saves $510/month in energy costs, pays $180/month in OBR, and nets +$330/month from day one." },
+      { type: "stat_box", content: "HVAC Covered: $36,000 (80%) | OBR: $180/month | Energy Savings: $510/month | Net Benefit: +$330/month" },
+      { type: "cta_box", content: "Find out what your commercial property qualifies for. Free assessment, we handle all paperwork.", buttonText: "Book Free Commercial Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 14 — Commercial Lighting 100% Free
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Commercial Lighting Is 100% Free Under Direct Install \u2014 Here's How to Get It",
+    slug: "commercial-lighting-100-percent-free-nj",
+    date: "March 31, 2026",
+    readTime: "6 min read",
+    category: "Commercial",
+    metaDescription: "NJ commercial lighting replacement is 100% free under Direct Install. No cost, no OBR, no financing. Interior, exterior, parking lot. Free assessment.",
+    excerpt: "New Jersey is replacing commercial lighting for free \u2014 100%, no catch. Here's exactly who qualifies and how to get it done.",
+    sections: [
+      { type: "intro", content: "This is not a rebate. Not a loan. Not a financing program. The NJ Direct Install Program pays 100% of commercial lighting replacement \u2014 you pay nothing, ever. No On-Bill Repayment. No monthly payments. Just free new LED lighting for your business." },
+      { type: "h2", content: "What Qualifies for 100% Lighting Coverage?" },
+      { type: "paragraph", content: "Interior LED retrofits and replacements for offices, retail, and commercial spaces. High-bay lighting for [warehouses](/blog/warehouse-lighting-hvac-direct-install-nj) and [manufacturing plants](/blog/manufacturing-direct-install-nj). Exterior building lighting and parking lot lighting. Emergency and exit lighting. Retail display lighting. Classroom and common-area lighting for [schools and churches](/blog/churches-houses-of-worship-direct-install-nj). Essentially, if it's a commercial light fixture, it qualifies." },
+      { type: "h2", content: "What Doesn't Qualify" },
+      { type: "checklist", items: ["Purely decorative lighting (chandeliers, neon signs)", "Residential units within mixed-use buildings", "Fixtures already upgraded to LED in the last 5 years", "Temporary or portable lighting"] },
+      { type: "h2", content: "The Energy Savings Math" },
+      { type: "paragraph", content: "Commercial LED lighting uses 60-75% less energy than fluorescent and HID alternatives. For a 10,000 sq ft [office building](/blog/office-building-direct-install-nj), that translates to $800-$1,400/month in energy savings. For a 50,000 sq ft warehouse with high-bay lighting, savings reach $2,000-$4,000/month. These savings start on day one and continue for 15-20 years (the lifespan of LED fixtures)." },
+      { type: "stat_box", content: "Energy Reduction: 60-75% | Installation Cost: $0 | Monthly Savings: Day 1 | LED Lifespan: 15-20 Years" },
+      { type: "h2", content: "Combine With HVAC for Maximum Benefit" },
+      { type: "paragraph", content: "While lighting is the fastest win (100% free, immediate savings), bundling with HVAC makes the overall project even more compelling. HVAC is covered at 80% with OBR for the balance. When you combine free lighting savings with HVAC energy savings, the HVAC OBR payment is typically covered entirely by the combined energy reduction. Net result: lower total utility bill from day one with zero upfront cost." },
+      { type: "h2", content: "Every Industry Qualifies" },
+      { type: "paragraph", content: "Hotels, restaurants, retail stores, warehouses, offices, medical facilities, auto dealerships, gyms, salons, and every other commercial building type. Nonprofits including churches, community centers, and schools also qualify. There are no industry restrictions \u2014 if you have a commercial electric meter in NJ, your lighting qualifies." },
+      { type: "cta_box", content: "Get your commercial lighting replaced for free. Assessment takes 30 minutes. We handle everything.", buttonText: "Book Free Lighting Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 15 — On-Bill Repayment Commercial
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "On-Bill Repayment for Commercial HVAC in NJ: How $0 Upfront Actually Works",
+    slug: "on-bill-repayment-commercial-hvac-nj",
+    date: "March 31, 2026",
+    readTime: "6 min read",
+    category: "Commercial",
+    metaDescription: "NJ On-Bill Repayment covers the remaining 20% of commercial HVAC after Direct Install pays 80%. Monthly OBR payments typically less than energy savings.",
+    excerpt: "Direct Install covers 80% of commercial HVAC. On-Bill Repayment handles the rest \u2014 added to your utility bill, often less than your energy savings.",
+    sections: [
+      { type: "intro", content: "After the [NJ Direct Install Program](/blog/nj-direct-install-program-commercial-guide) covers 80% of your commercial HVAC replacement, the remaining 20% doesn't require a check, a loan, or a line of credit. It goes on On-Bill Repayment \u2014 added directly to your utility bill at 0% interest. Here's exactly how it works." },
+      { type: "h2", content: "What Is Commercial On-Bill Repayment?" },
+      { type: "paragraph", content: "OBR is not a loan. It's a utility-administered repayment mechanism tied to your electric meter \u2014 not to you personally or your credit. The remaining HVAC balance after Direct Install's 80% coverage is spread over 5-7 years at 0% interest and appears as a line item on your monthly utility bill. No bank, no credit check, no separate payment." },
+      { type: "h2", content: "Real Math: Essex County Restaurant" },
+      { type: "paragraph", content: "A 3,000 sq ft restaurant in Essex County replaced its aging rooftop unit through Direct Install. Total HVAC cost: $38,000. Direct Install covered: $30,400 (80%). OBR balance: $7,600. Monthly OBR payment over 5 years: $127. Monthly energy savings from new system: $290. Net monthly benefit: +$163. The restaurant saves money from day one." },
+      { type: "stat_box", content: "OBR Payment: ~$127/month | Energy Savings: ~$290/month | Net Benefit: +$163/month | Upfront Cost: $0" },
+      { type: "h2", content: "Key OBR Facts" },
+      { type: "checklist", items: ["0% interest \u2014 the balance never grows", "Tied to the meter, not the owner \u2014 no personal credit check", "Transfers with building sale \u2014 disclosed at closing, new owner assumes", "5-7 year repayment terms", "No early payoff penalty \u2014 pay it off anytime", "Appears on your existing utility bill \u2014 no separate payment"] },
+      { type: "h2", content: "What Happens When You Sell?" },
+      { type: "paragraph", content: "The OBR obligation stays with the property. If you sell your building, the remaining OBR balance transfers to the new owner and is disclosed during the closing process. This is standard \u2014 it works the same way as any utility obligation. The new owner benefits from the energy-efficient equipment and continues the payments." },
+      { type: "h2", content: "Lighting Has No OBR" },
+      { type: "paragraph", content: "Important distinction: [commercial lighting is 100% free](/blog/commercial-lighting-100-percent-free-nj) under Direct Install with zero OBR. Only HVAC has the 80/20 split. This means you can get all your lighting replaced at zero cost with zero ongoing payments, even if you decide to wait on HVAC." },
+      { type: "h2", content: "Nonprofits and OBR" },
+      { type: "paragraph", content: "[Nonprofit organizations](/blog/nonprofit-direct-install-complete-guide-nj) benefit from the same OBR structure. For nonprofits with multiple buildings, each building's OBR is separate \u2014 managed independently on each meter. This makes budgeting and board approval straightforward." },
+      { type: "cta_box", content: "See your exact OBR payment and energy savings. Free commercial assessment, no obligation.", buttonText: "Calculate My OBR \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 16 — Nonprofit Complete Guide
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Nonprofits: Lighting 100% Free + HVAC 80% Off \u2014 Complete Direct Install Guide",
+    slug: "nonprofit-direct-install-complete-guide-nj",
+    date: "March 31, 2026",
+    readTime: "7 min read",
+    category: "Commercial",
+    metaDescription: "NJ nonprofits qualify for 100% free lighting and 80% HVAC under Direct Install. Every building qualifies separately. Churches, schools, food banks. Free assessment.",
+    excerpt: "NJ nonprofits are leaving millions on the table every year by not claiming Direct Install. Here's the complete guide for 501c3 organizations.",
+    sections: [
+      { type: "intro", content: "If you run a nonprofit in New Jersey, the Direct Install Program is the single most impactful financial decision you can make this year. [Lighting is 100% free](/blog/commercial-lighting-100-percent-free-nj). HVAC is 80% covered. And if your organization has multiple buildings, every single one qualifies separately." },
+      { type: "h2", content: "Why Nonprofits Are the Biggest Winners" },
+      { type: "paragraph", content: "Nonprofits face no income limits, no revenue caps, and no restrictions beyond having a commercial electric meter. Any 501(c)(3) qualifies \u2014 [churches and houses of worship](/blog/churches-houses-of-worship-direct-install-nj), food banks, charter schools, community centers, health nonprofits, and arts organizations. The program treats nonprofits identically to commercial properties." },
+      { type: "h2", content: "The Portfolio Math: 5 Buildings" },
+      { type: "paragraph", content: "For a nonprofit with 5 buildings, Direct Install covers each building separately. Total HVAC across 5 buildings: $200,000 \u2014 $160,000 covered (80%), OBR $670/month total. Total lighting across 5 buildings: $75,000 value \u2014 $0 cost. Combined monthly energy savings: $1,870. Net monthly benefit after OBR: +$1,200." },
+      { type: "stat_box", content: "5 Buildings | $235,000 Covered | $0 Upfront | $14,400+ Annual Net Benefit" },
+      { type: "h2", content: "Who Qualifies?" },
+      { type: "checklist", items: ["Churches, mosques, synagogues, and all houses of worship", "Food banks, shelters, and social service organizations", "Charter schools, tutoring centers, and education nonprofits", "Community centers and recreation facilities", "Nonprofit hospitals and health clinics", "Arts organizations, museums, and cultural institutions", "Any NJ 501(c)(3) with a commercial electric meter"] },
+      { type: "h2", content: "Lighting First Strategy" },
+      { type: "paragraph", content: "For nonprofits unsure about committing to HVAC, start with lighting. It's the fastest win \u2014 100% free, no OBR, no board vote needed for financing. Once your board sees the lighting savings on the first utility bill, the HVAC conversation becomes much easier." },
+      { type: "h2", content: "Board Presentation Package" },
+      { type: "paragraph", content: "We prepare a complete building-by-building breakdown for your board \u2014 current energy costs, projected savings, OBR schedule, and net benefit analysis. This package is designed to give your board everything they need for an informed vote. It's free and there's no obligation." },
+      { type: "cta_box", content: "Find out what your nonprofit qualifies for. Free assessment, we prepare your board presentation.", buttonText: "Book Nonprofit Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 17 — Restaurant Direct Install
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Restaurants: Replace HVAC for 80% Off and Get Free Lighting \u2014 Direct Install Guide",
+    slug: "restaurant-hvac-lighting-direct-install-nj",
+    date: "March 31, 2026",
+    readTime: "6 min read",
+    category: "Commercial",
+    metaDescription: "NJ restaurants qualify for 80% HVAC and 100% free lighting under Direct Install. OBR for balance. Free assessment. PSE&G certified contractor.",
+    excerpt: "Restaurant HVAC is the third-largest operating cost in the industry. Direct Install covers 80% and throws in free lighting. Here's how.",
+    sections: [
+      { type: "intro", content: "Restaurant HVAC replacement costs $25,000-$60,000 \u2014 the kind of expense that keeps owners up at night. The NJ Direct Install Program covers 80% of that cost. And it throws in 100% free lighting for your entire restaurant. Kitchen, dining room, bar, exterior, parking \u2014 all free." },
+      { type: "h2", content: "What Direct Install Covers for Restaurants" },
+      { type: "paragraph", content: "A typical $40,000 restaurant HVAC project: $32,000 covered by Direct Install (80%). Remaining $8,000 on [OBR](/blog/on-bill-repayment-commercial-hvac-nj) at $133/month over 5 years. Monthly energy savings from the new system: $200-$400. Net result: you save money from day one while running a brand new HVAC system." },
+      { type: "stat_box", content: "HVAC Covered: $32,000 (80%) | OBR: $133/month | Savings: $200-$400/month | Lighting: $0 Cost" },
+      { type: "h2", content: "Restaurant Lighting: 100% Free" },
+      { type: "paragraph", content: "Kitchen lighting, dining room ambiance, bar and lounge lighting, restrooms, exterior and signage lighting, parking lot \u2014 all covered at 100%. A typical restaurant lighting upgrade is worth $8,000-$15,000 and you pay nothing. Modern LED restaurant lighting also provides better color rendering for food presentation and creates the atmosphere your guests expect." },
+      { type: "h2", content: "Scheduling Around Your Business" },
+      { type: "paragraph", content: "We understand restaurants can't shut down. Installation is phased around your operating hours \u2014 lighting during closed hours, HVAC during your slowest periods. Most restaurant lighting installations complete in 1-2 days. HVAC timelines depend on system complexity but we coordinate every step with your schedule." },
+      { type: "cta_box", content: "See what your restaurant qualifies for. Free assessment, we work around your schedule.", buttonText: "Book Restaurant Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/direct-install/hotels-nj" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 18 — Warehouse Direct Install
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Warehouses: Free High-Bay Lighting + HVAC 80% Off \u2014 Direct Install Guide",
+    slug: "warehouse-lighting-hvac-direct-install-nj",
+    date: "March 31, 2026",
+    readTime: "6 min read",
+    category: "Commercial",
+    metaDescription: "NJ warehouses qualify for 100% free high-bay lighting and 80% HVAC under Direct Install. No size cap. OBR for balance. Free assessment.",
+    excerpt: "Warehouse lighting and HVAC are 60-70% of energy costs. Direct Install covers both \u2014 lighting free, HVAC 80% off. No project size cap.",
+    sections: [
+      { type: "intro", content: "Warehouse energy costs are dominated by two things: high-bay lighting and climate control. The [NJ Direct Install Program](/blog/nj-direct-install-program-commercial-guide) covers both simultaneously \u2014 lighting at 100% free and HVAC at 80% covered. There is no project size cap." },
+      { type: "h2", content: "High-Bay Lighting: 100% Free" },
+      { type: "paragraph", content: "Replacing 400W metal halide with 150W LED high-bay fixtures cuts lighting energy by 60%. For a 50,000 sq ft warehouse, that's $2,000-$4,000/month in savings. Direct Install covers 100% of this upgrade \u2014 no cost, no OBR. Loading dock lighting, office areas within the facility, exterior security lighting, and parking areas are all included." },
+      { type: "h2", content: "HVAC for Warehouses: 80% Covered" },
+      { type: "paragraph", content: "Warehouse HVAC includes loading dock air curtains, break room and office climate control, temperature-controlled storage areas, and general warehouse heating. All qualify for 80% coverage with [OBR for the balance](/blog/on-bill-repayment-commercial-hvac-nj). No project size cap \u2014 500,000 sq ft qualifies the same as 5,000 sq ft." },
+      { type: "h2", content: "Real Example: 100,000 Sq Ft Warehouse" },
+      { type: "paragraph", content: "Lighting project: $180,000 value, $0 cost, saves $4,200/month. HVAC project: $220,000 total, $176,000 covered (80%), OBR $733/month over 5 years, saves $1,100/month. Combined monthly benefit: $4,200 lighting savings + $1,100 HVAC savings - $733 OBR = $4,567 net monthly savings." },
+      { type: "stat_box", content: "Lighting Savings: $4,200/month | HVAC Savings: $1,100/month | OBR: $733/month | Net: +$4,567/month" },
+      { type: "h2", content: "Phased Installation" },
+      { type: "paragraph", content: "Active warehouses can't shut down for weeks. We phase installations bay by bay, working during off-peak hours or scheduled maintenance windows. Your operations continue uninterrupted. For [manufacturing facilities](/blog/manufacturing-direct-install-nj), we coordinate with production schedules for zero downtime." },
+      { type: "cta_box", content: "Get your warehouse assessed for free. No size limit, no obligation.", buttonText: "Book Warehouse Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 19 — Office Building Direct Install
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Office Buildings: Free Lighting + 80% Off HVAC Through Direct Install",
+    slug: "office-building-direct-install-nj",
+    date: "March 31, 2026",
+    readTime: "6 min read",
+    category: "Commercial",
+    metaDescription: "NJ office buildings qualify for 100% free LED lighting and 80% HVAC under Direct Install. Multi-floor buildings. OBR for balance. Free assessment.",
+    excerpt: "Lighting and HVAC are 70-80% of office energy costs. Direct Install covers both \u2014 free lighting, 80% off HVAC. Here's how it works for office properties.",
+    sections: [
+      { type: "intro", content: "For NJ office building owners and [property managers](/blog/property-manager-direct-install-nj), the Direct Install Program eliminates the two largest energy expenses in one project. [Lighting is 100% free](/blog/commercial-lighting-100-percent-free-nj). HVAC is 80% covered. And the process works for multi-floor buildings with one application covering the entire property." },
+      { type: "h2", content: "What Qualifies for Office Lighting?" },
+      { type: "paragraph", content: "Open office areas, private offices, conference rooms, lobbies, hallways, restrooms, parking garages, and exterior building lighting. All covered at 100%. Modern LED office lighting reduces eye strain, improves worker productivity by up to 20%, and serves as a tenant retention tool. It's the easiest building upgrade you'll ever make \u2014 because it costs nothing." },
+      { type: "h2", content: "Multi-Floor Buildings" },
+      { type: "paragraph", content: "One application covers your entire building regardless of floor count. Installation is phased floor by floor to minimize tenant disruption. We coordinate with your building management team and schedule work during off-hours when possible. Most office lighting installations complete in 1-2 days per floor." },
+      { type: "h2", content: "HVAC: Central Systems, RTUs, VRF \u2014 All Qualify" },
+      { type: "paragraph", content: "Central HVAC systems, rooftop units, split systems, and VRF \u2014 all qualify for 80% coverage. For a 20,000 sq ft office building: $120,000 HVAC project, $96,000 covered by Direct Install, [OBR](/blog/on-bill-repayment-commercial-hvac-nj) $400/month, energy savings $600-$900/month. Net benefit from day one." },
+      { type: "stat_box", content: "HVAC Covered: $96,000 (80%) | OBR: $400/month | Savings: $600-$900/month | Lighting: Free" },
+      { type: "cta_box", content: "Get your office building assessed for free. We handle multi-floor coordination.", buttonText: "Book Office Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 20 — Churches and Houses of Worship
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Churches and Houses of Worship: Free Lighting + 80% Off HVAC \u2014 Complete Guide",
+    slug: "churches-houses-of-worship-direct-install-nj",
+    date: "March 31, 2026",
+    readTime: "7 min read",
+    category: "Commercial",
+    metaDescription: "NJ churches, mosques, synagogues qualify for 100% free lighting and 80% HVAC under Direct Install. Multiple buildings each qualify separately. Free assessment.",
+    excerpt: "Faith communities across NJ are replacing aging HVAC and lighting at zero cost through Direct Install. Here is the complete guide.",
+    sections: [
+      { type: "intro", content: "Houses of worship qualify exceptionally well for the [NJ Direct Install Program](/blog/nj-direct-install-program-commercial-guide) because they're classified as nonprofit commercial properties \u2014 no income limits, no restrictions. If your faith community has multiple buildings, each one qualifies separately for [100% free lighting](/blog/commercial-lighting-100-percent-free-nj) and 80% HVAC coverage." },
+      { type: "h2", content: "Multiple Buildings Each Qualify Separately" },
+      { type: "paragraph", content: "This is the key advantage for houses of worship. Your sanctuary, education wing, fellowship hall, administrative office, and any other building on a separate electric meter each qualifies independently. A church with 3 buildings gets 3 separate lighting upgrades (all free) and 3 separate HVAC projects (each 80% covered)." },
+      { type: "h2", content: "Sanctuary Lighting" },
+      { type: "paragraph", content: "Modern LED sanctuary lighting provides ambient, accent, and task lighting with full color temperature control and dimming. The result is better atmosphere for worship while using 60-70% less energy. All covered at 100% \u2014 no cost to your congregation." },
+      { type: "h2", content: "Real Example: West Orange Church" },
+      { type: "paragraph", content: "A West Orange church with 3 buildings (sanctuary, education wing, fellowship hall): Lighting across all 3 buildings: $48,000 value at $0 cost. HVAC across all 3 buildings: $85,000 total, $68,000 covered (80%). [OBR](/blog/on-bill-repayment-commercial-hvac-nj) payment: $283/month. Combined energy savings: $520/month. Net benefit: +$237/month. The church saves $2,844 per year while running brand new HVAC and lighting." },
+      { type: "stat_box", content: "3 Buildings | Lighting: $48,000 Free | HVAC: $68,000 Covered | Net Savings: +$237/month" },
+      { type: "h2", content: "We Work Around Your Schedule" },
+      { type: "paragraph", content: "We schedule all work around your service times, events, and programs. No work during worship. No disruption to your congregation. Most lighting installations complete in 1-2 days per building. HVAC is scheduled during your quietest periods." },
+      { type: "cta_box", content: "Find out what your house of worship qualifies for. Free assessment, every building evaluated.", buttonText: "Book Church Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 21 — Manufacturing Direct Install
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Manufacturing: Free Industrial Lighting + HVAC 80% Off \u2014 Direct Install Guide",
+    slug: "manufacturing-direct-install-nj",
+    date: "March 31, 2026",
+    readTime: "7 min read",
+    category: "Commercial",
+    metaDescription: "NJ manufacturing plants qualify for 100% free industrial lighting and 80% HVAC under Direct Install. No project size cap. OBR for balance. Free assessment.",
+    excerpt: "NJ manufacturers have the highest energy costs in commercial real estate. Direct Install covers both industrial lighting and HVAC simultaneously.",
+    sections: [
+      { type: "intro", content: "Manufacturing facilities have the highest energy density of any commercial building type in NJ. The [Direct Install Program](/blog/nj-direct-install-program-commercial-guide) covers both industrial lighting (100% free) and HVAC (80% covered) with no project size cap. A 500,000 sq ft plant qualifies the same as a 5,000 sq ft shop." },
+      { type: "h2", content: "Industrial Lighting: 100% Free" },
+      { type: "paragraph", content: "High-bay production floor lighting, loading dock lighting, exterior security lighting, and office areas within the facility \u2014 all covered at [100% with zero cost](/blog/commercial-lighting-100-percent-free-nj). LED high-bay fixtures provide better visibility for workers, last 50,000+ hours, and use 60% less energy than metal halide or fluorescent alternatives." },
+      { type: "h2", content: "No Project Size Cap" },
+      { type: "paragraph", content: "Unlike some incentive programs with dollar caps, Direct Install has no maximum project size for manufacturing facilities. Whether your lighting project is $20,000 or $500,000, coverage is 100%. HVAC coverage at 80% also has no cap. This makes the program especially valuable for large [warehouse](/blog/warehouse-lighting-hvac-direct-install-nj) and manufacturing operations." },
+      { type: "h2", content: "HVAC for Manufacturing" },
+      { type: "paragraph", content: "Make-up air units, rooftop units, warehouse heaters, office climate control within the facility, and process cooling \u2014 all qualify for 80% coverage. [OBR for the remaining 20%](/blog/on-bill-repayment-commercial-hvac-nj) at 0% interest. Energy savings from modern HVAC typically exceed the OBR payment." },
+      { type: "h2", content: "Zero Production Downtime" },
+      { type: "paragraph", content: "We phase installations bay by bay, scheduling work during maintenance windows, shift changes, or weekend shutdowns. Your production line runs continuously. For multi-shift operations, we coordinate with your plant manager to find the optimal installation windows." },
+      { type: "stat_box", content: "Lighting: 100% Free | HVAC: 80% Covered | Size Cap: None | Downtime: Zero" },
+      { type: "cta_box", content: "Get your manufacturing facility assessed. No size limit, no obligation, no downtime.", buttonText: "Book Manufacturing Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 22 — Property Manager Playbook
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "NJ Property Managers: Direct Install Is the Easiest CapEx Win of 2026",
+    slug: "property-manager-direct-install-nj",
+    date: "March 31, 2026",
+    readTime: "6 min read",
+    category: "Commercial",
+    metaDescription: "NJ property managers remove HVAC from CapEx with Direct Install covering 80%. Lighting 100% free. Multi-property coordination. OBR for balance. Free assessment.",
+    excerpt: "For NJ property managers, Direct Install turns a major capital expense into a zero-upfront budget win. Here is the portfolio playbook.",
+    sections: [
+      { type: "intro", content: "If you manage commercial properties in NJ, the [Direct Install Program](/blog/nj-direct-install-program-commercial-guide) turns your biggest CapEx headache into an OpEx line item that pays for itself. HVAC moves off the capital budget entirely. [Lighting is free](/blog/commercial-lighting-100-percent-free-nj). And your tenants get a better building." },
+      { type: "h2", content: "Take HVAC Off CapEx" },
+      { type: "paragraph", content: "A $100,000 HVAC project becomes: $80,000 covered by Direct Install (off your books), $20,000 on [OBR](/blog/on-bill-repayment-commercial-hvac-nj) at $333/month (OpEx, on the utility bill), offset by $500-$800/month in energy savings. Net impact on your operating budget: positive from day one. No capital expenditure request. No bank financing. No board approval for capital." },
+      { type: "h2", content: "Free Lighting Across Every Property" },
+      { type: "paragraph", content: "For a portfolio of 10 properties, that's $100,000-$300,000 in free lighting upgrades. LED lighting is the #1 tenant satisfaction improvement you can make \u2014 and it costs you nothing. Every property gets assessed individually. Every qualifying fixture gets replaced. Zero out of pocket." },
+      { type: "h2", content: "Multi-Property Coordination" },
+      { type: "paragraph", content: "One point of contact, one team, one coordinated rollout. We schedule around tenant hours across all your properties. No need to manage multiple contractors or applications. We handle every assessment, every application, and every installation across your entire portfolio." },
+      { type: "h2", content: "Tenant Retention Impact" },
+      { type: "paragraph", content: "HVAC and lighting are the top two factors in commercial tenant renewal decisions. Modern HVAC means consistent temperature, better air quality, and quieter operation. LED lighting means better work environments and lower common-area energy costs. Both delivered at zero upfront cost to you." },
+      { type: "h2", content: "The Report We Provide" },
+      { type: "paragraph", content: "We prepare a property-by-property breakdown: current energy costs, recommended upgrades, projected savings, OBR schedule, and net benefit analysis. This report is formatted for ownership presentation \u2014 the kind of document that gets immediate approval because the math is undeniable." },
+      { type: "cta_box", content: "Get your portfolio assessed. One contact, all properties, zero upfront cost.", buttonText: "Book Portfolio Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
     ],
   },
 ];

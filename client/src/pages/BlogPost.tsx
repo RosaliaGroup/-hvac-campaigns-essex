@@ -11,14 +11,24 @@ const BASE = "https://mechanicalenterprise.com";
 const PHONE = "(862) 419-1763";
 const PHONE_TEL = "tel:+18624191763";
 
+/** Render [text](url) links in plain text content */
+function renderLinkedText(text: string) {
+  const parts = text.split(/(\[[^\]]+\]\([^)]+\))/g);
+  return parts.map((part, i) => {
+    const match = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if (match) return <a key={i} href={match[2]} className="text-[#e8813a] font-medium hover:underline">{match[1]}</a>;
+    return <span key={i}>{part}</span>;
+  });
+}
+
 function RenderSection({ section }: { section: BlogSection }) {
   switch (section.type) {
     case "intro":
-      return <p className="text-lg text-gray-700 leading-relaxed font-medium border-l-4 border-[#e8813a] pl-5 my-8">{section.content}</p>;
+      return <p className="text-lg text-gray-700 leading-relaxed font-medium border-l-4 border-[#e8813a] pl-5 my-8">{renderLinkedText(section.content)}</p>;
     case "h2":
       return <h2 className="text-2xl md:text-3xl font-bold text-[#0a1628] mt-10 mb-4">{section.content}</h2>;
     case "paragraph":
-      return <p className="text-gray-600 leading-[1.8] mb-4" style={{ fontSize: 18 }}>{section.content}</p>;
+      return <p className="text-gray-600 leading-[1.8] mb-4" style={{ fontSize: 18 }}>{renderLinkedText(section.content)}</p>;
     case "stat_box":
       return (
         <div className="bg-[#0a1628] rounded-xl p-6 my-8 text-center">
