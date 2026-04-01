@@ -23,18 +23,18 @@ export const blogPosts: BlogPostData[] = [
   // POST 1 — Original post (kept)
   // ──────────────────────────────────────────────────────────────
   {
-    title: "NJ Heat Pump Rebates 2026: How to Get Up to $16,000",
+    title: "NJ Heat Pump Rebates 2026: How to Get Up to $20,000",
     slug: "nj-heat-pump-rebates-2026",
     date: "March 31, 2026",
     readTime: "8 min read",
     category: "Rebates & Incentives",
-    metaDescription: "Complete guide to NJ heat pump rebates in 2026. Learn how to qualify for up to $16,000 in rebates plus a $2,000 federal tax credit. Free assessment available.",
-    excerpt: "NJ homeowners can qualify for up to $16,000 in heat pump rebates in 2026. Here's exactly how to get every dollar you're entitled to.",
+    metaDescription: "Complete guide to NJ heat pump rebates in 2026. Learn how to qualify for up to $20,000 in rebates (PSE&G $18K + $2K qualifying credit) plus a $2,000 federal tax credit.",
+    excerpt: "NJ homeowners can qualify for up to $20,000 in heat pump rebates in 2026. Here's exactly how to get every dollar you're entitled to.",
     sections: [
-      { type: "intro", content: "If you're a New Jersey homeowner thinking about replacing your heating or cooling system, 2026 is the best time to do it. Between NJ state rebates and federal tax credits, you could receive up to $18,000 back on a new heat pump installation — and Mechanical Enterprise handles all the paperwork for free." },
+      { type: "intro", content: "If you're a New Jersey homeowner thinking about replacing your heating or cooling system, 2026 is the best time to do it. Between PSE&G rebates, the Mechanical Enterprise qualifying credit, and federal tax credits, you could receive up to $22,000 back on a new heat pump installation — and we handle all the paperwork for free." },
       { type: "h2", content: "What Rebates Are Available for NJ Homeowners in 2026?" },
-      { type: "paragraph", content: "New Jersey homeowners installing qualifying heat pump systems can access two major incentive programs in 2026. The first is NJ state rebates which can provide up to $16,000 depending on your property type, existing system, and the equipment you install. The second is the federal Investment Tax Credit (ITC) under the Inflation Reduction Act, which provides up to $2,000 as a direct tax credit." },
-      { type: "stat_box", content: "NJ Rebates: Up to $16,000 | Federal Tax Credit: Up to $2,000 | Total Possible: Up to $18,000" },
+      { type: "paragraph", content: "New Jersey homeowners installing qualifying heat pump systems can access three major incentive programs in 2026. PSE&G rebates provide up to $18,000 depending on your current system and equipment. Mechanical Enterprise offers an additional qualifying credit of up to $2,000. And the federal 25C tax credit under the Inflation Reduction Act provides up to $2,000 as a dollar-for-dollar tax credit." },
+      { type: "stat_box", content: "PSE&G Rebate: Up to $18,000 | ME Qualifying Credit: Up to $2,000 | Federal 25C: Up to $2,000 | Total: Up to $22,000" },
       { type: "h2", content: "Who Qualifies for NJ Heat Pump Rebates?" },
       { type: "paragraph", content: "Most New Jersey homeowners qualify for at least some rebate amount. Eligibility depends on several factors including your current heating system, the type of heat pump you install, your utility provider, and your property type. Residential homeowners generally qualify for higher rebate amounts than commercial properties, though commercial buildings can receive rebates covering up to 80% of total installation costs." },
       { type: "checklist", items: ["Own a home or commercial property in New Jersey", "Install a qualifying high-efficiency heat pump system", "Work with a licensed NJ HVAC contractor", "Submit rebate applications within the required timeframe", "Meet minimum efficiency requirements (varies by program)"] },
