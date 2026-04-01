@@ -444,6 +444,42 @@ export default function CommercialCampaigns() {
         </div>
       </section>
 
+      {/* Browse by Industry */}
+      <section className="py-16 bg-[#f7f8fa]">
+        <div className="container">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl font-bold text-[#1e3a5f] mb-3">Browse by Industry</h2>
+            <p className="text-muted-foreground">Every commercial industry in NJ qualifies for Direct Install. Find yours.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-5xl mx-auto">
+            {[
+              ["Hotels", "hotels-nj"], ["Motels", "motels-nj"], ["B&Bs", "bed-and-breakfast-nj"], ["Event Venues", "event-venues-nj"],
+              ["Banquet Halls", "banquet-halls-nj"], ["Catering", "catering-facilities-nj"], ["Dental", "dental-offices-nj"],
+              ["Veterinary", "veterinary-clinics-nj"], ["Urgent Care", "urgent-care-nj"], ["Gyms", "gyms-fitness-centers-nj"],
+              ["Spas & Salons", "spas-salons-nj"], ["Physical Therapy", "physical-therapy-nj"], ["Nursing Homes", "nursing-homes-nj"],
+              ["Auto Dealers", "auto-dealerships-nj"], ["Auto Body", "auto-body-shops-nj"], ["Manufacturing", "manufacturing-plants-nj"],
+              ["Cold Storage", "cold-storage-nj"], ["Self-Storage", "self-storage-nj"], ["Laundromats", "laundromats-nj"],
+              ["Grocery", "grocery-stores-nj"], ["Pharmacies", "pharmacies-nj"], ["C-Stores", "convenience-stores-nj"],
+              ["Bakeries", "bakeries-nj"], ["Barbershops", "barbershops-nj"], ["Dry Cleaners", "dry-cleaners-nj"],
+              ["Nail Salons", "nail-salons-nj"], ["Law Offices", "law-offices-nj"], ["CPA Offices", "accounting-offices-nj"],
+              ["Insurance", "insurance-offices-nj"], ["Real Estate", "real-estate-offices-nj"], ["Financial", "financial-advisors-nj"],
+              ["Coworking", "coworking-spaces-nj"], ["Daycare", "daycare-centers-nj"], ["Private Schools", "private-schools-nj"],
+              ["Tutoring", "tutoring-centers-nj"], ["Studios", "martial-arts-studios-nj"], ["Music Studios", "music-studios-nj"],
+              ["Municipal", "municipal-buildings-nj"], ["Fire Stations", "fire-stations-nj"], ["Libraries", "libraries-nj"],
+              ["Colleges", "community-colleges-nj"], ["Rec Centers", "recreation-centers-nj"], ["Trucking", "trucking-companies-nj"],
+              ["Taxi/Limo", "taxi-limo-companies-nj"], ["Car Washes", "car-washes-nj"], ["Gas Stations", "gas-stations-nj"],
+              ["Bowling", "bowling-alleys-nj"], ["Sports", "indoor-sports-facilities-nj"], ["Golf Clubs", "golf-courses-nj"],
+              ["Pools", "swimming-pools-nj"], ["Mixed-Use", "mixed-use-buildings-nj"], ["Art Galleries", "art-galleries-nj"],
+              ["Funeral Homes", "funeral-homes-nj"], ["Dispensaries", "cannabis-dispensaries-nj"], ["Breweries", "breweries-wineries-nj"],
+            ].map(([name, slug]) => (
+              <a key={slug} href={`/direct-install/${slug}`} className="bg-white rounded-lg border px-3 py-2.5 text-center text-sm font-medium text-[#1e3a5f] hover:border-[#ff6b35] hover:text-[#ff6b35] transition-colors block">
+                {name}
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </div>
   );
