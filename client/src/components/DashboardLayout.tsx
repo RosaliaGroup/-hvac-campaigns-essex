@@ -63,6 +63,9 @@ const menuItems: MenuItem[] = [
   { icon: Bot, label: "AI VA Dashboard", path: "/ai-va-dashboard", section: "AI & Tools" },
   { icon: FileText, label: "AI Script Manager", path: "/ai-scripts", section: "AI & Tools" },
   { icon: Settings, label: "AI VA Settings", path: "/ai-va-settings", section: "AI & Tools" },
+
+  // Analytics
+  { icon: BarChart3, label: "Analytics & Reports", path: "/analytics", section: "Analytics" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

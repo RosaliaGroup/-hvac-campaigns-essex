@@ -62,6 +62,7 @@ import BlogPost from "./pages/BlogPost";
 import DirectInstallIndex from "./pages/DirectInstallIndex";
 import DirectInstallPage from "./pages/DirectInstallPage";
 import Presentation from "./pages/Presentation";
+import AnalyticsReports from "./pages/AnalyticsReports";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -257,6 +258,7 @@ function Router() {
       <Route path={"/admin"} component={protect(AdminPortal)} />
       <Route path={"/team-management"} component={protect(TeamManagement)} />
       <Route path={"/assessment-submissions"} component={protect(AssessmentSubmissions)} />
+      <Route path={"/analytics"} component={protect(AnalyticsReports)} />
 
       <Route path={"/presentation-2026"} component={Presentation} />
       <Route path={"/404"} component={NotFound} />

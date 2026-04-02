@@ -22,6 +22,7 @@ const navItems = [
   { label: "Performance", href: "/campaign-performance", icon: BarChart3 },
   { label: "Google Ads", href: "/google-ads-campaigns", icon: Search },
   { label: "Facebook Ads", href: "/facebook-campaigns", icon: Facebook },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
 ];
 
 export default function InternalNav() {

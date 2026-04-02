@@ -232,6 +232,53 @@ export async function getLeadCaptureStats() {
   };
 }
 
+export async function getLeadCaptureAnalytics() {
+  const db = await getDb();
+  if (!db) {
+    return { today: 0, thisWeek: 0, thisMonth: 0, allTime: 0, dailyCounts: [], bySource: {} };
+  }
+
+  const all = await db.select().from(leadCaptures).orderBy(desc(leadCaptures.createdAt));
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfDay);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const today = all.filter(l => new Date(l.createdAt) >= startOfDay).length;
+  const thisWeek = all.filter(l => new Date(l.createdAt) >= startOfWeek).length;
+  const thisMonth = all.filter(l => new Date(l.createdAt) >= startOfMonth).length;
+
+  // Daily counts for last 30 days
+  const dailyMap: Record<string, number> = {};
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(startOfDay);
+    d.setDate(d.getDate() - i);
+    dailyMap[d.toISOString().slice(0, 10)] = 0;
+  }
+  all.forEach(l => {
+    const key = new Date(l.createdAt).toISOString().slice(0, 10);
+    if (key in dailyMap) dailyMap[key]++;
+  });
+  const dailyCounts = Object.entries(dailyMap).map(([date, count]) => ({ date, count }));
+
+  const bySource: Record<string, number> = {};
+  all.forEach(l => {
+    bySource[l.captureType] = (bySource[l.captureType] || 0) + 1;
+  });
+
+  return {
+    today,
+    thisWeek,
+    thisMonth,
+    allTime: all.length,
+    dailyCounts,
+    bySource,
+    recentLeads: all.slice(0, 20),
+  };
+}
+
 /**
  * AI VA Credentials management
  */

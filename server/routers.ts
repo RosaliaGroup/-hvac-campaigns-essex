@@ -314,6 +314,10 @@ export const appRouter = router({
     stats: protectedProcedure.query(async () => {
       return await db.getLeadCaptureStats();
     }),
+
+    analytics: protectedProcedure.query(async () => {
+      return await db.getLeadCaptureAnalytics();
+    }),
   }),
 
   // AI Virtual Assistant router
