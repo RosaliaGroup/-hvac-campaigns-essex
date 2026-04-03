@@ -209,6 +209,7 @@ export default function TakeOffDetail() {
   const [dirty, setDirty] = useState(false);
   const [veRunning, setVeRunning] = useState(false);
   const [veFilter, setVeFilter] = useState<string>("all");
+  const [showReanalyzeConfirm, setShowReanalyzeConfirm] = useState(false);
 
   const [margins, setMargins] = useState<Margins>({
     materials: 20, labor: 35, overhead: 12, profit: 10, contingency: 5, tax: 6.625,
@@ -576,10 +577,23 @@ export default function TakeOffDetail() {
                     {analyzing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
                     {analyzing ? "Analyzing…" : "Analyze with AI"}
                   </Button>
+                ) : showReanalyzeConfirm ? (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                    <p className="text-xs text-amber-800">
+                      This will re-run the AI analysis and replace all {rows.length} saved items. This costs ~$0.40 in API credits. Continue?
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="destructive" className="flex-1" onClick={() => { setShowReanalyzeConfirm(false); analyzeWithClaude(); }} disabled={analyzing || files.length === 0}>
+                        Yes, Re-analyze
+                      </Button>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowReanalyzeConfirm(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
-                  <Button variant="outline" className="w-full" onClick={analyzeWithClaude} disabled={analyzing || files.length === 0}>
-                    {analyzing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-                    Re-analyze
+                  <Button variant="outline" className="w-full" onClick={() => setShowReanalyzeConfirm(true)} disabled={analyzing || files.length === 0}>
+                    <RefreshCw className="h-4 w-4 mr-2" /> Re-analyze
                   </Button>
                 )}
                 {analyzing && <Progress value={undefined} className="h-1" />}

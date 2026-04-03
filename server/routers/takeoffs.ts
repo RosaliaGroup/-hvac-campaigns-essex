@@ -1,4 +1,5 @@
 import { protectedProcedure, router } from "../_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
 import {
@@ -248,7 +249,10 @@ export const takeoffsRouter = router({
         // Debug: check what projects have items
         const allItems = await db.select({ projectId: takeoffItems.projectId, cnt: sql<number>`count(*)` }).from(takeoffItems).groupBy(takeoffItems.projectId);
         console.log("[VE] Items by project:", JSON.stringify(allItems));
-        throw new Error(`No items found for project ${pid}. Save items to the take-off before running Value Engineering. (Items exist in projects: ${allItems.map(a => `${a.projectId}(${a.cnt})`).join(', ')})`);
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `No items found for project ${pid}. Save items to the take-off before running Value Engineering. (Items exist in projects: ${allItems.map(a => `${a.projectId}(${a.cnt})`).join(', ')})`,
+        });
       }
 
       const [project] = await db
