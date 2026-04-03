@@ -260,12 +260,12 @@ export const takeoffsRouter = router({
         .from(takeoffProjects)
         .where(eq(takeoffProjects.id, pid));
 
-      // Compact items list: max 50 items, pipe-separated, max 500 chars
+      // Compact items list: max 50 items, pipe-separated, max 400 chars
       const compactItems = items
         .slice(0, 50)
         .map((i) => `${i.description} x${i.qty} @ $${i.unitPrice}`)
         .join(" | ")
-        .slice(0, 500);
+        .slice(0, 400);
       const totalCost = items.reduce((s, i) => s + Number(i.qty) * Number(i.unitPrice), 0);
 
       const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -281,17 +281,17 @@ export const takeoffsRouter = router({
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 6000,
-          system: `You are an HVAC value engineer. Given this take-off, provide exactly 8 cost-saving suggestions. Mix types: redesign, substitution, scope_reduction, sequencing. Order by estimatedSavings descending.
+          system: `You are an HVAC value engineer. Given a take-off, provide exactly 8 cost-saving suggestions. Mix types: redesign, substitution, scope_reduction, sequencing. Order by estimatedSavings descending.
 
-Return ONLY this JSON with exactly 8 items in the array — no more, no preamble, no explanation:
-{"suggestions":[
-{"type":"redesign","title":"...","currentSpec":"...","alternativeSpec":"...","estimatedSavings":0,"savingsPercent":0,"tradeOffs":"...","codeCompliant":true,"affectedItems":["..."],"implementationNotes":"..."},
-...7 more...
-]}`,
+Return ONLY a JSON array with exactly 8 objects. No wrapping object, no preamble, no explanation — just the array:
+[
+{"type":"substitution","title":"X","currentSpec":"X","alternativeSpec":"X","estimatedSavings":5000,"savingsPercent":8,"tradeOffs":"X","codeCompliant":true,"affectedItems":["X"],"implementationNotes":"X"},
+...7 more items...
+]`,
           messages: [
             {
               role: "user",
-              content: `Project: ${project?.name || "HVAC"}\nLocation: ${project?.location || "NJ"}\n\nTAKE-OFF SUMMARY:\n${compactItems}\n\nTOTAL DIRECT COST: $${totalCost.toFixed(0)}\n\nProvide exactly 8 value engineering suggestions as JSON.`,
+              content: `Project: ${project?.name || "HVAC"}\nLocation: ${project?.location || "NJ"}\n\nTAKE-OFF SUMMARY:\n${compactItems}\n\nTOTAL DIRECT COST: $${totalCost.toFixed(0)}\n\nReturn exactly 8 VE suggestions as a JSON array.`,
             },
           ],
         }),
@@ -306,20 +306,27 @@ Return ONLY this JSON with exactly 8 items in the array — no more, no preamble
       const text = data.content?.[0]?.text || "";
       console.log("[VE] Response length:", text.length, "Last 100 chars:", text.slice(-100));
 
-      // Check how many type fields exist in response
       const typeFields = text.match(/"type"\s*:\s*"[^"]+"/g);
       console.log("[VE] Type fields found:", typeFields?.length);
 
-      let parsed: any;
+      let suggestions: any[] = [];
       try {
-        // Try full JSON parse first
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { suggestions: [] };
+        // Try parsing as a JSON array first
+        const arrMatch = text.match(/\[[\s\S]*\]/);
+        if (arrMatch) {
+          suggestions = JSON.parse(arrMatch[0]);
+        }
       } catch {
-        console.log("[VE] Full JSON parse failed, trying fallback extraction");
-        // Robust fallback: extract individual suggestion objects
+        console.log("[VE] Array parse failed, trying object wrapper");
         try {
-          const suggestions: any[] = [];
+          const objMatch = text.match(/\{[\s\S]*\}/);
+          if (objMatch) {
+            const obj = JSON.parse(objMatch[0]);
+            suggestions = obj.suggestions || [];
+          }
+        } catch {
+          console.log("[VE] Object parse failed, trying individual extraction");
+          // Last resort: extract individual objects
           const objRegex = /\{[^{}]*"type"\s*:\s*"[^"]*"[^{}]*"title"\s*:[^{}]*\}/g;
           let match;
           while ((match = objRegex.exec(text)) !== null) {
@@ -328,15 +335,10 @@ Return ONLY this JSON with exactly 8 items in the array — no more, no preamble
               if (s.type && s.title) suggestions.push(s);
             } catch {}
           }
-          parsed = { suggestions };
-          console.log("[VE] Fallback parser extracted", suggestions.length, "suggestions");
-        } catch {
-          parsed = { suggestions: [] };
-          console.log("[VE] JSON parse failed completely, raw text length:", text.length);
+          console.log("[VE] Individual extraction got", suggestions.length, "suggestions");
         }
       }
-
-      const suggestions = parsed.suggestions || [];
+      console.log("[VE] Final suggestions count:", suggestions.length);
 
       // Save to DB
       if (suggestions.length > 0) {

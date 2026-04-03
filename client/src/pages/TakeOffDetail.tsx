@@ -413,7 +413,28 @@ export default function TakeOffDetail() {
     setDirty(true);
   };
   const deleteRow = (id: string) => { setRows((prev) => prev.filter((r) => r.id !== id)); setDirty(true); };
-  const addRow = () => { setRows((prev) => [...prev, emptyRow()]); setDirty(true); };
+  const addRow = () => {
+    const newRow: TakeOffRow = {
+      id: uid(),
+      category: "OTHER",
+      description: "New Item",
+      tag: "",
+      qty: 1,
+      unit: "EA",
+      vendor: "",
+      model: "",
+      specs: "",
+      source: "Manual",
+      confidence: 60,
+      unitPrice: 0,
+      notes: "",
+    };
+    setRows((prev) => [...prev, newRow]);
+    setDirty(true);
+    // Clear any active filters that would hide the new row
+    setFilterCategory("ALL");
+    setSearch("");
+  };
 
   // ── Value Engineering ─────────────────────────────────────────────────────
   const runVE = async () => {
@@ -679,7 +700,9 @@ export default function TakeOffDetail() {
                                 <tr key={r.id} className="border-t hover:bg-accent/30">
                                   <td className="px-2 py-1"><Input className="h-6 text-xs border-0 shadow-none p-0" value={r.description} onChange={(e) => updateRow(r.id, "description", e.target.value)} /></td>
                                   <td className="px-2 py-1"><Input className="h-6 text-xs border-0 shadow-none p-0" value={r.tag} onChange={(e) => updateRow(r.id, "tag", e.target.value)} /></td>
-                                  <td className="px-2 py-1 text-right"><Input type="number" className="h-6 text-xs border-0 shadow-none p-0 text-right w-20" value={r.qty} onChange={(e) => updateRow(r.id, "qty", Number(e.target.value))} /></td>
+                                  <td className="px-2 py-1 text-right">
+                                    <input type="number" value={r.qty} onChange={(e) => updateRow(r.id, "qty", parseFloat(e.target.value) || 0)} className="w-24 text-right font-mono text-sm bg-transparent border-0 focus:outline-none focus:bg-white focus:border focus:border-orange-300 focus:px-1 rounded" style={{ minWidth: "80px" }} />
+                                  </td>
                                   <td className="px-2 py-1 text-xs">{r.unit}</td>
                                   <td className="px-2 py-1 text-right"><Input type="number" className="h-6 text-xs border-0 shadow-none p-0 text-right w-full" value={r.unitPrice} onChange={(e) => updateRow(r.id, "unitPrice", Number(e.target.value))} /></td>
                                   <td className="px-2 py-1 text-right text-xs font-medium">{fmt(r.qty * r.unitPrice)}</td>
