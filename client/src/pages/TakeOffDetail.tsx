@@ -153,7 +153,7 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 function emptyRow(): TakeOffRow {
-  return { id: uid(), category: "OTHER", description: "", tag: "", qty: 1, unit: "EA", vendor: "", model: "", specs: "", source: "", confidence: 0, unitPrice: 0, notes: "" };
+  return { id: uid(), category: "OTHER", description: "New Item", tag: "", qty: 1, unit: "EA", vendor: "", model: "", specs: "", source: "Manual", confidence: 60, unitPrice: 0, notes: "" };
 }
 
 function safeParseJSON(raw: string) {
@@ -449,6 +449,8 @@ export default function TakeOffDetail() {
 
   // ── Filtering ─────────────────────────────────────────────────────────────
   const filteredRows = rows.filter((r) => {
+    // Hide empty placeholder rows (no description, default qty/price)
+    if (!r.description.trim()) return false;
     const matchSearch = !search || r.description.toLowerCase().includes(search.toLowerCase()) || r.tag.toLowerCase().includes(search.toLowerCase()) || r.vendor.toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCategory === "ALL" || r.category === filterCategory;
     return matchSearch && matchCat;
@@ -664,7 +666,7 @@ export default function TakeOffDetail() {
                               <tr className="bg-muted/50 text-muted-foreground">
                                 <th className="text-left px-2 py-1.5 font-medium">Description</th>
                                 <th className="text-left px-2 py-1.5 font-medium w-[60px]">Tag</th>
-                                <th className="text-right px-2 py-1.5 font-medium w-[50px]">Qty</th>
+                                <th className="text-right px-2 py-1.5 font-medium min-w-[80px] w-[80px]">Qty</th>
                                 <th className="text-left px-2 py-1.5 font-medium w-[45px]">Unit</th>
                                 <th className="text-right px-2 py-1.5 font-medium w-[80px]">Unit $</th>
                                 <th className="text-right px-2 py-1.5 font-medium w-[80px]">Ext $</th>
@@ -677,7 +679,7 @@ export default function TakeOffDetail() {
                                 <tr key={r.id} className="border-t hover:bg-accent/30">
                                   <td className="px-2 py-1"><Input className="h-6 text-xs border-0 shadow-none p-0" value={r.description} onChange={(e) => updateRow(r.id, "description", e.target.value)} /></td>
                                   <td className="px-2 py-1"><Input className="h-6 text-xs border-0 shadow-none p-0" value={r.tag} onChange={(e) => updateRow(r.id, "tag", e.target.value)} /></td>
-                                  <td className="px-2 py-1 text-right"><Input type="number" className="h-6 text-xs border-0 shadow-none p-0 text-right w-full" value={r.qty} onChange={(e) => updateRow(r.id, "qty", Number(e.target.value))} /></td>
+                                  <td className="px-2 py-1 text-right"><Input type="number" className="h-6 text-xs border-0 shadow-none p-0 text-right w-20" value={r.qty} onChange={(e) => updateRow(r.id, "qty", Number(e.target.value))} /></td>
                                   <td className="px-2 py-1 text-xs">{r.unit}</td>
                                   <td className="px-2 py-1 text-right"><Input type="number" className="h-6 text-xs border-0 shadow-none p-0 text-right w-full" value={r.unitPrice} onChange={(e) => updateRow(r.id, "unitPrice", Number(e.target.value))} /></td>
                                   <td className="px-2 py-1 text-right text-xs font-medium">{fmt(r.qty * r.unitPrice)}</td>
