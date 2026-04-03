@@ -224,11 +224,13 @@ export const takeoffsRouter = router({
       const db = await getDb();
       if (!db) throw new Error("Database not available");
 
+      const pid = Number(input.projectId);
+
       // Check if VE suggestions already exist
       const existing = await db
         .select()
         .from(takeoffVeSuggestions)
-        .where(eq(takeoffVeSuggestions.projectId, input.projectId));
+        .where(eq(takeoffVeSuggestions.projectId, pid));
       if (existing.length > 0) {
         return { suggestions: existing, cached: true };
       }
@@ -237,14 +239,16 @@ export const takeoffsRouter = router({
       const items = await db
         .select()
         .from(takeoffItems)
-        .where(eq(takeoffItems.projectId, input.projectId));
+        .where(eq(takeoffItems.projectId, pid));
 
-      if (items.length === 0) throw new Error("No items to analyze");
+      if (!items || items.length === 0) {
+        throw new Error(`No items found for project ${pid}. Save items to the take-off before running Value Engineering.`);
+      }
 
       const [project] = await db
         .select()
         .from(takeoffProjects)
-        .where(eq(takeoffProjects.id, input.projectId));
+        .where(eq(takeoffProjects.id, pid));
 
       const itemsSummary = items
         .map(
@@ -305,7 +309,7 @@ Order by estimatedSavings descending. Mix all types. Respond ONLY with valid JSO
       if (suggestions.length > 0) {
         await db.insert(takeoffVeSuggestions).values(
           suggestions.map((s: any) => ({
-            projectId: input.projectId,
+            projectId: pid,
             veType: s.type || "substitution",
             itemDescription: s.title || s.itemDescription || "",
             currentSpec: s.currentSpec || "",
@@ -327,7 +331,7 @@ Order by estimatedSavings descending. Mix all types. Respond ONLY with valid JSO
       const saved = await db
         .select()
         .from(takeoffVeSuggestions)
-        .where(eq(takeoffVeSuggestions.projectId, input.projectId));
+        .where(eq(takeoffVeSuggestions.projectId, pid));
 
       return { suggestions: saved, cached: false };
     }),
