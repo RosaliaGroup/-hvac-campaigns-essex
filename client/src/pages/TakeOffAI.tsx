@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -186,6 +186,15 @@ export default function TakeOffAI() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const apiKeyRef = useRef<string | null>(null);
+
+  // Fetch API key from server on mount
+  useEffect(() => {
+    fetch("/.netlify/functions/get-api-config")
+      .then((r) => r.json())
+      .then((d) => { apiKeyRef.current = d.apiKey || null; })
+      .catch(() => {});
+  }, []);
 
   // ── Log helper ───────────────────────────────────────────────────────────
   const log = useCallback((msg: string) => {
@@ -236,23 +245,50 @@ export default function TakeOffAI() {
 
     try {
       const file = files[0];
-      log(`Sending ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) to Claude via serverless function…`);
-      const res = await fetch("/.netlify/functions/takeoff-analyze", {
+      if (!apiKeyRef.current) {
+        log("Fetching API configuration…");
+        const cfgRes = await fetch("/.netlify/functions/get-api-config");
+        const cfg = await cfgRes.json();
+        apiKeyRef.current = cfg.apiKey || null;
+      }
+      if (!apiKeyRef.current) {
+        log("Error: API key not available. Check server configuration.");
+        setAnalyzing(false);
+        return;
+      }
+
+      log(`Sending ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) directly to Claude…`);
+
+      const isPDF = file.type === "application/pdf";
+      const mediaBlock = isPDF
+        ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: file.base64 } }
+        : { type: "image", source: { type: "base64", media_type: file.type, data: file.base64 } };
+
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKeyRef.current,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true",
+        },
         body: JSON.stringify({
-          fileData: file.base64,
-          fileType: file.type,
-          projName: projectName,
-          discipline,
-          location: projectLocation,
-          instructions,
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 8000,
+          system: `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off from the uploaded drawing sheets for project: ${projectName || "HVAC Project"}. Discipline: ${discipline}. Location: ${projectLocation}. Instructions: ${instructions || "None"}. Extract ALL items: equipment with tags/models/specs, ductwork by size in LF, piping by diameter in LF, air devices by count, insulation SF/LF, accessories, fire dampers, controls, labor hours. For pricing provide realistic installed unit prices for ${projectLocation || "Newark NJ"}. Respond ONLY with valid JSON: {"pages":<number>,"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`,
+          messages: [{
+            role: "user",
+            content: [
+              mediaBlock,
+              { type: "text", text: "Perform a complete mechanical take-off. Extract every item. Return only valid JSON." }
+            ]
+          }]
         }),
       });
 
       if (!res.ok) {
-        const errBody = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(errBody.error || `API ${res.status}`);
+        const errText = await res.text();
+        throw new Error(`API ${res.status}: ${errText}`);
       }
 
       const data = await res.json();
