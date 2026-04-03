@@ -439,7 +439,7 @@ export default function CommercialCampaigns() {
             <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-lg px-8 py-6 mb-4">
               <a href="https://mechanicalenterprise.com/commercial" className="text-white no-underline">Book Free Nonprofit Assessment</a>
             </Button>
-            <p className="text-sm text-muted-foreground">PSE&G Trade Ally PN#136 | WMBE Certified | SBE Certified | Serving NJ Nonprofits</p>
+            <p className="text-sm text-muted-foreground">PSE&G Trade Ally | WMBE Certified | SBE Certified | Serving NJ Nonprofits</p>
           </div>
         </div>
       </section>

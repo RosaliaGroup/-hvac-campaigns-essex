@@ -44,7 +44,7 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
           <div className="max-w-3xl mx-auto text-center text-white">
             <Badge className="mb-4 bg-[#e8813a] text-white hover:bg-[#e8813a]/90 text-sm px-4 py-1.5">NJ Direct Install Program</Badge>
             <h1 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">{page.h1}</h1>
-            <p className="text-lg text-white/75 mb-8 max-w-2xl mx-auto">Lighting 100% free · HVAC up to 80% covered · OBR for balance · PSE&G Trade Ally PN#136</p>
+            <p className="text-lg text-white/75 mb-8 max-w-2xl mx-auto">Lighting 100% free · HVAC up to 80% covered · OBR for balance · PSE&G Trade Ally </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href={COMMERCIAL_URL}>
                 <Button size="lg" className="bg-[#e8813a] hover:bg-[#d5732f] text-white px-8 py-6 text-lg w-full sm:w-auto">Free Commercial Assessment</Button>
@@ -119,7 +119,7 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
             {[
               { icon: "💡", title: "100% Free Lighting", desc: "Every qualifying fixture replaced with LED at zero cost. No OBR, no financing, no catch." },
               { icon: "❄️", title: "80% HVAC Coverage", desc: "Up to 80% of HVAC replacement covered. Remaining balance on OBR at 0% interest." },
-              { icon: "📋", title: "We Handle Everything", desc: "Assessment, application, installation, and all paperwork. PSE&G Trade Ally PN#136." },
+              { icon: "📋", title: "We Handle Everything", desc: "Assessment, application, installation, and all paperwork. PSE&G Trade Ally ." },
               { icon: "🏢", title: "Portfolio Qualified", desc: "Multiple buildings? Each one qualifies separately. We coordinate multi-site rollouts." },
             ].map((item, i) => (
               <div key={i} className="flex gap-4">
@@ -159,7 +159,7 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
           <div className="max-w-2xl mx-auto text-center text-white">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Get Your Free Assessment Today</h2>
             <p className="text-lg text-white/90 mb-2">No cost. No obligation. We come to you.</p>
-            <p className="text-sm text-white/70 mb-8">PSE&G Trade Ally PN#136 | WMBE Certified | SBE Certified</p>
+            <p className="text-sm text-white/70 mb-8">PSE&G Trade Ally | WMBE Certified | SBE Certified</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href={COMMERCIAL_URL}>
                 <Button size="lg" className="bg-[#0a1628] hover:bg-[#0a1628]/90 text-white px-8 py-6 text-lg w-full sm:w-auto">

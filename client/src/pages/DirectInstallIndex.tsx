@@ -14,7 +14,7 @@ const PHONE_TEL = "tel:+18624191763";
 export default function DirectInstallIndex() {
   useSEO({
     title: "NJ Direct Install Program \u2014 Every Industry Qualifies | Mechanical Enterprise",
-    description: "NJ Direct Install covers 100% of commercial lighting and up to 80% of HVAC for every industry. Browse by category. Free assessment. PSE&G Trade Ally PN#136.",
+    description: "NJ Direct Install covers 100% of commercial lighting and up to 80% of HVAC for every industry. Browse by category. Free assessment. PSE&G Trade Ally .",
     ogUrl: `${BASE}/direct-install`,
   });
 
@@ -28,7 +28,7 @@ export default function DirectInstallIndex() {
             <Badge className="mb-4 bg-[#e8813a] text-white hover:bg-[#e8813a]/90 text-sm px-4 py-1.5">NJ Direct Install Program</Badge>
             <h1 className="text-4xl md:text-5xl font-bold mb-6">Every Industry Qualifies</h1>
             <p className="text-lg text-white/75 mb-4">Lighting 100% free. HVAC up to 80% covered. OBR for balance. We handle all paperwork.</p>
-            <p className="text-sm text-white/50">PSE&G Trade Ally PN#136 | WMBE Certified | SBE Certified</p>
+            <p className="text-sm text-white/50">PSE&G Trade Ally | WMBE Certified | SBE Certified</p>
           </div>
         </div>
       </section>
