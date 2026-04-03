@@ -234,84 +234,27 @@ export default function TakeOffAI() {
     setAnalyzing(true);
     log("Starting AI analysis…");
 
-    const contentBlocks: any[] = [];
-
-    for (const f of files) {
-      if (f.type === "application/pdf") {
-        contentBlocks.push({
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: f.base64 },
-        });
-      } else {
-        contentBlocks.push({
-          type: "image",
-          source: { type: "base64", media_type: f.type, data: f.base64 },
-        });
-      }
-    }
-
-    contentBlocks.push({
-      type: "text",
-      text: `Project: ${projectName || "Untitled"}\nLocation: ${projectLocation}\nDiscipline: ${discipline}\n\n${instructions ? `Additional instructions: ${instructions}` : ""}
-
-Analyze the uploaded mechanical/HVAC drawings and produce a detailed quantity take-off. Return ONLY valid JSON (no markdown) in this format:
-{
-  "items": [
-    {
-      "category": "MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER",
-      "description": "...",
-      "tag": "...",
-      "qty": 1,
-      "unit": "EA|LF|SF|CF|LBS|HR|LS|SET",
-      "vendor": "...",
-      "model": "...",
-      "specs": "...",
-      "source": "sheet/detail reference",
-      "confidence": 0-100,
-      "unitPrice": 0,
-      "notes": "..."
-    }
-  ],
-  "findings": [
-    { "severity": "info|warning|error", "title": "...", "detail": "..." }
-  ]
-}`,
-    });
-
     try {
-      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
-      if (!apiKey) {
-        log("Error: VITE_ANTHROPIC_API_KEY env var is not set.");
-        setAnalyzing(false);
-        return;
-      }
-
-      log("Sending to Claude claude-sonnet-4-20250514…");
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      log("Sending to Claude via serverless function…");
+      const res = await fetch("/.netlify/functions/takeoff-analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 8192,
-          system:
-            "You are an expert HVAC mechanical estimator. Analyze construction drawings and produce accurate quantity take-offs with line items and findings. Return ONLY valid JSON.",
-          messages: [{ role: "user", content: contentBlocks }],
+          files: files.map((f) => ({ base64: f.base64, type: f.type, name: f.name })),
+          projName: projectName,
+          discipline,
+          location: projectLocation,
+          instructions,
         }),
       });
 
       if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`API ${res.status}: ${errText}`);
+        const errBody = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(errBody.error || `API ${res.status}`);
       }
 
       const data = await res.json();
-      const text =
-        data.content?.[0]?.text || "";
+      const text = data.content?.[0]?.text || "";
       log("Response received — parsing…");
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
