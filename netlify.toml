@@ -5,6 +5,9 @@
 [functions]
   node_bundler = "esbuild"
 
+[functions."takeoff-analyze"]
+  included_files = []
+
 [[redirects]]
   from = "/api/*"
   to = "https://hvac-campaigns-essex-production.up.railway.app/api/:splat"
