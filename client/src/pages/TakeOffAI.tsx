@@ -154,6 +154,47 @@ function emptyRow(): TakeOffRow {
   };
 }
 
+function safeParseJSON(raw: string) {
+  // Strip markdown fences
+  let text = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+  // Try direct parse first
+  try { return JSON.parse(text); } catch {}
+
+  // Try to extract just the items array even if truncated
+  try {
+    const pagesMatch = text.match(/"pages"\s*:\s*(\d+)/);
+    const pages = pagesMatch ? parseInt(pagesMatch[1]) : 1;
+
+    // Extract all complete item objects from the items array
+    const items: any[] = [];
+    const itemRegex = /\{[^{}]*"category"\s*:[^{}]*"description"\s*:[^{}]*"qty"\s*:\s*[\d.]+[^{}]*\}/g;
+    let match;
+    while ((match = itemRegex.exec(text)) !== null) {
+      try {
+        const item = JSON.parse(match[0]);
+        if (item.category && item.description) items.push(item);
+      } catch {}
+    }
+
+    // Extract findings
+    const findings: any[] = [];
+    const findingRegex = /\{[^{}]*"type"\s*:\s*"(warning|info|success|alert)"[^{}]*"title"\s*:[^{}]*\}/g;
+    while ((match = findingRegex.exec(text)) !== null) {
+      try {
+        const f = JSON.parse(match[0]);
+        if (f.type && f.title) findings.push(f);
+      } catch {}
+    }
+
+    if (items.length > 0) {
+      return { pages, items, findings };
+    }
+  } catch {}
+
+  throw new Error("Could not parse AI response");
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function TakeOffAI() {
@@ -274,7 +315,7 @@ export default function TakeOffAI() {
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 8000,
+          max_tokens: 16000,
           system: `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off from the uploaded drawing sheets for project: ${projectName || "HVAC Project"}. Discipline: ${discipline}. Location: ${projectLocation}. Instructions: ${instructions || "None"}. Extract ALL items: equipment with tags/models/specs, ductwork by size in LF, piping by diameter in LF, air devices by count, insulation SF/LF, accessories, fire dampers, controls, labor hours. For pricing provide realistic installed unit prices for ${projectLocation || "Newark NJ"}. Respond ONLY with valid JSON: {"pages":<number>,"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`,
           messages: [{
             role: "user",
@@ -295,10 +336,7 @@ export default function TakeOffAI() {
       const text = data.content?.[0]?.text || "";
       log("Response received — parsing…");
 
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found in response.");
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = safeParseJSON(text);
       const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
         id: uid(),
         category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
