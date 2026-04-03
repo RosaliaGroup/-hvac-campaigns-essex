@@ -176,18 +176,18 @@ export const takeoffsRouter = router({
         await db.insert(takeoffItems).values(
           input.items.map((item) => ({
             projectId: input.projectId,
-            category: item.category,
-            description: item.description,
-            tag: item.tag,
-            qty: String(item.qty),
-            unit: item.unit,
-            vendor: item.vendor,
-            model: item.model,
-            specs: item.specs,
-            source: item.source,
-            confidence: item.confidence,
-            unitPrice: String(item.unitPrice),
-            notes: item.notes,
+            category: item.category || "OTHER",
+            description: item.description || "Unknown Item",
+            tag: item.tag || "",
+            qty: String(Number(item.qty) || 0),
+            unit: item.unit || "EA",
+            vendor: item.vendor || "",
+            model: item.model || "",
+            specs: item.specs || "",
+            source: item.source || "",
+            confidence: item.confidence || 0,
+            unitPrice: String(Number(item.unitPrice) || 0),
+            notes: item.notes || "",
           }))
         );
       }
@@ -199,10 +199,10 @@ export const takeoffsRouter = router({
           await db.insert(takeoffFindings).values(
             input.findings.map((f) => ({
               projectId: input.projectId,
-              type: f.type,
-              title: f.title,
-              body: f.body,
-              source: f.source,
+              type: f.type || "info",
+              title: f.title || "",
+              body: f.body || "",
+              source: f.source || "",
             }))
           );
         }
@@ -211,7 +211,7 @@ export const takeoffsRouter = router({
       // Update project timestamp
       await db
         .update(takeoffProjects)
-        .set({})
+        .set({ updatedAt: new Date() })
         .where(eq(takeoffProjects.id, input.projectId));
 
       return { success: true };
