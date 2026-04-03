@@ -698,3 +698,76 @@ export const userSubscriptions = mysqlTable("userSubscriptions", {
 });
 export type UserSubscription = typeof userSubscriptions.$inferSelect;
 export type InsertUserSubscription = typeof userSubscriptions.$inferInsert;
+
+// ── Take-Off & Estimating ─────────────────────────────────────────────────
+
+export const takeoffProjects = mysqlTable("takeoff_projects", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  location: varchar("location", { length: 255 }),
+  discipline: varchar("discipline", { length: 100 }).default("HVAC"),
+  status: mysqlEnum("status", ["draft", "complete"]).default("draft").notNull(),
+  notes: text("notes"),
+  createdBy: varchar("createdBy", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type TakeoffProject = typeof takeoffProjects.$inferSelect;
+export type InsertTakeoffProject = typeof takeoffProjects.$inferInsert;
+
+export const takeoffItems = mysqlTable("takeoff_items", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  description: text("description"),
+  tag: varchar("tag", { length: 100 }),
+  qty: decimal("qty", { precision: 12, scale: 2 }).default("1"),
+  unit: varchar("unit", { length: 20 }).default("EA"),
+  vendor: varchar("vendor", { length: 255 }),
+  model: varchar("model", { length: 255 }),
+  specs: text("specs"),
+  source: varchar("source", { length: 255 }),
+  confidence: int("confidence").default(0),
+  unitPrice: decimal("unitPrice", { precision: 12, scale: 2 }).default("0"),
+  notes: text("notes"),
+});
+export type TakeoffItem = typeof takeoffItems.$inferSelect;
+export type InsertTakeoffItem = typeof takeoffItems.$inferInsert;
+
+export const takeoffFindings = mysqlTable("takeoff_findings", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  type: varchar("type", { length: 20 }).default("info"),
+  title: varchar("title", { length: 500 }),
+  body: text("body"),
+  source: varchar("source", { length: 255 }),
+});
+export type TakeoffFinding = typeof takeoffFindings.$inferSelect;
+export type InsertTakeoffFinding = typeof takeoffFindings.$inferInsert;
+
+export const takeoffVeSuggestions = mysqlTable("takeoff_ve_suggestions", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  itemDescription: text("itemDescription"),
+  currentSpec: text("currentSpec"),
+  alternativeSpec: text("alternativeSpec"),
+  vendor: varchar("vendor", { length: 255 }),
+  model: varchar("model", { length: 255 }),
+  estimatedSavings: decimal("estimatedSavings", { precision: 12, scale: 2 }).default("0"),
+  tradeOffs: text("tradeOffs"),
+  status: mysqlEnum("status", ["pending", "applied", "rejected"]).default("pending").notNull(),
+});
+export type TakeoffVeSuggestion = typeof takeoffVeSuggestions.$inferSelect;
+export type InsertTakeoffVeSuggestion = typeof takeoffVeSuggestions.$inferInsert;
+
+export const takeoffFiles = mysqlTable("takeoff_files", {
+  id: int("id").autoincrement().primaryKey(),
+  projectId: int("projectId").notNull(),
+  fileName: varchar("fileName", { length: 500 }).notNull(),
+  fileSize: int("fileSize"),
+  pages: int("pages"),
+  analyzedAt: timestamp("analyzedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type TakeoffFile = typeof takeoffFiles.$inferSelect;
+export type InsertTakeoffFile = typeof takeoffFiles.$inferInsert;

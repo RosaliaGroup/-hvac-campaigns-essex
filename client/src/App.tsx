@@ -64,6 +64,7 @@ import DirectInstallPage from "./pages/DirectInstallPage";
 import Presentation from "./pages/Presentation";
 import AnalyticsReports from "./pages/AnalyticsReports";
 import TakeOffAI from "./pages/TakeOffAI";
+import TakeOffDetail from "./pages/TakeOffDetail";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -261,6 +262,7 @@ function Router() {
       <Route path={"/assessment-submissions"} component={protect(AssessmentSubmissions)} />
       <Route path={"/analytics"} component={protect(AnalyticsReports)} />
       <Route path={"/takeoff-ai"} component={protect(TakeOffAI)} />
+      <Route path={"/takeoff-ai/:id"} component={protect(TakeOffDetail)} />
 
       <Route path={"/presentation-2026"} component={Presentation} />
       <Route path={"/404"} component={NotFound} />

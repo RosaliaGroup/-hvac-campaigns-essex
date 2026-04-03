@@ -1,13 +1,11 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState } from "react";
+import { useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
+import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -16,459 +14,44 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Upload,
   Zap,
-  FileText,
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  Download,
   Plus,
   Trash2,
-  RefreshCw,
+  FolderOpen,
   DollarSign,
   BarChart3,
-  Wrench,
-  Wind,
-  Thermometer,
-  Package,
+  FileText,
+  MapPin,
 } from "lucide-react";
 
-// ── Types ────────────────────────────────────────────────────────────────────
+const DISCIPLINES = ["HVAC", "Plumbing", "Electrical", "Fire Protection", "Controls"];
 
-type Category =
-  | "MACHINERY"
-  | "SHEET METAL"
-  | "COPPER"
-  | "INSULATION"
-  | "AIR DEVICES"
-  | "ACCESSORIES"
-  | "LABOR"
-  | "OTHER";
-
-interface TakeOffRow {
-  id: string;
-  category: Category;
-  description: string;
-  tag: string;
-  qty: number;
-  unit: string;
-  vendor: string;
-  model: string;
-  specs: string;
-  source: string;
-  confidence: number;
-  unitPrice: number;
-  notes: string;
-}
-
-interface Finding {
-  id: string;
-  severity: "info" | "warning" | "error";
-  title: string;
-  detail: string;
-}
-
-interface UploadedFile {
-  name: string;
-  type: string;
-  size: number;
-  base64: string;
-  status: "ready" | "uploading" | "done" | "error";
-}
-
-interface Margins {
-  materials: number;
-  labor: number;
-  overhead: number;
-  profit: number;
-  contingency: number;
-  tax: number;
-}
-
-// ── Constants ────────────────────────────────────────────────────────────────
-
-const CATEGORIES: Category[] = [
-  "MACHINERY",
-  "SHEET METAL",
-  "COPPER",
-  "INSULATION",
-  "AIR DEVICES",
-  "ACCESSORIES",
-  "LABOR",
-  "OTHER",
-];
-
-const CATEGORY_COLORS: Record<Category, string> = {
-  MACHINERY: "bg-blue-100 text-blue-800 border-blue-200",
-  "SHEET METAL": "bg-orange-100 text-orange-800 border-orange-200",
-  COPPER: "bg-amber-100 text-amber-800 border-amber-200",
-  INSULATION: "bg-purple-100 text-purple-800 border-purple-200",
-  "AIR DEVICES": "bg-indigo-100 text-indigo-800 border-indigo-200",
-  ACCESSORIES: "bg-green-100 text-green-800 border-green-200",
-  LABOR: "bg-teal-100 text-teal-800 border-teal-200",
-  OTHER: "bg-gray-100 text-gray-800 border-gray-200",
-};
-
-const DISCIPLINES = [
-  "HVAC",
-  "Plumbing",
-  "Electrical",
-  "Fire Protection",
-  "Controls",
-];
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1]);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function emptyRow(): TakeOffRow {
-  return {
-    id: uid(),
-    category: "OTHER",
-    description: "",
-    tag: "",
-    qty: 1,
-    unit: "EA",
-    vendor: "",
-    model: "",
-    specs: "",
-    source: "",
-    confidence: 0,
-    unitPrice: 0,
-    notes: "",
-  };
-}
-
-function safeParseJSON(raw: string) {
-  // Strip markdown fences
-  let text = raw.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-  // Try direct parse first
-  try { return JSON.parse(text); } catch {}
-
-  // Try to extract just the items array even if truncated
-  try {
-    const pagesMatch = text.match(/"pages"\s*:\s*(\d+)/);
-    const pages = pagesMatch ? parseInt(pagesMatch[1]) : 1;
-
-    // Extract all complete item objects from the items array
-    const items: any[] = [];
-    const itemRegex = /\{[^{}]*"category"\s*:[^{}]*"description"\s*:[^{}]*"qty"\s*:\s*[\d.]+[^{}]*\}/g;
-    let match;
-    while ((match = itemRegex.exec(text)) !== null) {
-      try {
-        const item = JSON.parse(match[0]);
-        if (item.category && item.description) items.push(item);
-      } catch {}
-    }
-
-    // Extract findings
-    const findings: any[] = [];
-    const findingRegex = /\{[^{}]*"type"\s*:\s*"(warning|info|success|alert)"[^{}]*"title"\s*:[^{}]*\}/g;
-    while ((match = findingRegex.exec(text)) !== null) {
-      try {
-        const f = JSON.parse(match[0]);
-        if (f.type && f.title) findings.push(f);
-      } catch {}
-    }
-
-    if (items.length > 0) {
-      return { pages, items, findings };
-    }
-  } catch {}
-
-  throw new Error("Could not parse AI response");
-}
-
-// ── Component ────────────────────────────────────────────────────────────────
+const fmt = (n: number) =>
+  n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 
 export default function TakeOffAI() {
-  // files & analysis state
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [rows, setRows] = useState<TakeOffRow[]>([]);
-  const [findings, setFindings] = useState<Finding[]>([]);
-  const [logs, setLogs] = useState<string[]>([]);
-  const [analyzing, setAnalyzing] = useState(false);
+  const [, setLocation] = useLocation();
+  const [showNew, setShowNew] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newLocation, setNewLocation] = useState("");
+  const [newDiscipline, setNewDiscipline] = useState("HVAC");
 
-  // project settings
-  const [projectName, setProjectName] = useState("");
-  const [projectLocation, setProjectLocation] = useState("");
-  const [discipline, setDiscipline] = useState("HVAC");
-  const [instructions, setInstructions] = useState("");
-
-  // table controls
-  const [search, setSearch] = useState("");
-  const [filterCategory, setFilterCategory] = useState<string>("ALL");
-
-  // margins
-  const [margins, setMargins] = useState<Margins>({
-    materials: 20,
-    labor: 35,
-    overhead: 12,
-    profit: 10,
-    contingency: 5,
-    tax: 6.625,
+  const { data: projects = [], isLoading, refetch } = trpc.takeoffs.list.useQuery();
+  const createMutation = trpc.takeoffs.create.useMutation({
+    onSuccess: (data) => {
+      setShowNew(false);
+      setNewName("");
+      setNewLocation("");
+      setLocation(`/takeoff-ai/${data.id}`);
+    },
+  });
+  const deleteMutation = trpc.takeoffs.delete.useMutation({
+    onSuccess: () => refetch(),
   });
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
-  const apiKeyRef = useRef<string | null>(null);
+  const totalBid = projects.reduce((s, p) => s + (p.directCost || 0), 0);
+  const avgBid = projects.length > 0 ? totalBid / projects.length : 0;
 
-  // Fetch API key from server on mount
-  useEffect(() => {
-    fetch("/.netlify/functions/get-api-config")
-      .then((r) => r.json())
-      .then((d) => { apiKeyRef.current = d.apiKey || null; })
-      .catch(() => {});
-  }, []);
-
-  // ── Log helper ───────────────────────────────────────────────────────────
-  const log = useCallback((msg: string) => {
-    const ts = new Date().toLocaleTimeString();
-    setLogs((prev) => [...prev, `[${ts}] ${msg}`]);
-  }, []);
-
-  // ── File handling ────────────────────────────────────────────────────────
-  const handleFiles = useCallback(
-    async (fileList: FileList | null) => {
-      if (!fileList) return;
-      const accepted = Array.from(fileList).filter(
-        (f) =>
-          f.type === "application/pdf" ||
-          f.type.startsWith("image/")
-      );
-      for (const f of accepted) {
-        log(`Adding file: ${f.name}`);
-        const base64 = await fileToBase64(f);
-        setFiles((prev) => [
-          ...prev,
-          { name: f.name, type: f.type, size: f.size, base64, status: "ready" },
-        ]);
-      }
-    },
-    [log]
-  );
-
-  const onDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      handleFiles(e.dataTransfer.files);
-    },
-    [handleFiles]
-  );
-
-  const removeFile = (name: string) =>
-    setFiles((prev) => prev.filter((f) => f.name !== name));
-
-  // ── Claude analysis ──────────────────────────────────────────────────────
-  const analyzeWithClaude = async () => {
-    if (files.length === 0) {
-      log("No files to analyze.");
-      return;
-    }
-    setAnalyzing(true);
-    log("Starting AI analysis…");
-
-    try {
-      const file = files[0];
-      if (!apiKeyRef.current) {
-        log("Fetching API configuration…");
-        const cfgRes = await fetch("/.netlify/functions/get-api-config");
-        const cfg = await cfgRes.json();
-        apiKeyRef.current = cfg.apiKey || null;
-      }
-      if (!apiKeyRef.current) {
-        log("Error: API key not available. Check server configuration.");
-        setAnalyzing(false);
-        return;
-      }
-
-      log(`Sending ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) directly to Claude…`);
-
-      const isPDF = file.type === "application/pdf";
-      const mediaBlock = isPDF
-        ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: file.base64 } }
-        : { type: "image", source: { type: "base64", media_type: file.type, data: file.base64 } };
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKeyRef.current,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 16000,
-          system: `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off from the uploaded drawing sheets for project: ${projectName || "HVAC Project"}. Discipline: ${discipline}. Location: ${projectLocation}. Instructions: ${instructions || "None"}. Extract ALL items: equipment with tags/models/specs, ductwork by size in LF, piping by diameter in LF, air devices by count, insulation SF/LF, accessories, fire dampers, controls, labor hours. For pricing provide realistic installed unit prices for ${projectLocation || "Newark NJ"}. Respond ONLY with valid JSON: {"pages":<number>,"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`,
-          messages: [{
-            role: "user",
-            content: [
-              mediaBlock,
-              { type: "text", text: "Perform a complete mechanical take-off. Extract every item. Return only valid JSON." }
-            ]
-          }]
-        }),
-      });
-
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error(`API ${res.status}: ${errText}`);
-      }
-
-      const data = await res.json();
-      const text = data.content?.[0]?.text || "";
-      log("Response received — parsing…");
-
-      const parsed = safeParseJSON(text);
-      const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
-        id: uid(),
-        category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
-        description: item.description || "",
-        tag: item.tag || "",
-        qty: Number(item.qty) || 1,
-        unit: item.unit || "EA",
-        vendor: item.vendor || "",
-        model: item.model || "",
-        specs: item.specs || "",
-        source: item.source || "",
-        confidence: typeof item.confidence === "string"
-          ? ({ high: 90, med: 60, low: 30 } as Record<string, number>)[item.confidence] ?? 0
-          : Number(item.confidence) || 0,
-        unitPrice: Number(item.unitPrice) || 0,
-        notes: item.notes || "",
-      }));
-
-      const newFindings: Finding[] = (parsed.findings || []).map((f: any) => ({
-        id: uid(),
-        severity: (f.type === "warning" ? "warning" : f.type === "alert" ? "error" : "info") as Finding["severity"],
-        title: f.title || "",
-        detail: f.body || f.detail || "",
-      }));
-
-      setRows(newRows);
-      setFindings(newFindings);
-      log(`Parsed ${newRows.length} line items, ${newFindings.length} findings.`);
-    } catch (err: any) {
-      log(`Error: ${err.message}`);
-    } finally {
-      setAnalyzing(false);
-    }
-  };
-
-  // ── Row editing ──────────────────────────────────────────────────────────
-  const updateRow = (id: string, field: keyof TakeOffRow, value: any) => {
-    setRows((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
-    );
-  };
-
-  const deleteRow = (id: string) =>
-    setRows((prev) => prev.filter((r) => r.id !== id));
-
-  const addRow = () => setRows((prev) => [...prev, emptyRow()]);
-
-  // ── Filtering ────────────────────────────────────────────────────────────
-  const filteredRows = rows.filter((r) => {
-    const matchSearch =
-      !search ||
-      r.description.toLowerCase().includes(search.toLowerCase()) ||
-      r.tag.toLowerCase().includes(search.toLowerCase()) ||
-      r.vendor.toLowerCase().includes(search.toLowerCase());
-    const matchCat = filterCategory === "ALL" || r.category === filterCategory;
-    return matchSearch && matchCat;
-  });
-
-  const groupedRows = CATEGORIES.reduce<Record<string, TakeOffRow[]>>(
-    (acc, cat) => {
-      const catRows = filteredRows.filter((r) => r.category === cat);
-      if (catRows.length > 0) acc[cat] = catRows;
-      return acc;
-    },
-    {}
-  );
-
-  // ── Bid calculation ──────────────────────────────────────────────────────
-  const matCost = rows
-    .filter((r) => r.category !== "LABOR")
-    .reduce((s, r) => s + r.qty * r.unitPrice, 0);
-  const laborCost = rows
-    .filter((r) => r.category === "LABOR")
-    .reduce((s, r) => s + r.qty * r.unitPrice, 0);
-
-  const matMarkup = matCost * (margins.materials / 100);
-  const laborBurden = laborCost * (margins.labor / 100);
-  const subtotal = matCost + matMarkup + laborCost + laborBurden;
-  const withOverhead = subtotal * (1 + margins.overhead / 100);
-  const withContingency = withOverhead * (1 + margins.contingency / 100);
-  const withProfit = withContingency * (1 + margins.profit / 100);
-  const taxAmount = matMarkup * (margins.tax / 100);
-  const bidPrice = withProfit + taxAmount;
-
-  const fmt = (n: number) =>
-    n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-
-  // ── Export CSV ───────────────────────────────────────────────────────────
-  const exportCSV = () => {
-    const headers = [
-      "Category",
-      "Description",
-      "Tag",
-      "Qty",
-      "Unit",
-      "Unit Price",
-      "Ext Price",
-      "Vendor",
-      "Model",
-      "Specs",
-      "Source",
-      "Confidence",
-      "Notes",
-    ];
-    const csvRows = rows.map((r) =>
-      [
-        r.category,
-        `"${r.description}"`,
-        r.tag,
-        r.qty,
-        r.unit,
-        r.unitPrice,
-        (r.qty * r.unitPrice).toFixed(2),
-        `"${r.vendor}"`,
-        `"${r.model}"`,
-        `"${r.specs}"`,
-        `"${r.source}"`,
-        r.confidence,
-        `"${r.notes}"`,
-      ].join(",")
-    );
-    const csv = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${projectName || "takeoff"}-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <DashboardLayout>
       <div className="flex flex-col gap-4">
@@ -480,554 +63,191 @@ export default function TakeOffAI() {
               AI Take-Off &amp; Estimating
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Upload plans, let AI extract quantities, then build your bid.
+              Manage your mechanical take-off projects
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={exportCSV} disabled={rows.length === 0}>
-              <Download className="h-4 w-4 mr-1" /> Export CSV
-            </Button>
-          </div>
+          <Button onClick={() => setShowNew(true)}>
+            <Plus className="h-4 w-4 mr-1" /> New Take-Off
+          </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4">
-          {/* ── LEFT PANEL ──────────────────────────────────────────────── */}
-          <div className="flex flex-col gap-4">
-            {/* Upload zone */}
-            <Card>
-              <CardContent className="p-4">
-                <div
-                  ref={dropRef}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={onDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-accent/30 transition-colors"
-                >
-                  <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium">
-                    Drop PDF or images here
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    or click to browse
-                  </p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".pdf,image/*"
-                    className="hidden"
-                    onChange={(e) => handleFiles(e.target.files)}
-                  />
-                </div>
+        {/* Stats row */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <FolderOpen className="h-8 w-8 text-primary/30" />
+              <div>
+                <p className="text-2xl font-bold">{projects.length}</p>
+                <p className="text-xs text-muted-foreground">Projects</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <DollarSign className="h-8 w-8 text-green-500/30" />
+              <div>
+                <p className="text-2xl font-bold">{fmt(totalBid)}</p>
+                <p className="text-xs text-muted-foreground">Total Direct Cost</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 flex items-center gap-3">
+              <BarChart3 className="h-8 w-8 text-blue-500/30" />
+              <div>
+                <p className="text-2xl font-bold">{fmt(avgBid)}</p>
+                <p className="text-xs text-muted-foreground">Avg Project Cost</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-                {files.length > 0 && (
-                  <div className="mt-3 space-y-1.5">
-                    {files.map((f) => (
-                      <div
-                        key={f.name}
-                        className="flex items-center justify-between text-sm bg-muted/50 rounded px-2 py-1.5"
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          <span className="truncate">{f.name}</span>
-                          <span className="text-xs text-muted-foreground shrink-0">
-                            {(f.size / 1024).toFixed(0)}KB
-                          </span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFile(f.name);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Project settings */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold">
-                  Project Settings
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Input
-                  placeholder="Project name"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                />
+        {/* New project form */}
+        {showNew && (
+          <Card className="border-primary/30">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">New Take-Off Project</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input
+                placeholder="Project name (e.g. Building 7 HVAC)"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                autoFocus
+              />
+              <div className="flex gap-2">
                 <Input
                   placeholder="Location"
-                  value={projectLocation}
-                  onChange={(e) => setProjectLocation(e.target.value)}
+                  value={newLocation}
+                  onChange={(e) => setNewLocation(e.target.value)}
+                  className="flex-1"
                 />
-                <Select value={discipline} onValueChange={setDiscipline}>
-                  <SelectTrigger>
+                <Select value={newDiscipline} onValueChange={setNewDiscipline}>
+                  <SelectTrigger className="w-[160px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {DISCIPLINES.map((d) => (
-                      <SelectItem key={d} value={d}>
-                        {d}
-                      </SelectItem>
+                      <SelectItem key={d} value={d}>{d}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <textarea
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px] resize-y"
-                  placeholder="Additional instructions for the AI…"
-                  value={instructions}
-                  onChange={(e) => setInstructions(e.target.value)}
-                />
-                <Button
-                  className="w-full"
-                  onClick={analyzeWithClaude}
-                  disabled={analyzing || files.length === 0}
-                >
-                  {analyzing ? (
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Zap className="h-4 w-4 mr-2" />
-                  )}
-                  {analyzing ? "Analyzing…" : "Analyze with AI"}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setShowNew(false)}>
+                  Cancel
                 </Button>
-                {analyzing && <Progress value={undefined} className="h-1" />}
-              </CardContent>
-            </Card>
+                <Button
+                  size="sm"
+                  disabled={!newName.trim() || createMutation.isPending}
+                  onClick={() =>
+                    createMutation.mutate({
+                      name: newName.trim(),
+                      location: newLocation,
+                      discipline: newDiscipline,
+                    })
+                  }
+                >
+                  Create &amp; Open
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-            {/* Log panel */}
-            <Card className="bg-zinc-950 text-zinc-300 border-zinc-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-xs font-mono text-zinc-500">
-                  LOG
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[180px] px-4 pb-3">
-                  {logs.length === 0 ? (
-                    <p className="text-xs text-zinc-600 font-mono">
-                      Waiting for activity…
-                    </p>
-                  ) : (
-                    logs.map((l, i) => (
-                      <p key={i} className="text-xs font-mono leading-5">
-                        {l}
-                      </p>
-                    ))
-                  )}
-                </ScrollArea>
-              </CardContent>
-            </Card>
+        {/* Projects table */}
+        {isLoading ? (
+          <div className="text-center py-16 text-muted-foreground text-sm">
+            Loading projects…
           </div>
-
-          {/* ── RIGHT PANEL ─────────────────────────────────────────────── */}
-          <Tabs defaultValue="takeoff" className="flex flex-col">
-            <TabsList className="w-fit">
-              <TabsTrigger value="takeoff" className="gap-1.5">
-                <Wrench className="h-3.5 w-3.5" /> Take-Off
-              </TabsTrigger>
-              <TabsTrigger value="summary" className="gap-1.5">
-                <DollarSign className="h-3.5 w-3.5" /> Summary
-              </TabsTrigger>
-              <TabsTrigger value="findings" className="gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5" /> Findings
-                {findings.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-[10px]">
-                    {findings.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-
-            {/* ── Take-Off Tab ──────────────────────────────────────────── */}
-            <TabsContent value="takeoff" className="flex-1 mt-3">
-              <Card>
-                <CardContent className="p-4">
-                  {/* Toolbar */}
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    <Input
-                      placeholder="Search items…"
-                      className="max-w-[220px] h-8 text-sm"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                    />
-                    <Select
-                      value={filterCategory}
-                      onValueChange={setFilterCategory}
-                    >
-                      <SelectTrigger className="w-[160px] h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ALL">All Categories</SelectItem>
-                        {CATEGORIES.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="ml-auto">
-                      <Button size="sm" variant="outline" onClick={addRow}>
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Add Row
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Table */}
-                  <ScrollArea className="max-h-[600px]">
-                    {Object.keys(groupedRows).length === 0 ? (
-                      <div className="text-center py-16 text-muted-foreground">
-                        <Package className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                        <p className="text-sm">
-                          No items yet — upload plans and analyze, or add rows
-                          manually.
-                        </p>
-                      </div>
-                    ) : (
-                      Object.entries(groupedRows).map(([cat, catRows]) => (
-                        <div key={cat} className="mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${CATEGORY_COLORS[cat as Category]}`}
-                            >
-                              {cat}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {catRows.length} item{catRows.length !== 1 && "s"} ·{" "}
-                              {fmt(
-                                catRows.reduce(
-                                  (s, r) => s + r.qty * r.unitPrice,
-                                  0
-                                )
-                              )}
-                            </span>
-                          </div>
-                          <div className="border rounded-md overflow-hidden">
-                            <table className="w-full text-xs">
-                              <thead>
-                                <tr className="bg-muted/50 text-muted-foreground">
-                                  <th className="text-left px-2 py-1.5 font-medium">
-                                    Description
-                                  </th>
-                                  <th className="text-left px-2 py-1.5 font-medium w-[60px]">
-                                    Tag
-                                  </th>
-                                  <th className="text-right px-2 py-1.5 font-medium w-[50px]">
-                                    Qty
-                                  </th>
-                                  <th className="text-left px-2 py-1.5 font-medium w-[45px]">
-                                    Unit
-                                  </th>
-                                  <th className="text-right px-2 py-1.5 font-medium w-[80px]">
-                                    Unit $
-                                  </th>
-                                  <th className="text-right px-2 py-1.5 font-medium w-[80px]">
-                                    Ext $
-                                  </th>
-                                  <th className="text-center px-2 py-1.5 font-medium w-[40px]">
-                                    Conf
-                                  </th>
-                                  <th className="w-[32px]" />
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {catRows.map((r) => (
-                                  <tr
-                                    key={r.id}
-                                    className="border-t hover:bg-accent/30"
-                                  >
-                                    <td className="px-2 py-1">
-                                      <Input
-                                        className="h-6 text-xs border-0 shadow-none p-0"
-                                        value={r.description}
-                                        onChange={(e) =>
-                                          updateRow(
-                                            r.id,
-                                            "description",
-                                            e.target.value
-                                          )
-                                        }
-                                      />
-                                    </td>
-                                    <td className="px-2 py-1">
-                                      <Input
-                                        className="h-6 text-xs border-0 shadow-none p-0"
-                                        value={r.tag}
-                                        onChange={(e) =>
-                                          updateRow(r.id, "tag", e.target.value)
-                                        }
-                                      />
-                                    </td>
-                                    <td className="px-2 py-1 text-right">
-                                      <Input
-                                        type="number"
-                                        className="h-6 text-xs border-0 shadow-none p-0 text-right w-full"
-                                        value={r.qty}
-                                        onChange={(e) =>
-                                          updateRow(
-                                            r.id,
-                                            "qty",
-                                            Number(e.target.value)
-                                          )
-                                        }
-                                      />
-                                    </td>
-                                    <td className="px-2 py-1 text-xs">
-                                      {r.unit}
-                                    </td>
-                                    <td className="px-2 py-1 text-right">
-                                      <Input
-                                        type="number"
-                                        className="h-6 text-xs border-0 shadow-none p-0 text-right w-full"
-                                        value={r.unitPrice}
-                                        onChange={(e) =>
-                                          updateRow(
-                                            r.id,
-                                            "unitPrice",
-                                            Number(e.target.value)
-                                          )
-                                        }
-                                      />
-                                    </td>
-                                    <td className="px-2 py-1 text-right text-xs font-medium">
-                                      {fmt(r.qty * r.unitPrice)}
-                                    </td>
-                                    <td className="px-2 py-1 text-center">
-                                      <Badge
-                                        variant="outline"
-                                        className={`text-[9px] px-1 ${
-                                          r.confidence >= 80
-                                            ? "border-green-300 text-green-700"
-                                            : r.confidence >= 50
-                                            ? "border-yellow-300 text-yellow-700"
-                                            : "border-red-300 text-red-700"
-                                        }`}
-                                      >
-                                        {r.confidence}%
-                                      </Badge>
-                                    </td>
-                                    <td className="px-1 py-1">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-5 w-5 p-0"
-                                        onClick={() => deleteRow(r.id)}
-                                      >
-                                        <Trash2 className="h-3 w-3 text-muted-foreground" />
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ── Summary Tab ───────────────────────────────────────────── */}
-            <TabsContent value="summary" className="flex-1 mt-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Bid price card */}
-                <Card className="md:col-span-2 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                  <CardContent className="p-6 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground font-medium">
-                        Total Bid Price
-                      </p>
-                      <p className="text-3xl font-bold tracking-tight mt-1">
-                        {fmt(bidPrice)}
-                      </p>
-                    </div>
-                    <BarChart3 className="h-10 w-10 text-primary/30" />
-                  </CardContent>
-                </Card>
-
-                {/* Markup controls */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Markup Controls</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {(
-                      [
-                        ["materials", "Material Markup %"],
-                        ["labor", "Labor Burden %"],
-                        ["overhead", "Overhead %"],
-                        ["profit", "Profit %"],
-                        ["contingency", "Contingency %"],
-                        ["tax", "Tax %"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <div
-                        key={key}
-                        className="flex items-center justify-between"
+        ) : projects.length === 0 && !showNew ? (
+          <Card>
+            <CardContent className="py-16 text-center">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
+              <h3 className="text-lg font-semibold mb-1">No take-off projects yet</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                Create your first project, upload drawings, and let AI extract quantities.
+              </p>
+              <Button onClick={() => setShowNew(true)}>
+                <Plus className="h-4 w-4 mr-1" /> New Take-Off
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 text-muted-foreground">
+                  <th className="text-left px-4 py-2.5 font-medium">Project</th>
+                  <th className="text-left px-4 py-2.5 font-medium hidden md:table-cell">Location</th>
+                  <th className="text-left px-4 py-2.5 font-medium hidden lg:table-cell">Discipline</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Items</th>
+                  <th className="text-right px-4 py-2.5 font-medium">Direct Cost</th>
+                  <th className="text-center px-4 py-2.5 font-medium">Status</th>
+                  <th className="text-right px-4 py-2.5 font-medium hidden lg:table-cell">Created</th>
+                  <th className="w-[80px]" />
+                </tr>
+              </thead>
+              <tbody>
+                {projects.map((p) => (
+                  <tr
+                    key={p.id}
+                    className="border-t hover:bg-accent/30 cursor-pointer"
+                    onClick={() => setLocation(`/takeoff-ai/${p.id}`)}
+                  >
+                    <td className="px-4 py-2.5 font-medium">{p.name}</td>
+                    <td className="px-4 py-2.5 text-muted-foreground hidden md:table-cell">
+                      {p.location ? (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {p.location}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-muted-foreground hidden lg:table-cell">
+                      {p.discipline || "HVAC"}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">{p.itemCount}</td>
+                    <td className="px-4 py-2.5 text-right font-medium">
+                      {fmt(p.directCost || 0)}
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      <Badge
+                        variant="outline"
+                        className={
+                          p.status === "complete"
+                            ? "border-green-300 text-green-700 bg-green-50"
+                            : "border-yellow-300 text-yellow-700 bg-yellow-50"
+                        }
                       >
-                        <label className="text-xs text-muted-foreground">
-                          {label}
-                        </label>
-                        <Input
-                          type="number"
-                          step="0.1"
-                          className="w-[80px] h-7 text-xs text-right"
-                          value={margins[key]}
-                          onChange={(e) =>
-                            setMargins((m) => ({
-                              ...m,
-                              [key]: Number(e.target.value),
-                            }))
+                        {p.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-muted-foreground text-xs hidden lg:table-cell">
+                      {new Date(p.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-2 py-2.5 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete "${p.name}"?`)) {
+                            deleteMutation.mutate({ id: p.id });
                           }
-                        />
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
-
-                {/* Cost buildup */}
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm">Cost Build-Up</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <table className="w-full text-xs">
-                      <tbody className="divide-y">
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            Material Cost
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(matCost)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            Material Markup
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(matMarkup)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            Labor Cost
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(laborCost)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            Labor Burden
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(laborBurden)}
-                          </td>
-                        </tr>
-                        <Separator className="my-1" />
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            Subtotal
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(subtotal)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            + Overhead ({margins.overhead}%)
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(withOverhead)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            + Contingency ({margins.contingency}%)
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(withContingency)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            + Profit ({margins.profit}%)
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(withProfit)}
-                          </td>
-                        </tr>
-                        <tr>
-                          <td className="py-1.5 text-muted-foreground">
-                            + Tax ({margins.tax}%)
-                          </td>
-                          <td className="py-1.5 text-right font-medium">
-                            {fmt(taxAmount)}
-                          </td>
-                        </tr>
-                        <Separator className="my-1" />
-                        <tr className="font-bold">
-                          <td className="py-2">Bid Price</td>
-                          <td className="py-2 text-right text-base">
-                            {fmt(bidPrice)}
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* ── Findings Tab ──────────────────────────────────────────── */}
-            <TabsContent value="findings" className="flex-1 mt-3">
-              <div className="space-y-3">
-                {findings.length === 0 ? (
-                  <div className="text-center py-16 text-muted-foreground">
-                    <CheckCircle2 className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                    <p className="text-sm">
-                      No findings yet — run an analysis to get AI observations.
-                    </p>
-                  </div>
-                ) : (
-                  findings.map((f) => (
-                    <Card key={f.id}>
-                      <CardContent className="p-4 flex gap-3">
-                        {f.severity === "error" ? (
-                          <AlertTriangle className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                        ) : f.severity === "warning" ? (
-                          <AlertTriangle className="h-5 w-5 text-yellow-500 shrink-0 mt-0.5" />
-                        ) : (
-                          <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
-                        )}
-                        <div>
-                          <p className="text-sm font-medium">{f.title}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {f.detail}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );
