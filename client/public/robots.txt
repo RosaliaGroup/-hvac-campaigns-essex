@@ -1,4 +1,35 @@
 User-agent: *
 Allow: /
 
+Disallow: /m/
+Disallow: /m/create-account
+Disallow: /api/
+Disallow: /admin
+Disallow: /command-center
+Disallow: /marketing-dashboard
+Disallow: /marketing-autopilot
+Disallow: /lead-dashboard
+Disallow: /leads
+Disallow: /lead-scoring
+Disallow: /ai-va-dashboard
+Disallow: /ai-va-settings
+Disallow: /ai-assistant-prompts
+Disallow: /ai-script-manager
+Disallow: /ai-scripts
+Disallow: /campaign-performance
+Disallow: /campaign-generator
+Disallow: /google-ads-campaigns
+Disallow: /facebook-campaigns
+Disallow: /email-sms-campaigns
+Disallow: /sms-campaigns
+Disallow: /team-login
+Disallow: /team-management
+Disallow: /accept-invite
+Disallow: /reset-password
+Disallow: /assessment-submissions
+Disallow: /analytics
+Disallow: /takeoff-ai
+Disallow: /presentation-2026
+Disallow: /.netlify/
+
 Sitemap: https://mechanicalenterprise.com/sitemap.xml

@@ -33,6 +33,16 @@ const WHY_CARDS = [
   { icon: "⚡", title: "Installation Specialists", desc: "We focus on heat pump and HVAC installations — not just service calls. We're here to upgrade your system." },
 ];
 
+// Unique per-competitor content for SEO depth
+const COMPETITOR_CONTENT: Record<string, string[]> = {
+  "aj-perri": [
+    "A.J. Perri is a well-known regional HVAC and plumbing company that has served New Jersey homeowners for decades. As a large operation with multiple service vans across the state, they offer broad coverage but operate more like a general service company than a specialized installation firm. If you're considering A.J. Perri for a new heat pump or HVAC system, it's worth understanding how the experience differs from working with a local, installation-focused contractor like Mechanical Enterprise.",
+    "The biggest difference between Mechanical Enterprise and A.J. Perri is our approach to NJ rebates and incentives. Mechanical Enterprise was built around the NJ Clean Energy rebate programs — it's the core of what we do. We assess every property for maximum rebate qualification, select equipment specifically to hit the highest rebate tiers, and file all PSE&G and NJ Clean Energy paperwork on your behalf at no extra charge. Many of our customers qualify for $8,000 to $16,000 in NJ rebates plus the $2,000 federal tax credit. A.J. Perri offers HVAC installation among many other services, but rebate optimization is not their primary focus — homeowners often end up handling their own rebate paperwork or not qualifying for the maximum amounts.",
+    "Pricing transparency is another key differentiator. Mechanical Enterprise provides detailed written quotes showing equipment costs, labor, permits, and exact rebate amounts you can expect — so you know your true out-of-pocket cost before committing. With NJ's On-Bill Repayment (OBR) program, many of our customers pay $0 upfront and repay through their utility bill at zero interest. A.J. Perri uses a flat-rate pricing model that can make it harder to understand exactly what you're paying for. Their diagnostic fees, which typically range from $80 to $120, are charged even for assessment visits — Mechanical Enterprise assessments are always 100% free.",
+    "Mechanical Enterprise is a WMBE (Women/Minority Business Enterprise) and SBE (Small Business Enterprise) certified contractor, meaning we meet rigorous state certification standards. We are locally based in Newark, NJ and serve 15 NJ counties. Our team focuses exclusively on HVAC installation and system upgrades — we don't do general plumbing, drain cleaning, or appliance repair. This specialization means every installation gets our full engineering attention. When you call Mechanical Enterprise, you talk to the people who will actually install your system — not a call center.",
+  ],
+};
+
 function StatusIcon({ good }: { good: boolean | null }) {
   if (good === true) return <CheckCircle className="h-5 w-5 text-green-600 inline mr-1.5 shrink-0" />;
   if (good === false) return <XCircle className="h-5 w-5 text-red-500 inline mr-1.5 shrink-0" />;
@@ -151,6 +161,29 @@ export default function CompetitorPage({ competitor, slug }: CompetitorPageProps
           </div>
         </div>
       </section>
+
+      {/* ── Detailed Comparison Content ──────────────────────────── */}
+      {COMPETITOR_CONTENT[slug] && (
+        <section className="py-12 bg-gray-50">
+          <div className="container">
+            <div className="max-w-3xl mx-auto prose prose-gray">
+              <h2 className="text-2xl font-bold text-[#0a1628] mb-6">
+                Mechanical Enterprise vs {competitor}: A Detailed Comparison
+              </h2>
+              {COMPETITOR_CONTENT[slug].map((para, i) => (
+                <p key={i} className="text-gray-700 leading-relaxed mb-4">{para}</p>
+              ))}
+              <div className="not-prose mt-6">
+                <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+                  <Button className="bg-[#e8813a] hover:bg-[#d5732f] text-white">
+                    Get a Free Assessment — See the Difference <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Why Choose Us ─────────────────────────────────────────── */}
       <section className="py-16 bg-gray-50">
