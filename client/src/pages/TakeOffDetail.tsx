@@ -417,6 +417,7 @@ export default function TakeOffDetail() {
   // ── Value Engineering ─────────────────────────────────────────────────────
   const runVE = async () => {
     setVeRunning(true);
+    console.log("[VE] Calling runVE with projectId:", projectId, "type:", typeof projectId, "rows in state:", rows.length);
     try {
       const result = await veRunMutation.mutateAsync({ projectId });
       setVeSuggestions(result.suggestions);

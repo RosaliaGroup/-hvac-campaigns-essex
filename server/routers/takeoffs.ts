@@ -225,12 +225,14 @@ export const takeoffsRouter = router({
       if (!db) throw new Error("Database not available");
 
       const pid = Number(input.projectId);
+      console.log("[VE] runVE called with projectId:", input.projectId, "→ pid:", pid, "type:", typeof pid);
 
       // Check if VE suggestions already exist
       const existing = await db
         .select()
         .from(takeoffVeSuggestions)
         .where(eq(takeoffVeSuggestions.projectId, pid));
+      console.log("[VE] Existing suggestions:", existing.length);
       if (existing.length > 0) {
         return { suggestions: existing, cached: true };
       }
@@ -240,9 +242,13 @@ export const takeoffsRouter = router({
         .select()
         .from(takeoffItems)
         .where(eq(takeoffItems.projectId, pid));
+      console.log("[VE] Found items for project", pid, ":", items?.length ?? 0);
 
       if (!items || items.length === 0) {
-        throw new Error(`No items found for project ${pid}. Save items to the take-off before running Value Engineering.`);
+        // Debug: check what projects have items
+        const allItems = await db.select({ projectId: takeoffItems.projectId, cnt: sql<number>`count(*)` }).from(takeoffItems).groupBy(takeoffItems.projectId);
+        console.log("[VE] Items by project:", JSON.stringify(allItems));
+        throw new Error(`No items found for project ${pid}. Save items to the take-off before running Value Engineering. (Items exist in projects: ${allItems.map(a => `${a.projectId}(${a.cnt})`).join(', ')})`);
       }
 
       const [project] = await db
