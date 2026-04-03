@@ -235,12 +235,14 @@ export default function TakeOffAI() {
     log("Starting AI analysis…");
 
     try {
-      log("Sending to Claude via serverless function…");
-      const res = await fetch("/.netlify/functions/takeoff-analyze", {
+      const file = files[0];
+      log(`Sending ${file.name} to Claude via serverless function…`);
+      const res = await fetch("/api/takeoff-analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          files: files.map((f) => ({ base64: f.base64, type: f.type, name: f.name })),
+          fileData: file.base64,
+          fileType: file.type,
           projName: projectName,
           discipline,
           location: projectLocation,
@@ -272,16 +274,18 @@ export default function TakeOffAI() {
         model: item.model || "",
         specs: item.specs || "",
         source: item.source || "",
-        confidence: Number(item.confidence) || 0,
+        confidence: typeof item.confidence === "string"
+          ? ({ high: 90, med: 60, low: 30 } as Record<string, number>)[item.confidence] ?? 0
+          : Number(item.confidence) || 0,
         unitPrice: Number(item.unitPrice) || 0,
         notes: item.notes || "",
       }));
 
       const newFindings: Finding[] = (parsed.findings || []).map((f: any) => ({
         id: uid(),
-        severity: f.severity || "info",
+        severity: (f.type === "warning" ? "warning" : f.type === "alert" ? "error" : "info") as Finding["severity"],
         title: f.title || "",
-        detail: f.detail || "",
+        detail: f.body || f.detail || "",
       }));
 
       setRows(newRows);

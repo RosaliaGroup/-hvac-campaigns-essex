@@ -1,101 +1,57 @@
 import type { Context } from "@netlify/functions";
 
-export default async (req: Request, _context: Context) => {
+export default async (req: Request, context: Context) => {
   if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
-
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return Response.json({ error: "ANTHROPIC_API_KEY not configured" }, { status: 500 });
+    return new Response("Method not allowed", { status: 405 });
   }
 
   try {
     const body = await req.json();
-    const { files, projName, discipline, location, instructions } = body as {
-      files: { base64: string; type: string; name: string }[];
-      projName: string;
-      discipline: string;
-      location: string;
-      instructions: string;
-    };
+    const { fileData, fileType, projName, discipline, location, instructions } = body;
 
-    if (!files || files.length === 0) {
-      return Response.json({ error: "No files provided" }, { status: 400 });
-    }
+    const isPDF = fileType === "application/pdf";
 
-    // Build content blocks for each uploaded file
-    const contentBlocks: any[] = [];
+    const mediaBlock = isPDF
+      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: fileData } }
+      : { type: "image", source: { type: "base64", media_type: fileType, data: fileData } };
 
-    for (const f of files) {
-      if (f.type === "application/pdf") {
-        contentBlocks.push({
-          type: "document",
-          source: { type: "base64", media_type: "application/pdf", data: f.base64 },
-        });
-      } else {
-        contentBlocks.push({
-          type: "image",
-          source: { type: "base64", media_type: f.type, data: f.base64 },
-        });
-      }
-    }
-
-    contentBlocks.push({
-      type: "text",
-      text: `Project: ${projName || "Untitled"}\nLocation: ${location || ""}\nDiscipline: ${discipline || "HVAC"}\n\n${instructions ? `Additional instructions: ${instructions}` : ""}
-
-Analyze the uploaded mechanical/HVAC drawings and produce a detailed quantity take-off. Return ONLY valid JSON (no markdown) in this format:
-{
-  "items": [
-    {
-      "category": "MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER",
-      "description": "...",
-      "tag": "...",
-      "qty": 1,
-      "unit": "EA|LF|SF|CF|LBS|HR|LS|SET",
-      "vendor": "...",
-      "model": "...",
-      "specs": "...",
-      "source": "sheet/detail reference",
-      "confidence": 0-100,
-      "unitPrice": 0,
-      "notes": "..."
-    }
-  ],
-  "findings": [
-    { "severity": "info|warning|error", "title": "...", "detail": "..." }
-  ]
-}`,
-    });
-
-    const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
+        "x-api-key": process.env.ANTHROPIC_API_KEY!,
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 8192,
-        system:
-          "You are an expert HVAC mechanical estimator. Analyze construction drawings and produce accurate quantity take-offs with line items and findings. Return ONLY valid JSON.",
-        messages: [{ role: "user", content: contentBlocks }],
-      }),
+        max_tokens: 8000,
+        system: `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off from the uploaded drawing sheets for project: ${projName || "HVAC Project"}. Discipline: ${discipline}. Location: ${location}. Instructions: ${instructions || "None"}. Extract ALL items: equipment with tags/models/specs, ductwork by size in LF, piping by diameter in LF, air devices by count, insulation SF/LF, accessories, fire dampers, controls, labor hours. For pricing provide realistic installed unit prices for ${location || "Newark NJ"}. Respond ONLY with valid JSON: {"pages":<number>,"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`,
+        messages: [{
+          role: "user",
+          content: [
+            mediaBlock,
+            { type: "text", text: "Perform a complete mechanical take-off. Extract every item. Return only valid JSON." }
+          ]
+        }]
+      })
     });
 
-    if (!anthropicRes.ok) {
-      const errText = await anthropicRes.text();
-      return Response.json(
-        { error: `Anthropic API ${anthropicRes.status}: ${errText}` },
-        { status: anthropicRes.status }
-      );
+    if (!response.ok) {
+      const err = await response.text();
+      console.error("Anthropic error:", err);
+      return new Response(JSON.stringify({ error: err }), { status: 500 });
     }
 
-    const data = await anthropicRes.json();
-    return Response.json(data);
+    const data = await response.json();
+    return new Response(JSON.stringify(data), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+
   } catch (err: any) {
-    return Response.json({ error: err.message || "Internal error" }, { status: 500 });
+    console.error("Function error:", err);
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
   }
 };
+
+export const config = { path: "/api/takeoff-analyze" };
