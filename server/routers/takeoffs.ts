@@ -266,7 +266,15 @@ export const takeoffsRouter = router({
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
           max_tokens: 8000,
-          system: `You are a mechanical engineering value engineer specializing in HVAC/MEP systems. Given a take-off, identify 8-12 opportunities to reduce cost while maintaining performance and code compliance. For each: specify the exact line item description, current spec, alternative spec, estimated cost savings in dollars, and trade-offs. Respond ONLY with valid JSON: {"suggestions":[{"itemDescription":"...","currentSpec":"...","alternativeSpec":"...","vendor":"...","model":"...","estimatedSavings":<number>,"tradeOffs":"..."}]}`,
+          system: `You are a mechanical engineering value engineer specializing in HVAC/MEP systems. Given a take-off, provide 12-18 cost reduction suggestions across these categories:
+1. SYSTEM REDESIGN (type: "redesign") — where a different system type would be significantly cheaper while meeting the same performance specs. Examples: switching from VRF to PTACs, downsizing oversized equipment, combining zones, eliminating redundant systems, using a different distribution method.
+2. SPEC SUBSTITUTIONS (type: "substitution") — same system, cheaper components (different brand, lower efficiency tier if code still met, standard vs custom sizes).
+3. SCOPE REDUCTIONS (type: "scope_reduction") — items that may be over-engineered, redundant, or optional for the base bid (can be listed as alternates).
+4. SEQUENCING SAVINGS (type: "sequencing") — items that could be phased or done by owner/GC instead of HVAC sub.
+
+For each suggestion return: {"type":"redesign|substitution|scope_reduction|sequencing","title":"short title","itemDescription":"affected item(s)","currentSpec":"current specification","alternativeSpec":"proposed alternative","vendor":"alt vendor if applicable","model":"alt model if applicable","estimatedSavings":<dollars>,"savingsPercent":<percent of item cost>,"tradeOffs":"description of trade-offs","codeCompliant":true|false,"affectedItems":["item desc 1","item desc 2"],"implementationNotes":"how to implement"}
+
+Order by estimatedSavings descending. Mix all types. Respond ONLY with valid JSON: {"suggestions":[...]}`,
           messages: [
             {
               role: "user",
@@ -298,13 +306,18 @@ export const takeoffsRouter = router({
         await db.insert(takeoffVeSuggestions).values(
           suggestions.map((s: any) => ({
             projectId: input.projectId,
-            itemDescription: s.itemDescription || "",
+            veType: s.type || "substitution",
+            itemDescription: s.title || s.itemDescription || "",
             currentSpec: s.currentSpec || "",
             alternativeSpec: s.alternativeSpec || "",
             vendor: s.vendor || "",
             model: s.model || "",
             estimatedSavings: String(s.estimatedSavings || 0),
+            savingsPercent: String(s.savingsPercent || 0),
             tradeOffs: s.tradeOffs || "",
+            codeCompliant: s.codeCompliant !== false,
+            affectedItems: JSON.stringify(s.affectedItems || []),
+            implementationNotes: s.implementationNotes || "",
             status: "pending" as const,
           }))
         );

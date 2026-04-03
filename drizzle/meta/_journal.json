@@ -169,6 +169,13 @@
       "when": 1775236638053,
       "tag": "0023_misty_edwin_jarvis",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1775238850703,
+      "tag": "0024_safe_phalanx",
+      "breakpoints": true
     }
   ]
 }

@@ -38,6 +38,9 @@ import {
   ArrowRight,
   X,
   Check,
+  Star,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -92,17 +95,31 @@ interface Margins {
   tax: number;
 }
 
+type VeType = "redesign" | "substitution" | "scope_reduction" | "sequencing";
+
 interface VeSuggestion {
   id: number;
+  veType: string | null;
   itemDescription: string | null;
   currentSpec: string | null;
   alternativeSpec: string | null;
   vendor: string | null;
   model: string | null;
   estimatedSavings: string | null;
+  savingsPercent: string | null;
   tradeOffs: string | null;
+  codeCompliant: boolean | number | null;
+  affectedItems: string | null;
+  implementationNotes: string | null;
   status: "pending" | "applied" | "rejected";
 }
+
+const VE_TYPE_CONFIG: Record<VeType, { label: string; color: string; icon?: string }> = {
+  redesign: { label: "REDESIGN", color: "bg-purple-100 text-purple-800 border-purple-200" },
+  substitution: { label: "SUBSTITUTION", color: "bg-blue-100 text-blue-800 border-blue-200" },
+  scope_reduction: { label: "SCOPE REDUCTION", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  sequencing: { label: "SEQUENCING", color: "bg-gray-100 text-gray-800 border-gray-200" },
+};
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -191,6 +208,7 @@ export default function TakeOffDetail() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [dirty, setDirty] = useState(false);
   const [veRunning, setVeRunning] = useState(false);
+  const [veFilter, setVeFilter] = useState<string>("all");
 
   const [margins, setMargins] = useState<Margins>({
     materials: 20, labor: 35, overhead: 12, profit: 10, contingency: 5, tax: 6.625,
@@ -452,7 +470,10 @@ export default function TakeOffDetail() {
   const taxAmount = matMarkup * (margins.tax / 100);
   const bidPrice = withProfit + taxAmount;
 
-  const totalVESavings = veSuggestions.filter((s) => s.status === "pending" || s.status === "applied").reduce((s, ve) => s + Number(ve.estimatedSavings || 0), 0);
+  const activeVE = veSuggestions.filter((s) => s.status === "pending" || s.status === "applied");
+  const totalVESavings = activeVE.reduce((s, ve) => s + Number(ve.estimatedSavings || 0), 0);
+  const veSavingsByType = (type: string) => activeVE.filter((s) => s.veType === type).reduce((s, ve) => s + Number(ve.estimatedSavings || 0), 0);
+  const filteredVE = veFilter === "all" ? veSuggestions : veSuggestions.filter((s) => s.veType === veFilter);
 
   // ── Export CSV ────────────────────────────────────────────────────────────
   const exportCSV = () => {
@@ -735,13 +756,27 @@ export default function TakeOffDetail() {
             {/* ── Value Engineering Tab ──────────────────────────────────── */}
             <TabsContent value="ve" className="flex-1 mt-3">
               <div className="space-y-4">
-                {/* Controls */}
-                <div className="flex items-center justify-between">
+                {/* Controls + savings summary */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     {veSuggestions.length > 0 && (
-                      <p className="text-sm font-medium">
-                        Potential savings: <span className="text-green-600">{fmt(totalVESavings)}</span>
-                      </p>
+                      <div>
+                        <p className="text-sm font-medium">
+                          Total potential savings: <span className="text-green-600 text-lg font-bold">{fmt(totalVESavings)}</span>
+                        </p>
+                        <div className="flex flex-wrap gap-3 mt-1">
+                          {(["redesign", "substitution", "scope_reduction", "sequencing"] as VeType[]).map((t) => {
+                            const s = veSavingsByType(t);
+                            if (s === 0) return null;
+                            return (
+                              <span key={t} className="text-[10px] text-muted-foreground">
+                                <Badge variant="outline" className={`text-[9px] mr-1 ${VE_TYPE_CONFIG[t].color}`}>{VE_TYPE_CONFIG[t].label}</Badge>
+                                {fmt(s)}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -758,6 +793,35 @@ export default function TakeOffDetail() {
                     )}
                   </div>
                 </div>
+
+                {/* Filter row */}
+                {veSuggestions.length > 0 && (
+                  <div className="flex gap-1.5 flex-wrap">
+                    {[
+                      { key: "all", label: "All" },
+                      { key: "redesign", label: "Redesigns" },
+                      { key: "substitution", label: "Substitutions" },
+                      { key: "scope_reduction", label: "Scope Reductions" },
+                      { key: "sequencing", label: "Sequencing" },
+                    ].map((f) => (
+                      <Button
+                        key={f.key}
+                        size="sm"
+                        variant={veFilter === f.key ? "default" : "outline"}
+                        className="h-7 text-xs"
+                        onClick={() => setVeFilter(f.key)}
+                      >
+                        {f.label}
+                        {f.key !== "all" && (
+                          <span className="ml-1 opacity-60">
+                            ({veSuggestions.filter((s) => s.veType === f.key).length})
+                          </span>
+                        )}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
                 {veRunning && <Progress value={undefined} className="h-1" />}
 
                 {/* VE Cards */}
@@ -767,42 +831,84 @@ export default function TakeOffDetail() {
                     <p className="text-sm">Click "Run Value Engineering" to get AI-powered cost reduction suggestions.</p>
                   </div>
                 ) : (
-                  veSuggestions.map((ve) => (
-                    <Card key={ve.id} className={ve.status === "rejected" ? "opacity-50" : ""}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 space-y-2">
-                            <p className="text-sm font-medium">{ve.itemDescription}</p>
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="bg-red-50 text-red-700 border border-red-200 rounded px-2 py-0.5">{ve.currentSpec}</span>
-                              <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                              <span className="bg-green-50 text-green-700 border border-green-200 rounded px-2 py-0.5">{ve.alternativeSpec}</span>
-                            </div>
-                            {(ve.vendor || ve.model) && (
-                              <p className="text-xs text-muted-foreground">Alt: {[ve.vendor, ve.model].filter(Boolean).join(" ")}</p>
-                            )}
-                            <p className="text-xs text-muted-foreground">{ve.tradeOffs}</p>
-                          </div>
-                          <div className="text-right shrink-0">
-                            <p className="text-lg font-bold text-green-600">{fmt(Number(ve.estimatedSavings || 0))}</p>
-                            <p className="text-[10px] text-muted-foreground">estimated savings</p>
-                            {ve.status === "pending" && (
-                              <div className="flex gap-1 mt-2 justify-end">
-                                <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyVE(ve)}>
-                                  <Check className="h-3 w-3 mr-1" /> Apply
-                                </Button>
-                                <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => dismissVE(ve)}>
-                                  <X className="h-3 w-3 mr-1" /> Dismiss
-                                </Button>
+                  filteredVE.map((ve) => {
+                    const typeKey = (ve.veType || "substitution") as VeType;
+                    const typeConfig = VE_TYPE_CONFIG[typeKey] || VE_TYPE_CONFIG.substitution;
+                    const isRedesign = typeKey === "redesign";
+                    const isCompliant = ve.codeCompliant === true || ve.codeCompliant === 1;
+                    let affectedList: string[] = [];
+                    try { affectedList = ve.affectedItems ? JSON.parse(ve.affectedItems) : []; } catch { affectedList = []; }
+
+                    return (
+                      <Card key={ve.id} className={`${ve.status === "rejected" ? "opacity-50" : ""} ${isRedesign ? "border-purple-300 shadow-md" : ""}`}>
+                        <CardContent className={`p-4 ${isRedesign ? "bg-purple-50/30" : ""}`}>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              {/* Type badge + title */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className={`text-[10px] ${typeConfig.color}`}>
+                                  {typeConfig.label}
+                                </Badge>
+                                {isRedesign && (
+                                  <Badge className="bg-purple-600 text-white text-[10px] gap-0.5">
+                                    <Star className="h-2.5 w-2.5" /> High Impact
+                                  </Badge>
+                                )}
+                                {isCompliant ? (
+                                  <span className="flex items-center gap-0.5 text-[10px] text-green-600">
+                                    <ShieldCheck className="h-3 w-3" /> Code Compliant
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-0.5 text-[10px] text-yellow-600">
+                                    <ShieldAlert className="h-3 w-3" /> Verify Compliance
+                                  </span>
+                                )}
                               </div>
-                            )}
-                            {ve.status === "applied" && <Badge className="mt-2 bg-green-100 text-green-800 border-green-200">Applied</Badge>}
-                            {ve.status === "rejected" && <Badge variant="secondary" className="mt-2">Dismissed</Badge>}
+                              <p className={`font-medium ${isRedesign ? "text-base" : "text-sm"}`}>{ve.itemDescription}</p>
+                              <div className="flex items-center gap-2 text-xs flex-wrap">
+                                <span className="bg-red-50 text-red-700 border border-red-200 rounded px-2 py-0.5">{ve.currentSpec}</span>
+                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                <span className="bg-green-50 text-green-700 border border-green-200 rounded px-2 py-0.5">{ve.alternativeSpec}</span>
+                              </div>
+                              {(ve.vendor || ve.model) && (
+                                <p className="text-xs text-muted-foreground">Alt: {[ve.vendor, ve.model].filter(Boolean).join(" ")}</p>
+                              )}
+                              <p className="text-xs text-muted-foreground">{ve.tradeOffs}</p>
+                              {ve.implementationNotes && (
+                                <p className="text-xs text-muted-foreground italic">Implementation: {ve.implementationNotes}</p>
+                              )}
+                              {affectedList.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {affectedList.map((a, i) => (
+                                    <span key={i} className="text-[10px] bg-muted rounded px-1.5 py-0.5">{a}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className={`font-bold text-green-600 ${isRedesign ? "text-xl" : "text-lg"}`}>{fmt(Number(ve.estimatedSavings || 0))}</p>
+                              {Number(ve.savingsPercent || 0) > 0 && (
+                                <p className="text-xs text-green-600 font-medium">-{Number(ve.savingsPercent).toFixed(0)}%</p>
+                              )}
+                              <p className="text-[10px] text-muted-foreground">estimated savings</p>
+                              {ve.status === "pending" && (
+                                <div className="flex gap-1 mt-2 justify-end">
+                                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => applyVE(ve)}>
+                                    <Check className="h-3 w-3 mr-1" /> Apply
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => dismissVE(ve)}>
+                                    <X className="h-3 w-3 mr-1" /> Dismiss
+                                  </Button>
+                                </div>
+                              )}
+                              {ve.status === "applied" && <Badge className="mt-2 bg-green-100 text-green-800 border-green-200">Applied</Badge>}
+                              {ve.status === "rejected" && <Badge variant="secondary" className="mt-2">Dismissed</Badge>}
+                            </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 )}
               </div>
             </TabsContent>

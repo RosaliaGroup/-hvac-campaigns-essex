@@ -748,13 +748,18 @@ export type InsertTakeoffFinding = typeof takeoffFindings.$inferInsert;
 export const takeoffVeSuggestions = mysqlTable("takeoff_ve_suggestions", {
   id: int("id").autoincrement().primaryKey(),
   projectId: int("projectId").notNull(),
+  veType: varchar("veType", { length: 30 }).default("substitution"),
   itemDescription: text("itemDescription"),
   currentSpec: text("currentSpec"),
   alternativeSpec: text("alternativeSpec"),
   vendor: varchar("vendor", { length: 255 }),
   model: varchar("model", { length: 255 }),
   estimatedSavings: decimal("estimatedSavings", { precision: 12, scale: 2 }).default("0"),
+  savingsPercent: decimal("savingsPercent", { precision: 5, scale: 1 }).default("0"),
   tradeOffs: text("tradeOffs"),
+  codeCompliant: boolean("codeCompliant").default(true),
+  affectedItems: text("affectedItems"),
+  implementationNotes: text("implementationNotes"),
   status: mysqlEnum("status", ["pending", "applied", "rejected"]).default("pending").notNull(),
 });
 export type TakeoffVeSuggestion = typeof takeoffVeSuggestions.$inferSelect;
