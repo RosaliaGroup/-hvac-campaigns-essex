@@ -279,13 +279,12 @@ Analyze the uploaded mechanical/HVAC drawings and produce a detailed quantity ta
     });
 
     try {
-      const apiKey = localStorage.getItem("anthropic_api_key") || prompt("Enter your Anthropic API key:");
+      const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY;
       if (!apiKey) {
-        log("API key required.");
+        log("Error: VITE_ANTHROPIC_API_KEY env var is not set.");
         setAnalyzing(false);
         return;
       }
-      localStorage.setItem("anthropic_api_key", apiKey);
 
       log("Sending to Claude claude-sonnet-4-20250514…");
       const res = await fetch("https://api.anthropic.com/v1/messages", {
