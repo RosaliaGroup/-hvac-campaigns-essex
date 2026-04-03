@@ -176,6 +176,13 @@
       "when": 1775238850703,
       "tag": "0024_safe_phalanx",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1775379600000,
+      "tag": "0025_add_pseg_checklist_capture_type",
+      "breakpoints": true
     }
   ]
 }

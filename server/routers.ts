@@ -109,7 +109,7 @@ export const appRouter = router({
           firstName: z.string().optional(),
           lastName: z.string().optional(),
           name: z.string().optional(),
-          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "qualify_form", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance", "lp_referral_partner", "lp_maintenance_subscription", "career_application", "partnership_inquiry"]),
+          captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "qualify_form", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance", "lp_referral_partner", "lp_maintenance_subscription", "career_application", "partnership_inquiry", "pseg_checklist_download"]),
           pageUrl: z.string().optional(),
           message: z.string().optional(),
         })
@@ -154,25 +154,75 @@ export const appRouter = router({
           // Determine email subject and content based on capture type
           const isCareer = input.captureType === "career_application";
           const isPartnership = input.captureType === "partnership_inquiry";
-          const clientSubject = isCareer
+          const isChecklist = input.captureType === "pseg_checklist_download";
+          const clientSubject = isChecklist
+            ? "Your Free PSE&G Rebate Checklist – Mechanical Enterprise"
+            : isCareer
             ? "We received your application – Mechanical Enterprise"
             : isPartnership
             ? "We received your partnership inquiry – Mechanical Enterprise"
             : "We received your quote request – Mechanical Enterprise";
-          const clientBody = isCareer
+          const clientBody = isChecklist
+            ? ""
+            : isCareer
             ? "We've received your job application and our team will review it within <strong>3-5 business days</strong>."
             : isPartnership
             ? "We've received your partnership inquiry and will be in touch within <strong>24-48 hours</strong> to discuss next steps."
             : "We've received your quote request and a member of our team will follow up with you within <strong>24 hours</strong>.";
-          const salesSubject = isCareer
+          const salesSubject = isChecklist
+            ? `PSE&G Checklist Download – ${leadName}`
+            : isCareer
             ? `New Job Application – ${leadName}`
             : isPartnership
             ? `New Partnership Inquiry – ${leadName}`
             : `New Quote Request – ${leadName}`;
-          const salesHeading = isCareer ? "New Job Application" : isPartnership ? "New Partnership Inquiry" : "New Quote Request";
+          const salesHeading = isChecklist ? "PSE&G Checklist Download" : isCareer ? "New Job Application" : isPartnership ? "New Partnership Inquiry" : "New Quote Request";
 
-          // 1. Client confirmation email
+          // 1. Client confirmation email (or checklist delivery)
           if (input.email) {
+            const checklistHtml = isChecklist ? `
+                    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                      <h2 style="color:#1e3a5f">Your PSE&G Rebate Checklist</h2>
+                      <p>Hi ${leadName}, here's your complete NJ PSE&G Rebate Checklist. Use this to make sure your application doesn't get rejected.</p>
+                      <div style="background:#f8f9fa;border-radius:8px;padding:20px;margin:20px 0">
+                        <h3 style="color:#1e3a5f;margin-top:0">Before You Apply — Required Documents</h3>
+                        <table style="width:100%;border-collapse:collapse">
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Current equipment age, make, and model number</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; PSE&G utility account number (from your bill)</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Property address must match PSE&G account exactly</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Proof of property ownership (deed or tax record)</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; If renting: written landlord authorization</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Photos of existing HVAC equipment and labels</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Square footage of conditioned space</td></tr>
+                        </table>
+                        <h3 style="color:#1e3a5f">Equipment Requirements</h3>
+                        <table style="width:100%;border-collapse:collapse">
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; New equipment must be ENERGY STAR certified</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Heat pumps: minimum 15.2 SEER2 / 7.8 HSPF2</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Equipment must be on PSE&G's qualified products list</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Installation by a PSE&G-certified contractor (required)</td></tr>
+                        </table>
+                        <h3 style="color:#1e3a5f">After Installation — Critical Timing</h3>
+                        <table style="width:100%;border-collapse:collapse">
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Submit rebate application within 90 days of installation</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Include paid invoice with contractor license number</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Include AHRI certificate for new equipment</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Keep all permits and inspection records</td></tr>
+                          <tr><td style="padding:8px 0;border-bottom:1px solid #eee">&#9744; Allow 6-8 weeks for rebate processing</td></tr>
+                        </table>
+                      </div>
+                      <div style="background:#1e3a5f;color:#fff;border-radius:8px;padding:20px;margin:20px 0;text-align:center">
+                        <h3 style="margin-top:0;color:#ff6b35">Skip the Paperwork — We Handle Everything</h3>
+                        <p style="margin-bottom:16px;font-size:14px">As a PSE&G certified contractor, we file every item on this checklist for you at no extra cost.</p>
+                        <a href="https://mechanicalenterprise.com/pseg-rebate-contractor-nj" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Book Free Assessment</a>
+                      </div>
+                      <div style="text-align:center;margin:24px 0">
+                        <a href="tel:8624191763" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Call Us Now: (862) 419-1763</a>
+                      </div>
+                      <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
+                      <p style="color:#999;font-size:12px">Mechanical Enterprise LLC &bull; PSE&G Certified Contractor &bull; WMBE/SBE Certified &bull; <a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a></p>
+                    </div>` : "";
+
             try {
               await fetch("https://api.resend.com/emails", {
                 method: "POST",
@@ -184,7 +234,7 @@ export const appRouter = router({
                   from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
                   to: [input.email],
                   subject: clientSubject,
-                  html: `
+                  html: isChecklist ? checklistHtml : `
                     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
                       <h2 style="color:#1e3a5f">Thank you, ${leadName}!</h2>
                       <p>${clientBody}</p>

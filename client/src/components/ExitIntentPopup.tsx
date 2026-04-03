@@ -1,105 +1,30 @@
 import { useState, useEffect } from "react";
-import { X, Home, Building2, CheckCircle, Users } from "lucide-react";
+import { X, FileText, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-
-// A/B Test Variants
-type PopupVariant = {
-  id: string;
-  headline: string;
-  buttonColor: string;
-  buttonHoverColor: string;
-  timerDelay: number;
-};
-
-const POPUP_VARIANTS: PopupVariant[] = [
-  {
-    id: "control",
-    headline: "Don't Miss Out on HVAC Savings!",
-    buttonColor: "bg-[#ff6b35]",
-    buttonHoverColor: "hover:bg-[#ff6b35]/90",
-    timerDelay: 15000,
-  },
-  {
-    id: "urgency",
-    headline: "Limited Time: $16K Rebates Available!",
-    buttonColor: "bg-[#ff6b35]",
-    buttonHoverColor: "hover:bg-[#ff6b35]/90",
-    timerDelay: 15000,
-  },
-  {
-    id: "green_button",
-    headline: "Don't Miss Out on HVAC Savings!",
-    buttonColor: "bg-green-600",
-    buttonHoverColor: "hover:bg-green-700",
-    timerDelay: 15000,
-  },
-  {
-    id: "faster_timer",
-    headline: "Don't Miss Out on HVAC Savings!",
-    buttonColor: "bg-[#ff6b35]",
-    buttonHoverColor: "hover:bg-[#ff6b35]/90",
-    timerDelay: 10000,
-  },
-  {
-    id: "slower_timer",
-    headline: "Don't Miss Out on HVAC Savings!",
-    buttonColor: "bg-[#ff6b35]",
-    buttonHoverColor: "hover:bg-[#ff6b35]/90",
-    timerDelay: 20000,
-  },
-];
-
-// Select variant based on user session (consistent per user)
-function getVariant(): PopupVariant {
-  let variantId = localStorage.getItem("hvac-popup-variant");
-  
-  if (!variantId) {
-    // Randomly assign variant on first visit
-    const randomIndex = Math.floor(Math.random() * POPUP_VARIANTS.length);
-    variantId = POPUP_VARIANTS[randomIndex].id;
-    localStorage.setItem("hvac-popup-variant", variantId);
-  }
-  
-  return POPUP_VARIANTS.find(v => v.id === variantId) || POPUP_VARIANTS[0];
-}
 
 export default function ExitIntentPopup() {
   const [isVisible, setIsVisible] = useState(false);
   const [hasShown, setHasShown] = useState(false);
-  const [variant] = useState(getVariant());
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-  });
+  const [email, setEmail] = useState("");
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
-      toast.success("Thanks! We'll send you information about available HVAC incentives and rebates.");
-      
+      toast.success("Checklist sent! Check your email.");
+
       // Track Google Ads conversion
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', 'conversion', {
-          'send_to': 'AW-17768263516/popup_lead_capture',
-          'value': 1.0,
-          'currency': 'USD',
-          'transaction_id': Date.now().toString()
-        });
-        
-        // Track A/B test variant
-        (window as any).gtag('event', 'popup_variant', {
-          'event_category': 'A/B Test',
-          'event_label': variant.id,
-          'value': 1
+      if (typeof window !== "undefined" && (window as any).gtag) {
+        (window as any).gtag("event", "conversion", {
+          send_to: "AW-17768263516/popup_checklist_capture",
+          value: 1.0,
+          currency: "USD",
+          transaction_id: Date.now().toString(),
         });
       }
-      
+
       setIsVisible(false);
       localStorage.setItem("hvac-exit-popup-shown", "true");
     },
@@ -116,36 +41,23 @@ export default function ExitIntentPopup() {
       return;
     }
 
-    // Show popup after variant-specific delay
-    const timer = setTimeout(() => {
-      if (!hasShown && !isVisible) {
-        setIsVisible(true);
-        setHasShown(true);
-        
-        // Track popup impression
-        if (typeof window !== 'undefined' && (window as any).gtag) {
-          (window as any).gtag('event', 'popup_impression', {
-            'event_category': 'A/B Test',
-            'event_label': variant.id,
-            'value': 1
-          });
-        }
-      }
-    }, variant.timerDelay);
+    // Track time on page — only enable exit intent after 30 seconds
+    let ready = false;
+    const readyTimer = setTimeout(() => {
+      ready = true;
+    }, 30000);
 
-    // Detect exit intent (mouse leaving viewport from top)
+    // Show popup on exit intent after 30s on page
     const handleMouseOut = (e: MouseEvent) => {
-      // Check if mouse is leaving the document from the top
-      if (!e.relatedTarget && e.clientY <= 10 && !hasShown && !isVisible) {
+      if (!e.relatedTarget && e.clientY <= 10 && ready && !hasShown && !isVisible) {
         setIsVisible(true);
         setHasShown(true);
-        
-        // Track popup impression
-        if (typeof window !== 'undefined' && (window as any).gtag) {
-          (window as any).gtag('event', 'popup_impression', {
-            'event_category': 'A/B Test',
-            'event_label': variant.id,
-            'value': 1
+
+        if (typeof window !== "undefined" && (window as any).gtag) {
+          (window as any).gtag("event", "popup_impression", {
+            event_category: "Checklist Popup",
+            event_label: "exit_intent_checklist",
+            value: 1,
           });
         }
       }
@@ -154,166 +66,101 @@ export default function ExitIntentPopup() {
     document.documentElement.addEventListener("mouseout", handleMouseOut);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(readyTimer);
       document.documentElement.removeEventListener("mouseout", handleMouseOut);
     };
-  }, [hasShown, isVisible, variant]);
+  }, [hasShown, isVisible]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.email && !formData.phone) {
-      toast.error("Please provide either email or phone number");
+
+    if (!email) {
+      toast.error("Please enter your email address");
       return;
     }
 
     createCapture.mutate({
-      firstName: formData.firstName || undefined,
-      lastName: formData.lastName || undefined,
-      email: formData.email || undefined,
-      phone: formData.phone || undefined,
-      captureType: "exit_popup",
+      email,
+      captureType: "pseg_checklist_download",
       pageUrl: window.location.href,
+      message: "Exit popup checklist download",
     });
   };
 
   if (!isVisible) return null;
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200"
       onClick={() => setIsVisible(false)}
     >
       <div onClick={(e) => e.stopPropagation()}>
-      <Card className="max-w-lg w-full relative animate-in slide-in-from-bottom-4 duration-300">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2"
-          onClick={() => setIsVisible(false)}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <Card className="max-w-md w-full relative animate-in slide-in-from-bottom-4 duration-300">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2"
+            onClick={() => setIsVisible(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
 
-        <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl text-[#1e3a5f]">
-            {variant.headline}
-          </CardTitle>
-          <CardDescription className="text-base">
-            Get exclusive information about available rebates and incentives for your home or business
-          </CardDescription>
-          
-          {/* Social Proof Badges */}
-          <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-              <div className="text-left">
-                <p className="text-sm font-semibold text-[#1e3a5f]">4,000+</p>
-                <p className="text-xs text-muted-foreground">Installations</p>
-              </div>
+          <CardHeader className="text-center pb-3">
+            <div className="w-12 h-12 bg-[#ff6b35]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+              <FileText className="h-6 w-6 text-[#ff6b35]" />
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              <div className="text-left">
-                <p className="text-sm font-semibold text-[#1e3a5f]">98%</p>
-                <p className="text-xs text-muted-foreground">Satisfaction</p>
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="popup-firstName">First Name *</Label>
-                <Input
-                  id="popup-firstName"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  placeholder="John"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="popup-lastName">Last Name *</Label>
-                <Input
-                  id="popup-lastName"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  placeholder="Smith"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="popup-email">Email *</Label>
-              <Input
-                id="popup-email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="john@example.com"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="popup-phone">Phone Number</Label>
-              <Input
-                id="popup-phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="(862) 555-1234"
-              />
-            </div>
-
-            {/* Residential & Commercial Incentives */}
-            <div className="grid md:grid-cols-2 gap-3">
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <Home className="h-5 w-5 text-[#ff6b35]" />
-                  <p className="font-semibold text-[#ff6b35]">Residential</p>
-                </div>
-                <ul className="text-orange-700 space-y-1 text-xs">
-                  <li>✓ Up to $16,000 in rebates</li>
-                  <li>✓ Heat pump installations</li>
-                  <li>✓ Energy-efficient upgrades</li>
-                  <li>✓ 24/7 emergency service</li>
-                </ul>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                <div className="flex items-center gap-2 mb-2">
-                  <Building2 className="h-5 w-5 text-[#1e3a5f]" />
-                  <p className="font-semibold text-[#1e3a5f]">Commercial</p>
-                </div>
-                <ul className="text-blue-700 space-y-1 text-xs">
-                  <li>✓ Up to 80% rebate coverage</li>
-                  <li>✓ VRF/VRV systems</li>
-                  <li>✓ Maintenance programs</li>
-                  <li>✓ BMS technology integration</li>
-                </ul>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              className={`w-full ${variant.buttonColor} ${variant.buttonHoverColor}`}
-              disabled={createCapture.isPending}
-            >
-              {createCapture.isPending ? "Submitting..." : "Get Rebate & Incentive Information"}
-            </Button>
-
-            <p className="text-xs text-center text-muted-foreground">
-              We respect your privacy. No spam, unsubscribe anytime.
+            <CardTitle className="text-xl text-[#1e3a5f]">
+              Wait — before you go.
+            </CardTitle>
+            <p className="text-sm text-gray-600 mt-2">
+              Get our free <strong>PSE&G Rebate Checklist</strong>. Most
+              applications fail for 3 reasons. Takes 30 seconds to get it.
             </p>
-          </form>
-        </CardContent>
-      </Card>
+          </CardHeader>
+
+          <CardContent>
+            {/* Quick preview of what's inside */}
+            <div className="bg-gray-50 rounded-lg p-3 mb-4 space-y-2">
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <AlertTriangle className="h-3.5 w-3.5 text-[#ff6b35] flex-shrink-0" />
+                <span>#1 rejection reason: wrong application timing</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <AlertTriangle className="h-3.5 w-3.5 text-[#ff6b35] flex-shrink-0" />
+                <span>#2: missing equipment documentation</span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <CheckCircle className="h-3.5 w-3.5 text-green-500 flex-shrink-0" />
+                <span>Our checklist prevents all 3</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Your email address"
+                required
+                className="h-11"
+              />
+
+              <Button
+                type="submit"
+                className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-3"
+                disabled={createCapture.isPending}
+              >
+                {createCapture.isPending
+                  ? "Sending..."
+                  : "Get the Free Checklist"}
+              </Button>
+
+              <p className="text-xs text-center text-muted-foreground">
+                No spam. Instant delivery. Unsubscribe anytime.
+              </p>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
