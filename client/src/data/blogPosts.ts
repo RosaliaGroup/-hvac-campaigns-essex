@@ -680,4 +680,85 @@ export const blogPosts: BlogPostData[] = [
       { type: "cta_box", content: "Get your portfolio assessed. One contact, all properties, zero upfront cost.", buttonText: "Book Portfolio Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/commercial" },
     ],
   },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 23 — How to Apply for a PSE&G Rebate
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "How to Apply for a PSE&G Rebate in NJ \u2014 And Why Most People Use a Contractor to Do It",
+    slug: "how-to-apply-pseg-rebate-nj",
+    date: "April 1, 2026",
+    readTime: "5 min read",
+    category: "Residential",
+    metaDescription: "Step-by-step guide to applying for a PSE&G rebate in NJ. Most homeowners use a certified contractor to handle the application \u2014 here's why.",
+    excerpt: "PSE&G offers thousands in rebates for NJ homeowners \u2014 but the application process stops most people cold. Here's the full breakdown and the easier path.",
+    sections: [
+      { type: "intro", content: "PSE&G offers some of the most generous energy rebates in the country. NJ homeowners can get up to $18,000 back on heat pumps, HVAC systems, and energy-efficient upgrades. Add in the Mechanical Enterprise incentive and you\u2019re looking at $20,000. But there\u2019s a problem: the application process is where most people give up." },
+      { type: "h2", content: "What PSE&G Rebates Actually Cover" },
+      { type: "paragraph", content: "PSE&G rebates apply to a wide range of residential upgrades. Heat pump installations are the biggest \u2014 up to $18,000 for qualifying cold-climate systems. Central air conditioning replacements, ductless mini-split systems, and high-efficiency furnaces all qualify for various rebate tiers. On the commercial side, the [Direct Install Program](/blog/nj-direct-install-program-commercial-guide) covers 80% of HVAC costs and [100% of lighting](/blog/commercial-lighting-100-percent-free-nj). The rebate amounts depend on equipment efficiency ratings, your existing system, and whether you\u2019re a PSE&G electric or gas customer. Most homeowners don\u2019t know their exact eligibility until an assessment is done \u2014 which is free when you work with a [certified contractor](/pseg-rebate-contractor-nj)." },
+      { type: "h2", content: "The Actual Application Process" },
+      { type: "paragraph", content: "Here\u2019s what applying for a PSE&G rebate looks like if you do it yourself. First, you need to identify which rebate programs you qualify for \u2014 PSE&G runs multiple programs simultaneously and the requirements differ. Then you need your utility account number, property deed or ownership proof, and your current equipment details including make, model, age, and efficiency ratings." },
+      { type: "numbered_list", items: [
+        "Determine which PSE&G rebate programs apply to your property and equipment",
+        "Gather documentation: utility account number, property ownership proof, existing equipment details",
+        "Select qualifying replacement equipment that meets PSE&G\u2019s minimum efficiency requirements (SEER2, HSPF2 ratings)",
+        "Get quotes from a PSE&G-certified contractor \u2014 non-certified contractors disqualify your application",
+        "Complete the rebate application with equipment specifications, contractor information, and property details",
+        "Schedule and complete the installation with all required permits and inspections",
+        "Submit post-installation documentation within 90 days: paid invoice, AHRI certificate, permit records",
+        "Wait 6\u20138 weeks for PSE&G to process and mail the rebate check"
+      ]},
+      { type: "paragraph", content: "Each step has specific requirements that must be met exactly. Miss the 90-day post-installation window and your rebate is gone. Use a non-certified contractor and your application is automatically denied. Submit the wrong efficiency rating documentation and you\u2019re starting over." },
+      { type: "h2", content: "Why Most People Abandon the Application" },
+      { type: "paragraph", content: "The drop-off rate on PSE&G rebate applications is staggering. Most homeowners start the process, realize how much documentation is required, and either delay until they miss the window or give up entirely. The most common sticking points are identifying the correct rebate program, finding a certified contractor, and assembling post-installation paperwork within the deadline. It\u2019s not that any single step is impossible. It\u2019s that there are eight steps, each with specific requirements, and one mistake at any point can invalidate the entire application." },
+      { type: "h2", content: "The 3 Most Common Rejection Reasons" },
+      { type: "checklist", items: [
+        "Wrong timing \u2014 application submitted outside the 90-day post-installation window",
+        "Missing documentation \u2014 incorrect or incomplete equipment specifications, AHRI certificates, or permit records",
+        "Non-certified contractor \u2014 the installing contractor was not on PSE&G\u2019s approved list at the time of installation"
+      ]},
+      { type: "paragraph", content: "All three of these are completely avoidable when a certified contractor manages the process. That\u2019s why the majority of successful PSE&G rebate applications come through contractors, not individual homeowners." },
+      { type: "h2", content: "What a Certified PSE&G Contractor Does Differently" },
+      { type: "paragraph", content: "A [PSE&G certified contractor](/blog/pseg-certified-hvac-contractor-nj) already knows which programs you qualify for based on your property and current equipment. They select equipment that meets the exact efficiency thresholds. They submit applications with the correct documentation the first time. And they track the 90-day window automatically because it\u2019s built into their workflow." },
+      { type: "stat_box", content: "Contractor-filed applications: 90%+ approval rate | DIY applications: significantly lower due to documentation errors and missed deadlines" },
+      { type: "h2", content: "How Mechanical Enterprise Handles It" },
+      { type: "paragraph", content: "We\u2019re a PSE&G certified contractor, WMBE certified, and SBE certified. When you book a free 20-minute assessment with us, here\u2019s what happens: we assess your property, identify every rebate you qualify for (PSE&G, NJ Clean Energy, federal tax credit), file all applications, schedule installation at your convenience, and track every deadline. You don\u2019t fill out a single form. The entire rebate filing service is free \u2014 we make our money from the installation, not from paperwork fees. Most of our customers receive between $12,000 and $20,000 in combined rebates." },
+      { type: "cta_box", content: "Stop fighting PSE&G paperwork. Book a free 20-minute assessment and we handle every application for you.", buttonText: "Book Free Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/pseg-rebate-contractor-nj" },
+    ],
+  },
+
+  // ──────────────────────────────────────────────────────────────
+  // POST 24 — PSE&G Certified Contractor Explained
+  // ──────────────────────────────────────────────────────────────
+  {
+    title: "What Is a PSE&G Certified Contractor and Why Does It Matter for Your Rebate?",
+    slug: "pseg-certified-hvac-contractor-nj",
+    date: "April 1, 2026",
+    readTime: "4 min read",
+    category: "Residential",
+    metaDescription: "PSE&G certified contractors can file rebate applications on your behalf in NJ. Here\u2019s what certification means and why it saves you thousands.",
+    excerpt: "Not all HVAC contractors can file PSE&G rebate applications. Here\u2019s what PSE&G certification means, why it matters, and what happens if you skip it.",
+    sections: [
+      { type: "intro", content: "If you\u2019re planning to claim a PSE&G rebate in NJ, one requirement trips up more homeowners than any other: the contractor must be PSE&G certified. Use a non-certified contractor \u2014 even a licensed, insured, excellent one \u2014 and your rebate application is automatically denied. Here\u2019s everything you need to know." },
+      { type: "h2", content: "What PSE&G Contractor Certification Means" },
+      { type: "paragraph", content: "PSE&G maintains a list of approved contractors who have met their specific requirements for training, insurance, licensing, and installation quality standards. Certification is not the same as a state HVAC license. A contractor can be fully licensed by the State of New Jersey and still not be on PSE&G\u2019s certified list. PSE&G certification requires additional training on their rebate programs, familiarity with qualifying equipment specifications, and a track record of compliant installations. The certification also means the contractor can file rebate applications directly on behalf of the homeowner \u2014 which eliminates most of the paperwork burden that causes DIY applications to fail." },
+      { type: "h2", content: "Why Only Certified Contractors Can File Direct Install Applications" },
+      { type: "paragraph", content: "The [NJ Direct Install Program](/blog/nj-direct-install-program-commercial-guide) \u2014 which covers 80% of commercial HVAC costs and [100% of lighting](/blog/commercial-lighting-100-percent-free-nj) \u2014 is exclusively available through PSE&G certified contractors. This isn\u2019t optional or flexible. The program requires certified contractors because they\u2019ve been trained on the specific assessment protocols, equipment standards, and documentation requirements. A certified contractor conducts the initial energy assessment, selects qualifying equipment, performs the installation to program standards, and submits all required documentation directly to PSE&G. The business owner never touches an application form." },
+      { type: "h2", content: "What Happens If You Use a Non-Certified Contractor" },
+      { type: "paragraph", content: "The consequences are straightforward and expensive. If your HVAC installation is performed by a contractor who isn\u2019t on PSE&G\u2019s certified list, your residential rebate application will be denied. You cannot retroactively certify the contractor or re-submit. You cannot transfer the installation to a certified contractor\u2019s paperwork. The rebate is simply lost. For commercial properties, it\u2019s even more restrictive: without a certified contractor, you cannot access the Direct Install Program at all. That means paying full price for equipment and installation that would have been 80% covered." },
+      { type: "stat_box", content: "Rebate denied with non-certified contractor: 100% of cases | Direct Install without certification: not available | Cost difference: up to $20,000 in lost rebates" },
+      { type: "h2", content: "How to Verify a Contractor Is PSE&G Certified" },
+      { type: "paragraph", content: "Before signing any contract for HVAC work in NJ, verify certification directly. Ask the contractor for their PSE&G certification number or Trade Ally status. You can also check PSE&G\u2019s website for their current list of approved contractors, or call PSE&G\u2019s energy efficiency department to confirm. Don\u2019t rely on a contractor claiming to be \u201cPSE&G approved\u201d or \u201cfamiliar with PSE&G rebates.\u201d There\u2019s a difference between knowing about the programs and being authorized to file applications. Only certified contractors can do the latter." },
+      { type: "checklist", items: [
+        "Ask for the contractor\u2019s PSE&G certification number or Trade Ally documentation",
+        "Verify directly with PSE&G\u2019s energy efficiency department if uncertain",
+        "Confirm the contractor can file rebate applications on your behalf (not just \u201chelp with paperwork\u201d)",
+        "For commercial projects: confirm Direct Install Program authorization specifically"
+      ]},
+      { type: "h2", content: "What Mechanical Enterprise\u2019s Certification Covers" },
+      { type: "paragraph", content: "Mechanical Enterprise is a PSE&G certified contractor, WMBE (Women/Minority Business Enterprise) certified, and SBE (Small Business Enterprise) certified. Our certification covers residential rebate applications (heat pumps, central AC, ductless mini-splits, furnaces), commercial Direct Install Program (HVAC and lighting), and the On-Bill Repayment program for commercial customers. We serve 15 NJ counties and have filed hundreds of successful PSE&G rebate applications. Our approval rate exceeds 90% because we know exactly what documentation PSE&G requires and we submit it correctly the first time." },
+      { type: "paragraph", content: "When you [book a free assessment](/pseg-rebate-contractor-nj) with us, certification is already handled. We assess your property, identify every rebate program you qualify for \u2014 PSE&G, NJ Clean Energy, federal tax credit \u2014 and [file all applications](/blog/how-to-apply-pseg-rebate-nj) at no cost to you. The entire process from assessment to rebate check takes 8\u201312 weeks for most homeowners." },
+      { type: "cta_box", content: "Work with a verified PSE&G certified contractor. Free 20-minute assessment, we handle every application.", buttonText: "Book Free Assessment \u2192", buttonUrl: "https://mechanicalenterprise.com/pseg-rebate-contractor-nj" },
+    ],
+  },
 ];
