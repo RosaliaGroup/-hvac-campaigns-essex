@@ -66,6 +66,7 @@ const menuItems: MenuItem[] = [
 
   // Analytics
   { icon: BarChart3, label: "Analytics & Reports", path: "/analytics", section: "Analytics" },
+  { icon: FileText, label: "AI Take-Off", path: "/takeoff-ai", section: "Analytics" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
