@@ -260,12 +260,13 @@ export const takeoffsRouter = router({
         .from(takeoffProjects)
         .where(eq(takeoffProjects.id, pid));
 
-      const itemsSummary = items
-        .map(
-          (i, idx) =>
-            `${idx + 1}. ${i.category}: ${i.description} x${i.qty} ${i.unit} @ $${i.unitPrice} each`
-        )
-        .join("\n");
+      // Compact items list: max 50 items, pipe-separated, max 500 chars
+      const compactItems = items
+        .slice(0, 50)
+        .map((i) => `${i.description} x${i.qty} @ $${i.unitPrice}`)
+        .join(" | ")
+        .slice(0, 500);
+      const totalCost = items.reduce((s, i) => s + Number(i.qty) * Number(i.unitPrice), 0);
 
       const apiKey = process.env.ANTHROPIC_API_KEY;
       if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
@@ -279,20 +280,18 @@ export const takeoffsRouter = router({
         },
         body: JSON.stringify({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 16000,
-          system: `You are a mechanical engineering value engineer specializing in HVAC/MEP systems. Given a take-off, provide 10-15 cost reduction suggestions across these categories:
-1. SYSTEM REDESIGN (type: "redesign") — different system type, significantly cheaper, same performance.
-2. SPEC SUBSTITUTIONS (type: "substitution") — same system, cheaper components.
-3. SCOPE REDUCTIONS (type: "scope_reduction") — over-engineered, redundant, or optional items.
-4. SEQUENCING SAVINGS (type: "sequencing") — items that could be phased or done by owner/GC.
+          max_tokens: 6000,
+          system: `You are an HVAC value engineer. Given this take-off, provide exactly 8 cost-saving suggestions. Mix types: redesign, substitution, scope_reduction, sequencing. Order by estimatedSavings descending.
 
-For each suggestion return JSON with these fields: type, title, itemDescription, currentSpec, alternativeSpec, vendor, model, estimatedSavings (number), savingsPercent (number), tradeOffs, codeCompliant (boolean), affectedItems (string array), implementationNotes.
-
-Order by estimatedSavings descending. Respond ONLY with valid JSON: {"suggestions":[...]}`,
+Return ONLY this JSON with exactly 8 items in the array — no more, no preamble, no explanation:
+{"suggestions":[
+{"type":"redesign","title":"...","currentSpec":"...","alternativeSpec":"...","estimatedSavings":0,"savingsPercent":0,"tradeOffs":"...","codeCompliant":true,"affectedItems":["..."],"implementationNotes":"..."},
+...7 more...
+]}`,
           messages: [
             {
               role: "user",
-              content: `Project: ${project?.name || "HVAC"}\nLocation: ${project?.location || "NJ"}\nDiscipline: ${project?.discipline || "HVAC"}\n\nTake-off items:\n${itemsSummary}\n\nProvide value engineering suggestions.`,
+              content: `Project: ${project?.name || "HVAC"}\nLocation: ${project?.location || "NJ"}\n\nTAKE-OFF SUMMARY:\n${compactItems}\n\nTOTAL DIRECT COST: $${totalCost.toFixed(0)}\n\nProvide exactly 8 value engineering suggestions as JSON.`,
             },
           ],
         }),
@@ -305,12 +304,19 @@ Order by estimatedSavings descending. Respond ONLY with valid JSON: {"suggestion
 
       const data = await res.json();
       const text = data.content?.[0]?.text || "";
+      console.log("[VE] Response length:", text.length, "Last 100 chars:", text.slice(-100));
+
+      // Check how many type fields exist in response
+      const typeFields = text.match(/"type"\s*:\s*"[^"]+"/g);
+      console.log("[VE] Type fields found:", typeFields?.length);
+
       let parsed: any;
       try {
         // Try full JSON parse first
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { suggestions: [] };
       } catch {
+        console.log("[VE] Full JSON parse failed, trying fallback extraction");
         // Robust fallback: extract individual suggestion objects
         try {
           const suggestions: any[] = [];
