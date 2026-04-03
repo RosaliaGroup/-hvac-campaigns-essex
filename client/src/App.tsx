@@ -38,6 +38,7 @@ import LPFBCommercial from "./pages/lp/LPFBCommercial";
 import LPRebateGuide from "./pages/lp/LPRebateGuide";
 import LPMaintenanceOffer from "./pages/lp/LPMaintenanceOffer";
 import LPReferralPartner from "./pages/lp/LPReferralPartner";
+import LPPsegRebate from "./pages/lp/LPPsegRebate";
 import PromosLanding from "./pages/PromosLanding";
 import Qualify from "./pages/Qualify";
 import RebateCalculator from "./pages/RebateCalculator";
@@ -109,6 +110,7 @@ function Router() {
       <Route path={"/lp/rebate-guide"} component={LPRebateGuide} />
       <Route path={"/lp/maintenance-offer"} component={LPMaintenanceOffer} />
       <Route path={"/lp/referral-partner"} component={LPReferralPartner} />
+      <Route path={"/pseg-rebate-contractor-nj"} component={LPPsegRebate} />
       <Route path={"/promos"} component={PromosLanding} />
       <Route path={"/qualify"} component={Qualify} />
       <Route path={"/assessment"} component={Qualify} />
