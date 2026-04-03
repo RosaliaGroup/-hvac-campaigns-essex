@@ -236,7 +236,13 @@ export default function TakeOffAI() {
 
     try {
       const file = files[0];
-      log(`Sending ${file.name} to Claude via serverless function…`);
+      if (file.size > 3_000_000) {
+        log(`Error: ${file.name} is ${(file.size / 1024 / 1024).toFixed(1)}MB — too large for upload.`);
+        log("PDF too large — please split into smaller files under 3MB, or upload individual page images (JPG/PNG screenshots of drawing sheets).");
+        setAnalyzing(false);
+        return;
+      }
+      log(`Sending ${file.name} (${(file.size / 1024).toFixed(0)}KB) to Claude via serverless function…`);
       const res = await fetch("/.netlify/functions/takeoff-analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

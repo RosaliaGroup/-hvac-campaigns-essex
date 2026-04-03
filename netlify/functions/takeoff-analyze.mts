@@ -9,6 +9,13 @@ export default async (req: Request, context: Context) => {
     const body = await req.json();
     const { fileData, fileType, projName, discipline, location, instructions } = body;
 
+    if (fileData && fileData.length > 4_000_000) {
+      return new Response(
+        JSON.stringify({ error: "File too large — please upload files under 3MB, or use JPG/PNG page images instead of a full PDF." }),
+        { status: 413, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
     const isPDF = fileType === "application/pdf";
 
     const mediaBlock = isPDF
