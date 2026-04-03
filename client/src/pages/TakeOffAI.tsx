@@ -237,7 +237,7 @@ export default function TakeOffAI() {
     try {
       const file = files[0];
       log(`Sending ${file.name} to Claude via serverless function…`);
-      const res = await fetch("/api/takeoff-analyze", {
+      const res = await fetch("/.netlify/functions/takeoff-analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
