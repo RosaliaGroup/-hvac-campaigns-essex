@@ -232,6 +232,8 @@ export default function TakeOffDetail() {
   useEffect(() => {
     if (!projectData || initializedRef.current) return;
     initializedRef.current = true;
+    console.log("[Mount] items from DB:", projectData.items?.length, "rows in state:", rows.length);
+    console.log("[Mount] auto-analyze triggered? false — analysis only runs on button click");
 
     const dbRows: TakeOffRow[] = projectData.items.map((i) => ({
       id: uid(),
