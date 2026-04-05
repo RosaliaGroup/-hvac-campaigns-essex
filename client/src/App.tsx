@@ -67,6 +67,7 @@ import Presentation from "./pages/Presentation";
 import AnalyticsReports from "./pages/AnalyticsReports";
 import TakeOffAI from "./pages/TakeOffAI";
 import TakeOffDetail from "./pages/TakeOffDetail";
+import TakeOffPublic from "./pages/TakeOffPublic";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -243,6 +244,9 @@ function Router() {
       <Route path={"/hvac-hopatcong-nj"} component={() => <CityPage city="Hopatcong" slug="hopatcong" />} />
       <Route path={"/hvac-sussex-nj"} component={() => <CityPage city="Sussex" slug="sussex" />} />
       <Route path={"/hvac-hardyston-nj"} component={() => <CityPage city="Hardyston" slug="hardyston" />} />
+
+      {/* Public estimating tool (password-protected in-page) */}
+      <Route path={"/estimating"} component={TakeOffPublic} />
 
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />
