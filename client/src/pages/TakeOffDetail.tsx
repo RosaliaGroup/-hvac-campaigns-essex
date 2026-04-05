@@ -1,9 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
-import * as pdfjsLib from "pdfjs-dist";
 import DashboardLayout from "@/components/DashboardLayout";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+import { extractPDFPages, buildSelectedText, buildImageBlocks, type ExtractedPage } from "@/lib/pdfExtract";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +42,9 @@ import {
   Star,
   ShieldCheck,
   ShieldAlert,
+  Eye,
+  ChevronDown,
+  Layers,
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -215,6 +216,12 @@ export default function TakeOffDetail() {
   const [veFilter, setVeFilter] = useState<string>("all");
   const [showReanalyzeConfirm, setShowReanalyzeConfirm] = useState(false);
 
+  // 3-step pipeline state
+  const [extractedPages, setExtractedPages] = useState<ExtractedPage[]>([]);
+  const [extracting, setExtracting] = useState(false);
+  const [expandedPage, setExpandedPage] = useState<number | null>(null);
+  const [analysisStep, setAnalysisStep] = useState<"idle" | "extracting" | "ready" | "analyzing" | "reconciling">("idle");
+
   const [margins, setMargins] = useState<Margins>({
     materials: 20, labor: 35, overhead: 12, profit: 10, contingency: 5, tax: 6.625,
   });
@@ -332,120 +339,143 @@ export default function TakeOffDetail() {
   const onDrop = useCallback((e: React.DragEvent) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }, [handleFiles]);
   const removeFile = (name: string) => setFiles((prev) => prev.filter((f) => f.name !== name));
 
-  // ── PDF text extraction ────────────────────────────────────────────────────
-  const extractPDFText = async (rawFile: File): Promise<{ text: string; numPages: number }> => {
-    const arrayBuffer = await rawFile.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = "";
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = (textContent.items as any[]).map((item) => item.str).join(" ");
-      fullText += `\n=== PAGE ${i} ===\n${pageText}`;
-      log(`Extracted text from page ${i} of ${pdf.numPages}…`);
+  // ── STEP 1: Extract pages from PDF ──────────────────────────────────────────
+  const runExtraction = async () => {
+    if (files.length === 0) return;
+    const file = files[0];
+    if (file.type !== "application/pdf") {
+      // For images, create a single pseudo-page
+      setExtractedPages([{ pageNum: 1, text: "", charCount: 0, thumbnail: `data:${file.type};base64,${file.base64}`, selected: true }]);
+      setAnalysisStep("ready");
+      log("Image file ready for analysis.");
+      return;
     }
-    return { text: fullText, numPages: pdf.numPages };
-  };
 
-  // ── Claude analysis ───────────────────────────────────────────────────────
-  const analyzeWithClaude = async () => {
-    if (files.length === 0) { log("No files to analyze."); return; }
-    setAnalyzing(true);
-    log("Starting AI analysis…");
+    setExtracting(true);
+    setAnalysisStep("extracting");
+    log("Step 1: Extracting text and thumbnails from PDF…");
 
     try {
-      const file = files[0];
-      if (!apiKeyRef.current) {
-        const cfgRes = await fetch("/.netlify/functions/get-api-config");
-        const cfg = await cfgRes.json();
-        apiKeyRef.current = cfg.apiKey || null;
-      }
-      if (!apiKeyRef.current) { log("Error: API key not available."); setAnalyzing(false); return; }
-
-      const pName = projectData?.project.name || "HVAC Project";
-      const pLoc = projectData?.project.location || "Newark NJ";
-      const pDisc = projectData?.project.discipline || "HVAC";
-      const isPDF = file.type === "application/pdf";
-
-      // Determine whether to use text extraction or image fallback
-      let useTextMode = false;
-      let extractedText = "";
-      let numPages = 0;
-
-      if (isPDF) {
-        log("Extracting text from PDF…");
-        try {
-          const result = await extractPDFText(file.rawFile);
-          extractedText = result.text;
-          numPages = result.numPages;
-          log(`Extracted ${extractedText.length} characters from ${numPages} pages`);
-
-          if (extractedText.trim().length >= 500) {
-            useTextMode = true;
-          } else {
-            log("PDF appears to be scanned — text extraction limited, falling back to image mode. Counts may be approximate.");
-          }
-        } catch (err: any) {
-          log(`PDF text extraction failed: ${err.message} — falling back to image mode.`);
-        }
-      }
-
-      const systemPrompt = `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off. Project: ${pName}. Discipline: ${pDisc}. Location: ${pLoc}. Instructions: ${instructions || "None"}. Extract ALL items: equipment with tags/models/specs, ductwork by size in LF, piping by diameter in LF, air devices by count, insulation SF/LF, accessories, fire dampers, controls, labor hours. Use NJ contractor DIRECT COST benchmarks (materials + labor, NO markup): VRF/VRV outdoor units: $800-1,200/ton; VRF/VRV indoor AHU: $400-700/unit; Exhaust fans small (<500 CFM): $150-300 each; Exhaust fans large (>1000 CFM): $500-1,500 each; ERV: $800-2,000 each; Rect duct small (≤10in): $8-14/LF; Rect duct large (>10in): $18-28/LF; Round/flex 5-6in: $4-8/LF; Fire dampers: $180-350 each; Volume dampers: $60-120 each; Motorized dampers: $200-450 each; Supply registers: $35-85 each; Insulation: $3-6/LF; Thermostats: $150-400 each; Mech labor: $85-110/hr; Sheet metal labor: $90-115/hr. Respond ONLY with valid JSON: {"pages":${numPages || "<number>"},"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`;
-
-      let messages: any[];
-
-      if (useTextMode) {
-        log("Sending extracted text to Claude for analysis…");
-        messages = [{
-          role: "user",
-          content: `Here is the complete extracted text from all ${numPages} pages of the mechanical drawing set for ${pName}:\n\n${extractedText}\n\nBased on this text, perform a precise mechanical take-off.\nCount every equipment tag exactly as listed in the schedules.\nEquipment schedules are the authoritative source for quantities.\nFloor plan tags confirm what goes in each unit.\nFlag any count that seems inconsistent as a finding.\n\nReturn the full take-off JSON.`,
-        }];
-      } else {
-        log(`Sending ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB) as document to Claude…`);
-        const mediaBlock = isPDF
-          ? { type: "document" as const, source: { type: "base64" as const, media_type: "application/pdf" as const, data: file.base64 } }
-          : { type: "image" as const, source: { type: "base64" as const, media_type: file.type, data: file.base64 } };
-        messages = [{ role: "user", content: [mediaBlock, { type: "text", text: "Perform a complete mechanical take-off. Extract every item. Return only valid JSON." }] }];
-      }
-
-      const requestHeaders = {
-        "Content-Type": "application/json",
-        "x-api-key": apiKeyRef.current,
-        "anthropic-version": "2023-06-01",
-        "anthropic-dangerous-direct-browser-access": "true",
-      };
-      const requestBody = {
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 16000,
-        system: systemPrompt,
-        messages,
-      };
-
-      let res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: requestHeaders,
-        body: JSON.stringify(requestBody),
+      const pages = await extractPDFPages(file.rawFile, (page, total) => {
+        log(`Extracted page ${page} of ${total}…`);
       });
+      setExtractedPages(pages);
+      const totalChars = pages.reduce((s, p) => s + p.charCount, 0);
+      log(`Step 1 complete: ${pages.length} pages extracted, ${totalChars.toLocaleString()} characters of text`);
+      setAnalysisStep("ready");
+    } catch (err: any) {
+      log(`Extraction error: ${err.message}`);
+      setAnalysisStep("idle");
+    } finally {
+      setExtracting(false);
+    }
+  };
 
-      // Retry once on rate limit
-      if (res.status === 429) {
-        log("Rate limit hit — waiting 60 seconds then retrying…");
-        await new Promise(resolve => setTimeout(resolve, 60000));
-        log("Retrying…");
-        res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: requestHeaders,
-          body: JSON.stringify(requestBody),
-        });
+  const togglePage = (pageNum: number) => {
+    setExtractedPages((prev) => prev.map((p) => p.pageNum === pageNum ? { ...p, selected: !p.selected } : p));
+  };
+
+  // ── Helper: call Claude with retry ────────────────────────────────────────
+  const callClaude = async (system: string, messages: any[]): Promise<string> => {
+    if (!apiKeyRef.current) {
+      const cfgRes = await fetch("/.netlify/functions/get-api-config");
+      const cfg = await cfgRes.json();
+      apiKeyRef.current = cfg.apiKey || null;
+    }
+    if (!apiKeyRef.current) throw new Error("API key not available");
+
+    const headers = { "Content-Type": "application/json", "x-api-key": apiKeyRef.current, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" };
+    const body = JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 16000, system, messages });
+
+    let res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body });
+    if (res.status === 429) {
+      log("Rate limit hit — waiting 60 seconds then retrying…");
+      await new Promise(resolve => setTimeout(resolve, 60000));
+      log("Retrying…");
+      res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body });
+    }
+    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    return data.content?.[0]?.text || "";
+  };
+
+  // ── STEP 2 + 3: Analyze with Claude (batched) + Reconcile ─────────────────
+  const analyzeWithClaude = async () => {
+    const selected = extractedPages.filter((p) => p.selected);
+    if (selected.length === 0) { log("No pages selected."); return; }
+
+    setAnalyzing(true);
+    setAnalysisStep("analyzing");
+
+    const pName = projectData?.project.name || "HVAC Project";
+    const pLoc = projectData?.project.location || "Newark NJ";
+    const pDisc = projectData?.project.discipline || "HVAC";
+    const totalChars = selected.reduce((s, p) => s + p.charCount, 0);
+    const isScanned = totalChars < 500;
+
+    log(`Step 2: Analyzing ${selected.length} of ${extractedPages.length} pages…`);
+
+    const systemPrompt = `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off. Project: ${pName}. Discipline: ${pDisc}. Location: ${pLoc}. Instructions: ${instructions || "None"}. Extract ALL items: equipment with tags/models/specs, ductwork by size in LF, piping by diameter in LF, air devices by count, insulation SF/LF, accessories, fire dampers, controls, labor hours. Use NJ contractor DIRECT COST benchmarks (materials + labor, NO markup): VRF/VRV outdoor units: $800-1,200/ton; VRF/VRV indoor AHU: $400-700/unit; Exhaust fans small (<500 CFM): $150-300 each; Exhaust fans large (>1000 CFM): $500-1,500 each; ERV: $800-2,000 each; Rect duct small (≤10in): $8-14/LF; Rect duct large (>10in): $18-28/LF; Round/flex 5-6in: $4-8/LF; Fire dampers: $180-350 each; Volume dampers: $60-120 each; Motorized dampers: $200-450 each; Supply registers: $35-85 each; Insulation: $3-6/LF; Thermostats: $150-400 each; Mech labor: $85-110/hr; Sheet metal labor: $90-115/hr. Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`;
+
+    try {
+      // Split into batches of 4 pages if > 8 pages
+      const BATCH_SIZE = 4;
+      const needsBatching = selected.length > 8;
+      const batches: ExtractedPage[][] = [];
+      if (needsBatching) {
+        for (let i = 0; i < selected.length; i += BATCH_SIZE) {
+          batches.push(selected.slice(i, i + BATCH_SIZE));
+        }
+      } else {
+        batches.push(selected);
       }
 
-      if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
+      const batchResults: string[] = [];
 
-      const data = await res.json();
-      const text = data.content?.[0]?.text || "";
-      log("Response received — parsing…");
+      for (let b = 0; b < batches.length; b++) {
+        const batch = batches[b];
+        const batchLabel = needsBatching ? ` (batch ${b + 1}/${batches.length})` : "";
+        log(`Sending pages ${batch.map((p) => p.pageNum).join(", ")} to Claude${batchLabel}…`);
 
-      const parsed = safeParseJSON(text);
+        // Build message content: text + images combined
+        const batchText = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        const imageBlocks = buildImageBlocks(batch, 4);
+
+        let content: any[];
+        if (isScanned) {
+          // Scanned PDF: send only images
+          content = [...imageBlocks, { type: "text", text: `Analyze these ${batch.length} pages of mechanical drawings for ${pName}. Extract every equipment item. Return valid JSON.` }];
+        } else {
+          // Digital PDF: send both text and images
+          content = [
+            ...imageBlocks,
+            { type: "text", text: `Here is extracted text from pages ${batch.map((p) => p.pageNum).join(", ")} AND images of each page. Use the text for precise counting and the images to understand the layout. Cross-reference both.\n\n${batchText}\n\nExtract every item from these pages. Return valid JSON.` },
+          ];
+        }
+
+        const text = await callClaude(systemPrompt, [{ role: "user", content }]);
+        batchResults.push(text);
+        log(`Batch ${b + 1} response received (${text.length} chars).`);
+      }
+
+      // ── STEP 3: Reconcile if batched ──────────────────────────────────────
+      let finalText: string;
+      if (batchResults.length > 1) {
+        setAnalysisStep("reconciling");
+        log("Step 3: Reconciling results across all pages…");
+        const combined = batchResults.map((r, i) => `=== BATCH ${i + 1} RESULTS ===\n${r}`).join("\n\n");
+        finalText = await callClaude(
+          `You are an HVAC estimator. You received take-off results from multiple batches of drawing pages. Merge them into a single, deduplicated take-off. If the same equipment tag appears in multiple batches, keep only one entry with the correct quantity. Cross-check schedule quantities against plan counts. Respond ONLY with valid JSON in the same format.`,
+          [{ role: "user", content: `Merge these ${batchResults.length} batch results into one final take-off:\n\n${combined}\n\nDeduplicate, reconcile, and return the final JSON.` }]
+        );
+        log("Reconciliation complete.");
+      } else {
+        finalText = batchResults[0];
+      }
+
+      log("Parsing results…");
+
+      const parsed = safeParseJSON(finalText);
       const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
         id: uid(),
         category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
@@ -468,12 +498,14 @@ export default function TakeOffDetail() {
       setRows(newRows);
       setFindings(newFindings);
       setDirty(true);
-      log(`Parsed ${newRows.length} line items, ${newFindings.length} findings.`);
+      setAnalysisStep("idle");
+      log(`Done! ${newRows.length} line items, ${newFindings.length} findings.`);
 
       // Auto-save immediately after analysis
       setTimeout(() => saveToDb(), 500);
     } catch (err: any) {
       log(`Error: ${err.message}`);
+      setAnalysisStep("idle");
     } finally {
       setAnalyzing(false);
     }
@@ -651,12 +683,58 @@ export default function TakeOffDetail() {
                         </Button>
                       </div>
                     ))}
+                    {/* Extract button — Step 1 */}
+                    {extractedPages.length === 0 && (
+                      <Button className="w-full mt-2" size="sm" onClick={runExtraction} disabled={extracting}>
+                        {extracting ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Layers className="h-4 w-4 mr-2" />}
+                        {extracting ? "Extracting pages…" : "Extract Pages"}
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Analyze section */}
+            {/* Page preview — shown after Step 1 */}
+            {extractedPages.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-xs flex items-center gap-2">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                    Step 1: Extraction Complete
+                  </CardTitle>
+                  <p className="text-[10px] text-muted-foreground">
+                    {extractedPages.length} pages extracted, {extractedPages.reduce((s, p) => s + p.charCount, 0).toLocaleString()} characters — uncheck pages to exclude from analysis
+                  </p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <ScrollArea className="max-h-[300px]">
+                    <div className="divide-y">
+                      {extractedPages.map((p) => (
+                        <div key={p.pageNum} className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <input type="checkbox" checked={p.selected} onChange={() => togglePage(p.pageNum)} className="h-3.5 w-3.5 rounded accent-primary" />
+                            <img src={p.thumbnail} alt={`Page ${p.pageNum}`} className="h-10 w-8 object-cover rounded border flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">Page {p.pageNum}</p>
+                              <p className="text-[10px] text-muted-foreground">{p.charCount.toLocaleString()} chars</p>
+                            </div>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setExpandedPage(expandedPage === p.pageNum ? null : p.pageNum)}>
+                              <ChevronDown className={`h-3 w-3 transition-transform ${expandedPage === p.pageNum ? "rotate-180" : ""}`} />
+                            </Button>
+                          </div>
+                          {expandedPage === p.pageNum && (
+                            <pre className="mt-2 text-[10px] text-muted-foreground bg-muted/50 rounded p-2 max-h-[120px] overflow-auto whitespace-pre-wrap">{p.text || "(no text — scanned page)"}</pre>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Analyze section — Step 2 */}
             <Card>
               <CardContent className="p-4 space-y-3">
                 <textarea
@@ -665,10 +743,15 @@ export default function TakeOffDetail() {
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
                 />
-                {rows.length === 0 ? (
-                  <Button className="w-full" onClick={analyzeWithClaude} disabled={analyzing || files.length === 0}>
-                    {analyzing ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Zap className="h-4 w-4 mr-2" />}
-                    {analyzing ? "Analyzing…" : "Analyze with AI"}
+                {analysisStep === "analyzing" || analysisStep === "reconciling" ? (
+                  <Button className="w-full" disabled>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    {analysisStep === "reconciling" ? "Reconciling…" : `Analyzing ${extractedPages.filter((p) => p.selected).length} pages…`}
+                  </Button>
+                ) : rows.length === 0 ? (
+                  <Button className="w-full" onClick={analyzeWithClaude} disabled={extractedPages.filter((p) => p.selected).length === 0 && files.length === 0}>
+                    <Zap className="h-4 w-4 mr-2" />
+                    {extractedPages.length > 0 ? `Proceed to Analysis (${extractedPages.filter((p) => p.selected).length} pages)` : "Analyze with AI"}
                   </Button>
                 ) : showReanalyzeConfirm ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
@@ -676,20 +759,16 @@ export default function TakeOffDetail() {
                       This will re-run the AI analysis and replace all {rows.length} saved items. This costs ~$0.40 in API credits. Continue?
                     </p>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="destructive" className="flex-1" onClick={() => { setShowReanalyzeConfirm(false); analyzeWithClaude(); }} disabled={analyzing || files.length === 0}>
-                        Yes, Re-analyze
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowReanalyzeConfirm(false)}>
-                        Cancel
-                      </Button>
+                      <Button size="sm" variant="destructive" className="flex-1" onClick={() => { setShowReanalyzeConfirm(false); analyzeWithClaude(); }}>Yes, Re-analyze</Button>
+                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowReanalyzeConfirm(false)}>Cancel</Button>
                     </div>
                   </div>
                 ) : (
-                  <Button variant="outline" className="w-full" onClick={() => setShowReanalyzeConfirm(true)} disabled={analyzing || files.length === 0}>
+                  <Button variant="outline" className="w-full" onClick={() => setShowReanalyzeConfirm(true)}>
                     <RefreshCw className="h-4 w-4 mr-2" /> Re-analyze
                   </Button>
                 )}
-                {analyzing && <Progress value={undefined} className="h-1" />}
+                {(analyzing || extracting) && <Progress value={undefined} className="h-1" />}
               </CardContent>
             </Card>
 
