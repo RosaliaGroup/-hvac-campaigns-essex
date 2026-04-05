@@ -470,9 +470,7 @@ export default function TakeOffDetail() {
 
   // ── Filtering ─────────────────────────────────────────────────────────────
   const filteredRows = rows.filter((r) => {
-    // Hide empty placeholder rows (no description, default qty/price)
-    if (!r.description.trim()) return false;
-    const matchSearch = !search || r.description.toLowerCase().includes(search.toLowerCase()) || r.tag.toLowerCase().includes(search.toLowerCase()) || r.vendor.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || (r.description || "").toLowerCase().includes(search.toLowerCase()) || (r.tag || "").toLowerCase().includes(search.toLowerCase()) || (r.vendor || "").toLowerCase().includes(search.toLowerCase());
     const matchCat = filterCategory === "ALL" || r.category === filterCategory;
     return matchSearch && matchCat;
   });
