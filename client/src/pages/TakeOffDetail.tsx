@@ -331,6 +331,7 @@ export default function TakeOffDetail() {
     if (files.length === 0) { log("No files to analyze."); return; }
     setAnalyzing(true);
     log("Starting AI analysis…");
+    log("Note: Large PDFs may hit rate limits. If this fails, wait 60 seconds and try again, or split the PDF into smaller files.");
 
     try {
       const file = files[0];
@@ -351,21 +352,36 @@ export default function TakeOffDetail() {
       const pLoc = projectData?.project.location || "Newark NJ";
       const pDisc = projectData?.project.discipline || "HVAC";
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const requestBody = {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 16000,
+        system: `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off from the uploaded drawing sheets for project: ${pName}. Discipline: ${pDisc}. Location: ${pLoc}. Instructions: ${instructions || "None"}. Extract ALL items: equipment with tags/models/specs, ductwork by size in LF, piping by diameter in LF, air devices by count, insulation SF/LF, accessories, fire dampers, controls, labor hours. Use these NJ contractor DIRECT COST benchmarks (materials + labor, NO markup applied — these are raw costs): VRF/VRV outdoor units: $800-1,200 per ton; VRF/VRV indoor air handlers: $400-700 per unit; Exhaust fans small (<500 CFM): $150-300 each; Exhaust fans large (>1000 CFM): $500-1,500 each; ERV units: $800-2,000 each; Rectangular ductwork small (10in or less wide): $8-14 per LF; Rectangular ductwork large (>10in wide): $18-28 per LF; Round/flex duct 5-6 inch: $4-8 per LF; Fire dampers: $180-350 each; Volume dampers: $60-120 each; Motorized dampers: $200-450 each; Supply registers/grilles: $35-85 each; Pipe/duct insulation: $3-6 per LF; Thermostats/controls: $150-400 each; Mechanical labor: $85-110 per hour (NJ prevailing wage); Sheet metal labor: $90-115 per hour (NJ). Keep unit prices as direct costs only — markup is applied separately by the estimator. Respond ONLY with valid JSON: {"pages":<number>,"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`,
+        messages: [{ role: "user", content: [mediaBlock, { type: "text", text: "Perform a complete mechanical take-off. Extract every item. Return only valid JSON." }] }],
+      };
+      const requestHeaders = {
+        "Content-Type": "application/json",
+        "x-api-key": apiKeyRef.current,
+        "anthropic-version": "2023-06-01",
+        "anthropic-dangerous-direct-browser-access": "true",
+      };
+
+      let res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKeyRef.current,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 16000,
-          system: `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off from the uploaded drawing sheets for project: ${pName}. Discipline: ${pDisc}. Location: ${pLoc}. Instructions: ${instructions || "None"}. Extract ALL items: equipment with tags/models/specs, ductwork by size in LF, piping by diameter in LF, air devices by count, insulation SF/LF, accessories, fire dampers, controls, labor hours. Use these NJ contractor DIRECT COST benchmarks (materials + labor, NO markup applied — these are raw costs): VRF/VRV outdoor units: $800-1,200 per ton; VRF/VRV indoor air handlers: $400-700 per unit; Exhaust fans small (<500 CFM): $150-300 each; Exhaust fans large (>1000 CFM): $500-1,500 each; ERV units: $800-2,000 each; Rectangular ductwork small (10in or less wide): $8-14 per LF; Rectangular ductwork large (>10in wide): $18-28 per LF; Round/flex duct 5-6 inch: $4-8 per LF; Fire dampers: $180-350 each; Volume dampers: $60-120 each; Motorized dampers: $200-450 each; Supply registers/grilles: $35-85 each; Pipe/duct insulation: $3-6 per LF; Thermostats/controls: $150-400 each; Mechanical labor: $85-110 per hour (NJ prevailing wage); Sheet metal labor: $90-115 per hour (NJ). Keep unit prices as direct costs only — markup is applied separately by the estimator. Respond ONLY with valid JSON: {"pages":<number>,"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`,
-          messages: [{ role: "user", content: [mediaBlock, { type: "text", text: "Perform a complete mechanical take-off. Extract every item. Return only valid JSON." }] }],
-        }),
+        headers: requestHeaders,
+        body: JSON.stringify(requestBody),
       });
+
+      // Retry once on rate limit
+      if (res.status === 429) {
+        log("Rate limit hit — waiting 60 seconds then retrying…");
+        await new Promise(resolve => setTimeout(resolve, 60000));
+        log("Retrying…");
+        res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: requestHeaders,
+          body: JSON.stringify(requestBody),
+        });
+      }
 
       if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
 
