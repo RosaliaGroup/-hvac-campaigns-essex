@@ -788,18 +788,18 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
 
             {/* Page preview — shown after Step 1 */}
             {extractedPages.length > 0 && (
-              <Card>
+              <Card className="border-2 border-primary/20">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-xs flex items-center gap-2">
                     <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-                    Step 1: Extraction Complete
+                    Step 1: Extraction Complete — {extractedPages.length} pages
                   </CardTitle>
                   <p className="text-[10px] text-muted-foreground">
-                    {extractedPages.length} pages extracted, {extractedPages.reduce((s, p) => s + p.charCount, 0).toLocaleString()} characters — uncheck pages to exclude from analysis
+                    {extractedPages.reduce((s, p) => s + p.charCount, 0).toLocaleString()} characters — uncheck pages to exclude
                   </p>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <ScrollArea className="max-h-[300px]">
+                  <ScrollArea className="max-h-[250px]">
                     <div className="divide-y">
                       {extractedPages.map((p) => (
                         <div key={p.pageNum} className="px-3 py-2">
@@ -821,11 +821,57 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
                       ))}
                     </div>
                   </ScrollArea>
+                  {/* Select all / Proceed — OUTSIDE ScrollArea */}
+                  <div className="border-t bg-muted/30 px-3 py-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <button
+                        className="text-[11px] text-primary hover:underline font-medium"
+                        onClick={() => {
+                          const allSelected = extractedPages.every((p) => p.selected);
+                          setExtractedPages((prev) => prev.map((p) => ({ ...p, selected: !allSelected })));
+                        }}
+                      >
+                        {extractedPages.every((p) => p.selected) ? "Deselect All" : "Select All"}
+                      </button>
+                      <span className="text-[10px] text-muted-foreground">{extractedPages.filter((p) => p.selected).length} of {extractedPages.length} selected</span>
+                    </div>
+                    <textarea
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[50px] resize-y"
+                      placeholder="Additional instructions for the AI…"
+                      value={instructions}
+                      onChange={(e) => setInstructions(e.target.value)}
+                    />
+                    {analysisStep === "analyzing" || analysisStep === "reconciling" ? (
+                      <Button className="w-full min-h-[48px]" disabled>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        {analysisStep === "reconciling" ? "Reconciling…" : `Analyzing ${extractedPages.filter((p) => p.selected).length} pages…`}
+                      </Button>
+                    ) : rows.length === 0 ? (
+                      <Button className="w-full min-h-[48px]" onClick={analyzeWithClaude} disabled={extractedPages.filter((p) => p.selected).length === 0}>
+                        <Zap className="h-4 w-4 mr-2" />
+                        Proceed to Analysis ({extractedPages.filter((p) => p.selected).length} pages)
+                      </Button>
+                    ) : showReanalyzeConfirm ? (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+                        <p className="text-xs text-amber-800">Replace all {rows.length} items? ~$0.40 API cost.</p>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="destructive" className="flex-1 min-h-[40px]" onClick={() => { setShowReanalyzeConfirm(false); analyzeWithClaude(); }}>Yes, Re-analyze</Button>
+                          <Button size="sm" variant="outline" className="flex-1 min-h-[40px]" onClick={() => setShowReanalyzeConfirm(false)}>Cancel</Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button variant="outline" className="w-full min-h-[48px]" onClick={() => setShowReanalyzeConfirm(true)}>
+                        <RefreshCw className="h-4 w-4 mr-2" /> Re-analyze
+                      </Button>
+                    )}
+                    {(analyzing || extracting) && <Progress value={undefined} className="h-1" />}
+                  </div>
                 </CardContent>
               </Card>
             )}
 
-            {/* Analyze section — Step 2 */}
+            {/* Analyze section — shown only when no extraction yet */}
+            {extractedPages.length === 0 && (
             <Card>
               <CardContent className="p-4 space-y-3">
                 <textarea
@@ -834,34 +880,27 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
                   value={instructions}
                   onChange={(e) => setInstructions(e.target.value)}
                 />
-                {analysisStep === "analyzing" || analysisStep === "reconciling" ? (
-                  <Button className="w-full" disabled>
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    {analysisStep === "reconciling" ? "Reconciling…" : `Analyzing ${extractedPages.filter((p) => p.selected).length} pages…`}
-                  </Button>
-                ) : rows.length === 0 ? (
-                  <Button className="w-full" onClick={analyzeWithClaude} disabled={extractedPages.filter((p) => p.selected).length === 0 && files.length === 0}>
-                    <Zap className="h-4 w-4 mr-2" />
-                    {extractedPages.length > 0 ? `Proceed to Analysis (${extractedPages.filter((p) => p.selected).length} pages)` : "Analyze with AI"}
+                {rows.length === 0 ? (
+                  <Button className="w-full min-h-[48px]" onClick={analyzeWithClaude} disabled={files.length === 0}>
+                    <Zap className="h-4 w-4 mr-2" /> Analyze with AI
                   </Button>
                 ) : showReanalyzeConfirm ? (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
-                    <p className="text-xs text-amber-800">
-                      This will re-run the AI analysis and replace all {rows.length} saved items. This costs ~$0.40 in API credits. Continue?
-                    </p>
+                    <p className="text-xs text-amber-800">Replace all {rows.length} items? ~$0.40 API cost.</p>
                     <div className="flex gap-2">
-                      <Button size="sm" variant="destructive" className="flex-1" onClick={() => { setShowReanalyzeConfirm(false); analyzeWithClaude(); }}>Yes, Re-analyze</Button>
-                      <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowReanalyzeConfirm(false)}>Cancel</Button>
+                      <Button size="sm" variant="destructive" className="flex-1 min-h-[40px]" onClick={() => { setShowReanalyzeConfirm(false); analyzeWithClaude(); }}>Yes, Re-analyze</Button>
+                      <Button size="sm" variant="outline" className="flex-1 min-h-[40px]" onClick={() => setShowReanalyzeConfirm(false)}>Cancel</Button>
                     </div>
                   </div>
                 ) : (
-                  <Button variant="outline" className="w-full" onClick={() => setShowReanalyzeConfirm(true)}>
+                  <Button variant="outline" className="w-full min-h-[48px]" onClick={() => setShowReanalyzeConfirm(true)}>
                     <RefreshCw className="h-4 w-4 mr-2" /> Re-analyze
                   </Button>
                 )}
                 {(analyzing || extracting) && <Progress value={undefined} className="h-1" />}
               </CardContent>
             </Card>
+            )}
 
             {/* Log panel */}
             <Card className="bg-zinc-950 text-zinc-300 border-zinc-800">
