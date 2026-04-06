@@ -30,7 +30,9 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
 
   for (const [key, value] of Object.entries(body)) {
     if (value === undefined || value === null) continue;
-    if (typeof value === "object") {
+    if (typeof value === "boolean") {
+      formData.set(key, value ? "true" : "false");
+    } else if (typeof value === "object") {
       formData.set(key, JSON.stringify(value));
     } else {
       formData.set(key, String(value));
@@ -227,9 +229,7 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     targeting.flexible_spec = [{ interests: params.interests }];
   }
 
-  // 3. Create ad set
-  // daily_budget is in cents (integer) — e.g. 500 = $5.00
-  // bid_strategy is on campaign, NOT here
+  // 3. Create ad set (budget + bid_strategy are on the campaign, not here)
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
