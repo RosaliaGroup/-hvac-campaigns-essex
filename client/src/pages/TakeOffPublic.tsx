@@ -340,10 +340,24 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
       if (batchResults.length > 1) {
         setAnalysisStep("reconciling");
         log("Step 3: Reconciling results...");
-        const combined = batchResults.map((r, i) => `=== BATCH ${i + 1} ===\n${r}`).join("\n\n");
+        const combined = batchResults.map((r, i) => `=== BATCH ${i + 1} RESULTS ===\n${r}`).join("\n\n");
         finalText = await callClaude(
-          `You are an HVAC estimator. Merge take-off results from multiple batches into one deduplicated take-off. Reconcile schedule vs plan counts. Respond ONLY with valid JSON.`,
-          [{ role: "user", content: `Merge these ${batchResults.length} batch results:\n\n${combined}\n\nDeduplicate and return final JSON.` }]
+          `You are reconciling a mechanical take-off from ${batchResults.length} batches of drawing pages for a ${numUnits || "?"}-unit apartment building.
+
+RECONCILIATION RULES:
+1. Equipment schedules list TAG TYPES (TX-1, KX-1) with specs — these show 1 row per type, NOT quantities.
+2. Floor plans show how many of each tag appear per floor — THIS is where you count quantities.
+3. For per-apartment equipment, look for floor plan pages that show multiple instances of the same tag.
+4. If floor plans show TX-1 appearing on every floor for every unit, count ALL instances.
+5. Final quantities MUST reflect:
+   - KX (kitchen exhaust): should be approximately ${numUnits || "unit count"} total
+   - TX (toilet exhaust): should be approximately ${numUnits || "unit count"} total
+   - AHUs: count every unique tag (AH-2A, AH-2B, AH-3A... AH-6Q = many units)
+6. If batch data shows conflicting counts, use the HIGHEST count found across all batches.
+7. For any item where qty=1 but it clearly serves multiple apartments, multiply by floor count.
+
+Produce the final reconciled take-off JSON. Every per-apartment item must have qty >= ${numUnits || 1}. Respond ONLY with valid JSON.`,
+          [{ role: "user", content: `RAW BATCH DATA:\n\n${combined}\n\nReconcile into one final take-off. Use HIGHEST count from any batch for each item. Per-apartment equipment qty must be >= ${numUnits || 1}.` }]
         );
         log("Reconciliation complete.");
       } else {
