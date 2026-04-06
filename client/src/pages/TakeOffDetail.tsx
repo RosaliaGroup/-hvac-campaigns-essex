@@ -250,32 +250,42 @@ export default function TakeOffDetail() {
   }, []);
 
   // Load project data from DB
-  console.log("[TakeOffDetail] render — projectId:", projectId, "loadingProject:", loadingProject, "projectData:", projectData ? "loaded" : "null", "items:", projectData?.items?.length, "initialized:", initializedRef.current);
-
   useEffect(() => {
-    if (!projectData || initializedRef.current) return;
+    if (!projectData) return;
+    // Only load once — skip if already initialized with data
+    if (initializedRef.current && rows.length > 0) return;
     initializedRef.current = true;
-    console.log("[Mount] items from DB:", projectData.items?.length, "rows in state:", rows.length);
-    console.log("[Mount] project:", projectData.project?.name, "id:", projectData.project?.id);
 
-    const dbRows: TakeOffRow[] = projectData.items.map((i) => ({
-      id: uid(),
-      category: (CATEGORIES.includes(i.category as Category) ? i.category : "OTHER") as Category,
-      description: i.description || "",
-      tag: i.tag || "",
-      qty: Number(i.qty) || 1,
-      unit: i.unit || "EA",
-      vendor: i.vendor || "",
-      model: i.model || "",
-      specs: i.specs || "",
-      source: i.source || "",
-      confidence: i.confidence || 0,
-      unitPrice: Number(i.unitPrice) || 0,
-      notes: i.notes || "",
-    }));
-    setRows(dbRows);
+    console.log("[Load] raw projectData keys:", Object.keys(projectData));
+    console.log("[Load] project:", projectData.project?.name, "id:", projectData.project?.id);
 
-    const dbFindings: Finding[] = projectData.findings.map((f) => ({
+    // Robust item loading — try multiple field names
+    const items: any[] = projectData.items || (projectData as any).takeoffItems || [];
+    console.log("[Load] items found:", items.length);
+
+    if (items.length > 0) {
+      const mapped: TakeOffRow[] = items.map((item: any) => ({
+        id: String(item.id || uid()),
+        category: (CATEGORIES.includes(item.category as Category) ? item.category : "OTHER") as Category,
+        description: item.description || "",
+        tag: item.tag || "",
+        qty: Number(item.qty) || 0,
+        unit: item.unit || "EA",
+        vendor: item.vendor || "",
+        model: item.model || "",
+        specs: item.specs || "",
+        source: item.source || "",
+        confidence: Number(item.confidence) || 60,
+        unitPrice: Number(item.unitPrice || item.unit_price) || 0,
+        notes: item.notes || "",
+      }));
+      console.log("[Load] mapped rows:", mapped.length, "first:", mapped[0]?.description);
+      setRows(mapped);
+      setLastSaved(new Date(projectData.project.updatedAt));
+    }
+
+    // Load findings
+    const dbFindings: Finding[] = (projectData.findings || []).map((f: any) => ({
       id: uid(),
       severity: (f.type === "warning" ? "warning" : f.type === "alert" ? "error" : "info") as Finding["severity"],
       title: f.title || "",
@@ -283,7 +293,6 @@ export default function TakeOffDetail() {
     }));
     setFindings(dbFindings);
     setVeSuggestions(projectData.veSuggestions || []);
-    if (dbRows.length > 0) setLastSaved(new Date(projectData.project.updatedAt));
 
     // Load numUnits from project notes (stored as JSON)
     try {
@@ -659,6 +668,7 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
   // ── Value Engineering ─────────────────────────────────────────────────────
   const runVE = async () => {
     setVeRunning(true);
+    log("Running Value Engineering analysis…");
     console.log("[VE] Calling runVE with projectId:", projectId, "type:", typeof projectId, "rows in state:", rows.length);
     try {
       const result = await veRunMutation.mutateAsync({ projectId });
