@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { extractPDFPages, buildSelectedText, buildImageBlocks, type ExtractedPage } from "@/lib/pdfExtract";
+import { DEFAULT_PRICEBOOK, matchPricebook, CSI_DIVISIONS, type PricebookEntry } from "@/lib/pricebook";
+import { runVerification } from "@/lib/takeoffVerify";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -170,6 +172,7 @@ function TakeOffTool() {
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
   const [veFilter, setVeFilter] = useState<string>("all");
   const [showReanalyzeConfirm, setShowReanalyzeConfirm] = useState(false);
+  const [pricebook, setPricebook] = useState<PricebookEntry[]>(() => [...DEFAULT_PRICEBOOK]);
   const [extractedPages, setExtractedPages] = useState<ExtractedPage[]>([]);
   const [extracting, setExtracting] = useState(false);
   const [expandedPage, setExpandedPage] = useState<number | null>(null);
@@ -261,7 +264,30 @@ function TakeOffTool() {
     const isScanned = totalChars < 500;
     log(`Step 2: Analyzing ${selected.length} of ${extractedPages.length} pages...`);
 
-    const systemPrompt = `You are an expert HVAC/MEP mechanical estimator. Extract a complete take-off. Project: ${projectName}. Discipline: HVAC. Location: ${projectLocation}. Instructions: ${instructions || "None"}. Extract ALL items. Use NJ contractor DIRECT COST benchmarks (materials + labor, NO markup): VRF/VRV outdoor units: $800-1,200/ton; VRF/VRV indoor AHU: $400-700/unit; Exhaust fans small (<500 CFM): $150-300 each; Exhaust fans large (>1000 CFM): $500-1,500 each; ERV: $800-2,000 each; Rect duct small (≤10in): $8-14/LF; Rect duct large (>10in): $18-28/LF; Round/flex 5-6in: $4-8/LF; Fire dampers: $180-350 each; Volume dampers: $60-120 each; Motorized dampers: $200-450 each; Supply registers: $35-85 each; Insulation: $3-6/LF; Thermostats: $150-400 each; Mech labor: $85-110/hr; Sheet metal labor: $90-115/hr. Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`;
+    const systemPrompt = `You are an expert HVAC/MEP mechanical estimator performing a category-by-category takeoff. Project: ${projectName}. Discipline: HVAC. Location: ${projectLocation}. Instructions: ${instructions || "None"}.
+
+FOLLOW THIS TAKEOFF ORDER — add a finding for each step completed:
+STEP 1 — EQUIPMENT SCHEDULES: Read ALL equipment schedules (AHUs, ODUs, ERVs, fans). AUTHORITATIVE counts.
+STEP 2 — EQUIPMENT ON PLANS: Verify schedule counts by counting tags on plans. Flag discrepancies.
+STEP 3 — DUCTWORK: Rectangular by size in LF, round by diameter in LF, fittings.
+STEP 4 — PIPING: Refrigerant lines by diameter in LF, condensate in LF.
+STEP 5 — AIR DEVICES: Supply registers, return grilles, exhaust grilles.
+STEP 6 — ACCESSORIES: Fire dampers, volume dampers, motorized dampers, louvers.
+STEP 7 — INSULATION: Duct wrap in SF, pipe insulation in LF.
+STEP 8 — CONTROLS: Thermostats, sensors, CO detectors.
+
+PRICING — NJ DIRECT COST (material + labor, NO markup):
+Equipment: VRF ODU $800-1,200/ton; VRF AHU $400-700/unit; Exhaust fan <500CFM $150-300; >1000CFM $500-1,500; ERV $800-2,000
+Ductwork: Rect ≤10in $8-14/LF; 12-20in $18-28/LF; >20in $28-40/LF; Round 5-6in $4-8/LF
+Piping: Refrigerant ≤3/8" $8-12/LF; >3/8" $12-18/LF; Condensate $4-6/LF
+Air devices: Supply $35-85; Return $45-85; Exhaust $30-60
+Accessories: Fire damper $180-350; Volume damper $60-120; Motorized $200-450
+Insulation: Duct wrap $3-5/SF; Pipe $4-7/LF
+Controls: Thermostat $150-400; CO detector $120-200
+
+LABOR (SMACNA/RSMeans NJ): Sheet metal $90-115/hr, 1.0-1.5 hr/100SF duct; Equipment 4-8 hr/AHU, 2-4 hr/ODU; Controls 2-3 hr each; Air devices 0.5-1.0 hr each.
+
+Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`;
 
     try {
       const BATCH_SIZE = 4;
@@ -316,10 +342,20 @@ function TakeOffTool() {
         id: uid(), severity: (f.type === "warning" ? "warning" : f.type === "alert" ? "error" : "info") as Finding["severity"],
         title: f.title || "", detail: f.body || f.detail || "",
       }));
-      setRows(newRows);
-      setFindings(newFindings);
+      // Apply pricebook matching
+      const pricedRows = newRows.map((r) => {
+        if (r.unitPrice > 0) return r;
+        const match = matchPricebook(r.description, pricebook);
+        return match ? { ...r, unitPrice: match.defaultPrice } : r;
+      });
+
+      log("Running verification checks…");
+      const verifyFindings = runVerification(pricedRows);
+
+      setRows(pricedRows);
+      setFindings([...newFindings, ...verifyFindings]);
       setAnalysisStep("idle");
-      log(`Done! ${newRows.length} line items, ${newFindings.length} findings.`);
+      log(`Done! ${pricedRows.length} line items, ${newFindings.length + verifyFindings.length} findings (${verifyFindings.length} from verification).`);
     } catch (err: any) {
       log(`Error: ${err.message}`);
       setAnalysisStep("idle");
@@ -427,12 +463,38 @@ function TakeOffTool() {
 
   // ── Export CSV ─────────────────────────────────────────────────────────────
   const exportCSV = () => {
-    const headers = ["Category", "Description", "Tag", "Qty", "Unit", "Unit Price", "Ext Price", "Vendor", "Model", "Specs", "Source", "Confidence", "Notes"];
-    const csvRows = rows.map((r) => [r.category, `"${r.description}"`, r.tag, r.qty, r.unit, r.unitPrice, (r.qty * r.unitPrice).toFixed(2), `"${r.vendor}"`, `"${r.model}"`, `"${r.specs}"`, `"${r.source}"`, r.confidence, `"${r.notes}"`].join(","));
-    const csv = [headers.join(","), ...csvRows].join("\n");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const lines: string[] = [];
+    lines.push(`"${projectName} — Mechanical Take-Off",,,,,,,,`);
+    lines.push(`"Location: ${projectLocation}","Date: ${dateStr}","Prepared by: ME AI Take-Off",,,,,,`);
+    lines.push("");
+    lines.push("CSI Division,Category,Description,Tag,Qty,Unit,Material $,Labor Hrs,Labor $,Ext Material,Ext Labor,Ext Total,Vendor,Model,Confidence,Notes");
+    let totalMat = 0, totalLabor = 0;
+    for (const cat of CATEGORIES) {
+      const catRows = rows.filter((r) => r.category === cat);
+      if (catRows.length === 0) continue;
+      const csi = CSI_DIVISIONS[cat] || "23 00 00";
+      let catMat = 0, catLab = 0;
+      for (const r of catRows) {
+        const match = matchPricebook(r.description, pricebook);
+        const laborHrs = match ? match.laborHours * r.qty : 0;
+        const laborRate = match ? match.laborRate : 95;
+        const laborCostItem = laborHrs * laborRate;
+        const matExt = r.qty * r.unitPrice;
+        catMat += matExt; catLab += laborCostItem;
+        lines.push([`"${csi}"`,`"${cat}"`,`"${r.description}"`,`"${r.tag}"`,r.qty,r.unit,r.unitPrice.toFixed(2),laborHrs.toFixed(1),laborRate.toFixed(0),matExt.toFixed(2),laborCostItem.toFixed(2),(matExt+laborCostItem).toFixed(2),`"${r.vendor}"`,`"${r.model}"`,`${r.confidence}%`,`"${r.notes}"`].join(","));
+      }
+      lines.push(`,,"SUBTOTAL — ${cat}",,,,,,,,${catMat.toFixed(2)},${catLab.toFixed(2)},${(catMat+catLab).toFixed(2)},,,`);
+      lines.push("");
+      totalMat += catMat; totalLabor += catLab;
+    }
+    lines.push("");
+    lines.push(`,,"DIRECT COST TOTAL",,,,,,,,${totalMat.toFixed(2)},${totalLabor.toFixed(2)},${(totalMat+totalLabor).toFixed(2)},,,`);
+    lines.push(`,,"BID PRICE",,,,,,,,,,${bidPrice.toFixed(2)},,,`);
+    const csv = lines.join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `${projectName}-takeoff-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = `${projectName}-div23-${dateStr}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -712,6 +774,35 @@ function TakeOffTool() {
                         <tr className="font-bold"><td className="py-2">Bid Price</td><td className="py-2 text-right text-base">{fmt(bidPrice)}</td></tr>
                       </tbody>
                     </table>
+                  </CardContent>
+                </Card>
+
+                <Card className="md:col-span-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" /> Pricebook — Standard Unit Prices
+                    </CardTitle>
+                    <p className="text-[10px] text-muted-foreground">Customize prices. Items with $0 auto-populate from pricebook matches.</p>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="max-h-[300px]">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1">
+                        {pricebook.map((entry, idx) => (
+                          <div key={entry.key} className="flex items-center justify-between py-1 border-b border-dashed">
+                            <span className="text-xs text-muted-foreground truncate pr-2">{entry.label} ({entry.unit})</span>
+                            <Input
+                              type="number"
+                              className="w-[80px] h-6 text-xs text-right"
+                              value={entry.defaultPrice}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setPricebook((prev) => prev.map((p, i) => i === idx ? { ...p, defaultPrice: val } : p));
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </CardContent>
                 </Card>
               </div>
