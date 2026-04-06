@@ -172,6 +172,7 @@ function TakeOffTool() {
   const [filterCategory, setFilterCategory] = useState<string>("ALL");
   const [veFilter, setVeFilter] = useState<string>("all");
   const [showReanalyzeConfirm, setShowReanalyzeConfirm] = useState(false);
+  const [numUnits, setNumUnits] = useState(0);
   const [pricebook, setPricebook] = useState<PricebookEntry[]>(() => [...DEFAULT_PRICEBOOK]);
   const [extractedPages, setExtractedPages] = useState<ExtractedPage[]>([]);
   const [extracting, setExtracting] = useState(false);
@@ -264,7 +265,29 @@ function TakeOffTool() {
     const isScanned = totalChars < 500;
     log(`Step 2: Analyzing ${selected.length} of ${extractedPages.length} pages...`);
 
-    const systemPrompt = `You are an expert HVAC/MEP mechanical estimator performing a category-by-category takeoff. Project: ${projectName}. Discipline: HVAC. Location: ${projectLocation}. Instructions: ${instructions || "None"}.
+    const unitCountNote = numUnits > 0 ? `This building has ${numUnits} units.` : "Unit count not specified — estimate from drawings if possible.";
+    const systemPrompt = `CRITICAL COUNTING RULES — READ BEFORE ANYTHING ELSE:
+
+1. RISER DIAGRAMS: When you see a riser diagram showing TX-1, TX-2... TX-13 stacked vertically with floors labeled (1ST FLOOR, 2ND FLOOR, 3RD FLOOR etc), each TX number appears ONCE PER FLOOR. Count: number of unique TX tags x number of floors served.
+
+2. EQUIPMENT SCHEDULES ARE AUTHORITATIVE: If the schedule says "RXTQ36TBVJUA QTY: 19" then qty = 19, not 1.
+
+3. UNIT-BY-UNIT EQUIPMENT: ${unitCountNote}
+   - Kitchen exhaust fans (KX): minimum 1 per unit = at least ${numUnits || "N"} total
+   - Toilet exhaust fans (TX): minimum 1 per unit = at least ${numUnits || "N"} total
+   - Thermostats: minimum 1 per unit = at least ${numUnits || "N"} total
+   - Air handlers (AHUs): count every AH-2A, AH-2B... AH-6Q tag individually
+
+4. FLOOR PLAN MULTIPLICATION: If a floor plan shows 13 KX fans on one typical floor and there are 5 residential floors, total KX = 13 x 5 = 65 minimum, plus any on other floors.
+
+5. NEVER report qty=1 for equipment that serves individual apartments unless the building truly has 1 apartment. If you see KX-1 as a tag, that is the TAG NAME not the quantity.
+
+6. CROSS-CHECK: After counting, verify:
+   - Total KX fans >= total units${numUnits ? ` (${numUnits})` : ""}
+   - Total TX fans >= total units
+   - If your count is less than unit count, RE-COUNT and explain discrepancy in findings
+
+You are an expert HVAC/MEP mechanical estimator performing a category-by-category takeoff. Project: ${projectName}. Discipline: HVAC. Location: ${projectLocation}. Instructions: ${instructions || "None"}.
 
 FOLLOW THIS TAKEOFF ORDER — add a finding for each step completed:
 STEP 1 — EQUIPMENT SCHEDULES: Read ALL equipment schedules (AHUs, ODUs, ERVs, fans). AUTHORITATIVE counts.
@@ -526,6 +549,10 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
         <div className="flex flex-wrap items-center gap-3">
           <Input className="max-w-[240px] h-8 text-sm" placeholder="Project name" value={projectName} onChange={(e) => setProjectName(e.target.value)} />
           <Input className="max-w-[160px] h-8 text-sm" placeholder="Location" value={projectLocation} onChange={(e) => setProjectLocation(e.target.value)} />
+          <div className="flex items-center gap-1 border rounded-md px-2 h-8">
+            <label className="text-[10px] text-muted-foreground whitespace-nowrap">Units<span className="text-red-500">*</span></label>
+            <input type="number" value={numUnits || ""} onChange={(e) => setNumUnits(Number(e.target.value) || 0)} placeholder="0" className="w-12 h-6 text-xs text-right border-0 bg-transparent focus:outline-none" title="Number of units — required for accurate per-unit equipment counts" />
+          </div>
           <Badge variant="outline" className="text-xs">{rows.length} items</Badge>
           {rows.length > 0 && <Badge className="bg-[#e85d2f] text-white text-xs">Direct: {fmt(matCost + laborCost)}</Badge>}
         </div>
