@@ -1,10 +1,10 @@
 /**
  * Meta (Facebook) Marketing API service
- * Uses the Meta Marketing API v21.0 via direct REST calls (no SDK needed)
+ * Uses the Meta Marketing API v25.0 via direct REST calls (no SDK needed)
  * Credentials: access token (long-lived page/system user token) + ad account ID
  */
 
-const META_API_VERSION = "v21.0";
+const META_API_VERSION = "v25.0";
 const META_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
 
 const APP_ID = process.env.META_APP_ID!;
@@ -20,14 +20,39 @@ async function metaGet(path: string, token: string, params: Record<string, strin
   return json;
 }
 
+/**
+ * POST to Meta Marketing API using form-urlencoded format.
+ * Nested objects/arrays are JSON-stringified as required by the API.
+ */
 async function metaPost(path: string, token: string, body: Record<string, unknown>) {
-  const res = await fetch(`${META_BASE}${path}`, {
+  const formData = new URLSearchParams();
+  formData.set("access_token", token);
+
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "object") {
+      formData.set(key, JSON.stringify(value));
+    } else {
+      formData.set(key, String(value));
+    }
+  }
+
+  const url = `${META_BASE}${path}`;
+  const debugEntries: Record<string, string> = {};
+  formData.forEach((v, k) => { if (k !== "access_token") debugEntries[k] = v; });
+  console.log(`[Meta API] POST ${url}`, debugEntries);
+
+  const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...body, access_token: token }),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: formData.toString(),
   });
   const json = await res.json();
-  if (json.error) throw new Error(`Meta API error: ${json.error.message} (code ${json.error.code})`);
+  if (json.error) {
+    console.error(`[Meta API] Error on POST ${path}:`, JSON.stringify(json.error, null, 2));
+    throw new Error(`Meta API error: ${json.error.message} (code ${json.error.code})`);
+  }
+  console.log(`[Meta API] Success on POST ${path}:`, json);
   return json;
 }
 
@@ -137,6 +162,13 @@ export interface MetaCampaignParams {
 export async function createLeadCampaign(token: string, params: MetaCampaignParams) {
   const actId = `act_${params.adAccountId}`;
 
+  console.log("[Meta Ads] Creating campaign:", params.name, {
+    objective: params.objective,
+    budgetCents: params.dailyBudgetCents,
+    adAccountId: params.adAccountId,
+    pageId: params.pageId,
+  });
+
   // 1. Create campaign
   const campaign = await metaPost(`/${actId}/campaigns`, token, {
     name: params.name,
@@ -147,53 +179,62 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const campaignId = campaign.id;
 
   // 2. Build targeting spec
+  const geoLocations: Record<string, unknown> = params.geoLocationZips?.length
+    ? {
+        zips: params.geoLocationZips.map((z) => ({ key: z, country: "US" })),
+        location_types: ["home"],
+      }
+    : {
+        cities: params.geoLocationCities ?? [
+          { key: "2418779", radius: 25, distance_unit: "mile" }, // Newark NJ
+        ],
+        location_types: ["home"],
+      };
+
   const targeting: Record<string, unknown> = {
     age_min: params.ageMin,
     age_max: params.ageMax,
-    geo_locations: params.geoLocationZips?.length
-      ? {
-          zips: params.geoLocationZips.map((z) => ({ key: z, country: "US" })),
-        }
-      : {
-          cities: params.geoLocationCities ?? [
-            // Default: Essex County NJ cities
-            { key: "2418779", radius: 25, distance_unit: "mile" }, // Newark NJ
-          ],
-        },
+    geo_locations: geoLocations,
   };
   if (params.interests?.length) {
     targeting.flexible_spec = [{ interests: params.interests }];
   }
 
   // 3. Create ad set
-  const adSet = await metaPost(`/${actId}/adsets`, token, {
+  const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
     optimization_goal: params.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "LINK_CLICKS",
     billing_event: "IMPRESSIONS",
+    bid_strategy: "LOWEST_COST_WITHOUT_BID_CAP",
     daily_budget: params.dailyBudgetCents,
     targeting,
     status: "PAUSED",
-    start_time: new Date(Date.now() + 86400000).toISOString(), // tomorrow
-  });
+  };
+
+  const adSet = await metaPost(`/${actId}/adsets`, token, adSetBody);
   const adSetId = adSet.id;
 
   // 4. Create ad creative
+  const linkData: Record<string, unknown> = {
+    link: params.websiteUrl,
+    message: params.primaryText,
+    name: params.headline,
+    description: params.description,
+    call_to_action: {
+      type: params.callToAction,
+      value: { link: params.websiteUrl },
+    },
+  };
+  if (params.imageUrl) {
+    linkData.picture = params.imageUrl;
+  }
+
   const creative = await metaPost(`/${actId}/adcreatives`, token, {
     name: `${params.name} — Creative`,
     object_story_spec: {
       page_id: params.pageId,
-      link_data: {
-        link: params.websiteUrl,
-        message: params.primaryText,
-        name: params.headline,
-        description: params.description,
-        call_to_action: {
-          type: params.callToAction,
-          value: { link: params.websiteUrl },
-        },
-        ...(params.imageUrl ? { picture: params.imageUrl } : {}),
-      },
+      link_data: linkData,
     },
   });
   const creativeId = creative.id;
