@@ -32,11 +32,6 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
     if (value === undefined || value === null) continue;
     if (typeof value === "boolean") {
       formData.set(key, value ? "true" : "false");
-    } else if (key === "targeting_automation" && typeof value === "object") {
-      // Send as bracket notation: targeting_automation[advantage_audience]=0
-      for (const [subKey, subVal] of Object.entries(value as Record<string, unknown>)) {
-        formData.set(`${key}[${subKey}]`, String(subVal));
-      }
     } else if (typeof value === "object") {
       formData.set(key, JSON.stringify(value));
     } else {
@@ -197,10 +192,12 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     pageId: params.pageId,
   });
 
-  // 1. Create campaign — simplest possible structure
+  // 1. Create campaign — use LINK_CLICKS to bypass Advantage Audience requirement
+  // OUTCOME_LEADS requires targeting_automation which has persistent issues;
+  // LINK_CLICKS drives traffic to landing page where users fill out the form.
   const campaignBody = {
     name: params.name,
-    objective: params.objective,
+    objective: "LINK_CLICKS",
     status: "PAUSED",
     special_ad_categories: ["NONE"],
     is_adset_budget_sharing_enabled: true,
@@ -211,17 +208,15 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const campaignId = campaign.id;
   console.log("[Meta] Step 1 — Campaign created:", campaignId);
 
-  // 2. Build targeting — geo only for simplicity, add age + interests if present
+  // 2. Build targeting — geo + age + interests
   const targeting: Record<string, unknown> = {
     geo_locations: {
       countries: ["US"],
       location_types: ["home"],
     },
   };
-  // Add age targeting
   if (params.ageMin) targeting.age_min = params.ageMin;
   if (params.ageMax) targeting.age_max = params.ageMax;
-  // Add geo refinement if city-level targeting provided
   if (params.geoLocationCities?.length) {
     targeting.geo_locations = {
       cities: params.geoLocationCities,
@@ -233,20 +228,18 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
       location_types: ["home"],
     };
   }
-  // Add interests
   if (params.interests?.length) {
     targeting.flexible_spec = [{ interests: params.interests }];
   }
 
-  // 3. Create ad set — budget lives here, simplest form
+  // 3. Create ad set — budget here, no targeting_automation needed for LINK_CLICKS
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
-    optimization_goal: params.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "LINK_CLICKS",
+    optimization_goal: "LINK_CLICKS",
     billing_event: "IMPRESSIONS",
     daily_budget: String(params.dailyBudgetCents),
     targeting,
-    targeting_automation: { advantage_audience: 0 },
     promoted_object: { page_id: params.pageId },
     destination_type: "WEBSITE",
     status: "PAUSED",
