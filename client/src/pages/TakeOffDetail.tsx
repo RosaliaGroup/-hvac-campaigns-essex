@@ -223,6 +223,7 @@ export default function TakeOffDetail() {
   const [veFilter, setVeFilter] = useState<string>("all");
   const [showReanalyzeConfirm, setShowReanalyzeConfirm] = useState(false);
   const [numUnits, setNumUnits] = useState(0);
+  const [unitMix, setUnitMix] = useState("");
 
   const [pricebook, setPricebook] = useState<PricebookEntry[]>(() => [...DEFAULT_PRICEBOOK]);
 
@@ -295,10 +296,11 @@ export default function TakeOffDetail() {
     setFindings(dbFindings);
     setVeSuggestions(projectData.veSuggestions || []);
 
-    // Load numUnits from project notes (stored as JSON)
+    // Load numUnits and unitMix from project notes (stored as JSON)
     try {
       const meta = JSON.parse(projectData.project.notes || "{}");
       if (meta.numUnits) setNumUnits(meta.numUnits);
+      if (meta.unitMix) setUnitMix(meta.unitMix);
     } catch {}
   }, [projectData]);
 
@@ -314,18 +316,19 @@ export default function TakeOffDetail() {
 
   // Auto-extract is handled after runExtraction is defined (see below)
 
-  // Save numUnits to project notes when it changes
+  // Save numUnits and unitMix to project notes when they change
   useEffect(() => {
-    if (!projectData || numUnits === 0) return;
+    if (!projectData || (numUnits === 0 && !unitMix)) return;
     const timer = setTimeout(() => {
       const existingNotes = projectData.project.notes || "{}";
       let meta: Record<string, any> = {};
       try { meta = JSON.parse(existingNotes); } catch {}
       meta.numUnits = numUnits;
+      meta.unitMix = unitMix;
       updateMutation.mutate({ id: projectId, notes: JSON.stringify(meta) });
     }, 1000);
     return () => clearTimeout(timer);
-  }, [numUnits]);
+  }, [numUnits, unitMix]);
 
   const log = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString();
@@ -467,15 +470,16 @@ export default function TakeOffDetail() {
     log(`Step 2: Analyzing ${selected.length} of ${extractedPages.length} pages…`);
 
     const unitCountNote = numUnits > 0 ? `This building has ${numUnits} units.` : "Unit count not specified — estimate from drawings if possible.";
+    const unitMixNote = unitMix ? `Unit mix: ${unitMix}.` : "";
     const systemPrompt = `CRITICAL COUNTING RULES — READ BEFORE ANYTHING ELSE:
 
 1. RISER DIAGRAMS: When you see a riser diagram showing TX-1, TX-2... TX-13 stacked vertically with floors labeled (1ST FLOOR, 2ND FLOOR, 3RD FLOOR etc), each TX number appears ONCE PER FLOOR. Count: number of unique TX tags x number of floors served.
 
 2. EQUIPMENT SCHEDULES ARE AUTHORITATIVE: If the schedule says "RXTQ36TBVJUA QTY: 19" then qty = 19, not 1.
 
-3. UNIT-BY-UNIT EQUIPMENT: ${unitCountNote}
+3. UNIT-BY-UNIT EQUIPMENT: ${unitCountNote} ${unitMixNote}
    - Kitchen exhaust fans (KX): minimum 1 per unit = at least ${numUnits || "N"} total
-   - Toilet exhaust fans (TX): minimum 1 per unit = at least ${numUnits || "N"} total
+   - Toilet exhaust fans (TX): count depends on unit mix. Studios/1BR = 1 TX per unit. 2BR/2BA = 2 TX per unit. If unit mix is unknown, count ALL TX tag instances across ALL floor plans. Do NOT use 1 per unit as default if drawings show more.
    - Thermostats: minimum 1 per unit = at least ${numUnits || "N"} total
    - Air handlers (AHUs): count every AH-2A, AH-2B... AH-6Q tag individually
 
@@ -575,7 +579,7 @@ RECONCILIATION RULES:
 4. If floor plans show TX-1 appearing on every floor for every unit, count ALL instances.
 5. Final quantities MUST reflect:
    - KX (kitchen exhaust): should be approximately ${numUnits || "unit count"} total
-   - TX (toilet exhaust): should be approximately ${numUnits || "unit count"} total
+   - TX (toilet exhaust): depends on unit mix — 2BR/2BA units need 2 TX each.${unitMix ? ` Unit mix: ${unitMix}.` : ""} Count ALL TX instances from floor plans, do NOT default to 1 per unit.
    - AHUs: count every unique tag (AH-2A, AH-2B, AH-3A... AH-6Q = many units)
 6. If batch data shows conflicting counts, use the HIGHEST count found across all batches.
 7. For any item where qty=1 but it clearly serves multiple apartments, multiply by floor count.
@@ -822,6 +826,10 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
             <div className="flex items-center gap-1.5 border rounded-md px-2 py-1">
               <label className="text-[10px] text-muted-foreground whitespace-nowrap">Units<span className="text-red-500">*</span></label>
               <input type="number" value={numUnits || ""} onChange={(e) => setNumUnits(Number(e.target.value) || 0)} placeholder="0" className="w-12 h-6 text-xs text-right border-0 bg-transparent focus:outline-none" title="Number of units — required for accurate per-unit equipment counts" />
+            </div>
+            <div className="flex items-center gap-1.5 border rounded-md px-2 py-1">
+              <label className="text-[10px] text-muted-foreground whitespace-nowrap">Mix</label>
+              <input type="text" value={unitMix} onChange={(e) => setUnitMix(e.target.value)} placeholder="e.g. 20 studios, 35 1BR, 20 2BR/2BA" className="w-48 h-6 text-xs border-0 bg-transparent focus:outline-none" title="Unit mix — helps count TX fans for 2-bathroom units" />
             </div>
             <Button variant="outline" size="sm" onClick={exportCSV} disabled={rows.length === 0}>
               <Download className="h-4 w-4 mr-1" /> CSV
