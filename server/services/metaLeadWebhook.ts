@@ -62,16 +62,18 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
    * GET /api/meta/leadgen — Meta webhook verification (hub.challenge handshake)
    */
   app.get("/api/meta/leadgen", (req: Request, res: Response) => {
-    const mode = req.query["hub.mode"];
-    const token = req.query["hub.verify_token"];
-    const challenge = req.query["hub.challenge"];
+    const mode = req.query["hub.mode"] as string | undefined;
+    const token = req.query["hub.verify_token"] as string | undefined;
+    const challenge = req.query["hub.challenge"] as string | undefined;
 
-    if (mode === "subscribe" && token === VERIFY_TOKEN) {
-      console.log("[MetaLeadWebhook] Verification successful");
-      return res.status(200).send(challenge);
+    console.log("[MetaLeadWebhook] Verification request:", { mode, token: token ? "***" : "missing", challenge });
+
+    if (mode === "subscribe" && token === VERIFY_TOKEN && challenge) {
+      console.log("[MetaLeadWebhook] Verification successful — returning challenge");
+      return res.status(200).type("text/plain").send(challenge);
     }
-    console.warn("[MetaLeadWebhook] Verification failed — bad token");
-    return res.status(403).json({ error: "Forbidden" });
+    console.warn("[MetaLeadWebhook] Verification failed — mode:", mode, "token match:", token === VERIFY_TOKEN);
+    return res.status(403).type("text/plain").send("Forbidden");
   });
 
   /**
