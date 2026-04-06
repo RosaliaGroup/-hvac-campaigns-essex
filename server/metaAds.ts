@@ -32,6 +32,11 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
     if (value === undefined || value === null) continue;
     if (typeof value === "boolean") {
       formData.set(key, value ? "true" : "false");
+    } else if (key === "targeting_automation" && typeof value === "object") {
+      // Send as bracket notation: targeting_automation[advantage_audience]=0
+      for (const [subKey, subVal] of Object.entries(value as Record<string, unknown>)) {
+        formData.set(`${key}[${subKey}]`, String(subVal));
+      }
     } else if (typeof value === "object") {
       formData.set(key, JSON.stringify(value));
     } else {
@@ -241,6 +246,7 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     billing_event: "IMPRESSIONS",
     daily_budget: String(params.dailyBudgetCents),
     targeting,
+    targeting_automation: { advantage_audience: 0 },
     promoted_object: { page_id: params.pageId },
     destination_type: "WEBSITE",
     status: "PAUSED",
