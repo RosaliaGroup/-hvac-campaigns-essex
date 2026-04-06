@@ -15,6 +15,8 @@ import CommercialCampaigns from "./pages/CommercialCampaigns";
 import MaintenanceSubscription from "./pages/MaintenanceSubscription";
 import Partnerships from "./pages/Partnerships";
 import Careers from "./pages/Careers";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import MarketingDashboard from "./pages/MarketingDashboard";
 import LeadTracker from "./pages/LeadTracker";
 import CampaignPerformance from "./pages/CampaignPerformance";
@@ -97,6 +99,8 @@ function Router() {
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
       <Route path={"/partnerships"} component={Partnerships} />
       <Route path={"/careers"} component={Careers} />
+      <Route path={"/privacy"} component={Privacy} />
+      <Route path={"/terms"} component={Terms} />
       <Route path={"/testimonials"} component={Testimonials} />
 
       {/* Team auth routes — public (no login required to access these) */}
