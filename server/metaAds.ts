@@ -7,8 +7,8 @@
 const META_API_VERSION = "v25.0";
 const META_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
 
-const APP_ID = process.env.META_APP_ID!;
-const APP_SECRET = process.env.META_APP_SECRET!;
+const APP_ID = process.env.META_APP_ID ?? "";
+const APP_SECRET = process.env.META_APP_SECRET ?? "";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -59,6 +59,7 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
 // ─── OAuth ───────────────────────────────────────────────────────────────────
 
 export function getMetaAuthUrl(redirectUri: string): string {
+  if (!APP_ID) throw new Error("META_APP_ID environment variable is not set.");
   const params = new URLSearchParams({
     client_id: APP_ID,
     redirect_uri: redirectUri,
@@ -73,6 +74,7 @@ export async function exchangeCodeForToken(
   code: string,
   redirectUri: string
 ): Promise<{ access_token: string; token_type: string }> {
+  if (!APP_ID || !APP_SECRET) throw new Error("META_APP_ID and META_APP_SECRET must be set.");
   const params = new URLSearchParams({
     client_id: APP_ID,
     client_secret: APP_SECRET,
@@ -86,6 +88,7 @@ export async function exchangeCodeForToken(
 }
 
 export async function getLongLivedToken(shortToken: string): Promise<string> {
+  if (!APP_ID || !APP_SECRET) throw new Error("META_APP_ID and META_APP_SECRET must be set.");
   const params = new URLSearchParams({
     grant_type: "fb_exchange_token",
     client_id: APP_ID,
@@ -170,11 +173,14 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   });
 
   // 1. Create campaign
+  // bid_strategy is set at campaign level, not ad set level
+  // special_ad_categories must be sent as JSON array string "["NONE"]" or omitted
   const campaign = await metaPost(`/${actId}/campaigns`, token, {
     name: params.name,
     objective: params.objective,
     status: "PAUSED",
-    special_ad_categories: [],
+    special_ad_categories: ["NONE"],
+    bid_strategy: "LOWEST_COST_WITHOUT_BID_CAP",
   });
   const campaignId = campaign.id;
 
@@ -201,13 +207,14 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   }
 
   // 3. Create ad set
+  // daily_budget is in cents (integer) — e.g. 500 = $5.00
+  // bid_strategy is on campaign, NOT here
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
     optimization_goal: params.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "LINK_CLICKS",
     billing_event: "IMPRESSIONS",
-    bid_strategy: "LOWEST_COST_WITHOUT_BID_CAP",
-    daily_budget: params.dailyBudgetCents,
+    daily_budget: String(params.dailyBudgetCents),
     targeting,
     status: "PAUSED",
   };

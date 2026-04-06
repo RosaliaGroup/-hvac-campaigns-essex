@@ -1,9 +1,9 @@
 import { GoogleAdsApi, enums } from "google-ads-api";
 
-const DEVELOPER_TOKEN = process.env.GOOGLE_ADS_DEVELOPER_TOKEN!;
-const CLIENT_ID = process.env.GOOGLE_ADS_CLIENT_ID!;
-const CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET!;
-const CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID!;
+const DEVELOPER_TOKEN = process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? "";
+const CLIENT_ID = process.env.GOOGLE_ADS_CLIENT_ID ?? "";
+const CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET ?? "";
+const CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID ?? "";
 
 // Build OAuth URL for user to authorize
 export function getGoogleAdsAuthUrl(redirectUri: string): string {
