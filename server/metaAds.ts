@@ -72,7 +72,7 @@ export function getMetaAuthUrl(redirectUri: string): string {
   const params = new URLSearchParams({
     client_id: APP_ID,
     redirect_uri: redirectUri,
-    scope: "ads_management,ads_read,business_management",
+    scope: "ads_management,ads_read,business_management,leads_retrieval,pages_manage_metadata,pages_read_engagement",
     response_type: "code",
     state: Buffer.from(redirectUri).toString("base64"),
   });
@@ -167,12 +167,6 @@ export interface MetaCampaignParams {
   dailyBudgetCents: number; // in cents (USD * 100)
   adAccountId: string;
   pageId: string;
-  // Targeting
-  ageMin: number;
-  ageMax: number;
-  geoLocationZips?: string[];
-  geoLocationCities?: Array<{ key: string; radius: number; distance_unit: string }>;
-  interests?: Array<{ id: string; name: string }>;
   // Ad creative
   headline: string;
   primaryText: string;
@@ -185,19 +179,17 @@ export interface MetaCampaignParams {
 export async function createLeadCampaign(token: string, params: MetaCampaignParams) {
   const actId = `act_${params.adAccountId}`;
 
-  console.log("[Meta Ads] Creating campaign:", params.name, {
-    objective: params.objective,
+  console.log("[Meta Ads] Creating OUTCOME_LEADS campaign:", params.name, {
+    objective: "OUTCOME_LEADS",
     budgetCents: params.dailyBudgetCents,
     adAccountId: params.adAccountId,
     pageId: params.pageId,
   });
 
-  // 1. Create campaign — use LINK_CLICKS to bypass Advantage Audience requirement
-  // OUTCOME_LEADS requires targeting_automation which has persistent issues;
-  // LINK_CLICKS drives traffic to landing page where users fill out the form.
+  // 1. Create campaign — OUTCOME_LEADS for pay-per-lead
   const campaignBody = {
     name: params.name,
-    objective: "OUTCOME_TRAFFIC",
+    objective: "OUTCOME_LEADS",
     status: "PAUSED",
     special_ad_categories: ["NONE"],
     is_adset_budget_sharing_enabled: true,
@@ -208,42 +200,52 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const campaignId = campaign.id;
   console.log("[Meta] Step 1 — Campaign created:", campaignId);
 
-  // 2. Build targeting — geo only, let Advantage+ audience handle the rest.
-  // Age/interest targeting conflicts with Advantage+ which Meta auto-enables
-  // for OUTCOME_TRAFFIC. Ad copy + landing page do the qualification instead.
-  const geoLocations: Record<string, unknown> = {
-    countries: ["US"],
-  };
-  if (params.geoLocationCities?.length) {
-    geoLocations.cities = params.geoLocationCities;
-    delete (geoLocations as any).countries;
-  } else if (params.geoLocationZips?.length) {
-    geoLocations.zips = params.geoLocationZips.map((z) => ({ key: z, country: "US" }));
-    delete (geoLocations as any).countries;
-  }
-  const targeting: Record<string, unknown> = {
-    geo_locations: geoLocations,
-  };
-
-  // 3. Create ad set — budget here, no targeting_automation needed for LINK_CLICKS
+  // 2. Create ad set — LEAD_GENERATION optimization, ON_POST destination
+  // ON_POST tells Meta to use an Instant Form on Facebook so leads are captured
+  // inside Facebook without leaving the app. No age/interest targeting — let Meta
+  // optimize audience for leads automatically.
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
-    optimization_goal: "LINK_CLICKS",
+    optimization_goal: "LEAD_GENERATION",
     billing_event: "IMPRESSIONS",
     daily_budget: String(params.dailyBudgetCents),
-    targeting,
+    targeting: { geo_locations: { countries: ["US"] } },
     promoted_object: { page_id: params.pageId },
-    destination_type: "WEBSITE",
+    destination_type: "ON_POST",
     status: "PAUSED",
   };
 
-  console.log("[Meta] Step 3 — Creating ad set with:", JSON.stringify(adSetBody));
+  console.log("[Meta] Step 2 — Creating ad set with:", JSON.stringify(adSetBody));
   const adSet = await metaPost(`/${actId}/adsets`, token, adSetBody);
   const adSetId = adSet.id;
-  console.log("[Meta] Step 3 — Ad set created:", adSetId);
+  console.log("[Meta] Step 2 — Ad set created:", adSetId);
 
-  // 4. Create ad creative
+  // 3. Create Instant Lead Form — collects name, email, phone inside Facebook
+  const leadFormBody = {
+    name: `${params.name} — Lead Form`,
+    questions: [
+      { type: "FULL_NAME" },
+      { type: "EMAIL" },
+      { type: "PHONE" },
+    ],
+    privacy_policy: {
+      url: "https://mechanicalenterprise.com/privacy",
+      link_text: "Privacy Policy",
+    },
+    thank_you_page: {
+      title: "We'll be in touch!",
+      body: "A Mechanical Enterprise specialist will contact you within 24 hours about your free assessment.",
+      cta_type: "VIEW_WEBSITE",
+      cta_link: "https://mechanicalenterprise.com/rebate-calculator",
+    },
+  };
+  console.log("[Meta] Step 3 — Creating lead form with:", JSON.stringify(leadFormBody));
+  const leadForm = await metaPost(`/${actId}/leadgen_forms`, token, leadFormBody);
+  const leadFormId = leadForm.id;
+  console.log("[Meta] Step 3 — Lead form created:", leadFormId);
+
+  // 4. Create ad creative — attach lead form via object_story_spec
   const linkData: Record<string, unknown> = {
     link: params.websiteUrl,
     message: params.primaryText,
@@ -251,8 +253,9 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     description: params.description,
     call_to_action: {
       type: params.callToAction,
-      value: { link: params.websiteUrl },
+      value: { lead_gen_form_id: leadFormId },
     },
+    lead_gen_form_id: leadFormId,
   };
   if (params.imageUrl) {
     linkData.picture = params.imageUrl;
@@ -284,8 +287,9 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   return {
     campaignId,
     adSetId,
+    leadFormId,
     adId: ad.id,
     status: "PAUSED",
-    message: "Campaign created successfully (paused). Enable it in Meta Ads Manager when ready.",
+    message: "Lead campaign created (paused). Leads will be captured via Instant Form inside Facebook. Enable in Ads Manager when ready.",
   };
 }

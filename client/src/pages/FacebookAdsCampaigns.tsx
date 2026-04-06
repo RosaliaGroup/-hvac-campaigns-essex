@@ -151,14 +151,11 @@ export default function FacebookAdsCampaigns() {
       name: confirmCampaign.name,
       objective: confirmCampaign.objective,
       dailyBudget: confirmCampaign.dailyBudget,
-      ageMin: confirmCampaign.ageMin,
-      ageMax: confirmCampaign.ageMax,
       headline: confirmCampaign.headline,
       primaryText: confirmCampaign.primaryText,
       description: confirmCampaign.description,
       callToAction: confirmCampaign.callToAction,
       websiteUrl: confirmCampaign.websiteUrl,
-      interests: confirmCampaign.interests,
     });
   }
 

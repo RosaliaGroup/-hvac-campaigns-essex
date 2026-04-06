@@ -134,24 +134,18 @@ export const metaAdsRouter = router({
     return { campaigns };
   }),
 
-  // Create a campaign
+  // Create a lead generation campaign (OUTCOME_LEADS with Instant Form)
   createCampaign: protectedProcedure
     .input(
       z.object({
         name: z.string(),
         objective: z.enum(["OUTCOME_LEADS", "OUTCOME_TRAFFIC", "OUTCOME_AWARENESS"]),
         dailyBudget: z.number().min(1), // USD
-        ageMin: z.number().default(30),
-        ageMax: z.number().default(65),
         headline: z.string(),
         primaryText: z.string(),
         description: z.string(),
         callToAction: z.string().default("LEARN_MORE"),
         websiteUrl: z.string().url(),
-        interests: z
-          .array(z.object({ id: z.string(), name: z.string() }))
-          .optional()
-          .default([]),
       })
     )
     .mutation(async ({ input }) => {
@@ -168,9 +162,6 @@ export const metaAdsRouter = router({
         dailyBudgetCents: Math.round(input.dailyBudget * 100),
         adAccountId,
         pageId,
-        geoLocationCities: [
-          { key: "2418779", radius: 25, distance_unit: "mile" }, // Newark NJ → covers Essex County
-        ],
       });
       return result;
     }),

@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { startScheduledSmsProcessor } from "../services/scheduledSms";
 import { registerSmsWebhookRoutes } from "../services/smsWebhook";
+import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -39,6 +40,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // SMS reply webhook (TextBelt STOP opt-out handler)
   registerSmsWebhookRoutes(app);
+  // Meta Lead Gen webhook (Instant Form submissions)
+  registerMetaLeadWebhookRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",

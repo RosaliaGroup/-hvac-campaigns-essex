@@ -242,14 +242,11 @@ export default function FacebookAdsCampaigns() {
       name: confirmCampaign.name,
       objective: confirmCampaign.objective,
       dailyBudget: confirmCampaign.dailyBudget,
-      ageMin: confirmCampaign.ageMin,
-      ageMax: confirmCampaign.ageMax,
       headline: confirmCampaign.headline,
       primaryText: confirmCampaign.primaryText,
       description: confirmCampaign.description,
       callToAction: confirmCampaign.callToAction,
       websiteUrl: confirmCampaign.websiteUrl,
-      interests: confirmCampaign.interests,
     });
   }
 
@@ -267,14 +264,11 @@ export default function FacebookAdsCampaigns() {
           name: camp.name,
           objective: camp.objective,
           dailyBudget: camp.dailyBudget,
-          ageMin: camp.ageMin,
-          ageMax: camp.ageMax,
           headline: camp.headline,
           primaryText: camp.primaryText,
           description: camp.description,
           callToAction: camp.callToAction,
           websiteUrl: camp.websiteUrl,
-          interests: camp.interests,
         });
       } catch {
         // Error toast already shown by onError
