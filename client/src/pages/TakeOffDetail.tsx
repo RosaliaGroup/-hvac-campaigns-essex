@@ -191,11 +191,16 @@ const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", curren
 
 export default function TakeOffDetail() {
   const params = useParams<{ id: string }>();
-  const projectId = parseInt(params.id || "0");
-  const [, setLocation] = useLocation();
+  // Fallback: extract ID from URL path if useParams fails
+  const [location] = useLocation();
+  const urlMatch = location.match(/\/takeoff-ai\/(\d+)/);
+  const projectId = parseInt(params.id || urlMatch?.[1] || "0");
+  const [, setLocation2] = useLocation();
+  const setLocation = setLocation2;
+  console.log("[TakeOffDetail] params:", params, "projectId:", projectId, "location:", location);
 
   // Data from DB
-  const { data: projectData, isLoading: loadingProject, refetch } = trpc.takeoffs.getById.useQuery({ id: projectId });
+  const { data: projectData, isLoading: loadingProject, refetch } = trpc.takeoffs.getById.useQuery({ id: projectId }, { enabled: projectId > 0 });
   const saveMutation = trpc.takeoffs.saveItems.useMutation();
   const updateMutation = trpc.takeoffs.update.useMutation();
   const veRunMutation = trpc.takeoffs.runVE.useMutation();
@@ -245,11 +250,13 @@ export default function TakeOffDetail() {
   }, []);
 
   // Load project data from DB
+  console.log("[TakeOffDetail] render — projectId:", projectId, "loadingProject:", loadingProject, "projectData:", projectData ? "loaded" : "null", "items:", projectData?.items?.length, "initialized:", initializedRef.current);
+
   useEffect(() => {
     if (!projectData || initializedRef.current) return;
     initializedRef.current = true;
     console.log("[Mount] items from DB:", projectData.items?.length, "rows in state:", rows.length);
-    console.log("[Mount] auto-analyze triggered? false — analysis only runs on button click");
+    console.log("[Mount] project:", projectData.project?.name, "id:", projectData.project?.id);
 
     const dbRows: TakeOffRow[] = projectData.items.map((i) => ({
       id: uid(),
@@ -295,12 +302,7 @@ export default function TakeOffDetail() {
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [rows, dirty]);
 
-  // Auto-extract pages when a PDF is uploaded
-  useEffect(() => {
-    if (files.length > 0 && extractedPages.length === 0 && !extracting && analysisStep === "idle") {
-      runExtraction();
-    }
-  }, [files.length]);
+  // Auto-extract is handled after runExtraction is defined (see below)
 
   // Save numUnits to project notes when it changes
   useEffect(() => {
@@ -405,6 +407,14 @@ export default function TakeOffDetail() {
   const togglePage = (pageNum: number) => {
     setExtractedPages((prev) => prev.map((p) => p.pageNum === pageNum ? { ...p, selected: !p.selected } : p));
   };
+
+  // Auto-extract pages when a PDF is uploaded (must be after runExtraction definition)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (files.length > 0 && extractedPages.length === 0 && !extracting && analysisStep === "idle") {
+      runExtraction();
+    }
+  }, [files.length]);
 
   // ── Helper: call Claude with retry ────────────────────────────────────────
   const callClaude = async (system: string, messages: any[]): Promise<string> => {
