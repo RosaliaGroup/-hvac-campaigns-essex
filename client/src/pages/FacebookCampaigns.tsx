@@ -258,6 +258,7 @@ export default function FacebookAdsCampaigns() {
       toast.error("Connect Meta Ads first.");
       return;
     }
+    if (launchingAll) return; // guard against double-click
     setLaunchingAll(true);
     const unlaunched = CAMPAIGNS.filter((c) => !launched[c.id]);
     for (const camp of unlaunched) {
