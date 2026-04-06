@@ -230,13 +230,15 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   }
 
   // 3. Create ad set (budget + bid_strategy are on the campaign, not here)
+  // Disable Advantage Audience so we keep manual targeting (age, geo, interests).
+  // advantage_audience: 0 = manual targeting, 1 = Meta-managed (conflicts with interests).
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
     optimization_goal: params.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "LINK_CLICKS",
     billing_event: "IMPRESSIONS",
     targeting,
-    targeting_automation: { advantage_audience: 1 },
+    targeting_automation: { advantage_audience: 0 },
     promoted_object: { page_id: params.pageId },
     destination_type: "WEBSITE",
     status: "PAUSED",
