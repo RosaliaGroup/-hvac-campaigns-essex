@@ -277,6 +277,12 @@ export default function TakeOffDetail() {
     setFindings(dbFindings);
     setVeSuggestions(projectData.veSuggestions || []);
     if (dbRows.length > 0) setLastSaved(new Date(projectData.project.updatedAt));
+
+    // Load numUnits from project notes (stored as JSON)
+    try {
+      const meta = JSON.parse(projectData.project.notes || "{}");
+      if (meta.numUnits) setNumUnits(meta.numUnits);
+    } catch {}
   }, [projectData]);
 
   // Auto-save debounced
@@ -288,6 +294,26 @@ export default function TakeOffDetail() {
     }, 2000);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
   }, [rows, dirty]);
+
+  // Auto-extract pages when a PDF is uploaded
+  useEffect(() => {
+    if (files.length > 0 && extractedPages.length === 0 && !extracting && analysisStep === "idle") {
+      runExtraction();
+    }
+  }, [files.length]);
+
+  // Save numUnits to project notes when it changes
+  useEffect(() => {
+    if (!projectData || numUnits === 0) return;
+    const timer = setTimeout(() => {
+      const existingNotes = projectData.project.notes || "{}";
+      let meta: Record<string, any> = {};
+      try { meta = JSON.parse(existingNotes); } catch {}
+      meta.numUnits = numUnits;
+      updateMutation.mutate({ id: projectId, notes: JSON.stringify(meta) });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [numUnits]);
 
   const log = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString();
