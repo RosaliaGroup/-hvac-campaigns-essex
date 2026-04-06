@@ -236,6 +236,7 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     optimization_goal: params.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "LINK_CLICKS",
     billing_event: "IMPRESSIONS",
     targeting,
+    targeting_automation: { advantage_audience: 1 },
     status: "PAUSED",
   };
 
