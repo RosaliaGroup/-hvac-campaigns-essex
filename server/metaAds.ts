@@ -198,6 +198,7 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     special_ad_categories: ["NONE"],
     bid_strategy: "LOWEST_COST_WITHOUT_CAP",
     is_adset_budget_sharing_enabled: false,
+    daily_budget: String(params.dailyBudgetCents),
   };
   console.log("[Meta] Step 1 — Creating campaign with:", JSON.stringify(campaignBody));
   const campaign = await metaPost(`/${actId}/campaigns`, token, campaignBody);
@@ -234,7 +235,6 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     campaign_id: campaignId,
     optimization_goal: params.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "LINK_CLICKS",
     billing_event: "IMPRESSIONS",
-    daily_budget: String(params.dailyBudgetCents),
     targeting,
     status: "PAUSED",
   };
