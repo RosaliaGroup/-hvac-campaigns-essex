@@ -196,7 +196,7 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     objective: params.objective,
     status: "PAUSED",
     special_ad_categories: ["NONE"],
-    bid_strategy: "LOWEST_COST_WITHOUT_BID_CAP",
+    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
   };
   console.log("[Meta] Step 1 — Creating campaign with:", JSON.stringify(campaignBody));
   const campaign = await metaPost(`/${actId}/campaigns`, token, campaignBody);
