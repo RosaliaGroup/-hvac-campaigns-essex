@@ -197,7 +197,7 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   // LINK_CLICKS drives traffic to landing page where users fill out the form.
   const campaignBody = {
     name: params.name,
-    objective: "LINK_CLICKS",
+    objective: "OUTCOME_TRAFFIC",
     status: "PAUSED",
     special_ad_categories: ["NONE"],
     is_adset_budget_sharing_enabled: true,
