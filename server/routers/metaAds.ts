@@ -8,7 +8,7 @@ import {
   getCampaignPerformance,
   createLeadCampaign,
 } from "../metaAds";
-import { saveAiVaCredentials, getAiVaCredentials } from "../db";
+import { saveAiVaCredentials, getAiVaCredentials, getAiVaCredentialTimestamp } from "../db";
 import { ENV } from "../_core/env";
 
 const SERVICE_KEY = "meta_ads";
@@ -47,7 +47,10 @@ export const metaAdsRouter = router({
     .mutation(async ({ input }) => {
       const shortToken = await exchangeCodeForToken(input.code, input.redirectUri);
       const longToken = await getLongLivedToken(shortToken.access_token);
-      await saveAiVaCredentials(SERVICE_KEY, { access_token: longToken });
+      await saveAiVaCredentials(SERVICE_KEY, {
+        access_token: longToken,
+        token_created_at: new Date().toISOString(),
+      });
       return { success: true, message: "Meta Ads connected successfully!" };
     }),
 
@@ -67,6 +70,18 @@ export const metaAdsRouter = router({
     const token = await getToken();
     const adAccountId = await getAdAccountId();
     const pageId = await getPageId();
+
+    // Get token age for expiry warning (Meta long-lived tokens last ~60 days)
+    let tokenCreatedAt: string | null = null;
+    const creds = await getAiVaCredentials(SERVICE_KEY);
+    if (creds["token_created_at"]) {
+      tokenCreatedAt = creds["token_created_at"];
+    } else if (token) {
+      // Fallback: check DB row timestamp
+      const ts = await getAiVaCredentialTimestamp(SERVICE_KEY, "access_token");
+      if (ts) tokenCreatedAt = ts.toISOString();
+    }
+
     return {
       connected: !!token && !!adAccountId && !!pageId,
       hasToken: !!token,
@@ -74,6 +89,7 @@ export const metaAdsRouter = router({
       hasPageId: !!pageId,
       adAccountId: adAccountId ?? null,
       pageId: pageId ?? null,
+      tokenCreatedAt,
     };
   }),
 

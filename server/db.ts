@@ -288,18 +288,19 @@ export async function saveAiVaCredentials(service: string, credentials: Record<s
     throw new Error("Database not available");
   }
 
-  // Delete existing credentials for this service
-  await db.delete(aiVaCredentials).where(eq(aiVaCredentials.service, service));
-
-  // Insert new credentials
-  const credentialEntries: InsertAiVaCredential[] = Object.entries(credentials).map(([key, value]) => ({
-    service,
-    credentialKey: key,
-    credentialValue: value, // TODO: Encrypt this value before storing
-    isActive: 1,
-  }));
-
-  await db.insert(aiVaCredentials).values(credentialEntries);
+  // Per-key upsert: only delete+insert the specific keys being saved,
+  // so saving ad_account_id won't destroy an existing access_token.
+  for (const [key, value] of Object.entries(credentials)) {
+    await db.delete(aiVaCredentials).where(
+      and(eq(aiVaCredentials.service, service), eq(aiVaCredentials.credentialKey, key))
+    );
+    await db.insert(aiVaCredentials).values({
+      service,
+      credentialKey: key,
+      credentialValue: value,
+      isActive: 1,
+    });
+  }
 }
 
 export async function getAiVaCredentials(service: string) {
@@ -320,6 +321,18 @@ export async function getAiVaCredentials(service: string) {
   });
 
   return credentials;
+}
+
+export async function getAiVaCredentialTimestamp(service: string, key: string): Promise<Date | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const results = await db
+    .select({ createdAt: aiVaCredentials.createdAt })
+    .from(aiVaCredentials)
+    .where(and(eq(aiVaCredentials.service, service), eq(aiVaCredentials.credentialKey, key)));
+
+  return results[0]?.createdAt ?? null;
 }
 
 /**

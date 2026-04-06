@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import { toast } from "sonner";
 import {
   Rocket, DollarSign, MapPin, Users, CheckCircle2, AlertCircle,
   Loader2, ExternalLink, RefreshCw, Eye, ChevronDown, ChevronUp,
-  Info, Settings, Facebook,
+  Info, Settings, Facebook, LogIn, Clock,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -155,9 +156,36 @@ export default function FacebookAdsCampaigns() {
   const [confirmCampaign, setConfirmCampaign] = useState<FbCampaignDef | null>(null);
   const [launched, setLaunched] = useState<Record<string, { campaignId: string }>>({});
   const [showSetup, setShowSetup] = useState(false);
+  const [setupStep, setSetupStep] = useState<1 | 2>(1); // 1=OAuth, 2=Ad Account+Page ID
   const [adAccountId, setAdAccountId] = useState("");
   const [pageId, setPageId] = useState("");
   const [liveExpanded, setLiveExpanded] = useState<string | null>(null);
+  const [connectingOAuth, setConnectingOAuth] = useState(false);
+  const [, setLocation] = useLocation();
+  const searchString = useSearch();
+
+  // Handle ?connected=1 or ?error= from OAuth callback redirect
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    if (params.get("connected") === "1") {
+      toast.success("Meta Ads connected successfully!", {
+        description: "Now enter your Ad Account ID and Page ID to finish setup.",
+        duration: 6000,
+      });
+      setShowSetup(true);
+      setSetupStep(2);
+      // Clean the URL
+      setLocation("/facebook-campaigns", { replace: true });
+    } else if (params.get("error")) {
+      toast.error("Meta Ads connection failed", {
+        description: params.get("error") === "missing_code"
+          ? "No authorization code received from Facebook."
+          : "Authentication failed. Please try again.",
+        duration: 8000,
+      });
+      setLocation("/facebook-campaigns", { replace: true });
+    }
+  }, [searchString, setLocation]);
 
   const { data: connStatus, isLoading: connLoading, refetch: refetchConn } =
     trpc.metaAds.getConnectionStatus.useQuery();
@@ -216,6 +244,33 @@ export default function FacebookAdsCampaigns() {
   const totalBudget = CAMPAIGNS.reduce((s, c) => s + c.dailyBudget, 0);
   const isConnected = connStatus?.connected === true;
 
+  // Token age for expiry warning (Meta tokens last ~60 days)
+  const tokenAgeDays = connStatus?.tokenCreatedAt
+    ? Math.floor((Date.now() - new Date(connStatus.tokenCreatedAt).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+  const tokenExpiringSoon = tokenAgeDays !== null && tokenAgeDays >= 50;
+
+  const authUrlQuery = trpc.metaAds.getAuthUrl.useQuery(
+    { redirectUri: `${window.location.origin}/api/oauth/meta/callback` },
+    { enabled: false }
+  );
+
+  async function handleConnectMeta() {
+    setConnectingOAuth(true);
+    try {
+      const result = await authUrlQuery.refetch();
+      if (result.data?.url) {
+        window.location.href = result.data.url;
+      } else {
+        toast.error("Could not generate Facebook login URL. Check META_APP_ID is configured.");
+        setConnectingOAuth(false);
+      }
+    } catch {
+      toast.error("Failed to get Meta authorization URL.");
+      setConnectingOAuth(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f8f9fc]">
       <InternalNav />
@@ -251,7 +306,10 @@ export default function FacebookAdsCampaigns() {
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
-                onClick={() => setShowSetup(true)}
+                onClick={() => {
+                  setSetupStep(connStatus?.hasToken ? 2 : 1);
+                  setShowSetup(true);
+                }}
               >
                 <Settings className="h-4 w-4" /> Configure
               </Button>
@@ -274,39 +332,36 @@ export default function FacebookAdsCampaigns() {
             <div className="text-sm">
               <p className="font-semibold text-blue-900">Connect your Meta Ads account to launch campaigns</p>
               <p className="text-blue-800 mt-1">
-                You need a <strong>Meta access token</strong>, your <strong>Ad Account ID</strong>, and your{" "}
-                <strong>Facebook Page ID</strong>. Click <strong>Configure</strong> above to enter these.
+                Click <strong>Configure</strong> above to connect with Facebook and enter your Ad Account ID and Page ID.
               </p>
-              <ol className="mt-2 space-y-1 text-blue-800 list-decimal list-inside">
-                <li>
-                  Get a long-lived access token from{" "}
-                  <a
-                    href="https://developers.facebook.com/tools/explorer/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline font-medium"
-                  >
-                    Meta Graph API Explorer
-                  </a>{" "}
-                  with <code className="bg-blue-100 px-1 rounded text-xs">ads_management</code> permission
-                </li>
-                <li>
-                  Find your Ad Account ID in{" "}
-                  <a
-                    href="https://adsmanager.facebook.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline font-medium"
-                  >
-                    Meta Ads Manager
-                  </a>{" "}
-                  (format: <code className="bg-blue-100 px-1 rounded text-xs">act_XXXXXXXXXX</code> — enter just the numbers)
-                </li>
-                <li>
-                  Find your Page ID in your Facebook Page settings under <strong>About → Page ID</strong>
-                </li>
-              </ol>
             </div>
+          </div>
+        )}
+
+        {/* Token expiry warning */}
+        {!connLoading && isConnected && tokenExpiringSoon && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
+            <Clock className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm flex-1">
+              <p className="font-semibold text-amber-900">
+                Your Meta token expires soon ({60 - (tokenAgeDays ?? 0)} days remaining)
+              </p>
+              <p className="text-amber-800 mt-1">
+                Meta access tokens expire after 60 days. Reconnect now to avoid interruption.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 flex-shrink-0"
+              onClick={handleConnectMeta}
+              disabled={connectingOAuth}
+            >
+              {connectingOAuth ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting…</>
+              ) : (
+                <><RefreshCw className="h-4 w-4" /> Reconnect Now</>
+              )}
+            </Button>
           </div>
         )}
 
@@ -673,64 +728,136 @@ export default function FacebookAdsCampaigns() {
       </div>
 
       {/* Setup / Configure Dialog */}
-      <Dialog open={showSetup} onOpenChange={setShowSetup}>
+      <Dialog open={showSetup} onOpenChange={(open) => {
+        setShowSetup(open);
+        if (!open) { setSetupStep(connStatus?.hasToken ? 2 : 1); }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Facebook className="h-5 w-5 text-[#1877F2]" />
-              Configure Meta Ads Connection
+              {setupStep === 1 ? "Connect Meta Ads" : "Configure Ad Account"}
             </DialogTitle>
             <DialogDescription>
-              Enter your Meta Ads credentials. These are stored securely on the server.
+              {setupStep === 1
+                ? "Sign in with Facebook to authorize ad management."
+                : "Enter your Ad Account ID and Page ID to finish setup."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="adAccountId">Ad Account ID</Label>
-              <Input
-                id="adAccountId"
-                placeholder="e.g. 123456789012345"
-                value={adAccountId}
-                onChange={(e) => setAdAccountId(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Found in Meta Ads Manager → top-left account selector. Enter numbers only (no "act_" prefix).
-              </p>
+
+          {/* Step indicator */}
+          <div className="flex items-center gap-2 py-1">
+            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+              connStatus?.hasToken
+                ? "bg-emerald-100 text-emerald-700"
+                : setupStep === 1
+                  ? "bg-[#1877F2] text-white"
+                  : "bg-slate-200 text-slate-500"
+            }`}>
+              {connStatus?.hasToken ? <CheckCircle2 className="h-3.5 w-3.5" /> : "1"}
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pageId">Facebook Page ID</Label>
-              <Input
-                id="pageId"
-                placeholder="e.g. 987654321"
-                value={pageId}
-                onChange={(e) => setPageId(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Found in your Facebook Page → About → Page ID.
-              </p>
+            <span className={`text-xs ${setupStep === 1 ? "font-semibold" : "text-muted-foreground"}`}>
+              Connect Facebook
+            </span>
+            <div className="flex-1 h-px bg-slate-200" />
+            <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+              connStatus?.hasAdAccount && connStatus?.hasPageId
+                ? "bg-emerald-100 text-emerald-700"
+                : setupStep === 2
+                  ? "bg-[#1877F2] text-white"
+                  : "bg-slate-200 text-slate-500"
+            }`}>
+              {connStatus?.hasAdAccount && connStatus?.hasPageId ? <CheckCircle2 className="h-3.5 w-3.5" /> : "2"}
             </div>
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-              <strong>Access Token:</strong> A long-lived token with <code>ads_management</code> permission
-              must be set by your administrator via the server environment variable{" "}
-              <code>META_ACCESS_TOKEN</code>. If you have the token, contact your admin to add it.
-            </div>
+            <span className={`text-xs ${setupStep === 2 ? "font-semibold" : "text-muted-foreground"}`}>
+              Ad Account & Page
+            </span>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setShowSetup(false)}>
-              Cancel
-            </Button>
-            <Button
-              className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white"
-              onClick={() => saveConfig.mutate({ adAccountId, pageId })}
-              disabled={!adAccountId || !pageId || saveConfig.isPending}
-            >
-              {saveConfig.isPending ? (
-                <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Saving…</>
+
+          {setupStep === 1 ? (
+            <div className="space-y-4 py-2">
+              {connStatus?.hasToken ? (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                  <span>Facebook account connected{tokenAgeDays !== null ? ` (${tokenAgeDays} days ago)` : ""}.</span>
+                </div>
               ) : (
-                "Save Configuration"
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Click below to sign in with Facebook and authorize Mechanical Enterprise to manage ads.
+                    You'll be redirected back here automatically.
+                  </p>
+                  <Button
+                    className="w-full bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-2"
+                    onClick={handleConnectMeta}
+                    disabled={connectingOAuth}
+                  >
+                    {connectingOAuth ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting to Facebook…</>
+                    ) : (
+                      <><LogIn className="h-4 w-4" /> Connect with Facebook</>
+                    )}
+                  </Button>
+                </div>
               )}
-            </Button>
-          </DialogFooter>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setShowSetup(false)}>
+                  Cancel
+                </Button>
+                {connStatus?.hasToken && (
+                  <Button
+                    className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white"
+                    onClick={() => setSetupStep(2)}
+                  >
+                    Next
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="adAccountId">Ad Account ID</Label>
+                <Input
+                  id="adAccountId"
+                  placeholder="e.g. 123456789012345"
+                  value={adAccountId}
+                  onChange={(e) => setAdAccountId(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Found in Meta Ads Manager → top-left account selector. Enter numbers only (no "act_" prefix).
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pageId">Facebook Page ID</Label>
+                <Input
+                  id="pageId"
+                  placeholder="e.g. 987654321"
+                  value={pageId}
+                  onChange={(e) => setPageId(e.target.value)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Found in your Facebook Page → About → Page ID.
+                </p>
+              </div>
+              <DialogFooter className="gap-2">
+                <Button variant="outline" onClick={() => setSetupStep(1)}>
+                  Back
+                </Button>
+                <Button
+                  className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white"
+                  onClick={() => saveConfig.mutate({ adAccountId, pageId })}
+                  disabled={!adAccountId || !pageId || saveConfig.isPending}
+                >
+                  {saveConfig.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin mr-1.5" /> Saving…</>
+                  ) : (
+                    "Save Configuration"
+                  )}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 
