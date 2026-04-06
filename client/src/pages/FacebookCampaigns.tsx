@@ -117,7 +117,7 @@ const CAMPAIGNS: FbCampaignDef[] = [
     dailyBudget: 2,
     color: "bg-orange-500",
     ageMin: 35,
-    ageMax: 70,
+    ageMax: 65,
     headline: "Researching PSE&G Rebates? We Handle the Whole Application.",
     primaryText:
       "Most people visit PSE&G's website, get overwhelmed, and never claim their rebate. We are a certified PSE&G contractor. We assess your home free and file every form. Up to $20,000 combined.",
