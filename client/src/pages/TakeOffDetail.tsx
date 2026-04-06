@@ -252,39 +252,40 @@ export default function TakeOffDetail() {
   // Load project data from DB
   useEffect(() => {
     if (!projectData) return;
-    // Only load once — skip if already initialized with data
-    if (initializedRef.current && rows.length > 0) return;
-    initializedRef.current = true;
+    console.log("[Load] raw projectData:", JSON.stringify(projectData).slice(0, 200));
 
-    console.log("[Load] raw projectData keys:", Object.keys(projectData));
-    console.log("[Load] project:", projectData.project?.name, "id:", projectData.project?.id);
-
-    // Robust item loading — try multiple field names
     const items: any[] = projectData.items || (projectData as any).takeoffItems || [];
     console.log("[Load] items found:", items.length);
 
     if (items.length > 0) {
-      const mapped: TakeOffRow[] = items.map((item: any) => ({
-        id: String(item.id || uid()),
-        category: (CATEGORIES.includes(item.category as Category) ? item.category : "OTHER") as Category,
-        description: item.description || "",
-        tag: item.tag || "",
-        qty: Number(item.qty) || 0,
-        unit: item.unit || "EA",
-        vendor: item.vendor || "",
-        model: item.model || "",
-        specs: item.specs || "",
-        source: item.source || "",
-        confidence: Number(item.confidence) || 60,
-        unitPrice: Number(item.unitPrice || item.unit_price) || 0,
-        notes: item.notes || "",
-      }));
-      console.log("[Load] mapped rows:", mapped.length, "first:", mapped[0]?.description);
-      setRows(mapped);
-      setLastSaved(new Date(projectData.project.updatedAt));
+      // Only skip if we already loaded these exact items (prevents overwriting
+      // in-progress edits when React Query background-refetches)
+      if (initializedRef.current && rows.length > 0) {
+        console.log("[Load] skipping — already have", rows.length, "rows");
+      } else {
+        const mapped: TakeOffRow[] = items.map((item: any) => ({
+          id: String(item.id || uid()),
+          category: (CATEGORIES.includes(item.category as Category) ? item.category : "OTHER") as Category,
+          description: item.description || "",
+          tag: item.tag || "",
+          qty: Number(item.qty) || 0,
+          unit: item.unit || "EA",
+          vendor: item.vendor || "",
+          model: item.model || "",
+          specs: item.specs || "",
+          source: item.source || "",
+          confidence: Number(item.confidence) || 60,
+          unitPrice: Number(item.unitPrice || item.unit_price) || 0,
+          notes: item.notes || "",
+        }));
+        console.log("[Load] mapped rows:", mapped.length, "first:", mapped[0]);
+        setRows(mapped);
+        setLastSaved(new Date(projectData.project.updatedAt));
+        initializedRef.current = true;
+      }
     }
 
-    // Load findings
+    // Always load findings and VE suggestions (these aren't user-editable inline)
     const dbFindings: Finding[] = (projectData.findings || []).map((f: any) => ({
       id: uid(),
       severity: (f.type === "warning" ? "warning" : f.type === "alert" ? "error" : "info") as Finding["severity"],
@@ -676,6 +677,7 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
       if (result.cached) log("VE suggestions loaded from cache.");
       else log(`Generated ${result.suggestions.length} VE suggestions.`);
     } catch (err: any) {
+      console.error("[VE] Error:", err);
       log(`VE error: ${err.message}`);
     } finally {
       setVeRunning(false);
