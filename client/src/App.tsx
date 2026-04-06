@@ -27,6 +27,7 @@ import AIScriptManager from "./pages/AIScriptManager";
 import AdminPortal from "./pages/AdminPortal";
 import GoogleAdsCampaigns from "./pages/GoogleAdsCampaigns";
 import FacebookCampaigns from "./pages/FacebookCampaigns";
+import FacebookAdsCampaigns from "./pages/FacebookAdsCampaigns";
 import EmailSMSCampaigns from "./pages/EmailSMSCampaigns";
 import SmsCampaigns from "./pages/SmsCampaigns";
 import CampaignGenerator from "./pages/CampaignGenerator";
@@ -257,6 +258,7 @@ function Router() {
       <Route path={"/campaign-performance"} component={protect(CampaignPerformance)} />
       <Route path={"/google-ads-campaigns"} component={protect(GoogleAdsCampaigns)} />
       <Route path={"/facebook-campaigns"} component={protect(FacebookCampaigns)} />
+      <Route path={"/facebook-ads-campaigns"} component={protect(FacebookAdsCampaigns)} />
       <Route path={"/email-sms-campaigns"} component={protect(EmailSMSCampaigns)} />
       <Route path={"/sms-campaigns"} component={protect(SmsCampaigns)} />
       <Route path={"/campaign-generator"} component={protect(CampaignGenerator)} />
