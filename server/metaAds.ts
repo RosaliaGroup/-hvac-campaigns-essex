@@ -38,9 +38,14 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
   }
 
   const url = `${META_BASE}${path}`;
-  const debugEntries: Record<string, string> = {};
-  formData.forEach((v, k) => { if (k !== "access_token") debugEntries[k] = v; });
-  console.log(`[Meta API] POST ${url}`, debugEntries);
+
+  // Detailed debug logging — show every param being sent
+  const debugBody: Record<string, string> = {};
+  formData.forEach((v, k) => {
+    debugBody[k] = k === "access_token" ? `TOKEN(${v.length} chars)` : v;
+  });
+  console.log("[Meta API DEBUG] Endpoint:", url);
+  console.log("[Meta API DEBUG] Body params:", JSON.stringify(debugBody, null, 2));
 
   const res = await fetch(url, {
     method: "POST",
@@ -49,10 +54,12 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
   });
   const json = await res.json();
   if (json.error) {
-    console.error(`[Meta API] Error on POST ${path}:`, JSON.stringify(json.error, null, 2));
-    throw new Error(`Meta API error: ${json.error.message} (code ${json.error.code})`);
+    console.error("[Meta API ERROR] Full response:", JSON.stringify(json, null, 2));
+    const subcode = json.error.error_subcode ? ` subcode=${json.error.error_subcode}` : "";
+    const blame = json.error.error_user_title || json.error.error_user_msg || "";
+    throw new Error(`Meta API error: ${json.error.message} (code ${json.error.code}${subcode}) ${blame}`);
   }
-  console.log(`[Meta API] Success on POST ${path}:`, json);
+  console.log("[Meta API SUCCESS]", path, "→", JSON.stringify(json));
   return json;
 }
 
@@ -108,6 +115,17 @@ export async function getAdAccounts(token: string) {
     fields: "id,name,account_status,currency,timezone_name",
   });
   return data.data ?? [];
+}
+
+// ─── Test / Debug ────────────────────────────────────────────────────────────
+
+export async function testAdAccount(token: string, adAccountId: string) {
+  console.log("[Meta Test] Testing token + ad account:", adAccountId);
+  const data = await metaGet(`/act_${adAccountId}`, token, {
+    fields: "id,name,account_status,currency,timezone_name,owner",
+  });
+  console.log("[Meta Test] Result:", JSON.stringify(data, null, 2));
+  return data;
 }
 
 // ─── Performance ─────────────────────────────────────────────────────────────
@@ -173,16 +191,17 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   });
 
   // 1. Create campaign
-  // bid_strategy is set at campaign level, not ad set level
-  // special_ad_categories must be sent as JSON array string "["NONE"]" or omitted
-  const campaign = await metaPost(`/${actId}/campaigns`, token, {
+  const campaignBody = {
     name: params.name,
     objective: params.objective,
     status: "PAUSED",
     special_ad_categories: ["NONE"],
     bid_strategy: "LOWEST_COST_WITHOUT_BID_CAP",
-  });
+  };
+  console.log("[Meta] Step 1 — Creating campaign with:", JSON.stringify(campaignBody));
+  const campaign = await metaPost(`/${actId}/campaigns`, token, campaignBody);
   const campaignId = campaign.id;
+  console.log("[Meta] Step 1 — Campaign created:", campaignId);
 
   // 2. Build targeting spec
   const geoLocations: Record<string, unknown> = params.geoLocationZips?.length
@@ -219,8 +238,10 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     status: "PAUSED",
   };
 
+  console.log("[Meta] Step 3 — Creating ad set with:", JSON.stringify(adSetBody));
   const adSet = await metaPost(`/${actId}/adsets`, token, adSetBody);
   const adSetId = adSet.id;
+  console.log("[Meta] Step 3 — Ad set created:", adSetId);
 
   // 4. Create ad creative
   const linkData: Record<string, unknown> = {
@@ -237,22 +258,28 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     linkData.picture = params.imageUrl;
   }
 
-  const creative = await metaPost(`/${actId}/adcreatives`, token, {
+  const creativeBody = {
     name: `${params.name} — Creative`,
     object_story_spec: {
       page_id: params.pageId,
       link_data: linkData,
     },
-  });
+  };
+  console.log("[Meta] Step 4 — Creating ad creative with:", JSON.stringify(creativeBody));
+  const creative = await metaPost(`/${actId}/adcreatives`, token, creativeBody);
   const creativeId = creative.id;
+  console.log("[Meta] Step 4 — Creative created:", creativeId);
 
   // 5. Create ad
-  const ad = await metaPost(`/${actId}/ads`, token, {
+  const adBody = {
     name: `${params.name} — Ad`,
     adset_id: adSetId,
     creative: { creative_id: creativeId },
     status: "PAUSED",
-  });
+  };
+  console.log("[Meta] Step 5 — Creating ad with:", JSON.stringify(adBody));
+  const ad = await metaPost(`/${actId}/ads`, token, adBody);
+  console.log("[Meta] Step 5 — Ad created:", ad.id);
 
   return {
     campaignId,

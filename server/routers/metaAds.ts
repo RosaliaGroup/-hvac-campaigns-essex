@@ -7,6 +7,7 @@ import {
   getAdAccounts,
   getCampaignPerformance,
   createLeadCampaign,
+  testAdAccount,
 } from "../metaAds";
 import { saveAiVaCredentials, getAiVaCredentials, getAiVaCredentialTimestamp } from "../db";
 import { ENV } from "../_core/env";
@@ -91,6 +92,29 @@ export const metaAdsRouter = router({
       pageId: pageId ?? null,
       tokenCreatedAt,
     };
+  }),
+
+  // Test connection — verifies token + ad account are valid
+  testConnection: protectedProcedure.query(async () => {
+    const token = await getToken();
+    const adAccountId = await getAdAccountId();
+    if (!token) return { ok: false, error: "No access token found." };
+    if (!adAccountId) return { ok: false, error: "No ad account ID configured." };
+    try {
+      const account = await testAdAccount(token, adAccountId);
+      return {
+        ok: true,
+        account: {
+          id: account.id,
+          name: account.name,
+          status: account.account_status,
+          currency: account.currency,
+          timezone: account.timezone_name,
+        },
+      };
+    } catch (err: any) {
+      return { ok: false, error: err.message };
+    }
   }),
 
   // Get ad accounts linked to the token
