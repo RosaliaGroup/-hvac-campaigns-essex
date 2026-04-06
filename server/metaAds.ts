@@ -208,31 +208,23 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const campaignId = campaign.id;
   console.log("[Meta] Step 1 — Campaign created:", campaignId);
 
-  // 2. Build targeting — geo + age + interests
-  const targeting: Record<string, unknown> = {
-    geo_locations: {
-      countries: ["US"],
-      location_types: ["home"],
-    },
+  // 2. Build targeting — geo only, let Advantage+ audience handle the rest.
+  // Age/interest targeting conflicts with Advantage+ which Meta auto-enables
+  // for OUTCOME_TRAFFIC. Ad copy + landing page do the qualification instead.
+  const geoLocations: Record<string, unknown> = {
+    countries: ["US"],
+    location_types: ["home"],
   };
-  const safeAgeMin = Math.max(18, Math.min(params.ageMin ?? 18, 64));
-  const safeAgeMax = Math.min(65, Math.max(params.ageMax ?? 65, safeAgeMin + 1));
-  targeting.age_min = safeAgeMin;
-  targeting.age_max = safeAgeMax;
   if (params.geoLocationCities?.length) {
-    targeting.geo_locations = {
-      cities: params.geoLocationCities,
-      location_types: ["home"],
-    };
+    geoLocations.cities = params.geoLocationCities;
+    delete (geoLocations as any).countries;
   } else if (params.geoLocationZips?.length) {
-    targeting.geo_locations = {
-      zips: params.geoLocationZips.map((z) => ({ key: z, country: "US" })),
-      location_types: ["home"],
-    };
+    geoLocations.zips = params.geoLocationZips.map((z) => ({ key: z, country: "US" }));
+    delete (geoLocations as any).countries;
   }
-  if (params.interests?.length) {
-    targeting.flexible_spec = [{ interests: params.interests }];
-  }
+  const targeting: Record<string, unknown> = {
+    geo_locations: geoLocations,
+  };
 
   // 3. Create ad set — budget here, no targeting_automation needed for LINK_CLICKS
   const adSetBody: Record<string, unknown> = {
