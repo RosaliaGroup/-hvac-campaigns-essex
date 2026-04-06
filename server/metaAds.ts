@@ -192,53 +192,53 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     pageId: params.pageId,
   });
 
-  // 1. Create campaign
+  // 1. Create campaign — simplest possible structure
   const campaignBody = {
     name: params.name,
     objective: params.objective,
     status: "PAUSED",
     special_ad_categories: ["NONE"],
-    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
-    is_adset_budget_sharing_enabled: false,
-    daily_budget: String(params.dailyBudgetCents),
   };
   console.log("[Meta] Step 1 — Creating campaign with:", JSON.stringify(campaignBody));
   const campaign = await metaPost(`/${actId}/campaigns`, token, campaignBody);
   const campaignId = campaign.id;
   console.log("[Meta] Step 1 — Campaign created:", campaignId);
 
-  // 2. Build targeting spec
-  const geoLocations: Record<string, unknown> = params.geoLocationZips?.length
-    ? {
-        zips: params.geoLocationZips.map((z) => ({ key: z, country: "US" })),
-        location_types: ["home"],
-      }
-    : {
-        cities: params.geoLocationCities ?? [
-          { key: "2418779", radius: 25, distance_unit: "mile" }, // Newark NJ
-        ],
-        location_types: ["home"],
-      };
-
+  // 2. Build targeting — geo only for simplicity, add age + interests if present
   const targeting: Record<string, unknown> = {
-    age_min: params.ageMin,
-    age_max: params.ageMax,
-    geo_locations: geoLocations,
+    geo_locations: {
+      countries: ["US"],
+      location_types: ["home"],
+    },
   };
+  // Add age targeting
+  if (params.ageMin) targeting.age_min = params.ageMin;
+  if (params.ageMax) targeting.age_max = params.ageMax;
+  // Add geo refinement if city-level targeting provided
+  if (params.geoLocationCities?.length) {
+    targeting.geo_locations = {
+      cities: params.geoLocationCities,
+      location_types: ["home"],
+    };
+  } else if (params.geoLocationZips?.length) {
+    targeting.geo_locations = {
+      zips: params.geoLocationZips.map((z) => ({ key: z, country: "US" })),
+      location_types: ["home"],
+    };
+  }
+  // Add interests
   if (params.interests?.length) {
     targeting.flexible_spec = [{ interests: params.interests }];
   }
 
-  // 3. Create ad set (budget + bid_strategy are on the campaign, not here)
-  // Disable Advantage Audience so we keep manual targeting (age, geo, interests).
-  // advantage_audience: 0 = manual targeting, 1 = Meta-managed (conflicts with interests).
+  // 3. Create ad set — budget lives here, simplest form
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
     optimization_goal: params.objective === "OUTCOME_LEADS" ? "LEAD_GENERATION" : "LINK_CLICKS",
     billing_event: "IMPRESSIONS",
+    daily_budget: String(params.dailyBudgetCents),
     targeting,
-    targeting_automation: { advantage_audience: 0 },
     promoted_object: { page_id: params.pageId },
     destination_type: "WEBSITE",
     status: "PAUSED",
