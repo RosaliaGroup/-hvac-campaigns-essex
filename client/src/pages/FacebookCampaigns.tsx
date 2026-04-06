@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import {
   Rocket, DollarSign, MapPin, Users, CheckCircle2, AlertCircle,
   Loader2, ExternalLink, RefreshCw, Eye, ChevronDown, ChevronUp,
-  Info, Settings, Facebook, LogIn, Clock,
+  Info, Settings, Facebook, LogIn, Clock, Target, TrendingUp, Building2, Star,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -33,134 +33,147 @@ interface FbCampaignDef {
   websiteUrl: string;
   interests: Array<{ id: string; name: string }>;
   audienceSummary: string;
+  recommended?: boolean;
+  estimatedCpl: string;
+  projectedLeads: string;
 }
-
-// Campaigns already created in Meta Ads Manager — these are the live IDs
-const LIVE_CAMPAIGNS = [
-  {
-    id: "rebate-hunter",
-    name: "ME — Rebate Hunter | Essex County",
-    tagline: "Homeowners who qualify for NJ heat pump rebates",
-    dailyBudget: 18,
-    color: "bg-emerald-500",
-    campaignId: "120240217183390786",
-    adSetId: "120240217183700786",
-    adId: "120240217183950786",
-    headline: "Up to $16,000 in NJ Rebates Available",
-    primaryText: "Essex County homeowners: Get up to $16K in NJ Clean Energy rebates for heat pump installation. Free estimate. WMBE certified. Call Mechanical Enterprise today.",
-    cta: "LEARN_MORE",
-    url: "https://mechanicalenterprise.com",
-    audienceSummary: "Ages 25–65 · Essex County NJ (40 zip codes) · Lowest cost bidding",
-  },
-  {
-    id: "oil-replacement",
-    name: "ME — Oil Replacement | Essex County",
-    tagline: "Oil heat homeowners ready to switch to a heat pump",
-    dailyBudget: 14,
-    color: "bg-orange-500",
-    campaignId: "120240217184130786",
-    adSetId: "120240217184440786",
-    adId: "120240217184690786",
-    headline: "Replace Your Oil Furnace — Save $3,000+/Year",
-    primaryText: "Switch from oil to a heat pump and save thousands annually. NJ rebates up to $16K available. Essex County HVAC experts. Free consultation.",
-    cta: "GET_QUOTE",
-    url: "https://mechanicalenterprise.com",
-    audienceSummary: "Ages 25–65 · Essex County NJ (40 zip codes) · Lowest cost bidding",
-  },
-  {
-    id: "hvac-replacement",
-    name: "ME — HVAC Replacement | Essex County",
-    tagline: "General HVAC replacement awareness in Essex County",
-    dailyBudget: 8,
-    color: "bg-blue-500",
-    campaignId: "120240217184860786",
-    adSetId: "120240217185180786",
-    adId: "120240217185460786",
-    headline: "New HVAC System — Essex County Specialists",
-    primaryText: "Mechanical Enterprise installs high-efficiency HVAC systems for Essex County homes and businesses. 20+ years experience. WMBE/SBE certified. Free estimate.",
-    cta: "GET_QUOTE",
-    url: "https://mechanicalenterprise.com",
-    audienceSummary: "Ages 25–65 · Essex County NJ (40 zip codes) · Lowest cost bidding",
-  },
-];
 
 const CAMPAIGNS: FbCampaignDef[] = [
   {
-    id: "rebate-hunter",
-    name: "ME — Rebate Hunter (FB)",
-    tagline: "Homeowners who qualify for NJ heat pump rebates",
+    id: "no-catch",
+    name: "ME — No Catch | NJ Homeowners",
+    tagline: "High-trust PSE&G rebate awareness — zero friction CTA",
     objective: "OUTCOME_LEADS",
-    dailyBudget: 18,
+    dailyBudget: 5,
     color: "bg-emerald-500",
-    ageMin: 30,
+    ageMin: 35,
     ageMax: 65,
-    headline: "Up to $16,000 in NJ Heat Pump Rebates",
+    headline: "PSE&G Is Paying Up to $20,000 to Replace Your Furnace.",
     primaryText:
-      "Essex County homeowners — did you know you may qualify for up to $16,000 in NJ Clean Heat rebates? Mechanical Enterprise makes it easy. Get your free estimate in 2 minutes, no commitment required.",
-    description: "Free rebate estimate · No obligation · WMBE-certified local HVAC",
+      "No catch. No salesperson. Just a free 20-minute assessment that tells you exactly what your home qualifies for. We handle all the PSE&G paperwork — you don't fill out a single form.",
+    description: "Free assessment. Real numbers. Zero obligation.",
     callToAction: "LEARN_MORE",
     websiteUrl: "https://mechanicalenterprise.com/rebate-calculator",
     interests: [
       { id: "6003349442621", name: "Home improvement" },
       { id: "6003397425735", name: "Energy conservation" },
     ],
-    audienceSummary: "Homeowners 30–65 · Essex County NJ · Home improvement interests",
+    audienceSummary: "NJ statewide · Homeowners 35–65 · Home improvement interests",
+    recommended: true,
+    estimatedCpl: "$8–12",
+    projectedLeads: "12–18",
   },
   {
-    id: "oil-replacement",
-    name: "ME — Oil Replacement (FB)",
-    tagline: "Oil heat homeowners ready to switch to a heat pump",
+    id: "do-the-math",
+    name: "ME — Do The Math | NJ Homeowners",
+    tagline: "Cost comparison hook — gas vs heat pump savings",
     objective: "OUTCOME_LEADS",
-    dailyBudget: 14,
-    color: "bg-orange-500",
+    dailyBudget: 3,
+    color: "bg-blue-500",
+    ageMin: 38,
+    ageMax: 62,
+    headline: "Gas Bill $300/mo. Heat Pump Bill $80/mo.",
+    primaryText:
+      "PSE&G covers up to $18,000. We add up to $2,000 for qualifying clients. Monthly payment as low as $0 with on-bill repayment. Free 20-min assessment — no obligation.",
+    description: "See your actual savings. Free assessment.",
+    callToAction: "GET_QUOTE",
+    websiteUrl: "https://mechanicalenterprise.com/rebate-calculator",
+    interests: [
+      { id: "6003349442621", name: "Home improvement" },
+      { id: "6003397425735", name: "Energy conservation" },
+      { id: "6003107902433", name: "Saving money" },
+    ],
+    audienceSummary: "Essex, Hudson, Bergen, Passaic counties · 38–62 · Savings & utility interests",
+    estimatedCpl: "$10–15",
+    projectedLeads: "6–9",
+  },
+  {
+    id: "neighbors-did-it",
+    name: "ME — Neighbors Did It | Essex County",
+    tagline: "Social proof — real local family success story",
+    objective: "OUTCOME_LEADS",
+    dailyBudget: 2,
+    color: "bg-purple-500",
     ageMin: 35,
     ageMax: 65,
-    headline: "Ditch Oil Heat — Get Up to $16K Back",
+    headline: "West Orange Family Replaced Their Furnace for $0.",
     primaryText:
-      "Still heating with oil? Switch to a modern heat pump and qualify for up to $16,000 in NJ rebates. Mechanical Enterprise handles everything — installation, permits, and rebate paperwork. Serving Essex County.",
-    description: "0% financing available · Up to $16K in rebates · Local WMBE contractor",
-    callToAction: "GET_QUOTE",
-    websiteUrl: "https://mechanicalenterprise.com/oil-to-heat-pump",
+      "PSE&G covered $18,000. We added $2,000. They paid nothing and we handled every form. If your system is 8+ years old you likely qualify too. Free 20-minute assessment.",
+    description: "Free assessment. We handle the paperwork.",
+    callToAction: "LEARN_MORE",
+    websiteUrl: "https://mechanicalenterprise.com/rebate-calculator",
     interests: [
       { id: "6003349442621", name: "Home improvement" },
-      { id: "6003269798979", name: "Heating, ventilation, and air conditioning" },
     ],
-    audienceSummary: "Homeowners 35–65 · Essex County NJ · HVAC & home improvement interests",
+    audienceSummary: "Essex County only (Newark, Montclair, West Orange, Bloomfield, Maplewood, Livingston) · 35–65",
+    estimatedCpl: "$7–11",
+    projectedLeads: "5–8",
   },
   {
-    id: "hvac-replacement",
-    name: "ME — HVAC Replacement (FB)",
-    tagline: "General HVAC replacement awareness in Essex County",
+    id: "pseg-rebate-help",
+    name: "ME — PSE&G Rebate Help | NJ",
+    tagline: "Capture people researching PSE&G rebates right now",
     objective: "OUTCOME_LEADS",
-    dailyBudget: 8,
-    color: "bg-blue-500",
-    ageMin: 28,
-    ageMax: 65,
-    headline: "New HVAC System — Essex County NJ",
+    dailyBudget: 2,
+    color: "bg-orange-500",
+    ageMin: 35,
+    ageMax: 70,
+    headline: "Researching PSE&G Rebates? We Handle the Whole Application.",
     primaryText:
-      "Is your HVAC system over 10 years old? Mechanical Enterprise installs high-efficiency systems for Essex County homes and businesses. Get a free quote today — financing available, rebates may apply.",
-    description: "Free quote · Financing available · WMBE/SBE certified · 20+ years experience",
-    callToAction: "GET_QUOTE",
-    websiteUrl: "https://mechanicalenterprise.com/contact",
+      "Most people visit PSE&G's website, get overwhelmed, and never claim their rebate. We are a certified PSE&G contractor. We assess your home free and file every form. Up to $20,000 combined.",
+    description: "Certified PSE&G contractor. Free assessment.",
+    callToAction: "LEARN_MORE",
+    websiteUrl: "https://mechanicalenterprise.com/pseg-rebate-contractor-nj",
     interests: [
       { id: "6003349442621", name: "Home improvement" },
-      { id: "6003269798979", name: "Heating, ventilation, and air conditioning" },
-      { id: "6003384750085", name: "Real estate" },
+      { id: "6003397425735", name: "Energy conservation" },
     ],
-    audienceSummary: "Homeowners 28–65 · Essex County NJ · HVAC, home improvement & real estate",
+    audienceSummary: "NJ statewide · 35–70 · PSE&G, utility company & government rebate interests",
+    estimatedCpl: "$6–10",
+    projectedLeads: "6–10",
+  },
+  {
+    id: "commercial-80-off",
+    name: "ME — Commercial 80% Off | NJ Business Owners",
+    tagline: "NJ Direct Install Program — commercial HVAC & lighting",
+    objective: "OUTCOME_LEADS",
+    dailyBudget: 3,
+    color: "bg-slate-700",
+    ageMin: 30,
+    ageMax: 65,
+    headline: "NJ Direct Install: 80% of Commercial HVAC Covered. Lighting 100% Free.",
+    primaryText:
+      "If you own a commercial building in NJ, the Direct Install Program covers up to 80% of HVAC replacement and 100% of lighting — no upfront cost. Free 30-minute commercial assessment. We handle all applications.",
+    description: "Free commercial assessment. No paperwork for you.",
+    callToAction: "LEARN_MORE",
+    websiteUrl: "https://mechanicalenterprise.com/commercial",
+    interests: [
+      { id: "6003384750085", name: "Real estate" },
+      { id: "6003269798979", name: "Heating, ventilation, and air conditioning" },
+    ],
+    audienceSummary: "NJ statewide · 30–65 · Business owners, property managers, facilities managers",
+    estimatedCpl: "$12–20",
+    projectedLeads: "4–7",
   },
 ];
+
+// Summary projections
+const TOTAL_BUDGET = CAMPAIGNS.reduce((s, c) => s + c.dailyBudget, 0);
+const PROJECTED_LEADS_LOW = 33;
+const PROJECTED_LEADS_HIGH = 52;
+const PROJECTED_INSTALLS_LOW = Math.round(PROJECTED_LEADS_LOW * 0.25);
+const PROJECTED_INSTALLS_HIGH = Math.round(PROJECTED_LEADS_HIGH * 0.25);
 
 export default function FacebookAdsCampaigns() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmCampaign, setConfirmCampaign] = useState<FbCampaignDef | null>(null);
   const [launched, setLaunched] = useState<Record<string, { campaignId: string }>>({});
   const [showSetup, setShowSetup] = useState(false);
-  const [setupStep, setSetupStep] = useState<1 | 2>(1); // 1=OAuth, 2=Ad Account+Page ID
+  const [setupStep, setSetupStep] = useState<1 | 2>(1);
   const [adAccountId, setAdAccountId] = useState("");
   const [pageId, setPageId] = useState("");
-  const [liveExpanded, setLiveExpanded] = useState<string | null>(null);
   const [connectingOAuth, setConnectingOAuth] = useState(false);
+  const [launchingAll, setLaunchingAll] = useState(false);
   const [, setLocation] = useLocation();
   const searchString = useSearch();
 
@@ -174,7 +187,6 @@ export default function FacebookAdsCampaigns() {
       });
       setShowSetup(true);
       setSetupStep(2);
-      // Clean the URL
       setLocation("/facebook-campaigns", { replace: true });
     } else if (params.get("error")) {
       toast.error("Meta Ads connection failed", {
@@ -220,6 +232,7 @@ export default function FacebookAdsCampaigns() {
     onError: (err) => {
       toast.error("Failed to create campaign", { description: err.message, duration: 10000 });
       setConfirmCampaign(null);
+      setLaunchingAll(false);
     },
   });
 
@@ -240,9 +253,39 @@ export default function FacebookAdsCampaigns() {
     });
   }
 
+  async function handleLaunchAll() {
+    if (!isConnected) {
+      toast.error("Connect Meta Ads first.");
+      return;
+    }
+    setLaunchingAll(true);
+    const unlaunched = CAMPAIGNS.filter((c) => !launched[c.id]);
+    for (const camp of unlaunched) {
+      try {
+        await createCampaign.mutateAsync({
+          name: camp.name,
+          objective: camp.objective,
+          dailyBudget: camp.dailyBudget,
+          ageMin: camp.ageMin,
+          ageMax: camp.ageMax,
+          headline: camp.headline,
+          primaryText: camp.primaryText,
+          description: camp.description,
+          callToAction: camp.callToAction,
+          websiteUrl: camp.websiteUrl,
+          interests: camp.interests,
+        });
+      } catch {
+        // Error toast already shown by onError
+        break;
+      }
+    }
+    setLaunchingAll(false);
+  }
+
   const isLaunching = createCampaign.isPending;
-  const totalBudget = CAMPAIGNS.reduce((s, c) => s + c.dailyBudget, 0);
   const isConnected = connStatus?.connected === true;
+  const allLaunched = CAMPAIGNS.every((c) => !!launched[c.id]);
 
   // Token age for expiry warning (Meta tokens last ~60 days)
   const tokenAgeDays = connStatus?.tokenCreatedAt
@@ -282,10 +325,10 @@ export default function FacebookAdsCampaigns() {
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <Facebook className="h-6 w-6 text-[#1877F2]" />
-                <h1 className="text-2xl font-bold text-[#1e3a5f]">Facebook Ads Campaigns</h1>
+                <h1 className="text-2xl font-bold text-[#1e3a5f]">Meta Lead Gen Campaigns</h1>
               </div>
               <p className="text-muted-foreground">
-                3 campaigns pre-configured for Essex County, NJ · ${totalBudget}/day total
+                5 optimized campaigns · ${TOTAL_BUDGET}/day · PSE&G rebate + commercial
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -423,132 +466,66 @@ export default function FacebookAdsCampaigns() {
           </div>
         )}
 
-        {/* Live Campaigns Already Created */}
-        <div className="space-y-4 mb-8">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-[#1e3a5f]">✅ Campaigns Live in Meta Ads Manager</h2>
-            <a
-              href="https://adsmanager.facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-[#1877F2] hover:underline font-medium"
+        {/* ── Summary Bar ──────────────────────────────────────────── */}
+        <div className="mb-6 bg-white border rounded-xl p-5">
+          <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+            <h2 className="font-bold text-[#1e3a5f] text-lg">Campaign Overview</h2>
+            <Button
+              className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-2"
+              onClick={handleLaunchAll}
+              disabled={!isConnected || allLaunched || launchingAll || isLaunching}
             >
-              Open Meta Ads Manager <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+              {launchingAll ? (
+                <><Loader2 className="h-4 w-4 animate-spin" /> Launching All…</>
+              ) : allLaunched ? (
+                <><CheckCircle2 className="h-4 w-4" /> All 5 Launched</>
+              ) : (
+                <><Rocket className="h-4 w-4" /> Launch All 5 Campaigns</>
+              )}
+            </Button>
           </div>
-          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <span>All 3 campaigns are built and <strong>paused</strong> in your Mechanical Enterprise ad account. Review each one below, then click <strong>Activate in Meta Ads</strong> to go live.</span>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Daily Budget</p>
+              <p className="text-xl font-bold text-[#1e3a5f]">${TOTAL_BUDGET}/day</p>
+              <p className="text-xs text-muted-foreground">${TOTAL_BUDGET * 30}/month</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Projected Leads</p>
+              <p className="text-xl font-bold text-emerald-600">{PROJECTED_LEADS_LOW}–{PROJECTED_LEADS_HIGH}/mo</p>
+              <p className="text-xs text-muted-foreground">across all 5 campaigns</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Est. CPL</p>
+              <p className="text-xl font-bold text-[#1e3a5f]">$8–15</p>
+              <p className="text-xs text-muted-foreground">cost per lead</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Projected Installs</p>
+              <p className="text-xl font-bold text-blue-600">{PROJECTED_INSTALLS_LOW}–{PROJECTED_INSTALLS_HIGH}/mo</p>
+              <p className="text-xs text-muted-foreground">at 25% close rate</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Bid Strategy</p>
+              <p className="text-sm font-bold text-[#1e3a5f] mt-1">Lowest Cost</p>
+              <p className="text-xs text-muted-foreground">without cap</p>
+            </div>
           </div>
-
-          {LIVE_CAMPAIGNS.map((camp) => {
-            const isExpanded = liveExpanded === camp.id;
-            return (
-              <div key={camp.id} className="bg-white border rounded-xl overflow-hidden shadow-sm">
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div className={`w-2 self-stretch rounded-full ${camp.color} flex-shrink-0`} />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-bold text-[#1e3a5f]">{camp.name}</h3>
-                          <Badge className="bg-amber-100 text-amber-800 border-amber-200 gap-1 text-xs">
-                            PAUSED — Ready to Activate
-                          </Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-0.5">{camp.tagline}</p>
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <DollarSign className="h-3.5 w-3.5" />
-                            <strong className="text-[#1e3a5f]">${camp.dailyBudget}/day</strong>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5" />
-                            Essex County, NJ
-                          </span>
-                          <span className="text-xs font-mono text-slate-400">Campaign ID: {camp.campaignId}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="gap-1.5 text-muted-foreground"
-                        onClick={() => setLiveExpanded(isExpanded ? null : camp.id)}
-                      >
-                        {isExpanded ? (
-                          <><ChevronUp className="h-4 w-4" /> Hide</>
-                        ) : (
-                          <><ChevronDown className="h-4 w-4" /> Preview Ad</>
-                        )}
-                      </Button>
-                      <a
-                        href={`https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=842920828353492&selected_campaign_ids=${camp.campaignId}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <Button size="sm" className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-1.5">
-                          <Rocket className="h-4 w-4" /> Activate in Meta Ads
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
-                {isExpanded && (
-                  <div className="border-t bg-slate-50 p-5 space-y-4 text-sm">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Campaign ID</p>
-                        <p className="font-mono text-xs text-slate-600">{camp.campaignId}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Ad Set ID</p>
-                        <p className="font-mono text-xs text-slate-600">{camp.adSetId}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Ad ID</p>
-                        <p className="font-mono text-xs text-slate-600">{camp.adId}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Headline</p>
-                      <p className="font-semibold text-slate-800">{camp.headline}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Ad Copy</p>
-                      <p className="text-slate-700 leading-relaxed">{camp.primaryText}</p>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Audience</p>
-                        <p className="text-slate-700">{camp.audienceSummary}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-1">Call to Action</p>
-                        <p className="text-slate-700">{camp.cta.replace(/_/g, " ")}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Eye className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Landing page:</span>
-                      <a href={camp.url} target="_blank" rel="noopener noreferrer" className="text-[#1e3a5f] hover:underline font-medium">{camp.url}</a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          <div className="mt-4 pt-3 border-t">
+            <p className="text-xs text-muted-foreground">
+              Running all 5 at ${TOTAL_BUDGET}/day leaves budget for Google Search ads on PSE&G keywords — recommended split for $600/month.
+            </p>
+          </div>
         </div>
 
-        {/* Campaign Cards */}
+        {/* ── Campaign Cards ───────────────────────────────────────── */}
         <div className="space-y-4">
-          <h2 className="font-semibold text-[#1e3a5f] text-muted-foreground text-sm">Create Additional Campaigns</h2>
-
           {CAMPAIGNS.map((camp) => {
             const isExpanded = expandedId === camp.id;
             const wasLaunched = !!launched[camp.id];
+            const truncatedText = camp.primaryText.length > 100
+              ? camp.primaryText.slice(0, 100) + "…"
+              : camp.primaryText;
 
             return (
               <div key={camp.id} className="bg-white border rounded-xl overflow-hidden shadow-sm">
@@ -559,26 +536,56 @@ export default function FacebookAdsCampaigns() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-bold text-[#1e3a5f]">{camp.name}</h3>
-                          {wasLaunched && (
+                          <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs gap-1">
+                            <Target className="h-3 w-3" /> LEAD GENERATION
+                          </Badge>
+                          {camp.recommended && (
+                            <Badge className="bg-orange-100 text-orange-800 border-orange-200 text-xs gap-1">
+                              <Star className="h-3 w-3" /> RECOMMENDED
+                            </Badge>
+                          )}
+                          {wasLaunched ? (
                             <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1 text-xs">
                               <CheckCircle2 className="h-3 w-3" /> Created — ID {launched[camp.id].campaignId}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">
+                              PAUSED — Ready to Activate
                             </Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-0.5">{camp.tagline}</p>
+
+                        {/* Key metrics row */}
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground flex-wrap">
                           <span className="flex items-center gap-1">
                             <DollarSign className="h-3.5 w-3.5" />
                             <strong className="text-[#1e3a5f]">${camp.dailyBudget}/day</strong>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5" />
-                            Essex County, NJ
                           </span>
                           <span className="flex items-center gap-1">
                             <Users className="h-3.5 w-3.5" />
                             Ages {camp.ageMin}–{camp.ageMax}
                           </span>
+                          <span className="flex items-center gap-1">
+                            <TrendingUp className="h-3.5 w-3.5" />
+                            CPL: {camp.estimatedCpl}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Target className="h-3.5 w-3.5" />
+                            {camp.projectedLeads} leads/mo
+                          </span>
+                        </div>
+
+                        {/* Headline preview */}
+                        <p className="font-semibold text-slate-800 mt-2 text-sm">{camp.headline}</p>
+
+                        {/* Truncated primary text */}
+                        <p className="text-xs text-muted-foreground mt-1">{truncatedText}</p>
+
+                        {/* Audience summary */}
+                        <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3 flex-shrink-0" />
+                          {camp.audienceSummary}
                         </div>
                       </div>
                     </div>
@@ -592,7 +599,7 @@ export default function FacebookAdsCampaigns() {
                         {isExpanded ? (
                           <><ChevronUp className="h-4 w-4" /> Hide</>
                         ) : (
-                          <><ChevronDown className="h-4 w-4" /> Preview</>
+                          <><Eye className="h-4 w-4" /> Preview Ad</>
                         )}
                       </Button>
                       <Button
@@ -604,7 +611,7 @@ export default function FacebookAdsCampaigns() {
                         {wasLaunched ? (
                           <><CheckCircle2 className="h-4 w-4" /> Launched</>
                         ) : (
-                          <><Rocket className="h-4 w-4" /> Launch Campaign</>
+                          <><Rocket className="h-4 w-4" /> Activate in Meta Ads</>
                         )}
                       </Button>
                     </div>
@@ -616,51 +623,37 @@ export default function FacebookAdsCampaigns() {
                   <div className="border-t bg-slate-50 p-5 space-y-4 text-sm">
                     <div className="grid md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
-                          Objective
-                        </p>
-                        <p className="text-slate-700">{camp.objective.replace("OUTCOME_", "")}</p>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">Objective</p>
+                        <p className="text-slate-700">Lead Generation</p>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
-                          Audience
-                        </p>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">Audience</p>
                         <p className="text-slate-700">{camp.audienceSummary}</p>
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
-                        Ad Headline
-                      </p>
+                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">Ad Headline</p>
                       <p className="font-semibold text-slate-800">{camp.headline}</p>
                     </div>
 
                     <div>
-                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
-                        Primary Text
-                      </p>
+                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">Primary Text</p>
                       <p className="text-slate-700 leading-relaxed">{camp.primaryText}</p>
                     </div>
 
                     <div>
-                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
-                        Description
-                      </p>
+                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">Description</p>
                       <p className="text-slate-700">{camp.description}</p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-3 gap-4">
                       <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
-                          Call to Action
-                        </p>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">Call to Action</p>
                         <p className="text-slate-700">{camp.callToAction.replace(/_/g, " ")}</p>
                       </div>
                       <div>
-                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
-                          Interests Targeted
-                        </p>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">Interests Targeted</p>
                         <div className="flex flex-wrap gap-1.5">
                           {camp.interests.map((i) => (
                             <span key={i.id} className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
@@ -668,6 +661,25 @@ export default function FacebookAdsCampaigns() {
                             </span>
                           ))}
                         </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">Bid Strategy</p>
+                        <p className="text-slate-700">Lowest Cost Without Cap</p>
+                      </div>
+                    </div>
+
+                    <div className="grid md:grid-cols-3 gap-4 bg-white rounded-lg p-3 border">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Est. CPL</p>
+                        <p className="font-bold text-[#1e3a5f]">{camp.estimatedCpl}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Projected Leads/mo</p>
+                        <p className="font-bold text-emerald-600">{camp.projectedLeads}</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground">Monthly Spend</p>
+                        <p className="font-bold text-[#1e3a5f]">${camp.dailyBudget * 30}/mo</p>
                       </div>
                     </div>
 
@@ -690,25 +702,25 @@ export default function FacebookAdsCampaigns() {
           })}
         </div>
 
-        {/* Budget summary */}
+        {/* Budget breakdown */}
         <div className="mt-6 bg-white border rounded-xl p-5">
-          <h3 className="font-semibold text-[#1e3a5f] mb-3">Budget Summary</h3>
-          <div className="grid grid-cols-3 gap-4 text-center">
+          <h3 className="font-semibold text-[#1e3a5f] mb-3">Budget Breakdown</h3>
+          <div className="grid grid-cols-5 gap-3 text-center">
             {CAMPAIGNS.map((c) => (
               <div key={c.id}>
-                <p className="text-xs text-muted-foreground">{c.name.replace("ME — ", "").replace(" (FB)", "")}</p>
+                <p className="text-xs text-muted-foreground truncate">{c.name.replace("ME — ", "").split("|")[0].trim()}</p>
                 <p className="text-lg font-bold text-[#1e3a5f]">
                   ${c.dailyBudget}
                   <span className="text-xs font-normal text-muted-foreground">/day</span>
                 </p>
-                <p className="text-xs text-muted-foreground">${(c.dailyBudget * 30).toFixed(0)}/mo</p>
+                <p className="text-xs text-muted-foreground">${c.dailyBudget * 30}/mo</p>
               </div>
             ))}
           </div>
           <div className="mt-4 pt-4 border-t flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Total Facebook Ads spend</span>
+            <span className="text-sm text-muted-foreground">Total Meta Ads spend</span>
             <span className="font-bold text-[#1e3a5f]">
-              ${totalBudget}/day · ${(totalBudget * 30).toFixed(0)}/month
+              ${TOTAL_BUDGET}/day · ${TOTAL_BUDGET * 30}/month
             </span>
           </div>
         </div>
@@ -717,11 +729,12 @@ export default function FacebookAdsCampaigns() {
         <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
           <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-800">
-            <p className="font-semibold">Campaigns launch as Paused</p>
+            <p className="font-semibold">All campaigns launch as Paused</p>
             <p className="mt-1">
               After clicking Launch, each campaign is created in your Meta Ads Manager in{" "}
               <strong>paused</strong> status. Open Meta Ads Manager, review the campaign, then click{" "}
-              <strong>Publish</strong> to go live.
+              <strong>Publish</strong> to go live. All campaigns use <strong>Lowest Cost</strong> bidding
+              with <strong>Lead Generation</strong> optimization.
             </p>
           </div>
         </div>
@@ -883,19 +896,27 @@ export default function FacebookAdsCampaigns() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Monthly estimate</span>
-                  <span className="font-semibold">${(confirmCampaign.dailyBudget * 30).toFixed(0)}/month</span>
+                  <span className="font-semibold">${confirmCampaign.dailyBudget * 30}/month</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Objective</span>
-                  <span className="font-semibold">{confirmCampaign.objective.replace("OUTCOME_", "")}</span>
+                  <span className="font-semibold">Lead Generation</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Audience ages</span>
                   <span className="font-semibold">{confirmCampaign.ageMin}–{confirmCampaign.ageMax}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Geo target</span>
-                  <span className="font-semibold">Essex County, NJ (25 mi radius)</span>
+                  <span className="text-muted-foreground">Est. CPL</span>
+                  <span className="font-semibold">{confirmCampaign.estimatedCpl}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Projected leads</span>
+                  <span className="font-semibold">{confirmCampaign.projectedLeads}/mo</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Bid strategy</span>
+                  <span className="font-semibold">Lowest Cost Without Cap</span>
                 </div>
               </div>
             </div>
