@@ -179,17 +179,17 @@ export interface MetaCampaignParams {
 export async function createLeadCampaign(token: string, params: MetaCampaignParams) {
   const actId = `act_${params.adAccountId}`;
 
-  console.log("[Meta Ads] Creating OUTCOME_LEADS campaign:", params.name, {
-    objective: "OUTCOME_LEADS",
+  console.log("[Meta Ads] Creating OUTCOME_TRAFFIC campaign:", params.name, {
     budgetCents: params.dailyBudgetCents,
     adAccountId: params.adAccountId,
     pageId: params.pageId,
   });
 
-  // 1. Create campaign — OUTCOME_LEADS for pay-per-lead
+  // 1. Create campaign — OUTCOME_TRAFFIC drives clicks to landing page
+  // Landing page (rebate-calculator) has lead capture form built in
   const campaignBody = {
     name: params.name,
-    objective: "OUTCOME_LEADS",
+    objective: "OUTCOME_TRAFFIC",
     status: "PAUSED",
     special_ad_categories: ["NONE"],
     is_adset_budget_sharing_enabled: true,
@@ -200,15 +200,16 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const campaignId = campaign.id;
   console.log("[Meta] Step 1 — Campaign created:", campaignId);
 
-  // 2. Create ad set — LEAD_GENERATION optimization, no destination_type needed
-  // for OUTCOME_LEADS. Let Meta optimize audience for leads automatically.
+  // 2. Create ad set — LINK_CLICKS optimization, geo-only targeting
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
-    optimization_goal: "LEAD_GENERATION",
+    optimization_goal: "LINK_CLICKS",
     billing_event: "IMPRESSIONS",
     daily_budget: String(params.dailyBudgetCents),
     targeting: { geo_locations: { countries: ["US"] } },
+    promoted_object: { page_id: params.pageId },
+    destination_type: "WEBSITE",
     status: "PAUSED",
   };
 
@@ -217,31 +218,7 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const adSetId = adSet.id;
   console.log("[Meta] Step 2 — Ad set created:", adSetId);
 
-  // 3. Create Instant Lead Form — collects name, email, phone inside Facebook
-  const leadFormBody = {
-    name: `${params.name} — Lead Form`,
-    questions: [
-      { type: "FULL_NAME" },
-      { type: "EMAIL" },
-      { type: "PHONE" },
-    ],
-    privacy_policy: {
-      url: "https://mechanicalenterprise.com/privacy",
-      link_text: "Privacy Policy",
-    },
-    thank_you_page: {
-      title: "We'll be in touch!",
-      body: "A Mechanical Enterprise specialist will contact you within 24 hours about your free assessment.",
-      cta_type: "VIEW_WEBSITE",
-      cta_link: "https://mechanicalenterprise.com/rebate-calculator",
-    },
-  };
-  console.log("[Meta] Step 3 — Creating lead form with:", JSON.stringify(leadFormBody));
-  const leadForm = await metaPost(`/${actId}/leadgen_forms`, token, leadFormBody);
-  const leadFormId = leadForm.id;
-  console.log("[Meta] Step 3 — Lead form created:", leadFormId);
-
-  // 4. Create ad creative — attach lead form via object_story_spec
+  // 3. Create ad creative — link ad pointing to landing page
   const linkData: Record<string, unknown> = {
     link: params.websiteUrl,
     message: params.primaryText,
@@ -249,9 +226,8 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     description: params.description,
     call_to_action: {
       type: params.callToAction,
-      value: { lead_gen_form_id: leadFormId },
+      value: { link: params.websiteUrl },
     },
-    lead_gen_form_id: leadFormId,
   };
   if (params.imageUrl) {
     linkData.picture = params.imageUrl;
@@ -264,28 +240,27 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
       link_data: linkData,
     },
   };
-  console.log("[Meta] Step 4 — Creating ad creative with:", JSON.stringify(creativeBody));
+  console.log("[Meta] Step 3 — Creating ad creative with:", JSON.stringify(creativeBody));
   const creative = await metaPost(`/${actId}/adcreatives`, token, creativeBody);
   const creativeId = creative.id;
-  console.log("[Meta] Step 4 — Creative created:", creativeId);
+  console.log("[Meta] Step 3 — Creative created:", creativeId);
 
-  // 5. Create ad
+  // 4. Create ad
   const adBody = {
     name: `${params.name} — Ad`,
     adset_id: adSetId,
     creative: { creative_id: creativeId },
     status: "PAUSED",
   };
-  console.log("[Meta] Step 5 — Creating ad with:", JSON.stringify(adBody));
+  console.log("[Meta] Step 4 — Creating ad with:", JSON.stringify(adBody));
   const ad = await metaPost(`/${actId}/ads`, token, adBody);
-  console.log("[Meta] Step 5 — Ad created:", ad.id);
+  console.log("[Meta] Step 4 — Ad created:", ad.id);
 
   return {
     campaignId,
     adSetId,
-    leadFormId,
     adId: ad.id,
     status: "PAUSED",
-    message: "Lead campaign created (paused). Leads will be captured via Instant Form inside Facebook. Enable in Ads Manager when ready.",
+    message: "Campaign created (paused). Ads drive traffic to landing page where leads fill out the Quick Quote form. Enable in Ads Manager when ready.",
   };
 }
