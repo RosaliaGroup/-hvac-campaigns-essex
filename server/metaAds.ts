@@ -215,8 +215,10 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
       location_types: ["home"],
     },
   };
-  if (params.ageMin) targeting.age_min = params.ageMin;
-  if (params.ageMax) targeting.age_max = params.ageMax;
+  const safeAgeMin = Math.max(18, Math.min(params.ageMin ?? 18, 64));
+  const safeAgeMax = Math.min(65, Math.max(params.ageMax ?? 65, safeAgeMin + 1));
+  targeting.age_min = safeAgeMin;
+  targeting.age_max = safeAgeMax;
   if (params.geoLocationCities?.length) {
     targeting.geo_locations = {
       cities: params.geoLocationCities,
