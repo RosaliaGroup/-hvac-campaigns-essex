@@ -684,8 +684,23 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
         const imgs = buildImageBlocks(batch, 2);
         const txt = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
         const result = await callClaude(
-          `You are a floor plan symbol counter for ${pName} (${unitCountNote}).${unitMixNote} Count every mechanical symbol visible in these floor plan images:\n- KX symbols (kitchen exhaust fans)\n- TX symbols (toilet exhaust fans)\n- FD symbols (fire dampers)\n- VD symbols (volume dampers)\n- MD symbols (motorized dampers)\n- CD symbols (ceiling diffusers/registers)\n- Thermostat symbols\n- AHU boxes with tags\n- Supply/return/exhaust grilles\nReturn JSON: {"pages":[${batch.map((p) => p.pageNum).join(",")}],"counts":{"KX":N,"TX":N,"FD":N,"VD":N,"MD":N,"CD":N,"thermostats":N,"supply_grilles":N,"return_grilles":N,"exhaust_grilles":N},"ahu_tags":["AH-2A","AH-2B",...]}`,
-          [{ role: "user", content: [...imgs, { type: "text", text: `EXTRACTED TEXT:\n${txt}\n\nCount every symbol on these pages. Return JSON.` }] }]
+          `You are a mechanical symbol counter. Look at these floor plan drawing images carefully.
+
+Count EVERY instance of these symbols — each floor plan page may show multiple:
+- KX symbols or "KX-#" labels = kitchen exhaust fan connections (count each label/symbol)
+- TX symbols or "TX-#" labels = toilet/bathroom exhaust fan connections (count EACH one — a 2-bathroom unit will show 2 TX connections)
+- FD labels = fire dampers
+- VD labels = volume dampers
+- MD labels = motorized dampers
+- CD or diffuser symbols = ceiling diffusers
+- T in a circle = thermostats
+- AH-## labels = air handlers (list each unique tag)
+- Supply/return/exhaust grilles
+
+IMPORTANT: Count EVERY TX label you see. If a unit has 2 bathrooms it will have 2 TX labels. Do not assume 1 per unit.
+
+Report exact counts: {"pageNums":[${batch.map((p) => p.pageNum).join(",")}],"KX":N,"TX":N,"FD":N,"VD":N,"MD":N,"CD":N,"thermostats":N,"supply_grilles":N,"return_grilles":N,"exhaust_grilles":N,"AHUs":["AH-2A","AH-2B"],"notes":"observations about unit types or bathroom counts visible"}`,
+          [{ role: "user", content: [...imgs, { type: "text", text: `EXTRACTED TEXT:\n${txt}\n\nCount EVERY symbol. Pay special attention to TX — count each TX label individually, even if multiple per unit. Return JSON.` }] }]
         );
         agent2Results.push(result);
       }
@@ -726,14 +741,16 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
         `You are the lead HVAC estimator for ${pName} in ${pLoc}. Reconcile results from 4 specialist agents into one complete take-off.
 
 RULES:
-1. Equipment schedule quantities (Agent 1) OVERRIDE floor plan counts for equipment
-2. SUM floor plan symbol counts (Agent 2) across all floors for accessories (FD, VD, MD, CD, grilles)
-3. Use Agent 3 ductwork measurements for all duct line items
-4. Use Agent 4 piping measurements for all piping line items
-5. ADD insulation: pipe insulation LF = refrigerant + condensate LF; duct insulation SF = total duct LF × perimeter
-6. ADD labor hours using SMACNA rates: equipment 4-8hr/unit, ductwork 1hr/100SF, controls 2.5hr each, air devices 0.75hr each
-7. Flag any item where floor plan count differs from schedule by >10%
-8. Per-apartment items (KX, TX, thermostats, AHUs) must have qty >= ${numUnits || 1}
+1. Equipment schedule quantities (Agent 1) OVERRIDE floor plan counts for EQUIPMENT (AHUs, ODUs, ERVs)
+2. SUM floor plan symbol counts (Agent 2) across all floor plan page groups for KX, TX, FD, VD, MD, CD, grilles, thermostats
+3. TX FANS: Use the SUM of all TX counts from Agent 2 across ALL floor plan pages. Do NOT use numUnits as TX count. The floor plans show the actual TX count — trust that number. If floor plans show 95 TX total, use 95.
+4. KX FANS: Use the SUM of all KX counts from Agent 2 across ALL floor plan pages.
+5. Use Agent 3 ductwork measurements for all duct line items
+6. Use Agent 4 piping measurements for all piping line items
+7. ADD insulation: pipe insulation LF = refrigerant + condensate LF; duct insulation SF = total duct LF × perimeter
+8. ADD labor hours using SMACNA rates: equipment 4-8hr/unit, ductwork 1hr/100SF, controls 2.5hr each, air devices 0.75hr each
+9. Flag any item where floor plan count differs from schedule by >10%
+10. After reconciling, add a finding: "Building Analysis: Found KX=[total] kitchen exhaust connections and TX=[total] toilet exhaust connections across all floor plans. This implies [TX total] total bathrooms and [KX total] total kitchens/units."
 
 PRICING — NJ DIRECT COST:
 Equipment: VRF ODU $800-1,200/ton; VRF AHU $400-700/unit; Exhaust fan <500CFM $150-300; >1000CFM $500-1,500; ERV $800-2,000

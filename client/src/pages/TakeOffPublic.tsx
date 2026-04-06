@@ -437,8 +437,21 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
         log(`[Agent 2/5] Pages ${batch.map((p) => p.pageNum).join(", ")}…`);
         const imgs = buildImageBlocks(batch, 2);
         const txt = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
-        const r = await callClaude(`You are a floor plan symbol counter (${unitCountNote}).${unitMixNote} Count every KX, TX, FD, VD, MD, CD, thermostat, grille, AHU. Return JSON with counts.`,
-          [{ role: "user", content: [...imgs, { type: "text", text: `EXTRACTED TEXT:\n${txt}\n\nCount every symbol. Return JSON.` }] }]);
+        const r = await callClaude(
+          `You are a mechanical symbol counter. Look at these floor plan drawing images carefully.
+
+Count EVERY instance of these symbols:
+- KX symbols or "KX-#" labels = kitchen exhaust (count each one)
+- TX symbols or "TX-#" labels = toilet/bathroom exhaust (count EACH one — 2-bathroom units show 2 TX)
+- FD = fire dampers, VD = volume dampers, MD = motorized dampers
+- CD or diffuser symbols = ceiling diffusers
+- T in circle = thermostats
+- AH-## labels = air handlers (list each tag)
+
+IMPORTANT: Count EVERY TX label. If a unit has 2 bathrooms it has 2 TX labels. Do not assume 1 per unit.
+
+Return: {"pageNums":[${batch.map((p) => p.pageNum).join(",")}],"KX":N,"TX":N,"FD":N,"VD":N,"MD":N,"CD":N,"thermostats":N,"supply_grilles":N,"return_grilles":N,"exhaust_grilles":N,"AHUs":[],"notes":"..."}`,
+          [{ role: "user", content: [...imgs, { type: "text", text: `EXTRACTED TEXT:\n${txt}\n\nCount EVERY symbol. Count each TX individually. Return JSON.` }] }]);
         agent2Results.push(r);
       }
 
@@ -461,7 +474,19 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
       setAnalysisStep("reconciling");
       log("[Agent 5/5] Reconciling all results…");
       const finalText = await callClaude(
-        `You are the lead estimator for ${projectName} in ${projectLocation}. Reconcile specialist agent results. Equipment schedule quantities override floor plan counts. Sum floor plan counts across floors for accessories. Add insulation and labor. Price using NJ direct costs. Per-apartment items must have qty >= ${numUnits || 1}. Respond ONLY with valid JSON: {"pages":${selected.length},"items":[...],"findings":[...]}`,
+        `You are the lead estimator for ${projectName} in ${projectLocation}. Reconcile specialist agent results.
+
+RULES:
+1. Equipment schedule quantities (Agent 1) OVERRIDE floor plan counts for EQUIPMENT (AHUs, ODUs, ERVs)
+2. SUM floor plan symbol counts (Agent 2) across ALL pages for KX, TX, FD, VD, MD, CD, grilles, thermostats
+3. TX FANS: Use SUM of all TX counts from Agent 2. Do NOT use numUnits as TX count. Trust the floor plan count.
+4. KX FANS: Use SUM of all KX counts from Agent 2.
+5. Use Agent 3 ductwork and Agent 4 piping measurements
+6. ADD insulation and labor using SMACNA rates
+7. Flag discrepancies >10% between schedule and plan counts
+8. After reconciling, add finding: "Building Analysis: Found KX=[total] and TX=[total] across all floor plans."
+
+Price using NJ direct costs. Respond ONLY with valid JSON: {"pages":${selected.length},"items":[...],"findings":[...]}`,
         [{ role: "user", content: `AGENT 1 EQUIPMENT:\n${agent1Result}\n\nAGENT 2 FLOOR PLANS:\n${agent2Results.join("\n")}\n\nAGENT 3 DUCTWORK:\n${agent3Result}\n\nAGENT 4 PIPING:\n${agent4Result}\n\nReconcile into final take-off.` }]
       );
 
