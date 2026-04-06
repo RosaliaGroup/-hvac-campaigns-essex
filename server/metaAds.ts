@@ -200,10 +200,8 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const campaignId = campaign.id;
   console.log("[Meta] Step 1 — Campaign created:", campaignId);
 
-  // 2. Create ad set — LEAD_GENERATION optimization, ON_POST destination
-  // ON_POST tells Meta to use an Instant Form on Facebook so leads are captured
-  // inside Facebook without leaving the app. No age/interest targeting — let Meta
-  // optimize audience for leads automatically.
+  // 2. Create ad set — LEAD_GENERATION optimization, no destination_type needed
+  // for OUTCOME_LEADS. Let Meta optimize audience for leads automatically.
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
@@ -211,8 +209,6 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     billing_event: "IMPRESSIONS",
     daily_budget: String(params.dailyBudgetCents),
     targeting: { geo_locations: { countries: ["US"] } },
-    promoted_object: { page_id: params.pageId },
-    destination_type: "ON_POST",
     status: "PAUSED",
   };
 
