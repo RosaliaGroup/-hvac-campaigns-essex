@@ -174,6 +174,7 @@ export default function FacebookAdsCampaigns() {
   const [pageId, setPageId] = useState("");
   const [connectingOAuth, setConnectingOAuth] = useState(false);
   const [launchingAll, setLaunchingAll] = useState(false);
+  const [launchCooldown, setLaunchCooldown] = useState(false);
   const [, setLocation] = useLocation();
   const searchString = useSearch();
 
@@ -236,8 +237,24 @@ export default function FacebookAdsCampaigns() {
     },
   });
 
-  function handleConfirm() {
+  async function handleConfirm() {
     if (!confirmCampaign) return;
+    // Check if campaign already exists in Meta
+    try {
+      const perf = await refetchPerf();
+      const existing = perf.data?.campaigns?.find(
+        (c: { name: string }) => c.name === confirmCampaign.name
+      );
+      if (existing) {
+        const camp = CAMPAIGNS.find((c) => c.name === confirmCampaign.name);
+        if (camp) setLaunched((prev) => ({ ...prev, [camp.id]: { campaignId: "existing" } }));
+        toast.info(`"${confirmCampaign.name}" already exists in Meta Ads Manager`);
+        setConfirmCampaign(null);
+        return;
+      }
+    } catch {
+      // If fetch fails, proceed with creation
+    }
     createCampaign.mutate({
       name: confirmCampaign.name,
       objective: confirmCampaign.objective,
@@ -255,10 +272,29 @@ export default function FacebookAdsCampaigns() {
       toast.error("Connect Meta Ads first.");
       return;
     }
-    if (launchingAll) return; // guard against double-click
+    if (launchingAll || launchCooldown) return;
     setLaunchingAll(true);
+    setLaunchCooldown(true);
+    setTimeout(() => setLaunchCooldown(false), 30000);
+
+    // Fetch existing campaigns from Meta to avoid duplicates
+    let existingNames = new Set<string>();
+    try {
+      const perf = await refetchPerf();
+      if (perf.data?.campaigns) {
+        existingNames = new Set(perf.data.campaigns.map((c: { name: string }) => c.name));
+      }
+    } catch {
+      // If fetch fails, proceed — createCampaign will just create them
+    }
+
     const unlaunched = CAMPAIGNS.filter((c) => !launched[c.id]);
     for (const camp of unlaunched) {
+      if (existingNames.has(camp.name)) {
+        setLaunched((prev) => ({ ...prev, [camp.id]: { campaignId: "existing" } }));
+        toast.info(`"${camp.name}" already exists — skipped`);
+        continue;
+      }
       try {
         await createCampaign.mutateAsync({
           name: camp.name,
@@ -468,7 +504,7 @@ export default function FacebookAdsCampaigns() {
             <Button
               className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-2"
               onClick={handleLaunchAll}
-              disabled={!isConnected || allLaunched || launchingAll || isLaunching}
+              disabled={!isConnected || allLaunched || launchingAll || launchCooldown || isLaunching}
             >
               {launchingAll ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Launching All…</>
