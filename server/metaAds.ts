@@ -213,7 +213,6 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   // for OUTCOME_TRAFFIC. Ad copy + landing page do the qualification instead.
   const geoLocations: Record<string, unknown> = {
     countries: ["US"],
-    location_types: ["home"],
   };
   if (params.geoLocationCities?.length) {
     geoLocations.cities = params.geoLocationCities;
