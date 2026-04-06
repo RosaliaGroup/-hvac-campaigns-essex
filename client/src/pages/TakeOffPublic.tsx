@@ -174,6 +174,7 @@ function TakeOffTool() {
   const [showReanalyzeConfirm, setShowReanalyzeConfirm] = useState(false);
   const [numUnits, setNumUnits] = useState(0);
   const [unitMix, setUnitMix] = useState("");
+  const [analysisMode, setAnalysisMode] = useState<"quick" | "precise">("quick");
   const [pricebook, setPricebook] = useState<PricebookEntry[]>(() => [...DEFAULT_PRICEBOOK]);
   const [extractedPages, setExtractedPages] = useState<ExtractedPage[]>([]);
   const [extracting, setExtracting] = useState(false);
@@ -401,6 +402,99 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
       setAnalyzing(false);
     }
   };
+
+  // ── Multi-Agent Precise Analysis ────────────────────────────────────────
+  const analyzeMultiAgent = async () => {
+    const selected = extractedPages.filter((p) => p.selected);
+    if (selected.length === 0) { log("No pages selected."); return; }
+    setAnalyzing(true);
+    setAnalysisStep("analyzing");
+
+    const unitCountNote = numUnits > 0 ? `${numUnits}-unit building` : "unit count unknown";
+    const unitMixNote = unitMix ? ` Unit mix: ${unitMix}.` : "";
+    const jsonFormat = `Return ONLY valid JSON array.`;
+
+    const schedulePages = selected.filter((p) => p.charCount > 1000 && (p.text.toLowerCase().includes("schedule") || p.text.toLowerCase().includes("model") || p.text.toLowerCase().includes("cfm")));
+    const floorPlanPages = selected.filter((p) => !schedulePages.includes(p));
+
+    log(`[Precise Mode] ${schedulePages.length} schedule pages, ${floorPlanPages.length} floor plan pages`);
+
+    try {
+      log("[Agent 1/5] Reading equipment schedules…");
+      let agent1Result = "[]";
+      if (schedulePages.length > 0) {
+        const imgs = buildImageBlocks(schedulePages, 8);
+        const txt = schedulePages.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        agent1Result = await callClaude(`You are an equipment schedule specialist for ${projectName}. Read ONLY equipment schedules. Extract every piece of equipment with exact tag, model, quantity, specs. ${jsonFormat}`,
+          [{ role: "user", content: [...imgs, { type: "text", text: `EXTRACTED TEXT:\n${txt}\n\nReturn JSON array of all equipment.` }] }]);
+        log(`[Agent 1/5] Found ${(agent1Result.match(/"tag"/g) || []).length} items`);
+      }
+
+      log("[Agent 2/5] Counting floor plan symbols…");
+      const agent2Results: string[] = [];
+      for (let i = 0; i < floorPlanPages.length; i += 2) {
+        const batch = floorPlanPages.slice(i, i + 2);
+        log(`[Agent 2/5] Pages ${batch.map((p) => p.pageNum).join(", ")}…`);
+        const imgs = buildImageBlocks(batch, 2);
+        const txt = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        const r = await callClaude(`You are a floor plan symbol counter (${unitCountNote}).${unitMixNote} Count every KX, TX, FD, VD, MD, CD, thermostat, grille, AHU. Return JSON with counts.`,
+          [{ role: "user", content: [...imgs, { type: "text", text: `EXTRACTED TEXT:\n${txt}\n\nCount every symbol. Return JSON.` }] }]);
+        agent2Results.push(r);
+      }
+
+      log("[Agent 3/5] Measuring ductwork…");
+      let agent3Result = '{"rectangular":[],"round":[]}';
+      if (floorPlanPages.length > 0) {
+        const dp = floorPlanPages.slice(0, 6);
+        agent3Result = await callClaude(`You are a ductwork surveyor. Measure all ducts by size in LF. Return JSON: {"rectangular":[{"size":"WxH","lf":N}],"round":[{"diameter":N,"lf":N}]}`,
+          [{ role: "user", content: [...buildImageBlocks(dp, 6), { type: "text", text: dp.map((p) => `PAGE ${p.pageNum}:\n${p.text}`).join("\n") + "\n\nMeasure all ductwork." }] }]);
+      }
+
+      log("[Agent 4/5] Measuring piping…");
+      let agent4Result = '{"refrigerant":[],"condensate":{"lf":0}}';
+      if (floorPlanPages.length > 0) {
+        const pp = floorPlanPages.slice(0, 4);
+        agent4Result = await callClaude(`You are a piping surveyor. Measure refrigerant piping by diameter in LF and condensate drain in LF. Return JSON.`,
+          [{ role: "user", content: [...buildImageBlocks(pp, 4), { type: "text", text: pp.map((p) => `PAGE ${p.pageNum}:\n${p.text}`).join("\n") + "\n\nMeasure all piping." }] }]);
+      }
+
+      setAnalysisStep("reconciling");
+      log("[Agent 5/5] Reconciling all results…");
+      const finalText = await callClaude(
+        `You are the lead estimator for ${projectName} in ${projectLocation}. Reconcile specialist agent results. Equipment schedule quantities override floor plan counts. Sum floor plan counts across floors for accessories. Add insulation and labor. Price using NJ direct costs. Per-apartment items must have qty >= ${numUnits || 1}. Respond ONLY with valid JSON: {"pages":${selected.length},"items":[...],"findings":[...]}`,
+        [{ role: "user", content: `AGENT 1 EQUIPMENT:\n${agent1Result}\n\nAGENT 2 FLOOR PLANS:\n${agent2Results.join("\n")}\n\nAGENT 3 DUCTWORK:\n${agent3Result}\n\nAGENT 4 PIPING:\n${agent4Result}\n\nReconcile into final take-off.` }]
+      );
+
+      log("Parsing results…");
+      const parsed = safeParseJSON(finalText);
+      const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
+        id: uid(), category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
+        description: item.description || "", tag: item.tag || "",
+        qty: Number(item.qty) || 1, unit: item.unit || "EA",
+        vendor: item.vendor || "", model: item.model || "",
+        specs: item.specs || "", source: item.source || "",
+        confidence: typeof item.confidence === "string" ? ({ high: 90, med: 60, low: 30 } as Record<string, number>)[item.confidence] ?? 0 : Number(item.confidence) || 0,
+        unitPrice: Number(item.unitPrice) || 0, notes: item.notes || "",
+      }));
+      const newFindings: Finding[] = (parsed.findings || []).map((f: any) => ({
+        id: uid(), severity: (f.type === "warning" ? "warning" : f.type === "alert" ? "error" : "info") as Finding["severity"],
+        title: f.title || "", detail: f.body || f.detail || "",
+      }));
+      const pricedRows = newRows.map((r) => { if (r.unitPrice > 0) return r; const m = matchPricebook(r.description, pricebook); return m ? { ...r, unitPrice: m.defaultPrice } : r; });
+      const vf = runVerification(pricedRows);
+      setRows(pricedRows);
+      setFindings([...newFindings, ...vf]);
+      setAnalysisStep("idle");
+      log(`Done! ${pricedRows.length} items, ${newFindings.length + vf.length} findings. [Precise — 5 agents]`);
+    } catch (err: any) {
+      log(`Error: ${err.message}`);
+      setAnalysisStep("idle");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const runAnalysis = () => { if (analysisMode === "precise") analyzeMultiAgent(); else analyzeWithClaude(); };
 
   // ── Row editing ───────────────────────────────────────────────────────────
   const updateRow = (id: string, field: keyof TakeOffRow, value: any) => { setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))); };
@@ -641,6 +735,10 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
                     </button>
                     <span className="text-xs text-muted-foreground">{extractedPages.filter((p) => p.selected).length} of {extractedPages.length}</span>
                   </div>
+                  <div className="flex items-center gap-1 rounded-md border p-1">
+                    <button className={`flex-1 text-[10px] font-medium px-2 py-1 rounded ${analysisMode === "quick" ? "bg-[#e85d2f] text-white" : "text-muted-foreground hover:bg-muted"}`} onClick={() => setAnalysisMode("quick")}>Quick (~$0.40)</button>
+                    <button className={`flex-1 text-[10px] font-medium px-2 py-1 rounded ${analysisMode === "precise" ? "bg-[#e85d2f] text-white" : "text-muted-foreground hover:bg-muted"}`} onClick={() => setAnalysisMode("precise")}>Precise (~$2.50)</button>
+                  </div>
                   <textarea className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[50px] resize-y" placeholder="Additional instructions..." value={instructions} onChange={(e) => setInstructions(e.target.value)} />
                   {analysisStep === "analyzing" || analysisStep === "reconciling" ? (
                     <Button className="w-full bg-[#e85d2f] text-white" style={{ minHeight: "48px", display: "block", position: "static" }} disabled>
@@ -654,7 +752,7 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
                       <p className="text-xs text-amber-800">Replace all {rows.length} items? ~$0.40 API cost.</p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="destructive" className="flex-1" style={{ minHeight: "40px" }} onClick={() => { setShowReanalyzeConfirm(false); analyzeWithClaude(); }}>Yes</Button>
+                        <Button size="sm" variant="destructive" className="flex-1" style={{ minHeight: "40px" }} onClick={() => { setShowReanalyzeConfirm(false); runAnalysis(); }}>Yes</Button>
                         <Button size="sm" variant="outline" className="flex-1" style={{ minHeight: "40px" }} onClick={() => setShowReanalyzeConfirm(false)}>Cancel</Button>
                       </div>
                     </div>
@@ -662,7 +760,7 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
                     <Button
                       className="w-full bg-[#e85d2f] hover:bg-[#d04f25] text-white"
                       style={{ minHeight: "48px", display: "block", position: "static" }}
-                      onClick={analyzeWithClaude}
+                      onClick={runAnalysis}
                       disabled={extractedPages.filter((p) => p.selected).length === 0 || analyzing}
                     >
                       {analyzing ? "Analyzing..." : `Proceed to Analysis (${extractedPages.filter((p) => p.selected).length} pages)`}
@@ -679,7 +777,7 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
                 <CardContent className="p-4 space-y-3">
                   <textarea className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[60px] resize-y" placeholder="Additional instructions..." value={instructions} onChange={(e) => setInstructions(e.target.value)} />
                   {rows.length === 0 ? (
-                    <Button className="w-full bg-[#e85d2f] hover:bg-[#d04f25] text-white" style={{ minHeight: "48px" }} onClick={analyzeWithClaude} disabled={files.length === 0}>
+                    <Button className="w-full bg-[#e85d2f] hover:bg-[#d04f25] text-white" style={{ minHeight: "48px" }} onClick={runAnalysis} disabled={files.length === 0}>
                       Analyze with AI
                     </Button>
                   ) : (

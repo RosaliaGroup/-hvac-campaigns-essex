@@ -224,6 +224,7 @@ export default function TakeOffDetail() {
   const [showReanalyzeConfirm, setShowReanalyzeConfirm] = useState(false);
   const [numUnits, setNumUnits] = useState(0);
   const [unitMix, setUnitMix] = useState("");
+  const [analysisMode, setAnalysisMode] = useState<"quick" | "precise">("quick");
 
   const [pricebook, setPricebook] = useState<PricebookEntry[]>(() => [...DEFAULT_PRICEBOOK]);
 
@@ -634,6 +635,170 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
     }
   };
 
+  // ── Multi-Agent Precise Analysis ────────────────────────────────────────
+  const analyzeMultiAgent = async () => {
+    const selected = extractedPages.filter((p) => p.selected);
+    if (selected.length === 0) { log("No pages selected."); return; }
+
+    setAnalyzing(true);
+    setAnalysisStep("analyzing");
+
+    const pName = projectData?.project.name || "HVAC Project";
+    const pLoc = projectData?.project.location || "Newark NJ";
+    const unitCountNote = numUnits > 0 ? `${numUnits}-unit building` : "unit count unknown";
+    const unitMixNote = unitMix ? ` Unit mix: ${unitMix}.` : "";
+    const jsonFormat = `Return ONLY valid JSON array: [{"category":"...","description":"...","tag":"...","qty":N,"unit":"EA|LF|SF","vendor":"...","model":"...","specs":"...","source":"...","confidence":"high|med|low","unitPrice":N,"notes":"..."}]`;
+
+    // Classify pages by content (heuristic: schedule pages have high char counts with table-like content)
+    const schedulePages = selected.filter((p) => p.charCount > 1000 && (p.text.toLowerCase().includes("schedule") || p.text.toLowerCase().includes("model") || p.text.toLowerCase().includes("cfm") || p.text.toLowerCase().includes("btu")));
+    const floorPlanPages = selected.filter((p) => !schedulePages.includes(p));
+
+    log(`[Precise Mode] ${selected.length} pages: ${schedulePages.length} schedule pages, ${floorPlanPages.length} floor plan pages`);
+
+    try {
+      // ── AGENT 1: Equipment Schedule Reader ──────────────────────────────
+      log("[Agent 1/5] Reading equipment schedules…");
+      let agent1Result = "[]";
+      if (schedulePages.length > 0) {
+        const schedImgs = buildImageBlocks(schedulePages, 8);
+        const schedText = schedulePages.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        agent1Result = await callClaude(
+          `You are an equipment schedule specialist for ${pName} (${pLoc}). Read ONLY equipment schedules — tables listing equipment with columns for tag, description, model, qty, CFM, BTU, etc. Extract every piece of equipment with exact tag, model number, quantity from the schedule, and specs. ${jsonFormat}`,
+          [{ role: "user", content: [...schedImgs, { type: "text", text: `EXTRACTED TEXT:\n${schedText}\n\nRead every equipment schedule. Return JSON array of all equipment items.` }] }]
+        );
+        log(`[Agent 1/5] Found equipment: ${(agent1Result.match(/"tag"/g) || []).length} items`);
+      } else {
+        log("[Agent 1/5] No schedule pages detected — skipping");
+      }
+
+      // ── AGENT 2: Floor Plan Counter (per floor) ──────────────────────────
+      log("[Agent 2/5] Counting floor plan symbols…");
+      const agent2Results: string[] = [];
+      const planBatches: ExtractedPage[][] = [];
+      for (let i = 0; i < floorPlanPages.length; i += 2) {
+        planBatches.push(floorPlanPages.slice(i, i + 2));
+      }
+      for (let b = 0; b < planBatches.length; b++) {
+        const batch = planBatches[b];
+        log(`[Agent 2/5] Counting symbols — pages ${batch.map((p) => p.pageNum).join(", ")}…`);
+        const imgs = buildImageBlocks(batch, 2);
+        const txt = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        const result = await callClaude(
+          `You are a floor plan symbol counter for ${pName} (${unitCountNote}).${unitMixNote} Count every mechanical symbol visible in these floor plan images:\n- KX symbols (kitchen exhaust fans)\n- TX symbols (toilet exhaust fans)\n- FD symbols (fire dampers)\n- VD symbols (volume dampers)\n- MD symbols (motorized dampers)\n- CD symbols (ceiling diffusers/registers)\n- Thermostat symbols\n- AHU boxes with tags\n- Supply/return/exhaust grilles\nReturn JSON: {"pages":[${batch.map((p) => p.pageNum).join(",")}],"counts":{"KX":N,"TX":N,"FD":N,"VD":N,"MD":N,"CD":N,"thermostats":N,"supply_grilles":N,"return_grilles":N,"exhaust_grilles":N},"ahu_tags":["AH-2A","AH-2B",...]}`,
+          [{ role: "user", content: [...imgs, { type: "text", text: `EXTRACTED TEXT:\n${txt}\n\nCount every symbol on these pages. Return JSON.` }] }]
+        );
+        agent2Results.push(result);
+      }
+      log(`[Agent 2/5] Completed ${planBatches.length} floor plan batches`);
+
+      // ── AGENT 3: Ductwork Measurer ──────────────────────────────────────
+      log("[Agent 3/5] Measuring ductwork…");
+      const ductPages = floorPlanPages.slice(0, 6); // Send up to 6 floor plan pages
+      let agent3Result = '{"rectangular":[],"round":[]}';
+      if (ductPages.length > 0) {
+        const ductImgs = buildImageBlocks(ductPages, 6);
+        const ductText = ductPages.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        agent3Result = await callClaude(
+          `You are a ductwork quantity surveyor for ${pName}. Using the drawing scale from the title block, measure every duct run visible:\n- Rectangular ducts: estimate LF by size (WxH)\n- Round ducts: estimate LF by diameter\nGroup by size. Return JSON: {"rectangular":[{"size":"14x10","lf":N}],"round":[{"diameter":6,"lf":N}],"fittings":{"elbows":N,"tees":N,"transitions":N}}`,
+          [{ role: "user", content: [...ductImgs, { type: "text", text: `EXTRACTED TEXT:\n${ductText}\n\nMeasure all ductwork. Return JSON.` }] }]
+        );
+        log(`[Agent 3/5] Ductwork measured`);
+      }
+
+      // ── AGENT 4: Piping Measurer ──────────────────────────────────────
+      log("[Agent 4/5] Measuring piping…");
+      let agent4Result = '{"refrigerant":[],"condensate":{"lf":0}}';
+      if (floorPlanPages.length > 0) {
+        const pipePages = floorPlanPages.slice(0, 4);
+        const pipeImgs = buildImageBlocks(pipePages, 4);
+        const pipeText = pipePages.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        agent4Result = await callClaude(
+          `You are a piping quantity surveyor for ${pName}. Measure all piping:\n- Refrigerant piping by diameter in LF (include riser diagram vertical runs + floor plan horizontal runs)\n- Condensate drain piping in LF\nReturn JSON: {"refrigerant":[{"diameter":"3/8","lf":N},{"diameter":"5/8","lf":N}],"condensate":{"lf":N}}`,
+          [{ role: "user", content: [...pipeImgs, { type: "text", text: `EXTRACTED TEXT:\n${pipeText}\n\nMeasure all piping. Return JSON.` }] }]
+        );
+        log(`[Agent 4/5] Piping measured`);
+      }
+
+      // ── AGENT 5: Reconciler & Pricer ──────────────────────────────────
+      setAnalysisStep("reconciling");
+      log("[Agent 5/5] Reconciling all results into final take-off…");
+      const finalText = await callClaude(
+        `You are the lead HVAC estimator for ${pName} in ${pLoc}. Reconcile results from 4 specialist agents into one complete take-off.
+
+RULES:
+1. Equipment schedule quantities (Agent 1) OVERRIDE floor plan counts for equipment
+2. SUM floor plan symbol counts (Agent 2) across all floors for accessories (FD, VD, MD, CD, grilles)
+3. Use Agent 3 ductwork measurements for all duct line items
+4. Use Agent 4 piping measurements for all piping line items
+5. ADD insulation: pipe insulation LF = refrigerant + condensate LF; duct insulation SF = total duct LF × perimeter
+6. ADD labor hours using SMACNA rates: equipment 4-8hr/unit, ductwork 1hr/100SF, controls 2.5hr each, air devices 0.75hr each
+7. Flag any item where floor plan count differs from schedule by >10%
+8. Per-apartment items (KX, TX, thermostats, AHUs) must have qty >= ${numUnits || 1}
+
+PRICING — NJ DIRECT COST:
+Equipment: VRF ODU $800-1,200/ton; VRF AHU $400-700/unit; Exhaust fan <500CFM $150-300; >1000CFM $500-1,500; ERV $800-2,000
+Ductwork: Rect ≤10in $8-14/LF; 12-20in $18-28/LF; >20in $28-40/LF; Round 5-6in $4-8/LF
+Piping: Refrigerant ≤3/8" $8-12/LF; >3/8" $12-18/LF; Condensate $4-6/LF
+Accessories: Fire damper $180-350; Volume damper $60-120; Motorized damper $200-450
+Air devices: Supply $35-85; Return $45-85; Exhaust $30-60
+Insulation: Duct wrap $3-5/SF; Pipe $4-7/LF
+Controls: Thermostat $150-400; CO detector $120-200
+
+Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<agent>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`,
+        [{ role: "user", content: `AGENT 1 — EQUIPMENT SCHEDULES:\n${agent1Result}\n\nAGENT 2 — FLOOR PLAN COUNTS:\n${agent2Results.join("\n")}\n\nAGENT 3 — DUCTWORK:\n${agent3Result}\n\nAGENT 4 — PIPING:\n${agent4Result}\n\nReconcile into one final take-off JSON.` }]
+      );
+      log("[Agent 5/5] Reconciliation complete");
+
+      // Parse and apply pricebook + verification (same as quick mode)
+      log("Parsing results…");
+      const parsed = safeParseJSON(finalText);
+      const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
+        id: uid(),
+        category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
+        description: item.description || "", tag: item.tag || "",
+        qty: Number(item.qty) || 1, unit: item.unit || "EA",
+        vendor: item.vendor || "", model: item.model || "",
+        specs: item.specs || "", source: item.source || "",
+        confidence: typeof item.confidence === "string"
+          ? ({ high: 90, med: 60, low: 30 } as Record<string, number>)[item.confidence] ?? 0
+          : Number(item.confidence) || 0,
+        unitPrice: Number(item.unitPrice) || 0, notes: item.notes || "",
+      }));
+      const newFindings: Finding[] = (parsed.findings || []).map((f: any) => ({
+        id: uid(),
+        severity: (f.type === "warning" ? "warning" : f.type === "alert" ? "error" : "info") as Finding["severity"],
+        title: f.title || "", detail: f.body || f.detail || "",
+      }));
+
+      const pricedRows = newRows.map((r) => {
+        if (r.unitPrice > 0) return r;
+        const match = matchPricebook(r.description, pricebook);
+        return match ? { ...r, unitPrice: match.defaultPrice } : r;
+      });
+
+      log("Running verification checks…");
+      const verifyFindings = runVerification(pricedRows);
+
+      setRows(pricedRows);
+      setFindings([...newFindings, ...verifyFindings]);
+      setDirty(true);
+      setAnalysisStep("idle");
+      log(`Done! ${pricedRows.length} line items, ${newFindings.length + verifyFindings.length} findings. [Precise mode — 5 agents]`);
+      setTimeout(() => saveToDb(), 500);
+    } catch (err: any) {
+      log(`Error: ${err.message}`);
+      setAnalysisStep("idle");
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  // Dispatch to correct analysis mode
+  const runAnalysis = () => {
+    if (analysisMode === "precise") analyzeMultiAgent();
+    else analyzeWithClaude();
+  };
+
   // ── Row editing ───────────────────────────────────────────────────────────
   const updateRow = (id: string, field: keyof TakeOffRow, value: any) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
@@ -908,6 +1073,15 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
                     </button>
                     <span className="text-xs text-muted-foreground">{extractedPages.filter((p) => p.selected).length} of {extractedPages.length}</span>
                   </div>
+                  {/* Analysis mode toggle */}
+                  <div className="flex items-center gap-1 rounded-md border p-1">
+                    <button className={`flex-1 text-[10px] font-medium px-2 py-1 rounded ${analysisMode === "quick" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`} onClick={() => setAnalysisMode("quick")}>
+                      Quick (~$0.40)
+                    </button>
+                    <button className={`flex-1 text-[10px] font-medium px-2 py-1 rounded ${analysisMode === "precise" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`} onClick={() => setAnalysisMode("precise")}>
+                      Precise (~$2.50)
+                    </button>
+                  </div>
                   <textarea
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm min-h-[50px] resize-y"
                     placeholder="Additional instructions for the AI…"
@@ -927,7 +1101,7 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
                       <p className="text-xs text-amber-800">Replace all {rows.length} items? ~$0.40 API cost.</p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="destructive" className="flex-1" style={{ minHeight: "40px" }} onClick={() => { setShowReanalyzeConfirm(false); analyzeWithClaude(); }}>Yes</Button>
+                        <Button size="sm" variant="destructive" className="flex-1" style={{ minHeight: "40px" }} onClick={() => { setShowReanalyzeConfirm(false); runAnalysis(); }}>Yes</Button>
                         <Button size="sm" variant="outline" className="flex-1" style={{ minHeight: "40px" }} onClick={() => setShowReanalyzeConfirm(false)}>Cancel</Button>
                       </div>
                     </div>
@@ -935,7 +1109,7 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
                     <Button
                       className="w-full"
                       style={{ minHeight: "48px", display: "block", position: "static" }}
-                      onClick={analyzeWithClaude}
+                      onClick={runAnalysis}
                       disabled={extractedPages.filter((p) => p.selected).length === 0 || analyzing}
                     >
                       {analyzing ? "Analyzing…" : `Proceed to Analysis (${extractedPages.filter((p) => p.selected).length} pages)`}
@@ -957,7 +1131,7 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
                     onChange={(e) => setInstructions(e.target.value)}
                   />
                   {rows.length === 0 ? (
-                    <Button className="w-full" style={{ minHeight: "48px" }} onClick={analyzeWithClaude} disabled={files.length === 0}>
+                    <Button className="w-full" style={{ minHeight: "48px" }} onClick={runAnalysis} disabled={files.length === 0}>
                       Analyze with AI
                     </Button>
                   ) : (
