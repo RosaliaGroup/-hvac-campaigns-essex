@@ -29,15 +29,15 @@ export async function extractPDFPages(
     const textContent = await page.getTextContent();
     const text = (textContent.items as any[]).map((item) => item.str).join(" ");
 
-    // Render thumbnail at 120 DPI (scale relative to 72 DPI default)
-    const scale = 120 / 72;
+    // Render page image at 150 DPI for symbol visibility (scale relative to 72 DPI default)
+    const scale = 150 / 72;
     const viewport = page.getViewport({ scale });
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     const ctx = canvas.getContext("2d")!;
     await page.render({ canvasContext: ctx, viewport, canvas } as any).promise;
-    const thumbnail = canvas.toDataURL("image/jpeg", 0.6);
+    const thumbnail = canvas.toDataURL("image/jpeg", 0.8);
 
     pages.push({
       pageNum: i,

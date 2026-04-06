@@ -542,21 +542,14 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
         const batchLabel = needsBatching ? ` (batch ${b + 1}/${batches.length})` : "";
         log(`Sending pages ${batch.map((p) => p.pageNum).join(", ")} to Claude${batchLabel}…`);
 
-        // Build message content: text + images combined
+        // Build message content: ALWAYS send both images + text
         const batchText = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
         const imageBlocks = buildImageBlocks(batch, 4);
 
-        let content: any[];
-        if (isScanned) {
-          // Scanned PDF: send only images
-          content = [...imageBlocks, { type: "text", text: `Analyze these ${batch.length} pages of mechanical drawings for ${pName}. Extract every equipment item. Return valid JSON.` }];
-        } else {
-          // Digital PDF: send both text and images
-          content = [
-            ...imageBlocks,
-            { type: "text", text: `Here is extracted text from pages ${batch.map((p) => p.pageNum).join(", ")} AND images of each page. Use the text for precise counting and the images to understand the layout. Cross-reference both.\n\n${batchText}\n\nExtract every item from these pages. Return valid JSON.` },
-          ];
-        }
+        const content: any[] = [
+          ...imageBlocks,
+          { type: "text", text: `=== EXTRACTED TEXT FROM PAGES ${batch.map((p) => p.pageNum).join(", ")} ===\n${batchText}\n\n=== INSTRUCTIONS ===\nUse BOTH the images above AND the extracted text to perform the take-off:\n- IMAGES: Count every symbol visible — FD (fire damper), VD (volume damper), MD (motorized damper), thermostat symbols, supply/return/exhaust register symbols, ductwork runs (measure visually). Count graphical symbols that may not appear in text.\n- TEXT: Read equipment schedules, notes, specs, and tag labels precisely. Schedules are authoritative for equipment quantities.\n- Cross-reference both: if text says 75 KX fans but images show symbols on floor plans, verify the count matches.\nReturn complete take-off JSON.` },
+        ];
 
         const text = await callClaude(systemPrompt, [{ role: "user", content }]);
         batchResults.push(text);

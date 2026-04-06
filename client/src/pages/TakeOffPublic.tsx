@@ -327,12 +327,11 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
         log(`Sending pages ${batch.map((p) => p.pageNum).join(", ")}${needsBatching ? ` (batch ${b + 1}/${batches.length})` : ""}...`);
         const batchText = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
         const imageBlocks = buildImageBlocks(batch, 4);
-        let content: any[];
-        if (isScanned) {
-          content = [...imageBlocks, { type: "text", text: `Analyze these ${batch.length} pages. Extract every item. Return valid JSON.` }];
-        } else {
-          content = [...imageBlocks, { type: "text", text: `Here is text + images for pages ${batch.map((p) => p.pageNum).join(", ")}. Use text for counting, images for layout.\n\n${batchText}\n\nExtract every item. Return valid JSON.` }];
-        }
+
+        const content: any[] = [
+          ...imageBlocks,
+          { type: "text", text: `=== EXTRACTED TEXT FROM PAGES ${batch.map((p) => p.pageNum).join(", ")} ===\n${batchText}\n\n=== INSTRUCTIONS ===\nUse BOTH the images above AND the extracted text:\n- IMAGES: Count every symbol — FD (fire damper), VD (volume damper), MD (motorized damper), thermostat symbols, register/grille symbols, ductwork runs.\n- TEXT: Read schedules, notes, specs precisely. Schedules are authoritative for equipment quantities.\n- Cross-reference both sources.\nReturn complete take-off JSON.` },
+        ];
         const text = await callClaude(systemPrompt, [{ role: "user", content }]);
         batchResults.push(text);
         log(`Batch ${b + 1} received (${text.length} chars).`);
