@@ -237,6 +237,8 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     billing_event: "IMPRESSIONS",
     targeting,
     targeting_automation: { advantage_audience: 1 },
+    promoted_object: { page_id: params.pageId },
+    destination_type: "WEBSITE",
     status: "PAUSED",
   };
 
