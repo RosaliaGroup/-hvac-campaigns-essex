@@ -20,7 +20,7 @@ export default function LPHeatPumpRebates() {
       }
     },
     onError: () => {
-      toast({ title: "Something went wrong", description: "Please call us directly at (862) 419-1763", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Please call us directly at (862) 423-9396", variant: "destructive" });
     },
   });
 
@@ -88,9 +88,9 @@ export default function LPHeatPumpRebates() {
                   <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
                   <h3 className="text-2xl font-bold text-[#1e3a5f] mb-2">You're on the list!</h3>
                   <p className="text-gray-600 mb-4">We'll call you within 2 business hours to schedule your free in-home estimate.</p>
-                  <a href="tel:+18624191763">
+                  <a href="tel:+18624239396">
                     <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-3">
-                      <Phone className="h-4 w-4 mr-2" /> Call Now: (862) 419-1763
+                      <Phone className="h-4 w-4 mr-2" /> Call Now: (862) 423-9396
                     </Button>
                   </a>
                 </div>
@@ -108,7 +108,7 @@ export default function LPHeatPumpRebates() {
                     <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4 text-base">
                       {captureLead.isPending ? "Sending..." : "Get My Free Estimate →"}
                     </Button>
-                    <p className="text-xs text-gray-400 text-center">No spam. We respect your privacy. Call us at (862) 419-1763</p>
+                    <p className="text-xs text-gray-400 text-center">No spam. We respect your privacy. Call us at (862) 423-9396</p>
                   </form>
                   <div className="mt-4 pt-4 border-t flex items-center justify-center gap-2 text-sm text-gray-500">
                     <Clock className="h-4 w-4 text-[#ff6b35]" /> We respond within 2 business hours
@@ -199,9 +199,9 @@ export default function LPHeatPumpRebates() {
           <h2 className="text-3xl font-bold mb-3">Don't Leave Money on the Table</h2>
           <p className="text-white/80 mb-6">Incentive programs have limited funding. Secure your spot before allocations run out.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="tel:+18624191763">
+            <a href="tel:+18624239396">
               <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold px-8">
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
               </Button>
             </a>
             <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>

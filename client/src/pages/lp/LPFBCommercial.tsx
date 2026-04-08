@@ -19,7 +19,7 @@ export default function LPFBCommercial() {
       }
     },
     onError: () => {
-      toast({ title: "Something went wrong", description: "Please call (862) 419-1763", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
     },
   });
 
@@ -70,9 +70,9 @@ export default function LPFBCommercial() {
                 <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-3" />
                 <h3 className="text-xl font-bold text-[#1e3a5f] mb-2">Request Received!</h3>
                 <p className="text-gray-600 text-sm mb-4">A commercial HVAC specialist will contact you within 4 business hours with a custom incentive analysis for your property.</p>
-                <a href="tel:+18624191763">
+                <a href="tel:+18624239396">
                   <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold">
-                    <Phone className="h-4 w-4 mr-2" /> Call (862) 419-1763
+                    <Phone className="h-4 w-4 mr-2" /> Call (862) 423-9396
                   </Button>
                 </a>
               </div>
@@ -176,9 +176,9 @@ export default function LPFBCommercial() {
           <h2 className="text-3xl font-bold mb-3">Ready to Cut Your HVAC Costs?</h2>
           <p className="text-white/80 mb-6">Free commercial site survey and incentive analysis. No obligation. Serving 15 NJ counties.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="tel:+18624191763">
+            <a href="tel:+18624239396">
               <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold px-8">
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
               </Button>
             </a>
             <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>

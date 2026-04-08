@@ -67,8 +67,8 @@ export default function Navigation() {
           <div className="hidden lg:flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-[#1e3a5f]">
               <Phone className="h-4 w-4 text-[#ff6b35]" />
-              <a href="tel:+18624191763" className="hover:text-[#ff6b35] transition-colors font-medium">
-                (862) 419-1763
+              <a href="tel:+18624239396" className="hover:text-[#ff6b35] transition-colors font-medium">
+                (862) 423-9396
               </a>
             </div>
             <Link href="/contact">
@@ -78,7 +78,7 @@ export default function Navigation() {
 
           {/* Mobile: phone + hamburger */}
           <div className="md:hidden flex items-center gap-3">
-            <a href="tel:+18624191763" className="text-[#1e3a5f]">
+            <a href="tel:+18624239396" className="text-[#1e3a5f]">
               <Phone className="h-5 w-5 text-[#ff6b35]" />
             </a>
             <button

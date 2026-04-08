@@ -46,7 +46,7 @@ function buildScript(req: HeyGenVideoRequest): string {
         `in rebates when you upgrade to a high-efficiency heat pump system. ` +
         `That's money back in your pocket — and with zero-percent on-bill financing, ` +
         `your monthly payment can actually be less than your current heating bill. ` +
-        `Click below to run your free rebate estimate, or call us at 862-419-1763. ` +
+        `Click below to run your free rebate estimate, or call us at 862-423-9396. ` +
         `We'd love to help you take advantage of this before the program fills up.`
       );
 
@@ -82,7 +82,7 @@ function buildScript(req: HeyGenVideoRequest): string {
         `identify every rebate and incentive you qualify for, ` +
         `and walk you through all four of our financing options — including zero-down OBR financing. ` +
         `There's absolutely no obligation, and the assessment is completely free. ` +
-        `If you have any questions before your appointment, call us at 862-419-1763. ` +
+        `If you have any questions before your appointment, call us at 862-423-9396. ` +
         `See you soon!`
       );
   }

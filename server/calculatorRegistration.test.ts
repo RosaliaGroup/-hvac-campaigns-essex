@@ -129,7 +129,7 @@ describe("register procedure logic", () => {
       `Click your personalized link to see how much you can save:`,
       calculatorUrl,
       ``,
-      `Link valid for 30 days. Questions? Call (862) 419-1763`,
+      `Link valid for 30 days. Questions? Call (862) 423-9396`,
       `Reply STOP to opt out.`,
     ].join("\n");
     expect(smsBody).toContain(calculatorUrl);

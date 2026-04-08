@@ -8,8 +8,8 @@ import { useState } from "react";
 
 const BASE = "https://mechanicalenterprise.com";
 const REBATE_URL = `${BASE}/rebate-calculator`;
-const PHONE = "(862) 419-1763";
-const PHONE_TEL = "tel:+18624191763";
+const PHONE = "(862) 423-9396";
+const PHONE_TEL = "tel:+18624239396";
 
 type ServicePageProps = { service: string; slug: string; description: string };
 

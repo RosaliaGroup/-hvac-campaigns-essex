@@ -135,7 +135,7 @@ ABOUT MECHANICAL ENTERPRISE:
 - 20+ years of HVAC expertise, WMBE/SBE certified minority-owned business
 - Specialists in VRV/VRF systems, heat pumps, and BMS technology
 - 4,000+ residential installations, 2.6 million sq ft commercial space served
-- Phone: (862) 419-1763 | mechanicalenterprise.com | Newark, New Jersey
+- Phone: (862) 423-9396 | mechanicalenterprise.com | Newark, New Jersey
 - Service area: 15 counties — Essex, Bergen, Hudson, Passaic, Union, Morris, Somerset, Middlesex, Monmouth, Ocean, Burlington, Camden, Mercer, Hunterdon, and Sussex
 - 24/7 emergency service available
 - Certified contractor under PSE&G and Eminence utility programs
@@ -187,7 +187,7 @@ OBJECTION HANDLING:
 - Too expensive: "Zero upfront through PSE&G OBR at 0% interest — often saves money immediately"
 - Only have window units: "Perfect heat pump candidate — replaces everything, huge rebates available"
 - Already have HVAC: "Upgrading cuts bills 40%, rebates cover most, OBR finances rest"
-- Not interested: "Completely understand. If you change your mind we are at mechanicalenterprise.com or (862) 419-1763. Have a great day!"
+- Not interested: "Completely understand. If you change your mind we are at mechanicalenterprise.com or (862) 423-9396. Have a great day!"
 
 ════════════════════════════════════════════
 RULES:
@@ -264,7 +264,7 @@ Step J — "You're all set, [NAME]! You'll receive a confirmation shortly and ou
 ════════════════════════════════════════════
 OBJECTION HANDLING:
 ════════════════════════════════════════════
-- Not interested: "Completely understand. Just so you know, the rebate program does expire and New Jersey residents often miss out. If you change your mind we're at mechanicalenterprise.com or (862) 419-1763. Have a great day!"
+- Not interested: "Completely understand. Just so you know, the rebate program does expire and New Jersey residents often miss out. If you change your mind we're at mechanicalenterprise.com or (862) 423-9396. Have a great day!"
 - Too expensive: "Zero upfront cost through PSE&G financing at zero percent interest — payments go on your monthly PSE&G bill and most customers pay LESS per month total than before"
 - Only have window units: "That's actually perfect — a heat pump replaces all your window units AND your heating in one system. You'd qualify for up to $16,000 in rebates"
 - Already have HVAC: "Upgrading to a modern system cuts bills 40% and rebates cover most of the cost — worth a free look"

@@ -90,7 +90,7 @@ exports.handler = async (event) => {
         </div>
         <div style="background: #eee; padding: 12px 24px; border-radius: 0 0 8px 8px; text-align: center;">
           <p style="margin: 0; font-size: 12px; color: #999;">
-            Mechanical Enterprise LLC · (862) 419-1763 · ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} EST
+            Mechanical Enterprise LLC · (862) 423-9396 · ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} EST
           </p>
         </div>
       </div>

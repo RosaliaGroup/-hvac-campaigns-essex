@@ -268,7 +268,7 @@ function getFallbackRecommendations(gapToGoal: number): AIRecommendation[] {
       title: "Add missed-call SMS follow-up for Jessica",
       description: "When callers hang up before Jessica answers, an immediate SMS follow-up recovers 20-30% of those leads. Set up an automated text that fires within 60 seconds of a missed call.",
       expectedImpact: "+2 to +4 appointments/week",
-      action: "Configure Vapi missed-call webhook to trigger Twilio SMS: 'Hi, this is Jessica from Mechanical Enterprise! Sorry I missed you. Reply YES to schedule your free consultation or call (862) 419-1763.'",
+      action: "Configure Vapi missed-call webhook to trigger Twilio SMS: 'Hi, this is Jessica from Mechanical Enterprise! Sorry I missed you. Reply YES to schedule your free consultation or call (862) 423-9396.'",
       actionType: "manual",
       campaignData: undefined,
     },

@@ -117,7 +117,7 @@ export default function Qualify() {
             </div>
             <p className="text-sm text-gray-500">
               Questions? Call us at{" "}
-              <a href="tel:+18624191763" className="text-[#ff6b35] font-semibold">(862) 419-1763</a>
+              <a href="tel:+18624239396" className="text-[#ff6b35] font-semibold">(862) 423-9396</a>
             </p>
           </CardContent>
         </Card>
@@ -196,7 +196,7 @@ export default function Qualify() {
                 <div>
                   <Label>Phone Number *</Label>
                   <Input
-                    placeholder="(862) 419-1763"
+                    placeholder="(862) 423-9396"
                     value={form.phone}
                     onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
                   />
@@ -431,7 +431,7 @@ export default function Qualify() {
               <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
                 <Phone className="h-4 w-4" />
                 <span>Or call us directly: </span>
-                <a href="tel:+18624191763" className="text-[#ff6b35] font-semibold">(862) 419-1763</a>
+                <a href="tel:+18624239396" className="text-[#ff6b35] font-semibold">(862) 423-9396</a>
               </div>
 
               <p className="text-xs text-center text-gray-400">

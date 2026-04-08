@@ -36,7 +36,7 @@ OPENING:
 "Hi, is this [FirstName]? This is Jessica calling from Mechanical Enterprise — we're a local New Jersey HVAC company. I'm reaching out because we have a free program helping New Jersey property owners qualify for significant HVAC rebates and savings. Do you have 60 seconds?"
 
 IF THEY SAY YES — RESIDENTIAL:
-"Great! New Jersey has a rebate program right now where homeowners can get up to $16,000 back on HVAC upgrades. We also have PSE&G financing at zero percent interest so there's no upfront cost. And if you have window AC units, a heat pump system would replace all of them plus your heating in one efficient system — most homeowners pay less per month after the upgrade. We do a free 30-minute assessment to find out exactly what you qualify for. Would that be something you'd be interested in?"
+"Great! New Jersey has a rebate program right now where homeowners can get up to $20,000 in combined rebates — that's up to $18,000 from PSE&G plus up to $2,000 from us. We also have PSE&G financing at zero percent interest so there's no upfront cost. And if you have window AC units, a heat pump system would replace all of them plus your heating in one efficient system — most homeowners pay less per month after the upgrade. We do a free 30-minute assessment to find out exactly what you qualify for. Would that be something you'd be interested in?"
 
 IF THEY SAY YES — COMMERCIAL / PROPERTY MANAGER:
 "Great! For commercial properties New Jersey rebate programs cover up to 80% of HVAC upgrade costs, and PSE&G finances the rest at zero percent interest. We also have maintenance subscription plans starting at $79 per system per month that include parts credits and service calls — most property managers find it saves money versus paying for repairs as they come up. We do a free commercial assessment — no obligation. Would that work for you?"
@@ -67,7 +67,7 @@ Step J — "You're all set, [NAME]! You'll receive a confirmation shortly and ou
 ════════════════════════════════════════════
 OBJECTION HANDLING:
 ════════════════════════════════════════════
-- Not interested: "Completely understand. Just so you know, the rebate program does expire and New Jersey residents often miss out. If you change your mind we're at mechanicalenterprise.com or (862) 419-1763. Have a great day!"
+- Not interested: "Completely understand. Just so you know, the rebate program does expire and New Jersey residents often miss out. If you change your mind we're at mechanicalenterprise.com or (862) 423-9396. Have a great day!"
 - Too expensive: "Zero upfront cost through PSE&G financing at zero percent interest — payments go on your monthly PSE&G bill and most customers pay LESS per month total than before"
 - Only have window units: "That's actually perfect — a heat pump replaces all your window units AND your heating in one system. You'd qualify for up to $16,000 in rebates"
 - Already have HVAC: "Upgrading to a modern system cuts bills 40% and rebates cover most of the cost — worth a free look"

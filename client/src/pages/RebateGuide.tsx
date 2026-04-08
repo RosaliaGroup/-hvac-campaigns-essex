@@ -335,9 +335,9 @@ export default function RebateGuide() {
                 </Button>
               </Link>
               <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20">
-                <a href="tel:+18624191763" className="flex items-center gap-2">
+                <a href="tel:+18624239396" className="flex items-center gap-2">
                   <Phone className="h-5 w-5" />
-                  (862) 419-1763
+                  (862) 423-9396
                 </a>
               </Button>
             </div>

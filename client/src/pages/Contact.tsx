@@ -35,8 +35,8 @@ export default function Contact() {
                 <CardTitle className="text-lg">Phone</CardTitle>
               </CardHeader>
               <CardContent>
-                <a href="tel:+18624191763" className="text-[#1e3a5f] hover:text-[#ff6b35] font-medium">
-                  (862) 419-1763
+                <a href="tel:+18624239396" className="text-[#1e3a5f] hover:text-[#ff6b35] font-medium">
+                  (862) 423-9396
                 </a>
               </CardContent>
             </Card>
@@ -139,9 +139,9 @@ export default function Contact() {
             <p className="text-xl text-white/90 mb-6">
               We're available 24/7 for all your HVAC emergencies
             </p>
-            <a href="tel:+18624191763">
+            <a href="tel:+18624239396">
               <button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors">
-                Call Now: (862) 419-1763
+                Call Now: (862) 423-9396
               </button>
             </a>
           </div>
