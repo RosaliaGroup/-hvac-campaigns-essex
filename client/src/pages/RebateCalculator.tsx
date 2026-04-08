@@ -890,10 +890,10 @@ export default function RebateCalculator() {
         <div className="w-full max-w-4xl mx-auto px-5 text-center">
           <Badge className="mb-3 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">NJ Clean Heat Rebate Program</Badge>
           <h1 className="text-xl sm:text-3xl md:text-4xl font-bold mb-3 leading-tight">
-            How Much Can You Get<br className="sm:hidden" /> in Rebates?
+            Up to $20,000 to Replace Your HVAC System.<br className="sm:hidden" /> See If You Qualify.
           </h1>
           <p className="text-sm sm:text-lg text-white/85 max-w-2xl mx-auto">
-            NJ homeowners receive up to <strong>$16,000 in rebates &amp; incentives</strong> on heat pump upgrades — plus 0% financing. Get your estimate in 2 minutes.
+            NJ homeowners receive up to <strong>$20,000 in combined rebates — PSE&amp;G up to $18,000 + Mechanical Enterprise up to $2,000</strong> on heat pump upgrades — plus 0% financing. Get your estimate in 2 minutes.
           </p>
           {/* Progress bar — compact on mobile */}
           <div className="mt-6 flex items-center justify-center gap-1 flex-wrap">
@@ -1421,7 +1421,7 @@ export default function RebateCalculator() {
               )}
               {selectedEfficiency === "high" && (
                 <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-1">
-                  ✅ High-efficiency heat pumps qualify for up to <strong>$16,000</strong> in NJ Clean Heat incentives.
+                  ✅ High-efficiency heat pumps qualify for up to <strong>$20,000</strong> in NJ Clean Heat incentives.
                 </p>
               )}
             </div>
@@ -1696,7 +1696,7 @@ export default function RebateCalculator() {
             {selectedEfficiency === "standard" && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 flex items-start gap-2">
                 <span className="text-amber-500 mt-0.5">⚠️</span>
-                <span><strong>Standard efficiency systems do not qualify for rebate incentives.</strong> Shown for comparison only. Switch to High-Efficiency to unlock up to $16,000 in incentives.</span>
+                <span><strong>Standard efficiency systems do not qualify for rebate incentives.</strong> Shown for comparison only. Switch to High-Efficiency to unlock up to $20,000 in incentives.</span>
               </div>
             )}
 
