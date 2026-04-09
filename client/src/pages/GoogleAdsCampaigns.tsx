@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -172,6 +172,7 @@ export default function GoogleAdsCampaigns() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [launched, setLaunched] = useState<Record<string, { campaignId: string }>>({});
   const [oauthLoading, setOauthLoading] = useState(false);
+  const oauthTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: connStatus, isLoading: connLoading, refetch: refetchConn } = trpc.googleAds.getConnectionStatus.useQuery();
   const getAuthUrl = trpc.googleAds.getAuthUrl.useQuery(
@@ -198,16 +199,45 @@ export default function GoogleAdsCampaigns() {
     }
   }, []);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => { if (oauthTimeout.current) clearTimeout(oauthTimeout.current); };
+  }, []);
+
+  function resetOauth(errorMsg?: string) {
+    setOauthLoading(false);
+    if (oauthTimeout.current) { clearTimeout(oauthTimeout.current); oauthTimeout.current = null; }
+    if (errorMsg) {
+      toast.error("Google Ads connection failed", { description: errorMsg, duration: 8000 });
+    }
+  }
+
   async function handleConnectGoogle() {
     setOauthLoading(true);
+
+    // 30-second timeout — if the page hasn't navigated away, something went wrong
+    oauthTimeout.current = setTimeout(() => {
+      resetOauth("Connection timed out. Check that your Google Client ID is configured in AI VA Settings → Google Ads, then try again.");
+    }, 30_000);
+
     try {
       const result = await getAuthUrl.refetch();
-      if (result.data?.url) {
-        window.location.href = result.data.url;
+
+      // refetch() puts errors in result.error instead of throwing
+      if (result.error) {
+        resetOauth(result.error.message);
+        return;
       }
+
+      if (!result.data?.url) {
+        resetOauth("Could not generate OAuth URL. Make sure Google Client ID is set in AI VA Settings → Google Ads tab.");
+        return;
+      }
+
+      // Navigate to Google OAuth — this leaves the page, so state doesn't matter after this
+      window.location.href = result.data.url;
     } catch (err: any) {
-      toast.error("Failed to start OAuth flow", { description: err.message });
-      setOauthLoading(false);
+      resetOauth(err.message || "Failed to start OAuth flow.");
     }
   }
 
@@ -340,17 +370,29 @@ export default function GoogleAdsCampaigns() {
               <p className="text-sm text-amber-700 mt-1">
                 Connect your Google account to enable campaign management. This will authorize the app to manage your Google Ads campaigns.
               </p>
-              <Button
-                className="mt-3 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white gap-2"
-                onClick={handleConnectGoogle}
-                disabled={oauthLoading}
-              >
-                {oauthLoading ? (
-                  <><Loader2 className="h-4 w-4 animate-spin" />Connecting…</>
-                ) : (
-                  <><Link2 className="h-4 w-4" />Connect with Google</>
+              <div className="flex items-center gap-2 mt-3">
+                <Button
+                  className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white gap-2"
+                  onClick={handleConnectGoogle}
+                  disabled={oauthLoading}
+                >
+                  {oauthLoading ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />Connecting…</>
+                  ) : (
+                    <><Link2 className="h-4 w-4" />Connect with Google</>
+                  )}
+                </Button>
+                {oauthLoading && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-amber-700 hover:text-amber-900"
+                    onClick={() => resetOauth()}
+                  >
+                    Cancel
+                  </Button>
                 )}
-              </Button>
+              </div>
             </div>
           </div>
         )}

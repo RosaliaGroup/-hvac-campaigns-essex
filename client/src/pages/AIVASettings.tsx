@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import InternalNav from "@/components/InternalNav";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
@@ -44,6 +44,7 @@ export default function AIVASettings() {
 
   const [activeTab, setActiveTab] = useState("vapi");
   const [gadsOauthLoading, setGadsOauthLoading] = useState(false);
+  const gadsOauthTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Google Ads connection status
   const { data: gadsConnStatus, refetch: refetchGadsConn } = trpc.googleAds.getConnectionStatus.useQuery();
@@ -62,6 +63,19 @@ export default function AIVASettings() {
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => { if (gadsOauthTimeout.current) clearTimeout(gadsOauthTimeout.current); };
+  }, []);
+
+  function resetGadsOauth(errorMsg?: string) {
+    setGadsOauthLoading(false);
+    if (gadsOauthTimeout.current) { clearTimeout(gadsOauthTimeout.current); gadsOauthTimeout.current = null; }
+    if (errorMsg) {
+      toast({ title: "Connection failed", description: errorMsg, variant: "destructive" });
+    }
+  }
 
   // Load existing credentials
   const { data: credentials, refetch: refetchCredentials } = trpc.aiVa.getAllCredentials.useQuery();
@@ -231,14 +245,26 @@ export default function AIVASettings() {
 
   async function handleConnectGoogleAds() {
     setGadsOauthLoading(true);
+
+    gadsOauthTimeout.current = setTimeout(() => {
+      resetGadsOauth("Connection timed out. Check that your Google Client ID is configured, then try again.");
+    }, 30_000);
+
     try {
       const result = await getGadsAuthUrl.refetch();
-      if (result.data?.url) {
-        window.location.href = result.data.url;
+
+      if (result.error) {
+        resetGadsOauth(result.error.message);
+        return;
       }
+      if (!result.data?.url) {
+        resetGadsOauth("Could not generate OAuth URL. Make sure Google Client ID is saved above first.");
+        return;
+      }
+
+      window.location.href = result.data.url;
     } catch (err: any) {
-      toast({ title: "OAuth Error", description: err.message, variant: "destructive" });
-      setGadsOauthLoading(false);
+      resetGadsOauth(err.message || "Failed to start OAuth flow.");
     }
   }
 
@@ -567,21 +593,28 @@ export default function AIVASettings() {
                           : "Link your Google account to enable campaign management via the API."}
                       </p>
                     </div>
-                    <Button
-                      variant={gadsConnStatus?.connected ? "outline" : "default"}
-                      size="sm"
-                      className={gadsConnStatus?.connected ? "gap-1.5" : "gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white"}
-                      onClick={handleConnectGoogleAds}
-                      disabled={gadsOauthLoading}
-                    >
-                      {gadsOauthLoading ? (
-                        <><Loader2 className="h-3.5 w-3.5 animate-spin" />Connecting…</>
-                      ) : gadsConnStatus?.connected ? (
-                        <><Link2 className="h-3.5 w-3.5" />Reconnect</>
-                      ) : (
-                        <><Link2 className="h-3.5 w-3.5" />Connect with Google</>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant={gadsConnStatus?.connected ? "outline" : "default"}
+                        size="sm"
+                        className={gadsConnStatus?.connected ? "gap-1.5" : "gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white"}
+                        onClick={handleConnectGoogleAds}
+                        disabled={gadsOauthLoading}
+                      >
+                        {gadsOauthLoading ? (
+                          <><Loader2 className="h-3.5 w-3.5 animate-spin" />Connecting…</>
+                        ) : gadsConnStatus?.connected ? (
+                          <><Link2 className="h-3.5 w-3.5" />Reconnect</>
+                        ) : (
+                          <><Link2 className="h-3.5 w-3.5" />Connect with Google</>
+                        )}
+                      </Button>
+                      {gadsOauthLoading && (
+                        <Button variant="ghost" size="sm" onClick={() => resetGadsOauth()}>
+                          Cancel
+                        </Button>
                       )}
-                    </Button>
+                    </div>
                   </div>
                   {gadsConnStatus?.connected && (
                     <div className="flex gap-2">
