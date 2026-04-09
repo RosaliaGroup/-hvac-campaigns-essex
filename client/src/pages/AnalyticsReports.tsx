@@ -558,7 +558,7 @@ function LeadsPanel() {
                 {Object.entries(analytics.bySource as Record<string, number>)
                   .sort(([, a], [, b]) => b - a)
                   .map(([source, count]) => {
-                    const pct = analytics.allTime > 0 ? Math.round((count / analytics.allTime) * 100) : 0;
+                    const pct = analytics.allTime > 0 ? Math.max(0, Math.round((count / analytics.allTime) * 100)) : 0;
                     return (
                       <div key={source} className="flex items-center gap-3">
                         <span className="text-xs font-medium w-40 truncate text-muted-foreground">

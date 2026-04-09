@@ -502,13 +502,13 @@ export default function CampaignPerformance() {
                   <div 
                     className="h-full bg-[#ff6b35]" 
                     style={{ 
-                      width: `${Math.min(((liveGoogleAds?.cost ?? 0) / googleAdsAllocated) * 100, 100)}%` 
-                    }} 
+                      width: `${Math.max(0, Math.min(((liveGoogleAds?.cost ?? 0) / googleAdsAllocated) * 100, 100))}%`
+                    }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {googleAdsConnected 
-                    ? `${(((liveGoogleAds?.cost ?? 0) / googleAdsAllocated) * 100).toFixed(1)}% of budget used`
+                  {googleAdsConnected
+                    ? `${Math.max(0, (((liveGoogleAds?.cost ?? 0) / googleAdsAllocated) * 100)).toFixed(1)}% of budget used`
                     : "Connect to track spending"}
                 </p>
               </div>

@@ -129,7 +129,7 @@ function WeeklyLeadGoal() {
           <div className="w-full bg-secondary rounded-full h-4">
             <div 
               className="bg-[#ff6b35] h-4 rounded-full transition-all duration-500"
-              style={{ width: `${Math.min(progress, 100)}%` }}
+              style={{ width: `${Math.max(0, Math.min(progress, 100))}%` }}
             />
           </div>
           <p className="text-sm text-muted-foreground">

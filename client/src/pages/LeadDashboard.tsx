@@ -578,7 +578,7 @@ export default function LeadDashboard() {
                   .sort(([, a], [, b]) => b - a)
                   .map(([source, count]) => {
                     const sourceInfo = SOURCE_LABELS[source] || { label: source, color: "bg-gray-100 text-gray-700" };
-                    const pct = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+                    const pct = stats.total > 0 ? Math.max(0, Math.round((count / stats.total) * 100)) : 0;
                     return (
                       <div key={source} className="flex items-center gap-3">
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium w-44 ${sourceInfo.color}`}>

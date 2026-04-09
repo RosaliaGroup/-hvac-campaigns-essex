@@ -254,7 +254,7 @@ export default function MarketingAutopilot() {
             <CardContent>
               <div className="flex items-end gap-2 h-32">
                 {analysis.weeklyTrend.map((week, i) => {
-                  const heightPct = Math.min(100, (week.count / WEEKLY_GOAL) * 100);
+                  const heightPct = Math.max(0, Math.min(100, (week.count / WEEKLY_GOAL) * 100));
                   const isGoalMet = week.count >= WEEKLY_GOAL;
                   const isCurrentWeek = i === analysis.weeklyTrend.length - 1;
                   return (
