@@ -87,10 +87,10 @@ export default function Partnerships() {
                 Become a Partner
               </a>
               <a 
-                href="tel:862-419-1763" 
+                href="tel:862-423-9396" 
                 className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-8 py-4 rounded-lg font-semibold hover:bg-white/20 transition-all border border-white/30"
               >
-                Call (862) 419-1763
+                Call (862) 423-9396
               </a>
             </div>
           </div>
@@ -670,10 +670,10 @@ export default function Partnerships() {
                 Apply Now
               </a>
               <a 
-                href="tel:862-419-1763" 
+                href="tel:862-423-9396" 
                 className="inline-flex items-center gap-2 bg-white text-[#1e3a5f] px-8 py-4 rounded-lg font-semibold hover:bg-slate-100 transition-all shadow-lg hover:shadow-xl"
               >
-                Call (862) 419-1763
+                Call (862) 423-9396
               </a>
             </div>
 

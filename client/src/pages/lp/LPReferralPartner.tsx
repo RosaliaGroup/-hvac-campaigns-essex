@@ -47,7 +47,7 @@ export default function LPReferralPartner() {
       }
     },
     onError: () => {
-      toast({ title: "Something went wrong", description: "Please call (862) 419-1763", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
     },
   });
 
@@ -108,7 +108,7 @@ export default function LPReferralPartner() {
                 <p className="text-gray-600 mb-4">
                   Welcome to the Mechanical Enterprise Referral Partner Program. We'll reach out within 24 hours with your partner link and materials.
                 </p>
-                <a href="tel:+18624191763">
+                <a href="tel:+18624239396">
                   <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white">
                     <Phone className="h-4 w-4 mr-2" /> Call Us Now
                   </Button>
@@ -288,9 +288,9 @@ export default function LPReferralPartner() {
             >
               Join the Partner Program <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
-            <a href="tel:+18624191763">
+            <a href="tel:+18624239396">
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
               </Button>
             </a>
           </div>

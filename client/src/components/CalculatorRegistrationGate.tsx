@@ -108,8 +108,8 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
 
             <p className="text-xs text-muted-foreground">
               Didn't receive it? Check your spam folder or call us at{" "}
-              <a href="tel:+18624191763" className="text-[#ff6b35] font-medium">
-                (862) 419-1763
+              <a href="tel:+18624239396" className="text-[#ff6b35] font-medium">
+                (862) 423-9396
               </a>
             </p>
           </CardContent>

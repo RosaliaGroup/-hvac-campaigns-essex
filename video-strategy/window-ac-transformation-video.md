@@ -5,7 +5,7 @@
 **Length:** ~90 seconds (YouTube) + 30-second cut (Reels/Shorts)  
 **YouTube Title:** We Replaced 5 Window AC Units With One Heat Pump — Here's What Happened | NJ
 **YouTube Description:**  
-A real Essex County, NJ homeowner was running 5 window air conditioners in summer and electric baseboard heat in winter — paying over $400/month in energy bills. We sent our assessment tech out, qualified them for the NJ Clean Heat program, and installed a whole-home heat pump system. Here's the full before and after. Book your free assessment at mechanicalenterprise.com or call (862) 419-1763.
+A real Essex County, NJ homeowner was running 5 window air conditioners in summer and electric baseboard heat in winter — paying over $400/month in energy bills. We sent our assessment tech out, qualified them for the NJ Clean Heat program, and installed a whole-home heat pump system. Here's the full before and after. Book your free assessment at mechanicalenterprise.com or call (862) 423-9396.
 
 **Tags:** window AC replacement NJ, heat pump vs window AC, NJ heat pump installation, NJ Clean Heat rebates, HVAC before after, heat pump Essex County NJ, replace window air conditioner, whole home heat pump NJ, Mechanical Enterprise NJ
 
@@ -77,7 +77,7 @@ A real Essex County, NJ homeowner was running 5 window air conditioners in summe
 
 **[Scene: Mechanical Enterprise logo, website, phone number — clean dark background]**
 
-> VOICEOVER: "If your home still runs on window units or baseboard heat — call us. Your free assessment is waiting. Visit mechanicalenterprise.com or call 862-419-1763."
+> VOICEOVER: "If your home still runs on window units or baseboard heat — call us. Your free assessment is waiting. Visit mechanicalenterprise.com or call 862-423-9396."
 
 ---
 
@@ -94,7 +94,7 @@ A real Essex County, NJ homeowner was running 5 window air conditioners in summe
 
 **[Scene 4 — After: clean windows, family comfortable, bill comparison, 0:22–0:30]**
 > TEXT OVERLAY: "Now paying $180/month. Windows clear. House quiet."
-> LOWER THIRD: "MechanicalEnterprise.com | 862-419-1763"
+> LOWER THIRD: "MechanicalEnterprise.com | 862-423-9396"
 
 ---
 
@@ -148,7 +148,7 @@ Generate each scene separately in Kling 3.0. Use cinematic, photorealistic style
 
 ### Scene 12 — CLOSING: Logo Card
 **Prompt:**  
-`Clean dark navy background (#1e3a5f). Mechanical Enterprise logo centered in white. Below: "mechanicalenterprise.com" in clean sans-serif white text. Below that: "(862) 419-1763" in orange (#ff6b35). Minimal, professional, 3-second hold. Slight vignette around edges.`
+`Clean dark navy background (#1e3a5f). Mechanical Enterprise logo centered in white. Below: "mechanicalenterprise.com" in clean sans-serif white text. Below that: "(862) 423-9396" in orange (#ff6b35). Minimal, professional, 3-second hold. Slight vignette around edges.`
 
 ---
 

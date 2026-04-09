@@ -252,9 +252,9 @@ export default function Testimonials() {
                 size="lg"
                 variant="outline"
                 className="bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20"
-                onClick={() => window.location.href = "tel:862-419-1763"}
+                onClick={() => window.location.href = "tel:862-423-9396"}
               >
-                Call (862) 419-1763
+                Call (862) 423-9396
               </Button>
             </div>
           </div>

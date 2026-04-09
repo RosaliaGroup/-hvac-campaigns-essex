@@ -37,7 +37,7 @@ function buildSmsMessage(params: {
     `Ready to lock in your rebate? Book your FREE assessment:`,
     `https://mechanicalenterprise.com`,
     ``,
-    `Questions? Call us: (862) 419-1763`,
+    `Questions? Call us: (862) 423-9396`,
     `Reply STOP to opt out.`,
   ].join("\n");
 }
@@ -46,24 +46,24 @@ function buildSmsMessage(params: {
 
 describe("sendResultsSms — phone number normalization", () => {
   it("normalizes a 10-digit number to E.164", () => {
-    expect(normalizePhone("8624191763")).toBe("+18624191763");
+    expect(normalizePhone("8624239396")).toBe("+18624239396");
   });
 
   it("normalizes a formatted number (dashes) to E.164", () => {
-    expect(normalizePhone("862-419-1763")).toBe("+18624191763");
+    expect(normalizePhone("862-423-9396")).toBe("+18624239396");
   });
 
   it("normalizes a formatted number (parens + spaces) to E.164", () => {
-    expect(normalizePhone("(862) 419-1763")).toBe("+18624191763");
+    expect(normalizePhone("(862) 423-9396")).toBe("+18624239396");
   });
 
   it("does not double-prefix a number that already starts with 1", () => {
-    expect(normalizePhone("18624191763")).toBe("+18624191763");
+    expect(normalizePhone("18624239396")).toBe("+18624239396");
   });
 
   it("does not double-prefix a number in E.164 format", () => {
     // strip the + before passing to normalizePhone (as the server does with replace(/\D/g,''))
-    expect(normalizePhone("+18624191763".replace(/\D/g, ""))).toBe("+18624191763");
+    expect(normalizePhone("+18624239396".replace(/\D/g, ""))).toBe("+18624239396");
   });
 });
 
@@ -155,7 +155,7 @@ describe("sendResultsSms — message content", () => {
       totalRebates: 16000,
       outOfPocket: 0,
     });
-    expect(msg).toContain("(862) 419-1763");
+    expect(msg).toContain("(862) 423-9396");
   });
 });
 
@@ -180,7 +180,7 @@ describe("sendResultsSms — Telnyx API call (mocked)", () => {
     });
     global.fetch = mockFetch as unknown as typeof fetch;
 
-    const phone = "8624191763";
+    const phone = "8624239396";
     const toNumber = normalizePhone(phone);
     const message = buildSmsMessage({
       firstName: "Ana",
@@ -208,7 +208,7 @@ describe("sendResultsSms — Telnyx API call (mocked)", () => {
     expect(options.method).toBe("POST");
 
     const body = JSON.parse(options.body);
-    expect(body.to).toBe("+18624191763");
+    expect(body.to).toBe("+18624239396");
     expect(body.from).toBe("+18621234567");
     expect(body.text).toContain("Ana");
     expect(body.text).toContain("$16,000");

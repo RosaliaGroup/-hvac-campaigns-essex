@@ -8,8 +8,8 @@ import { blogPosts, type BlogSection } from "@/data/blogPosts";
 import { Redirect } from "wouter";
 
 const BASE = "https://mechanicalenterprise.com";
-const PHONE = "(862) 419-1763";
-const PHONE_TEL = "tel:+18624191763";
+const PHONE = "(862) 423-9396";
+const PHONE_TEL = "tel:+18624239396";
 
 /** Render [text](url) links in plain text content */
 function renderLinkedText(text: string) {

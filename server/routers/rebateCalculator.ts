@@ -332,7 +332,7 @@ export const rebateCalculatorRouter = router({
                     <div style="text-align:center;margin:32px 0">
                       <a href="https://mechanicalenterprise.com/rebate-calculator#assessment" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Schedule Your Free Assessment</a>
                     </div>
-                    <p style="color:#666;font-size:14px">Questions? Call us at <strong>(862) 419-1763</strong> — we're happy to help.</p>
+                    <p style="color:#666;font-size:14px">Questions? Call us at <strong>(862) 423-9396</strong> — we're happy to help.</p>
                     <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
                     <p style="color:#999;font-size:12px">Mechanical Enterprise LLC &bull; Essex County, NJ &bull; <a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a></p>
                   </div>
@@ -583,7 +583,7 @@ export const rebateCalculatorRouter = router({
         `Ready to lock in your rebate? Book your FREE assessment:`,
         `https://mechanicalenterprise.com`,
         ``,
-        `Questions? Call us: (862) 419-1763`,
+        `Questions? Call us: (862) 423-9396`,
         `Reply STOP to opt out.`,
       ].join("\n");
 
@@ -676,7 +676,7 @@ export const rebateCalculatorRouter = router({
             `Click your personalized link to see how much you can save:`,
             calculatorUrl,
             ``,
-            `Link valid for 30 days. Questions? Call (862) 419-1763`,
+            `Link valid for 30 days. Questions? Call (862) 423-9396`,
             `Reply STOP to opt out.`,
           ].join("\n");
 
@@ -716,7 +716,7 @@ export const rebateCalculatorRouter = router({
                     <a href="${calculatorUrl}" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Open My Rebate Calculator</a>
                   </div>
                   <p style="color:#666;font-size:14px">Or copy this link: <a href="${calculatorUrl}">${calculatorUrl}</a></p>
-                  <p style="color:#666;font-size:14px">This link is valid for 30 days. Questions? Call us at <strong>(862) 419-1763</strong>.</p>
+                  <p style="color:#666;font-size:14px">This link is valid for 30 days. Questions? Call us at <strong>(862) 423-9396</strong>.</p>
                   <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
                   <p style="color:#999;font-size:12px">Mechanical Enterprise LLC &bull; Essex County, NJ &bull; <a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a></p>
                 </div>

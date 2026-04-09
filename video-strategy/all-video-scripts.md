@@ -8,7 +8,7 @@ See: `rebates-video-script.md`
 
 **YouTube SEO:**
 - **Title:** NJ Heat Pump Rebates 2025 — Get Up to $16,000 Back | Mechanical Enterprise
-- **Description:** New Jersey homeowners can get up to $16,000 back when replacing old heating systems with a high-efficiency heat pump. In this video, we break down exactly how the NJ Clean Heat rebate program works — who qualifies, how much you can get, and how to apply with zero paperwork on your end. Mechanical Enterprise handles everything. Call (862) 419-1763 or visit mechanicalenterprise.com to get your free assessment today.
+- **Description:** New Jersey homeowners can get up to $16,000 back when replacing old heating systems with a high-efficiency heat pump. In this video, we break down exactly how the NJ Clean Heat rebate program works — who qualifies, how much you can get, and how to apply with zero paperwork on your end. Mechanical Enterprise handles everything. Call (862) 423-9396 or visit mechanicalenterprise.com to get your free assessment today.
 - **Tags:** NJ heat pump rebates, New Jersey HVAC rebates 2025, NJ Clean Heat program, heat pump rebate New Jersey, HVAC rebates Essex County NJ, Mechanical Enterprise NJ
 - **Thumbnail text:** "$16,000 BACK — NJ Heat Pump Rebates Explained"
 
@@ -35,11 +35,11 @@ On top of that, you still qualify for up to $16,000 in state and federal rebates
 
 At Mechanical Enterprise, we handle all the paperwork, the application, and the installation. You just say yes.
 
-Call us at 862-419-1763 or visit mechanicalenterprise.com to book your free assessment. We'll show you exactly what you qualify for — no obligation."
+Call us at 862-423-9396 or visit mechanicalenterprise.com to book your free assessment. We'll show you exactly what you qualify for — no obligation."
 
 **YouTube SEO:**
 - **Title:** How OBR Financing Works in New Jersey — Zero Down Heat Pump | Mechanical Enterprise
-- **Description:** OBR (On-Bill Repayment) lets New Jersey homeowners get a new heat pump with zero money down, zero interest, and no credit check. The repayment is added to your utility bill — and your energy savings often cover most of the cost. Mechanical Enterprise explains exactly how it works and how to qualify. Call (862) 419-1763 or visit mechanicalenterprise.com.
+- **Description:** OBR (On-Bill Repayment) lets New Jersey homeowners get a new heat pump with zero money down, zero interest, and no credit check. The repayment is added to your utility bill — and your energy savings often cover most of the cost. Mechanical Enterprise explains exactly how it works and how to qualify. Call (862) 423-9396 or visit mechanicalenterprise.com.
 - **Tags:** OBR financing New Jersey, on-bill repayment NJ, zero down heat pump NJ, NJ Clean Heat OBR, heat pump financing New Jersey, HVAC zero down NJ
 - **Thumbnail text:** "$0 DOWN — How OBR Financing Works in NJ"
 
@@ -68,11 +68,11 @@ The average payback period for a combined solar and heat pump system in New Jers
 
 At Mechanical Enterprise, we help you design the right combination for your home and navigate every rebate and incentive available.
 
-Call 862-419-1763 or visit mechanicalenterprise.com to book your free solar and heat pump assessment today."
+Call 862-423-9396 or visit mechanicalenterprise.com to book your free solar and heat pump assessment today."
 
 **YouTube SEO:**
 - **Title:** Solar + Heat Pump Savings in New Jersey — Stack Your Rebates | Mechanical Enterprise
-- **Description:** New Jersey homeowners can stack heat pump rebates (up to $16,000) with the 30% federal solar tax credit for maximum savings. Learn how combining a heat pump with solar panels can save $1,200–$1,800/year and pay for itself in 6–9 years. Mechanical Enterprise handles both installations. Call (862) 419-1763 or visit mechanicalenterprise.com.
+- **Description:** New Jersey homeowners can stack heat pump rebates (up to $16,000) with the 30% federal solar tax credit for maximum savings. Learn how combining a heat pump with solar panels can save $1,200–$1,800/year and pay for itself in 6–9 years. Mechanical Enterprise handles both installations. Call (862) 423-9396 or visit mechanicalenterprise.com.
 - **Tags:** solar heat pump New Jersey, solar panels NJ rebates, heat pump solar combo NJ, NJ solar incentives 2025, solar rebates New Jersey, Mechanical Enterprise solar NJ
 - **Thumbnail text:** "SAVE $2,000/YEAR — Solar + Heat Pump in NJ"
 
@@ -101,11 +101,11 @@ At the end of the visit, we give you a detailed written proposal showing the tot
 
 You take the proposal home, think about it, and call us when you're ready. No pressure, ever.
 
-To book your free assessment, call 862-419-1763 or visit mechanicalenterprise.com."
+To book your free assessment, call 862-423-9396 or visit mechanicalenterprise.com."
 
 **YouTube SEO:**
 - **Title:** What Happens at a Free HVAC Assessment? | Mechanical Enterprise New Jersey
-- **Description:** Wondering what happens during a free home HVAC assessment? Mechanical Enterprise walks you through every step — from system evaluation to rebate calculation to your written proposal. No pressure, no obligation. Book yours at mechanicalenterprise.com or call (862) 419-1763.
+- **Description:** Wondering what happens during a free home HVAC assessment? Mechanical Enterprise walks you through every step — from system evaluation to rebate calculation to your written proposal. No pressure, no obligation. Book yours at mechanicalenterprise.com or call (862) 423-9396.
 - **Tags:** free HVAC assessment NJ, heat pump assessment New Jersey, HVAC home evaluation NJ, free heat pump quote NJ, Mechanical Enterprise assessment, NJ HVAC inspection free
 - **Thumbnail text:** "FREE ASSESSMENT — Here's What to Expect"
 
@@ -134,11 +134,11 @@ Our team handles everything: system design using BMS technology, permits, instal
 
 If your commercial HVAC system is more than 10 years old, you're almost certainly leaving money on the table.
 
-Call 862-419-1763 or visit mechanicalenterprise.com to schedule a free commercial assessment today."
+Call 862-423-9396 or visit mechanicalenterprise.com to schedule a free commercial assessment today."
 
 **YouTube SEO:**
 - **Title:** Commercial HVAC Rebates in New Jersey — Up to 80% Covered | Mechanical Enterprise
-- **Description:** New Jersey businesses can get up to 80% of commercial HVAC upgrades covered through utility rebates and NJ Clean Energy programs. Mechanical Enterprise specializes in VRV/VRF systems for offices, restaurants, hotels, and industrial facilities. Call (862) 419-1763 or visit mechanicalenterprise.com for a free commercial assessment.
+- **Description:** New Jersey businesses can get up to 80% of commercial HVAC upgrades covered through utility rebates and NJ Clean Energy programs. Mechanical Enterprise specializes in VRV/VRF systems for offices, restaurants, hotels, and industrial facilities. Call (862) 423-9396 or visit mechanicalenterprise.com for a free commercial assessment.
 - **Tags:** commercial HVAC New Jersey, NJ commercial HVAC rebates, VRF system New Jersey, VRV HVAC NJ, commercial heat pump NJ, NJ Clean Energy commercial, Mechanical Enterprise commercial
 - **Thumbnail text:** "80% COVERED — Commercial HVAC Rebates in NJ"
 
@@ -164,4 +164,4 @@ Create 2 playlists on your channel:
 - **"Commercial HVAC Solutions NJ"** — Video 5 + future commercial content
 
 ### Channel Description (Update This)
-"Mechanical Enterprise is New Jersey's trusted HVAC specialist, serving 15 counties across the state. We help homeowners and businesses replace old heating systems, qualify for up to $16,000 in rebates, and upgrade to high-efficiency heat pumps with zero money down. WMBE/SBE certified. Call (862) 419-1763 or visit mechanicalenterprise.com."
+"Mechanical Enterprise is New Jersey's trusted HVAC specialist, serving 15 counties across the state. We help homeowners and businesses replace old heating systems, qualify for up to $16,000 in rebates, and upgrade to high-efficiency heat pumps with zero money down. WMBE/SBE certified. Call (862) 423-9396 or visit mechanicalenterprise.com."

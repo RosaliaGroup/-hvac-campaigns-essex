@@ -240,7 +240,7 @@ export const appRouter = router({
                       <p>${clientBody}</p>
                       <p>Need immediate assistance? Give us a call — we're happy to help.</p>
                       <div style="text-align:center;margin:32px 0">
-                        <a href="tel:8624191763" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Call Us Now: (862) 419-1763</a>
+                        <a href="tel:8624239396" style="background:#ff6b35;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px">Call Us Now: (862) 423-9396</a>
                       </div>
                       <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
                       <p style="color:#999;font-size:12px">Mechanical Enterprise LLC &bull; Essex County, NJ &bull; <a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a></p>
