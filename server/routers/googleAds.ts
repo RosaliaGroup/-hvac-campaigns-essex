@@ -19,8 +19,9 @@ async function getRefreshToken(): Promise<string | null> {
 
 export const googleAdsRouter = router({
   // Get OAuth authorization URL
+  // redirectUri is optional — server resolves the canonical URI from GOOGLE_ADS_REDIRECT_URI env var first
   getAuthUrl: protectedProcedure
-    .input(z.object({ redirectUri: z.string() }))
+    .input(z.object({ redirectUri: z.string().optional() }))
     .query(async ({ input }) => {
       const url = await getGoogleAdsAuthUrl(input.redirectUri);
       return { url };

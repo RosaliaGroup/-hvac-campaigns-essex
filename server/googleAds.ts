@@ -8,6 +8,10 @@ const ENV_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ADS_CLI
 const ENV_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_ADS_CLIENT_SECRET || "";
 const ENV_CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID ?? "";
 
+// Canonical redirect URI — MUST match exactly what's registered in Google Cloud Console.
+// Set GOOGLE_ADS_REDIRECT_URI in your environment to the production value.
+const ENV_REDIRECT_URI = process.env.GOOGLE_ADS_REDIRECT_URI ?? "";
+
 // Resolve credentials: DB (google_ads_config) first, env vars as fallback
 async function getConfig() {
   const dbCreds = await getAiVaCredentials("google_ads_config");
@@ -19,15 +23,23 @@ async function getConfig() {
   };
 }
 
+// Resolve the redirect URI: env var > DB > client-provided fallback
+async function getRedirectUri(clientHint?: string): Promise<string> {
+  if (ENV_REDIRECT_URI) return ENV_REDIRECT_URI;
+  const dbCreds = await getAiVaCredentials("google_ads_config");
+  if (dbCreds.redirectUri) return dbCreds.redirectUri;
+  return clientHint || "https://mechanicalenterprise.com/api/oauth/google-ads/callback";
+}
+
 // Build OAuth URL for user to authorize
-export async function getGoogleAdsAuthUrl(redirectUri: string): Promise<string> {
+export async function getGoogleAdsAuthUrl(clientRedirectHint?: string): Promise<string> {
   const config = await getConfig();
   if (!config.clientId) {
     throw new Error(
       "Google OAuth client_id is not configured. Set GOOGLE_CLIENT_ID in your environment variables or enter it in AI VA Settings → Google Ads tab."
     );
   }
-  const state = Buffer.from(redirectUri).toString("base64");
+  const redirectUri = await getRedirectUri(clientRedirectHint);
   const params = new URLSearchParams({
     client_id: config.clientId,
     redirect_uri: redirectUri,
@@ -35,7 +47,8 @@ export async function getGoogleAdsAuthUrl(redirectUri: string): Promise<string> 
     scope: "https://www.googleapis.com/auth/adwords",
     access_type: "offline",
     prompt: "consent",
-    state,
+    // Encode the redirect URI in state so the callback can recover it for token exchange
+    state: Buffer.from(redirectUri).toString("base64"),
   });
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
