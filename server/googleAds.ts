@@ -2,9 +2,10 @@ import { GoogleAdsApi, enums } from "google-ads-api";
 import { getAiVaCredentials } from "./db";
 
 // Env-var defaults (Railway / .env)
+// Accept both GOOGLE_CLIENT_ID and GOOGLE_ADS_CLIENT_ID naming conventions
 const ENV_DEVELOPER_TOKEN = process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? "";
-const ENV_CLIENT_ID = process.env.GOOGLE_ADS_CLIENT_ID ?? "";
-const ENV_CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET ?? "";
+const ENV_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ADS_CLIENT_ID || "";
+const ENV_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_ADS_CLIENT_SECRET || "";
 const ENV_CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID ?? "";
 
 // Resolve credentials: DB (google_ads_config) first, env vars as fallback
@@ -21,6 +22,11 @@ async function getConfig() {
 // Build OAuth URL for user to authorize
 export async function getGoogleAdsAuthUrl(redirectUri: string): Promise<string> {
   const config = await getConfig();
+  if (!config.clientId) {
+    throw new Error(
+      "Google OAuth client_id is not configured. Set GOOGLE_CLIENT_ID in your environment variables or enter it in AI VA Settings → Google Ads tab."
+    );
+  }
   const state = Buffer.from(redirectUri).toString("base64");
   const params = new URLSearchParams({
     client_id: config.clientId,
@@ -40,6 +46,11 @@ export async function exchangeCodeForTokens(
   redirectUri: string
 ): Promise<{ refresh_token: string; access_token: string }> {
   const config = await getConfig();
+  if (!config.clientId || !config.clientSecret) {
+    throw new Error(
+      "Google OAuth credentials missing. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in your environment variables or in AI VA Settings → Google Ads tab."
+    );
+  }
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
