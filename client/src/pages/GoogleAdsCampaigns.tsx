@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import {
   Rocket, DollarSign, Target, CheckCircle2, AlertCircle, Loader2,
   ExternalLink, RefreshCw, TrendingUp, Eye, Zap,
-  ChevronDown, ChevronUp, Info
+  ChevronDown, ChevronUp, Info, Link2
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -171,8 +171,45 @@ export default function GoogleAdsCampaigns() {
   const [confirmCampaign, setConfirmCampaign] = useState<CampaignDef | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [launched, setLaunched] = useState<Record<string, { campaignId: string }>>({});
+  const [oauthLoading, setOauthLoading] = useState(false);
 
-  const { data: connStatus, isLoading: connLoading } = trpc.googleAds.getConnectionStatus.useQuery();
+  const { data: connStatus, isLoading: connLoading, refetch: refetchConn } = trpc.googleAds.getConnectionStatus.useQuery();
+  const getAuthUrl = trpc.googleAds.getAuthUrl.useQuery(
+    { redirectUri: `${window.location.origin}/api/oauth/google-ads/callback` },
+    { enabled: false }
+  );
+
+  // Handle ?connected=1 URL param after OAuth redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "1") {
+      toast.success("Google Ads connected successfully!", {
+        description: "Your account is now linked. You can launch campaigns.",
+        duration: 6000,
+      });
+      refetchConn();
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("error")) {
+      toast.error("Google Ads connection failed", {
+        description: `Error: ${params.get("error")}. Please try again.`,
+        duration: 8000,
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  async function handleConnectGoogle() {
+    setOauthLoading(true);
+    try {
+      const result = await getAuthUrl.refetch();
+      if (result.data?.url) {
+        window.location.href = result.data.url;
+      }
+    } catch (err: any) {
+      toast.error("Failed to start OAuth flow", { description: err.message });
+      setOauthLoading(false);
+    }
+  }
 
   const { data: perfData, isLoading: perfLoading, refetch: refetchPerf } =
     trpc.googleAds.getCampaignPerformance.useQuery(undefined, {
@@ -266,8 +303,8 @@ export default function GoogleAdsCampaigns() {
           </div>
         </div>
 
-        {/* Developer token upgrade notice — always visible */}
-        <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
+        {/* Developer token upgrade notice — shown only when connected (Test Access) */}
+        {connStatus?.connected && <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm">
             <p className="font-semibold text-amber-900">Action required: Apply for Google Ads API Standard Access</p>
@@ -292,17 +329,28 @@ export default function GoogleAdsCampaigns() {
               </a>
             </div>
           </div>
-        </div>
+        </div>}
 
-        {/* Not connected warning */}
+        {/* Not connected — OAuth connect button */}
         {!connLoading && !connStatus?.connected && (
           <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div>
+            <div className="flex-1">
               <p className="font-semibold text-amber-800">Google Ads not connected</p>
               <p className="text-sm text-amber-700 mt-1">
-                Go to <strong>AI VA Settings</strong> to connect your Google Ads account, then come back here to launch campaigns.
+                Connect your Google account to enable campaign management. This will authorize the app to manage your Google Ads campaigns.
               </p>
+              <Button
+                className="mt-3 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white gap-2"
+                onClick={handleConnectGoogle}
+                disabled={oauthLoading}
+              >
+                {oauthLoading ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" />Connecting…</>
+                ) : (
+                  <><Link2 className="h-4 w-4" />Connect with Google</>
+                )}
+              </Button>
             </div>
           </div>
         )}

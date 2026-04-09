@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Phone, MessageSquare, Share2, CheckCircle2, AlertCircle, Loader2, FileText } from "lucide-react";
+import { Phone, MessageSquare, Share2, CheckCircle2, AlertCircle, Loader2, FileText, Target } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
@@ -35,6 +35,12 @@ export default function AIVASettings() {
   const [googleApiKey, setGoogleApiKey] = useState("");
   const [googleClientId, setGoogleClientId] = useState("");
   const [googleClientSecret, setGoogleClientSecret] = useState("");
+
+  // Google Ads credentials
+  const [gadsCustomerId, setGadsCustomerId] = useState("");
+  const [gadsDeveloperToken, setGadsDeveloperToken] = useState("");
+  const [gadsClientId, setGadsClientId] = useState("");
+  const [gadsClientSecret, setGadsClientSecret] = useState("");
 
   const [activeTab, setActiveTab] = useState("vapi");
 
@@ -73,6 +79,15 @@ export default function AIVASettings() {
         setGoogleApiKey(googleCreds.credentials.apiKey || "");
         setGoogleClientId(googleCreds.credentials.clientId || "");
         setGoogleClientSecret(googleCreds.credentials.clientSecret || "");
+      }
+
+      // Load Google Ads credentials
+      const gadsCreds = credentials.find((c: any) => c.service === 'google_ads_config');
+      if (gadsCreds && gadsCreds.credentials) {
+        setGadsCustomerId(gadsCreds.credentials.customerId || "");
+        setGadsDeveloperToken(gadsCreds.credentials.developerToken || "");
+        setGadsClientId(gadsCreds.credentials.clientId || "");
+        setGadsClientSecret(gadsCreds.credentials.clientSecret || "");
       }
     }
   }, [credentials]);
@@ -174,6 +189,27 @@ export default function AIVASettings() {
     });
   };
 
+  const handleSaveGoogleAds = () => {
+    if (!gadsCustomerId || !gadsDeveloperToken || !gadsClientId || !gadsClientSecret) {
+      toast({
+        title: "Missing fields",
+        description: "Please fill in all Google Ads credentials",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    saveCredentialsMutation.mutate({
+      service: "google_ads_config",
+      credentials: {
+        customerId: gadsCustomerId,
+        developerToken: gadsDeveloperToken,
+        clientId: gadsClientId,
+        clientSecret: gadsClientSecret,
+      },
+    });
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -216,7 +252,7 @@ export default function AIVASettings() {
         </Alert>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="vapi">
               <Phone className="h-4 w-4 mr-2" />
               Vapi (Voice)
@@ -227,11 +263,15 @@ export default function AIVASettings() {
             </TabsTrigger>
             <TabsTrigger value="facebook">
               <Share2 className="h-4 w-4 mr-2" />
-              Facebook/Instagram
+              Facebook/IG
             </TabsTrigger>
             <TabsTrigger value="google">
               <Share2 className="h-4 w-4 mr-2" />
               Google Business
+            </TabsTrigger>
+            <TabsTrigger value="google-ads">
+              <Target className="h-4 w-4 mr-2" />
+              Google Ads
             </TabsTrigger>
           </TabsList>
 
@@ -456,6 +496,99 @@ export default function AIVASettings() {
                       <li>Add "Instagram Basic Display" and "Pages" products</li>
                       <li>Generate a long-lived Page Access Token</li>
                       <li>Connect your Instagram Business account to your Facebook Page</li>
+                    </ol>
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Google Ads Tab */}
+          <TabsContent value="google-ads">
+            <Card>
+              <CardHeader>
+                <CardTitle>Google Ads Configuration</CardTitle>
+                <CardDescription>
+                  Configure Google Ads API credentials for campaign management. These are used by the /google-ads-campaigns page.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="gads-customer-id">Google Ads Customer ID</Label>
+                  <Input
+                    id="gads-customer-id"
+                    placeholder="e.g. 123-456-7890"
+                    value={gadsCustomerId}
+                    onChange={(e) => setGadsCustomerId(e.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Your Google Ads account ID (found in the top-right of Google Ads dashboard)
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gads-developer-token">Developer Token</Label>
+                  <Input
+                    id="gads-developer-token"
+                    type="password"
+                    placeholder="Enter your Google Ads API Developer Token"
+                    value={gadsDeveloperToken}
+                    onChange={(e) => setGadsDeveloperToken(e.target.value)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Found in Google Ads → Tools & Settings → API Center
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gads-client-id">OAuth Client ID</Label>
+                  <Input
+                    id="gads-client-id"
+                    placeholder="Enter your Google OAuth 2.0 Client ID"
+                    value={gadsClientId}
+                    onChange={(e) => setGadsClientId(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gads-client-secret">OAuth Client Secret</Label>
+                  <Input
+                    id="gads-client-secret"
+                    type="password"
+                    placeholder="Enter your Google OAuth 2.0 Client Secret"
+                    value={gadsClientSecret}
+                    onChange={(e) => setGadsClientSecret(e.target.value)}
+                  />
+                </div>
+
+                <Button
+                  onClick={handleSaveGoogleAds}
+                  disabled={saveCredentialsMutation.isPending}
+                  className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+                >
+                  {saveCredentialsMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-4 w-4" />
+                      Save Google Ads Credentials
+                    </>
+                  )}
+                </Button>
+
+                <Alert>
+                  <AlertDescription className="text-sm">
+                    <strong>Setup Guide:</strong>
+                    <ol className="list-decimal list-inside mt-2 space-y-1">
+                      <li>Go to console.cloud.google.com → Create/select a project</li>
+                      <li>Enable the "Google Ads API"</li>
+                      <li>Create OAuth 2.0 credentials (Web application type)</li>
+                      <li>Add <code>{window.location.origin}/api/oauth/google-ads/callback</code> as an authorized redirect URI</li>
+                      <li>Get your Developer Token from Google Ads → Tools & Settings → API Center</li>
+                      <li>Apply for Standard Access if your token is still at Test level</li>
                     </ol>
                   </AlertDescription>
                 </Alert>
