@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Phone, MessageSquare, Share2, CheckCircle2, AlertCircle, Loader2, FileText, Target } from "lucide-react";
+import { Phone, MessageSquare, Share2, CheckCircle2, AlertCircle, Loader2, FileText, Target, Link2, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
@@ -43,6 +43,25 @@ export default function AIVASettings() {
   const [gadsClientSecret, setGadsClientSecret] = useState("");
 
   const [activeTab, setActiveTab] = useState("vapi");
+  const [gadsOauthLoading, setGadsOauthLoading] = useState(false);
+
+  // Google Ads connection status
+  const { data: gadsConnStatus, refetch: refetchGadsConn } = trpc.googleAds.getConnectionStatus.useQuery();
+  const getGadsAuthUrl = trpc.googleAds.getAuthUrl.useQuery(
+    { redirectUri: `${window.location.origin}/api/oauth/google-ads/callback` },
+    { enabled: false }
+  );
+
+  // Handle ?connected=1 from OAuth redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("gads_connected") === "1") {
+      toast({ title: "Google Ads Connected", description: "OAuth linked successfully. You can now launch campaigns." });
+      refetchGadsConn();
+      setActiveTab("google-ads");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   // Load existing credentials
   const { data: credentials, refetch: refetchCredentials } = trpc.aiVa.getAllCredentials.useQuery();
@@ -209,6 +228,19 @@ export default function AIVASettings() {
       },
     });
   };
+
+  async function handleConnectGoogleAds() {
+    setGadsOauthLoading(true);
+    try {
+      const result = await getGadsAuthUrl.refetch();
+      if (result.data?.url) {
+        window.location.href = result.data.url;
+      }
+    } catch (err: any) {
+      toast({ title: "OAuth Error", description: err.message, variant: "destructive" });
+      setGadsOauthLoading(false);
+    }
+  }
 
   if (authLoading) {
     return (
@@ -507,12 +539,61 @@ export default function AIVASettings() {
           <TabsContent value="google-ads">
             <Card>
               <CardHeader>
-                <CardTitle>Google Ads Configuration</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Google Ads Configuration</span>
+                  {gadsConnStatus?.connected ? (
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+                      <CheckCircle2 className="h-3.5 w-3.5" /> OAuth Connected
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+                      <AlertCircle className="h-3.5 w-3.5" /> Not Connected
+                    </span>
+                  )}
+                </CardTitle>
                 <CardDescription>
-                  Configure Google Ads API credentials for campaign management. These are used by the /google-ads-campaigns page.
+                  Configure Google Ads API credentials and connect your account via OAuth. Account: AW-17768263516.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* OAuth Connect Section */}
+                <div className="p-4 bg-slate-50 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">Google Ads OAuth Connection</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {gadsConnStatus?.connected
+                          ? "Your Google account is linked. Refresh token is stored securely."
+                          : "Link your Google account to enable campaign management via the API."}
+                      </p>
+                    </div>
+                    <Button
+                      variant={gadsConnStatus?.connected ? "outline" : "default"}
+                      size="sm"
+                      className={gadsConnStatus?.connected ? "gap-1.5" : "gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white"}
+                      onClick={handleConnectGoogleAds}
+                      disabled={gadsOauthLoading}
+                    >
+                      {gadsOauthLoading ? (
+                        <><Loader2 className="h-3.5 w-3.5 animate-spin" />Connecting…</>
+                      ) : gadsConnStatus?.connected ? (
+                        <><Link2 className="h-3.5 w-3.5" />Reconnect</>
+                      ) : (
+                        <><Link2 className="h-3.5 w-3.5" />Connect with Google</>
+                      )}
+                    </Button>
+                  </div>
+                  {gadsConnStatus?.connected && (
+                    <div className="flex gap-2">
+                      <Link href="/google-ads-campaigns">
+                        <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                          <ExternalLink className="h-3 w-3" />Go to Campaigns
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="gads-customer-id">Google Ads Customer ID</Label>
                   <Input

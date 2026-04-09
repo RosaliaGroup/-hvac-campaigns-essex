@@ -21,8 +21,8 @@ export const googleAdsRouter = router({
   // Get OAuth authorization URL
   getAuthUrl: protectedProcedure
     .input(z.object({ redirectUri: z.string() }))
-    .query(({ input }) => {
-      const url = getGoogleAdsAuthUrl(input.redirectUri);
+    .query(async ({ input }) => {
+      const url = await getGoogleAdsAuthUrl(input.redirectUri);
       return { url };
     }),
 

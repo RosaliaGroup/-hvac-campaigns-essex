@@ -1,15 +1,29 @@
 import { GoogleAdsApi, enums } from "google-ads-api";
+import { getAiVaCredentials } from "./db";
 
-const DEVELOPER_TOKEN = process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? "";
-const CLIENT_ID = process.env.GOOGLE_ADS_CLIENT_ID ?? "";
-const CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET ?? "";
-const CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID ?? "";
+// Env-var defaults (Railway / .env)
+const ENV_DEVELOPER_TOKEN = process.env.GOOGLE_ADS_DEVELOPER_TOKEN ?? "";
+const ENV_CLIENT_ID = process.env.GOOGLE_ADS_CLIENT_ID ?? "";
+const ENV_CLIENT_SECRET = process.env.GOOGLE_ADS_CLIENT_SECRET ?? "";
+const ENV_CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID ?? "";
+
+// Resolve credentials: DB (google_ads_config) first, env vars as fallback
+async function getConfig() {
+  const dbCreds = await getAiVaCredentials("google_ads_config");
+  return {
+    clientId: dbCreds.clientId || ENV_CLIENT_ID,
+    clientSecret: dbCreds.clientSecret || ENV_CLIENT_SECRET,
+    developerToken: dbCreds.developerToken || ENV_DEVELOPER_TOKEN,
+    customerId: (dbCreds.customerId || ENV_CUSTOMER_ID).replace(/-/g, ""),
+  };
+}
 
 // Build OAuth URL for user to authorize
-export function getGoogleAdsAuthUrl(redirectUri: string): string {
+export async function getGoogleAdsAuthUrl(redirectUri: string): Promise<string> {
+  const config = await getConfig();
   const state = Buffer.from(redirectUri).toString("base64");
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
+    client_id: config.clientId,
     redirect_uri: redirectUri,
     response_type: "code",
     scope: "https://www.googleapis.com/auth/adwords",
@@ -25,13 +39,14 @@ export async function exchangeCodeForTokens(
   code: string,
   redirectUri: string
 ): Promise<{ refresh_token: string; access_token: string }> {
+  const config = await getConfig();
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: CLIENT_ID,
-      client_secret: CLIENT_SECRET,
+      client_id: config.clientId,
+      client_secret: config.clientSecret,
       redirect_uri: redirectUri,
       grant_type: "authorization_code",
     }),
@@ -44,20 +59,21 @@ export async function exchangeCodeForTokens(
 }
 
 // Create Google Ads API client with refresh token
-function getClient(refreshToken: string) {
+async function getClient(refreshToken: string) {
+  const config = await getConfig();
   return new GoogleAdsApi({
-    client_id: CLIENT_ID,
-    client_secret: CLIENT_SECRET,
-    developer_token: DEVELOPER_TOKEN,
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    developer_token: config.developerToken,
   }).Customer({
-    customer_id: CUSTOMER_ID,
+    customer_id: config.customerId,
     refresh_token: refreshToken,
   });
 }
 
 // Get campaign performance metrics
 export async function getCampaignPerformance(refreshToken: string) {
-  const customer = getClient(refreshToken);
+  const customer = await getClient(refreshToken);
   const campaigns = await customer.query(`
     SELECT
       campaign.id,
@@ -94,7 +110,7 @@ export async function getCampaignPerformance(refreshToken: string) {
 
 // Get account-level summary
 export async function getAccountSummary(refreshToken: string) {
-  const customer = getClient(refreshToken);
+  const customer = await getClient(refreshToken);
   const rows = await customer.query(`
     SELECT
       metrics.impressions,
@@ -156,7 +172,7 @@ export async function createSearchCampaign(
     geoTargetIds?: number[];
   }
 ) {
-  const customer = getClient(refreshToken);
+  const customer = await getClient(refreshToken);
 
   // 1. Create budget
   const budgetRes = await customer.campaignBudgets.create([
@@ -271,7 +287,7 @@ export async function createSearchCampaign(
 // Validate credentials by fetching accessible customers
 export async function validateCredentials(refreshToken: string): Promise<boolean> {
   try {
-    const customer = getClient(refreshToken);
+    const customer = await getClient(refreshToken);
     await customer.query(`SELECT customer.id FROM customer LIMIT 1`);
     return true;
   } catch {

@@ -377,7 +377,7 @@ export const appRouter = router({
     saveCredentials: protectedProcedure
       .input(
         z.object({
-          service: z.enum(["vapi", "twilio", "facebook", "google_business"] as const),
+          service: z.enum(["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const),
           credentials: z.record(z.string(), z.string()),
         })
       )
@@ -389,7 +389,7 @@ export const appRouter = router({
       }),
 
     getCredentials: protectedProcedure
-      .input(z.object({ service: z.enum(["vapi", "twilio", "facebook", "google_business"] as const) }))
+      .input(z.object({ service: z.enum(["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const) }))
       .query(async ({ input }) => {
         return await db.getAiVaCredentials(input.service);
       }),
@@ -397,7 +397,7 @@ export const appRouter = router({
     getAllCredentials: protectedProcedure
       .query(async () => {
         // Get all credentials for all services
-        const services = ["vapi", "twilio", "facebook", "google_business"] as const;
+        const services = ["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const;
         const allCredentials = await Promise.all(
           services.map(async (service) => {
             const creds = await db.getAiVaCredentials(service);
