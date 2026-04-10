@@ -262,39 +262,24 @@ export default function GoogleAdsCampaigns() {
       setConfirmCampaign(null);
     },
     onError: (err) => {
-      const msg = err.message ?? "";
-      const isDeveloperTokenError =
-        msg.includes("DEVELOPER_TOKEN_NOT_APPROVED") ||
-        msg.includes("developer token");
-      const isApiNotEnabled =
-        msg.includes("PERMISSION_DENIED") ||
-        msg.includes("has not been used in project");
-      if (isApiNotEnabled) {
-        toast.error("Google Ads API not enabled", {
-          description: (
-            <span>
-              Google Ads API not enabled.{" "}
-              <a
-                href="https://console.developers.google.com/apis/api/googleads.googleapis.com/overview?project=408029125716"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline font-semibold"
-              >
-                Click here to enable it &rarr;
-              </a>
-            </span>
-          ),
-          duration: 15000,
-        });
-      } else if (isDeveloperTokenError) {
-        toast.error("Google Ads API access required", {
-          description:
-            "Your developer token needs Standard Access approval before it can write to live accounts. See the banner on this page for instructions.",
-          duration: 12000,
-        });
-      } else {
-        toast.error("Failed to create campaign", { description: msg, duration: 10000 });
-      }
+      console.error("Campaign creation error:", err);
+      toast.error("Failed to create campaign", {
+        description: (
+          <span>
+            First enable the Google Ads API:{" "}
+            <a
+              href="https://console.developers.google.com/apis/api/googleads.googleapis.com/overview?project=408029125716"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline font-semibold"
+            >
+              Click here to enable it &rarr;
+            </a>
+            {" "}Then apply for Standard Access in the banner above.
+          </span>
+        ),
+        duration: 20000,
+      });
       setConfirmCampaign(null);
     },
   });
