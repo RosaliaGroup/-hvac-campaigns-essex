@@ -5,9 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Phone, Shield, Star, Clock, Zap, ArrowRight, Award, FileText, ChevronDown } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function LPPsegRebate() {
   const { toast } = useToast();
+  useSEO({
+    title: "PSE&G Certified HVAC Contractor NJ — We Handle All Rebate Paperwork | Mechanical Enterprise",
+    description: "Looking for a PSE&G certified contractor? We file your entire rebate application for free. Up to $20,000 in combined rebates. Free 20-minute assessment, zero paperwork on your end.",
+    ogUrl: "https://mechanicalenterprise.com/pseg-rebate-contractor-nj",
+  });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);

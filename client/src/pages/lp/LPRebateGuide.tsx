@@ -5,9 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Phone, Star, Download, FileText, Mail, Shield, Award } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function LPRebateGuide() {
   const { toast } = useToast();
+  useSEO({
+    title: "Free 2026 NJ HVAC Incentive Guide — $16,000+ Available | Mechanical Enterprise",
+    description: "Download the complete 2026 NJ HVAC incentive guide. Learn how to stack PSE&G, NJ Clean Energy, and federal tax credits for maximum savings on heat pump installations.",
+    ogUrl: "https://mechanicalenterprise.com/lp/rebate-guide",
+  });
   const [form, setForm] = useState({ firstName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -37,7 +43,7 @@ export default function LPRebateGuide() {
   };
 
   const guideContents = [
-    "Complete list of all 2025 NJ HVAC incentive programs",
+    "Complete list of all 2026 NJ HVAC incentive programs",
     "Step-by-step application guide for PSE&G rebates",
     "How to claim the 30% Federal Tax Credit",
     "NJ Clean Energy Program eligibility checklist",
@@ -50,7 +56,7 @@ export default function LPRebateGuide() {
   return (
     <div className="min-h-screen bg-white font-sans">
       <div className="bg-[#1e3a5f] text-white py-2 px-4 text-center text-sm">
-        📥 Free Download: The Complete 2025 NJ HVAC Incentive Guide — <strong className="text-[#ff6b35]">$16,000+ Available</strong>
+        📥 Free Download: The Complete 2026 NJ HVAC Incentive Guide — <strong className="text-[#ff6b35]">$16,000+ Available</strong>
       </div>
 
       {/* Hero */}
@@ -61,7 +67,7 @@ export default function LPRebateGuide() {
             <div>
               <Badge className="mb-4 bg-[#ff6b35]/10 text-[#ff6b35] border border-[#ff6b35]/20">Free Download · No Credit Card Required</Badge>
               <h1 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] leading-tight mb-4">
-                The Complete 2025 NJ HVAC Incentive Guide
+                The Complete 2026 NJ HVAC Incentive Guide
               </h1>
               <p className="text-lg text-gray-600 mb-6">
                 Everything NJ homeowners and business owners need to know about stacking PSE&G, NJ Clean Energy, and federal incentives — written by the experts at Mechanical Enterprise.

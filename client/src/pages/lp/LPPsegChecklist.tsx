@@ -8,9 +8,15 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function LPPsegChecklist() {
   const { toast } = useToast();
+  useSEO({
+    title: "Free PSE&G Rebate Checklist — What You Need Before You Apply | Mechanical Enterprise NJ",
+    description: "Download the free NJ PSE&G rebate checklist. Avoid the top 3 rejection reasons. Or let a certified contractor handle everything for you. Serving 15 NJ counties.",
+    ogUrl: "https://mechanicalenterprise.com/pseg-rebate-checklist",
+  });
   const [form, setForm] = useState({
     firstName: "",
     phone: "",

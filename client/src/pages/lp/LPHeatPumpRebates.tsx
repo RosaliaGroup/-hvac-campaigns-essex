@@ -5,9 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Phone, Shield, Star, Clock, Zap, ArrowRight, Award } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function LPHeatPumpRebates() {
   const { toast } = useToast();
+  useSEO({
+    title: "Get Up to $16,000 in Heat Pump Incentives | Mechanical Enterprise NJ",
+    description: "Stack PSE&G, NJ Clean Energy, and Federal Tax Credit incentives on your new heat pump. Free estimate — we handle all rebate paperwork. Serving Essex, Morris, Union, Bergen, Passaic, Hudson Counties.",
+    ogUrl: "https://mechanicalenterprise.com/lp/heat-pump-rebates",
+  });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -35,7 +41,7 @@ export default function LPHeatPumpRebates() {
       lastName: form.lastName,
       email: form.email,
       phone: form.phone,
-      captureType: "exit_popup",
+      captureType: "lp_heat_pump",
       pageUrl: window.location.href,
       message: "Google Ads LP: Heat Pump Rebates",
     });
@@ -45,7 +51,7 @@ export default function LPHeatPumpRebates() {
     <div className="min-h-screen bg-white font-sans">
       {/* Top Bar */}
       <div className="bg-[#1e3a5f] text-white py-2 px-4 text-center text-sm font-medium">
-        <span className="text-[#ff6b35]">⚡ LIMITED TIME:</span> NJ Heat Pump Incentives — Up to $16,000 Available in 2025
+        <span className="text-[#ff6b35]">⚡ LIMITED TIME:</span> NJ Heat Pump Incentives — Up to $16,000 Available in 2026
       </div>
 
       {/* Hero */}

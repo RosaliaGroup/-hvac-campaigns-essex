@@ -5,9 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Phone, Clock, Zap, Shield, Star, AlertTriangle, Award } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function LPEmergencyHVAC() {
   const { toast } = useToast();
+  useSEO({
+    title: "24/7 Emergency HVAC Service in NJ — Same-Day Dispatch | Mechanical Enterprise",
+    description: "HVAC emergency? Call (862) 423-9396 for same-day service. No heat, no AC, system breakdown — certified technicians dispatched across 15 NJ counties. Licensed & insured.",
+    ogUrl: "https://mechanicalenterprise.com/lp/emergency-hvac",
+  });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -34,7 +40,7 @@ export default function LPEmergencyHVAC() {
       lastName: form.lastName,
       email: form.email,
       phone: form.phone,
-      captureType: "exit_popup",
+      captureType: "lp_emergency",
       pageUrl: window.location.href,
       message: "Google Ads LP: Emergency HVAC Service",
     });

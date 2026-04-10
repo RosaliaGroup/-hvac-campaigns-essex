@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 const earningExamples = [
   { type: "Residential Heat Pump", rebate: "$16,000", yourCut: "$500–$1,000", icon: Home },
@@ -30,6 +31,11 @@ const steps = [
 
 export default function LPReferralPartner() {
   const { toast } = useToast();
+  useSEO({
+    title: "Earn $500–$5,000 Per HVAC Referral | Mechanical Enterprise Partner Program",
+    description: "Join the Mechanical Enterprise referral partner program. Earn $500–$5,000 per referral. Free to join, no minimums, paid within 30 days. Real estate agents, contractors, and anyone welcome.",
+    ogUrl: "https://mechanicalenterprise.com/lp/referral-partner",
+  });
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",

@@ -5,9 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Phone, Star, Clock, Home, ArrowRight, DollarSign, Leaf } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function LPFBResidential() {
   const { toast } = useToast();
+  useSEO({
+    title: "NJ Homeowners: Get Up to $16,000 Back on Heat Pumps | Mechanical Enterprise",
+    description: "Stack PSE&G, NJ Clean Energy, and federal incentives. Most NJ homeowners pay ~$1,000 after all rebates. Free estimate — we handle all paperwork.",
+    ogUrl: "https://mechanicalenterprise.com/lp/fb-residential",
+  });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -37,7 +43,7 @@ export default function LPFBResidential() {
       lastName: form.lastName,
       email: form.email,
       phone: form.phone,
-      captureType: "exit_popup_residential",
+      captureType: "lp_fb_residential",
       pageUrl: window.location.href,
       message: "Facebook LP: Residential Homeowners Rebate",
     });

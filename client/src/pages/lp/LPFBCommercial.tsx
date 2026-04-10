@@ -5,9 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Phone, Star, Clock, Building2, ArrowRight, TrendingDown, Shield } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function LPFBCommercial() {
   const { toast } = useToast();
+  useSEO({
+    title: "80% Off Commercial HVAC — NJ Business Incentives | Mechanical Enterprise",
+    description: "NJ utility rebates, state programs, and federal deductions can cover up to 80% of your commercial HVAC upgrade. 500+ NJ businesses served. Free incentive analysis.",
+    ogUrl: "https://mechanicalenterprise.com/lp/fb-commercial",
+  });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "", sqft: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -34,7 +40,7 @@ export default function LPFBCommercial() {
       lastName: form.lastName,
       email: form.email,
       phone: form.phone,
-      captureType: "exit_popup_commercial",
+      captureType: "lp_fb_commercial",
       pageUrl: window.location.href,
       message: `Facebook LP: Commercial Business | Company: ${form.company} | Sq Ft: ${form.sqft}`,
     });

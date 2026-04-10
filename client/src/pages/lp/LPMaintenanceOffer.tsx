@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 const plans = [
   {
@@ -77,6 +78,11 @@ const included = [
 
 export default function LPMaintenanceOffer() {
   const { toast } = useToast();
+  useSEO({
+    title: "HVAC Maintenance Subscription Plans — First Month FREE | Mechanical Enterprise NJ",
+    description: "Never worry about your HVAC again. Priority service, annual tune-ups, and exclusive discounts. No contracts. First month free. Serving NJ homeowners and businesses.",
+    ogUrl: "https://mechanicalenterprise.com/lp/maintenance-offer",
+  });
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [form, setForm] = useState({
     firstName: "",

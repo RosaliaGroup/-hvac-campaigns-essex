@@ -5,9 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Phone, Shield, Star, Clock, Building2, ArrowRight, Zap, Award } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
+import { useSEO } from "@/hooks/useSEO";
 
 export default function LPCommercialVRV() {
   const { toast } = useToast();
+  useSEO({
+    title: "Commercial VRV/VRF Systems — Up to 80% Incentives | Mechanical Enterprise NJ",
+    description: "Cut commercial HVAC costs by up to 80% with VRV/VRF systems and stacked utility, state, and federal incentives. 2.6M+ sq ft served. Free site survey.",
+    ogUrl: "https://mechanicalenterprise.com/lp/commercial-vrv",
+  });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -34,7 +40,7 @@ export default function LPCommercialVRV() {
       lastName: form.lastName,
       email: form.email,
       phone: form.phone,
-      captureType: "exit_popup",
+      captureType: "lp_commercial_vrv",
       pageUrl: window.location.href,
       message: `Google Ads LP: Commercial VRV/VRF | Company: ${form.company}`,
     });
