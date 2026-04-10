@@ -10,6 +10,8 @@ import {
   ChevronDown, ChevronUp, Info, Link2
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { AD_COPY_LIBRARY, CATEGORY_LABELS, type AdCopyEntry } from "@/data/adCopyLibrary";
+import { Copy, BookOpen, Search } from "lucide-react";
 
 interface CampaignDef {
   id: string;
@@ -642,6 +644,9 @@ export default function GoogleAdsCampaigns() {
             </p>
           </div>
         </div>
+
+        {/* ── Ad Copy Library ───────────────────────────────────────── */}
+        <AdCopyLibrary />
       </div>
 
       {/* Confirm Dialog */}
@@ -701,6 +706,175 @@ export default function GoogleAdsCampaigns() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+/* ── Ad Copy Library ──────────────────────────────────────────────── */
+
+function AdCopyLibrary() {
+  const [search, setSearch] = useState("");
+  const [filterCat, setFilterCat] = useState<string>("all");
+  const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
+
+  const categories = Object.keys(CATEGORY_LABELS) as Array<AdCopyEntry["category"]>;
+
+  const filtered = AD_COPY_LIBRARY.filter((entry) => {
+    if (filterCat !== "all" && entry.category !== filterCat) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (
+      entry.name.toLowerCase().includes(q) ||
+      entry.headlines.some((h) => h.toLowerCase().includes(q)) ||
+      entry.descriptions.some((d) => d.toLowerCase().includes(q))
+    );
+  });
+
+  function copyAll(entry: AdCopyEntry) {
+    const text = [
+      `Campaign: ${entry.name}`,
+      `Final URL: ${entry.finalUrl}`,
+      "",
+      "Headlines:",
+      ...entry.headlines.map((h, i) => `  ${i + 1}. ${h}`),
+      "",
+      "Descriptions:",
+      ...entry.descriptions.map((d, i) => `  ${i + 1}. ${d}`),
+    ].join("\n");
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard", { description: entry.name, duration: 2000 });
+  }
+
+  return (
+    <div className="mt-10">
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
+        <div className="flex items-center gap-2">
+          <BookOpen className="h-5 w-5 text-[#1e3a5f]" />
+          <h2 className="text-xl font-bold text-[#1e3a5f]">Ad Copy Library</h2>
+          <Badge variant="outline" className="ml-1">{AD_COPY_LIBRARY.length} campaigns</Badge>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search headlines, descriptions…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-2 text-sm border rounded-lg w-64 bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20"
+          />
+        </div>
+      </div>
+
+      {/* Category filter tabs */}
+      <div className="flex flex-wrap gap-1.5 mb-5">
+        <button
+          onClick={() => setFilterCat("all")}
+          className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+            filterCat === "all" ? "bg-[#1e3a5f] text-white border-[#1e3a5f]" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          All ({AD_COPY_LIBRARY.length})
+        </button>
+        {categories.map((cat) => {
+          const count = AD_COPY_LIBRARY.filter((e) => e.category === cat).length;
+          return (
+            <button
+              key={cat}
+              onClick={() => setFilterCat(cat)}
+              className={`px-3 py-1 text-xs font-medium rounded-full border transition-colors ${
+                filterCat === cat ? "bg-[#1e3a5f] text-white border-[#1e3a5f]" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+              }`}
+            >
+              {CATEGORY_LABELS[cat]} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="bg-white border rounded-lg p-8 text-center text-muted-foreground text-sm">
+          No campaigns match your search.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((entry, i) => {
+            const globalIdx = AD_COPY_LIBRARY.indexOf(entry);
+            const isOpen = expandedIdx === globalIdx;
+            return (
+              <div key={globalIdx} className="bg-white border rounded-xl overflow-hidden shadow-sm">
+                {/* Collapsed header */}
+                <div
+                  className="p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 transition-colors"
+                  onClick={() => setExpandedIdx(isOpen ? null : globalIdx)}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-xs font-mono text-muted-foreground w-6 flex-shrink-0">{globalIdx + 1}</span>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-[#1e3a5f] text-sm truncate">{entry.name}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">
+                        {entry.headlines.length} headlines · {entry.descriptions.length} descriptions · {entry.finalUrl.replace("https://", "")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={(e) => { e.stopPropagation(); copyAll(entry); }}
+                    >
+                      <Copy className="h-3.5 w-3.5" /> Copy All
+                    </Button>
+                    {isOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  </div>
+                </div>
+
+                {/* Expanded content */}
+                {isOpen && (
+                  <div className="border-t bg-[#f8f9fc] px-5 py-4 space-y-4">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Eye className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Final URL:</span>
+                      <a href={entry.finalUrl} target="_blank" rel="noopener noreferrer"
+                        className="text-[#1e3a5f] hover:underline font-medium text-sm">
+                        {entry.finalUrl}
+                      </a>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
+                        Headlines ({entry.headlines.length})
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+                        {entry.headlines.map((h, hi) => (
+                          <div key={hi} className="text-sm text-slate-700 flex items-start gap-1.5">
+                            <span className="text-xs text-muted-foreground w-5 flex-shrink-0 mt-0.5 text-right">{hi + 1}.</span>
+                            <span>{h}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2">
+                        Descriptions ({entry.descriptions.length})
+                      </p>
+                      <div className="space-y-2">
+                        {entry.descriptions.map((d, di) => (
+                          <div key={di} className="text-sm text-slate-700 flex items-start gap-1.5">
+                            <span className="text-xs text-muted-foreground w-5 flex-shrink-0 mt-0.5 text-right">{di + 1}.</span>
+                            <span>{d}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
