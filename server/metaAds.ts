@@ -185,13 +185,16 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     pageId: params.pageId,
   });
 
-  // 1. Create campaign — OUTCOME_LEADS optimises for lead generation
+  // 1. Create campaign — OUTCOME_LEADS with Campaign Budget Optimization (CBO)
+  //    Budget lives on the campaign, not ad sets. Campaign starts PAUSED so
+  //    the user enables it in Ads Manager when ready. Ad sets and ads are ACTIVE
+  //    so they run immediately once the campaign is turned on.
   const campaignBody = {
     name: params.name,
     objective: "OUTCOME_LEADS",
     status: "PAUSED",
     special_ad_categories: ["NONE"],
-    is_adset_budget_sharing_enabled: true,
+    daily_budget: String(params.dailyBudgetCents),
     bid_strategy: "LOWEST_COST_WITHOUT_CAP",
   };
   console.log("[Meta] Step 1 — Creating campaign with:", JSON.stringify(campaignBody));
@@ -223,16 +226,17 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   console.log("[Meta] Step 2 — Lead form created:", leadFormId);
 
   // 3. Create ad set — LEAD_GENERATION optimisation with instant form
+  //    No budget here — CBO on the campaign controls spend.
+  //    Status ACTIVE so it runs when the campaign is enabled.
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
     optimization_goal: "LEAD_GENERATION",
     billing_event: "IMPRESSIONS",
-    daily_budget: String(params.dailyBudgetCents),
     targeting: { geo_locations: { countries: ["US"] } },
     promoted_object: { page_id: params.pageId },
     destination_type: "ON_AD",
-    status: "PAUSED",
+    status: "ACTIVE",
   };
 
   console.log("[Meta] Step 3 — Creating ad set with:", JSON.stringify(adSetBody));
@@ -270,12 +274,12 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const creativeId = creative.id;
   console.log("[Meta] Step 4 — Creative created:", creativeId);
 
-  // 5. Create ad
+  // 5. Create ad — ACTIVE so it runs when campaign is enabled
   const adBody = {
     name: `${params.name} — Ad`,
     adset_id: adSetId,
     creative: { creative_id: creativeId },
-    status: "PAUSED",
+    status: "ACTIVE",
   };
   console.log("[Meta] Step 5 — Creating ad with:", JSON.stringify(adBody));
   const ad = await metaPost(`/${actId}/ads`, token, adBody);
