@@ -244,10 +244,14 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   const adSetId = adSet.id;
   console.log("[Meta] Step 3 — Ad set created:", adSetId);
 
-  // 4. Create ad creative — link ad with instant lead form
+  // 4. Create ad creative — lead gen ad with instant form
+  //    link_data.message = post body text (shown above the ad card)
+  //    link_data.name = headline (bold text in the ad card)
+  //    link_data.description = link description (below headline)
+  //    link_data.call_to_action = CTA button that opens the lead form
   const linkData: Record<string, unknown> = {
-    link: params.websiteUrl,
     message: params.primaryText,
+    link: params.websiteUrl,
     name: params.headline,
     description: params.description,
     call_to_action: {
