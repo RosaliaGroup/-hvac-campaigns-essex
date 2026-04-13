@@ -18,6 +18,16 @@ function setMeta(name: string, content: string, attr = "name") {
   el.content = content;
 }
 
+function setCanonical(href: string) {
+  let el = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+  if (!el) {
+    el = document.createElement("link");
+    el.rel = "canonical";
+    document.head.appendChild(el);
+  }
+  el.href = href;
+}
+
 export function useSEO({ title, description, ogTitle, ogDescription, ogUrl }: SEOProps) {
   useEffect(() => {
     document.title = title;
@@ -30,5 +40,9 @@ export function useSEO({ title, description, ogTitle, ogDescription, ogUrl }: SE
     setMeta("og:type", "website", "property");
     setMeta("twitter:title", ogTitle || title);
     setMeta("twitter:description", ogDescription || description);
+
+    // Canonical URL — use ogUrl if provided, otherwise derive from current path
+    const canonical = ogUrl || `https://mechanicalenterprise.com${window.location.pathname}`;
+    setCanonical(canonical);
   }, [title, description, ogTitle, ogDescription, ogUrl]);
 }
