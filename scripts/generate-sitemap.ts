@@ -1,5 +1,7 @@
 /**
- * Generate static sitemap.xml from blog posts + known pages.
+ * Generate static sitemap.xml by auto-extracting ALL public routes from App.tsx,
+ * plus dynamic pages from blogPosts.ts and directInstallIndustries.ts.
+ *
  * Run: npx tsx scripts/generate-sitemap.ts
  * Called automatically during `pnpm build`.
  */
@@ -7,23 +9,11 @@ import fs from "fs";
 import path from "path";
 
 const BASE = "https://mechanicalenterprise.com";
+const root = path.resolve(import.meta.dirname, "..");
 
-// ── Read blog posts from source ─────────────────────────────────────────────
-
-const blogSrc = fs.readFileSync(
-  path.resolve(import.meta.dirname, "..", "client", "src", "data", "blogPosts.ts"),
-  "utf-8"
-);
-
-interface BlogMeta { slug: string; date: string }
-
-const slugs = Array.from(blogSrc.matchAll(/slug:\s*"([^"]+)"/g)).map(m => m[1]);
-const dates = Array.from(blogSrc.matchAll(/date:\s*"([^"]+)"/g)).map(m => m[1]);
-
-const blogPosts: BlogMeta[] = slugs.map((slug, i) => ({
-  slug,
-  date: dates[i] ?? "2026-04-01",
-}));
+function readFile(rel: string): string {
+  return fs.readFileSync(path.resolve(root, rel), "utf-8");
+}
 
 function toIsoDate(dateStr: string): string {
   try {
@@ -32,86 +22,131 @@ function toIsoDate(dateStr: string): string {
   } catch { return "2026-04-01"; }
 }
 
-// ── Static pages ────────────────────────────────────────────────────────────
+// ── 1. Extract all Route paths from App.tsx ─────────────────────────────────
 
-const STATIC_PAGES: Array<{ path: string; priority: string; changefreq: string; lastmod: string }> = [
-  { path: "/", priority: "1.0", changefreq: "weekly", lastmod: "2026-04-12" },
-  { path: "/residential", priority: "0.9", changefreq: "weekly", lastmod: "2026-04-01" },
-  { path: "/commercial", priority: "0.9", changefreq: "weekly", lastmod: "2026-04-01" },
-  { path: "/rebate-calculator", priority: "0.9", changefreq: "weekly", lastmod: "2026-04-01" },
-  { path: "/services", priority: "0.8", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/about", priority: "0.7", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/contact", priority: "0.7", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/blog", priority: "0.8", changefreq: "weekly", lastmod: "2026-04-12" },
-  { path: "/heat-pump-installation-nj", priority: "0.8", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/ductless-mini-split-installation-nj", priority: "0.8", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/central-ac-installation-nj", priority: "0.8", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/oil-to-heat-pump-conversion-nj", priority: "0.8", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/commercial-vrf-vrv-installation-nj", priority: "0.8", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/pseg-rebate-contractor-nj", priority: "0.8", changefreq: "monthly", lastmod: "2026-04-01" },
-  { path: "/direct-install", priority: "0.8", changefreq: "monthly", lastmod: "2026-04-01" },
-  // City pages
-  ...([
-    "newark", "jersey-city", "elizabeth", "paterson", "edison", "woodbridge",
-    "toms-river", "clifton", "passaic", "union-city", "bayonne", "east-orange",
-    "hackensack", "new-brunswick", "perth-amboy", "west-new-york", "plainfield",
-    "bloomfield", "irvington", "montclair", "belleville", "kearny", "linden",
-    "garfield", "west-orange", "orange", "nutley",
-  ].map(city => ({
-    path: `/hvac-${city}-nj`,
-    priority: "0.7",
-    changefreq: "monthly" as const,
-    lastmod: "2026-04-01",
-  }))),
-  // Luxury areas
-  ...([
-    "millburn", "short-hills", "summit", "maplewood", "south-orange",
-    "livingston", "glen-ridge", "montclair", "caldwell", "verona",
-  ].map(area => ({
-    path: `/hvac-${area}-nj`,
-    priority: "0.6",
-    changefreq: "monthly" as const,
-    lastmod: "2026-04-01",
-  }))),
-  // Competitor pages
-  ...([
-    "aj-perri", "gold-medal-service", "central-air-systems",
-    "service-experts", "polar-hvac",
-  ].map(comp => ({
-    path: `/vs-${comp}`,
-    priority: "0.5",
-    changefreq: "monthly" as const,
-    lastmod: "2026-04-01",
-  }))),
-];
+const appSrc = readFile("client/src/App.tsx");
 
-// ── Generate XML ────────────────────────────────────────────────────────────
+// Match Route path={"/something"} or Route path="/something"
+const routeMatches = Array.from(appSrc.matchAll(/Route\s+path=\{?"([^"]+)"\}?/g));
+
+// Build a map of path → component text (to detect protect(), LuxuryAreaPage, etc.)
+const routeLines = appSrc.split("\n");
+interface RouteInfo { path: string; line: string }
+const allRoutes: RouteInfo[] = routeMatches.map(m => {
+  const lineIdx = appSrc.substring(0, m.index!).split("\n").length - 1;
+  return { path: m[1], line: routeLines[lineIdx] ?? "" };
+});
+
+// Filter: skip protected routes, auth routes, dynamic param routes, 404
+const SKIP_PATHS = new Set(["/team-login", "/accept-invite", "/reset-password", "/404"]);
+const publicRoutes = allRoutes.filter(r => {
+  if (r.line.includes("protect(")) return false;     // protected/admin routes
+  if (SKIP_PATHS.has(r.path)) return false;           // auth/utility
+  if (r.path.includes(":")) return false;             // dynamic params (expanded below)
+  return true;
+});
+
+// ── 2. Read blog posts ──────────────────────────────────────────────────────
+
+const blogSrc = readFile("client/src/data/blogPosts.ts");
+const blogSlugs = Array.from(blogSrc.matchAll(/slug:\s*"([^"]+)"/g)).map(m => m[1]);
+const blogDates = Array.from(blogSrc.matchAll(/date:\s*"([^"]+)"/g)).map(m => m[1]);
+
+// ── 3. Read direct install industries ───────────────────────────────────────
+
+const diSrc = readFile("client/src/data/directInstallIndustries.ts");
+const diSlugs = Array.from(diSrc.matchAll(/slug:\s*"([^"]+)"/g)).map(m => m[1]);
+
+// ── 4. Classify priorities ──────────────────────────────────────────────────
+
+function getPriority(p: string, line: string): string {
+  if (p === "/") return "1.0";
+  if (["/residential", "/commercial", "/rebate-calculator"].includes(p)) return "0.9";
+  if (p === "/blog" || p.startsWith("/heat-pump-") || p.startsWith("/central-ac-") ||
+      p.startsWith("/ductless-") || p.startsWith("/oil-to-") || p.startsWith("/commercial-") ||
+      p.startsWith("/vrv-") || p.startsWith("/hvac-system-") || p.startsWith("/hvac-financing") ||
+      p.startsWith("/heat-pump-rebates") || p === "/direct-install" ||
+      p.startsWith("/pseg-")) return "0.8";
+  if (p === "/services" || p === "/about" || p === "/contact" || p === "/rebate-guide" ||
+      p === "/testimonials" || p === "/maintenance" || p === "/partnerships" ||
+      p === "/careers") return "0.7";
+  if (line.includes("LuxuryAreaPage")) return "0.6";
+  if (p.startsWith("/lp/")) return "0.6";
+  if (p.startsWith("/vs-")) return "0.5";
+  if (p.startsWith("/hvac-") && p.endsWith("-nj")) return "0.7"; // city pages
+  if (["/promos", "/qualify", "/assessment", "/estimating", "/courses",
+       "/rebate-calc", "/privacy", "/terms"].includes(p)) return "0.5";
+  return "0.6";
+}
+
+function getChangefreq(priority: string): string {
+  if (parseFloat(priority) >= 0.9) return "weekly";
+  if (parseFloat(priority) >= 0.7) return "monthly";
+  return "monthly";
+}
+
+// ── 5. Build URL list ───────────────────────────────────────────────────────
+
+interface SitemapEntry { loc: string; lastmod: string; changefreq: string; priority: string }
+const entries: SitemapEntry[] = [];
+const seen = new Set<string>();
+
+function addUrl(urlPath: string, priority: string, changefreq: string, lastmod: string) {
+  if (seen.has(urlPath)) return;
+  seen.add(urlPath);
+  entries.push({ loc: `${BASE}${urlPath}`, lastmod, changefreq, priority });
+}
+
+// Static routes from App.tsx
+for (const r of publicRoutes) {
+  const priority = getPriority(r.path, r.line);
+  addUrl(r.path, priority, getChangefreq(priority), "2026-04-12");
+}
+
+// Blog posts
+for (let i = 0; i < blogSlugs.length; i++) {
+  addUrl(`/blog/${blogSlugs[i]}`, "0.8", "monthly", toIsoDate(blogDates[i] ?? "April 12, 2026"));
+}
+
+// Direct install industry pages
+for (const slug of diSlugs) {
+  addUrl(`/direct-install/${slug}`, "0.6", "monthly", "2026-04-01");
+}
+
+// ── 6. Sort: higher priority first, then alphabetical ───────────────────────
+
+entries.sort((a, b) => {
+  const pd = parseFloat(b.priority) - parseFloat(a.priority);
+  if (pd !== 0) return pd;
+  return a.loc.localeCompare(b.loc);
+});
+
+// ── 7. Generate XML ─────────────────────────────────────────────────────────
 
 const lines = [
   '<?xml version="1.0" encoding="UTF-8"?>',
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
 ];
 
-for (const p of STATIC_PAGES) {
+for (const e of entries) {
   lines.push("  <url>");
-  lines.push(`    <loc>${BASE}${p.path}</loc>`);
-  lines.push(`    <lastmod>${p.lastmod}</lastmod>`);
-  lines.push(`    <changefreq>${p.changefreq}</changefreq>`);
-  lines.push(`    <priority>${p.priority}</priority>`);
-  lines.push("  </url>");
-}
-
-for (const post of blogPosts) {
-  lines.push("  <url>");
-  lines.push(`    <loc>${BASE}/blog/${post.slug}</loc>`);
-  lines.push(`    <lastmod>${toIsoDate(post.date)}</lastmod>`);
-  lines.push(`    <changefreq>monthly</changefreq>`);
-  lines.push(`    <priority>0.8</priority>`);
+  lines.push(`    <loc>${e.loc}</loc>`);
+  lines.push(`    <lastmod>${e.lastmod}</lastmod>`);
+  lines.push(`    <changefreq>${e.changefreq}</changefreq>`);
+  lines.push(`    <priority>${e.priority}</priority>`);
   lines.push("  </url>");
 }
 
 lines.push("</urlset>");
 
-const outPath = path.resolve(import.meta.dirname, "..", "client", "public", "sitemap.xml");
+const outPath = path.resolve(root, "client", "public", "sitemap.xml");
 fs.writeFileSync(outPath, lines.join("\n"), "utf-8");
-console.log(`[sitemap] Generated ${STATIC_PAGES.length + blogPosts.length} URLs → ${outPath}`);
+
+// Summary
+const blogCount = blogSlugs.length;
+const diCount = diSlugs.length;
+const staticCount = entries.length - blogCount - diCount;
+console.log(`[sitemap] Generated ${entries.length} URLs → ${outPath}`);
+console.log(`  Static routes: ${staticCount}`);
+console.log(`  Blog posts: ${blogCount}`);
+console.log(`  Direct install: ${diCount}`);
