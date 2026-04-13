@@ -5,7 +5,10 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "generate:sitemap": "tsx scripts/generate-sitemap.ts",
+    "generate:blog-meta": "tsx scripts/generate-blog-meta.ts",
+    "prebuild": "tsx scripts/generate-sitemap.ts && tsx scripts/generate-blog-meta.ts",
+    "build": "tsx scripts/generate-sitemap.ts && tsx scripts/generate-blog-meta.ts && vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
