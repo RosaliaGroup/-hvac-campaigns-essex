@@ -131,13 +131,18 @@ function injectMeta(html: string, urlPath: string): string {
 export default async function handler(request: Request, context: any) {
   const url = new URL(request.url);
 
+  // Static files — skip entirely so Netlify serves them as-is
+  if (url.pathname.endsWith(".xml") || url.pathname.endsWith(".txt") || url.pathname.endsWith(".csv")) {
+    return;
+  }
+
   // Skip non-HTML requests (assets, API, etc.)
   if (
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/assets/") ||
     url.pathname.match(/\.\w{2,5}$/) // has file extension like .js, .css, .png
   ) {
-    return context.next();
+    return;
   }
 
   // Get the original response (index.html via SPA fallback)
