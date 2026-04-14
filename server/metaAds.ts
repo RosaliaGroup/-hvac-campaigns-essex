@@ -226,13 +226,12 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
   console.log("[Meta] Step 2 — Lead form created:", leadFormId);
 
   // 3. Create ad set — LEAD_GENERATION optimisation with instant form
-  //    No budget here — CBO on the campaign controls spend.
+  //    No budget, no billing_event, no bid fields — campaign CBO handles all of that.
   //    Status ACTIVE so it runs when the campaign is enabled.
   const adSetBody: Record<string, unknown> = {
     name: `${params.name} — Ad Set`,
     campaign_id: campaignId,
     optimization_goal: "LEAD_GENERATION",
-    billing_event: "IMPRESSIONS",
     targeting: { geo_locations: { countries: ["US"] } },
     promoted_object: { page_id: params.pageId },
     destination_type: "ON_AD",
