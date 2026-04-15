@@ -72,7 +72,7 @@ export function getMetaAuthUrl(redirectUri: string): string {
   const params = new URLSearchParams({
     client_id: APP_ID,
     redirect_uri: redirectUri,
-    scope: "ads_management,ads_read,business_management,leads_retrieval,pages_manage_metadata,pages_read_engagement",
+    scope: "ads_management,ads_read,business_management,leads_retrieval,pages_manage_metadata,pages_read_engagement,pages_manage_ads",
     response_type: "code",
     state: Buffer.from(redirectUri).toString("base64"),
   });
@@ -107,6 +107,27 @@ export async function getLongLivedToken(shortToken: string): Promise<string> {
   const res = await fetch(`${META_BASE}/oauth/access_token?${params}`);
   const json = await res.json();
   if (json.error) throw new Error(`Long-lived token exchange failed: ${json.error.message}`);
+  return json.access_token;
+}
+
+// Exchange a long-lived user token for a Page Access Token.
+// Page tokens derived from long-lived user tokens never expire and have
+// page-level permissions (pages_manage_ads) built in.
+export async function getPageAccessToken(
+  userToken: string,
+  pageId: string
+): Promise<string> {
+  const res = await fetch(
+    `${META_BASE}/${pageId}?fields=access_token&access_token=${userToken}`
+  );
+  const json = await res.json();
+  if (json.error) {
+    throw new Error(`Failed to get Page Access Token: ${json.error.message}`);
+  }
+  if (!json.access_token) {
+    throw new Error("Page Access Token not returned — make sure the user has admin access to the page.");
+  }
+  console.log("[Meta] Got Page Access Token for page:", pageId);
   return json.access_token;
 }
 

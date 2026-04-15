@@ -4,6 +4,7 @@ import {
   getMetaAuthUrl,
   exchangeCodeForToken,
   getLongLivedToken,
+  getPageAccessToken,
   getAdAccounts,
   getCampaignPerformance,
   createLeadCampaign,
@@ -42,17 +43,24 @@ export const metaAdsRouter = router({
       return { url };
     }),
 
-  // Exchange code for long-lived token and save
+  // Exchange code for long-lived user token, then get Page Access Token
   handleCallback: protectedProcedure
     .input(z.object({ code: z.string(), redirectUri: z.string() }))
     .mutation(async ({ input }) => {
       const shortToken = await exchangeCodeForToken(input.code, input.redirectUri);
-      const longToken = await getLongLivedToken(shortToken.access_token);
+      const longUserToken = await getLongLivedToken(shortToken.access_token);
+
+      // Exchange user token for a Page Access Token (never expires, has pages_manage_ads)
+      const PAGE_ID = "844109052114327"; // Mechanical Enterprise
+      const pageToken = await getPageAccessToken(longUserToken, PAGE_ID);
+
       await saveAiVaCredentials(SERVICE_KEY, {
-        access_token: longToken,
+        access_token: pageToken,
+        page_id: PAGE_ID,
+        token_type: "page_access_token",
         token_created_at: new Date().toISOString(),
       });
-      return { success: true, message: "Meta Ads connected successfully!" };
+      return { success: true, message: "Meta Ads connected with Page Access Token!" };
     }),
 
   // Save ad account ID and page ID manually

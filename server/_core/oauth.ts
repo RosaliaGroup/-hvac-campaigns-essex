@@ -2,7 +2,7 @@ import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { exchangeCodeForTokens } from "../googleAds";
-import { exchangeCodeForToken, getLongLivedToken } from "../metaAds";
+import { exchangeCodeForToken, getLongLivedToken, getPageAccessToken } from "../metaAds";
 import { saveAiVaCredentials } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
@@ -83,12 +83,19 @@ export function registerOAuthRoutes(app: Express) {
     try {
       console.log("[Meta Ads] Exchanging code with redirectUri:", redirectUri);
       const shortToken = await exchangeCodeForToken(code, redirectUri);
-      const longToken = await getLongLivedToken(shortToken.access_token);
+      const longUserToken = await getLongLivedToken(shortToken.access_token);
+
+      // Exchange user token for a Page Access Token (never expires, has pages_manage_ads)
+      const PAGE_ID = "844109052114327"; // Mechanical Enterprise
+      const pageToken = await getPageAccessToken(longUserToken, PAGE_ID);
+
       await saveAiVaCredentials("meta_ads", {
-        access_token: longToken,
+        access_token: pageToken,
+        page_id: PAGE_ID,
+        token_type: "page_access_token",
         token_created_at: new Date().toISOString(),
       });
-      console.log("[Meta Ads] OAuth connected successfully");
+      console.log("[Meta Ads] OAuth connected with Page Access Token");
       res.redirect(302, "/facebook-campaigns?connected=1");
     } catch (error) {
       console.error("[Meta Ads] OAuth callback failed", error);
