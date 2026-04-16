@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Networking Partners | Mechanical Enterprise — NJ HVAC</title>
+  <meta name="description" content="Mechanical Enterprise networking partners page. WMBE-certified HVAC contractor in Newark NJ. PSE&G-approved. Rebates up to $20K. Call (862) 419-1763." />
+  <meta property="og:title" content="Networking Partners | Mechanical Enterprise" />
+  <meta property="og:description" content="WMBE-certified HVAC contractor serving 15 NJ counties. PSE&G-approved. Up to $20,000 in rebates. Partner with us." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://mechanicalenterprise.com/247-partners.html" />
+  <link rel="canonical" href="https://mechanicalenterprise.com/247-partners.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy: #1e3a5f;
+      --navy-dark: #0a1628;
+      --orange: #ff6b35;
+      --orange-hover: #e85d2c;
+      --white: #ffffff;
+      --gray-50: #f8f9fc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-400: #94a3b8;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --green: #10b981;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--gray-800);
+      line-height: 1.6;
+      background: var(--white);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; line-height: 1.2; }
+    a { color: var(--orange); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── Header ─────────────────────────────────── */
+    header {
+      background: var(--navy-dark);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 3px solid var(--orange);
+    }
+    header .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .logo {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 1.4rem;
+      color: var(--white);
+    }
+    .logo span { color: var(--orange); }
+    header nav a {
+      color: var(--gray-200);
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-left: 24px;
+      transition: color 0.2s;
+    }
+    header nav a:hover { color: var(--orange); text-decoration: none; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-orange { background: var(--orange); color: var(--white); }
+    .btn-orange:hover { background: var(--orange-hover); text-decoration: none; }
+    .btn-white { background: var(--white); color: var(--navy); }
+    .btn-white:hover { background: var(--gray-100); text-decoration: none; }
+    .btn-outline { background: transparent; color: var(--white); border: 2px solid rgba(255,255,255,0.3); }
+    .btn-outline:hover { border-color: var(--orange); color: var(--orange); text-decoration: none; }
+
+    /* ── Hero ────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, var(--navy-dark) 0%, var(--navy) 100%);
+      padding: 80px 0 60px;
+      text-align: center;
+      color: var(--white);
+    }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+    .hero h1 span { color: var(--orange); }
+    .hero p {
+      font-size: 1.15rem;
+      color: var(--gray-200);
+      max-width: 700px;
+      margin: 0 auto 32px;
+    }
+    .hero-badges {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      color: var(--gray-200);
+    }
+    .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+
+    /* ── About Section ───────────────────────────── */
+    .about {
+      padding: 64px 0;
+      background: var(--white);
+    }
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    @media (max-width: 768px) { .about-grid { grid-template-columns: 1fr; } }
+    .about h2 { font-size: 1.8rem; color: var(--navy); margin-bottom: 16px; }
+    .about p { color: var(--gray-600); margin-bottom: 16px; }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    .stat-card {
+      background: var(--gray-50);
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-card .number { font-family: 'Outfit'; font-size: 1.8rem; font-weight: 800; color: var(--orange); }
+    .stat-card .label { font-size: 0.85rem; color: var(--gray-600); margin-top: 4px; }
+
+    /* ── Services ─────────────────────────────────── */
+    .services {
+      padding: 64px 0;
+      background: var(--gray-50);
+    }
+    .services h2 { font-size: 1.8rem; color: var(--navy); text-align: center; margin-bottom: 40px; }
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .service-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 28px;
+      transition: box-shadow 0.2s;
+    }
+    .service-card:hover { box-shadow: 0 4px 24px rgba(0,0,0,0.08); }
+    .service-card .icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      background: var(--navy);
+      color: var(--orange);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+    }
+    .service-card h3 { font-size: 1.1rem; color: var(--navy); margin-bottom: 8px; }
+    .service-card p { font-size: 0.9rem; color: var(--gray-600); }
+
+    /* ── Rebates ──────────────────────────────────── */
+    .rebates {
+      padding: 64px 0;
+      background: var(--white);
+    }
+    .rebates h2 { font-size: 1.8rem; color: var(--navy); text-align: center; margin-bottom: 12px; }
+    .rebates .subtitle { text-align: center; color: var(--gray-600); margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .rebate-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+    }
+    .rebate-card {
+      border: 2px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 28px;
+      text-align: center;
+      transition: border-color 0.2s;
+    }
+    .rebate-card:hover { border-color: var(--orange); }
+    .rebate-card .amount { font-family: 'Outfit'; font-size: 2rem; font-weight: 800; color: var(--navy); }
+    .rebate-card .source { font-size: 0.85rem; color: var(--gray-600); margin-top: 4px; }
+    .rebate-card .desc { font-size: 0.85rem; color: var(--gray-400); margin-top: 8px; }
+
+    /* ── Partner / Referral ───────────────────────── */
+    .partner {
+      padding: 64px 0;
+      background: linear-gradient(135deg, var(--navy-dark), var(--navy));
+      color: var(--white);
+    }
+    .partner h2 { font-size: 1.8rem; text-align: center; margin-bottom: 12px; }
+    .partner .subtitle { text-align: center; color: var(--gray-200); margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto; }
+    .partner-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 24px;
+    }
+    .partner-card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .partner-card h3 { color: var(--orange); font-size: 1.1rem; margin-bottom: 8px; }
+    .partner-card p { font-size: 0.9rem; color: var(--gray-200); }
+    .partner-card .payout { font-family: 'Outfit'; font-size: 1.5rem; font-weight: 700; color: var(--white); margin-top: 12px; }
+
+    /* ── Service Area ─────────────────────────────── */
+    .area {
+      padding: 64px 0;
+      background: var(--gray-50);
+    }
+    .area h2 { font-size: 1.8rem; color: var(--navy); text-align: center; margin-bottom: 32px; }
+    .counties {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .county-tag {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      color: var(--navy);
+      font-weight: 500;
+    }
+
+    /* ── CTA ──────────────────────────────────────── */
+    .cta {
+      padding: 64px 0;
+      background: var(--orange);
+      text-align: center;
+      color: var(--white);
+    }
+    .cta h2 { font-size: 2rem; margin-bottom: 12px; }
+    .cta p { font-size: 1.1rem; opacity: 0.95; margin-bottom: 28px; }
+    .cta-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+    .cta .phone { font-family: 'Outfit'; font-size: 1.3rem; font-weight: 700; }
+
+    /* ── Footer ───────────────────────────────────── */
+    footer {
+      background: var(--navy-dark);
+      color: var(--gray-400);
+      padding: 40px 0;
+      text-align: center;
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--gray-200); }
+    footer .footer-links { margin-bottom: 16px; }
+    footer .footer-links a { margin: 0 12px; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <div class="logo">Mechanical <span>Enterprise</span></div>
+      <nav>
+        <a href="https://mechanicalenterprise.com">Home</a>
+        <a href="https://mechanicalenterprise.com/services">Services</a>
+        <a href="https://mechanicalenterprise.com/rebate-calculator">Rebate Calculator</a>
+        <a href="https://mechanicalenterprise.com/partnerships">Partner With Us</a>
+        <a href="tel:8624191763" class="btn btn-orange" style="margin-left:12px;">Call (862) 419-1763</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <h1>Your <span>Networking Partners</span> in NJ HVAC</h1>
+      <p>Mechanical Enterprise LLC is a WMBE-certified, PSE&G-approved HVAC contractor headquartered in Newark, NJ. We help homeowners and businesses save thousands through NJ rebate programs.</p>
+      <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;">
+        <a href="tel:8624191763" class="btn btn-orange">Call (862) 419-1763</a>
+        <a href="https://mechanicalenterprise.com/rebate-calculator" class="btn btn-outline">Free Rebate Estimate</a>
+      </div>
+      <div class="hero-badges">
+        <div class="badge"><span class="dot"></span> WMBE / SBE Certified</div>
+        <div class="badge"><span class="dot"></span> PSE&G Approved Contractor</div>
+        <div class="badge"><span class="dot"></span> Licensed NJ HVAC</div>
+        <div class="badge"><span class="dot"></span> Serving 15 Counties</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section class="about">
+    <div class="container">
+      <div class="about-grid">
+        <div>
+          <h2>Who We Are</h2>
+          <p>Mechanical Enterprise LLC is a full-service HVAC contractor based in Newark, New Jersey. We specialize in heat pump installations, VRF/VRV commercial systems, and helping property owners navigate NJ's generous rebate programs.</p>
+          <p>As a <strong>PSE&G-approved contractor</strong>, we handle the entire rebate application process for our customers — from assessment to installation to paperwork. Most homeowners qualify for <strong>up to $20,000</strong> in combined state and federal incentives.</p>
+          <p>We're <strong>WMBE/SBE certified</strong> (Women and Minority Business Enterprise / Small Business Enterprise), making us an ideal partner for organizations with diversity procurement goals.</p>
+        </div>
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="number">$20K</div>
+            <div class="label">Max Combined Rebates</div>
+          </div>
+          <div class="stat-card">
+            <div class="number">15</div>
+            <div class="label">NJ Counties Served</div>
+          </div>
+          <div class="stat-card">
+            <div class="number">80%</div>
+            <div class="label">Commercial HVAC Covered</div>
+          </div>
+          <div class="stat-card">
+            <div class="number">$0</div>
+            <div class="label">Typical Out-of-Pocket</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Services -->
+  <section class="services">
+    <div class="container">
+      <h2>What We Do</h2>
+      <div class="services-grid">
+        <div class="service-card">
+          <div class="icon">&#x1f3e0;</div>
+          <h3>Residential Heat Pumps</h3>
+          <p>Central and ductless heat pump installation for NJ homes. Replaces furnaces, AC, and oil systems. Qualifies for up to $20,000 in rebates.</p>
+        </div>
+        <div class="service-card">
+          <div class="icon">&#x1f3e2;</div>
+          <h3>Commercial HVAC</h3>
+          <p>VRF/VRV systems, rooftop units, and full commercial HVAC. PSE&G Direct Install covers up to 80% of costs. Free lighting upgrades included.</p>
+        </div>
+        <div class="service-card">
+          <div class="icon">&#x1f6e2;</div>
+          <h3>Oil-to-Heat-Pump Conversion</h3>
+          <p>Full oil system removal, heat pump installation, and oil tank decommissioning. Qualifies for maximum PSE&G rebate amounts.</p>
+        </div>
+        <div class="service-card">
+          <div class="icon">&#x1f4b0;</div>
+          <h3>Rebate Management</h3>
+          <p>We handle all PSE&G, NJ Clean Energy, and federal tax credit paperwork. Your customers fill out zero forms — we do everything.</p>
+        </div>
+        <div class="service-card">
+          <div class="icon">&#x2744;</div>
+          <h3>R22 System Replacement</h3>
+          <p>R22 refrigerant is banned. We replace outdated R22 systems with modern heat pumps that qualify for full NJ rebate programs.</p>
+        </div>
+        <div class="service-card">
+          <div class="icon">&#x26a1;</div>
+          <h3>Emergency HVAC Service</h3>
+          <p>Same-day emergency HVAC repair and replacement throughout NJ. Available for both residential and commercial properties.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rebates -->
+  <section class="rebates">
+    <div class="container">
+      <h2>NJ Rebate Programs We Manage</h2>
+      <p class="subtitle">We identify every rebate your referral qualifies for and handle all applications at no cost.</p>
+      <div class="rebate-cards">
+        <div class="rebate-card">
+          <div class="amount">$18,000</div>
+          <div class="source">PSE&G NJ Clean Heat</div>
+          <div class="desc">Residential heat pump rebate for PSE&G customers</div>
+        </div>
+        <div class="rebate-card">
+          <div class="amount">$2,000</div>
+          <div class="source">Federal 25C Tax Credit</div>
+          <div class="desc">IRS tax credit for energy-efficient HVAC</div>
+        </div>
+        <div class="rebate-card">
+          <div class="amount">80%</div>
+          <div class="source">PSE&G Direct Install</div>
+          <div class="desc">Commercial HVAC coverage + 100% free lighting</div>
+        </div>
+        <div class="rebate-card">
+          <div class="amount">0%</div>
+          <div class="source">On-Bill Repayment</div>
+          <div class="desc">0% interest financing through PSE&G utility bill</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Partner / Referral -->
+  <section class="partner">
+    <div class="container">
+      <h2>Referral Partner Program</h2>
+      <p class="subtitle">Earn money for every residential or commercial HVAC referral. No licensing required — just connect us with someone who needs HVAC work.</p>
+      <div class="partner-grid">
+        <div class="partner-card">
+          <h3>Residential Referrals</h3>
+          <p>Refer a homeowner who needs a heat pump, AC, or furnace replacement. We handle the assessment, installation, and rebate paperwork.</p>
+          <div class="payout">$200 – $500 per referral</div>
+        </div>
+        <div class="partner-card">
+          <h3>Commercial Referrals</h3>
+          <p>Refer a business owner, property manager, or building owner. PSE&G Direct Install covers up to 80% — easy sell for your network.</p>
+          <div class="payout">$500+ per referral</div>
+        </div>
+        <div class="partner-card">
+          <h3>Real Estate Partners</h3>
+          <p>Agents, inspectors, and property managers — refer clients who need HVAC upgrades before listing or after purchase.</p>
+          <div class="payout">$200 – $500 per referral</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:32px;">
+        <a href="https://mechanicalenterprise.com/partnerships" class="btn btn-orange">Apply to Partner Program</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Service Area -->
+  <section class="area">
+    <div class="container">
+      <h2>Service Area — 15 NJ Counties</h2>
+      <div class="counties">
+        <span class="county-tag">Essex County</span>
+        <span class="county-tag">Hudson County</span>
+        <span class="county-tag">Bergen County</span>
+        <span class="county-tag">Passaic County</span>
+        <span class="county-tag">Union County</span>
+        <span class="county-tag">Middlesex County</span>
+        <span class="county-tag">Morris County</span>
+        <span class="county-tag">Somerset County</span>
+        <span class="county-tag">Mercer County</span>
+        <span class="county-tag">Monmouth County</span>
+        <span class="county-tag">Ocean County</span>
+        <span class="county-tag">Sussex County</span>
+        <span class="county-tag">Camden County</span>
+        <span class="county-tag">Burlington County</span>
+        <span class="county-tag">Hunterdon County</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container">
+      <h2>Let's Work Together</h2>
+      <p>Whether you need HVAC service or want to refer someone, we make it easy.</p>
+      <div class="cta-buttons">
+        <a href="tel:8624191763" class="btn btn-white">
+          <span class="phone">(862) 419-1763</span>
+        </a>
+        <a href="https://mechanicalenterprise.com/rebate-calculator" class="btn btn-white">Free Rebate Estimate</a>
+        <a href="https://mechanicalenterprise.com/partnerships" class="btn btn-outline" style="border-color:rgba(255,255,255,0.5);color:var(--white);">Become a Partner</a>
+      </div>
+      <p style="margin-top:20px;font-size:0.9rem;opacity:0.9;">
+        <strong>Mechanical Enterprise LLC</strong> · Newark, NJ · WMBE/SBE Certified · NJ Licensed HVAC Contractor
+      </p>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://mechanicalenterprise.com">Home</a>
+        <a href="https://mechanicalenterprise.com/residential">Residential</a>
+        <a href="https://mechanicalenterprise.com/commercial">Commercial</a>
+        <a href="https://mechanicalenterprise.com/blog">Blog</a>
+        <a href="https://mechanicalenterprise.com/contact">Contact</a>
+      </div>
+      <p>&copy; 2026 Mechanical Enterprise LLC. All rights reserved. Licensed NJ HVAC Contractor.</p>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -132,7 +132,7 @@ export default async function handler(request: Request, context: any) {
   const url = new URL(request.url);
 
   // Static files — skip entirely so Netlify serves them as-is
-  if (url.pathname.endsWith(".xml") || url.pathname.endsWith(".txt") || url.pathname.endsWith(".csv")) {
+  if (url.pathname.endsWith(".xml") || url.pathname.endsWith(".txt") || url.pathname.endsWith(".csv") || url.pathname === "/247-partners.html") {
     return;
   }
 

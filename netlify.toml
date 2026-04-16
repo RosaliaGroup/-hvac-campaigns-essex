@@ -38,6 +38,12 @@
   force = true
 
 [[redirects]]
+  from = "/247-partners.html"
+  to = "/247-partners.html"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
