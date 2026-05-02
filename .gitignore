@@ -106,5 +106,8 @@ temp/
 *.sqlite
 *.sqlite3
 
+# Google Indexing API key
+server/scripts/indexing-api-key.json
+
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
