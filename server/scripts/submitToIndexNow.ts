@@ -38,7 +38,7 @@ async function main() {
     urlList: urls,
   };
 
-  const res = await fetch("https://api.indexnow.org/indexnow", {
+  const res = await fetch("https://www.bing.com/indexnow", {
     method: "POST",
     headers: { "Content-Type": "application/json; charset=utf-8" },
     body: JSON.stringify(body),
