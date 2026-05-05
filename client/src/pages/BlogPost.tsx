@@ -4,7 +4,7 @@ import { Phone, ArrowRight, CheckCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
-import { blogPosts, type BlogSection } from "@/data/blogPosts";
+import { blogPosts, type BlogSection, type FAQItem } from "@/data/blogPosts";
 import { Redirect } from "wouter";
 import { Link } from "wouter";
 import { ALL_CITIES, pickDeterministic } from "@/data/njCounties";
@@ -99,13 +99,22 @@ export default function BlogPost({ slug }: { slug: string }) {
   return (
     <div className="min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        "@context": "https://schema.org", "@type": "BlogPosting",
+        "@context": "https://schema.org", "@type": "Article",
         "headline": post.title, "datePublished": post.date,
         "author": { "@type": "Organization", "name": "Mechanical Enterprise LLC" },
         "publisher": { "@type": "Organization", "name": "Mechanical Enterprise LLC", "url": BASE },
         "description": post.metaDescription,
         "mainEntityOfPage": { "@type": "WebPage", "@id": `${BASE}/blog/${post.slug}` },
       }) }} />
+      {post.faqSchema && post.faqSchema.length > 0 && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+          "@context": "https://schema.org", "@type": "FAQPage",
+          "mainEntity": post.faqSchema.map((faq: FAQItem) => ({
+            "@type": "Question", "name": faq.question,
+            "acceptedAnswer": { "@type": "Answer", "text": faq.answer },
+          })),
+        }) }} />
+      )}
       <Navigation />
 
       {/* Hero */}
