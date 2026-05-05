@@ -7,7 +7,8 @@ import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
 import { directInstallIndustries, type IndustryPage } from "@/data/directInstallIndustries";
-import { Redirect } from "wouter";
+import { Redirect, Link } from "wouter";
+import { pickDeterministic } from "@/data/njCounties";
 
 const BASE = "https://mechanicalenterprise.com";
 const COMMERCIAL_URL = `${BASE}/commercial`;
@@ -148,6 +149,23 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
                 </button>
                 {openFaq === i && <div className="px-5 pb-5 text-sm text-gray-600 leading-relaxed border-t pt-4">{faq.a}</div>}
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Related Industries */}
+      <section className="py-12 bg-[#f7f8fa]">
+        <div className="container">
+          <h2 className="text-2xl font-bold text-[#0a1628] mb-3 text-center">Direct Install for Other Industries</h2>
+          <p className="text-gray-600 mb-6 text-center">The NJ Direct Install Program covers businesses across every industry:</p>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-2xl mx-auto">
+            {pickDeterministic(directInstallIndustries, slug, 6).map((ind) => (
+              <Link key={ind.slug} href={`/direct-install/${ind.slug}`}>
+                <div className="bg-white rounded-lg border px-4 py-3 text-center text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                  {ind.industry}
+                </div>
+              </Link>
             ))}
           </div>
         </div>

@@ -6,6 +6,8 @@ import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { blogPosts, type BlogSection } from "@/data/blogPosts";
 import { Redirect } from "wouter";
+import { Link } from "wouter";
+import { ALL_CITIES, pickDeterministic } from "@/data/njCounties";
 
 const BASE = "https://mechanicalenterprise.com";
 const PHONE = "(862) 423-9396";
@@ -153,6 +155,29 @@ export default function BlogPost({ slug }: { slug: string }) {
                 </div>
               </div>
             </aside>
+          </div>
+        </div>
+      </section>
+
+      {/* Related Service Areas */}
+      <section className="py-12 bg-white">
+        <div className="container">
+          <div className="max-w-5xl mx-auto">
+            <div className="mt-8 border-t pt-12">
+              <h2 className="text-2xl font-bold text-[#0a1628] mb-3">HVAC Service Across NJ</h2>
+              <p className="text-gray-600 mb-6">
+                Mechanical Enterprise serves homeowners and businesses across NJ:
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {pickDeterministic(ALL_CITIES, slug, 8).map((c) => (
+                  <Link key={c.slug} href={`/hvac-${c.slug}-nj`}>
+                    <div className="bg-[#f7f8fa] rounded-lg border px-4 py-3 text-center text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                      {c.city}, NJ
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

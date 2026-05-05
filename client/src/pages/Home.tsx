@@ -77,6 +77,36 @@ export default function Home() {
         </div>
       </section>
 
+      {/* HVAC Service Across New Jersey */}
+      <section className="py-12 bg-white border-b">
+        <div className="container">
+          <h2 className="text-3xl font-bold text-center text-[#1e3a5f] mb-3">HVAC Service Across New Jersey</h2>
+          <p className="text-center text-muted-foreground mb-8">Licensed HVAC contractor serving homes and businesses statewide</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-w-4xl mx-auto">
+            {[
+              { city: "Newark", slug: "newark" },
+              { city: "Jersey City", slug: "jersey-city" },
+              { city: "Paterson", slug: "clifton" },
+              { city: "Elizabeth", slug: "elizabeth" },
+              { city: "Edison", slug: "woodbridge" },
+              { city: "Woodbridge", slug: "woodbridge" },
+              { city: "Clifton", slug: "clifton" },
+              { city: "Hoboken", slug: "hoboken" },
+              { city: "Morristown", slug: "morristown" },
+              { city: "Hackensack", slug: "hackensack" },
+              { city: "Fort Lee", slug: "fort-lee" },
+              { city: "Westfield", slug: "westfield" },
+            ].map(({ city, slug }) => (
+              <Link key={slug + city} href={`/hvac-${slug}-nj`}>
+                <div className="bg-[#f7f8fa] rounded-lg border px-3 py-2.5 text-center text-sm font-medium text-[#1e3a5f] hover:border-[#ff6b35] hover:text-[#ff6b35] transition-colors cursor-pointer">
+                  {city}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Why Choose Us */}
       <section className="py-20 bg-white">
         <div className="container">
