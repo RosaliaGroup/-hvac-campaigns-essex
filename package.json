@@ -14,7 +14,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "db:push": "drizzle-kit generate && drizzle-kit migrate",
-    "submit-index": "tsx server/scripts/submitToIndexingAPI.ts"
+    "submit-index": "tsx server/scripts/submitToIndexingAPI.ts",
+    "submit-indexnow": "tsx server/scripts/submitToIndexNow.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
