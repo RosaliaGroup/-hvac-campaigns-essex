@@ -24,8 +24,7 @@ function buildTransporter() {
 const SALES_EMAIL = "sales@mechanicalenterprise.com";
 const PHONE = "(862) 419-1763";
 const PHONE_LINK = "tel:+18624191763";
-const BOOKING_URL = "https://mechanicalenterprise.com/contact";
-const PAY_URL = "https://buy.stripe.com/7sY8wIcuM0hz7M17I40oM03";
+const BOOKING_URL = "https://mechanicalenterprise.com/qualify";
 
 function timestamp() {
   return new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
@@ -137,10 +136,6 @@ function newLeadHtml(d) {
         <div style="text-align: center; margin: 24px 0;">
           <a href="${BOOKING_URL}" style="background: #e8813a; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block; margin-bottom: 12px;">
             Book your appointment &rarr;
-          </a>
-          &nbsp;&nbsp;
-          <a href="${PAY_URL}" style="background: transparent; color: #e8813a; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block; margin-bottom: 12px; border: 2px solid #e8813a;">
-            Pay an invoice
           </a>
           <br/>
           <a href="${PHONE_LINK}" style="color: #e8813a; text-decoration: none; font-size: 14px; padding: 8px 16px; display: inline-block;">
