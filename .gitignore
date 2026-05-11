@@ -111,3 +111,6 @@ server/scripts/indexing-api-key.json
 
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
+
+# Local Netlify folder
+.netlify
