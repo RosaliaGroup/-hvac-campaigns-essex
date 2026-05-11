@@ -14,6 +14,7 @@ import ResidentialCampaigns from "./pages/ResidentialCampaigns";
 import CommercialCampaigns from "./pages/CommercialCampaigns";
 import MaintenanceSubscription from "./pages/MaintenanceSubscription";
 import Partnerships from "./pages/Partnerships";
+import Referral from "./pages/Referral";
 import Careers from "./pages/Careers";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -98,6 +99,7 @@ function Router() {
       <Route path={"/commercial"} component={CommercialCampaigns} />
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
       <Route path={"/partnerships"} component={Partnerships} />
+      <Route path={"/referral"} component={Referral} />
       <Route path={"/careers"} component={Careers} />
       <Route path={"/privacy"} component={Privacy} />
       <Route path={"/terms"} component={Terms} />
