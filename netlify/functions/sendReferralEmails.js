@@ -25,6 +25,7 @@ const SALES_EMAIL = "sales@mechanicalenterprise.com";
 const PHONE = "(862) 419-1763";
 const PHONE_LINK = "tel:+18624191763";
 const BOOKING_URL = "https://mechanicalenterprise.com/contact";
+const PAY_URL = "https://buy.stripe.com/7sY8wIcuM0hz7M17I40oM03";
 
 function timestamp() {
   return new Date().toLocaleString("en-US", { timeZone: "America/New_York" });
@@ -129,13 +130,17 @@ function newLeadHtml(d) {
         <ul style="font-size: 14px; line-height: 1.8; padding-left: 20px; margin: 0 0 20px;">
           <li>PSE&amp;G-approved for heat pump rebates up to <strong>$16,000</strong> (residential)</li>
           <li>Up to <strong>80%</strong> rebates on commercial systems</li>
-          <li>Flat $100 service calls &mdash; no hourly surprises</li>
+          <li>Flat-fee service &mdash; no hourly surprises</li>
           <li>WMBE certified, 24/7 emergency service</li>
         </ul>
         <p style="font-size: 14px; line-height: 1.6;">We&rsquo;ll reach out within 24 hours, but you can also book your appointment now &mdash; pick a time that works for you:</p>
         <div style="text-align: center; margin: 24px 0;">
           <a href="${BOOKING_URL}" style="background: #e8813a; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block; margin-bottom: 12px;">
             Book your appointment &rarr;
+          </a>
+          &nbsp;&nbsp;
+          <a href="${PAY_URL}" style="background: transparent; color: #e8813a; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block; margin-bottom: 12px; border: 2px solid #e8813a;">
+            Pay an invoice
           </a>
           <br/>
           <a href="${PHONE_LINK}" style="color: #e8813a; text-decoration: none; font-size: 14px; padding: 8px 16px; display: inline-block;">
