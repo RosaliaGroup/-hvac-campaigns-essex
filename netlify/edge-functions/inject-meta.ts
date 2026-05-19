@@ -4,6 +4,9 @@
  *
  * Runs at the CDN edge, rewrites the <head> of the SPA index.html
  * before it reaches the browser/crawler.
+ *
+ * ENHANCED: Now handles city pages, direct-install pages, og:image,
+ * and adds prerender hints for search engine bots.
  */
 
 import blogPosts from "./blog-meta.json" with { type: "json" };
@@ -12,12 +15,16 @@ const BASE = "https://mechanicalenterprise.com";
 const DEFAULT_TITLE = "Mechanical Enterprise | Expert HVAC Solutions in New Jersey";
 const DEFAULT_DESC =
   "Licensed HVAC contractor in Newark NJ. PSE&G-approved for heat pump rebates up to $16K. Serving 15 NJ counties. Call (862) 419-1763.";
+const DEFAULT_OG_IMAGE = `${BASE}/og-default.png`;
+const PHONE = "(862) 423-9396";
+const PHONE_COMMERCIAL = "(862) 419-1763";
 
 // ── Known page metadata ────────────────────────────────────────────────────
 
 interface PageMeta {
   title: string;
   description: string;
+  ogImage?: string;
 }
 
 const PAGE_META: Record<string, PageMeta> = {
@@ -50,7 +57,105 @@ const PAGE_META: Record<string, PageMeta> = {
     title: "HVAC Blog | Mechanical Enterprise NJ",
     description: "HVAC tips, NJ rebate guides, heat pump advice, and energy savings articles from Mechanical Enterprise.",
   },
+  "/direct-install": {
+    title: "NJ Direct Install Program | Free Lighting & 80% HVAC | Mechanical Enterprise",
+    description: "NJ Direct Install Program covers 100% of commercial lighting and up to 80% of HVAC. PSE&G Trade Ally. Free assessment for NJ businesses.",
+  },
+  "/pseg-rebate-contractor-nj": {
+    title: "PSE&G Approved HVAC Contractor NJ | Mechanical Enterprise",
+    description: "PSE&G-approved HVAC contractor for NJ rebate programs. We handle all paperwork. Up to $16K in rebates. Free assessment.",
+  },
+  "/pseg-rebate-checklist": {
+    title: "PSE&G Rebate Checklist NJ | Mechanical Enterprise",
+    description: "Complete PSE&G rebate checklist for NJ homeowners. Every step from assessment to rebate check. Free assessment included.",
+  },
+  "/rebate-guide": {
+    title: "NJ HVAC Rebate Guide 2026 | Mechanical Enterprise",
+    description: "Complete guide to every NJ HVAC rebate in 2026. PSE&G, federal, state programs. How to stack rebates for maximum savings.",
+  },
+  "/maintenance": {
+    title: "HVAC Maintenance Plans NJ | Mechanical Enterprise",
+    description: "HVAC maintenance plans for NJ homes and businesses. Prevent breakdowns, extend system life, maintain warranty coverage.",
+  },
+  "/testimonials": {
+    title: "Customer Reviews | Mechanical Enterprise NJ",
+    description: "Read what NJ homeowners and businesses say about Mechanical Enterprise HVAC installations and rebate assistance.",
+  },
+  "/careers": {
+    title: "HVAC Careers NJ | Mechanical Enterprise",
+    description: "Join Mechanical Enterprise. HVAC technician and installer positions in New Jersey. Competitive pay, benefits, growth.",
+  },
+  "/partnerships": {
+    title: "HVAC Referral Partnerships | Mechanical Enterprise NJ",
+    description: "Partner with Mechanical Enterprise for HVAC referrals in NJ. Real estate agents, contractors, property managers welcome.",
+  },
 };
+
+// ── Dynamic page metadata generators ──────────────────────────────────────
+
+function getCityMeta(slug: string): PageMeta & { canonical: string } {
+  // slug is like "hvac-newark-nj" — extract city name
+  const cityPart = slug.replace("hvac-", "").replace("-nj", "");
+  const city = cityPart.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return {
+    title: `Heat Pump Installation ${city} NJ | Up to $16K Rebates | Mechanical Enterprise`,
+    description: `HVAC installation in ${city} NJ. Free assessment, NJ rebates up to $16,000, federal tax credit up to $2,000. Licensed NJ contractor. Call ${PHONE}.`,
+    canonical: `${BASE}/${slug}`,
+  };
+}
+
+function getDirectInstallMeta(slug: string): PageMeta & { canonical: string } {
+  // slug is like "accounting-offices-nj"
+  const industryPart = slug.replace("-nj", "");
+  const industry = industryPart.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  return {
+    title: `${industry} HVAC + Lighting NJ | Direct Install Program | Mechanical Enterprise`,
+    description: `NJ ${industry.toLowerCase()} qualify for 100% free lighting and up to 80% HVAC coverage under Direct Install. PSE&G Trade Ally. Free assessment.`,
+    canonical: `${BASE}/direct-install/${slug}`,
+  };
+}
+
+function getLandingPageMeta(slug: string): PageMeta & { canonical: string } {
+  const LP_META: Record<string, PageMeta> = {
+    "heat-pump-rebates": {
+      title: "NJ Heat Pump Rebates 2026 | Up to $22,000 Back | Mechanical Enterprise",
+      description: "Get up to $22,000 in NJ heat pump rebates. PSE&G + federal + state programs stack. Free assessment, we handle all paperwork.",
+    },
+    "emergency-hvac": {
+      title: "Emergency HVAC Repair NJ | Same-Day Service | Mechanical Enterprise",
+      description: "Emergency HVAC repair in NJ. Same-day service available. Licensed contractor. Call now for immediate assistance.",
+    },
+    "commercial-vrv": {
+      title: "Commercial VRV/VRF Installation NJ | Mechanical Enterprise",
+      description: "Commercial VRV/VRF system installation in NJ. Up to 80% covered by Direct Install. Free commercial assessment.",
+    },
+    "maintenance-offer": {
+      title: "HVAC Maintenance Special NJ | Mechanical Enterprise",
+      description: "HVAC maintenance plans for NJ homes. Prevent breakdowns, extend system life. Special offer available.",
+    },
+    "rebate-guide": {
+      title: "NJ HVAC Rebate Guide 2026 | Every Program Explained",
+      description: "Complete guide to NJ HVAC rebates in 2026. PSE&G, federal, HEEHRA, Clean Heat. How to stack for maximum savings.",
+    },
+    "referral-partner": {
+      title: "HVAC Referral Partner Program NJ | Mechanical Enterprise",
+      description: "Earn referral fees for HVAC leads in NJ. Real estate agents, contractors, property managers. Easy signup.",
+    },
+    "fb-commercial": {
+      title: "Commercial HVAC Solutions NJ | Free Assessment | Mechanical Enterprise",
+      description: "Commercial HVAC for NJ businesses. Direct Install covers up to 80%. Free assessment, PSE&G Trade Ally.",
+    },
+    "fb-residential": {
+      title: "Home HVAC Installation NJ | Up to $16K Rebates | Mechanical Enterprise",
+      description: "Residential HVAC installation in NJ. Heat pumps, central AC. Up to $16K in rebates. Free assessment.",
+    },
+  };
+  const meta = LP_META[slug];
+  if (meta) {
+    return { ...meta, canonical: `${BASE}/lp/${slug}` };
+  }
+  return { title: DEFAULT_TITLE, description: DEFAULT_DESC, canonical: `${BASE}/lp/${slug}` };
+}
 
 function getMetaForPath(urlPath: string): PageMeta & { canonical: string } {
   const clean = urlPath.split("?")[0].replace(/\/+$/, "") || "/";
@@ -68,6 +173,23 @@ function getMetaForPath(urlPath: string): PageMeta & { canonical: string } {
         canonical: `${BASE}/blog/${post.slug}`,
       };
     }
+  }
+
+  // City page (hvac-*-nj pattern)
+  if (clean.match(/^\/hvac-[a-z-]+-nj$/)) {
+    return getCityMeta(clean.slice(1));
+  }
+
+  // Direct-install page
+  if (clean.startsWith("/direct-install/") && clean !== "/direct-install") {
+    const slug = clean.replace("/direct-install/", "");
+    return getDirectInstallMeta(slug);
+  }
+
+  // Landing pages
+  if (clean.startsWith("/lp/")) {
+    const slug = clean.replace("/lp/", "");
+    return getLandingPageMeta(slug);
   }
 
   // Known static page
@@ -91,6 +213,7 @@ function injectMeta(html: string, urlPath: string): string {
   const t = escHtml(meta.title);
   const d = escHtml(meta.description);
   const c = escHtml(meta.canonical);
+  const ogImage = escHtml(meta.ogImage || DEFAULT_OG_IMAGE);
 
   html = html.replace(/<title>[^<]*<\/title>/, `<title>${t}</title>`);
   html = html.replace(
@@ -117,6 +240,22 @@ function injectMeta(html: string, urlPath: string): string {
     /<meta name="twitter:description" content="[^"]*" \/>/,
     `<meta name="twitter:description" content="${d}" />`
   );
+
+  // Inject og:image if not present
+  if (!html.includes('og:image')) {
+    html = html.replace(
+      /<meta property="og:url"/,
+      `<meta property="og:image" content="${ogImage}" />\n    <meta property="og:image:width" content="1200" />\n    <meta property="og:image:height" content="630" />\n    <meta property="og:url"`
+    );
+  }
+
+  // Inject twitter:card and twitter:image if not present
+  if (!html.includes('twitter:card')) {
+    html = html.replace(
+      /<meta name="twitter:title"/,
+      `<meta name="twitter:card" content="summary_large_image" />\n    <meta name="twitter:image" content="${ogImage}" />\n    <meta name="twitter:title"`
+    );
+  }
 
   // Inject canonical link
   if (!html.includes('rel="canonical"')) {

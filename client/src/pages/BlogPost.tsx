@@ -8,6 +8,7 @@ import { blogPosts, type BlogSection, type FAQItem } from "@/data/blogPosts";
 import { Redirect } from "wouter";
 import { Link } from "wouter";
 import { ALL_CITIES, pickDeterministic } from "@/data/njCounties";
+import { directInstallIndustries } from "@/data/directInstallIndustries";
 
 const BASE = "https://mechanicalenterprise.com";
 const PHONE = "(862) 423-9396";
@@ -168,7 +169,7 @@ export default function BlogPost({ slug }: { slug: string }) {
         </div>
       </section>
 
-      {/* Related Service Areas */}
+      {/* Related Service Areas (expanded for SEO internal linking) */}
       <section className="py-12 bg-white">
         <div className="container">
           <div className="max-w-5xl mx-auto">
@@ -185,6 +186,35 @@ export default function BlogPost({ slug }: { slug: string }) {
                     </div>
                   </Link>
                 ))}
+              </div>
+
+              {/* Cross-links to direct-install pages */}
+              <div className="mt-8">
+                <h3 className="text-xl font-bold text-[#0a1628] mb-3">Commercial Direct Install Programs</h3>
+                <p className="text-gray-600 mb-4 text-sm">NJ businesses qualify for free lighting and up to 80% HVAC coverage:</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {pickDeterministic(directInstallIndustries, slug, 4).map((ind) => (
+                    <Link key={ind.slug} href={`/direct-install/${ind.slug}`}>
+                      <div className="bg-[#f7f8fa] rounded-lg border px-4 py-3 text-center text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                        {ind.industry}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cross-links to related blog posts */}
+              <div className="mt-8">
+                <h3 className="text-xl font-bold text-[#0a1628] mb-3">More HVAC Guides</h3>
+                <div className="grid md:grid-cols-2 gap-3">
+                  {pickDeterministic(blogPosts.filter(p => p.slug !== slug), slug, 4).map((post) => (
+                    <Link key={post.slug} href={`/blog/${post.slug}`}>
+                      <div className="bg-[#f7f8fa] rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                        {post.title.length > 55 ? post.title.slice(0, 52) + "..." : post.title}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           </div>

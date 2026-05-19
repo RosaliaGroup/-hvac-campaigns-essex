@@ -8,7 +8,8 @@ import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
 import { directInstallIndustries, type IndustryPage } from "@/data/directInstallIndustries";
 import { Redirect, Link } from "wouter";
-import { pickDeterministic } from "@/data/njCounties";
+import { pickDeterministic, ALL_CITIES } from "@/data/njCounties";
+import { blogPosts } from "@/data/blogPosts";
 
 const BASE = "https://mechanicalenterprise.com";
 const COMMERCIAL_URL = `${BASE}/commercial`;
@@ -36,6 +37,14 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
         "areaServed": "New Jersey", "priceRange": "Free Assessment",
         "openingHours": "Mo-Su 00:00-23:59",
         "description": page.meta,
+      }) }} />
+      {/* FAQPage Schema for rich snippets */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org", "@type": "FAQPage",
+        "mainEntity": page.faqs.map(faq => ({
+          "@type": "Question", "name": faq.q,
+          "acceptedAnswer": { "@type": "Answer", "text": faq.a },
+        })),
       }) }} />
       <Navigation />
 
@@ -154,12 +163,12 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
         </div>
       </section>
 
-      {/* Related Industries */}
+      {/* Related Industries (expanded for SEO internal linking) */}
       <section className="py-12 bg-[#f7f8fa]">
         <div className="container">
           <h2 className="text-2xl font-bold text-[#0a1628] mb-3 text-center">Direct Install for Other Industries</h2>
           <p className="text-gray-600 mb-6 text-center">The NJ Direct Install Program covers businesses across every industry:</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-2xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl mx-auto">
             {pickDeterministic(directInstallIndustries, slug, 6).map((ind) => (
               <Link key={ind.slug} href={`/direct-install/${ind.slug}`}>
                 <div className="bg-white rounded-lg border px-4 py-3 text-center text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
@@ -167,6 +176,40 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
                 </div>
               </Link>
             ))}
+          </div>
+
+          {/* Cross-links to city pages */}
+          <div className="mt-10 max-w-3xl mx-auto">
+            <h3 className="text-xl font-bold text-[#0a1628] mb-2 text-center">Service Areas</h3>
+            <p className="text-gray-600 mb-4 text-center text-sm">We serve {page.industry.toLowerCase()} across Northern New Jersey:</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {pickDeterministic(ALL_CITIES, slug, 8).map((c) => (
+                <Link key={c.slug} href={`/hvac-${c.slug}-nj`}>
+                  <div className="bg-white rounded-lg border px-4 py-3 text-center text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                    {c.city}, NJ
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Cross-links to related blog posts */}
+          <div className="mt-8 max-w-3xl mx-auto">
+            <h3 className="text-xl font-bold text-[#0a1628] mb-4 text-center">Learn More About Commercial Programs</h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              {pickDeterministic(blogPosts.filter(p => p.category === "Commercial" || p.slug.includes("commercial") || p.slug.includes("direct-install")), slug, 2).map((post) => (
+                <Link key={post.slug} href={`/blog/${post.slug}`}>
+                  <div className="bg-white rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                    {post.title.length > 60 ? post.title.slice(0, 57) + "..." : post.title}
+                  </div>
+                </Link>
+              ))}
+              <Link href="/blog/nj-direct-install-program-commercial-guide">
+                <div className="bg-white rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                  NJ Direct Install Program: Complete Commercial Guide
+                </div>
+              </Link>
+            </div>
           </div>
         </div>
       </section>

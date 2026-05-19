@@ -6,7 +6,9 @@ import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
 import { Link } from "wouter";
-import { getNearbyCities } from "@/data/njCounties";
+import { getNearbyCities, pickDeterministic } from "@/data/njCounties";
+import { blogPosts } from "@/data/blogPosts";
+import { directInstallIndustries } from "@/data/directInstallIndustries";
 
 const BASE = "https://mechanicalenterprise.com";
 const REBATE_URL = `${BASE}/rebate-calculator`;
@@ -48,6 +50,14 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
         "areaServed": { "@type": "City", "name": `${area}, New Jersey` },
         "priceRange": "Free Assessment", "openingHours": "Mo-Su 00:00-23:59",
         "description": `Premium heat pump and HVAC installation in ${area} NJ. Carrier, Trane, Lennox systems with NJ rebates up to $16,000.`,
+      }) }} />
+      {/* FAQPage Schema for rich snippets */}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org", "@type": "FAQPage",
+        "mainEntity": faqs.map(faq => ({
+          "@type": "Question", "name": faq.q,
+          "acceptedAnswer": { "@type": "Answer", "text": faq.a },
+        })),
       }) }} />
       <Navigation />
 
@@ -195,19 +205,50 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
         </div>
       </section>
 
-      {/* Nearby Service Areas */}
+      {/* Nearby Service Areas (expanded for SEO internal linking) */}
       <section className="py-12 bg-[#f7f8fa]">
         <div className="container">
-          <h2 className="text-2xl font-bold text-[#0a1628] mb-3 text-center">Nearby Service Areas</h2>
-          <p className="text-gray-600 mb-6 text-center">We also serve these nearby NJ communities:</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-2xl mx-auto">
-            {getNearbyCities(slug, 6).map((c) => (
+          <h2 className="text-2xl font-bold text-[#0a1628] mb-3 text-center">Premium HVAC Service Areas Near {area}, NJ</h2>
+          <p className="text-gray-600 mb-6 text-center max-w-2xl mx-auto">
+            Mechanical Enterprise provides premium HVAC installation across Northern New Jersey's finest communities:
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
+            {getNearbyCities(slug, 8).map((c) => (
               <Link key={c.slug} href={`/hvac-${c.slug}-nj`}>
                 <div className="bg-white rounded-lg border px-4 py-3 text-center text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
                   {c.city}, NJ
                 </div>
               </Link>
             ))}
+          </div>
+
+          {/* Cross-links to related blog posts */}
+          <div className="mt-10 max-w-3xl mx-auto">
+            <h3 className="text-xl font-bold text-[#0a1628] mb-4">HVAC Guides for {area} Homeowners</h3>
+            <div className="grid md:grid-cols-2 gap-3">
+              {pickDeterministic(blogPosts, slug, 4).map((post) => (
+                <Link key={post.slug} href={`/blog/${post.slug}`}>
+                  <div className="bg-white rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                    {post.title.length > 60 ? post.title.slice(0, 57) + "..." : post.title}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Cross-links to direct-install pages */}
+          <div className="mt-8 max-w-3xl mx-auto">
+            <h3 className="text-xl font-bold text-[#0a1628] mb-2">Commercial Direct Install in {area}</h3>
+            <p className="text-gray-600 mb-4 text-sm">Business owners in {area} can qualify for the NJ Direct Install Program:</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {pickDeterministic(directInstallIndustries, slug, 3).map((ind) => (
+                <Link key={ind.slug} href={`/direct-install/${ind.slug}`}>
+                  <div className="bg-white rounded-lg border px-4 py-3 text-center text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
+                    {ind.industry}
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </section>

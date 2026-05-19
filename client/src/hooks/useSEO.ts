@@ -6,7 +6,10 @@ type SEOProps = {
   ogTitle?: string;
   ogDescription?: string;
   ogUrl?: string;
+  ogImage?: string;
 };
+
+const DEFAULT_OG_IMAGE = "https://mechanicalenterprise.com/og-default.png";
 
 function setMeta(name: string, content: string, attr = "name") {
   let el = document.querySelector(`meta[${attr}="${name}"]`) as HTMLMetaElement | null;
@@ -28,7 +31,7 @@ function setCanonical(href: string) {
   el.href = href;
 }
 
-export function useSEO({ title, description, ogTitle, ogDescription, ogUrl }: SEOProps) {
+export function useSEO({ title, description, ogTitle, ogDescription, ogUrl, ogImage }: SEOProps) {
   useEffect(() => {
     document.title = title;
     setMeta("description", description);
@@ -38,11 +41,16 @@ export function useSEO({ title, description, ogTitle, ogDescription, ogUrl }: SE
     setMeta("og:description", ogDescription || description, "property");
     if (ogUrl) setMeta("og:url", ogUrl, "property");
     setMeta("og:type", "website", "property");
+    setMeta("og:image", ogImage || DEFAULT_OG_IMAGE, "property");
+    setMeta("og:image:width", "1200", "property");
+    setMeta("og:image:height", "630", "property");
+    setMeta("twitter:card", "summary_large_image");
     setMeta("twitter:title", ogTitle || title);
     setMeta("twitter:description", ogDescription || description);
+    setMeta("twitter:image", ogImage || DEFAULT_OG_IMAGE);
 
     // Canonical URL — use ogUrl if provided, otherwise derive from current path
     const canonical = ogUrl || `https://mechanicalenterprise.com${window.location.pathname}`;
     setCanonical(canonical);
-  }, [title, description, ogTitle, ogDescription, ogUrl]);
+  }, [title, description, ogTitle, ogDescription, ogUrl, ogImage]);
 }
