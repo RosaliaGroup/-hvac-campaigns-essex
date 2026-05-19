@@ -185,23 +185,28 @@ exports.handler = async (event) => {
     const from = `"Mechanical Enterprise" <${process.env.SMTP_USER}>`;
 
     const emails = [
-      // Email 1 — Sales
+      // Email 1 — Sales (always sent)
       transporter.sendMail({
         from,
         to: SALES_EMAIL,
-        replyTo: d.referrer_email,
-        subject: `\u{1F4B0} New Referral: ${d.referrer_name} \u2192 ${d.new_name} (${d.service_needed})`,
+        replyTo: d.referrer_email || undefined,
+        subject: `\u{1F4B0} New Referral: ${d.referrer_name} \u2192 ${d.new_name} (${d.service_needed || "HVAC"})`,
         html: salesHtml(d),
       }),
-      // Email 2 — Referrer
-      transporter.sendMail({
-        from,
-        to: d.referrer_email,
-        replyTo: SALES_EMAIL,
-        subject: "Thanks for the referral \u2014 we've got it from here",
-        html: referrerHtml(d),
-      }),
     ];
+
+    // Email 2 — Referrer (only if email provided)
+    if (d.referrer_email && d.referrer_email.trim() && d.referrer_email.includes("@")) {
+      emails.push(
+        transporter.sendMail({
+          from,
+          to: d.referrer_email,
+          replyTo: SALES_EMAIL,
+          subject: "Thanks for the referral \u2014 we've got it from here",
+          html: referrerHtml(d),
+        })
+      );
+    }
 
     // Email 3 — New lead (only if email provided)
     if (d.new_email && d.new_email.trim()) {

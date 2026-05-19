@@ -87,6 +87,21 @@ export default function Referral() {
         throw new Error(body.error || "Submission failed");
       }
       setSubmitted(true);
+
+      // Track: referral_form_submitted
+      if (typeof window !== "undefined" && (window as any).gtag) {
+        (window as any).gtag("event", "referral_form_submitted", {
+          event_category: "Referral",
+          event_label: "referral_lead",
+          value: 1,
+        });
+        (window as any).gtag("event", "conversion", {
+          send_to: "AW-17768263516/referral_submitted",
+          value: 1.0,
+          currency: "USD",
+          transaction_id: Date.now().toString(),
+        });
+      }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
@@ -101,6 +116,15 @@ export default function Referral() {
       "Hey — I use Mechanical Enterprise for HVAC stuff in NJ. They do free assessments and rebates up to $16K. Worth a call: (862) 419-1763 or https://mechanicalenterprise.com/rebate-calculator"
     );
     window.open(`sms:${cleanPhone}?body=${message}`, "_self");
+
+    // Track: text_a_friend_clicked
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", "text_a_friend_clicked", {
+        event_category: "Referral",
+        event_label: "sms_launched",
+        value: 1,
+      });
+    }
   }
 
   return (

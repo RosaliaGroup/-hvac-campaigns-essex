@@ -133,7 +133,17 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
 
   const register = trpc.rebateCalculator.register.useMutation();
 
-  // ── Step 1: Calculate estimate ──────────────────────────────────────────────
+  // ── Analytics ─────────────────────────────────────────────────────────────────────
+  function trackEvent(eventName: string, params?: Record<string, any>) {
+    if (typeof window !== "undefined" && (window as any).gtag) {
+      (window as any).gtag("event", eventName, {
+        event_category: "Rebate Calculator",
+        ...params,
+      });
+    }
+  }
+
+  // ── Step 1: Calculate estimate ────────────────────────────────────────────────────────────
   function handleSeeEstimate() {
     if (!zip.trim() || zip.replace(/\D/g, "").length < 5) {
       setErrors({ zip: "Enter a valid 5-digit NJ ZIP code" });
@@ -151,6 +161,21 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
     const result = getEstimate(propertyType, incomeTier || "prefer_not_to_say");
     setEstimate(result);
     setCurrentStep(2);
+
+    // Track: Step 1 submitted
+    trackEvent("rebate_calc_step1_submitted", {
+      event_label: propertyType,
+      value: 1,
+      zip: zip.trim(),
+      property_type: propertyType,
+      income_tier: incomeTier || "prefer_not_to_say",
+    });
+    // Track: Estimate viewed (Step 2 render)
+    trackEvent("rebate_calc_estimate_viewed", {
+      event_label: result.range,
+      value: 1,
+      estimated_range: result.range,
+    });
   }
 
   // ── Step 3: Submit lead ─────────────────────────────────────────────────────
@@ -180,6 +205,21 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
       });
       setCurrentStep(4);
       onRegistered?.(email, phone);
+
+      // Track: Step 3 submitted (lead captured)
+      trackEvent("rebate_calc_step3_submitted", {
+        event_label: "lead_captured",
+        value: 1,
+      });
+      // Google Ads conversion
+      if (typeof window !== "undefined" && (window as any).gtag) {
+        (window as any).gtag("event", "conversion", {
+          send_to: "AW-17768263516/rebate_calc_lead",
+          value: 1.0,
+          currency: "USD",
+          transaction_id: Date.now().toString(),
+        });
+      }
     } catch (err) {
       console.error("Registration error:", err);
       setErrors({ submit: "Something went wrong. Please try again." });
