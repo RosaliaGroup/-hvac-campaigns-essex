@@ -93,17 +93,18 @@ serve(async (req) => {
                req.headers.get("cf-connecting-ip") || null;
 
     // Insert into Supabase
+    // Note: referrer_email, payout_method, new_address, property_type, service_needed are NOT NULL in DB
     const { data, error: dbError } = await supabase.from("referrals").insert({
       referrer_name: ref_name.trim(),
       referrer_phone: ref_phone.trim(),
-      referrer_email: ref_email?.trim().toLowerCase() || null,
-      payout_method: ref_payout || null,
+      referrer_email: ref_email?.trim().toLowerCase() || "",
+      payout_method: ref_payout || "Zelle",
       new_name: new_name.trim(),
       new_phone: new_phone.trim(),
       new_email: new_email?.trim().toLowerCase() || null,
-      new_address: new_address?.trim() || null,
-      property_type: property_type || null,
-      service_needed: service_needed || null,
+      new_address: new_address?.trim() || "Not provided",
+      property_type: property_type || "Residential",
+      service_needed: service_needed || "Not specified",
       notes: notes?.trim() || null,
       ip_address: ip,
     }).select().single();
