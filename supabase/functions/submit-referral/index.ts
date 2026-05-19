@@ -50,17 +50,12 @@ serve(async (req) => {
       consent,
     } = body;
 
-    // Validate required fields
+    // Validate required fields (simplified — only name + phone for both parties)
     const required: Record<string, string | undefined> = {
       ref_name,
       ref_phone,
-      ref_email,
-      ref_payout,
       new_name,
       new_phone,
-      new_address,
-      property_type,
-      service_needed,
     };
 
     for (const [field, value] of Object.entries(required)) {
@@ -101,14 +96,14 @@ serve(async (req) => {
     const { data, error: dbError } = await supabase.from("referrals").insert({
       referrer_name: ref_name.trim(),
       referrer_phone: ref_phone.trim(),
-      referrer_email: ref_email.trim().toLowerCase(),
-      payout_method: ref_payout,
+      referrer_email: ref_email?.trim().toLowerCase() || null,
+      payout_method: ref_payout || null,
       new_name: new_name.trim(),
       new_phone: new_phone.trim(),
       new_email: new_email?.trim().toLowerCase() || null,
-      new_address: new_address.trim(),
-      property_type,
-      service_needed,
+      new_address: new_address?.trim() || null,
+      property_type: property_type || null,
+      service_needed: service_needed || null,
       notes: notes?.trim() || null,
       ip_address: ip,
     }).select().single();
