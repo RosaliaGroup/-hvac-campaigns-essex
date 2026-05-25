@@ -654,11 +654,11 @@ function LeadsPanel() {
 // ════════════════════════════════════════════════════════════════════════════
 
 const PRIORITY_PAGES = [
-  { title: "NJ Direct Install Program Commercial Guide", path: "/blog/nj-direct-install-program-commercial-guide" },
-  { title: "Commercial Lighting 100% Free NJ", path: "/blog/commercial-lighting-100-percent-free-nj" },
-  { title: "Nonprofit Direct Install Complete Guide NJ", path: "/blog/nonprofit-direct-install-complete-guide-nj" },
+  { title: "NJ Direct Install Program", path: "/direct-install" },
   { title: "Churches NJ — Direct Install", path: "/direct-install/churches-nj" },
   { title: "Warehouses NJ — Direct Install", path: "/direct-install/warehouses-nj" },
+  { title: "Restaurants NJ — Direct Install", path: "/direct-install/restaurants-nj" },
+  { title: "Rebate Application Process", path: "/blog/pseg-rebate-application-process" },
 ];
 
 function IndexingPanel() {

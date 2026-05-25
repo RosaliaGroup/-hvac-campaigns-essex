@@ -204,9 +204,9 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
                   </div>
                 </Link>
               ))}
-              <Link href="/blog/nj-direct-install-program-commercial-guide">
+              <Link href="/direct-install">
                 <div className="bg-white rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
-                  NJ Direct Install Program: Complete Commercial Guide
+                  NJ Direct Install Program: All Industries
                 </div>
               </Link>
             </div>

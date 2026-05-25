@@ -43,8 +43,39 @@
   status = 200
   force = true
 
+# ── 301 Redirects for old/renamed URLs (GSC redirect validation fixes) ──
+[[redirects]]
+  from = "/blog/how-to-apply-pseg-rebate-nj"
+  to = "/blog/pseg-rebate-application-process"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/r22-replacement-cost-nj"
+  to = "/blog/how-much-does-r22-replacement-cost-nj"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/warehouse-lighting-hvac-direct-install-nj"
+  to = "/blog/warehouse-hvac-nj"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/old-ac-replacement-nj-rebates"
+  to = "/blog/central-ac-replacement-nj-cost"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/nj-direct-install-program-commercial-guide"
+  to = "/direct-install"
+  status = 301
+  force = true
+
+# ── SPA catch-all (must be last) ──
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
