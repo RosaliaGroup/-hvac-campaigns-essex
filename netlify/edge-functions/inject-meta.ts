@@ -12,9 +12,9 @@
 import blogPosts from "./blog-meta.json" with { type: "json" };
 
 const BASE = "https://mechanicalenterprise.com";
-const DEFAULT_TITLE = "Mechanical Enterprise | Expert HVAC Solutions in New Jersey";
+const DEFAULT_TITLE = "Mechanical Enterprise | #1 MWBE HVAC Contractor in NJ | Up to $16K Rebates";
 const DEFAULT_DESC =
-  "Licensed HVAC contractor in Newark NJ. PSE&G-approved for heat pump rebates up to $16K. Serving 15 NJ counties. Call (862) 419-1763.";
+  "Licensed & MWBE-certified HVAC contractor in Newark, NJ. Heat pump, AC & furnace installation. PSE&G-approved, up to $16K in rebates. Serving 15 NJ counties. Free assessment. Call (862) 423-9396.";
 const DEFAULT_OG_IMAGE = `${BASE}/og-default.png`;
 const PHONE = "(862) 423-9396";
 const PHONE_COMMERCIAL = "(862) 419-1763";
@@ -30,12 +30,12 @@ interface PageMeta {
 const PAGE_META: Record<string, PageMeta> = {
   "/": { title: DEFAULT_TITLE, description: DEFAULT_DESC },
   "/residential": {
-    title: "Residential HVAC Services NJ | Mechanical Enterprise",
-    description: "Residential HVAC installation, repair, and replacement in New Jersey. Heat pumps, central AC, ductless mini-splits. Up to $16K in rebates.",
+    title: "Residential HVAC Installation NJ | Heat Pump & AC | Up to $16K Rebates",
+    description: "Expert residential HVAC installation in NJ. Heat pumps, central AC, ductless mini-splits & furnaces. Up to $16K in NJ rebates + $2K federal tax credit. MWBE certified. Free in-home assessment.",
   },
   "/commercial": {
-    title: "Commercial HVAC Services NJ | Mechanical Enterprise",
-    description: "Commercial HVAC solutions for NJ businesses. PSE&G Direct Install covers up to 80%. VRF/VRV specialists. Free assessment.",
+    title: "Commercial HVAC Contractor NJ | Direct Install | Up to 80% Covered",
+    description: "Commercial HVAC installation & repair in NJ. PSE&G Direct Install covers up to 80% of costs. VRF/VRV specialists. MWBE certified. Free commercial assessment. Call (862) 419-1763.",
   },
   "/rebate-calculator": {
     title: "NJ HVAC Rebate Calculator | Mechanical Enterprise",
@@ -54,8 +54,8 @@ const PAGE_META: Record<string, PageMeta> = {
     description: "Contact Mechanical Enterprise for HVAC service in New Jersey. Call (862) 419-1763 or request a free assessment online.",
   },
   "/blog": {
-    title: "HVAC Blog | Mechanical Enterprise NJ",
-    description: "HVAC tips, NJ rebate guides, heat pump advice, and energy savings articles from Mechanical Enterprise.",
+    title: "NJ HVAC Blog | Rebate Guides, Heat Pump Tips & Energy Savings",
+    description: "Expert HVAC guides for NJ homeowners. Learn about heat pump rebates, PSE&G programs, R22 replacement, oil-to-electric conversion, and how to save thousands on your HVAC upgrade.",
   },
   "/direct-install": {
     title: "NJ Direct Install Program | Free Lighting & 80% HVAC | Mechanical Enterprise",
@@ -98,8 +98,8 @@ function getCityMeta(slug: string): PageMeta & { canonical: string } {
   const cityPart = slug.replace("hvac-", "").replace("-nj", "");
   const city = cityPart.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   return {
-    title: `Heat Pump Installation ${city} NJ | Up to $16K Rebates | Mechanical Enterprise`,
-    description: `HVAC installation in ${city} NJ. Free assessment, NJ rebates up to $16,000, federal tax credit up to $2,000. Licensed NJ contractor. Call ${PHONE}.`,
+    title: `${city} NJ HVAC Contractor | AC & Heat Pump Installation | Up to $16K Rebates`,
+    description: `Top-rated HVAC contractor in ${city}, NJ. Heat pump, central AC & furnace installation and repair. Up to $16K in NJ rebates + $2K federal tax credit. Free assessment, no obligation. Call ${PHONE}.`,
     canonical: `${BASE}/${slug}`,
   };
 }
@@ -109,8 +109,8 @@ function getDirectInstallMeta(slug: string): PageMeta & { canonical: string } {
   const industryPart = slug.replace("-nj", "");
   const industry = industryPart.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   return {
-    title: `${industry} HVAC + Lighting NJ | Direct Install Program | Mechanical Enterprise`,
-    description: `NJ ${industry.toLowerCase()} qualify for 100% free lighting and up to 80% HVAC coverage under Direct Install. PSE&G Trade Ally. Free assessment.`,
+    title: `Free HVAC & Lighting for ${industry} in NJ | Direct Install Program`,
+    description: `NJ ${industry.toLowerCase()} qualify for 100% free commercial lighting and up to 80% off HVAC upgrades through the NJ Direct Install Program. PSE&G Trade Ally. No upfront cost. Free assessment. Call ${PHONE_COMMERCIAL}.`,
     canonical: `${BASE}/direct-install/${slug}`,
   };
 }
@@ -262,7 +262,97 @@ function injectMeta(html: string, urlPath: string): string {
     html = html.replace("</head>", `  <link rel="canonical" href="${c}" />\n  </head>`);
   }
 
+  // Inject LocalBusiness JSON-LD schema on all pages
+  if (!html.includes('"@type":"HVACBusiness"') && !html.includes('application/ld+json')) {
+    const localBusinessSchema = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "HVACBusiness",
+      "name": "Mechanical Enterprise LLC",
+      "url": BASE,
+      "telephone": PHONE,
+      "email": "info@mechanicalenterprise.com",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Newark",
+        "addressLocality": "Newark",
+        "addressRegion": "NJ",
+        "postalCode": "07102",
+        "addressCountry": "US"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 40.7357,
+        "longitude": -74.1724
+      },
+      "areaServed": {
+        "@type": "State",
+        "name": "New Jersey"
+      },
+      "priceRange": "$$",
+      "openingHoursSpecification": [
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "07:00", "closes": "18:00" },
+        { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "08:00", "closes": "14:00" }
+      ],
+      "sameAs": [
+        "https://www.google.com/maps/place/Mechanical+Enterprise"
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "HVAC Services",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Heat Pump Installation" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Central AC Installation" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Ductless Mini-Split Installation" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Commercial VRF/VRV Systems" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "HVAC Repair & Maintenance" } }
+        ]
+      }
+    });
+    html = html.replace("</head>", `  <script type="application/ld+json">${localBusinessSchema}</script>\n  </head>`);
+  }
+
+  // Inject BreadcrumbList schema for non-homepage
+  const clean = urlPath.split("?")[0].replace(/\/+$/, "") || "/";
+  if (clean !== "/" && !html.includes('"@type":"BreadcrumbList"')) {
+    const breadcrumbs = buildBreadcrumbs(clean);
+    if (breadcrumbs.length > 0) {
+      const breadcrumbSchema = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": breadcrumbs
+      });
+      html = html.replace("</head>", `  <script type="application/ld+json">${breadcrumbSchema}</script>\n  </head>`);
+    }
+  }
+
   return html;
+}
+
+function buildBreadcrumbs(path: string): Array<{"@type": string; position: number; name: string; item: string}> {
+  const items: Array<{"@type": string; position: number; name: string; item: string}> = [
+    { "@type": "ListItem", position: 1, name: "Home", item: BASE }
+  ];
+  if (path.startsWith("/blog/")) {
+    items.push({ "@type": "ListItem", position: 2, name: "Blog", item: `${BASE}/blog` });
+    const slug = path.replace("/blog/", "");
+    const title = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    items.push({ "@type": "ListItem", position: 3, name: title.slice(0, 50), item: `${BASE}${path}` });
+  } else if (path.startsWith("/direct-install/")) {
+    items.push({ "@type": "ListItem", position: 2, name: "Direct Install", item: `${BASE}/direct-install` });
+    const slug = path.replace("/direct-install/", "").replace("-nj", "");
+    const title = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    items.push({ "@type": "ListItem", position: 3, name: title, item: `${BASE}${path}` });
+  } else if (path.match(/^\/hvac-[a-z-]+-nj$/)) {
+    items.push({ "@type": "ListItem", position: 2, name: "Service Areas", item: `${BASE}/services` });
+    const city = path.replace("/hvac-", "").replace("-nj", "").split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    items.push({ "@type": "ListItem", position: 3, name: `${city}, NJ`, item: `${BASE}${path}` });
+  } else if (path.startsWith("/lp/")) {
+    items.push({ "@type": "ListItem", position: 2, name: "Offers", item: `${BASE}/lp/heat-pump-rebates` });
+  } else {
+    const pageName = path.slice(1).split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    items.push({ "@type": "ListItem", position: 2, name: pageName, item: `${BASE}${path}` });
+  }
+  return items;
 }
 
 // ── Edge Function handler ──────────────────────────────────────────────────

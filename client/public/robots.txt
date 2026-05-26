@@ -1,5 +1,12 @@
 User-agent: *
 Allow: /
+Allow: /blog/
+Allow: /direct-install/
+Allow: /hvac-*
+Allow: /lp/
+Allow: /residential
+Allow: /commercial
+Allow: /rebate-calculator
 
 Disallow: /m/
 Disallow: /m/create-account
