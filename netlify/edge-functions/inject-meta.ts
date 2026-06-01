@@ -360,6 +360,22 @@ function buildBreadcrumbs(path: string): Array<{"@type": string; position: numbe
 export default async function handler(request: Request, context: any) {
   const url = new URL(request.url);
 
+  // ── 301 Redirects for old/renamed URLs (must run before SPA fallback) ──
+  const REDIRECTS: Record<string, string> = {
+    "/blog/how-to-apply-pseg-rebate-nj": "/blog/pseg-rebate-application-process",
+    "/blog/r22-replacement-cost-nj": "/blog/how-much-does-r22-replacement-cost-nj",
+    "/blog/warehouse-lighting-hvac-direct-install-nj": "/blog/warehouse-hvac-nj",
+    "/blog/old-ac-replacement-nj-rebates": "/blog/central-ac-replacement-nj-cost",
+    "/blog/nj-direct-install-program-commercial-guide": "/direct-install",
+  };
+  const redirectTarget = REDIRECTS[url.pathname];
+  if (redirectTarget) {
+    return new Response(null, {
+      status: 301,
+      headers: { "Location": `${url.origin}${redirectTarget}` },
+    });
+  }
+
   // Static files — skip entirely so Netlify serves them as-is
   if (url.pathname.endsWith(".xml") || url.pathname.endsWith(".txt") || url.pathname.endsWith(".csv") || url.pathname === "/247-partners.html") {
     return;
