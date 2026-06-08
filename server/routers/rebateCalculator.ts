@@ -622,7 +622,7 @@ export const rebateCalculatorRouter = router({
     .input(
       z.object({
         firstName: z.string().min(1).max(100),
-        lastName: z.string().min(1).max(100),
+        lastName: z.string().optional().default(""),
         email: z.string().email(),
         phone: z.string().min(10).max(20),
         address: z.string().optional(),
