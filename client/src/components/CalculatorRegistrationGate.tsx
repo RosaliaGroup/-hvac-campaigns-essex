@@ -124,6 +124,7 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
 
   // Step 3 fields
   const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -182,6 +183,7 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
   async function handleGetExactAmount() {
     const errs: Record<string, string> = {};
     if (!firstName.trim()) errs.firstName = "First name is required";
+    if (!lastName.trim()) errs.lastName = "Last name is required";
     if (!phone.trim() || phone.replace(/\D/g, "").length < 10)
       errs.phone = "Valid 10-digit phone number is required";
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -195,7 +197,7 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
     try {
       await register.mutateAsync({
         firstName,
-        lastName: "",
+        lastName,
         email,
         phone,
         address: "",
@@ -481,16 +483,29 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
               </div>
 
               <div className="space-y-4">
-                <div className="space-y-1">
-                  <Label htmlFor="firstName" className="text-sm">First Name</Label>
-                  <Input
-                    id="firstName"
-                    placeholder="Jane"
-                    value={firstName}
-                    onChange={(e) => { setFirstName(e.target.value); setErrors({}); }}
-                    className={errors.firstName ? "border-red-500" : ""}
-                  />
-                  {errors.firstName && <p className="text-xs text-red-500">{errors.firstName}</p>}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="firstName" className="text-sm">First Name</Label>
+                    <Input
+                      id="firstName"
+                      placeholder="Jane"
+                      value={firstName}
+                      onChange={(e) => { setFirstName(e.target.value); setErrors({}); }}
+                      className={errors.firstName ? "border-red-500" : ""}
+                    />
+                    {errors.firstName && <p className="text-xs text-red-500">{errors.firstName}</p>}
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="lastName" className="text-sm">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      placeholder="Smith"
+                      value={lastName}
+                      onChange={(e) => { setLastName(e.target.value); setErrors({}); }}
+                      className={errors.lastName ? "border-red-500" : ""}
+                    />
+                    {errors.lastName && <p className="text-xs text-red-500">{errors.lastName}</p>}
+                  </div>
                 </div>
 
                 <div className="space-y-1">
