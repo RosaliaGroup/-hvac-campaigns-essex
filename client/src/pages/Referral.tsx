@@ -328,39 +328,7 @@ export default function Referral() {
                   </CardContent>
                 </Card>
 
-                {/* Text-a-Friend Card */}
-                <Card className="shadow-lg mt-6 border-dashed border-2 border-slate-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-3 mb-4">
-                      <MessageSquare className="w-6 h-6 text-[#1e3a5f] mt-0.5" />
-                      <div>
-                        <h3 className="text-lg font-bold text-[#1e3a5f]">Or just text them directly</h3>
-                        <p className="text-sm text-slate-600">
-                          We'll generate a message — you send it from your phone.
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-3">
-                      <Input
-                        type="tel"
-                        placeholder="Their phone number"
-                        value={textFriendPhone}
-                        onChange={(e) => setTextFriendPhone(e.target.value)}
-                        className="flex-1"
-                      />
-                      <Button
-                        onClick={handleTextAFriend}
-                        variant="outline"
-                        className="border-[#1e3a5f] text-[#1e3a5f] hover:bg-[#1e3a5f]/5 whitespace-nowrap"
-                      >
-                        Generate Text <ArrowRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-slate-400 mt-2">
-                      Opens your phone's messaging app with a pre-written message.
-                    </p>
-                  </CardContent>
-                </Card>
+
               </div>
 
               {/* Tiered Rewards Column (2/5) */}
@@ -387,25 +355,25 @@ export default function Referral() {
                       <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3">
                         <div>
                           <p className="text-sm font-semibold text-[#1e3a5f]">3 referrals booked</p>
-                          <p className="text-xs text-green-700">$666 each — bonus $500</p>
+                          <p className="text-xs text-green-700">$666 each — bonus $250</p>
                         </div>
-                        <p className="text-lg font-bold text-green-700">$2,000</p>
+                        <p className="text-lg font-bold text-green-700">$2,248</p>
                       </div>
 
                       <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
                         <div>
                           <p className="text-sm font-semibold text-[#1e3a5f]">5 referrals booked</p>
-                          <p className="text-xs text-blue-700">$800 each — bonus $1,500</p>
+                          <p className="text-xs text-blue-700">$750 each — bonus $500</p>
                         </div>
-                        <p className="text-lg font-bold text-blue-700">$4,000</p>
+                        <p className="text-lg font-bold text-blue-700">$4,250</p>
                       </div>
 
                       <div className="flex items-center justify-between bg-[#ff6b35]/5 border border-[#ff6b35]/30 rounded-lg px-4 py-3">
                         <div>
                           <p className="text-sm font-semibold text-[#1e3a5f]">10 referrals booked</p>
-                          <p className="text-xs text-[#ff6b35]">$1,000 each — bonus $5,000</p>
+                          <p className="text-xs text-[#ff6b35]">$875 each — bonus $750</p>
                         </div>
-                        <p className="text-lg font-bold text-[#ff6b35]">$10,000</p>
+                        <p className="text-lg font-bold text-[#ff6b35]">$9,500</p>
                       </div>
                     </div>
 
