@@ -19,12 +19,14 @@ export default function Referral() {
     ogUrl: "https://mechanicalenterprise.com/referral",
   });
 
-  // Simplified form — 5 fields only
+  // Simplified form — 7 fields
   const [form, setForm] = useState({
     referrerName: "",
     referrerPhone: "",
+    referrerEmail: "",
     leadName: "",
     leadPhone: "",
+    leadEmail: "",
     consent: false,
   });
 
@@ -39,6 +41,7 @@ export default function Referral() {
     if (!form.referrerName.trim()) return "Please enter your name.";
     const digits = (s: string) => s.replace(/\D/g, "");
     if (digits(form.referrerPhone).length < 10) return "Your phone number must be at least 10 digits.";
+    if (!form.referrerEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.referrerEmail)) return "Please enter a valid email address.";
     if (!form.leadName.trim()) return "Please enter their name.";
     if (digits(form.leadPhone).length < 10) return "Their phone number must be at least 10 digits.";
     if (digits(form.referrerPhone) === digits(form.leadPhone)) {
@@ -70,11 +73,11 @@ export default function Referral() {
         body: JSON.stringify({
           ref_name: form.referrerName,
           ref_phone: form.referrerPhone,
-          ref_email: "",
+          ref_email: form.referrerEmail,
           ref_payout: "",
           new_name: form.leadName,
           new_phone: form.leadPhone,
-          new_email: "",
+          new_email: form.leadEmail,
           new_address: "",
           property_type: "Residential",
           service_needed: "Not sure",
@@ -235,7 +238,7 @@ export default function Referral() {
                         <Button
                           onClick={() => {
                             setSubmitted(false);
-                            setForm({ referrerName: form.referrerName, referrerPhone: form.referrerPhone, leadName: "", leadPhone: "", consent: false });
+                            setForm({ referrerName: form.referrerName, referrerPhone: form.referrerPhone, referrerEmail: form.referrerEmail, leadName: "", leadPhone: "", leadEmail: "", consent: false });
                           }}
                           variant="outline"
                           className="border-[#ff6b35] text-[#ff6b35] hover:bg-[#ff6b35]/5"
@@ -277,6 +280,18 @@ export default function Referral() {
                           </div>
                         </div>
 
+                        <div className="space-y-1.5">
+                          <Label htmlFor="referrerEmail" className="text-sm font-medium">Your email</Label>
+                          <Input
+                            id="referrerEmail"
+                            type="email"
+                            required
+                            placeholder="you@example.com"
+                            value={form.referrerEmail}
+                            onChange={(e) => setForm({ ...form, referrerEmail: e.target.value })}
+                          />
+                        </div>
+
                         {/* Their Info */}
                         <div className="grid sm:grid-cols-2 gap-4">
                           <div className="space-y-1.5">
@@ -300,6 +315,17 @@ export default function Referral() {
                               onChange={(e) => setForm({ ...form, leadPhone: e.target.value })}
                             />
                           </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="leadEmail" className="text-sm font-medium">Their email <span className="text-slate-400 font-normal">(optional)</span></Label>
+                          <Input
+                            id="leadEmail"
+                            type="email"
+                            placeholder="their@email.com"
+                            value={form.leadEmail}
+                            onChange={(e) => setForm({ ...form, leadEmail: e.target.value })}
+                          />
                         </div>
 
                         {/* Consent */}
