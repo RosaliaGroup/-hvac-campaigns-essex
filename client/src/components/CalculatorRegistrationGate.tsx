@@ -67,12 +67,11 @@ function getEstimate(
       return {
         range: "$15,000–$25,000+",
         programs: [
-          "NJ Comfort Partners (100% covered for income-qualified)",
-          "Direct Install Residential (enhanced LMI rate)",
-          "Inflation Reduction Act HEEHRA program — up to $14,000",
-          "NJ Clean Energy heat pump rebate stack",
+          "Heat pump rebate up to $7,000",
+          "Inflation Reduction Act 25C tax credit up to $2,000",
+          "NJ Clean Energy electrification rebates",
+          "Possible utility-specific bonuses",
         ],
-        note: "You may qualify for FREE installation through Comfort Partners",
         federalCredit: "+ $2,000 federal tax credit",
       };
     case "middle":
