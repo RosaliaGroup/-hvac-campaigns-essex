@@ -108,6 +108,28 @@ const propertyInput = z.object({
   isPrimary: z.boolean().default(false),
 });
 
+/**
+ * Auto-link helper: resolve a raw phone number to an existing customer id.
+ * Used by appointments (staff + Vapi) to attach bookings to customers.
+ * Never throws.
+ */
+export async function findCustomerIdByPhone(phone: string | null | undefined): Promise<number | null> {
+  try {
+    const phoneKey = normalizePhone(phone);
+    if (!phoneKey) return null;
+    const db = await getDb();
+    if (!db) return null;
+    const rows = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(sql`RIGHT(REGEXP_REPLACE(${customers.phone}, '[^0-9]', ''), 10) = ${phoneKey}`)
+      .limit(1);
+    return rows[0]?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // Router
 // ─────────────────────────────────────────────────────────────

@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
 import {
   ArrowLeft, Building2, Calendar, Home, Mail, MapPin, Pencil, Phone, PhoneCall,
   Plus, Star, Trash2, UserRound, Zap,
@@ -63,6 +64,8 @@ export default function CustomerDetail() {
   const [propOpen, setPropOpen] = useState(false);
   const [editingPropId, setEditingPropId] = useState<number | null>(null);
   const [propForm, setPropForm] = useState({ ...EMPTY_PROPERTY });
+  const [apptOpen, setApptOpen] = useState(false);
+  const [editingAppt, setEditingAppt] = useState<EditableAppointment | null>(null);
 
   const updateCustomer = trpc.customers.update.useMutation({
     onSuccess: () => { toast({ title: "Customer updated" }); setEditOpen(false); refetch(); },
@@ -263,18 +266,34 @@ export default function CustomerDetail() {
           </TabsList>
 
           <TabsContent value="appointments">
-            <Card><CardContent className="pt-6 space-y-3">
-              {appointments.length === 0 ? <p className="text-sm text-muted-foreground">No appointments linked yet. (Appointment ↔ customer linking expands in Task 3.)</p> :
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-base">Appointments</CardTitle>
+                <Button size="sm" variant="outline" onClick={() => { setEditingAppt(null); setApptOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-1" /> New Appointment
+                </Button>
+              </CardHeader>
+              <CardContent className="space-y-3">
+              {appointments.length === 0 ? <p className="text-sm text-muted-foreground">No appointments yet — book one with the button above.</p> :
                 appointments.map(a => (
                   <div key={a.id} className="flex items-center justify-between border rounded-lg p-3 text-sm">
                     <div>
                       <div className="font-medium capitalize">{a.appointmentType.replace(/_/g, " ")}</div>
-                      <div className="text-muted-foreground">{a.preferredDate} · {a.preferredTime}</div>
+                      <div className="text-muted-foreground">
+                        {a.scheduledAt ? formatDate(a.scheduledAt) : `${a.preferredDate} · ${a.preferredTime} (unscheduled)`}
+                        {a.durationMinutes ? ` · ${a.durationMinutes} min` : ""}
+                      </div>
                     </div>
-                    <Badge variant="secondary" className={APPT_STATUS[a.status] || ""}>{a.status}</Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className={APPT_STATUS[a.status] || ""}>{a.status}</Badge>
+                      <Button size="icon" variant="ghost" onClick={() => { setEditingAppt(a as unknown as EditableAppointment); setApptOpen(true); }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
-            </CardContent></Card>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="leads">
@@ -483,6 +502,21 @@ export default function CustomerDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <AppointmentDialog
+        open={apptOpen}
+        onClose={() => setApptOpen(false)}
+        onSaved={() => refetch()}
+        appointment={editingAppt}
+        defaults={{
+          customerId,
+          fullName: customer.displayName,
+          phone: customer.phone || "",
+          email: customer.email || "",
+          propertyType: customer.type,
+          propertyAddress: properties.find(p => p.isPrimary)?.addressLine1 || properties[0]?.addressLine1 || "",
+          propertyId: properties.find(p => p.isPrimary)?.id ?? properties[0]?.id,
+        }}
+      />
     </DashboardLayout>
   );
 }

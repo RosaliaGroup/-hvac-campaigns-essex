@@ -3,6 +3,8 @@
  * Handles: bookAppointment, rescheduleAppointment, getCallerInfo
  */
 import * as db from "../db";
+import { parsePreferredDateTime } from "../services/appointmentTime";
+import { findCustomerIdByPhone } from "../routers/customers";
 import { notifyOwner } from "../_core/notification";
 
 export interface VapiToolCallPayload {
@@ -92,6 +94,17 @@ async function handleBookAppointment(args: Record<string, string>, vapiCallId?: 
     return JSON.stringify({ success: false, error: `Invalid appointment_type: ${appointment_type}` });
   }
 
+  // Phase 1 upgrade: best-effort parse into a real datetime + auto-link customer.
+  // Both are non-fatal — Jessica's booking must never fail because of them.
+  let scheduledAt: Date | undefined;
+  let customerId: number | undefined;
+  try {
+    scheduledAt = parsePreferredDateTime(preferred_date, preferred_time) ?? undefined;
+  } catch { /* leave unscheduled — surfaces in calendar backlog */ }
+  try {
+    customerId = (await findCustomerIdByPhone(phone)) ?? undefined;
+  } catch { /* unlinked is fine */ }
+
   // Save to database
   await db.createAppointment({
     fullName: full_name,
@@ -102,6 +115,8 @@ async function handleBookAppointment(args: Record<string, string>, vapiCallId?: 
     appointmentType: apptType,
     preferredDate: preferred_date,
     preferredTime: preferred_time,
+    scheduledAt,
+    customerId,
     issueDescription: issue_description || undefined,
     status: "pending",
     bookedBy: "jessica",

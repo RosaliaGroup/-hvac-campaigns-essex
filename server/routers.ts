@@ -21,7 +21,11 @@ import { generateSocialPost } from "./integrations/ai-content-generator";
 import { postToGoogleBusiness } from "./integrations/google-business";
 import { postToFacebook, postToInstagram } from "./integrations/facebook";
 import { takeoffsRouter } from "./routers/takeoffs";
-import { customersRouter } from "./routers/customers";
+import { customersRouter, findCustomerIdByPhone } from "./routers/customers";
+import { parsePreferredDateTime } from "./services/appointmentTime";
+import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
+import { appointments as appointmentsTable, teamMembers as teamMembersTable } from "../drizzle/schema";
+import { and as dAnd, eq as dEq, gte as dGte, lte as dLte, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -631,15 +635,157 @@ export const appRouter = router({
       }),
   }),
 
-  // Appointments router (booked by Jessica)
+  // Appointments router (booked by Jessica or staff)
   appointments: router({
     list: protectedProcedure
       .input(z.object({
         limit: z.number().optional().default(100),
         offset: z.number().optional().default(0),
+        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled"]).optional(),
+        assignedToId: z.number().optional(),
+        customerId: z.number().optional(),
+        /** Filter on scheduledAt range (ISO strings) */
+        from: z.string().datetime().optional(),
+        to: z.string().datetime().optional(),
+        /** Return only rows with NO scheduledAt (the backlog) */
+        unscheduledOnly: z.boolean().optional(),
       }))
       .query(async ({ input }) => {
-        return await db.getAllAppointments(input.limit, input.offset);
+        const dbi = await db.getDb();
+        if (!dbi) return [];
+        const conditions = [];
+        if (input.status) conditions.push(dEq(appointmentsTable.status, input.status));
+        if (input.assignedToId) conditions.push(dEq(appointmentsTable.assignedToId, input.assignedToId));
+        if (input.customerId) conditions.push(dEq(appointmentsTable.customerId, input.customerId));
+        if (input.unscheduledOnly) conditions.push(dIsNull(appointmentsTable.scheduledAt));
+        if (input.from) conditions.push(dGte(appointmentsTable.scheduledAt, new Date(input.from)));
+        if (input.to) conditions.push(dLte(appointmentsTable.scheduledAt, new Date(input.to)));
+        const where = conditions.length ? dAnd(...conditions) : undefined;
+        return await dbi.select().from(appointmentsTable).where(where)
+          .orderBy(dDesc(appointmentsTable.scheduledAt), dDesc(appointmentsTable.createdAt))
+          .limit(input.limit).offset(input.offset);
+      }),
+
+    /** Active team members for the assignee dropdown. */
+    assignees: protectedProcedure.query(async () => {
+      const dbi = await db.getDb();
+      if (!dbi) return [];
+      return await dbi.select({ id: teamMembersTable.id, name: teamMembersTable.name })
+        .from(teamMembersTable).where(dEq(teamMembersTable.status, "active"));
+    }),
+
+    /** Staff manual booking. Auto-links customer by phone; sends SMS confirmation. */
+    create: protectedProcedure
+      .input(z.object({
+        fullName: z.string().min(1).max(255),
+        phone: z.string().min(7).max(50),
+        email: z.string().email().max(320).optional().nullable(),
+        propertyAddress: z.string().max(1000).optional().nullable(),
+        propertyType: z.enum(["residential", "commercial"]).default("residential"),
+        appointmentType: z.enum(["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]),
+        scheduledAt: z.string().datetime(),
+        durationMinutes: z.number().int().min(15).max(480).default(60),
+        assignedToId: z.number().int().optional().nullable(),
+        customerId: z.number().int().optional().nullable(),
+        propertyId: z.number().int().optional().nullable(),
+        issueDescription: z.string().optional().nullable(),
+        notes: z.string().optional().nullable(),
+        /** Set false to skip the customer SMS (e.g. internal blocks) */
+        sendConfirmation: z.boolean().default(true),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const scheduled = new Date(input.scheduledAt);
+        const customerId = input.customerId ?? (await findCustomerIdByPhone(input.phone));
+        const values = {
+          fullName: input.fullName,
+          phone: input.phone,
+          email: input.email ?? undefined,
+          propertyAddress: input.propertyAddress ?? undefined,
+          propertyType: input.propertyType,
+          appointmentType: input.appointmentType,
+          // Keep the legacy varchars in sync for anything still reading them
+          preferredDate: scheduled.toLocaleDateString("en-US", { timeZone: "America/New_York" }),
+          preferredTime: scheduled.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" }),
+          scheduledAt: scheduled,
+          durationMinutes: input.durationMinutes,
+          assignedToId: input.assignedToId ?? undefined,
+          customerId: customerId ?? undefined,
+          propertyId: input.propertyId ?? undefined,
+          issueDescription: input.issueDescription ?? undefined,
+          notes: input.notes ?? undefined,
+          status: "confirmed" as const,
+          bookedBy: ctx.user?.name || ctx.user?.email || "staff",
+        };
+        const result = await db.createAppointment(values);
+        const id = Number((result as unknown as { insertId?: number })?.insertId ?? 0);
+
+        let smsSent = false;
+        if (input.sendConfirmation) {
+          const sms = await sendAppointmentConfirmationSms(values);
+          smsSent = sms.sent;
+        }
+        return { id, customerId, smsSent };
+      }),
+
+    /** Staff edit — any field. Sends reschedule SMS when scheduledAt changes. */
+    update: protectedProcedure
+      .input(z.object({
+        id: z.number().int(),
+        fullName: z.string().min(1).max(255).optional(),
+        phone: z.string().min(7).max(50).optional(),
+        email: z.string().email().max(320).optional().nullable(),
+        propertyAddress: z.string().max(1000).optional().nullable(),
+        propertyType: z.enum(["residential", "commercial"]).optional(),
+        appointmentType: z.enum(["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]).optional(),
+        scheduledAt: z.string().datetime().optional(),
+        durationMinutes: z.number().int().min(15).max(480).optional(),
+        assignedToId: z.number().int().optional().nullable(),
+        customerId: z.number().int().optional().nullable(),
+        propertyId: z.number().int().optional().nullable(),
+        issueDescription: z.string().optional().nullable(),
+        notes: z.string().optional().nullable(),
+        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled"]).optional(),
+        sendConfirmation: z.boolean().default(true),
+      }))
+      .mutation(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) throw new Error("Database not available");
+        const existing = (await dbi.select().from(appointmentsTable).where(dEq(appointmentsTable.id, input.id)).limit(1))[0];
+        if (!existing) throw new Error("Appointment not found");
+
+        const { id, sendConfirmation, scheduledAt, ...rest } = input;
+        const patch: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(rest)) {
+          if (v !== undefined) patch[k] = v;
+        }
+
+        let rescheduled = false;
+        if (scheduledAt) {
+          const newDate = new Date(scheduledAt);
+          rescheduled = !existing.scheduledAt || newDate.getTime() !== new Date(existing.scheduledAt).getTime();
+          patch.scheduledAt = newDate;
+          patch.preferredDate = newDate.toLocaleDateString("en-US", { timeZone: "America/New_York" });
+          patch.preferredTime = newDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" });
+          if (rescheduled && !patch.status && existing.scheduledAt) patch.status = "rescheduled";
+        }
+
+        // Re-run auto-link if phone changed and no explicit customerId given
+        if (patch.phone && input.customerId === undefined && !existing.customerId) {
+          const linked = await findCustomerIdByPhone(patch.phone as string);
+          if (linked) patch.customerId = linked;
+        }
+
+        if (Object.keys(patch).length > 0) {
+          await dbi.update(appointmentsTable).set(patch).where(dEq(appointmentsTable.id, id));
+        }
+
+        let smsSent = false;
+        if (rescheduled && sendConfirmation) {
+          const merged = { ...existing, ...patch } as typeof existing;
+          const sms = await sendAppointmentConfirmationSms(merged, { isReschedule: Boolean(existing.scheduledAt) });
+          smsSent = sms.sent;
+        }
+        return { success: true, rescheduled, smsSent };
       }),
 
     stats: protectedProcedure.query(async () => {

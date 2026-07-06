@@ -268,6 +268,14 @@ export const appointments = mysqlTable("appointments", {
   appointmentType: mysqlEnum("appointmentType", ["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]).notNull(),
   preferredDate: varchar("preferredDate", { length: 100 }).notNull(),
   preferredTime: varchar("preferredTime", { length: 100 }).notNull(),
+  /**
+   * Real datetime for the appointment (Phase 1 upgrade). preferredDate/preferredTime
+   * varchars are KEPT for Vapi/Jessica compatibility; scheduledAt is the queryable truth.
+   */
+  scheduledAt: timestamp("scheduledAt"),
+  durationMinutes: int("durationMinutes").default(60).notNull(),
+  /** Team member (teamMembers.id) assigned to run this appointment */
+  assignedToId: int("assignedToId"),
   issueDescription: text("issueDescription"),
   // Status
   status: mysqlEnum("status", ["pending", "confirmed", "completed", "cancelled", "rescheduled"]).default("pending").notNull(),
