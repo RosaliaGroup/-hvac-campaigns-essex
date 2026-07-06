@@ -9,7 +9,7 @@ import {
   BarChart3,
   ChevronRight,
   Search,
-  Facebook, UserRound } from "lucide-react";
+  Facebook, UserRound, CalendarClock } from "lucide-react";
 
 const navItems = [
   { label: "Command Center", href: "/command-center", icon: LayoutDashboard },
@@ -17,6 +17,7 @@ const navItems = [
   { label: "Marketing", href: "/marketing-dashboard", icon: Megaphone },
   { label: "Leads", href: "/leads", icon: Users },
   { label: "Customers", href: "/customers", icon: UserRound },
+  { label: "Calendar", href: "/calendar", icon: CalendarClock },
   { label: "Lead Scoring", href: "/lead-scoring", icon: Star },
   { label: "AI VA", href: "/ai-va-dashboard", icon: Bot },
   { label: "Performance", href: "/campaign-performance", icon: BarChart3 },
