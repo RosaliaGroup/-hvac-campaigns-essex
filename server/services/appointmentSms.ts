@@ -7,17 +7,8 @@
 import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { smsContacts, type Appointment } from "../../drizzle/schema";
-
-const BUSINESS_PHONE = "(862) 423-9396";
-
-/** Normalize to E.164 (+1XXXXXXXXXX). Returns null if not a usable US number. */
-export function toE164(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, "");
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  return null;
-}
+import { sendTelnyxSms } from "./telnyxSms";
+export { sendTelnyxSms, toE164 } from "./telnyxSms"; // re-export for existing importers
 
 /** True if this number has opted out via the SMS contacts list. */
 async function isOptedOut(phone: string): Promise<boolean> {
@@ -36,36 +27,7 @@ async function isOptedOut(phone: string): Promise<boolean> {
   }
 }
 
-export async function sendTelnyxSms(
-  phone: string,
-  message: string,
-): Promise<{ success: boolean; error?: string }> {
-  const apiKey = process.env.TELNYX_API_KEY;
-  const fromNumber = process.env.TELNYX_FROM_NUMBER;
-  if (!apiKey || !fromNumber) {
-    console.warn("[TelnyxSms] Not configured (TELNYX_API_KEY / TELNYX_FROM_NUMBER missing) — skipping send");
-    return { success: false, error: "SMS not configured" };
-  }
-  const to = toE164(phone);
-  if (!to) return { success: false, error: `Invalid phone number: ${phone}` };
-
-  try {
-    const res = await fetch("https://api.telnyx.com/v2/messages", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: fromNumber, to, text: message }),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error(`[TelnyxSms] Send failed (${res.status}):`, body.slice(0, 300));
-      return { success: false, error: `Telnyx ${res.status}` };
-    }
-    return { success: true };
-  } catch (err) {
-    console.error("[TelnyxSms] Send error:", err);
-    return { success: false, error: String(err) };
-  }
-}
+const BUSINESS_PHONE = "(862) 423-9396";
 
 const TYPE_LABELS: Record<string, string> = {
   free_consultation: "Free Consultation",

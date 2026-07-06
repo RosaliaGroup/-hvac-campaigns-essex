@@ -1,8 +1,9 @@
 /**
- * SMS Campaign Router — TextBelt-powered drip campaign management
+ * SMS Campaign Router — Telnyx-powered drip campaign management
  * Handles contacts, campaigns, sending, and delivery tracking
- * Note: Telnyx is configured but pending 10DLC approval; using TextBelt in the meantime
+ * SMS provider: Telnyx (active). TextBelt is legacy — removed July 2026.
  */
+import { sendTelnyxSms, telnyxConfigured } from "../services/telnyxSms";
 import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
@@ -12,7 +13,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 
 type DbInstance = ReturnType<typeof drizzle>;
 
-const TEXTBELT_API = "https://textbelt.com/text";
+
 
 // Normalize phone to E.164 US format (+1XXXXXXXXXX)
 function normalizePhone(raw: string): string {
@@ -35,46 +36,26 @@ async function requireDb(): Promise<DbInstance> {
   return db;
 }
 
-// Send a single SMS via TextBelt API
-async function sendViaTextBelt(phone: string, message: string): Promise<{
+/**
+ * LEGACY NOTE (July 2026): TextBelt was replaced by Telnyx as the active SMS
+ * provider. This wrapper keeps the old call-site shape but sends via Telnyx.
+ */
+async function sendViaTelnyx(phone: string, message: string): Promise<{
   success: boolean;
   messageId?: string;
-  quotaRemaining?: number;
+  quotaRemaining?: number; // legacy field — Telnyx is pay-as-you-go, always undefined
   error?: string;
 }> {
-  const apiKey = process.env.TEXTBELT_API_KEY;
-  if (!apiKey) throw new Error("TEXTBELT_API_KEY not configured");
-
-  const body = new URLSearchParams({
-    phone,
-    message,
-    key: apiKey,
-    replyWebhookUrl: "https://mechanicalenterprise.com/api/sms/reply",
-  });
-
-  const res = await globalThis.fetch(TEXTBELT_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-
-  const data = (await res.json()) as { success: boolean; textId?: string; quotaRemaining?: number; error?: string };
-  if (data.success) {
-    return { success: true, messageId: data.textId, quotaRemaining: data.quotaRemaining };
-  } else {
-    return { success: false, error: data.error ?? "Unknown TextBelt error", quotaRemaining: data.quotaRemaining };
-  }
+  const result = await sendTelnyxSms(phone, message);
+  return { success: result.success, messageId: result.messageId, error: result.error };
 }
 
 export const smsCampaignsRouter = router({
   // ── Quota / Balance ───────────────────────────────────────────────────────
   getQuota: protectedProcedure.query(async () => {
-    const apiKey = process.env.TEXTBELT_API_KEY;
-    if (!apiKey) throw new Error("TEXTBELT_API_KEY not configured");
-    const res = await globalThis.fetch(`https://textbelt.com/quota/${apiKey}`);
-    if (!res.ok) return { quotaRemaining: 0, success: false };
-    const data = (await res.json()) as { success: boolean; quotaRemaining: number };
-    return { quotaRemaining: data.quotaRemaining ?? 0, success: data.success };
+    // Telnyx is pay-as-you-go: no prepaid quota. quotaRemaining=null signals
+    // "unlimited/PAYG" to the UI. success reflects whether creds are set.
+    return { quotaRemaining: null as number | null, success: telnyxConfigured(), provider: "telnyx" as const };
   }),
 
   // ── Contacts ──────────────────────────────────────────────────────────────
@@ -245,7 +226,7 @@ export const smsCampaignsRouter = router({
       if (contact.optedOut) throw new Error("Contact has opted out");
 
       const personalizedMsg = personalize(input.messageText, contact.firstName);
-      const result = await sendViaTextBelt(contact.phone, personalizedMsg);
+      const result = await sendViaTelnyx(contact.phone, personalizedMsg);
 
       await db.insert(smsSends).values({
         contactId: input.contactId,
@@ -295,7 +276,7 @@ export const smsCampaignsRouter = router({
         const personalizedMsg = personalize(input.messageText, contact.firstName);
 
         try {
-          const result = await sendViaTextBelt(contact.phone, personalizedMsg);
+          const result = await sendViaTelnyx(contact.phone, personalizedMsg);
 
           await db.insert(smsSends).values({
             contactId,
@@ -510,7 +491,7 @@ export const smsCampaignsRouter = router({
       if (!contact) throw new Error("Contact not found");
       if (contact.optedOut) throw new Error("Contact has opted out");
 
-      const result = await sendViaTextBelt(contact.phone, input.message);
+      const result = await sendViaTelnyx(contact.phone, input.message);
 
       // Save outbound reply to inbox
       await db.insert(smsInboxMessages).values({

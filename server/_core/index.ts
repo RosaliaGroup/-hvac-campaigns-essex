@@ -41,7 +41,7 @@ async function startServer() {
   registerSeoRoutes(app);
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
-  // SMS reply webhook (TextBelt STOP opt-out handler)
+  // SMS reply webhook — Telnyx inbound (active) + legacy TextBelt format fallback
   registerSmsWebhookRoutes(app);
   // Meta Lead Gen webhook (Instant Form submissions)
   registerMetaLeadWebhookRoutes(app);

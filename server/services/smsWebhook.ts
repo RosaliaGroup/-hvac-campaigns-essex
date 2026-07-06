@@ -115,7 +115,8 @@ export function registerSmsWebhookRoutes(app: Express): void {
             text?: string;
           };
         };
-        // Legacy TextBelt format fallback
+        // LEGACY (TextBelt, retired July 2026): kept only so an old
+        // TextBelt reply-webhook config cannot drop inbound STOP messages.
         fromNumber?: string;
         text?: string;
       };

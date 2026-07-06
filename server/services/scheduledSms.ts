@@ -1,13 +1,13 @@
 /**
- * Scheduled SMS Service — TextBelt-powered
+ * Scheduled SMS Service — Telnyx-powered
  * Processes pending scheduled sends every 5 minutes via a cron-like interval.
- * Note: Telnyx pending 10DLC approval; using TextBelt in the meantime.
+ * (TextBelt is LEGACY — retired July 2026.)
  */
+import { sendTelnyxSms, telnyxConfigured } from "./telnyxSms";
 import { getDb } from "../db";
 import { scheduledSends, smsContacts, smsSends } from "../../drizzle/schema";
 import { eq, lte, and } from "drizzle-orm";
 
-const TEXTBELT_API = "https://textbelt.com/text";
 
 function personalize(template: string, firstName: string): string {
   return template
@@ -15,45 +15,26 @@ function personalize(template: string, firstName: string): string {
     .replace(/\{\{firstName\}\}/gi, firstName);
 }
 
-async function sendViaTextBelt(phone: string, message: string): Promise<{
+/**
+ * LEGACY NOTE (July 2026): TextBelt was replaced by Telnyx as the active SMS
+ * provider. This wrapper keeps the old call-site shape but sends via Telnyx.
+ */
+async function sendViaTelnyx(phone: string, message: string): Promise<{
   success: boolean;
   messageId?: string;
-  quotaRemaining?: number;
+  quotaRemaining?: number; // legacy field — Telnyx is pay-as-you-go, always undefined
   error?: string;
 }> {
-  const apiKey = process.env.TEXTBELT_API_KEY;
-  if (!apiKey) {
-    return { success: false, error: "TEXTBELT_API_KEY not configured" };
-  }
-
-  const body = new URLSearchParams({
-    phone,
-    message,
-    key: apiKey,
-    replyWebhookUrl: "https://mechanicalenterprise.com/api/sms/reply",
-  });
-
-  const res = await globalThis.fetch(TEXTBELT_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-
-  const data = (await res.json()) as { success: boolean; textId?: string; quotaRemaining?: number; error?: string };
-  if (data.success) {
-    return { success: true, messageId: data.textId, quotaRemaining: data.quotaRemaining };
-  } else {
-    return { success: false, error: data.error ?? "Unknown TextBelt error", quotaRemaining: data.quotaRemaining };
-  }
+  const result = await sendTelnyxSms(phone, message);
+  return { success: result.success, messageId: result.messageId, error: result.error };
 }
 
 export async function processScheduledSends(): Promise<{ processed: number; sent: number; failed: number }> {
   const db = await getDb();
   if (!db) return { processed: 0, sent: 0, failed: 0 };
 
-  const apiKey = process.env.TEXTBELT_API_KEY;
-  if (!apiKey) {
-    console.warn("[ScheduledSMS] TEXTBELT_API_KEY not set — skipping");
+  if (!telnyxConfigured()) {
+    console.warn("[ScheduledSMS] Telnyx not configured (TELNYX_API_KEY / TELNYX_FROM_NUMBER) — skipping");
     return { processed: 0, sent: 0, failed: 0 };
   }
 
@@ -86,7 +67,7 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
     const personalizedMsg = personalize(item.messageText, contact.firstName);
 
     try {
-      const result = await sendViaTextBelt(contact.phone, personalizedMsg);
+      const result = await sendViaTelnyx(contact.phone, personalizedMsg);
 
       const [sendResult] = await db.insert(smsSends).values({
         contactId: item.contactId,
@@ -95,7 +76,7 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
         messageText: personalizedMsg,
         phone: contact.phone,
         status: result.success ? "sent" : "failed",
-        textBeltId: result.messageId ?? null,
+        textBeltId: result.messageId ?? null, // legacy column name; stores the Telnyx message id
         errorMessage: result.error ?? null,
         quotaRemaining: result.quotaRemaining ?? null,
       });
@@ -133,7 +114,7 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
 
 export function startScheduledSmsProcessor(): void {
   const INTERVAL_MS = 5 * 60 * 1000;
-  console.log("[ScheduledSMS] TextBelt processor started — checking every 5 minutes");
+  console.log("[ScheduledSMS] Telnyx processor started — checking every 5 minutes");
 
   processScheduledSends().catch((err) =>
     console.error("[ScheduledSMS] Startup run error:", err)

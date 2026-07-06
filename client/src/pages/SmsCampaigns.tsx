@@ -344,14 +344,14 @@ export default function SmsCampaigns() {
             <MessageSquare className="h-7 w-7 text-[#ff6b35]" />
             <div>
               <h1 className="text-2xl font-bold">SMS Campaign Manager</h1>
-              <p className="text-blue-200 text-sm">Powered by TextBelt · Mechanical Enterprise</p>
+              <p className="text-blue-200 text-sm">Powered by Telnyx · Mechanical Enterprise</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {quota && (
               <div className="flex items-center gap-2 bg-white/10 rounded-lg px-4 py-2">
                 <Zap className="h-4 w-4 text-yellow-300" />
-                <span className="text-sm font-semibold">{quota.quotaRemaining} texts remaining</span>
+                <span className="text-sm font-semibold">{quota.quotaRemaining == null ? "Telnyx · pay-as-you-go" : `${quota.quotaRemaining} texts remaining`}</span>
               </div>
             )}
             <Button
@@ -593,7 +593,7 @@ export default function SmsCampaigns() {
 
                   <div className="bg-blue-50 rounded-lg p-3 text-xs text-blue-700 space-y-1">
                     <p className="font-semibold">Compliance reminder:</p>
-                    <p>All messages must include opt-out language (e.g. "Reply STOP to opt out"). TextBelt handles STOP replies automatically.</p>
+                    <p>All messages must include opt-out language (e.g. "Reply STOP to opt out"). STOP replies arrive via the Telnyx inbound webhook and set the contact to opted-out.</p>
                   </div>
 
                   <div className="flex gap-2 pt-2 flex-wrap">
@@ -647,7 +647,7 @@ export default function SmsCampaigns() {
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Zap className="h-4 w-4 text-yellow-500" />
-                      TextBelt Quota
+                      SMS Provider
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -655,7 +655,7 @@ export default function SmsCampaigns() {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center">
                           <span className="text-sm text-gray-600">Texts remaining</span>
-                          <span className="text-2xl font-bold text-[#1e3a5f]">{quota.quotaRemaining}</span>
+                          <span className="text-2xl font-bold text-[#1e3a5f]">{quota.quotaRemaining == null ? "PAYG" : quota.quotaRemaining}</span>
                         </div>
                         <div className="text-xs text-gray-500">
                           Sending to {sendTarget === "all" ? activeContacts.length : selectedContactIds.length} contacts will use {sendTarget === "all" ? activeContacts.length : selectedContactIds.length} credits
@@ -1039,12 +1039,12 @@ function OptOutSetupTab() {
           </div>
 
           <div className="space-y-3">
-            <h3 className="font-semibold text-gray-800">How to configure in TextBelt:</h3>
+            <h3 className="font-semibold text-gray-800">How to configure inbound SMS in Telnyx:</h3>
             <ol className="space-y-2 text-sm text-gray-700">
-              <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">1.</span> Log in to your TextBelt account at <a href="https://textbelt.com/dashboard" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">textbelt.com/dashboard</a></li>
+              <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">1.</span> Log in to the Telnyx portal at <a href="https://portal.telnyx.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">portal.telnyx.com</a> → Messaging → your Messaging Profile</li>
               <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">2.</span> Find the <strong>Webhook URL</strong> or <strong>Reply Webhook</strong> setting</li>
               <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">3.</span> Paste the URL above into the webhook field</li>
-              <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">4.</span> Save — TextBelt will now POST to your server whenever a recipient replies</li>
+              <li className="flex gap-2"><span className="font-bold text-[#ff6b35] flex-shrink-0">4.</span> Set the inbound webhook URL and save — Telnyx will POST to your server whenever a recipient replies</li>
             </ol>
           </div>
 
@@ -1055,7 +1055,7 @@ function OptOutSetupTab() {
 
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
             <div className="flex items-center gap-2 font-semibold mb-1"><AlertTriangle className="h-4 w-4" /> Note</div>
-            <p>TextBelt's reply webhook feature requires a paid plan. If you are on a free/trial plan, opt-outs must be managed manually via the Contacts tab.</p>
+            <p>If the Telnyx inbound webhook is not configured, opt-outs must be managed manually via the Contacts tab.</p>
           </div>
         </CardContent>
       </Card>
@@ -1147,7 +1147,7 @@ function SmsInboxTab() {
             <Inbox className="h-12 w-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No replies yet</p>
             <p className="text-gray-400 text-sm mt-1">When contacts reply to your SMS campaigns, their messages will appear here.</p>
-            <p className="text-gray-400 text-sm mt-1">Make sure the webhook URL is configured in your TextBelt account.</p>
+            <p className="text-gray-400 text-sm mt-1">Make sure the inbound webhook URL is configured on your Telnyx Messaging Profile.</p>
           </CardContent>
         </Card>
       ) : (
