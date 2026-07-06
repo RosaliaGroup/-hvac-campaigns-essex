@@ -3,6 +3,13 @@
  * Public-facing tool for homeowners to estimate HVAC rebates and place assessment orders
  */
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { enforceRateLimit, getClientIp, phoneKey, HOUR_MS } from "../_core/rateLimit";
+
+// ── Task 5 rate-limit constants (adjust here) ──
+const SMS_LIMIT_PER_PHONE_HOUR = 3;
+const SMS_LIMIT_PER_IP_HOUR = 10;
+const REGISTER_LIMIT_PER_IP_HOUR = 5;
+const SUBMIT_LIMIT_PER_IP_HOUR = 10;
 import { makeRequest, GeocodingResult } from "../_core/map";
 import { z } from "zod";
 import { getDb } from "../db";
@@ -177,7 +184,11 @@ export const rebateCalculatorRouter = router({
         propertyDataJson: z.string().optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // Rate limit (Task 5): public form; block spam floods
+      enforceRateLimit([
+        { bucket: "rebate.submit.ip", key: getClientIp(ctx), max: SUBMIT_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
+      ]);
       const db = await requireDb();
 
       const rebates = calculateRebates({
@@ -556,7 +567,12 @@ export const rebateCalculatorRouter = router({
         selectedOption: z.enum(["high_efficiency", "standard"]),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // Rate limit (Task 5): this endpoint sends a real SMS — protect the budget
+      enforceRateLimit([
+        { bucket: "rebate.sms.phone", key: phoneKey(input.phone), max: SMS_LIMIT_PER_PHONE_HOUR, windowMs: HOUR_MS },
+        { bucket: "rebate.sms.ip", key: getClientIp(ctx), max: SMS_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
+      ]);
       const telnyxApiKey = process.env.TELNYX_API_KEY;
       const fromNumber = process.env.TELNYX_FROM_NUMBER;
 
@@ -631,7 +647,12 @@ export const rebateCalculatorRouter = router({
         origin: z.string().url(), // window.location.origin passed from frontend
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      // Rate limit (Task 5): sends an SMS link on success
+      enforceRateLimit([
+        { bucket: "rebate.register.phone", key: phoneKey(input.phone), max: SMS_LIMIT_PER_PHONE_HOUR, windowMs: HOUR_MS },
+        { bucket: "rebate.register.ip", key: getClientIp(ctx), max: REGISTER_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
+      ]);
       const db = await requireDb();
 
       // Normalize phone to E.164

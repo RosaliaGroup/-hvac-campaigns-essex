@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 
 const SLIDES = 17;
-const PASSWORD = "mechanicalenterprise2026";
+// Task 5: password moved to env. The old hardcoded value is burned (it lives in
+// git history) — set VITE_PRESENTATION_PASSWORD in Netlify to a NEW value.
+const PASSWORD = import.meta.env.VITE_PRESENTATION_PASSWORD || "";
 
 export default function Presentation() {
   const [unlocked, setUnlocked] = useState(false);
@@ -26,10 +28,10 @@ export default function Presentation() {
         <h2 style={{color:"#0a1628",marginBottom:4,fontSize:24,fontWeight:800}}>Mechanical Enterprise LLC</h2>
         <p style={{color:"#64748b",marginBottom:24,fontSize:14}}>Partner Presentation — Confidential</p>
         <input type="password" placeholder="Enter access password" value={input}
-          onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(input===PASSWORD){setUnlocked(true);setError("")}else{setError("Incorrect password");setInput("")}}}}
+          onChange={e=>setInput(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){if(PASSWORD&&input===PASSWORD){setUnlocked(true);setError("")}else{setError("Incorrect password");setInput("")}}}}
           style={{width:"100%",padding:"12px 16px",borderRadius:8,border:"2px solid #e2e8f0",fontSize:16,marginBottom:12,boxSizing:"border-box",outline:"none"}}/>
         {error&&<p style={{color:"#e53e3e",fontSize:13,marginBottom:8}}>{error}</p>}
-        <button onClick={()=>{if(input===PASSWORD){setUnlocked(true);setError("")}else{setError("Incorrect password");setInput("")}}}
+        <button onClick={()=>{if(PASSWORD&&input===PASSWORD){setUnlocked(true);setError("")}else{setError("Incorrect password");setInput("")}}}
           style={{width:"100%",padding:14,background:"#e8813a",color:"#fff",border:"none",borderRadius:8,fontSize:16,fontWeight:700,cursor:"pointer"}}>
           Enter Presentation
         </button>

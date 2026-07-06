@@ -1,7 +1,8 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
+import { enforceRateLimit, getClientIp, HOUR_MS } from "./_core/rateLimit";
 import { z } from "zod";
 import * as db from "./db";
 import { handleVapiWebhook } from "./integrations/vapi";
@@ -120,7 +121,9 @@ export const appRouter = router({
           message: z.string().optional(),
         })
       )
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        // Rate limit (Task 5): public capture endpoint — 20/IP/hour
+        enforceRateLimit([{ bucket: "leadCapture.ip", key: getClientIp(ctx), max: 20, windowMs: HOUR_MS }]);
         // Validate that at least email or phone is provided
         if (!input.email && !input.phone) {
           throw new Error("Either email or phone is required");
@@ -380,7 +383,7 @@ export const appRouter = router({
 
   // AI Virtual Assistant router
   aiVa: router({
-    saveCredentials: protectedProcedure
+    saveCredentials: adminProcedure
       .input(
         z.object({
           service: z.enum(["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const),
@@ -873,6 +876,8 @@ export const appRouter = router({
   }),
 
   // Webhook endpoints for external services
+  // PUBLIC by design: called by external services (Vapi, Twilio) that cannot
+  // hold a session. Payload validation is the auth boundary here.
   webhooks: router({
 
     // Vapi voice AI webhook

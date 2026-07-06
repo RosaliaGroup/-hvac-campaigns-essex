@@ -1,4 +1,4 @@
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import {
   getGoogleAdsAuthUrl,
@@ -28,7 +28,7 @@ export const googleAdsRouter = router({
     }),
 
   // Exchange auth code for tokens and save refresh token
-  handleCallback: protectedProcedure
+  handleCallback: adminProcedure
     .input(z.object({ code: z.string(), redirectUri: z.string() }))
     .mutation(async ({ input }) => {
       const tokens = await exchangeCodeForTokens(input.code, input.redirectUri);
@@ -59,7 +59,7 @@ export const googleAdsRouter = router({
   }),
 
   // Push a new search campaign to Google Ads
-  createCampaign: protectedProcedure
+  createCampaign: adminProcedure
     .input(
       z.object({
         name: z.string(),

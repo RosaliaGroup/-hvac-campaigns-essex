@@ -2,7 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
-import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
 import { sdk } from "../_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
@@ -32,7 +32,7 @@ export const teamAuthRouter = router({
    * Owner invites a new team member by email.
    * Protected — only logged-in owner/admin can invite.
    */
-  invite: protectedProcedure
+  invite: adminProcedure
     .input(z.object({
       email: z.string().email(),
       name: z.string().min(1).max(100),
@@ -241,7 +241,7 @@ export const teamAuthRouter = router({
   /**
    * Suspend or reactivate a team member (owner only).
    */
-  updateStatus: protectedProcedure
+  updateStatus: adminProcedure
     .input(z.object({
       id: z.number(),
       status: z.enum(["active", "suspended"]),
@@ -254,7 +254,7 @@ export const teamAuthRouter = router({
   /**
    * Remove a team member (owner only).
    */
-  remove: protectedProcedure
+  remove: adminProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await db.deleteTeamMember(input.id);
@@ -264,7 +264,7 @@ export const teamAuthRouter = router({
   /**
    * Resend an invite link to a pending team member.
    */
-  resendInvite: protectedProcedure
+  resendInvite: adminProcedure
     .input(z.object({
       id: z.number(),
       origin: z.string().url(),

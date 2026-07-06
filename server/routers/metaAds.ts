@@ -1,4 +1,4 @@
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import {
   getMetaAuthUrl,
@@ -44,7 +44,7 @@ export const metaAdsRouter = router({
     }),
 
   // Exchange code for long-lived user token, then get Page Access Token
-  handleCallback: protectedProcedure
+  handleCallback: adminProcedure
     .input(z.object({ code: z.string(), redirectUri: z.string() }))
     .mutation(async ({ input }) => {
       const shortToken = await exchangeCodeForToken(input.code, input.redirectUri);
@@ -64,7 +64,7 @@ export const metaAdsRouter = router({
     }),
 
   // Save ad account ID and page ID manually
-  saveConfig: protectedProcedure
+  saveConfig: adminProcedure
     .input(z.object({ adAccountId: z.string(), pageId: z.string() }))
     .mutation(async ({ input }) => {
       await saveAiVaCredentials(SERVICE_KEY, {
@@ -143,7 +143,7 @@ export const metaAdsRouter = router({
   }),
 
   // Create a lead generation campaign (OUTCOME_LEADS with Instant Form)
-  createCampaign: protectedProcedure
+  createCampaign: adminProcedure
     .input(
       z.object({
         name: z.string(),

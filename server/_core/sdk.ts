@@ -287,10 +287,14 @@ class SDKServer {
         email: member.email,
         loginMethod: "team",
         role: member.role === "admin" ? "admin" : "user",
+        // Phase 1 security: preserve the REAL team role so viewer can be
+        // enforced as read-only (previously flattened to "user").
+        teamRole: member.role,
+        videoInterests: null,
         createdAt: member.createdAt,
         updatedAt: member.createdAt,
         lastSignedIn: signedInAt,
-      } as User;
+      } as User & { teamRole: "admin" | "member" | "viewer" };
     }
 
     // ── Regular Manus OAuth session ───────────────────────────────────────
