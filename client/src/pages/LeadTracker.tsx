@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, User, Calendar, TrendingUp, Download, Plus, Bell } from "lucide-react";
+import { Phone, Mail, User, Calendar, TrendingUp, Download, Plus, Bell, UserPlus, UserRound } from "lucide-react";
 import InternalNav from "@/components/InternalNav";
 import Navigation from "@/components/Navigation";
 import DashboardFooter from "@/components/DashboardFooter";
@@ -63,6 +63,15 @@ export default function LeadTracker() {
     onError: (error) => {
       toast.error(`Failed to log lead: ${error.message}`);
     },
+  });
+
+  const convertLead = trpc.customers.convertFromLead.useMutation({
+    onSuccess: res => {
+      toast.success(res.merged ? "Linked to existing customer" : "Customer created");
+      refetch();
+      setLocation(`/customers/${res.customerId}`);
+    },
+    onError: err => toast.error(`Conversion failed: ${err.message}`),
   });
 
   const updateStatus = trpc.leads.updateStatus.useMutation({
@@ -395,6 +404,7 @@ export default function LeadTracker() {
                       <TableHead>Service</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Notes</TableHead>
+                      <TableHead>Customer</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -451,6 +461,27 @@ export default function LeadTracker() {
                           <span className="text-sm text-muted-foreground truncate block">
                             {lead.notes || "—"}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          {lead.customerId ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-[#1e3a5f] text-[#1e3a5f] whitespace-nowrap"
+                              onClick={() => setLocation(`/customers/${lead.customerId}`)}
+                            >
+                              <UserRound className="h-3.5 w-3.5 mr-1" /> View
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              className="bg-[#1e3a5f] hover:bg-[#16304f] whitespace-nowrap"
+                              disabled={convertLead.isPending}
+                              onClick={() => convertLead.mutate({ leadId: lead.id })}
+                            >
+                              <UserPlus className="h-3.5 w-3.5 mr-1" /> Convert
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}

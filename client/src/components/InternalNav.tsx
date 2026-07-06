@@ -9,14 +9,14 @@ import {
   BarChart3,
   ChevronRight,
   Search,
-  Facebook,
-} from "lucide-react";
+  Facebook, UserRound } from "lucide-react";
 
 const navItems = [
   { label: "Command Center", href: "/command-center", icon: LayoutDashboard },
   { label: "SMS Campaigns", href: "/sms-campaigns", icon: MessageSquare },
   { label: "Marketing", href: "/marketing-dashboard", icon: Megaphone },
   { label: "Leads", href: "/leads", icon: Users },
+  { label: "Customers", href: "/customers", icon: UserRound },
   { label: "Lead Scoring", href: "/lead-scoring", icon: Star },
   { label: "AI VA", href: "/ai-va-dashboard", icon: Bot },
   { label: "Performance", href: "/campaign-performance", icon: BarChart3 },

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -15,7 +16,7 @@ import {
   Users, Phone, Mail, Clock, TrendingUp, Filter, Search,
   RefreshCw, CheckCircle, XCircle, Star, Calendar, MessageSquare,
   ChevronRight, BarChart3, Flame, Zap, Snowflake, ExternalLink,
-  PhoneCall, Globe, Facebook, AlertCircle, Eye, ClipboardCheck, Handshake
+  PhoneCall, Globe, Facebook, AlertCircle, Eye, ClipboardCheck, Handshake, UserPlus, UserRound
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -88,6 +89,7 @@ type LeadCapture = {
   message?: string | null;
   status: string;
   notes?: string | null;
+  customerId?: number | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -106,6 +108,22 @@ function LeadDetailModal({
   const [notes, setNotes] = useState(lead.notes || "");
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const utils = trpc.useUtils();
+
+  const convert = trpc.customers.convertFromCapture.useMutation({
+    onSuccess: res => {
+      toast({
+        title: res.merged ? "Linked to existing customer" : "Customer created",
+        description: res.merged
+          ? "A customer with this phone/email already existed — the lead was linked to it."
+          : "The lead was converted into a new customer record.",
+      });
+      utils.leadCaptures.list.invalidate();
+      navigate(`/customers/${res.customerId}`);
+    },
+    onError: err => toast({ title: "Conversion failed", description: err.message, variant: "destructive" }),
+  });
 
   const sourceInfo = SOURCE_LABELS[lead.captureType] || { label: lead.captureType, icon: <Globe className="h-3 w-3" />, color: "bg-gray-100 text-gray-700" };
   const statusInfo = STATUS_CONFIG[lead.status] || STATUS_CONFIG.new;
@@ -215,7 +233,25 @@ function LeadDetailModal({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
+          {lead.customerId ? (
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/customers/${lead.customerId}`)}
+              className="border-[#1e3a5f] text-[#1e3a5f]"
+            >
+              <UserRound className="h-4 w-4 mr-1" /> View Customer
+            </Button>
+          ) : (
+            <Button
+              onClick={() => convert.mutate({ captureId: lead.id })}
+              disabled={convert.isPending}
+              className="bg-[#1e3a5f] text-white hover:bg-[#1e3a5f]/90"
+            >
+              <UserPlus className="h-4 w-4 mr-1" />
+              {convert.isPending ? "Converting…" : "Convert to Customer"}
+            </Button>
+          )}
           <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>

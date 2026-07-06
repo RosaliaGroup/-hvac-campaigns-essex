@@ -49,6 +49,8 @@ import Qualify from "./pages/Qualify";
 import RebateCalculator from "./pages/RebateCalculator";
 import CommandCenter from "./pages/CommandCenter";
 import LeadDashboard from "./pages/LeadDashboard";
+import Customers from "./pages/Customers";
+import CustomerDetail from "./pages/CustomerDetail";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
 import TeamLogin from "./pages/TeamLogin";
 import AcceptInvite from "./pages/AcceptInvite";
@@ -261,6 +263,8 @@ function Router() {
       <Route path={"/marketing-dashboard"} component={protect(MarketingDashboard)} />
       <Route path={"/leads"} component={protect(LeadTracker)} />
       <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
+      <Route path={"/customers"} component={protect(Customers)} />
+      <Route path={"/customers/:id"} component={protect(CustomerDetail)} />
       <Route path={"/campaign-performance"} component={protect(CampaignPerformance)} />
       <Route path={"/google-ads-campaigns"} component={protect(GoogleAdsCampaigns)} />
       <Route path={"/facebook-campaigns"} component={protect(FacebookCampaigns)} />
