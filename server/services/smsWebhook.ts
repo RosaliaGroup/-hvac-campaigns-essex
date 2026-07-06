@@ -16,7 +16,8 @@
  */
 import type { Express, Request, Response } from "express";
 import { getDb } from "../db";
-import { smsContacts, scheduledSends, smsInboxMessages } from "../../drizzle/schema";
+import { smsContacts, scheduledSends, smsInboxMessages, smsSends } from "../../drizzle/schema";
+import { parseTelnyxStatusEvent } from "./telnyxDeliveryStatus";
 import { eq, and } from "drizzle-orm";
 
 const OPT_OUT_KEYWORDS = new Set([
@@ -106,6 +107,47 @@ export function registerSmsWebhookRoutes(app: Express): void {
    */
   app.post("/api/sms/reply", async (req: Request, res: Response) => {
     try {
+      // ── Task 6.5: outbound delivery-status events first ─────────
+      // Telnyx sends message.sent / message.finalized to this same URL.
+      const statusEvent = parseTelnyxStatusEvent(req.body);
+      if (statusEvent) {
+        console.log(JSON.stringify({
+          tag: "[SMSWebhook] DELIVERY_STATUS",
+          telnyxMessageId: statusEvent.telnyxMessageId,
+          eventType: statusEvent.eventType,
+          rawToStatus: statusEvent.rawToStatus,
+          mapped: statusEvent.deliveryStatus,
+          errorCode: statusEvent.errorCode,
+        }));
+        try {
+          const db = await getDb();
+          if (db) {
+            const patch: Record<string, unknown> = {
+              deliveryStatus: statusEvent.deliveryStatus,
+              deliveryErrorCode: statusEvent.errorCode,
+              deliveryErrorMessage: statusEvent.errorMessage,
+              deliveryUpdatedAt: new Date(),
+            };
+            if (statusEvent.deliveryStatus === "delivered") {
+              patch.deliveredAt = statusEvent.completedAt ?? new Date();
+            }
+            const result = await db
+              .update(smsSends)
+              .set(patch)
+              .where(eq(smsSends.textBeltId, statusEvent.telnyxMessageId));
+            const affected = Number((result as unknown as [{ affectedRows?: number }])[0]?.affectedRows ?? 0);
+            if (affected === 0) {
+              // Not a campaign send (e.g. appointment confirmation / rebate
+              // text — those aren't tracked in smsSends). Logged, not an error.
+              console.log(`[SMSWebhook] Delivery status for untracked message ${statusEvent.telnyxMessageId} (${statusEvent.deliveryStatus})`);
+            }
+          }
+        } catch (err) {
+          console.error("[SMSWebhook] Failed to persist delivery status:", err);
+        }
+        return res.status(200).json({ success: true });
+      }
+
       // Telnyx webhook format
       const body = req.body as {
         data?: {

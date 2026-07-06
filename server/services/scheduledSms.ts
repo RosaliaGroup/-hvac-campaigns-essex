@@ -76,6 +76,7 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
         messageText: personalizedMsg,
         phone: contact.phone,
         status: result.success ? "sent" : "failed",
+        deliveryStatus: result.success ? "accepted" : null,
         textBeltId: result.messageId ?? null, // legacy column name; stores the Telnyx message id
         errorMessage: result.error ?? null,
         quotaRemaining: result.quotaRemaining ?? null,

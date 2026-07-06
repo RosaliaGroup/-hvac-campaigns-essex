@@ -114,6 +114,32 @@ type Contact = {
   updatedAt: Date;
 };
 
+
+/**
+ * Task 6.5: two-stage status. `status` = API acceptance; `deliveryStatus`
+ * = final carrier outcome from the Telnyx webhook (null = pending).
+ */
+function deliveryBadge(s: { status: string; deliveryStatus?: string | null; deliveryErrorCode?: string | null }) {
+  if (s.status === "failed") return { label: "failed", cls: "bg-red-100 text-red-700" };
+  switch (s.deliveryStatus) {
+    case "delivered":
+      return { label: "delivered", cls: "bg-green-100 text-green-700" };
+    case "carrier_filtered":
+      return { label: `carrier filtered${s.deliveryErrorCode ? ` (${s.deliveryErrorCode})` : ""}`, cls: "bg-red-100 text-red-700" };
+    case "delivery_failed":
+      return { label: `delivery failed${s.deliveryErrorCode ? ` (${s.deliveryErrorCode})` : ""}`, cls: "bg-red-100 text-red-700" };
+    case "rejected":
+      return { label: "rejected", cls: "bg-red-100 text-red-700" };
+    case "sent":
+      return { label: "sent to carrier", cls: "bg-blue-100 text-blue-700" };
+    case "accepted":
+    case null:
+    case undefined:
+    default:
+      return { label: "accepted by Telnyx", cls: "bg-amber-100 text-amber-700" };
+  }
+}
+
 export default function SmsCampaigns() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -846,8 +872,8 @@ export default function SmsCampaigns() {
                 <div key={s.id} className="border rounded-lg p-3 text-sm">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-medium">Message {s.messageNum} (Day {s.messageNum === 1 ? 1 : s.messageNum === 2 ? 4 : 10})</span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${s.status === "sent" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                      {s.status}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${deliveryBadge(s).cls}`}>
+                      {deliveryBadge(s).label}
                     </span>
                   </div>
                   <p className="text-gray-600 text-xs line-clamp-2">{s.messageText}</p>
@@ -1304,9 +1330,10 @@ function SendHistoryTab() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         {[
-          { label: "Total Sent", value: stats.sent, icon: CheckCircle2, color: "text-green-600" },
+          { label: "Accepted", value: stats.sent, icon: CheckCircle2, color: "text-green-600" },
+          { label: "Delivered", value: history.filter(h => h.deliveryStatus === "delivered").length, icon: CheckCircle2, color: "text-emerald-600" },
           { label: "Failed", value: stats.failed, icon: XCircle, color: "text-red-500" },
           { label: "Day 1 Sent", value: stats.msg1, icon: Clock, color: "text-blue-600" },
           { label: "Day 4 Sent", value: stats.msg2, icon: Clock, color: "text-yellow-600" },
@@ -1355,10 +1382,11 @@ function SendHistoryTab() {
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-1 max-w-xs">{s.messageText}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${s.status === "sent" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                        {s.status}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${deliveryBadge(s).cls}`}>
+                        {deliveryBadge(s).label}
                       </span>
                       {s.errorMessage && <p className="text-xs text-red-500 mt-0.5">{s.errorMessage}</p>}
+                      {s.deliveryErrorMessage && <p className="text-xs text-red-500 mt-0.5">{s.deliveryErrorMessage}</p>}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{s.quotaRemaining ?? "—"}</td>
                     <td className="px-4 py-3 text-xs text-gray-500">{new Date(s.sentAt).toLocaleString()}</td>

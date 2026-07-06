@@ -34,21 +34,66 @@ export async function sendTelnyxSms(
   const to = toE164(phone);
   if (!to) return { success: false, error: `Invalid phone number: ${phone}` };
 
+  const payload = { from: fromNumber, to, text: message };
+  const startedAt = Date.now();
   try {
+    // Structured send log — one line per attempt, greppable as [TelnyxSms]
+    console.log(JSON.stringify({
+      tag: "[TelnyxSms] REQUEST",
+      to,
+      from: fromNumber,
+      textLength: message.length,
+      textPreview: message.slice(0, 60),
+    }));
+
     const res = await fetch("https://api.telnyx.com/v2/messages", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: fromNumber, to, text: message }),
+      body: JSON.stringify(payload),
     });
+
+    const rawBody = await res.text().catch(() => "");
+    const ms = Date.now() - startedAt;
+
     if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error(`[TelnyxSms] Send failed (${res.status}):`, body.slice(0, 300));
-      return { success: false, error: `Telnyx ${res.status}` };
+      console.error(JSON.stringify({
+        tag: "[TelnyxSms] FAILED",
+        to,
+        httpStatus: res.status,
+        ms,
+        errorBody: rawBody.slice(0, 500),
+      }));
+      return { success: false, error: `Telnyx ${res.status}: ${rawBody.slice(0, 200)}` };
     }
-    const data = (await res.json().catch(() => null)) as { data?: { id?: string } } | null;
-    return { success: true, messageId: data?.data?.id };
+
+    let data: { data?: { id?: string; to?: Array<{ status?: string }> } } | null = null;
+    try { data = JSON.parse(rawBody); } catch { /* logged below */ }
+    const messageId = data?.data?.id;
+
+    console.log(JSON.stringify({
+      tag: "[TelnyxSms] ACCEPTED",
+      to,
+      httpStatus: res.status,
+      ms,
+      telnyxMessageId: messageId ?? null,
+      recipientStatus: data?.data?.to?.[0]?.status ?? null,
+      bodyPreview: messageId ? undefined : rawBody.slice(0, 300),
+    }));
+
+    if (!messageId) {
+      // 2xx without an id is anomalous — accepted by SOMETHING, but not
+      // verifiably by Telnyx's message API. Surface it loudly.
+      console.warn(`[TelnyxSms] WARNING: 2xx response but no message id — body: ${rawBody.slice(0, 300)}`);
+    }
+
+    return { success: true, messageId };
   } catch (err) {
-    console.error("[TelnyxSms] Send error:", err);
+    console.error(JSON.stringify({
+      tag: "[TelnyxSms] NETWORK_ERROR",
+      to,
+      ms: Date.now() - startedAt,
+      error: String(err).slice(0, 300),
+    }));
     return { success: false, error: String(err) };
   }
 }

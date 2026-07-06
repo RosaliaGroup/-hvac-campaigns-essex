@@ -378,6 +378,17 @@ export const smsSends = mysqlTable("smsSends", {
   textBeltId: varchar("textBeltId", { length: 255 }),
   errorMessage: text("errorMessage"),
   quotaRemaining: int("quotaRemaining"),
+  // ── Final delivery tracking (Task 6.5) ─────────────────────
+  // "status" above = API acceptance ("sent" = accepted by Telnyx).
+  // deliveryStatus = the FINAL carrier outcome, set by the Telnyx
+  // delivery-status webhook. NULL = pending / pre-feature rows.
+  deliveryStatus: mysqlEnum("deliveryStatus", [
+    "accepted", "sent", "delivered", "delivery_failed", "rejected", "carrier_filtered",
+  ]),
+  deliveryErrorCode: varchar("deliveryErrorCode", { length: 16 }),
+  deliveryErrorMessage: varchar("deliveryErrorMessage", { length: 500 }),
+  deliveredAt: timestamp("deliveredAt"),
+  deliveryUpdatedAt: timestamp("deliveryUpdatedAt"),
   sentAt: timestamp("sentAt").defaultNow().notNull(),
 });
 export type SmsSend = typeof smsSends.$inferSelect;
