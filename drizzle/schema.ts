@@ -276,6 +276,17 @@ export const appointments = mysqlTable("appointments", {
   durationMinutes: int("durationMinutes").default(60).notNull(),
   /** Team member (teamMembers.id) assigned to run this appointment */
   assignedToId: int("assignedToId"),
+  // ── Job classification (Task 4.5 — appointment-level only, NOT work orders) ──
+  /** What kind of work this visit is for. Nullable: legacy + Jessica rows may not specify. */
+  jobType: mysqlEnum("jobType", [
+    "service_call", "diagnostic", "repair", "maintenance", "installation",
+    "replacement", "estimate", "commercial_hvac", "residential_hvac",
+    "boiler", "furnace", "ac", "heat_pump", "mini_split", "rooftop_unit",
+    "refrigeration", "other",
+  ]),
+  priority: mysqlEnum("priority", ["normal", "urgent", "emergency"]).default("normal").notNull(),
+  /** Where this booking came from */
+  source: mysqlEnum("source", ["website", "phone", "referral", "partner", "repeat_customer", "other"]),
   issueDescription: text("issueDescription"),
   // Status
   status: mysqlEnum("status", ["pending", "confirmed", "completed", "cancelled", "rescheduled"]).default("pending").notNull(),

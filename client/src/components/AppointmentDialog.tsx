@@ -20,6 +20,9 @@ export type EditableAppointment = {
   propertyAddress?: string | null;
   propertyType: "residential" | "commercial";
   appointmentType: "free_consultation" | "technician_dispatch" | "maintenance_plan" | "commercial_assessment";
+  jobType?: string | null;
+  priority?: "normal" | "urgent" | "emergency" | null;
+  source?: string | null;
   scheduledAt?: Date | string | null;
   durationMinutes?: number | null;
   assignedToId?: number | null;
@@ -33,6 +36,41 @@ const TYPE_OPTIONS = [
   { value: "technician_dispatch", label: "Service Visit (Technician)" },
   { value: "maintenance_plan", label: "Maintenance Visit" },
   { value: "commercial_assessment", label: "Commercial Assessment" },
+] as const;
+
+export const JOB_TYPE_OPTIONS = [
+  { value: "service_call", label: "Service Call" },
+  { value: "diagnostic", label: "Diagnostic" },
+  { value: "repair", label: "Repair" },
+  { value: "maintenance", label: "Maintenance" },
+  { value: "installation", label: "Installation" },
+  { value: "replacement", label: "Replacement" },
+  { value: "estimate", label: "Estimate" },
+  { value: "commercial_hvac", label: "Commercial HVAC" },
+  { value: "residential_hvac", label: "Residential HVAC" },
+  { value: "boiler", label: "Boiler" },
+  { value: "furnace", label: "Furnace" },
+  { value: "ac", label: "AC" },
+  { value: "heat_pump", label: "Heat Pump" },
+  { value: "mini_split", label: "Mini Split" },
+  { value: "rooftop_unit", label: "Rooftop Unit" },
+  { value: "refrigeration", label: "Refrigeration" },
+  { value: "other", label: "Other" },
+] as const;
+
+const PRIORITY_OPTIONS = [
+  { value: "normal", label: "Normal" },
+  { value: "urgent", label: "Urgent" },
+  { value: "emergency", label: "Emergency" },
+] as const;
+
+const SOURCE_OPTIONS = [
+  { value: "website", label: "Website" },
+  { value: "phone", label: "Phone" },
+  { value: "referral", label: "Referral" },
+  { value: "partner", label: "Partner" },
+  { value: "repeat_customer", label: "Repeat Customer" },
+  { value: "other", label: "Other" },
 ] as const;
 
 /** Convert a Date to the value expected by <input type="datetime-local"> in local time. */
@@ -77,6 +115,9 @@ export default function AppointmentDialog({
     scheduledAt: "",
     durationMinutes: "60",
     assignedToId: "none",
+    jobType: "none",
+    priority: "normal" as "normal" | "urgent" | "emergency",
+    source: "none",
     issueDescription: "",
     notes: "",
     sendConfirmation: true,
@@ -95,6 +136,9 @@ export default function AppointmentDialog({
         scheduledAt: toLocalInputValue(appointment.scheduledAt),
         durationMinutes: String(appointment.durationMinutes ?? 60),
         assignedToId: appointment.assignedToId ? String(appointment.assignedToId) : "none",
+        jobType: appointment.jobType || "none",
+        priority: appointment.priority || "normal",
+        source: appointment.source || "none",
         issueDescription: appointment.issueDescription || "",
         notes: appointment.notes || "",
         sendConfirmation: true,
@@ -111,6 +155,9 @@ export default function AppointmentDialog({
         scheduledAt: toLocalInputValue(defaults?.scheduledAt),
         durationMinutes: "60",
         assignedToId: "none",
+        jobType: "none",
+        priority: "normal",
+        source: "none",
         issueDescription: "",
         notes: "",
         sendConfirmation: true,
@@ -167,6 +214,9 @@ export default function AppointmentDialog({
       scheduledAt: iso,
       durationMinutes: parseInt(form.durationMinutes) || 60,
       assignedToId: form.assignedToId === "none" ? null : parseInt(form.assignedToId),
+      jobType: form.jobType === "none" ? null : (form.jobType as (typeof JOB_TYPE_OPTIONS)[number]["value"]),
+      priority: form.priority,
+      source: form.source === "none" ? null : (form.source as (typeof SOURCE_OPTIONS)[number]["value"]),
       issueDescription: form.issueDescription.trim() || null,
       notes: form.notes.trim() || null,
       sendConfirmation: form.sendConfirmation,
@@ -221,6 +271,25 @@ export default function AppointmentDialog({
             </Select>
           </div>
           <div>
+            <Label>Job type</Label>
+            <Select value={form.jobType} onValueChange={v => setForm(f => ({ ...f, jobType: v }))}>
+              <SelectTrigger><SelectValue placeholder="Select job type" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Not specified</SelectItem>
+                {JOB_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Priority</Label>
+            <Select value={form.priority} onValueChange={v => setForm(f => ({ ...f, priority: v as typeof f.priority }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PRIORITY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label>Date & time *</Label>
             <Input
               type="datetime-local"
@@ -237,7 +306,17 @@ export default function AppointmentDialog({
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-2">
+          <div>
+            <Label>Source</Label>
+            <Select value={form.source} onValueChange={v => setForm(f => ({ ...f, source: v }))}>
+              <SelectTrigger><SelectValue placeholder="How did they find us?" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Not specified</SelectItem>
+                {SOURCE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label>Assigned to</Label>
             <Select value={form.assignedToId} onValueChange={v => setForm(f => ({ ...f, assignedToId: v }))}>
               <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
@@ -248,7 +327,7 @@ export default function AppointmentDialog({
             </Select>
           </div>
           <div className="col-span-2">
-            <Label>Issue description</Label>
+            <Label>Job description</Label>
             <Textarea rows={2} value={form.issueDescription} onChange={e => setForm(f => ({ ...f, issueDescription: e.target.value }))} />
           </div>
           <div className="col-span-2">

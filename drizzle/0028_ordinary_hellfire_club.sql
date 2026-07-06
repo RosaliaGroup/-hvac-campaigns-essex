@@ -1,0 +1,3 @@
+ALTER TABLE `appointments` ADD `jobType` enum('service_call','diagnostic','repair','maintenance','installation','replacement','estimate','commercial_hvac','residential_hvac','boiler','furnace','ac','heat_pump','mini_split','rooftop_unit','refrigeration','other');--> statement-breakpoint
+ALTER TABLE `appointments` ADD `priority` enum('normal','urgent','emergency') DEFAULT 'normal' NOT NULL;--> statement-breakpoint
+ALTER TABLE `appointments` ADD `source` enum('website','phone','referral','partner','repeat_customer','other');

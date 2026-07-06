@@ -120,6 +120,7 @@ async function handleBookAppointment(args: Record<string, string>, vapiCallId?: 
     issueDescription: issue_description || undefined,
     status: "pending",
     bookedBy: "jessica",
+    source: "phone",
     vapiCallId: vapiCallId || undefined,
   });
 

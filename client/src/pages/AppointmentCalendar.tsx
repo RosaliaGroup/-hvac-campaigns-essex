@@ -306,7 +306,16 @@ export default function AppointmentCalendar() {
                     </div>
                   </div>
                   <div className="font-medium">{a.fullName}</div>
-                  <div className="text-muted-foreground">{TYPE_LABELS[a.appointmentType] ?? a.appointmentType} · {a.durationMinutes ?? 60} min</div>
+                  <div className="text-muted-foreground">
+                    {TYPE_LABELS[a.appointmentType] ?? a.appointmentType}
+                    {a.jobType ? ` · ${a.jobType.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}` : ""}
+                    {` · ${a.durationMinutes ?? 60} min`}
+                  </div>
+                  {a.priority && a.priority !== "normal" && (
+                    <Badge variant="secondary" className={a.priority === "emergency" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}>
+                      {a.priority === "emergency" ? "🚨 Emergency" : "⚠️ Urgent"}
+                    </Badge>
+                  )}
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <span className="flex items-center gap-1"><Phone className="h-3 w-3" /><a href={`tel:${a.phone}`} className="hover:underline">{a.phone}</a></span>
                     <span className="flex items-center gap-1"><UserRound className="h-3 w-3" />{assigneeName(a.assignedToId)}</span>
