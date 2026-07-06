@@ -1,4 +1,4 @@
-import { boolean, decimal, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -45,6 +45,9 @@ export const leads = mysqlTable("leads", {
   lastInteractionAt: timestamp("lastInteractionAt"),
   interactionCount: int("interactionCount").default(0).notNull(),
   scoreBreakdown: text("scoreBreakdown"), // JSON: {calls: 20, sms: 15, social: 5, ...}
+  // Customer conversion linkage (Phase 1)
+  customerId: int("customerId"),
+  convertedAt: timestamp("convertedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -69,6 +72,9 @@ export const leadCaptures = mysqlTable("leadCaptures", {
   notes: text("notes"),
   assignedTo: varchar("assignedTo", { length: 255 }),
   followUpAt: timestamp("followUpAt"),
+  // Customer conversion linkage (Phase 1)
+  customerId: int("customerId"),
+  convertedAt: timestamp("convertedAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -139,6 +145,8 @@ export const callLogs = mysqlTable("callLogs", {
   transcript: text("transcript"),
   recordingUrl: text("recordingUrl"),
   leadId: int("leadId"),
+  // Customer linkage (Phase 1)
+  customerId: int("customerId"),
   leadQuality: mysqlEnum("leadQuality", ["hot", "warm", "cold"]),
   serviceType: varchar("serviceType", { length: 255 }),
   budget: varchar("budget", { length: 100 }),
@@ -267,6 +275,9 @@ export const appointments = mysqlTable("appointments", {
   // Source tracking
   vapiCallId: varchar("vapiCallId", { length: 255 }),
   bookedBy: varchar("bookedBy", { length: 100 }).default("jessica"),
+  // Customer linkage (Phase 1 — nullable, backfilled over time)
+  customerId: int("customerId"),
+  propertyId: int("propertyId"),
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -396,6 +407,8 @@ export type InsertSmsInboxMessage = typeof smsInboxMessages.$inferInsert;
  */
 export const rebateCalculations = mysqlTable("rebateCalculations", {
   id: int("id").autoincrement().primaryKey(),
+  // Customer linkage (Phase 1)
+  customerId: int("customerId"),
   // Contact info
   firstName: varchar("firstName", { length: 255 }).notNull(),
   lastName: varchar("lastName", { length: 255 }),
@@ -776,3 +789,82 @@ export const takeoffFiles = mysqlTable("takeoff_files", {
 });
 export type TakeoffFile = typeof takeoffFiles.$inferSelect;
 export type InsertTakeoffFile = typeof takeoffFiles.$inferInsert;
+
+/**
+ * Customers — the canonical person/company entity for operations.
+ * Leads and captures convert into customers; appointments, calls, and
+ * rebate calculations link here. QuickBooks fields are prepared for a
+ * later Phase 2 integration and MUST NOT be wired to any API yet.
+ */
+export const customers = mysqlTable(
+  "customers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    type: mysqlEnum("type", ["residential", "commercial"]).default("residential").notNull(),
+    firstName: varchar("firstName", { length: 255 }),
+    lastName: varchar("lastName", { length: 255 }),
+    companyName: varchar("companyName", { length: 255 }),
+    /** Computed on write: companyName, or "firstName lastName". Always present for display/search. */
+    displayName: varchar("displayName", { length: 255 }).notNull(),
+    email: varchar("email", { length: 320 }),
+    phone: varchar("phone", { length: 50 }),
+    altPhone: varchar("altPhone", { length: 50 }),
+    status: mysqlEnum("status", ["active", "inactive", "archived"]).default("active").notNull(),
+    /** Marketing source carried over from the originating lead/capture */
+    source: varchar("source", { length: 255 }),
+    notes: text("notes"),
+    /** Team member responsible for this customer (teamMembers.id) */
+    assignedToId: int("assignedToId"),
+    // ── QuickBooks-ready fields (Phase 2 — display only for now) ──
+    quickbooksCustomerId: varchar("quickbooksCustomerId", { length: 64 }).unique(),
+    quickbooksSyncStatus: mysqlEnum("quickbooksSyncStatus", ["not_synced", "pending", "synced", "error"])
+      .default("not_synced")
+      .notNull(),
+    quickbooksSyncedAt: timestamp("quickbooksSyncedAt"),
+    quickbooksSyncError: text("quickbooksSyncError"),
+    // ── Provenance ──
+    convertedFromLeadId: int("convertedFromLeadId"),
+    convertedFromCaptureId: int("convertedFromCaptureId"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    phoneIdx: index("customers_phone_idx").on(table.phone),
+    emailIdx: index("customers_email_idx").on(table.email),
+    displayNameIdx: index("customers_displayName_idx").on(table.displayName),
+  }),
+);
+export type Customer = typeof customers.$inferSelect;
+export type InsertCustomer = typeof customers.$inferInsert;
+
+/**
+ * Properties — service locations belonging to a customer.
+ * A customer can have many properties (home, rental units, commercial sites).
+ */
+export const properties = mysqlTable(
+  "properties",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    /** Human label, e.g. "Home", "Warehouse", "Unit 4B" */
+    label: varchar("label", { length: 255 }),
+    addressLine1: varchar("addressLine1", { length: 255 }).notNull(),
+    addressLine2: varchar("addressLine2", { length: 255 }),
+    city: varchar("city", { length: 120 }),
+    state: varchar("state", { length: 10 }).default("NJ"),
+    zip: varchar("zip", { length: 20 }),
+    propertyType: mysqlEnum("propertyType", ["residential", "commercial"]).default("residential").notNull(),
+    squareFeet: int("squareFeet"),
+    /** Matches rebate-calculator vocabulary, e.g. "gas_furnace", "oil_boiler" */
+    existingSystem: varchar("existingSystem", { length: 255 }),
+    systemNotes: text("systemNotes"),
+    isPrimary: boolean("isPrimary").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("properties_customerId_idx").on(table.customerId),
+  }),
+);
+export type Property = typeof properties.$inferSelect;
+export type InsertProperty = typeof properties.$inferInsert;
