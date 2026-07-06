@@ -68,6 +68,14 @@ export default function Footer() {
         <div className="border-t border-white/20 mt-8 pt-8 text-center text-sm text-white/60">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
             <p>© 2026 Mechanical Enterprise. All rights reserved.</p>
+            <div className="flex items-center gap-4">
+              <Link href="/privacy" className="text-white/60 hover:text-white transition-colors text-xs">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-white/60 hover:text-white transition-colors text-xs">
+                Terms of Service
+              </Link>
+            </div>
             {isAuthenticated && (
               <Link href="/admin" className="flex items-center gap-1 text-white/40 hover:text-white/80 transition-colors text-xs">
                 <Lock className="h-3 w-3" />

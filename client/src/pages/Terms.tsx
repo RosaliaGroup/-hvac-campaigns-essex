@@ -5,7 +5,7 @@ import { useSEO } from "@/hooks/useSEO";
 export default function Terms() {
   useSEO({
     title: "Terms of Service | Mechanical Enterprise",
-    description: "Terms of service for Mechanical Enterprise LLC — conditions for using our website and HVAC services.",
+    description: "Terms of service for Mechanical Enterprise LLC — conditions for using our website, HVAC services, and SMS/text messaging program.",
     ogUrl: "https://mechanicalenterprise.com/terms",
   });
 
@@ -16,7 +16,7 @@ export default function Terms() {
       <section className="bg-white py-16">
         <div className="max-w-3xl mx-auto px-4">
           <h1 className="text-3xl font-bold text-[#0a1628] mb-2">Terms of Service</h1>
-          <p className="text-muted-foreground mb-8">Last updated: April 6, 2026</p>
+          <p className="text-muted-foreground mb-8">Last updated: July 7, 2026</p>
 
           <div className="prose prose-slate max-w-none space-y-6 text-[#333]">
             <p>
@@ -34,12 +34,24 @@ export default function Terms() {
               All services are subject to availability and a site assessment.
             </p>
 
-            <h2 className="text-xl font-semibold text-[#0a1628] mt-8">Free Assessments</h2>
+            <h2 className="text-xl font-semibold text-[#0a1628] mt-8">Estimates and Quotes</h2>
             <p>
               We offer free, no-obligation HVAC assessments. A free assessment does
-              not constitute a commitment to purchase services. Quotes provided
-              during assessments are estimates and may be adjusted based on final
-              site conditions and equipment selection.
+              not constitute a commitment to purchase services. Estimates and quotes
+              are provided based on the information available at the time and are
+              subject to a final on-site inspection. Final pricing may be adjusted
+              based on site conditions, equipment selection, and scope of work
+              confirmed during that inspection.
+            </p>
+
+            <h2 className="text-xl font-semibold text-[#0a1628] mt-8">Scheduling and Cancellation</h2>
+            <p>
+              Appointments are scheduled based on availability and confirmed in
+              advance. If you need to reschedule or cancel, please notify us as early
+              as possible so we can offer the time to another customer. We may need to
+              reschedule appointments due to weather, parts availability, or other
+              circumstances beyond our control, and will make reasonable efforts to
+              notify you promptly.
             </p>
 
             <h2 className="text-xl font-semibold text-[#0a1628] mt-8">Rebates and Incentives</h2>
@@ -48,6 +60,47 @@ export default function Terms() {
               credits. Rebate amounts and eligibility are determined by the
               issuing utility or government agency, not by Mechanical Enterprise.
               We do not guarantee rebate approval or specific rebate amounts.
+            </p>
+
+            <h2 className="text-xl font-semibold text-[#0a1628] mt-8">Warranties</h2>
+            <p>
+              Equipment we install is covered by the applicable manufacturer's
+              warranty, subject to that manufacturer's terms and conditions. Any
+              workmanship warranty we provide will be described in your service
+              agreement or invoice. Except as expressly stated, we make no other
+              warranties, express or implied, regarding equipment or services.
+            </p>
+
+            <h2 className="text-xl font-semibold text-[#0a1628] mt-8">SMS Terms</h2>
+            <p>
+              By opting in, you agree to receive text messages from our{" "}
+              <strong>Mechanical Enterprise Service Updates</strong> program. These Terms
+              apply to that program.
+            </p>
+            <ul className="list-disc pl-6 space-y-1">
+              <li>
+                <strong>Message types:</strong> appointment confirmations, reschedules,
+                rebate results, and occasional offers.
+              </li>
+              <li>
+                <strong>Message frequency</strong> varies based on your interactions with us.
+              </li>
+              <li>Message and data rates may apply.</li>
+              <li>
+                Carriers are not liable for delayed or undelivered messages.
+              </li>
+              <li>
+                Reply <strong>STOP</strong> to cancel at any time, or reply{" "}
+                <strong>HELP</strong> for help.
+              </li>
+              <li>
+                Consent to receive text messages is not a condition of purchasing any
+                goods or services.
+              </li>
+            </ul>
+            <p>
+              For more detail on how we handle text-messaging consent and data, see our{" "}
+              <a href="/privacy" className="text-[#e8813a] hover:underline">Privacy Policy</a>.
             </p>
 
             <h2 className="text-xl font-semibold text-[#0a1628] mt-8">Website Use</h2>
@@ -71,7 +124,7 @@ export default function Terms() {
               "as is" basis. We make no warranties regarding the accuracy or
               completeness of website content. To the fullest extent permitted by
               law, we shall not be liable for any indirect, incidental, or
-              consequential damages arising from use of this website.
+              consequential damages arising from use of this website or our services.
             </p>
 
             <h2 className="text-xl font-semibold text-[#0a1628] mt-8">Governing Law</h2>
@@ -98,8 +151,8 @@ export default function Terms() {
                 sales@mechanicalenterprise.com
               </a><br />
               Phone:{" "}
-              <a href="tel:+18624191763" className="text-[#e8813a] hover:underline">
-                (862) 419-1763
+              <a href="tel:+18624239396" className="text-[#e8813a] hover:underline">
+                (862) 423-9396
               </a>
             </p>
           </div>

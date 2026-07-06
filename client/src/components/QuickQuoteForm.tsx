@@ -177,7 +177,9 @@ export default function QuickQuoteForm({
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            By submitting, you agree to receive communications from Mechanical Enterprise. We respect your privacy.
+            By submitting, you agree to receive text messages from Mechanical Enterprise about
+            your request. Msg &amp; data rates may apply. Reply STOP to opt out. See our{" "}
+            <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
           </p>
         </form>
       </CardContent>

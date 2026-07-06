@@ -2007,7 +2007,9 @@ export default function RebateCalculator() {
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-2">
-                By entering your number you consent to receive a one-time SMS from Mechanical Enterprise. Reply STOP to opt out. Message &amp; data rates may apply.
+                By submitting, you agree to receive text messages from Mechanical Enterprise about
+                your request. Msg &amp; data rates may apply. Reply STOP to opt out. See our{" "}
+                <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
               </p>
             </div>
 
@@ -2202,6 +2204,12 @@ export default function RebateCalculator() {
                     {submitAssessment.isPending ? "Submitting..." : "Request Free Assessment"} <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </div>
+
+                <p className="text-xs text-center text-muted-foreground mt-3">
+                  By submitting, you agree to receive text messages from Mechanical Enterprise about
+                  your request. Msg &amp; data rates may apply. Reply STOP to opt out. See our{" "}
+                  <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
+                </p>
               </>
             )}
           </div>

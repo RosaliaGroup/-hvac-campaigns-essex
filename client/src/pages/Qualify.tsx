@@ -435,7 +435,9 @@ export default function Qualify() {
               </div>
 
               <p className="text-xs text-center text-gray-400">
-                By submitting, you agree to be contacted by Mechanical Enterprise regarding your HVAC assessment. Reply STOP to any text to opt out.
+                By submitting, you agree to receive text messages from Mechanical Enterprise about
+                your request. Msg &amp; data rates may apply. Reply STOP to opt out. See our{" "}
+                <a href="/privacy" className="underline hover:text-gray-600">Privacy Policy</a>.
               </p>
             </CardContent>
           </Card>
