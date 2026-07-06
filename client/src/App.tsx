@@ -52,6 +52,8 @@ import LeadDashboard from "./pages/LeadDashboard";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
+import Jobs from "./pages/Jobs";
+import JobDetail from "./pages/JobDetail";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
 import TeamLogin from "./pages/TeamLogin";
 import AcceptInvite from "./pages/AcceptInvite";
@@ -267,6 +269,8 @@ function Router() {
       <Route path={"/customers"} component={protect(Customers)} />
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />
       <Route path={"/calendar"} component={protect(AppointmentCalendar)} />
+      <Route path={"/jobs"} component={protect(Jobs)} />
+      <Route path={"/jobs/:id"} component={protect(JobDetail)} />
       <Route path={"/campaign-performance"} component={protect(CampaignPerformance)} />
       <Route path={"/google-ads-campaigns"} component={protect(GoogleAdsCampaigns)} />
       <Route path={"/facebook-campaigns"} component={protect(FacebookCampaigns)} />

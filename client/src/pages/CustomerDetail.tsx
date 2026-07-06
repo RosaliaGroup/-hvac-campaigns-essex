@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
+import { JOB_STATUS_META, formatMoney } from "@/lib/jobPresentation";
+import { Briefcase } from "lucide-react";
 import {
   ArrowLeft, Building2, Calendar, Home, Mail, MapPin, Pencil, Phone, PhoneCall,
   Plus, Star, Trash2, UserRound, Zap,
@@ -261,6 +263,7 @@ export default function CustomerDetail() {
           <TabsList>
             <TabsTrigger value="appointments">Appointments ({appointments.length})</TabsTrigger>
             <TabsTrigger value="leads">Leads ({leads.length + captures.length})</TabsTrigger>
+            <TabsTrigger value="jobs">Jobs</TabsTrigger>
             <TabsTrigger value="calls">Calls ({callLogs.length})</TabsTrigger>
             <TabsTrigger value="rebates">Rebate Calcs ({rebateCalculations.length})</TabsTrigger>
           </TabsList>
@@ -321,6 +324,10 @@ export default function CustomerDetail() {
                 </>
               )}
             </CardContent></Card>
+          </TabsContent>
+
+          <TabsContent value="jobs">
+            <CustomerJobsTab customerId={customerId} />
           </TabsContent>
 
           <TabsContent value="calls">
@@ -518,5 +525,55 @@ export default function CustomerDetail() {
         }}
       />
     </DashboardLayout>
+  );
+}
+
+
+/** Jobs tab on the customer 360 view (Task 6). */
+function CustomerJobsTab({ customerId }: { customerId: number }) {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const { data, refetch } = trpc.jobs.list.useQuery({ customerId, limit: 50, offset: 0 });
+  const createJob = trpc.jobs.create.useMutation({
+    onSuccess: res => { toast({ title: `Job ${res.jobNumber} created` }); refetch(); navigate(`/jobs/${res.id}`); },
+    onError: e => toast({ title: "Could not create job", description: e.message, variant: "destructive" }),
+  });
+  const items = data?.items ?? [];
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+        <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4 text-[#1e3a5f]" /> Jobs ({items.length})</CardTitle>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={createJob.isPending}
+          onClick={() => createJob.mutate({ customerId, title: "New job", priority: "normal" })}
+        >
+          <Plus className="h-4 w-4 mr-1" /> New Job
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {items.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No jobs for this customer yet.</p>
+        ) : (
+          items.map(({ job, lineTotal }) => {
+            const meta = JOB_STATUS_META.find(m => m.value === job.status);
+            return (
+              <div
+                key={job.id}
+                className="flex items-center justify-between border rounded-lg p-3 text-sm cursor-pointer hover:bg-muted/50"
+                onClick={() => navigate(`/jobs/${job.id}`)}
+              >
+                <div>
+                  <div className="font-medium"><span className="font-mono text-muted-foreground mr-2">{job.jobNumber}</span>{job.title}</div>
+                  <div className="text-muted-foreground">{formatMoney(Number(lineTotal))}</div>
+                </div>
+                <Badge variant="secondary" className={meta?.badge ?? ""}>{meta?.label ?? job.status}</Badge>
+              </div>
+            );
+          })
+        )}
+      </CardContent>
+    </Card>
   );
 }

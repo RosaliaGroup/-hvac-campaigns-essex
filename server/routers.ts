@@ -23,6 +23,7 @@ import { postToGoogleBusiness } from "./integrations/google-business";
 import { postToFacebook, postToInstagram } from "./integrations/facebook";
 import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone } from "./routers/customers";
+import { jobsRouter } from "./routers/jobs";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
 import { appointments as appointmentsTable, teamMembers as teamMembersTable } from "../drizzle/schema";
@@ -41,6 +42,7 @@ export const appRouter = router({
   payment: paymentRouter,
   takeoffs: takeoffsRouter,
   customers: customersRouter,
+  jobs: jobsRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -694,6 +696,7 @@ export const appRouter = router({
         assignedToId: z.number().int().optional().nullable(),
         customerId: z.number().int().optional().nullable(),
         propertyId: z.number().int().optional().nullable(),
+        jobId: z.number().int().optional().nullable(),
         issueDescription: z.string().optional().nullable(),
         notes: z.string().optional().nullable(),
         /** Set false to skip the customer SMS (e.g. internal blocks) */
@@ -720,6 +723,7 @@ export const appRouter = router({
           assignedToId: input.assignedToId ?? undefined,
           customerId: customerId ?? undefined,
           propertyId: input.propertyId ?? undefined,
+          jobId: input.jobId ?? undefined,
           issueDescription: input.issueDescription ?? undefined,
           notes: input.notes ?? undefined,
           status: "confirmed" as const,

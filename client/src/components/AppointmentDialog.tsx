@@ -97,6 +97,7 @@ export default function AppointmentDialog({
   defaults?: Partial<Pick<EditableAppointment, "fullName" | "phone" | "email" | "propertyAddress" | "propertyType">> & {
     customerId?: number;
     propertyId?: number;
+    jobId?: number;
     scheduledAt?: Date;
   };
 }) {
@@ -224,7 +225,7 @@ export default function AppointmentDialog({
     if (isEdit && appointment) {
       update.mutate({ id: appointment.id, ...shared });
     } else {
-      create.mutate({ ...shared, customerId: defaults?.customerId ?? null, propertyId: defaults?.propertyId ?? null });
+      create.mutate({ ...shared, customerId: defaults?.customerId ?? null, propertyId: defaults?.propertyId ?? null, jobId: defaults?.jobId ?? null });
     }
   };
 

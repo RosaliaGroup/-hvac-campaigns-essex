@@ -297,6 +297,8 @@ export const appointments = mysqlTable("appointments", {
   // Customer linkage (Phase 1 — nullable, backfilled over time)
   customerId: int("customerId"),
   propertyId: int("propertyId"),
+  /** Job this visit belongs to (Phase 2 — Job 1→N Appointments) */
+  jobId: int("jobId"),
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -898,3 +900,83 @@ export const properties = mysqlTable(
 );
 export type Property = typeof properties.$inferSelect;
 export type InsertProperty = typeof properties.$inferInsert;
+
+/**
+ * Jobs — the OPERATIONAL system of record (Phase 2, Task 6).
+ * Architecture: Customer → Property → Job → many Appointments.
+ * A Job owns the work; appointments are visits under it; line items are the
+ * raw material for the future QuickBooks estimate. QuickBooks fields below
+ * are PREPARED ONLY — no sync logic exists yet and none may be added in Task 6.
+ */
+export const jobs = mysqlTable(
+  "jobs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** Human-facing number, e.g. "ME-2026-0042". Assigned right after insert (derived from id — race-free). */
+    jobNumber: varchar("jobNumber", { length: 32 }).notNull().default(""),
+    customerId: int("customerId").notNull(),
+    propertyId: int("propertyId"),
+    title: varchar("title", { length: 255 }).notNull(),
+    description: text("description"),
+    jobType: mysqlEnum("jobType", [
+      "service_call", "diagnostic", "repair", "maintenance", "installation",
+      "replacement", "estimate", "commercial_hvac", "residential_hvac",
+      "boiler", "furnace", "ac", "heat_pump", "mini_split", "rooftop_unit",
+      "refrigeration", "other",
+    ]),
+    priority: mysqlEnum("priority", ["normal", "urgent", "emergency"]).default("normal").notNull(),
+    status: mysqlEnum("status", [
+      "new", "scheduled", "in_progress", "waiting_parts", "estimate_sent",
+      "approved", "completed", "invoice_sent", "paid", "closed", "cancelled",
+    ]).default("new").notNull(),
+    /** Technician / team member responsible (teamMembers.id) */
+    assignedToId: int("assignedToId"),
+    equipmentServiced: text("equipmentServiced"),
+    internalNotes: text("internalNotes"),
+    /** Set automatically when status first reaches "completed" */
+    completedAt: timestamp("completedAt"),
+    // ── QuickBooks-ready fields (Phase 2 later tasks — display only, NO sync logic) ──
+    quickbooksEstimateId: varchar("quickbooksEstimateId", { length: 64 }),
+    quickbooksInvoiceId: varchar("quickbooksInvoiceId", { length: 64 }),
+    quickbooksSyncStatus: mysqlEnum("quickbooksSyncStatus", ["not_synced", "pending", "synced", "error"])
+      .default("not_synced")
+      .notNull(),
+    quickbooksSyncedAt: timestamp("quickbooksSyncedAt"),
+    quickbooksSyncError: text("quickbooksSyncError"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("jobs_customerId_idx").on(table.customerId),
+    statusIdx: index("jobs_status_idx").on(table.status),
+    jobNumberIdx: index("jobs_jobNumber_idx").on(table.jobNumber),
+  }),
+);
+export type Job = typeof jobs.$inferSelect;
+export type InsertJob = typeof jobs.$inferInsert;
+
+/**
+ * Job line items — labor/parts/services on a job.
+ * These become QuickBooks estimate lines in a later task; keep amounts exact.
+ */
+export const jobLineItems = mysqlTable(
+  "jobLineItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    type: mysqlEnum("type", ["labor", "part", "service", "equipment", "other"]).default("labor").notNull(),
+    description: varchar("description", { length: 500 }).notNull(),
+    quantity: decimal("quantity", { precision: 10, scale: 2 }).default("1").notNull(),
+    unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).default("0").notNull(),
+    /** quantity × unitPrice, maintained on every write (source of truth for totals) */
+    total: decimal("total", { precision: 12, scale: 2 }).default("0").notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobLineItems_jobId_idx").on(table.jobId),
+  }),
+);
+export type JobLineItem = typeof jobLineItems.$inferSelect;
+export type InsertJobLineItem = typeof jobLineItems.$inferInsert;

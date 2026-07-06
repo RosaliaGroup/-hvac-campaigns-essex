@@ -7,6 +7,7 @@
 import { useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import type { DayButton } from "react-day-picker";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
@@ -47,6 +48,7 @@ const TYPE_LABELS: Record<string, string> = {
 
 type Appt = EditableAppointment & {
   customerId?: number | null;
+  jobId?: number | null;
   preferredDate: string;
   preferredTime: string;
   bookedBy?: string | null;
@@ -63,6 +65,7 @@ function dayTitle(d: Date): string {
 }
 
 export default function AppointmentCalendar() {
+  const [, navigateTo] = useLocation();
   const [month, setMonth] = useState<Date>(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -80,6 +83,10 @@ export default function AppointmentCalendar() {
   const [createDefaults, setCreateDefaults] = useState<{ scheduledAt?: Date } | undefined>();
 
   const { data: assignees = [] } = trpc.appointments.assignees.useQuery();
+
+  const createJobFromAppt = trpc.jobs.createFromAppointment.useMutation({
+    onSuccess: res => navigateTo(`/jobs/${res.id}`),
+  });
 
   // Fetch the visible month (pad a week each side so outside days render counts too)
   const from = useMemo(() => new Date(month.getFullYear(), month.getMonth(), -7).toISOString(), [month]);
@@ -320,7 +327,23 @@ export default function AppointmentCalendar() {
                     <span className="flex items-center gap-1"><Phone className="h-3 w-3" /><a href={`tel:${a.phone}`} className="hover:underline">{a.phone}</a></span>
                     <span className="flex items-center gap-1"><UserRound className="h-3 w-3" />{assigneeName(a.assignedToId)}</span>
                   </div>
-                  {a.bookedBy === "jessica" && <Badge variant="outline" className="text-[10px]">Booked by Jessica</Badge>}
+                  <div className="flex items-center justify-between pt-1">
+                    {a.bookedBy === "jessica" ? <Badge variant="outline" className="text-[10px]">Booked by Jessica</Badge> : <span />}
+                    {a.jobId ? (
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigateTo(`/jobs/${a.jobId}`)}>
+                        View Job
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        className="h-7 text-xs bg-[#1e3a5f] hover:bg-[#16304f]"
+                        disabled={createJobFromAppt.isPending}
+                        onClick={() => createJobFromAppt.mutate({ appointmentId: a.id })}
+                      >
+                        Create Job
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
