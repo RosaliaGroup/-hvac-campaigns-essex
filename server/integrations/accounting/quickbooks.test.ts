@@ -4,6 +4,7 @@ import {
   resolveDisplayName,
   collapseRepeatedPhrase,
   buildQboAddress,
+  planCustomerPush,
   pickMergeMatch,
   parseTokenResponse,
   buildConnectionUpdate,
@@ -164,6 +165,29 @@ describe("resolveDisplayName + collapseRepeatedPhrase + buildQboAddress", () => 
       CountrySubDivisionCode: "NJ",
       PostalCode: "07102",
     });
+  });
+});
+
+describe("planCustomerPush — linked customers update by id, no duplicate", () => {
+  it("linked customer updates the existing QBO customer by id", () => {
+    const plan = planCustomerPush({ ...base, existingRemoteId: "345" });
+    expect(plan).toEqual({ action: "update-by-id", qbId: "345" });
+  });
+
+  it("unlinked customer still uses duplicate matching", () => {
+    expect(planCustomerPush({ ...base, existingRemoteId: null })).toEqual({ action: "match" });
+    expect(planCustomerPush(base)).toEqual({ action: "match" }); // existingRemoteId undefined
+  });
+
+  it("never creates/matches (no duplicate) when quickbooksCustomerId exists", () => {
+    const plan = planCustomerPush({ ...base, existingRemoteId: "58" });
+    expect(plan.action).toBe("update-by-id");
+    expect(plan.action).not.toBe("match");
+    if (plan.action === "update-by-id") expect(plan.qbId).toBe("58");
+  });
+
+  it("treats a blank/whitespace id as unlinked (falls back to matching)", () => {
+    expect(planCustomerPush({ ...base, existingRemoteId: "   " })).toEqual({ action: "match" });
   });
 });
 
