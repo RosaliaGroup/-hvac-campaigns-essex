@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
+import { dayKey, appointmentMatchesFilters, bucketAppointmentsByDay } from "@/lib/appointmentCalendar";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,9 +55,6 @@ type Appt = EditableAppointment & {
   bookedBy?: string | null;
 };
 
-function dayKey(d: Date): string {
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
 function timeLabel(d: Date | string): string {
   return new Date(d).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
 }
@@ -102,42 +100,21 @@ export default function AppointmentCalendar() {
   const refetchAll = () => { refetchMonth(); refetchBacklog(); };
 
   // Apply filters client-side (a month is small; keeps one fetch per view)
-  const matchesFilters = (a: Appt) => {
-    if (assigneeFilter !== "all") {
-      if (assigneeFilter === "unassigned" ? a.assignedToId != null : String(a.assignedToId) !== assigneeFilter) return false;
-    }
-    if (statusFilter.length > 0 && !statusFilter.includes(a.status)) return false;
-    if (typeFilter !== "all" && a.appointmentType !== typeFilter) return false;
-    return true;
-  };
-
-  const filtered = useMemo(
-    () => (monthAppts as Appt[]).filter(a => a.scheduledAt && matchesFilters(a)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [monthAppts, assigneeFilter, statusFilter, typeFilter],
+  const filters = useMemo(
+    () => ({ assignee: assigneeFilter, statuses: statusFilter, type: typeFilter }),
+    [assigneeFilter, statusFilter, typeFilter],
   );
+
   const filteredBacklog = useMemo(
-    () => (backlog as Appt[]).filter(matchesFilters),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [backlog, assigneeFilter, statusFilter, typeFilter],
+    () => (backlog as Appt[]).filter(a => appointmentMatchesFilters(a, filters)),
+    [backlog, filters],
   );
 
-  // day → status counts
-  const byDay = useMemo(() => {
-    const map = new Map<string, { total: number; statuses: Record<string, number>; appts: Appt[] }>();
-    for (const a of filtered) {
-      const key = dayKey(new Date(a.scheduledAt!));
-      const entry = map.get(key) ?? { total: 0, statuses: {}, appts: [] };
-      entry.total++;
-      entry.statuses[a.status] = (entry.statuses[a.status] ?? 0) + 1;
-      entry.appts.push(a);
-      map.set(key, entry);
-    }
-    map.forEach(entry => {
-      entry.appts.sort((x: Appt, y: Appt) => new Date(x.scheduledAt!).getTime() - new Date(y.scheduledAt!).getTime());
-    });
-    return map;
-  }, [filtered]);
+  // day → status counts (skips scheduledAt-less rows; those live in the backlog)
+  const byDay = useMemo(
+    () => bucketAppointmentsByDay(monthAppts as Appt[], filters),
+    [monthAppts, filters],
+  );
 
   const selectedDayAppts = selectedDay ? byDay.get(dayKey(selectedDay))?.appts ?? [] : [];
 
