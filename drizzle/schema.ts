@@ -265,7 +265,15 @@ export const appointments = mysqlTable("appointments", {
   propertyAddress: text("propertyAddress"),
   propertyType: mysqlEnum("propertyType", ["residential", "commercial"]).default("residential"),
   // Appointment details
-  appointmentType: mysqlEnum("appointmentType", ["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]).notNull(),
+  // New HVAC appointment types + legacy values retained so existing rows stay valid.
+  // Keep in sync with shared/appointmentTypes.ts APPOINTMENT_TYPE_ENUM.
+  appointmentType: mysqlEnum("appointmentType", [
+    "assessment", "estimate", "service_call", "installation", "maintenance",
+    "warranty", "follow_up", "inspection", "sales_visit", "other",
+    "free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment",
+  ]).notNull(),
+  /** Second dropdown (equipment/job): mini_split_installation, heat_pump, … (see shared/appointmentTypes.ts). */
+  serviceType: varchar("serviceType", { length: 100 }),
   preferredDate: varchar("preferredDate", { length: 100 }).notNull(),
   preferredTime: varchar("preferredTime", { length: 100 }).notNull(),
   /**
@@ -309,6 +317,12 @@ export const appointments = mysqlTable("appointments", {
   googleSyncError: varchar("googleSyncError", { length: 500 }),
   /** Overall invite state across all attendees (native Google invites or ICS email fallback). */
   inviteStatus: mysqlEnum("inviteStatus", ["none", "pending", "sent", "partial", "failed"]).default("none").notNull(),
+  /** Minutes before start for a Google reminder; null = none. 15/30/60/120/1440. */
+  reminderMinutes: int("reminderMinutes"),
+  /** Whether a Google Meet link should be attached to the event. */
+  googleMeetRequested: boolean("googleMeetRequested").default(false).notNull(),
+  /** Meet URL captured from the created event. */
+  googleMeetUrl: varchar("googleMeetUrl", { length: 512 }),
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

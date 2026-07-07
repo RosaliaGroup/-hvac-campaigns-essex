@@ -39,6 +39,7 @@ import {
   syncAppointmentInvites,
   type AttendeeInput,
 } from "./services/appointmentInvites";
+import { APPOINTMENT_TYPE_ENUM } from "../shared/appointmentTypes";
 import { and as dAnd, eq as dEq, gte as dGte, lte as dLte, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
 
 /** Zod shape for an attendee coming from the appointment dialog. */
@@ -732,13 +733,19 @@ export const appRouter = router({
         email: z.string().email().max(320).optional().nullable(),
         propertyAddress: z.string().max(1000).optional().nullable(),
         propertyType: z.enum(["residential", "commercial"]).default("residential"),
-        appointmentType: z.enum(["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]),
+        appointmentType: z.enum(APPOINTMENT_TYPE_ENUM),
+        /** Second dropdown (equipment/job), see shared/appointmentTypes.ts. */
+        serviceType: z.string().max(100).optional().nullable(),
         jobType: z.enum(["service_call", "diagnostic", "repair", "maintenance", "installation", "replacement", "estimate", "commercial_hvac", "residential_hvac", "boiler", "furnace", "ac", "heat_pump", "mini_split", "rooftop_unit", "refrigeration", "other"]).optional().nullable(),
         priority: z.enum(["normal", "urgent", "emergency"]).default("normal"),
         source: z.enum(["website", "phone", "referral", "partner", "repeat_customer", "other"]).optional().nullable(),
         scheduledAt: z.string().datetime(),
         durationMinutes: z.number().int().min(15).max(480).default(60),
         assignedToId: z.number().int().optional().nullable(),
+        /** Google reminder in minutes (15/30/60/120/1440); null = none. */
+        reminderMinutes: z.number().int().min(0).max(10080).optional().nullable(),
+        /** Attach a Google Meet link to the calendar event. */
+        googleMeetRequested: z.boolean().default(false),
         customerId: z.number().int().optional().nullable(),
         propertyId: z.number().int().optional().nullable(),
         jobId: z.number().int().optional().nullable(),
@@ -763,6 +770,9 @@ export const appRouter = router({
           propertyAddress: input.propertyAddress ?? undefined,
           propertyType: input.propertyType,
           appointmentType: input.appointmentType,
+          serviceType: input.serviceType ?? undefined,
+          reminderMinutes: input.reminderMinutes ?? undefined,
+          googleMeetRequested: input.googleMeetRequested,
           // Keep the legacy varchars in sync for anything still reading them
           preferredDate: scheduled.toLocaleDateString("en-US", { timeZone: "America/New_York" }),
           preferredTime: scheduled.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" }),
@@ -814,7 +824,10 @@ export const appRouter = router({
         email: z.string().email().max(320).optional().nullable(),
         propertyAddress: z.string().max(1000).optional().nullable(),
         propertyType: z.enum(["residential", "commercial"]).optional(),
-        appointmentType: z.enum(["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]).optional(),
+        appointmentType: z.enum(APPOINTMENT_TYPE_ENUM).optional(),
+        serviceType: z.string().max(100).optional().nullable(),
+        reminderMinutes: z.number().int().min(0).max(10080).optional().nullable(),
+        googleMeetRequested: z.boolean().optional(),
         jobType: z.enum(["service_call", "diagnostic", "repair", "maintenance", "installation", "replacement", "estimate", "commercial_hvac", "residential_hvac", "boiler", "furnace", "ac", "heat_pump", "mini_split", "rooftop_unit", "refrigeration", "other"]).optional().nullable(),
         priority: z.enum(["normal", "urgent", "emergency"]).optional(),
         source: z.enum(["website", "phone", "referral", "partner", "repeat_customer", "other"]).optional().nullable(),

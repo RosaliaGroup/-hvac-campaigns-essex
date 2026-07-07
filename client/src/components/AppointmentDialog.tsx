@@ -11,6 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  APPOINTMENT_TYPES,
+  SERVICE_TYPES,
+  REMINDER_OPTIONS,
+  showsServiceType,
+  normalizeAppointmentType,
+  type AppointmentTypeValue,
+} from "@shared/appointmentTypes";
 
 export type EditableAppointment = {
   id: number;
@@ -19,24 +27,20 @@ export type EditableAppointment = {
   email?: string | null;
   propertyAddress?: string | null;
   propertyType: "residential" | "commercial";
-  appointmentType: "free_consultation" | "technician_dispatch" | "maintenance_plan" | "commercial_assessment";
+  appointmentType: string;
+  serviceType?: string | null;
   jobType?: string | null;
   priority?: "normal" | "urgent" | "emergency" | null;
   source?: string | null;
   scheduledAt?: Date | string | null;
   durationMinutes?: number | null;
   assignedToId?: number | null;
+  reminderMinutes?: number | null;
+  googleMeetRequested?: boolean | null;
   status: string;
   issueDescription?: string | null;
   notes?: string | null;
 };
-
-const TYPE_OPTIONS = [
-  { value: "free_consultation", label: "Free Consultation" },
-  { value: "technician_dispatch", label: "Service Visit (Technician)" },
-  { value: "maintenance_plan", label: "Maintenance Visit" },
-  { value: "commercial_assessment", label: "Commercial Assessment" },
-] as const;
 
 export const JOB_TYPE_OPTIONS = [
   { value: "service_call", label: "Service Call" },
@@ -125,13 +129,16 @@ export default function AppointmentDialog({
     email: "",
     propertyAddress: "",
     propertyType: "residential" as "residential" | "commercial",
-    appointmentType: "free_consultation" as EditableAppointment["appointmentType"],
+    appointmentType: "assessment",
+    serviceType: "none",
     scheduledAt: "",
     durationMinutes: "60",
     assignedToId: "none",
     jobType: "none",
     priority: "normal" as "normal" | "urgent" | "emergency",
     source: "none",
+    reminderMinutes: "none",
+    googleMeet: false,
     issueDescription: "",
     notes: "",
     sendConfirmation: true,
@@ -146,13 +153,17 @@ export default function AppointmentDialog({
         email: appointment.email || "",
         propertyAddress: appointment.propertyAddress || "",
         propertyType: appointment.propertyType,
-        appointmentType: appointment.appointmentType,
+        // Backwards compat: legacy/blank types (e.g. free_consultation) map to a new value.
+        appointmentType: normalizeAppointmentType(appointment.appointmentType),
+        serviceType: appointment.serviceType || "none",
         scheduledAt: toLocalInputValue(appointment.scheduledAt),
         durationMinutes: String(appointment.durationMinutes ?? 60),
         assignedToId: appointment.assignedToId ? String(appointment.assignedToId) : "none",
         jobType: appointment.jobType || "none",
         priority: appointment.priority || "normal",
         source: appointment.source || "none",
+        reminderMinutes: appointment.reminderMinutes != null ? String(appointment.reminderMinutes) : "none",
+        googleMeet: Boolean(appointment.googleMeetRequested),
         issueDescription: appointment.issueDescription || "",
         notes: appointment.notes || "",
         sendConfirmation: true,
@@ -165,13 +176,16 @@ export default function AppointmentDialog({
         email: defaults?.email || "",
         propertyAddress: defaults?.propertyAddress || "",
         propertyType: defaults?.propertyType || "residential",
-        appointmentType: "free_consultation",
+        appointmentType: "assessment",
+        serviceType: "none",
         scheduledAt: toLocalInputValue(defaults?.scheduledAt),
         durationMinutes: "60",
         assignedToId: "none",
         jobType: "none",
         priority: "normal",
         source: "none",
+        reminderMinutes: "none",
+        googleMeet: false,
         issueDescription: "",
         notes: "",
         sendConfirmation: true,
@@ -260,13 +274,17 @@ export default function AppointmentDialog({
       email: form.email.trim() || null,
       propertyAddress: form.propertyAddress.trim() || null,
       propertyType: form.propertyType,
-      appointmentType: form.appointmentType,
+      appointmentType: form.appointmentType as AppointmentTypeValue,
+      // Only persist Service Type for the types that show the dropdown.
+      serviceType: showsServiceType(form.appointmentType) && form.serviceType !== "none" ? form.serviceType : null,
       scheduledAt: iso,
       durationMinutes: parseInt(form.durationMinutes) || 60,
       assignedToId: form.assignedToId === "none" ? null : parseInt(form.assignedToId),
       jobType: form.jobType === "none" ? null : (form.jobType as (typeof JOB_TYPE_OPTIONS)[number]["value"]),
       priority: form.priority,
       source: form.source === "none" ? null : (form.source as (typeof SOURCE_OPTIONS)[number]["value"]),
+      reminderMinutes: form.reminderMinutes === "none" ? null : parseInt(form.reminderMinutes),
+      googleMeetRequested: form.googleMeet,
       issueDescription: form.issueDescription.trim() || null,
       notes: form.notes.trim() || null,
       sendConfirmation: form.sendConfirmation,
@@ -316,13 +334,25 @@ export default function AppointmentDialog({
           </div>
           <div>
             <Label>Appointment type</Label>
-            <Select value={form.appointmentType} onValueChange={v => setForm(f => ({ ...f, appointmentType: v as typeof f.appointmentType }))}>
+            <Select value={form.appointmentType} onValueChange={v => setForm(f => ({ ...f, appointmentType: v }))}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                {APPOINTMENT_TYPES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
+          {showsServiceType(form.appointmentType) && (
+            <div>
+              <Label>Service type</Label>
+              <Select value={form.serviceType} onValueChange={v => setForm(f => ({ ...f, serviceType: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select service type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not specified</SelectItem>
+                  {SERVICE_TYPES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <Label>Job type</Label>
             <Select value={form.jobType} onValueChange={v => setForm(f => ({ ...f, jobType: v }))}>
@@ -370,12 +400,23 @@ export default function AppointmentDialog({
             </Select>
           </div>
           <div>
-            <Label>Assigned to</Label>
+            <Label>Primary technician</Label>
             <Select value={form.assignedToId} onValueChange={v => setForm(f => ({ ...f, assignedToId: v }))}>
               <SelectTrigger><SelectValue placeholder="Unassigned" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Unassigned</SelectItem>
                 {assignees.map(a => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Reminder</Label>
+            <Select value={form.reminderMinutes} onValueChange={v => setForm(f => ({ ...f, reminderMinutes: v }))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {REMINDER_OPTIONS.map(o => (
+                  <SelectItem key={o.label} value={o.value == null ? "none" : String(o.value)}>{o.label}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -396,7 +437,7 @@ export default function AppointmentDialog({
             </p>
           </div>
           <div className="col-span-2">
-            <Label>Coworkers</Label>
+            <Label>Additional technicians</Label>
             {roster.length === 0 ? (
               <p className="text-xs text-muted-foreground">No active team members to invite.</p>
             ) : (
@@ -449,6 +490,16 @@ export default function AppointmentDialog({
               onChange={e => setSendInvites(e.target.checked)}
             />
             <Label htmlFor="appt-send-invites">Create calendar event & send invites</Label>
+          </div>
+          <div className="col-span-2 flex items-center gap-2">
+            <input
+              id="appt-google-meet"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={form.googleMeet}
+              onChange={e => setForm(f => ({ ...f, googleMeet: e.target.checked }))}
+            />
+            <Label htmlFor="appt-google-meet">Create Google Meet link</Label>
           </div>
           <div className="col-span-2 flex items-center gap-2">
             <input

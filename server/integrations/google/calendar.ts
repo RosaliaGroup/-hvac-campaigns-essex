@@ -17,6 +17,7 @@ import {
   type GoogleCalendarConnection,
 } from "../../../drizzle/schema";
 import { encrypt, decrypt, isEncryptionConfigured } from "../../_core/crypto";
+import { reminderToGoogle } from "../../../shared/appointmentTypes";
 
 const AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -153,21 +154,36 @@ export interface CalendarEventInput {
   durationMinutes: number;
   attendees: { email: string; name?: string | null }[];
   timeZone?: string;
+  /** Minutes before start for a reminder; null/undefined = none. */
+  reminderMinutes?: number | null;
+  /** Request a Google Meet link on create. */
+  createMeet?: boolean;
+  /** Stable request id for the Meet create request (idempotent per appointment). */
+  meetRequestId?: string;
 }
 
 /** Map a normalized appointment into a Google Calendar event resource. */
 export function mapToGoogleEvent(input: CalendarEventInput): Record<string, unknown> {
   const tz = input.timeZone ?? DEFAULT_TIMEZONE;
   const end = new Date(input.scheduledAt.getTime() + input.durationMinutes * 60_000);
-  return {
+  const event: Record<string, unknown> = {
     summary: input.summary,
     ...(input.description ? { description: input.description } : {}),
     ...(input.location ? { location: input.location } : {}),
     start: { dateTime: input.scheduledAt.toISOString(), timeZone: tz },
     end: { dateTime: end.toISOString(), timeZone: tz },
     attendees: input.attendees.map(a => ({ email: a.email, ...(a.name ? { displayName: a.name } : {}) })),
-    reminders: { useDefault: true },
+    reminders: reminderToGoogle(input.reminderMinutes),
   };
+  if (input.createMeet) {
+    event.conferenceData = {
+      createRequest: {
+        requestId: input.meetRequestId ?? `meet-${input.scheduledAt.getTime()}`,
+        conferenceSolutionKey: { type: "hangoutsMeet" },
+      },
+    };
+  }
+  return event;
 }
 
 export interface GoogleStatus {
@@ -339,24 +355,29 @@ export class GoogleCalendarProvider {
     });
   }
 
-  /** Create an event; sendUpdates=all makes Google email the invites. */
-  async createEvent(event: Record<string, unknown>): Promise<{ id: string; calendarId: string; htmlLink?: string }> {
+  /** Create an event; sendUpdates=all makes Google email the invites. Captures a Meet link when requested. */
+  async createEvent(event: Record<string, unknown>): Promise<{ id: string; calendarId: string; htmlLink?: string; meetUrl?: string | null }> {
     const { calendarId } = await this.getValidAccessToken();
-    const res = await this.calFetch(`/events?sendUpdates=all`, { method: "POST", body: JSON.stringify(event) });
+    const conf = "conferenceData" in event ? "&conferenceDataVersion=1" : "";
+    const res = await this.calFetch(`/events?sendUpdates=all${conf}`, { method: "POST", body: JSON.stringify(event) });
     if (!res.ok) throw new Error(`Google create event failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
-    const json = (await res.json()) as { id: string; htmlLink?: string };
-    return { id: json.id, calendarId, htmlLink: json.htmlLink };
+    const json = (await res.json()) as { id: string; htmlLink?: string; hangoutLink?: string };
+    return { id: json.id, calendarId, htmlLink: json.htmlLink, meetUrl: json.hangoutLink ?? null };
   }
 
-  /** Full update of an existing event (also notifies attendees). */
-  async updateEvent(eventId: string, event: Record<string, unknown>): Promise<{ id: string; htmlLink?: string }> {
-    const res = await this.calFetch(`/events/${encodeURIComponent(eventId)}?sendUpdates=all`, {
-      method: "PUT",
+  /**
+   * Update an existing event via PATCH (merge semantics) so the SAME event is
+   * updated and its Meet/conference data is preserved when not re-sent.
+   */
+  async updateEvent(eventId: string, event: Record<string, unknown>): Promise<{ id: string; htmlLink?: string; meetUrl?: string | null }> {
+    const conf = "conferenceData" in event ? "&conferenceDataVersion=1" : "";
+    const res = await this.calFetch(`/events/${encodeURIComponent(eventId)}?sendUpdates=all${conf}`, {
+      method: "PATCH",
       body: JSON.stringify(event),
     });
     if (!res.ok) throw new Error(`Google update event failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
-    const json = (await res.json()) as { id: string; htmlLink?: string };
-    return { id: json.id, htmlLink: json.htmlLink };
+    const json = (await res.json()) as { id: string; htmlLink?: string; hangoutLink?: string };
+    return { id: json.id, htmlLink: json.htmlLink, meetUrl: json.hangoutLink ?? null };
   }
 
   /** Cancel (delete) an event; sendUpdates=all sends cancellation notices. */

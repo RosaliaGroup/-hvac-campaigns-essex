@@ -10,24 +10,19 @@
  * All side effects are BEST EFFORT: this never throws to its caller, so a
  * failed invite can never break CRM appointment create/update.
  */
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { getDb } from "../db";
 import {
   appointments as appointmentsTable,
   appointmentAttendees as attendeesTable,
+  teamMembers as teamMembersTable,
   type Appointment,
   type AppointmentAttendee,
 } from "../../drizzle/schema";
 import { googleCalendarProvider, mapToGoogleEvent, DEFAULT_TIMEZONE } from "../integrations/google/calendar";
+import { buildAppointmentTitle, buildAppointmentDescription } from "../../shared/appointmentTypes";
 import { buildIcs, type IcsAttendee } from "./ics";
 import { sendEmail } from "./emailService";
-
-const APPOINTMENT_TYPE_LABELS: Record<string, string> = {
-  free_consultation: "Free Consultation",
-  technician_dispatch: "Service Visit",
-  maintenance_plan: "Maintenance Visit",
-  commercial_assessment: "Commercial Assessment",
-};
 
 export type AttendeeRole = "organizer" | "team_member" | "customer" | "guest";
 
@@ -89,23 +84,65 @@ export function normalizeAttendees(
   return Array.from(byEmail.values());
 }
 
-export function appointmentSummary(appt: Pick<Appointment, "appointmentType" | "fullName">): string {
-  const label = APPOINTMENT_TYPE_LABELS[appt.appointmentType] ?? "Appointment";
-  return `${label} — ${appt.fullName}`;
+/** Google/ICS event title: "<Appointment Type> – <Service Type>". */
+export function appointmentSummary(appt: Pick<Appointment, "appointmentType" | "serviceType">): string {
+  return buildAppointmentTitle(appt.appointmentType, appt.serviceType);
+}
+
+/** Resolved technicians for an appointment (primary from assignedToId, additional from attendee rows). */
+export interface TechnicianNames {
+  assignedTechnician: string | null;
+  assignedTechnicianEmail: string | null;
+  additionalTechnicians: string[];
+}
+
+/**
+ * Look up technicians: the primary (appointments.assignedToId) and any
+ * additional technicians stored as team_member attendees. Returns display names
+ * (for the description) plus the primary's email (to add as an attendee).
+ */
+export async function resolveTechnicians(appt: Appointment, attendees: AppointmentAttendee[]): Promise<TechnicianNames> {
+  const db = await getDb();
+  const teamAttendees = attendees.filter(a => a.role === "team_member" && a.teamMemberId != null);
+  const ids = new Set<number>();
+  if (appt.assignedToId != null) ids.add(appt.assignedToId);
+  for (const a of teamAttendees) ids.add(a.teamMemberId as number);
+
+  const byId = new Map<number, { name: string; email: string }>();
+  if (db && ids.size) {
+    const rows = await db
+      .select({ id: teamMembersTable.id, name: teamMembersTable.name, email: teamMembersTable.email })
+      .from(teamMembersTable)
+      .where(inArray(teamMembersTable.id, Array.from(ids)));
+    for (const r of rows) byId.set(r.id, { name: r.name, email: r.email });
+  }
+  const primary = appt.assignedToId != null ? byId.get(appt.assignedToId) : undefined;
+  const additionalTechnicians = teamAttendees
+    .filter(a => a.teamMemberId !== appt.assignedToId)
+    .map(a => a.name || byId.get(a.teamMemberId as number)?.name || "")
+    .filter(Boolean);
+  return {
+    assignedTechnician: primary?.name ?? null,
+    assignedTechnicianEmail: primary?.email ?? null,
+    additionalTechnicians,
+  };
 }
 
 export function appointmentDescription(
-  appt: Pick<Appointment, "issueDescription" | "notes" | "phone" | "propertyAddress">,
+  appt: Pick<Appointment, "fullName" | "phone" | "email" | "propertyAddress" | "appointmentType" | "serviceType" | "notes">,
+  techs?: TechnicianNames,
 ): string {
-  return [
-    appt.issueDescription ? `Details: ${appt.issueDescription}` : null,
-    appt.propertyAddress ? `Location: ${appt.propertyAddress}` : null,
-    appt.phone ? `Contact: ${appt.phone}` : null,
-    appt.notes ? `Notes: ${appt.notes}` : null,
-    "Booked via Mechanical Enterprise CRM.",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  return buildAppointmentDescription({
+    fullName: appt.fullName,
+    phone: appt.phone,
+    email: appt.email,
+    propertyAddress: appt.propertyAddress,
+    appointmentType: appt.appointmentType,
+    serviceType: appt.serviceType,
+    assignedTechnician: techs?.assignedTechnician ?? null,
+    additionalTechnicians: techs?.additionalTechnicians ?? [],
+    notes: appt.notes,
+  });
 }
 
 function icsUid(appointmentId: number): string {
@@ -245,14 +282,28 @@ export async function syncAppointmentInvites(params: {
     }
 
     // ── Create / update ──
+    const techs = await resolveTechnicians(appt, attendees);
+    // Google attendees = customer + guests + additional techs + the primary technician.
+    const googleAttendees = attendees.map(a => ({ email: a.email, name: a.name }));
+    if (
+      techs.assignedTechnicianEmail &&
+      !googleAttendees.some(x => x.email.toLowerCase() === techs.assignedTechnicianEmail!.toLowerCase())
+    ) {
+      googleAttendees.push({ email: techs.assignedTechnicianEmail, name: techs.assignedTechnician });
+    }
     const eventInput = {
       summary: appointmentSummary(appt),
-      description: appointmentDescription(appt),
+      description: appointmentDescription(appt, techs),
       location: appt.propertyAddress,
       scheduledAt: new Date(appt.scheduledAt),
       durationMinutes: appt.durationMinutes,
-      attendees: attendees.map(a => ({ email: a.email, name: a.name })),
+      attendees: googleAttendees,
       timeZone: DEFAULT_TIMEZONE,
+      reminderMinutes: appt.reminderMinutes,
+      // Request a Meet when the user asked for one and we don't have a link yet
+      // (so an existing event's Meet is preserved on update instead of re-created).
+      createMeet: appt.googleMeetRequested && !appt.googleMeetUrl,
+      meetRequestId: `meet-${appt.id}`,
     };
 
     if (connected) {
@@ -260,12 +311,15 @@ export async function syncAppointmentInvites(params: {
         const payload = mapToGoogleEvent(eventInput);
         let eventId = appt.googleCalendarEventId ?? null;
         let calendarId = appt.googleCalendarId ?? conn!.googleCalendarId;
+        let meetUrl: string | null = appt.googleMeetUrl ?? null;
         if (eventId) {
-          await googleCalendarProvider.updateEvent(eventId, payload);
+          const upd = await googleCalendarProvider.updateEvent(eventId, payload);
+          if (upd.meetUrl) meetUrl = upd.meetUrl;
         } else {
           const created = await googleCalendarProvider.createEvent(payload);
           eventId = created.id;
           calendarId = created.calendarId;
+          if (created.meetUrl) meetUrl = created.meetUrl;
         }
         await googleCalendarProvider.touchLastSync();
         if (attendees.length) {
@@ -279,6 +333,7 @@ export async function syncAppointmentInvites(params: {
           .set({
             googleCalendarEventId: eventId,
             googleCalendarId: calendarId,
+            googleMeetUrl: meetUrl,
             googleSyncStatus: "synced",
             googleSyncError: null,
             inviteStatus: attendees.length ? "sent" : "none",
