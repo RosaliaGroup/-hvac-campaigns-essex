@@ -55,8 +55,10 @@ const menuItems: MenuItem[] = [
   { icon: Megaphone, label: "Marketing Dashboard", path: "/marketing-dashboard", section: "Campaigns" },
   { icon: BarChart3, label: "Campaign Performance", path: "/campaign-performance", section: "Campaigns" },
 
-  // Leads
-  { icon: Users, label: "Lead Tracker", path: "/leads", section: "Leads" },
+  // Leads — primary entry is the Lead Inbox (/lead-dashboard, reads leadCaptures:
+  // real website/landing-page/Meta submissions). /leads (LeadTracker) reads the
+  // separate `leads` table and is left routed but unlinked for now.
+  { icon: Users, label: "Lead Inbox", path: "/lead-dashboard", section: "Leads" },
   { icon: Star, label: "Lead Scoring", path: "/lead-scoring", section: "Leads" },
 
   // AI & Tools
