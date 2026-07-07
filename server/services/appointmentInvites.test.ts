@@ -54,23 +54,33 @@ describe("normalizeAttendees", () => {
 });
 
 describe("appointment summary/description", () => {
-  it("labels the summary by appointment type", () => {
-    expect(appointmentSummary({ appointmentType: "technician_dispatch", fullName: "Jane Doe" })).toBe(
-      "Service Visit — Jane Doe",
+  it("builds the title from appointment + service type (en dash, no customer name)", () => {
+    expect(appointmentSummary({ appointmentType: "assessment", serviceType: "mini_split_installation" })).toBe(
+      "Assessment – Mini Split Installation",
     );
-    expect(appointmentSummary({ appointmentType: "unknown_type", fullName: "Jane" })).toBe("Appointment — Jane");
+    // Legacy type falls back to Assessment; no service type → just the type label.
+    expect(appointmentSummary({ appointmentType: "free_consultation", serviceType: null })).toBe("Assessment");
   });
 
-  it("includes only the details that are present", () => {
-    const desc = appointmentDescription({
-      issueDescription: "No heat",
-      notes: null,
-      phone: "862-555-0100",
-      propertyAddress: "500 Main St",
-    });
-    expect(desc).toContain("Details: No heat");
-    expect(desc).toContain("Location: 500 Main St");
-    expect(desc).toContain("Contact: 862-555-0100");
-    expect(desc).not.toContain("Notes:");
+  it("orders the description and puts the customer above the address", () => {
+    const desc = appointmentDescription(
+      {
+        fullName: "Jane Doe",
+        phone: "862-555-0100",
+        email: "jane@example.com",
+        propertyAddress: "500 Main St",
+        appointmentType: "installation",
+        serviceType: "heat_pump",
+        notes: "Gate code 4432",
+      },
+      { assignedTechnician: "Mike R.", assignedTechnicianEmail: "mike@x.com", additionalTechnicians: ["Sam T."] },
+    );
+    expect(desc.indexOf("Customer")).toBeLessThan(desc.indexOf("Service Address"));
+    expect(desc).toContain("Customer\nJane Doe");
+    expect(desc).toContain("Appointment Type\nInstallation");
+    expect(desc).toContain("Service Type\nHeat Pump");
+    expect(desc).toContain("Assigned Technician\nMike R.");
+    expect(desc).toContain("Additional Technicians\nSam T.");
+    expect(desc.endsWith("Booked via Mechanical Enterprise CRM")).toBe(true);
   });
 });

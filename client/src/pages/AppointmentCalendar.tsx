@@ -13,6 +13,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
 import AppointmentAttendees from "@/components/AppointmentAttendees";
+import { APPOINTMENT_TYPES, appointmentTypeLabel, serviceTypeLabel } from "@shared/appointmentTypes";
 import { dayKey, appointmentMatchesFilters, bucketAppointmentsByDay } from "@/lib/appointmentCalendar";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +24,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
-  CalendarClock, CalendarPlus, ChevronDown, Clock, Inbox, Pencil, Phone, UserRound,
+  CalendarClock, CalendarPlus, ChevronDown, Clock, Inbox, Pencil, Phone, UserRound, Video,
 } from "lucide-react";
 
 // Status → dot & badge colors (matches badge palette used across dashboards)
@@ -41,13 +42,6 @@ const STATUS_BADGE: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700",
   rescheduled: "bg-blue-100 text-blue-700",
 };
-const TYPE_LABELS: Record<string, string> = {
-  free_consultation: "Free Consultation",
-  technician_dispatch: "Service Visit",
-  maintenance_plan: "Maintenance",
-  commercial_assessment: "Commercial Assessment",
-};
-
 type Appt = EditableAppointment & {
   customerId?: number | null;
   jobId?: number | null;
@@ -56,6 +50,7 @@ type Appt = EditableAppointment & {
   bookedBy?: string | null;
   googleSyncStatus?: string | null;
   googleCalendarEventId?: string | null;
+  googleMeetUrl?: string | null;
   inviteStatus?: string | null;
 };
 
@@ -189,7 +184,7 @@ export default function AppointmentCalendar() {
             <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
-              {Object.entries(TYPE_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+              {APPOINTMENT_TYPES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <ToggleGroup
@@ -251,7 +246,7 @@ export default function AppointmentCalendar() {
                   filteredBacklog.map(a => (
                     <div key={a.id} className="flex items-center justify-between border rounded-lg p-3 text-sm">
                       <div>
-                        <div className="font-medium">{a.fullName} <span className="text-muted-foreground font-normal">· {TYPE_LABELS[a.appointmentType] ?? a.appointmentType}</span></div>
+                        <div className="font-medium">{a.fullName} <span className="text-muted-foreground font-normal">· {appointmentTypeLabel(a.appointmentType)}</span></div>
                         <div className="text-muted-foreground">Wanted: {a.preferredDate} · {a.preferredTime}</div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -295,8 +290,8 @@ export default function AppointmentCalendar() {
                   </div>
                   <div className="font-medium">{a.fullName}</div>
                   <div className="text-muted-foreground">
-                    {TYPE_LABELS[a.appointmentType] ?? a.appointmentType}
-                    {a.jobType ? ` · ${a.jobType.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}` : ""}
+                    {appointmentTypeLabel(a.appointmentType)}
+                    {serviceTypeLabel(a.serviceType) ? ` · ${serviceTypeLabel(a.serviceType)}` : ""}
                     {` · ${a.durationMinutes ?? 60} min`}
                   </div>
                   {a.priority && a.priority !== "normal" && (
@@ -315,6 +310,16 @@ export default function AppointmentCalendar() {
                       googleCalendarEventId={a.googleCalendarEventId}
                       inviteStatus={a.inviteStatus}
                     />
+                    {a.googleMeetUrl && (
+                      <a
+                        href={a.googleMeetUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-1 flex items-center gap-1 text-xs text-[#1e3a5f] hover:underline"
+                      >
+                        <Video className="h-3 w-3" /> Join Google Meet
+                      </a>
+                    )}
                   </div>
                   <div className="flex items-center justify-between pt-1">
                     {a.bookedBy === "jessica" ? <Badge variant="outline" className="text-[10px]">Booked by Jessica</Badge> : <span />}
