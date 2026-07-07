@@ -52,6 +52,8 @@ export interface AccountingCustomerInput {
   companyName?: string | null;
   email?: string | null;
   phone?: string | null;
+  /** Free-text customer notes, mapped to the QBO Customer Notes field. */
+  notes?: string | null;
   address?: {
     line1?: string | null;
     line2?: string | null;
