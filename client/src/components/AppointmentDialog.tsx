@@ -102,6 +102,7 @@ export default function AppointmentDialog({
   };
 }) {
   const { toast } = useToast();
+  const utils = trpc.useUtils();
   const isEdit = Boolean(appointment);
 
   const { data: assignees = [] } = trpc.appointments.assignees.useQuery(undefined, { enabled: open });
@@ -173,6 +174,10 @@ export default function AppointmentDialog({
         title: "Appointment booked",
         description: res.smsSent ? "Confirmation SMS sent to the customer." : "No SMS sent (opted out, invalid number, or SMS disabled).",
       });
+      // Refresh EVERY appointments.list consumer (calendar month + backlog),
+      // not just the page that opened this dialog. Without this, an appointment
+      // created from the customer 360 never appeared on a cached calendar.
+      utils.appointments.list.invalidate();
       onSaved?.();
       onClose();
     },
@@ -187,6 +192,9 @@ export default function AppointmentDialog({
           ? res.smsSent ? "Reschedule SMS sent to the customer." : "Rescheduled — no SMS sent."
           : undefined,
       });
+      // Same reason as create: a reschedule must move the dot on the calendar
+      // even when edited from another surface.
+      utils.appointments.list.invalidate();
       onSaved?.();
       onClose();
     },
