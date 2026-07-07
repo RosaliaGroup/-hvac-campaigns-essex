@@ -259,6 +259,22 @@ export function mapCustomerToQbo(c: AccountingCustomerInput): Record<string, unk
   return payload;
 }
 
+export type CustomerPushPlan =
+  | { action: "update-by-id"; qbId: string }
+  | { action: "match" };
+
+/**
+ * Decide how to push a customer (pure, unit-tested):
+ *  - already linked (existingRemoteId set) → update THAT record by id;
+ *  - otherwise → run duplicate matching.
+ * A linked customer NEVER routes to match/create, so re-pushing a synced
+ * customer can't spawn a duplicate in QuickBooks.
+ */
+export function planCustomerPush(customer: AccountingCustomerInput): CustomerPushPlan {
+  const id = customer.existingRemoteId?.trim();
+  return id ? { action: "update-by-id", qbId: id } : { action: "match" };
+}
+
 export interface MergeMatch {
   matchedBy: "email" | "phone" | "name";
   candidate: QboCustomer;
@@ -509,6 +525,14 @@ export class QuickBooksProvider implements AccountingProvider {
     customer: AccountingCustomerInput,
     resolution?: ConflictResolution,
   ): Promise<PushCustomerResult> {
+    // Already linked → update THAT QBO record by id; never match or create a
+    // duplicate. (Falls through only if the linked record is gone from QBO.)
+    const plan = planCustomerPush(customer);
+    if (plan.action === "update-by-id") {
+      const updated = await this.updateCustomerById(plan.qbId, customer);
+      if (updated) return updated;
+    }
+
     // Merge protection (skip when the caller already resolved a conflict).
     if (!resolution) {
       const candidates = await this.findMatches(customer);
@@ -554,6 +578,30 @@ export class QuickBooksProvider implements AccountingProvider {
       throw new Error(`QuickBooks create failed: ${err?.Message ?? err?.Detail ?? res.status}`);
     }
     return { outcome: "created", qbId: json.Customer!.Id, summary: toSummary(json.Customer!) };
+  }
+
+  /**
+   * Update an already-linked QBO customer by id (sparse update). Returns null
+   * when the record no longer exists remotely, so the caller can fall back to
+   * the normal create/match path (a re-create is not a duplicate).
+   */
+  private async updateCustomerById(qbId: string, customer: AccountingCustomerInput): Promise<PushCustomerResult | null> {
+    const current = await this.readCustomer(qbId);
+    if (!current) return null; // deleted/inactive remotely — not a duplicate to recreate
+    const body = {
+      ...mapCustomerToQbo(customer),
+      Id: qbId,
+      SyncToken: (current as unknown as { SyncToken?: string })?.SyncToken ?? "0",
+      sparse: true,
+    };
+    const res = await this.qboFetch(`/customer`, { method: "POST", body: JSON.stringify(body) });
+    if (!res.ok) throw new Error(`QuickBooks update-by-id failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+    const json = (await res.json()) as { Customer?: QboCustomer };
+    return {
+      outcome: "updated",
+      qbId,
+      summary: json.Customer ? toSummary(json.Customer) : { qbId, displayName: String(mapCustomerToQbo(customer).DisplayName ?? "") },
+    };
   }
 
   private async updateCustomer(existing: QboCustomer, customer: AccountingCustomerInput): Promise<PushCustomerResult> {

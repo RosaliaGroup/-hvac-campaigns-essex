@@ -23,6 +23,8 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export function buildCustomerInput(c: Customer, primary?: Property | null): AccountingCustomerInput {
   return {
     localId: c.id,
+    // Already linked → the push updates this QBO record by id (no duplicate).
+    existingRemoteId: c.quickbooksCustomerId,
     type: c.type,
     displayName: c.displayName,
     firstName: c.firstName,

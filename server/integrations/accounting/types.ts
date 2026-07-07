@@ -45,6 +45,13 @@ export interface ConnectInput {
 /** Normalized local customer + primary address, the input to a push. */
 export interface AccountingCustomerInput {
   localId: number;
+  /**
+   * The provider record id this customer is ALREADY linked to (e.g. QBO
+   * Customer.Id). When set, a push updates that exact record by id instead of
+   * running duplicate matching / create — so a linked customer never spawns a
+   * duplicate in the provider.
+   */
+  existingRemoteId?: string | null;
   type: "residential" | "commercial";
   displayName: string;
   firstName?: string | null;
