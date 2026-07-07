@@ -25,10 +25,29 @@ import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
 import { quickbooksRouter } from "./routers/quickbooks";
+import { googleCalendarRouter } from "./routers/googleCalendar";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
-import { appointments as appointmentsTable, teamMembers as teamMembersTable } from "../drizzle/schema";
+import {
+  appointments as appointmentsTable,
+  teamMembers as teamMembersTable,
+  appointmentAttendees as appointmentAttendeesTable,
+} from "../drizzle/schema";
+import {
+  normalizeAttendees,
+  replaceAttendees,
+  syncAppointmentInvites,
+  type AttendeeInput,
+} from "./services/appointmentInvites";
 import { and as dAnd, eq as dEq, gte as dGte, lte as dLte, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
+
+/** Zod shape for an attendee coming from the appointment dialog. */
+const attendeeInputSchema = z.object({
+  email: z.string().email().max(320),
+  name: z.string().max(255).optional().nullable(),
+  role: z.enum(["organizer", "team_member", "customer", "guest"]),
+  teamMemberId: z.number().int().optional().nullable(),
+});
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -45,6 +64,7 @@ export const appRouter = router({
   customers: customersRouter,
   jobs: jobsRouter,
   quickbooks: quickbooksRouter,
+  googleCalendar: googleCalendarRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -681,6 +701,29 @@ export const appRouter = router({
         .from(teamMembersTable).where(dEq(teamMembersTable.status, "active"));
     }),
 
+    /** Active team members WITH emails — for inviting coworkers as attendees (Task 8). */
+    teamRoster: protectedProcedure.query(async () => {
+      const dbi = await db.getDb();
+      if (!dbi) return [];
+      return await dbi
+        .select({ id: teamMembersTable.id, name: teamMembersTable.name, email: teamMembersTable.email })
+        .from(teamMembersTable)
+        .where(dEq(teamMembersTable.status, "active"));
+    }),
+
+    /** Invited people + their invite status for one appointment (Task 8). */
+    attendees: protectedProcedure
+      .input(z.object({ appointmentId: z.number().int() }))
+      .query(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) return [];
+        return await dbi
+          .select()
+          .from(appointmentAttendeesTable)
+          .where(dEq(appointmentAttendeesTable.appointmentId, input.appointmentId))
+          .orderBy(appointmentAttendeesTable.id);
+      }),
+
     /** Staff manual booking. Auto-links customer by phone; sends SMS confirmation. */
     create: protectedProcedure
       .input(z.object({
@@ -703,6 +746,12 @@ export const appRouter = router({
         notes: z.string().optional().nullable(),
         /** Set false to skip the customer SMS (e.g. internal blocks) */
         sendConfirmation: z.boolean().default(true),
+        /** Coworkers / external guests to invite (Task 8). */
+        attendees: z.array(attendeeInputSchema).optional(),
+        /** Auto-invite the customer at their email. */
+        includeCustomer: z.boolean().default(true),
+        /** Set false to skip calendar-event creation + invite emails. */
+        sendInvites: z.boolean().default(true),
       }))
       .mutation(async ({ input, ctx }) => {
         const scheduled = new Date(input.scheduledAt);
@@ -739,7 +788,21 @@ export const appRouter = router({
           const sms = await sendAppointmentConfirmationSms(values);
           smsSent = sms.sent;
         }
-        return { id, customerId, smsSent };
+
+        // Attendees + calendar invites (Task 8) — best effort, never blocks the booking.
+        let invitesSent = false;
+        if (id > 0) {
+          const attendees = normalizeAttendees((input.attendees ?? []) as AttendeeInput[], {
+            customerEmail: input.includeCustomer ? input.email ?? undefined : undefined,
+            customerName: input.fullName,
+          });
+          await replaceAttendees(id, attendees);
+          if (input.sendInvites && attendees.length > 0) {
+            await syncAppointmentInvites({ appointmentId: id });
+            invitesSent = true;
+          }
+        }
+        return { id, customerId, smsSent, invitesSent };
       }),
 
     /** Staff edit — any field. Sends reschedule SMS when scheduledAt changes. */
@@ -764,6 +827,12 @@ export const appRouter = router({
         notes: z.string().optional().nullable(),
         status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled"]).optional(),
         sendConfirmation: z.boolean().default(true),
+        /** When provided, REPLACES the attendee list (Task 8). Omit to leave unchanged. */
+        attendees: z.array(attendeeInputSchema).optional(),
+        /** Auto-invite the customer at their email when replacing attendees. */
+        includeCustomer: z.boolean().default(true),
+        /** Set false to skip re-syncing the calendar event + invites. */
+        sendInvites: z.boolean().default(true),
       }))
       .mutation(async ({ input }) => {
         const dbi = await db.getDb();
@@ -771,7 +840,7 @@ export const appRouter = router({
         const existing = (await dbi.select().from(appointmentsTable).where(dEq(appointmentsTable.id, input.id)).limit(1))[0];
         if (!existing) throw new Error("Appointment not found");
 
-        const { id, sendConfirmation, scheduledAt, ...rest } = input;
+        const { id, sendConfirmation, scheduledAt, attendees: attendeesInput, sendInvites, includeCustomer, ...rest } = input;
         const patch: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(rest)) {
           if (v !== undefined) patch[k] = v;
@@ -803,6 +872,25 @@ export const appRouter = router({
           const sms = await sendAppointmentConfirmationSms(merged, { isReschedule: Boolean(existing.scheduledAt) });
           smsSent = sms.sent;
         }
+
+        // Attendees + calendar sync (Task 8) — best effort, never blocks the edit.
+        if (attendeesInput !== undefined) {
+          const normalized = normalizeAttendees(attendeesInput as AttendeeInput[], {
+            customerEmail: includeCustomer
+              ? (patch.email as string | undefined) ?? existing.email ?? undefined
+              : undefined,
+            customerName: (patch.fullName as string | undefined) ?? existing.fullName,
+          });
+          await replaceAttendees(id, normalized);
+        }
+        if (sendInvites) {
+          const nowCancelled = patch.status === "cancelled" && existing.status !== "cancelled";
+          if (nowCancelled) {
+            await syncAppointmentInvites({ appointmentId: id, cancel: true });
+          } else if (attendeesInput !== undefined || rescheduled || Object.keys(patch).length > 0) {
+            await syncAppointmentInvites({ appointmentId: id });
+          }
+        }
         return { success: true, rescheduled, smsSent };
       }),
 
@@ -821,6 +909,10 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         await db.updateAppointmentStatus(input.id, input.status);
+        // Cancel the Google event / send cancellation ICS when cancelled (Task 8).
+        if (input.status === "cancelled") {
+          await syncAppointmentInvites({ appointmentId: input.id, cancel: true });
+        }
         return { success: true };
       }),
   }),

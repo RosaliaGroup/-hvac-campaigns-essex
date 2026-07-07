@@ -12,6 +12,7 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
+import AppointmentAttendees from "@/components/AppointmentAttendees";
 import { dayKey, appointmentMatchesFilters, bucketAppointmentsByDay } from "@/lib/appointmentCalendar";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,6 +54,9 @@ type Appt = EditableAppointment & {
   preferredDate: string;
   preferredTime: string;
   bookedBy?: string | null;
+  googleSyncStatus?: string | null;
+  googleCalendarEventId?: string | null;
+  inviteStatus?: string | null;
 };
 
 function timeLabel(d: Date | string): string {
@@ -303,6 +307,14 @@ export default function AppointmentCalendar() {
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <span className="flex items-center gap-1"><Phone className="h-3 w-3" /><a href={`tel:${a.phone}`} className="hover:underline">{a.phone}</a></span>
                     <span className="flex items-center gap-1"><UserRound className="h-3 w-3" />{assigneeName(a.assignedToId)}</span>
+                  </div>
+                  <div className="pt-1.5 border-t mt-1.5">
+                    <AppointmentAttendees
+                      appointmentId={a.id}
+                      googleSyncStatus={a.googleSyncStatus}
+                      googleCalendarEventId={a.googleCalendarEventId}
+                      inviteStatus={a.inviteStatus}
+                    />
                   </div>
                   <div className="flex items-center justify-between pt-1">
                     {a.bookedBy === "jessica" ? <Badge variant="outline" className="text-[10px]">Booked by Jessica</Badge> : <span />}

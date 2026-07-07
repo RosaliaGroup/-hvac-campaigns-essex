@@ -6,11 +6,20 @@ const getResend = () => {
   return new Resend(apiKey);
 };
 
+export interface EmailAttachment {
+  filename: string;
+  /** File bytes (Resend accepts a Buffer or base64 string). */
+  content: Buffer | string;
+  /** MIME type, e.g. "text/calendar; method=REQUEST". */
+  contentType?: string;
+}
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
   from?: string;
+  attachments?: EmailAttachment[];
 }
 
 /**
@@ -32,6 +41,15 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
       to: options.to,
       subject: options.subject,
       html: options.html,
+      ...(options.attachments?.length
+        ? {
+            attachments: options.attachments.map(a => ({
+              filename: a.filename,
+              content: a.content,
+              ...(a.contentType ? { contentType: a.contentType } : {}),
+            })),
+          }
+        : {}),
     });
 
     if (error) {

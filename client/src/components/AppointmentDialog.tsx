@@ -106,6 +106,18 @@ export default function AppointmentDialog({
   const isEdit = Boolean(appointment);
 
   const { data: assignees = [] } = trpc.appointments.assignees.useQuery(undefined, { enabled: open });
+  // Coworkers available to invite (with emails), and any attendees already on this appointment.
+  const { data: roster = [] } = trpc.appointments.teamRoster.useQuery(undefined, { enabled: open });
+  const { data: existingAttendees } = trpc.appointments.attendees.useQuery(
+    { appointmentId: appointment?.id ?? 0 },
+    { enabled: open && Boolean(appointment?.id) },
+  );
+
+  // Attendee/invite state (Task 8)
+  const [inviteTeamIds, setInviteTeamIds] = useState<number[]>([]);
+  const [externalEmails, setExternalEmails] = useState("");
+  const [includeCustomer, setIncludeCustomer] = useState(true);
+  const [sendInvites, setSendInvites] = useState(true);
 
   const [form, setForm] = useState({
     fullName: "",
@@ -168,6 +180,22 @@ export default function AppointmentDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, appointment?.id]);
 
+  // Prefill attendee controls (create → empty; edit → from stored attendees).
+  useEffect(() => {
+    if (!open) return;
+    if (appointment && existingAttendees) {
+      setInviteTeamIds(existingAttendees.filter(a => a.teamMemberId != null).map(a => a.teamMemberId as number));
+      setExternalEmails(existingAttendees.filter(a => a.role === "guest").map(a => a.email).join(", "));
+      setIncludeCustomer(existingAttendees.some(a => a.role === "customer"));
+    } else if (!appointment) {
+      setInviteTeamIds([]);
+      setExternalEmails("");
+      setIncludeCustomer(true);
+    }
+    setSendInvites(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, appointment?.id, existingAttendees]);
+
   const create = trpc.appointments.create.useMutation({
     onSuccess: res => {
       toast({
@@ -213,6 +241,19 @@ export default function AppointmentDialog({
       return;
     }
     const iso = new Date(form.scheduledAt).toISOString();
+    // Build the attendee list: selected coworkers + external guest emails.
+    // (The customer is added server-side from the email field when includeCustomer is on.)
+    const teamAttendees = inviteTeamIds
+      .map(tid => roster.find(r => r.id === tid))
+      .filter((r): r is (typeof roster)[number] => Boolean(r?.email))
+      .map(r => ({ email: r.email, name: r.name, role: "team_member" as const, teamMemberId: r.id }));
+    const guestAttendees = externalEmails
+      .split(/[,\n;]+/)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(email => ({ email, role: "guest" as const }));
+    const attendees = [...teamAttendees, ...guestAttendees];
+
     const shared = {
       fullName: form.fullName.trim(),
       phone: form.phone.trim(),
@@ -229,6 +270,9 @@ export default function AppointmentDialog({
       issueDescription: form.issueDescription.trim() || null,
       notes: form.notes.trim() || null,
       sendConfirmation: form.sendConfirmation,
+      attendees,
+      includeCustomer,
+      sendInvites,
     };
     if (isEdit && appointment) {
       update.mutate({ id: appointment.id, ...shared });
@@ -342,6 +386,69 @@ export default function AppointmentDialog({
           <div className="col-span-2">
             <Label>Internal notes</Label>
             <Textarea rows={2} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
+          </div>
+          {/* ── Attendees & calendar invites (Task 8) ── */}
+          <div className="col-span-2 border-t pt-3 mt-1">
+            <Label className="text-sm font-semibold text-[#1e3a5f]">Invite people</Label>
+            <p className="text-xs text-muted-foreground mb-2">
+              Coworkers, the customer, and external guests get a calendar invite (Google Calendar when connected,
+              otherwise an .ics email).
+            </p>
+          </div>
+          <div className="col-span-2">
+            <Label>Coworkers</Label>
+            {roster.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No active team members to invite.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5 max-h-32 overflow-y-auto rounded border p-2">
+                {roster.map(r => (
+                  <label key={r.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={inviteTeamIds.includes(r.id)}
+                      onChange={e =>
+                        setInviteTeamIds(ids =>
+                          e.target.checked ? [...ids, r.id] : ids.filter(x => x !== r.id),
+                        )
+                      }
+                    />
+                    <span className="truncate" title={r.email}>{r.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="col-span-2">
+            <Label>External guests (emails)</Label>
+            <Textarea
+              rows={2}
+              placeholder="alex@example.com, sam@partner.com"
+              value={externalEmails}
+              onChange={e => setExternalEmails(e.target.value)}
+            />
+          </div>
+          <div className="col-span-2 flex items-center gap-2">
+            <input
+              id="appt-invite-customer"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={includeCustomer}
+              onChange={e => setIncludeCustomer(e.target.checked)}
+            />
+            <Label htmlFor="appt-invite-customer">
+              Invite the customer{form.email ? ` (${form.email})` : " (add an email above)"}
+            </Label>
+          </div>
+          <div className="col-span-2 flex items-center gap-2">
+            <input
+              id="appt-send-invites"
+              type="checkbox"
+              className="h-4 w-4"
+              checked={sendInvites}
+              onChange={e => setSendInvites(e.target.checked)}
+            />
+            <Label htmlFor="appt-send-invites">Create calendar event & send invites</Label>
           </div>
           <div className="col-span-2 flex items-center gap-2">
             <input
