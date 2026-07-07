@@ -30,6 +30,7 @@ export function buildCustomerInput(c: Customer, primary?: Property | null): Acco
     companyName: c.companyName,
     email: c.email,
     phone: c.phone,
+    notes: c.notes,
     address: primary
       ? {
           line1: primary.addressLine1,

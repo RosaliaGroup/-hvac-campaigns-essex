@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import {
   mapCustomerToQbo,
+  resolveDisplayName,
+  collapseRepeatedPhrase,
+  buildQboAddress,
   pickMergeMatch,
   parseTokenResponse,
   buildConnectionUpdate,
@@ -55,6 +58,112 @@ describe("mapCustomerToQbo", () => {
     expect(p.CompanyName).toBe("Acme HVAC LLC");
     expect(p.PrimaryPhone).toBeUndefined();
     expect(p.BillAddr).toBeUndefined();
+  });
+});
+
+describe("mapCustomerToQbo — CompanyName / BillAddr / ShipAddr / Notes / dedupe (mapping fix)", () => {
+  const residential: AccountingCustomerInput = {
+    localId: 10,
+    type: "residential",
+    displayName: "Jane Homeowner",
+    firstName: "Jane",
+    lastName: "Homeowner",
+    companyName: null,
+    email: "jane@example.com",
+    phone: "(862) 555-0100",
+    notes: null,
+    address: { line1: "12 Main St", line2: "Apt 2", city: "Newark", state: "NJ", zip: "07102" },
+  };
+
+  it("residential individual → person DisplayName + names, no CompanyName", () => {
+    const p = mapCustomerToQbo({ ...residential, address: null });
+    expect(p.DisplayName).toBe("Jane Homeowner");
+    expect(p.GivenName).toBe("Jane");
+    expect(p.FamilyName).toBe("Homeowner");
+    expect("CompanyName" in p).toBe(false);
+  });
+
+  it("commercial customer with company name → CompanyName + company DisplayName", () => {
+    const p = mapCustomerToQbo({
+      ...residential,
+      type: "commercial",
+      displayName: "Acme HVAC LLC",
+      companyName: "Acme HVAC LLC",
+      firstName: "Sam",
+      lastName: "Rivera",
+    });
+    expect(p.CompanyName).toBe("Acme HVAC LLC");
+    expect(p.DisplayName).toBe("Acme HVAC LLC");
+    // Contact person still carried alongside the company.
+    expect(p.GivenName).toBe("Sam");
+    expect(p.FamilyName).toBe("Rivera");
+  });
+
+  it("customer with address → BillAddr AND ShipAddr populated (ship mirrors bill)", () => {
+    const p = mapCustomerToQbo(residential) as Record<string, unknown>;
+    expect(p.BillAddr).toEqual({
+      Line1: "12 Main St",
+      Line2: "Apt 2",
+      City: "Newark",
+      CountrySubDivisionCode: "NJ",
+      PostalCode: "07102",
+    });
+    expect(p.ShipAddr).toEqual(p.BillAddr);
+  });
+
+  it("customer without company name → DisplayName falls back to person, no CompanyName key", () => {
+    const p = mapCustomerToQbo({ ...residential, companyName: null, address: null });
+    expect(p.DisplayName).toBe("Jane Homeowner");
+    expect("CompanyName" in p).toBe(false);
+  });
+
+  it("de-duplicates a doubled DisplayName / identical first+last (the reported bug)", () => {
+    const p = mapCustomerToQbo({
+      ...residential,
+      address: null,
+      displayName: "QBO Test Customer QBO Test Customer",
+      firstName: "QBO Test Customer",
+      lastName: "QBO Test Customer",
+    });
+    expect(p.DisplayName).toBe("QBO Test Customer");
+    expect(p.GivenName).toBe("QBO Test Customer");
+    // FamilyName dropped because it duplicates GivenName.
+    expect("FamilyName" in p).toBe(false);
+  });
+
+  it("maps Notes when present", () => {
+    const p = mapCustomerToQbo({ ...residential, address: null, notes: "Gate code 1234" });
+    expect(p.Notes).toBe("Gate code 1234");
+  });
+});
+
+describe("resolveDisplayName + collapseRepeatedPhrase + buildQboAddress", () => {
+  it("collapses only exact doubled phrases and normalizes whitespace", () => {
+    expect(collapseRepeatedPhrase("QBO Test Customer QBO Test Customer")).toBe("QBO Test Customer");
+    expect(collapseRepeatedPhrase("Jane Homeowner")).toBe("Jane Homeowner");
+    expect(collapseRepeatedPhrase("Bob Bob Bob")).toBe("Bob Bob Bob"); // odd count → not a doubled phrase
+    expect(collapseRepeatedPhrase("  extra   spaces  ")).toBe("extra spaces");
+  });
+
+  it("prefers company for commercial and person for residential", () => {
+    const c = { localId: 1, displayName: "x", companyName: "Acme", firstName: "A", lastName: "B" };
+    expect(resolveDisplayName({ ...c, type: "commercial" })).toBe("Acme");
+    expect(resolveDisplayName({ ...c, type: "residential" })).toBe("A B");
+  });
+
+  it("falls back to 'Customer' when nothing usable is present", () => {
+    expect(resolveDisplayName({ localId: 1, type: "residential", displayName: "" })).toBe("Customer");
+  });
+
+  it("buildQboAddress returns null when empty, object when populated", () => {
+    expect(buildQboAddress(null)).toBeNull();
+    expect(buildQboAddress({ line1: null, city: null, zip: null, state: null, line2: null })).toBeNull();
+    expect(buildQboAddress({ line1: "1 A St", city: "Newark", state: "NJ", zip: "07102", line2: null })).toEqual({
+      Line1: "1 A St",
+      City: "Newark",
+      CountrySubDivisionCode: "NJ",
+      PostalCode: "07102",
+    });
   });
 });
 

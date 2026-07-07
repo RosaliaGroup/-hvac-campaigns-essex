@@ -186,25 +186,76 @@ export interface QboCustomer {
   PrimaryPhone?: { FreeFormNumber?: string };
 }
 
+/**
+ * Collapse a phrase that is the SAME words repeated twice into a single copy,
+ * e.g. "QBO Test Customer QBO Test Customer" → "QBO Test Customer". Guards the
+ * common bug where a stored displayName duplicated first+last (or the whole
+ * name) and got pushed to QBO verbatim.
+ */
+export function collapseRepeatedPhrase(value: string): string {
+  const words = (value ?? "").trim().split(/\s+/).filter(Boolean);
+  if (words.length >= 2 && words.length % 2 === 0) {
+    const half = words.length / 2;
+    const a = words.slice(0, half).join(" ");
+    const b = words.slice(half).join(" ");
+    if (a.toLowerCase() === b.toLowerCase()) return a;
+  }
+  return words.join(" ");
+}
+
+/** Join first + last, dropping a duplicate when they are identical. */
+function personName(first?: string | null, last?: string | null): string {
+  const f = (first ?? "").trim();
+  const l = (last ?? "").trim();
+  if (f && l) return f.toLowerCase() === l.toLowerCase() ? f : `${f} ${l}`;
+  return f || l;
+}
+
+/**
+ * Pick a clean QBO DisplayName: commercial → company name, residential →
+ * person name, always de-duplicated. Falls back to the stored displayName
+ * (also de-duplicated) and finally "Customer" so a name is never empty.
+ */
+export function resolveDisplayName(c: AccountingCustomerInput): string {
+  const company = c.companyName?.trim() || "";
+  const person = personName(c.firstName, c.lastName);
+  const stored = collapseRepeatedPhrase(c.displayName ?? "");
+  const chosen = c.type === "commercial" ? company || person || stored : person || company || stored;
+  return collapseRepeatedPhrase(chosen) || "Customer";
+}
+
+/** Build a QBO physical address resource, or null when there's nothing to send. */
+export function buildQboAddress(a: AccountingCustomerInput["address"]): Record<string, unknown> | null {
+  if (!a) return null;
+  const addr: Record<string, unknown> = {};
+  if (a.line1) addr.Line1 = a.line1;
+  if (a.line2) addr.Line2 = a.line2;
+  if (a.city) addr.City = a.city;
+  if (a.state) addr.CountrySubDivisionCode = a.state;
+  if (a.zip) addr.PostalCode = a.zip;
+  return Object.keys(addr).length ? addr : null;
+}
+
 /** Map a local customer → QBO Customer create/update payload. */
 export function mapCustomerToQbo(c: AccountingCustomerInput): Record<string, unknown> {
   const payload: Record<string, unknown> = {
-    DisplayName: c.displayName,
+    DisplayName: resolveDisplayName(c),
   };
-  if (c.firstName) payload.GivenName = c.firstName;
-  if (c.lastName) payload.FamilyName = c.lastName;
-  if (c.companyName) payload.CompanyName = c.companyName;
+  const first = c.firstName?.trim();
+  const last = c.lastName?.trim();
+  if (first) payload.GivenName = first;
+  // Only set FamilyName when it adds information (not a duplicate of GivenName).
+  if (last && last.toLowerCase() !== (first ?? "").toLowerCase()) payload.FamilyName = last;
+  if (c.companyName?.trim()) payload.CompanyName = c.companyName.trim();
   if (c.email) payload.PrimaryEmailAddr = { Address: c.email };
   if (c.phone) payload.PrimaryPhone = { FreeFormNumber: c.phone };
-  if (c.address && (c.address.line1 || c.address.city || c.address.zip)) {
-    payload.BillAddr = {
-      Line1: c.address.line1 ?? undefined,
-      Line2: c.address.line2 ?? undefined,
-      City: c.address.city ?? undefined,
-      CountrySubDivisionCode: c.address.state ?? undefined,
-      PostalCode: c.address.zip ?? undefined,
-    };
+  const addr = buildQboAddress(c.address);
+  if (addr) {
+    payload.BillAddr = addr;
+    // QBO keeps billing/shipping separate; mirror bill → ship so both are populated.
+    payload.ShipAddr = { ...addr };
   }
+  if (c.notes?.trim()) payload.Notes = c.notes.trim();
   return payload;
 }
 
