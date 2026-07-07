@@ -809,3 +809,42 @@
 - [ ] Create user documentation
 - [ ] Set up monitoring and analytics
 - [ ] Present working system to stakeholder
+
+## Opportunity Center (P1)
+
+> Not yet built in this repo — no `opportunities` / `opportunityEvents` tables exist yet.
+> These are captured requirements for the P1 build.
+
+### Auto-create CRM customer from a QuickBooks sales document
+When a QuickBooks Estimate / Proposal / Sales Document is detected and the related
+QuickBooks customer does **not** exist in Mechanical CRM:
+
+- [ ] Auto-create the Mechanical customer
+- [ ] Store `quickbooksCustomerId` on the new customer
+- [ ] Populate from the QuickBooks record:
+  - [ ] `displayName`
+  - [ ] `firstName`
+  - [ ] `lastName`
+  - [ ] `companyName` (if available)
+  - [ ] `email`
+  - [ ] `phone`
+  - [ ] billing address (if available)
+  - [ ] `source = quickbooks`
+  - [ ] `notes = "Created automatically from QuickBooks sales document."`
+- [ ] Deduplicate before creating, in this priority order:
+  1. `quickbooksCustomerId`
+  2. `email`
+  3. `phone`
+  4. `displayName` / `companyName`
+- [ ] Create the Opportunity and attach the Sales Document
+- [ ] Log an `opportunityEvents` entry: "Customer auto-created from QuickBooks."
+- [ ] Never overwrite existing CRM customer data without logging the change (write an
+      audit/change event for any field that would be modified on an existing match)
+
+**Why:** QuickBooks may contain customers that do not yet exist in Mechanical CRM, so a
+detected sales document must be able to bring its customer into the CRM automatically.
+
+**Reuse:** the existing QuickBooks customer field-mapping + linked-update logic
+(`server/routers/quickbooks.ts` `buildCustomerInput`, and the dedup/merge-protection in
+`server/integrations/accounting/quickbooks.ts`) already covers dedup-by-id/email/phone/name
+and update-by-id-when-linked; the P1 build should reuse it rather than re-implement matching.
