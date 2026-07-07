@@ -91,28 +91,22 @@ describe("Source label mapping", () => {
   });
 });
 
-// ---- Status configuration tests ----
-describe("Status configuration", () => {
-  const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-    new: { label: "New", color: "text-blue-700", bg: "bg-blue-100" },
-    contacted: { label: "Contacted", color: "text-yellow-700", bg: "bg-yellow-100" },
-    qualified: { label: "Qualified", color: "text-purple-700", bg: "bg-purple-100" },
-    booked: { label: "Booked", color: "text-green-700", bg: "bg-green-100" },
-    lost: { label: "Lost", color: "text-red-700", bg: "bg-red-100" },
-  };
+// ---- Pipeline stage tests (new 8-stage model, no "Booked") ----
+describe("Pipeline stages", () => {
+  const STAGES = [
+    "new", "contacted", "assessment_scheduled", "assessment_completed",
+    "proposal_sent", "follow_up", "won", "lost",
+  ];
 
-  it("should have all 5 status types", () => {
-    expect(Object.keys(STATUS_CONFIG)).toHaveLength(5);
-    ["new", "contacted", "qualified", "booked", "lost"].forEach(status => {
-      expect(STATUS_CONFIG[status]).toBeDefined();
-    });
+  it("has the 8 lead stages and no 'booked'", () => {
+    expect(STAGES).toHaveLength(8);
+    expect(STAGES).not.toContain("booked");
+    expect(STAGES).not.toContain("qualified");
   });
 
-  it("should have label, color, and bg for each status", () => {
-    Object.values(STATUS_CONFIG).forEach(config => {
-      expect(config.label).toBeTruthy();
-      expect(config.color).toBeTruthy();
-      expect(config.bg).toBeTruthy();
+  it("includes the HVAC-specific stages", () => {
+    ["assessment_scheduled", "assessment_completed", "proposal_sent", "follow_up"].forEach(s => {
+      expect(STAGES).toContain(s);
     });
   });
 });
@@ -162,13 +156,17 @@ describe("Lead stats calculation", () => {
       bySource[l.captureType] = (bySource[l.captureType] || 0) + 1;
     });
 
+    const by = (s: string) => leads.filter(l => l.status === s).length;
     return {
       total: leads.length,
-      new: leads.filter(l => l.status === "new").length,
-      contacted: leads.filter(l => l.status === "contacted").length,
-      qualified: leads.filter(l => l.status === "qualified").length,
-      booked: leads.filter(l => l.status === "booked").length,
-      lost: leads.filter(l => l.status === "lost").length,
+      new: by("new"),
+      contacted: by("contacted"),
+      assessment_scheduled: by("assessment_scheduled"),
+      assessment_completed: by("assessment_completed"),
+      proposal_sent: by("proposal_sent"),
+      follow_up: by("follow_up"),
+      won: by("won"),
+      lost: by("lost"),
       bySource,
     };
   }
@@ -177,8 +175,8 @@ describe("Lead stats calculation", () => {
     { status: "new", captureType: "lp_heat_pump" },
     { status: "new", captureType: "lp_heat_pump" },
     { status: "contacted", captureType: "lp_commercial_vrv" },
-    { status: "qualified", captureType: "lp_fb_residential" },
-    { status: "booked", captureType: "exit_popup" },
+    { status: "assessment_scheduled", captureType: "lp_fb_residential" },
+    { status: "won", captureType: "exit_popup" },
     { status: "lost", captureType: "lp_emergency" },
   ];
 
@@ -191,8 +189,8 @@ describe("Lead stats calculation", () => {
     const stats = calculateStats(sampleLeads);
     expect(stats.new).toBe(2);
     expect(stats.contacted).toBe(1);
-    expect(stats.qualified).toBe(1);
-    expect(stats.booked).toBe(1);
+    expect(stats.assessment_scheduled).toBe(1);
+    expect(stats.won).toBe(1);
     expect(stats.lost).toBe(1);
   });
 
@@ -209,23 +207,23 @@ describe("Lead stats calculation", () => {
     const stats = calculateStats([]);
     expect(stats.total).toBe(0);
     expect(stats.new).toBe(0);
-    expect(stats.booked).toBe(0);
+    expect(stats.won).toBe(0);
     expect(Object.keys(stats.bySource)).toHaveLength(0);
   });
 });
 
 // ---- Conversion rate calculation tests ----
 describe("Conversion rate calculation", () => {
-  function calculateConversionRate(total: number, booked: number): number {
+  function calculateConversionRate(total: number, won: number): number {
     if (total === 0) return 0;
-    return Math.round((booked / total) * 100);
+    return Math.round((won / total) * 100);
   }
 
   it("should calculate 0% for no leads", () => {
     expect(calculateConversionRate(0, 0)).toBe(0);
   });
 
-  it("should calculate 100% when all leads are booked", () => {
+  it("should calculate 100% when all leads are won", () => {
     expect(calculateConversionRate(10, 10)).toBe(100);
   });
 

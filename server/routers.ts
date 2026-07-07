@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { LEAD_STAGE_ENUM } from "@shared/leadPipeline";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
@@ -361,7 +362,7 @@ export const appRouter = router({
     list: protectedProcedure
       .input(
         z.object({
-          status: z.enum(["new", "contacted", "qualified", "booked", "lost"]).optional(),
+          status: z.enum(LEAD_STAGE_ENUM).optional(),
           captureType: z.string().optional(),
           search: z.string().optional(),
           limit: z.number().optional().default(100),
@@ -376,7 +377,7 @@ export const appRouter = router({
       .input(
         z.object({
           id: z.number(),
-          status: z.enum(["new", "contacted", "qualified", "booked", "lost"]),
+          status: z.enum(LEAD_STAGE_ENUM),
         })
       )
       .mutation(async ({ input }) => {

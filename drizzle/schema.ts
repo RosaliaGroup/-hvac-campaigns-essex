@@ -68,7 +68,13 @@ export const leadCaptures = mysqlTable("leadCaptures", {
   captureType: mysqlEnum("captureType", ["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "qualify_form", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance", "lp_referral_partner", "lp_maintenance_subscription", "career_application", "partnership_inquiry", "pseg_checklist_download", "meta_lead_ad"]).notNull(),
   pageUrl: varchar("pageUrl", { length: 500 }),
   message: text("message"),
-  status: mysqlEnum("status", ["new", "contacted", "qualified", "booked", "lost"]).default("new").notNull(),
+  // Lead pipeline stage. Additive: new stages + retained legacy (qualified/booked)
+  // so pre-migration rows stay valid. Keep in sync with shared/leadPipeline.ts.
+  status: mysqlEnum("status", [
+    "new", "contacted", "assessment_scheduled", "assessment_completed",
+    "proposal_sent", "follow_up", "won", "lost",
+    "qualified", "booked", // legacy — mapped to new stages on display
+  ]).default("new").notNull(),
   notes: text("notes"),
   assignedTo: varchar("assignedTo", { length: 255 }),
   followUpAt: timestamp("followUpAt"),

@@ -11,6 +11,7 @@ import {
   teamMembers
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import type { LeadStageValue } from '@shared/leadPipeline';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -162,7 +163,7 @@ export async function createLeadCapture(capture: InsertLeadCapture) {
 }
 
 export async function getAllLeadCaptures(filters?: {
-  status?: "new" | "contacted" | "qualified" | "booked" | "lost";
+  status?: LeadStageValue;
   captureType?: string;
   search?: string;
   limit?: number;
@@ -203,7 +204,7 @@ export async function getAllLeadCaptures(filters?: {
     .offset(filters?.offset ?? 0);
 }
 
-export async function updateLeadCaptureStatus(id: number, status: "new" | "contacted" | "qualified" | "booked" | "lost") {
+export async function updateLeadCaptureStatus(id: number, status: LeadStageValue) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(leadCaptures).set({ status, updatedAt: new Date() }).where(eq(leadCaptures.id, id));

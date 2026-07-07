@@ -21,7 +21,7 @@ const navItems = [
   // writes to it. /leads is intentionally left in place for now; future work should
   // unify these into a single "Lead Inbox" (see BUGFIX note below).
   { label: "Lead Inbox", href: "/lead-dashboard", icon: Users },
-  { label: "Customers", href: "/customers", icon: UserRound },
+  { label: "Contacts", href: "/customers", icon: UserRound },
   { label: "Calendar", href: "/calendar", icon: CalendarClock },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
   { label: "Lead Scoring", href: "/lead-scoring", icon: Star },

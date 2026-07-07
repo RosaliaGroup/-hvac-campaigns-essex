@@ -268,6 +268,7 @@ function Router() {
       <Route path={"/leads"} component={protect(LeadTracker)} />
       <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
       <Route path={"/customers"} component={protect(Customers)} />
+      <Route path={"/contacts"} component={protect(Customers)} />
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />
       <Route path={"/settings/integrations"} component={protect(Integrations)} />
       <Route path={"/calendar"} component={protect(AppointmentCalendar)} />

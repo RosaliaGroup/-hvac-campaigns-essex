@@ -15,11 +15,18 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Building2, ChevronRight, Home, Mail, Phone, Plus, Search, UserRound, Users,
 } from "lucide-react";
+import { deriveRelationship, relationshipLabel } from "@shared/leadPipeline";
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-green-100 text-green-700",
   inactive: "bg-yellow-100 text-yellow-700",
   archived: "bg-gray-100 text-gray-600",
+};
+
+const RELATIONSHIP_BADGE: Record<string, string> = {
+  Lead: "bg-slate-100 text-slate-700",
+  Prospect: "bg-amber-100 text-amber-800",
+  Customer: "bg-green-100 text-green-800",
 };
 
 export default function Customers() {
@@ -84,14 +91,14 @@ export default function Customers() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="h-6 w-6 text-[#1e3a5f]" /> Customers
+              <Users className="h-6 w-6 text-[#1e3a5f]" /> Contacts
             </h1>
             <p className="text-sm text-muted-foreground">
-              Canonical customer records — converted from leads or added manually.
+              One record per person — Lead, Prospect, or Customer. No duplicates.
             </p>
           </div>
           <Button onClick={() => setCreateOpen(true)} className="bg-[#1e3a5f] hover:bg-[#16304f]">
-            <Plus className="h-4 w-4 mr-1" /> Add Customer
+            <Plus className="h-4 w-4 mr-1" /> Add Contact
           </Button>
         </div>
 
@@ -148,22 +155,23 @@ export default function Customers() {
         {/* Table */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">All Customers ({data?.total ?? 0})</CardTitle>
+            <CardTitle className="text-base">All Contacts ({data?.total ?? 0})</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <p className="text-sm text-muted-foreground py-8 text-center">Loading customers…</p>
             ) : items.length === 0 ? (
               <p className="text-sm text-muted-foreground py-8 text-center">
-                No customers yet. Convert a lead from the Lead Dashboard, or add one manually.
+                No contacts yet. New leads become contacts automatically, or add one manually.
               </p>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Type</TableHead>
                     <TableHead>Contact</TableHead>
+                    <TableHead>Relationship</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Details</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="w-8" />
@@ -183,6 +191,14 @@ export default function Customers() {
                             : <UserRound className="h-4 w-4 text-muted-foreground" />}
                           {c.displayName}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {(() => {
+                          // Contact-directory rows are Customers; Lead/Prospect surface in the Lead Inbox
+                          // (derived from stage) and fully unify here with the future Contacts model.
+                          const label = relationshipLabel(deriveRelationship({ isCustomer: true }));
+                          return <Badge className={RELATIONSHIP_BADGE[label]} variant="secondary">{label}</Badge>;
+                        })()}
                       </TableCell>
                       <TableCell className="capitalize text-sm">{c.type}</TableCell>
                       <TableCell>
