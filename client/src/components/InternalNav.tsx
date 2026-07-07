@@ -15,7 +15,12 @@ const navItems = [
   { label: "Command Center", href: "/command-center", icon: LayoutDashboard },
   { label: "SMS Campaigns", href: "/sms-campaigns", icon: MessageSquare },
   { label: "Marketing", href: "/marketing-dashboard", icon: Megaphone },
-  { label: "Leads", href: "/leads", icon: Users },
+  // NOTE: "Leads" points to /lead-dashboard (reads the leadCaptures table — real
+  // website/landing-page submissions). The older /leads route (LeadTracker) reads
+  // the separate `leads` table, which is currently empty because no intake path
+  // writes to it. /leads is intentionally left in place for now; future work should
+  // unify these into a single "Lead Inbox" (see BUGFIX note below).
+  { label: "Leads", href: "/lead-dashboard", icon: Users },
   { label: "Customers", href: "/customers", icon: UserRound },
   { label: "Calendar", href: "/calendar", icon: CalendarClock },
   { label: "Jobs", href: "/jobs", icon: Briefcase },
