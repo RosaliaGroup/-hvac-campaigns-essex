@@ -1,0 +1,1 @@
+ALTER TABLE `appointments` MODIFY COLUMN `status` enum('pending','confirmed','completed','cancelled','rescheduled','arrived') NOT NULL DEFAULT 'pending';

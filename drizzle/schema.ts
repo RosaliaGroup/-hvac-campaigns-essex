@@ -296,8 +296,8 @@ export const appointments = mysqlTable("appointments", {
   /** Where this booking came from */
   source: mysqlEnum("source", ["website", "phone", "referral", "partner", "repeat_customer", "other"]),
   issueDescription: text("issueDescription"),
-  // Status
-  status: mysqlEnum("status", ["pending", "confirmed", "completed", "cancelled", "rescheduled"]).default("pending").notNull(),
+  // Status — "arrived" appended for the Field App (additive: existing rows/indexes unchanged).
+  status: mysqlEnum("status", ["pending", "confirmed", "completed", "cancelled", "rescheduled", "arrived"]).default("pending").notNull(),
   notes: text("notes"),
   // Source tracking
   vapiCallId: varchar("vapiCallId", { length: 255 }),
