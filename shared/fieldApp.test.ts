@@ -7,6 +7,10 @@ import {
   statusForFieldAction,
   resolveTeamMemberId,
   dayRangeInTimeZone,
+  fieldTimestamp,
+  formatNoteEntry,
+  appendNote,
+  buildFieldNotesUpdate,
   FIELD_TIME_ZONE,
   type FieldAppointmentLike,
 } from "./fieldApp";
@@ -131,5 +135,75 @@ describe("fieldApp — resolveTeamMemberId", () => {
     expect(resolveTeamMemberId({ openId: "oauth-abc", id: 5 })).toBeNull();
     expect(resolveTeamMemberId(null)).toBeNull();
     expect(resolveTeamMemberId(undefined)).toBeNull();
+  });
+});
+
+describe("fieldApp — append-only notes", () => {
+  // 2026-07-07 11:32 AM America/New_York === 15:32 UTC (EDT, UTC-4)
+  const AT = new Date("2026-07-07T15:32:00.000Z");
+
+  it("formats a deterministic timestamp in the field timezone", () => {
+    expect(fieldTimestamp(AT)).toBe("2026-07-07 11:32 AM");
+  });
+
+  it("formats a note entry with timestamp and author", () => {
+    expect(formatNoteEntry("Gate code 4417", AT, "Ana Haynes")).toBe(
+      "[2026-07-07 11:32 AM — Ana Haynes] Gate code 4417",
+    );
+  });
+
+  it("falls back to a generic author label when none is given", () => {
+    expect(formatNoteEntry("done", AT, null)).toBe("[2026-07-07 11:32 AM — Field] done");
+    expect(formatNoteEntry("done", AT, "   ")).toBe("[2026-07-07 11:32 AM — Field] done");
+  });
+
+  it("APPENDS to existing notes and preserves prior content verbatim", () => {
+    const existing = "Prior note from office.";
+    const result = appendNote(existing, "Arrived on site.", AT, "Ana Haynes");
+    // old content untouched at the top
+    expect(result.startsWith("Prior note from office.")).toBe(true);
+    // new entry appended after a blank line
+    expect(result).toBe(
+      "Prior note from office.\n\n[2026-07-07 11:32 AM — Ana Haynes] Arrived on site.",
+    );
+    // it never replaced the original
+    expect(result).not.toBe("Arrived on site.");
+    expect(result.includes(existing)).toBe(true);
+  });
+
+  it("stacks multiple appends without losing any", () => {
+    let notes = "";
+    notes = appendNote(notes, "first", AT, "A");
+    notes = appendNote(notes, "second", AT, "B");
+    expect(notes).toBe(
+      "[2026-07-07 11:32 AM — A] first\n\n[2026-07-07 11:32 AM — B] second",
+    );
+    expect(notes.match(/first/g)?.length).toBe(1);
+    expect(notes.match(/second/g)?.length).toBe(1);
+  });
+
+  it("writes only the new entry when there were no existing notes", () => {
+    expect(appendNote(null, "hello", AT, "A")).toBe("[2026-07-07 11:32 AM — A] hello");
+    expect(appendNote("", "hello", AT, "A")).toBe("[2026-07-07 11:32 AM — A] hello");
+  });
+
+  it("leaves existing notes unchanged when the new text is blank", () => {
+    expect(appendNote("keep me", "   ", AT, "A")).toBe("keep me");
+    expect(appendNote("keep me", "", AT, "A")).toBe("keep me");
+  });
+});
+
+describe("fieldApp — notes update has no calendar/SMS side effects", () => {
+  it("builds an update payload with invites AND confirmation disabled", () => {
+    const payload = buildFieldNotesUpdate(6, "some notes");
+    expect(payload).toEqual({
+      id: 6,
+      notes: "some notes",
+      sendInvites: false,
+      sendConfirmation: false,
+    });
+    // guardrails: these must be false so Add Note never triggers Google Calendar sync or SMS
+    expect(payload.sendInvites).toBe(false);
+    expect(payload.sendConfirmation).toBe(false);
   });
 });

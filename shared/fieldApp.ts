@@ -208,3 +208,68 @@ export function resolveTeamMemberId(
   if (typeof user.id === "number" && user.id < 0) return -user.id;
   return null;
 }
+
+// ── Append-only field notes ──────────────────────────────────────────────────
+// The DB has a single `notes` text column. To avoid ever destroying prior notes,
+// the Field App NEVER overwrites: it appends a new, timestamped, authored entry
+// to whatever is already there. Existing notes render read-only as history.
+
+/**
+ * Deterministic, timezone-stable timestamp for a note header, e.g.
+ * "2026-07-07 11:32 AM". Built from Intl parts (not toLocaleString) so the format
+ * is stable across environments and unit-testable.
+ */
+export function fieldTimestamp(at: Date, timeZone: string = FIELD_TIME_ZONE): string {
+  const map: Record<string, string> = {};
+  for (const p of new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(at)) {
+    if (p.type !== "literal") map[p.type] = p.value;
+  }
+  const ap = (map.dayPeriod || "").toUpperCase();
+  return `${map.year}-${map.month}-${map.day} ${map.hour}:${map.minute} ${ap}`.trim();
+}
+
+/** Format one note entry: "[<timestamp> — <author>] <text>". */
+export function formatNoteEntry(
+  text: string,
+  at: Date,
+  author?: string | null,
+  timeZone: string = FIELD_TIME_ZONE,
+): string {
+  const who = author && author.trim() ? author.trim() : "Field";
+  return `[${fieldTimestamp(at, timeZone)} — ${who}] ${text.trim()}`;
+}
+
+/**
+ * Append a new note to existing notes WITHOUT modifying prior content. Returns
+ * the combined string (existing preserved verbatim, new entry after a blank
+ * line). Returns existing unchanged when the new text is blank.
+ */
+export function appendNote(
+  existing: string | null | undefined,
+  newText: string,
+  at: Date,
+  author?: string | null,
+  timeZone: string = FIELD_TIME_ZONE,
+): string {
+  const trimmedNew = (newText ?? "").trim();
+  const base = (existing ?? "").replace(/\s+$/, "");
+  if (!trimmedNew) return existing ?? "";
+  const entry = formatNoteEntry(trimmedNew, at, author, timeZone);
+  return base ? `${base}\n\n${entry}` : entry;
+}
+
+/**
+ * Payload for the Field App's note save. Explicitly disables invite/calendar
+ * re-sync AND SMS so appending a note has NO Google Calendar or SMS side effects.
+ */
+export function buildFieldNotesUpdate(id: number, notes: string) {
+  return { id, notes, sendInvites: false as const, sendConfirmation: false as const };
+}
