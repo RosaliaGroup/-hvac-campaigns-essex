@@ -218,6 +218,13 @@
       "when": 1783371399052,
       "tag": "0030_complex_emma_frost",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1783393438036,
+      "tag": "0031_high_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }

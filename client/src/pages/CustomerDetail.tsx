@@ -18,7 +18,7 @@ import { JOB_STATUS_META, formatMoney } from "@/lib/jobPresentation";
 import { Briefcase } from "lucide-react";
 import {
   ArrowLeft, Building2, Calendar, Home, Mail, MapPin, Pencil, Phone, PhoneCall,
-  Plus, Star, Trash2, UserRound, Zap,
+  Plus, Star, Trash2, UserRound, Zap, RefreshCw, CheckCircle2, XCircle, Plug, Link2, Loader2,
 } from "lucide-react";
 
 function formatDate(date: Date | string | null | undefined) {
@@ -199,6 +199,9 @@ export default function CustomerDetail() {
           </div>
           <Button variant="outline" onClick={openEdit}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
         </div>
+
+        {/* QuickBooks sync */}
+        <QuickBooksCard customer={customer} customerId={customerId} onChange={refetch} />
 
         {/* Contact card */}
         <Card>
@@ -572,6 +575,130 @@ function CustomerJobsTab({ customerId }: { customerId: number }) {
               </div>
             );
           })
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * QuickBooks sync panel (Task 7). Live once QuickBooks is connected:
+ * push/link/update a customer with merge protection, pull current QBO values,
+ * and resolve duplicate-name / match conflicts inline.
+ */
+function QuickBooksCard({
+  customer,
+  customerId,
+  onChange,
+}: {
+  customer: {
+    quickbooksCustomerId: string | null;
+    quickbooksSyncStatus: string;
+    quickbooksSyncedAt: Date | string | null;
+    quickbooksSyncError: string | null;
+  };
+  customerId: number;
+  onChange: () => void;
+}) {
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+  const statusQ = trpc.quickbooks.getStatus.useQuery();
+  const [conflict, setConflict] = useState<
+    | { matchedBy: string; candidate: { qbId: string; displayName: string; email?: string | null; phone?: string | null } }
+    | null
+  >(null);
+
+  const push = trpc.quickbooks.pushCustomer.useMutation({
+    onSuccess: res => {
+      if (res.outcome === "conflict") {
+        setConflict({ matchedBy: res.matchedBy, candidate: res.candidate });
+        toast({ title: "Possible duplicate in QuickBooks", description: `Matched by ${res.matchedBy}` });
+      } else {
+        setConflict(null);
+        toast({ title: `QuickBooks: ${res.outcome}` });
+        onChange();
+      }
+    },
+    onError: e => toast({ title: "Push failed", description: e.message, variant: "destructive" }),
+  });
+  const pull = trpc.quickbooks.pullCustomer.useMutation({
+    onSuccess: () => { toast({ title: "Synced from QuickBooks" }); onChange(); },
+    onError: e => toast({ title: "Sync failed", description: e.message, variant: "destructive" }),
+  });
+  const resolve = trpc.quickbooks.resolveConflict.useMutation({
+    onSuccess: res => { setConflict(null); toast({ title: `Resolved: ${res.outcome}` }); onChange(); },
+    onError: e => toast({ title: "Resolve failed", description: e.message, variant: "destructive" }),
+  });
+
+  const connected = statusQ.data?.connected;
+  const linked = Boolean(customer.quickbooksCustomerId);
+  const busy = push.isPending || pull.isPending || resolve.isPending;
+
+  if (!connected) {
+    return (
+      <Card>
+        <CardContent className="pt-6 flex items-center justify-between gap-3 text-sm">
+          <span className="flex items-center gap-2 text-muted-foreground">
+            <Building2 className="h-4 w-4" /> QuickBooks not connected
+          </span>
+          <Button variant="outline" size="sm" onClick={() => navigate("/settings/integrations")}>
+            <Plug className="h-4 w-4 mr-1" /> Connect
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+        <CardTitle className="text-base flex items-center gap-2 text-[#1e3a5f]">
+          <Building2 className="h-4 w-4" /> QuickBooks
+        </CardTitle>
+        {linked
+          ? <Badge className="bg-green-100 text-green-700"><CheckCircle2 className="h-3 w-3 mr-1" /> Linked · {customer.quickbooksCustomerId}</Badge>
+          : <Badge variant="secondary" className="text-muted-foreground">Not linked</Badge>}
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {linked && (
+          <div className="text-muted-foreground">Last sync: {formatDate(customer.quickbooksSyncedAt)}</div>
+        )}
+        {customer.quickbooksSyncStatus === "error" && customer.quickbooksSyncError && (
+          <div className="flex items-start gap-2 text-red-600"><XCircle className="h-4 w-4 mt-0.5 shrink-0" />{customer.quickbooksSyncError}</div>
+        )}
+
+        {conflict ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <div className="font-medium text-amber-800">Matched an existing QuickBooks customer (by {conflict.matchedBy})</div>
+            <div className="text-amber-900">
+              {conflict.candidate.displayName}
+              {conflict.candidate.email && <span className="text-muted-foreground"> · {conflict.candidate.email}</span>}
+              {conflict.candidate.phone && <span className="text-muted-foreground"> · {conflict.candidate.phone}</span>}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button size="sm" onClick={() => resolve.mutate({ customerId, resolution: "link" })} disabled={busy}>
+                <Link2 className="h-4 w-4 mr-1" /> Link to existing
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => resolve.mutate({ customerId, resolution: "update" })} disabled={busy}>
+                Update existing
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { resolve.mutate({ customerId, resolution: "skip" }); setConflict(null); }} disabled={busy}>
+                Skip
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={() => push.mutate({ customerId })} disabled={busy}>
+              {push.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1" />}
+              {linked ? "Re-push" : "Push to QuickBooks"}
+            </Button>
+            {linked && (
+              <Button size="sm" variant="outline" onClick={() => pull.mutate({ customerId })} disabled={busy}>
+                {pull.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null} Sync from QuickBooks
+              </Button>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

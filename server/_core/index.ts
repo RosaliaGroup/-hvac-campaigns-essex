@@ -11,6 +11,7 @@ import { registerSeoRoutes } from "../seo";
 import { startScheduledSmsProcessor } from "../services/scheduledSms";
 import { registerSmsWebhookRoutes } from "../services/smsWebhook";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
+import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -45,6 +46,8 @@ async function startServer() {
   registerSmsWebhookRoutes(app);
   // Meta Lead Gen webhook (Instant Form submissions)
   registerMetaLeadWebhookRoutes(app);
+  // QuickBooks OAuth callback (/api/integrations/quickbooks/callback)
+  registerQuickbooksRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
