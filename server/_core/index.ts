@@ -12,6 +12,7 @@ import { startScheduledSmsProcessor } from "../services/scheduledSms";
 import { registerSmsWebhookRoutes } from "../services/smsWebhook";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
+import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -48,6 +49,8 @@ async function startServer() {
   registerMetaLeadWebhookRoutes(app);
   // QuickBooks OAuth callback (/api/integrations/quickbooks/callback)
   registerQuickbooksRoutes(app);
+  // Google Calendar OAuth callback (/api/integrations/google-calendar/callback)
+  registerGoogleCalendarRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",

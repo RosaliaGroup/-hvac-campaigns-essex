@@ -26,7 +26,6 @@ function fmt(d: Date | string | null | undefined): string {
 const COMING_SOON = [
   { name: "Stripe", desc: "Payments & payment links", icon: CreditCard },
   { name: "Gmail", desc: "Send & sync email", icon: Mail },
-  { name: "Google Calendar", desc: "Two-way appointment sync", icon: CalendarClock },
   { name: "Telnyx", desc: "SMS & voice (connected via env)", icon: MessageSquare },
   { name: "Vapi", desc: "AI voice receptionist", icon: Bot },
   { name: "Zapier", desc: "Automation webhooks", icon: Zap },
@@ -41,7 +40,10 @@ export default function Integrations() {
   const logsQ = trpc.quickbooks.recentLogs.useQuery({ limit: 25 });
   const status = statusQ.data;
 
-  // Surface the OAuth callback result (?qb_connected / ?qb_error).
+  const gcalStatusQ = trpc.googleCalendar.getStatus.useQuery();
+  const gcal = gcalStatusQ.data;
+
+  // Surface the OAuth callback result (?qb_* / ?gcal_*).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("qb_connected")) {
@@ -51,9 +53,25 @@ export default function Integrations() {
     } else if (params.get("qb_error")) {
       toast({ title: "QuickBooks connection failed", description: params.get("qb_error") ?? undefined, variant: "destructive" });
       window.history.replaceState({}, "", "/settings/integrations");
+    } else if (params.get("gcal_connected")) {
+      toast({ title: "Google Calendar connected" });
+      gcalStatusQ.refetch();
+      window.history.replaceState({}, "", "/settings/integrations");
+    } else if (params.get("gcal_error")) {
+      toast({ title: "Google Calendar connection failed", description: params.get("gcal_error") ?? undefined, variant: "destructive" });
+      window.history.replaceState({}, "", "/settings/integrations");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const gcalConnect = trpc.googleCalendar.connectStart.useMutation({
+    onSuccess: res => { window.location.href = res.url; },
+    onError: e => toast({ title: "Could not start connection", description: e.message, variant: "destructive" }),
+  });
+  const gcalDisconnect = trpc.googleCalendar.disconnect.useMutation({
+    onSuccess: () => { toast({ title: "Google Calendar disconnected" }); gcalStatusQ.refetch(); },
+    onError: e => toast({ title: "Disconnect failed", description: e.message, variant: "destructive" }),
+  });
 
   const connect = trpc.quickbooks.connectStart.useMutation({
     onSuccess: res => { window.location.href = res.url; },
@@ -127,6 +145,57 @@ export default function Integrations() {
                     {pushAll.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null} Push all unsynced customers
                   </Button>
                   <Button variant="destructive" onClick={() => disconnect.mutate()} disabled={!isAdmin || disconnect.isPending}>
+                    Disconnect
+                  </Button>
+                </>
+              )}
+              {!isAdmin && <span className="text-xs text-muted-foreground self-center">Admin access required to change connection.</span>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Google Calendar */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-[#1e3a5f]">
+              <CalendarClock className="h-5 w-5" /> Google Calendar
+            </CardTitle>
+            {gcal?.connected
+              ? <Badge className="bg-green-100 text-green-700"><CheckCircle2 className="h-3 w-3 mr-1" /> Connected</Badge>
+              : <Badge variant="secondary" className="text-muted-foreground"><XCircle className="h-3 w-3 mr-1" /> {gcal?.status ?? "Not connected"}</Badge>}
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              When connected, new appointments create a Google Calendar event and Google emails the invites to
+              attendees. When not connected, attendees still receive an .ics email invite.
+            </p>
+            {!gcal?.configured && (
+              <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                Not fully configured — set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_CALENDAR_REDIRECT_URI and
+                ENCRYPTION_KEY, then reload.
+              </div>
+            )}
+            {gcal?.connected && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                <Meta label="Account" value={gcal?.googleAccountEmail ?? "—"} />
+                <Meta label="Calendar" value={gcal?.googleCalendarId ?? "—"} />
+                <Meta label="Token expires" value={fmt(gcal?.expiresAt)} />
+                <Meta label="Last sync" value={fmt(gcal?.lastSyncAt)} />
+              </div>
+            )}
+            {gcal?.lastError && <p className="text-sm text-red-600">{gcal.lastError}</p>}
+            <div className="flex flex-wrap gap-2">
+              {!gcal?.connected ? (
+                <Button onClick={() => gcalConnect.mutate()} disabled={!isAdmin || !gcal?.configured || gcalConnect.isPending}>
+                  {gcalConnect.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plug className="h-4 w-4 mr-1" />}
+                  Connect Google Calendar
+                </Button>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={() => gcalConnect.mutate()} disabled={!isAdmin || gcalConnect.isPending}>
+                    <RefreshCw className="h-4 w-4 mr-1" /> Reconnect
+                  </Button>
+                  <Button variant="destructive" onClick={() => gcalDisconnect.mutate()} disabled={!isAdmin || gcalDisconnect.isPending}>
                     Disconnect
                   </Button>
                 </>

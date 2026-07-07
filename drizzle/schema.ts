@@ -299,12 +299,80 @@ export const appointments = mysqlTable("appointments", {
   propertyId: int("propertyId"),
   /** Job this visit belongs to (Phase 2 — Job 1→N Appointments) */
   jobId: int("jobId"),
+  // ── Google Calendar + invites (Task 8) ──────────────────────────────────────
+  /** Google Calendar event id once this appointment is synced (null = not synced). */
+  googleCalendarEventId: varchar("googleCalendarEventId", { length: 1024 }),
+  /** Calendar the event was written to (usually "primary"). */
+  googleCalendarId: varchar("googleCalendarId", { length: 320 }),
+  /** Result of the last Google Calendar sync attempt. */
+  googleSyncStatus: mysqlEnum("googleSyncStatus", ["not_synced", "synced", "error"]).default("not_synced").notNull(),
+  googleSyncError: varchar("googleSyncError", { length: 500 }),
+  /** Overall invite state across all attendees (native Google invites or ICS email fallback). */
+  inviteStatus: mysqlEnum("inviteStatus", ["none", "pending", "sent", "partial", "failed"]).default("none").notNull(),
   // Timestamps
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 export type Appointment = typeof appointments.$inferSelect;
 export type InsertAppointment = typeof appointments.$inferInsert;
+
+/**
+ * Appointment attendees (Task 8) — internal coworkers, the customer, and
+ * external guests invited to an appointment. One row per invited email.
+ */
+export const appointmentAttendees = mysqlTable(
+  "appointmentAttendees",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    appointmentId: int("appointmentId").notNull(),
+    /** teamMembers.id when role="team_member"/"organizer"; null for customer/guest. */
+    teamMemberId: int("teamMemberId"),
+    email: varchar("email", { length: 320 }).notNull(),
+    name: varchar("name", { length: 255 }),
+    role: mysqlEnum("role", ["organizer", "team_member", "customer", "guest"]).notNull(),
+    /** Invite lifecycle: pending → sent (Google/ICS) → accepted/declined/tentative, or failed. */
+    inviteStatus: mysqlEnum("inviteStatus", ["pending", "sent", "accepted", "declined", "tentative", "failed"])
+      .default("pending")
+      .notNull(),
+    respondedAt: timestamp("respondedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    appointmentIdx: index("appointmentAttendees_appointmentId_idx").on(table.appointmentId),
+  }),
+);
+export type AppointmentAttendee = typeof appointmentAttendees.$inferSelect;
+export type InsertAppointmentAttendee = typeof appointmentAttendees.$inferInsert;
+
+/**
+ * Google Calendar OAuth connection (Task 8). Mirrors quickbooksConnections:
+ * a single active connection; access/refresh tokens AES-256-GCM encrypted at
+ * rest, NEVER logged or returned to the client.
+ */
+export const googleCalendarConnections = mysqlTable("googleCalendarConnections", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Google account this connection authenticates as. */
+  googleAccountEmail: varchar("googleAccountEmail", { length: 320 }).notNull().unique(),
+  /** Target calendar events are written to (default "primary"). */
+  googleCalendarId: varchar("googleCalendarId", { length: 320 }).default("primary").notNull(),
+  /** AES-256-GCM ciphertext (iv:tag:data hex). NEVER logged, NEVER sent to client. */
+  accessTokenEncrypted: text("accessTokenEncrypted").notNull(),
+  /** Google refresh tokens do NOT rotate on refresh; kept for the life of the grant. */
+  refreshTokenEncrypted: text("refreshTokenEncrypted").notNull(),
+  scope: text("scope"),
+  /** When the current access token expires (~1h from issue). */
+  expiresAt: timestamp("expiresAt").notNull(),
+  connectedAt: timestamp("connectedAt").defaultNow().notNull(),
+  lastRefreshAt: timestamp("lastRefreshAt"),
+  lastSyncAt: timestamp("lastSyncAt"),
+  status: mysqlEnum("status", ["connected", "expired", "revoked", "error"]).default("connected").notNull(),
+  lastError: text("lastError"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type GoogleCalendarConnection = typeof googleCalendarConnections.$inferSelect;
+export type InsertGoogleCalendarConnection = typeof googleCalendarConnections.$inferInsert;
 
 /**
  * Team members table for email/password dashboard access.
