@@ -239,6 +239,13 @@
       "when": 1783428490724,
       "tag": "0033_appointment_types_service_meet_reminder",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "5",
+      "when": 1783431239383,
+      "tag": "0034_appointment_status_arrived",
+      "breakpoints": true
     }
   ]
 }
