@@ -28,7 +28,8 @@ describe("mapToGoogleEvent", () => {
       { email: "jane@example.com", displayName: "Jane" },
       { email: "tech@x.com" },
     ]);
-    expect(event.reminders).toEqual({ useDefault: true });
+    // No reminder requested → no overrides.
+    expect(event.reminders).toEqual({ useDefault: false, overrides: [] });
   });
 
   it("omits optional fields when absent", () => {
@@ -41,6 +42,31 @@ describe("mapToGoogleEvent", () => {
     expect(event.description).toBeUndefined();
     expect(event.location).toBeUndefined();
     expect(event.start.timeZone).toBe("America/New_York");
+    expect(event.conferenceData).toBeUndefined();
+  });
+
+  it("adds a reminder override when reminderMinutes is set (Google sync)", () => {
+    const event = mapToGoogleEvent({
+      summary: "X",
+      scheduledAt: new Date("2026-07-08T00:00:00.000Z"),
+      durationMinutes: 60,
+      attendees: [],
+      reminderMinutes: 30,
+    }) as any;
+    expect(event.reminders).toEqual({ useDefault: false, overrides: [{ method: "popup", minutes: 30 }] });
+  });
+
+  it("requests a Google Meet when createMeet is set", () => {
+    const event = mapToGoogleEvent({
+      summary: "X",
+      scheduledAt: new Date("2026-07-08T00:00:00.000Z"),
+      durationMinutes: 60,
+      attendees: [],
+      createMeet: true,
+      meetRequestId: "meet-42",
+    }) as any;
+    expect(event.conferenceData.createRequest.requestId).toBe("meet-42");
+    expect(event.conferenceData.createRequest.conferenceSolutionKey).toEqual({ type: "hangoutsMeet" });
   });
 });
 

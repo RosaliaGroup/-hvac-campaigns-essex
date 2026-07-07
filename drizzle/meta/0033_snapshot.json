@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "dba21138-a1c5-4faf-ac8b-876872027ad6",
-  "prevId": "0df3d7ab-ac50-4e0c-9613-6c7c919a5a78",
+  "id": "866763db-5b6a-436f-96c0-c55802c51287",
+  "prevId": "8a81dd57-e66d-4460-b08b-b5284ea13234",
   "tables": {
     "aiScripts": {
       "name": "aiScripts",
@@ -481,7 +481,7 @@
         },
         "status": {
           "name": "status",
-          "type": "enum('pending','confirmed','completed','cancelled','rescheduled','arrived')",
+          "type": "enum('pending','confirmed','completed','cancelled','rescheduled')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
@@ -2295,7 +2295,7 @@
         },
         "status": {
           "name": "status",
-          "type": "enum('new','contacted','assessment_scheduled','assessment_completed','proposal_sent','follow_up','won','lost','qualified','booked')",
+          "type": "enum('new','contacted','qualified','booked','lost')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,

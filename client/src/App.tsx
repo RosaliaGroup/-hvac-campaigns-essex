@@ -78,6 +78,7 @@ import AnalyticsReports from "./pages/AnalyticsReports";
 import TakeOffAI from "./pages/TakeOffAI";
 import TakeOffDetail from "./pages/TakeOffDetail";
 import TakeOffPublic from "./pages/TakeOffPublic";
+import FieldToday from "./pages/FieldToday";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -272,6 +273,8 @@ function Router() {
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />
       <Route path={"/settings/integrations"} component={protect(Integrations)} />
       <Route path={"/calendar"} component={protect(AppointmentCalendar)} />
+      {/* Field App (mobile) — today's assigned appointments for technicians/sales */}
+      <Route path={"/field/today"} component={protect(FieldToday)} />
       <Route path={"/jobs"} component={protect(Jobs)} />
       <Route path={"/jobs/:id"} component={protect(JobDetail)} />
       <Route path={"/campaign-performance"} component={protect(CampaignPerformance)} />

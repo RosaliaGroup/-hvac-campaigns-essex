@@ -33,14 +33,17 @@ import {
   appointments as appointmentsTable,
   teamMembers as teamMembersTable,
   appointmentAttendees as appointmentAttendeesTable,
+  customers as customersTable,
 } from "../drizzle/schema";
+import { resolveTeamMemberId, dayRangeInTimeZone } from "../shared/fieldApp";
 import {
   normalizeAttendees,
   replaceAttendees,
   syncAppointmentInvites,
   type AttendeeInput,
 } from "./services/appointmentInvites";
-import { and as dAnd, eq as dEq, gte as dGte, lte as dLte, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
+import { APPOINTMENT_TYPE_ENUM } from "../shared/appointmentTypes";
+import { and as dAnd, eq as dEq, gte as dGte, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
 
 /** Zod shape for an attendee coming from the appointment dialog. */
 const attendeeInputSchema = z.object({
@@ -669,7 +672,7 @@ export const appRouter = router({
       .input(z.object({
         limit: z.number().optional().default(100),
         offset: z.number().optional().default(0),
-        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled"]).optional(),
+        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled", "arrived"]).optional(),
         assignedToId: z.number().optional(),
         customerId: z.number().optional(),
         /** Filter on scheduledAt range (ISO strings) */
@@ -733,13 +736,19 @@ export const appRouter = router({
         email: z.string().email().max(320).optional().nullable(),
         propertyAddress: z.string().max(1000).optional().nullable(),
         propertyType: z.enum(["residential", "commercial"]).default("residential"),
-        appointmentType: z.enum(["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]),
+        appointmentType: z.enum(APPOINTMENT_TYPE_ENUM),
+        /** Second dropdown (equipment/job), see shared/appointmentTypes.ts. */
+        serviceType: z.string().max(100).optional().nullable(),
         jobType: z.enum(["service_call", "diagnostic", "repair", "maintenance", "installation", "replacement", "estimate", "commercial_hvac", "residential_hvac", "boiler", "furnace", "ac", "heat_pump", "mini_split", "rooftop_unit", "refrigeration", "other"]).optional().nullable(),
         priority: z.enum(["normal", "urgent", "emergency"]).default("normal"),
         source: z.enum(["website", "phone", "referral", "partner", "repeat_customer", "other"]).optional().nullable(),
         scheduledAt: z.string().datetime(),
         durationMinutes: z.number().int().min(15).max(480).default(60),
         assignedToId: z.number().int().optional().nullable(),
+        /** Google reminder in minutes (15/30/60/120/1440); null = none. */
+        reminderMinutes: z.number().int().min(0).max(10080).optional().nullable(),
+        /** Attach a Google Meet link to the calendar event. */
+        googleMeetRequested: z.boolean().default(false),
         customerId: z.number().int().optional().nullable(),
         propertyId: z.number().int().optional().nullable(),
         jobId: z.number().int().optional().nullable(),
@@ -764,6 +773,9 @@ export const appRouter = router({
           propertyAddress: input.propertyAddress ?? undefined,
           propertyType: input.propertyType,
           appointmentType: input.appointmentType,
+          serviceType: input.serviceType ?? undefined,
+          reminderMinutes: input.reminderMinutes ?? undefined,
+          googleMeetRequested: input.googleMeetRequested,
           // Keep the legacy varchars in sync for anything still reading them
           preferredDate: scheduled.toLocaleDateString("en-US", { timeZone: "America/New_York" }),
           preferredTime: scheduled.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/New_York" }),
@@ -815,7 +827,10 @@ export const appRouter = router({
         email: z.string().email().max(320).optional().nullable(),
         propertyAddress: z.string().max(1000).optional().nullable(),
         propertyType: z.enum(["residential", "commercial"]).optional(),
-        appointmentType: z.enum(["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"]).optional(),
+        appointmentType: z.enum(APPOINTMENT_TYPE_ENUM).optional(),
+        serviceType: z.string().max(100).optional().nullable(),
+        reminderMinutes: z.number().int().min(0).max(10080).optional().nullable(),
+        googleMeetRequested: z.boolean().optional(),
         jobType: z.enum(["service_call", "diagnostic", "repair", "maintenance", "installation", "replacement", "estimate", "commercial_hvac", "residential_hvac", "boiler", "furnace", "ac", "heat_pump", "mini_split", "rooftop_unit", "refrigeration", "other"]).optional().nullable(),
         priority: z.enum(["normal", "urgent", "emergency"]).optional(),
         source: z.enum(["website", "phone", "referral", "partner", "repeat_customer", "other"]).optional().nullable(),
@@ -826,7 +841,7 @@ export const appRouter = router({
         propertyId: z.number().int().optional().nullable(),
         issueDescription: z.string().optional().nullable(),
         notes: z.string().optional().nullable(),
-        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled"]).optional(),
+        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled", "arrived"]).optional(),
         sendConfirmation: z.boolean().default(true),
         /** When provided, REPLACES the attendee list (Task 8). Omit to leave unchanged. */
         attendees: z.array(attendeeInputSchema).optional(),
@@ -906,7 +921,7 @@ export const appRouter = router({
     updateStatus: protectedProcedure
       .input(z.object({
         id: z.number(),
-        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled"]),
+        status: z.enum(["pending", "confirmed", "completed", "cancelled", "rescheduled", "arrived"]),
       }))
       .mutation(async ({ input }) => {
         await db.updateAppointmentStatus(input.id, input.status);
@@ -915,6 +930,62 @@ export const appRouter = router({
           await syncAppointmentInvites({ appointmentId: input.id, cancel: true });
         }
         return { success: true };
+      }),
+
+    /**
+     * Field App (mobile) feed — today's appointments assigned to the logged-in
+     * team member, oldest-first (the day's running order). Joins the linked
+     * customer (companyName/displayName) and the assigned technician's name so
+     * the phone card needs no extra round-trips. Read-only; never touches
+     * QuickBooks, Google Calendar, or the core CRM schema.
+     */
+    fieldToday: protectedProcedure
+      .input(z.object({ now: z.string().datetime().optional() }).optional())
+      .query(async ({ input, ctx }) => {
+        const memberId = resolveTeamMemberId(ctx.user);
+        // Manus OAuth users have no field assignments → empty feed (not an error).
+        if (memberId == null) return { memberId: null, appointments: [] as const };
+
+        const dbi = await db.getDb();
+        if (!dbi) return { memberId, appointments: [] as const };
+
+        const now = input?.now ? new Date(input.now) : new Date();
+        const { start, endExclusive } = dayRangeInTimeZone(now);
+
+        const rows = await dbi
+          .select({
+            id: appointmentsTable.id,
+            scheduledAt: appointmentsTable.scheduledAt,
+            durationMinutes: appointmentsTable.durationMinutes,
+            appointmentType: appointmentsTable.appointmentType,
+            serviceType: appointmentsTable.serviceType,
+            status: appointmentsTable.status,
+            priority: appointmentsTable.priority,
+            fullName: appointmentsTable.fullName,
+            phone: appointmentsTable.phone,
+            propertyAddress: appointmentsTable.propertyAddress,
+            notes: appointmentsTable.notes,
+            issueDescription: appointmentsTable.issueDescription,
+            customerId: appointmentsTable.customerId,
+            jobId: appointmentsTable.jobId,
+            assignedToId: appointmentsTable.assignedToId,
+            companyName: customersTable.companyName,
+            customerDisplayName: customersTable.displayName,
+            technicianName: teamMembersTable.name,
+          })
+          .from(appointmentsTable)
+          .leftJoin(customersTable, dEq(appointmentsTable.customerId, customersTable.id))
+          .leftJoin(teamMembersTable, dEq(appointmentsTable.assignedToId, teamMembersTable.id))
+          .where(
+            dAnd(
+              dEq(appointmentsTable.assignedToId, memberId),
+              dGte(appointmentsTable.scheduledAt, start),
+              dLt(appointmentsTable.scheduledAt, endExclusive),
+            ),
+          )
+          .orderBy(dAsc(appointmentsTable.scheduledAt));
+
+        return { memberId, appointments: rows };
       }),
   }),
 

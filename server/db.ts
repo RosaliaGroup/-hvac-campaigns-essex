@@ -677,7 +677,7 @@ export async function getAppointmentByPhone(phone: string) {
   return appt || null;
 }
 
-export async function updateAppointmentStatus(id: number, status: "pending" | "confirmed" | "completed" | "cancelled" | "rescheduled") {
+export async function updateAppointmentStatus(id: number, status: "pending" | "confirmed" | "completed" | "cancelled" | "rescheduled" | "arrived") {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.update(appointments).set({ status }).where(eq(appointments.id, id));
