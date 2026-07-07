@@ -980,3 +980,65 @@ export const jobLineItems = mysqlTable(
 );
 export type JobLineItem = typeof jobLineItems.$inferSelect;
 export type InsertJobLineItem = typeof jobLineItems.$inferInsert;
+
+/**
+ * QuickBooks Online connection (Phase 2, Task 7 — Accounting Integration).
+ * Stores the OAuth token pair for one Intuit company (realm). Tokens are
+ * AES-256-GCM encrypted at rest (see server/_core/crypto.ts) and NEVER
+ * returned to the client. Single-connection semantics in the UI (one realm),
+ * but the table supports multiple realms via the unique realmId.
+ */
+export const quickbooksConnections = mysqlTable(
+  "quickbooksConnections",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** Intuit company/realm id — the tenant this connection is scoped to. */
+    realmId: varchar("realmId", { length: 64 }).notNull().unique(),
+    companyName: varchar("companyName", { length: 255 }),
+    /** AES-256-GCM ciphertext (iv:tag:data hex). NEVER logged, NEVER sent to client. */
+    accessTokenEncrypted: text("accessTokenEncrypted").notNull(),
+    refreshTokenEncrypted: text("refreshTokenEncrypted").notNull(),
+    /** When the current access token expires (~1h from issue). */
+    expiresAt: timestamp("expiresAt").notNull(),
+    /** When the current refresh token expires (~100 days; rotates on each refresh). */
+    refreshExpiresAt: timestamp("refreshExpiresAt"),
+    connectedAt: timestamp("connectedAt").defaultNow().notNull(),
+    lastRefreshAt: timestamp("lastRefreshAt"),
+    lastSyncAt: timestamp("lastSyncAt"),
+    status: mysqlEnum("status", ["connected", "expired", "revoked", "error"]).default("connected").notNull(),
+    lastError: text("lastError"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+);
+export type QuickbooksConnection = typeof quickbooksConnections.$inferSelect;
+export type InsertQuickbooksConnection = typeof quickbooksConnections.$inferInsert;
+
+/**
+ * QuickBooks sync log — one row per push/pull attempt, for the audit trail
+ * and the recent-activity list on the Integrations page.
+ */
+export const quickbooksSyncLogs = mysqlTable(
+  "quickbooksSyncLogs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    entityType: mysqlEnum("entityType", ["customer", "estimate", "invoice", "payment"]).notNull(),
+    /** Local entity id (e.g. customers.id) this log refers to. */
+    entityId: int("entityId"),
+    direction: mysqlEnum("direction", ["push", "pull"]).notNull(),
+    realmId: varchar("realmId", { length: 64 }),
+    success: boolean("success").notNull(),
+    durationMs: int("durationMs"),
+    /** QuickBooks entity id involved (if any). */
+    qbId: varchar("qbId", { length: 64 }),
+    errorCode: varchar("errorCode", { length: 64 }),
+    errorMessage: text("errorMessage"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    entityIdx: index("quickbooksSyncLogs_entity_idx").on(table.entityType, table.entityId),
+    createdIdx: index("quickbooksSyncLogs_createdAt_idx").on(table.createdAt),
+  }),
+);
+export type QuickbooksSyncLog = typeof quickbooksSyncLogs.$inferSelect;
+export type InsertQuickbooksSyncLog = typeof quickbooksSyncLogs.$inferInsert;

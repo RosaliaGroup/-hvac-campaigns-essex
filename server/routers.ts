@@ -24,6 +24,7 @@ import { postToFacebook, postToInstagram } from "./integrations/facebook";
 import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
+import { quickbooksRouter } from "./routers/quickbooks";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
 import { appointments as appointmentsTable, teamMembers as teamMembersTable } from "../drizzle/schema";
@@ -43,6 +44,7 @@ export const appRouter = router({
   takeoffs: takeoffsRouter,
   customers: customersRouter,
   jobs: jobsRouter,
+  quickbooks: quickbooksRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

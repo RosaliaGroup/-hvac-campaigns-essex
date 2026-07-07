@@ -9,7 +9,7 @@ import {
   BarChart3,
   ChevronRight,
   Search,
-  Facebook, UserRound, CalendarClock, Briefcase } from "lucide-react";
+  Facebook, UserRound, CalendarClock, Briefcase, Plug } from "lucide-react";
 
 const navItems = [
   { label: "Command Center", href: "/command-center", icon: LayoutDashboard },
@@ -25,6 +25,7 @@ const navItems = [
   { label: "Google Ads", href: "/google-ads-campaigns", icon: Search },
   { label: "Facebook Ads", href: "/facebook-campaigns", icon: Facebook },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Integrations", href: "/settings/integrations", icon: Plug },
 ];
 
 export default function InternalNav() {

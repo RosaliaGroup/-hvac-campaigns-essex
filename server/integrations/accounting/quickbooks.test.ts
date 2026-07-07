@@ -1,0 +1,159 @@
+import { describe, it, expect, beforeAll } from "vitest";
+import {
+  mapCustomerToQbo,
+  pickMergeMatch,
+  parseTokenResponse,
+  buildConnectionUpdate,
+  requestTokens,
+  qboApiBase,
+  escapeQboLiteral,
+  signState,
+  verifyState,
+  type QboConfig,
+  type QboCustomer,
+} from "./quickbooks";
+import { decrypt } from "../../_core/crypto";
+import type { AccountingCustomerInput } from "./types";
+
+const base: AccountingCustomerInput = {
+  localId: 1,
+  type: "residential",
+  displayName: "Jane Homeowner",
+  firstName: "Jane",
+  lastName: "Homeowner",
+  companyName: null,
+  email: "jane@example.com",
+  phone: "(862) 555-0100",
+  address: { line1: "12 Main St", line2: null, city: "Newark", state: "NJ", zip: "07102" },
+};
+
+const cfg: QboConfig = {
+  clientId: "id",
+  clientSecret: "secret",
+  redirectUri: "https://mechanicalenterprise.com/api/integrations/quickbooks/callback",
+  environment: "sandbox",
+};
+
+beforeAll(() => {
+  process.env.ENCRYPTION_KEY = "a".repeat(64);
+  process.env.JWT_SECRET = "test-state-secret";
+});
+
+describe("mapCustomerToQbo", () => {
+  it("maps core fields + BillAddr", () => {
+    const p = mapCustomerToQbo(base);
+    expect(p.DisplayName).toBe("Jane Homeowner");
+    expect(p.GivenName).toBe("Jane");
+    expect(p.FamilyName).toBe("Homeowner");
+    expect(p.PrimaryEmailAddr).toEqual({ Address: "jane@example.com" });
+    expect(p.PrimaryPhone).toEqual({ FreeFormNumber: "(862) 555-0100" });
+    expect(p.BillAddr).toMatchObject({ Line1: "12 Main St", City: "Newark", CountrySubDivisionCode: "NJ", PostalCode: "07102" });
+  });
+
+  it("uses CompanyName for commercial and omits empty fields", () => {
+    const p = mapCustomerToQbo({ ...base, companyName: "Acme HVAC LLC", address: null, phone: null });
+    expect(p.CompanyName).toBe("Acme HVAC LLC");
+    expect(p.PrimaryPhone).toBeUndefined();
+    expect(p.BillAddr).toBeUndefined();
+  });
+});
+
+describe("pickMergeMatch", () => {
+  const cust = base;
+  it("matches by email first (case-insensitive)", () => {
+    const cands: QboCustomer[] = [
+      { Id: "9", DisplayName: "Someone Else", PrimaryEmailAddr: { Address: "JANE@example.com" } },
+    ];
+    expect(pickMergeMatch(cust, cands)).toEqual({ matchedBy: "email", candidate: cands[0] });
+  });
+
+  it("matches by phone (normalized last-10) when email differs", () => {
+    const cands: QboCustomer[] = [
+      { Id: "3", DisplayName: "Jane H", PrimaryEmailAddr: { Address: "other@x.com" }, PrimaryPhone: { FreeFormNumber: "+1 862-555-0100" } },
+    ];
+    expect(pickMergeMatch(cust, cands)).toEqual({ matchedBy: "phone", candidate: cands[0] });
+  });
+
+  it("matches by exact display name when email + phone differ", () => {
+    const cands: QboCustomer[] = [
+      { Id: "5", DisplayName: "jane homeowner", PrimaryEmailAddr: { Address: "no@x.com" }, PrimaryPhone: { FreeFormNumber: "973-000-0000" } },
+    ];
+    expect(pickMergeMatch(cust, cands)).toEqual({ matchedBy: "name", candidate: cands[0] });
+  });
+
+  it("prefers email over phone over name when several candidates qualify", () => {
+    const cands: QboCustomer[] = [
+      { Id: "name", DisplayName: "Jane Homeowner" },
+      { Id: "phone", DisplayName: "x", PrimaryPhone: { FreeFormNumber: "8625550100" } },
+      { Id: "email", DisplayName: "y", PrimaryEmailAddr: { Address: "jane@example.com" } },
+    ];
+    expect(pickMergeMatch(cust, cands)?.candidate.Id).toBe("email");
+  });
+
+  it("returns null when nothing matches", () => {
+    expect(pickMergeMatch(cust, [{ Id: "1", DisplayName: "No One", PrimaryEmailAddr: { Address: "no@x.com" } }])).toBeNull();
+  });
+
+  it("does not match on empty/absent keys", () => {
+    const noContact: AccountingCustomerInput = { ...base, email: null, phone: null, displayName: "" };
+    expect(pickMergeMatch(noContact, [{ Id: "1", DisplayName: "" }])).toBeNull();
+  });
+});
+
+describe("token parsing + refresh-token rotation persistence", () => {
+  it("parseTokenResponse captures the rotated refresh token", () => {
+    const t = parseTokenResponse({ access_token: "AT1", refresh_token: "RT_NEW", expires_in: 3600, x_refresh_token_expires_in: 8726400 });
+    expect(t.accessToken).toBe("AT1");
+    expect(t.refreshToken).toBe("RT_NEW");
+    expect(t.expiresIn).toBe(3600);
+  });
+
+  it("throws when tokens are missing", () => {
+    expect(() => parseTokenResponse({ access_token: "only" })).toThrow();
+  });
+
+  it("buildConnectionUpdate persists the NEW rotated refresh token (encrypted)", () => {
+    const now = new Date("2026-07-06T00:00:00Z");
+    const patch = buildConnectionUpdate({ accessToken: "AT2", refreshToken: "RT_ROTATED", expiresIn: 3600, refreshExpiresIn: 8726400 }, now);
+    // Critical QuickBooks trap: the rotated refresh token must be what we store.
+    expect(decrypt(patch.refreshTokenEncrypted)).toBe("RT_ROTATED");
+    expect(decrypt(patch.accessTokenEncrypted)).toBe("AT2");
+    expect(patch.expiresAt.getTime()).toBe(now.getTime() + 3600 * 1000);
+    expect(patch.status).toBe("connected");
+    expect(patch.lastError).toBeNull();
+  });
+
+  it("requestTokens (refresh) returns the rotated refresh token via mocked fetch", async () => {
+    const fakeFetch = (async () =>
+      new Response(JSON.stringify({ access_token: "AT3", refresh_token: "RT_AFTER_REFRESH", expires_in: 3600, x_refresh_token_expires_in: 8726400 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })) as unknown as typeof fetch;
+    const t = await requestTokens(cfg, { type: "refresh_token", refreshToken: "RT_BEFORE" }, fakeFetch);
+    expect(t.refreshToken).toBe("RT_AFTER_REFRESH");
+    expect(t.refreshToken).not.toBe("RT_BEFORE");
+  });
+
+  it("requestTokens throws on non-200", async () => {
+    const fakeFetch = (async () => new Response("bad", { status: 400 })) as unknown as typeof fetch;
+    await expect(requestTokens(cfg, { type: "authorization_code", code: "x" }, fakeFetch)).rejects.toThrow();
+  });
+});
+
+describe("helpers", () => {
+  it("selects the right API base per environment", () => {
+    expect(qboApiBase("sandbox")).toContain("sandbox-quickbooks");
+    expect(qboApiBase("production")).toBe("https://quickbooks.api.intuit.com");
+  });
+
+  it("escapes single quotes for QBO query literals", () => {
+    expect(escapeQboLiteral("O'Brien HVAC")).toBe("O''Brien HVAC");
+  });
+
+  it("signs and verifies OAuth state, rejects tampering", () => {
+    const s = signState("nonce123");
+    expect(verifyState(s)).toBe(true);
+    expect(verifyState("nonce123.deadbeef")).toBe(false);
+    expect(verifyState(undefined)).toBe(false);
+  });
+});

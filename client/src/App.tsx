@@ -54,6 +54,7 @@ import CustomerDetail from "./pages/CustomerDetail";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
 import Jobs from "./pages/Jobs";
 import JobDetail from "./pages/JobDetail";
+import Integrations from "./pages/settings/Integrations";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
 import TeamLogin from "./pages/TeamLogin";
 import AcceptInvite from "./pages/AcceptInvite";
@@ -268,6 +269,7 @@ function Router() {
       <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
       <Route path={"/customers"} component={protect(Customers)} />
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />
+      <Route path={"/settings/integrations"} component={protect(Integrations)} />
       <Route path={"/calendar"} component={protect(AppointmentCalendar)} />
       <Route path={"/jobs"} component={protect(Jobs)} />
       <Route path={"/jobs/:id"} component={protect(JobDetail)} />
