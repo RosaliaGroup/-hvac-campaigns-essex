@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Building2, ChevronRight, Home, Mail, Phone, Plus, Search, UserRound, Users,
 } from "lucide-react";
-import { deriveRelationship, relationshipLabel } from "@shared/leadPipeline";
+import { relationshipLabel } from "@shared/leadPipeline";
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-green-100 text-green-700",
@@ -194,9 +194,10 @@ export default function Customers() {
                       </TableCell>
                       <TableCell>
                         {(() => {
-                          // Contact-directory rows are Customers; Lead/Prospect surface in the Lead Inbox
-                          // (derived from stage) and fully unify here with the future Contacts model.
-                          const label = relationshipLabel(deriveRelationship({ isCustomer: true }));
+                          // Relationship is derived server-side from real signals
+                          // (lead stage, won jobs, appointments) — Lead by default,
+                          // never assumed Customer.
+                          const label = relationshipLabel(c.relationship ?? "lead");
                           return <Badge className={RELATIONSHIP_BADGE[label]} variant="secondary">{label}</Badge>;
                         })()}
                       </TableCell>
@@ -226,7 +227,7 @@ export default function Customers() {
       {/* Create dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Add Customer</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Add Contact</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <Label>Type</Label>

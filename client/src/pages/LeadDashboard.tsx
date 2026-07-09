@@ -15,7 +15,7 @@ import {
   Users, Phone, Mail, TrendingUp, Filter, Search, RefreshCw, CheckCircle,
   Star, Calendar, MessageSquare, ChevronRight, BarChart3, ExternalLink,
   PhoneCall, Globe, Facebook, AlertCircle, ClipboardCheck, Handshake,
-  Trophy, CalendarPlus, Wrench, Clock, FileText,
+  Trophy, CalendarPlus, Wrench, Clock, FileText, Pencil, CalendarClock, User,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -69,6 +69,15 @@ const RELATIONSHIP_STYLE: Record<Relationship, string> = {
   customer: "bg-green-100 text-green-800",
 };
 
+const APPOINTMENT_STATUS_STYLE: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  confirmed: "bg-blue-100 text-blue-700",
+  arrived: "bg-indigo-100 text-indigo-700",
+  completed: "bg-green-100 text-green-700",
+  cancelled: "bg-red-100 text-red-700",
+  rescheduled: "bg-purple-100 text-purple-700",
+};
+
 function formatDate(date: Date | string | null) {
   if (!date) return "—";
   return new Date(date).toLocaleString("en-US", {
@@ -90,7 +99,10 @@ function getLeadName(lead: any) {
   return "Anonymous";
 }
 function leadRelationship(lead: LeadCapture): Relationship {
-  return deriveRelationship({ stage: lead.status, isCustomer: Boolean(lead.customerId) });
+  // Derive purely from the pipeline stage. A link to a customer record
+  // (customerId) is NOT proof of a won deal, so it must not force "Customer" —
+  // only a Won stage does. Job/proposal signals are folded in server-side.
+  return deriveRelationship({ stage: lead.status });
 }
 
 type LeadCapture = {
@@ -167,20 +179,67 @@ function LeadDetailModal({
   onClose,
   onStatusUpdate,
   onNoteUpdate,
+  onSaved,
 }: {
   lead: LeadCapture;
   onClose: () => void;
   onStatusUpdate: (id: number, status: string) => void;
   onNoteUpdate: (id: number, notes: string) => void;
+  onSaved: (patch: Partial<LeadCapture>) => void;
 }) {
   const [notes, setNotes] = useState(lead.notes || "");
   const [saving, setSaving] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
   const { toast } = useToast();
+
+  // Editable lead fields (name/phone/email/service/source/assignee).
+  const [form, setForm] = useState({
+    firstName: lead.firstName || "",
+    lastName: lead.lastName || "",
+    phone: lead.phone || "",
+    email: lead.email || "",
+    message: lead.message || "",
+    captureType: lead.captureType,
+    assignedTo: lead.assignedTo || "",
+  });
 
   const sourceInfo = SOURCE_LABELS[lead.captureType] || { label: lead.captureType, icon: <Globe className="h-3 w-3" />, color: "bg-gray-100 text-gray-700" };
   const rel = leadRelationship(lead);
   const requestedService = (lead.message && lead.message.trim()) || sourceInfo.label;
+
+  const { data: appointments = [] } = trpc.leadCaptures.appointments.useQuery({ id: lead.id });
+  const updateLead = trpc.leadCaptures.update.useMutation({
+    onSuccess: () => {
+      toast({ title: "Lead updated", description: "Lead details saved." });
+      setEditing(false);
+      // Keep the open modal in sync so the header/name reflect the edit
+      // immediately (the modal holds a snapshot, not the live query row).
+      onSaved({
+        firstName: form.firstName || null,
+        lastName: form.lastName || null,
+        phone: form.phone || null,
+        email: form.email || null,
+        message: form.message || null,
+        captureType: form.captureType,
+        assignedTo: form.assignedTo || null,
+      });
+    },
+    onError: err => toast({ title: "Could not save", description: err.message, variant: "destructive" }),
+  });
+
+  const handleSaveDetails = () => {
+    updateLead.mutate({
+      id: lead.id,
+      firstName: form.firstName || null,
+      lastName: form.lastName || null,
+      phone: form.phone || null,
+      email: form.email || null,
+      message: form.message || null,
+      captureType: form.captureType,
+      assignedTo: form.assignedTo || null,
+    });
+  };
 
   const handleSaveNotes = async () => {
     setSaving(true);
@@ -209,10 +268,67 @@ function LeadDetailModal({
             <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${RELATIONSHIP_STYLE[rel]}`}>
               {relationshipLabel(rel)}
             </span>
+            {!editing && (
+              <Button size="sm" variant="outline" className="ml-auto" onClick={() => setEditing(true)}>
+                <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+              </Button>
+            )}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
+          {editing ? (
+            /* ── Edit lead details ─────────────────────────────── */
+            <div className="space-y-4 rounded-lg border p-4">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Edit Lead</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>First name</Label>
+                  <Input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Last name</Label>
+                  <Input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Phone</Label>
+                  <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <Label>Email</Label>
+                  <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label>Requested service</Label>
+                  <Input value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="e.g. Heat pump install estimate" />
+                </div>
+                <div>
+                  <Label>Source</Label>
+                  <Select value={form.captureType} onValueChange={v => setForm(f => ({ ...f, captureType: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(SOURCE_LABELS).map(([value, info]) => (
+                        <SelectItem key={value} value={value}>{info.label}</SelectItem>
+                      ))}
+                      {!SOURCE_LABELS[form.captureType] && (
+                        <SelectItem value={form.captureType}>{form.captureType}</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Assigned to</Label>
+                  <Input value={form.assignedTo} onChange={e => setForm(f => ({ ...f, assignedTo: e.target.value }))} placeholder="Team member" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => setEditing(false)} disabled={updateLead.isPending}>Cancel</Button>
+                <Button size="sm" onClick={handleSaveDetails} disabled={updateLead.isPending} className="bg-[#1e3a5f] text-white hover:bg-[#1e3a5f]/90">
+                  {updateLead.isPending ? "Saving…" : "Save Details"}
+                </Button>
+              </div>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Contact Information */}
             <div className="space-y-3">
@@ -249,6 +365,7 @@ function LeadDetailModal({
               {infoRow("Lead Age", leadAgeLabel(lead.createdAt, new Date()))}
             </div>
           </div>
+          )}
 
           {/* Pipeline Stage */}
           <div className="space-y-2">
@@ -273,6 +390,50 @@ function LeadDetailModal({
                 <a href={lead.email ? `mailto:${lead.email}` : undefined}><Mail className="h-3.5 w-3.5 mr-1" /> Email</a>
               </Button>
             </div>
+          </div>
+
+          {/* Appointments */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Appointments ({appointments.length})</h3>
+              <a href="/calendar" className="text-xs text-[#1e3a5f] hover:underline inline-flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5" /> Open Calendar
+              </a>
+            </div>
+            {appointments.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic px-1 py-2">
+                No appointments yet. Use “Schedule Assessment” to book one — it will appear here.
+              </p>
+            ) : (
+              <div className="rounded-lg border divide-y">
+                {appointments.map((appt: any) => {
+                  const when = appt.scheduledAt
+                    ? formatDate(appt.scheduledAt)
+                    : [appt.preferredDate, appt.preferredTime].filter(Boolean).join(" · ") || "Unscheduled";
+                  const st = APPOINTMENT_STATUS_STYLE[appt.status] || "bg-gray-100 text-gray-700";
+                  return (
+                    <a
+                      key={appt.id}
+                      href="/calendar"
+                      className="flex items-center gap-3 px-3 py-2 hover:bg-muted/40 transition-colors"
+                    >
+                      <CalendarClock className="h-4 w-4 text-[#1e3a5f] flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium capitalize">{String(appt.appointmentType).replace(/_/g, " ")}</span>
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium capitalize ${st}`}>{appt.status}</span>
+                        </div>
+                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {when}</span>
+                          <span className="flex items-center gap-1"><User className="h-3 w-3" /> {appt.assigneeName || "Unassigned"}</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Internal Notes */}
@@ -567,7 +728,13 @@ export default function LeadDashboard() {
       </div>
 
       {selectedLead && (
-        <LeadDetailModal lead={selectedLead} onClose={() => setSelectedLead(null)} onStatusUpdate={handleStatusUpdate} onNoteUpdate={handleNoteUpdate} />
+        <LeadDetailModal
+          lead={selectedLead}
+          onClose={() => setSelectedLead(null)}
+          onStatusUpdate={handleStatusUpdate}
+          onNoteUpdate={handleNoteUpdate}
+          onSaved={patch => { setSelectedLead(prev => prev ? { ...prev, ...patch } : prev); refetchLeads(); refetchStats(); }}
+        />
       )}
     </DashboardLayout>
   );
