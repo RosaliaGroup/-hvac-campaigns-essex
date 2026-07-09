@@ -1,5 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
-import { LEAD_STAGE_ENUM } from "@shared/leadPipeline";
+import { LEAD_STAGE_ENUM, buildLeadCapturePatch } from "@shared/leadPipeline";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
@@ -23,7 +23,7 @@ import { generateSocialPost } from "./integrations/ai-content-generator";
 import { postToGoogleBusiness } from "./integrations/google-business";
 import { postToFacebook, postToInstagram } from "./integrations/facebook";
 import { takeoffsRouter } from "./routers/takeoffs";
-import { customersRouter, findCustomerIdByPhone } from "./routers/customers";
+import { customersRouter, findCustomerIdByPhone, normalizePhone } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
 import { quickbooksRouter } from "./routers/quickbooks";
 import { googleCalendarRouter } from "./routers/googleCalendar";
@@ -34,6 +34,7 @@ import {
   teamMembers as teamMembersTable,
   appointmentAttendees as appointmentAttendeesTable,
   customers as customersTable,
+  leadCaptures as leadCapturesTable,
 } from "../drizzle/schema";
 import { resolveTeamMemberId, dayRangeInTimeZone } from "../shared/fieldApp";
 import {
@@ -43,7 +44,7 @@ import {
   type AttendeeInput,
 } from "./services/appointmentInvites";
 import { APPOINTMENT_TYPE_ENUM } from "../shared/appointmentTypes";
-import { and as dAnd, eq as dEq, gte as dGte, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
+import { and as dAnd, eq as dEq, or as dOr, sql as dSql, gte as dGte, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
 
 /** Zod shape for an attendee coming from the appointment dialog. */
 const attendeeInputSchema = z.object({
@@ -398,6 +399,68 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         await db.updateLeadCaptureNotes(input.id, input.notes);
         return { success: true };
+      }),
+
+    /** Edit lead details from the Lead Inbox popup. */
+    update: protectedProcedure
+      .input(
+        z.object({
+          id: z.number(),
+          firstName: z.string().max(255).optional().nullable(),
+          lastName: z.string().max(255).optional().nullable(),
+          phone: z.string().max(50).optional().nullable(),
+          email: z.string().email().max(320).optional().nullable().or(z.literal("").transform(() => null)),
+          /** Requested service — stored on `message`. */
+          message: z.string().max(2000).optional().nullable(),
+          /** Source — stored on `captureType` (validated against the DB enum). */
+          captureType: z.string().max(100).optional(),
+          assignedTo: z.string().max(255).optional().nullable(),
+          notes: z.string().max(5000).optional().nullable(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const { id, ...edit } = input;
+        await db.updateLeadCapture(id, buildLeadCapturePatch(edit));
+        return { success: true };
+      }),
+
+    /**
+     * Appointments tied to a lead — by customerId when converted, else a
+     * phone/email fallback so pre-conversion bookings still show. Includes the
+     * assigned technician's name for the popup.
+     */
+    appointments: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) return [];
+        const cap = (await dbi.select().from(leadCapturesTable).where(dEq(leadCapturesTable.id, input.id)).limit(1))[0];
+        if (!cap) return [];
+        const phoneKey = normalizePhone(cap.phone);
+        const emailKey = cap.email?.trim().toLowerCase() || null;
+        const conds = [];
+        if (cap.customerId) conds.push(dEq(appointmentsTable.customerId, cap.customerId));
+        if (phoneKey) conds.push(dSql`RIGHT(REGEXP_REPLACE(${appointmentsTable.phone}, '[^0-9]', ''), 10) = ${phoneKey}`);
+        if (emailKey) conds.push(dSql`LOWER(${appointmentsTable.email}) = ${emailKey}`);
+        if (conds.length === 0) return [];
+        return await dbi
+          .select({
+            id: appointmentsTable.id,
+            appointmentType: appointmentsTable.appointmentType,
+            serviceType: appointmentsTable.serviceType,
+            scheduledAt: appointmentsTable.scheduledAt,
+            preferredDate: appointmentsTable.preferredDate,
+            preferredTime: appointmentsTable.preferredTime,
+            status: appointmentsTable.status,
+            assignedToId: appointmentsTable.assignedToId,
+            assigneeName: teamMembersTable.name,
+            googleCalendarEventId: appointmentsTable.googleCalendarEventId,
+          })
+          .from(appointmentsTable)
+          .leftJoin(teamMembersTable, dEq(teamMembersTable.id, appointmentsTable.assignedToId))
+          .where(dOr(...conds))
+          .orderBy(dDesc(appointmentsTable.scheduledAt), dDesc(appointmentsTable.createdAt))
+          .limit(50);
       }),
 
     stats: protectedProcedure.query(async () => {

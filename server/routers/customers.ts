@@ -6,13 +6,15 @@ import {
   customers,
   properties,
   appointments,
+  jobs,
   leads,
   leadCaptures,
   callLogs,
   rebateCalculations,
   type InsertCustomer,
 } from "../../drizzle/schema";
-import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { deriveContactRelationship, type Relationship } from "@shared/leadPipeline";
 
 // ─────────────────────────────────────────────────────────────
 // Pure helpers (exported for unit tests)
@@ -33,6 +35,27 @@ export function splitName(fullName: string | null | undefined): { firstName: str
   const parts = trimmed.split(" ");
   if (parts.length === 1) return { firstName: parts[0], lastName: null };
   return { firstName: parts.slice(0, -1).join(" "), lastName: parts[parts.length - 1] };
+}
+
+/**
+ * Does an appointment belong to a given lead/contact? Links, in priority order:
+ *  1. customerId (both sides linked to the same customer record)
+ *  2. phone (last-10-digit match)
+ *  3. email (case-insensitive)
+ * Pure — the same rule the SQL fallback query encodes, exported for tests.
+ */
+export function appointmentMatchesLead(
+  appt: { customerId?: number | null; phone?: string | null; email?: string | null },
+  lead: { customerId?: number | null; phone?: string | null; email?: string | null },
+): boolean {
+  if (lead.customerId != null && appt.customerId != null && lead.customerId === appt.customerId) return true;
+  const lp = normalizePhone(lead.phone);
+  const ap = normalizePhone(appt.phone);
+  if (lp && ap && lp === ap) return true;
+  const le = lead.email?.trim().toLowerCase() || null;
+  const ae = appt.email?.trim().toLowerCase() || null;
+  if (le && ae && le === ae) return true;
+  return false;
 }
 
 /** displayName = companyName, else "First Last", else email/phone fallback. Never empty. */
@@ -130,6 +153,54 @@ export async function findCustomerIdByPhone(phone: string | null | undefined): P
   }
 }
 
+/**
+ * Compute the derived relationship (Lead/Prospect/Customer) for a batch of
+ * customer ids, using real signals — linked lead-capture stages, job outcomes,
+ * and whether any appointment exists. Contacts with none of these default to
+ * Lead, NOT Customer.
+ */
+async function computeRelationshipMap(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  customerIds: number[],
+): Promise<Map<number, Relationship>> {
+  const map = new Map<number, Relationship>();
+  if (customerIds.length === 0) return map;
+
+  const [caps, jbs, appts] = await Promise.all([
+    db.select({ customerId: leadCaptures.customerId, status: leadCaptures.status })
+      .from(leadCaptures)
+      .where(inArray(leadCaptures.customerId, customerIds)),
+    db.select({ customerId: jobs.customerId, status: jobs.status })
+      .from(jobs)
+      .where(inArray(jobs.customerId, customerIds)),
+    db.select({ customerId: appointments.customerId })
+      .from(appointments)
+      .where(inArray(appointments.customerId, customerIds)),
+  ]);
+
+  const stagesByCustomer = new Map<number, string[]>();
+  for (const c of caps) {
+    if (c.customerId == null) continue;
+    (stagesByCustomer.get(c.customerId) ?? stagesByCustomer.set(c.customerId, []).get(c.customerId)!).push(c.status);
+  }
+  const jobStatusByCustomer = new Map<number, string[]>();
+  for (const j of jbs) {
+    if (j.customerId == null) continue;
+    (jobStatusByCustomer.get(j.customerId) ?? jobStatusByCustomer.set(j.customerId, []).get(j.customerId)!).push(j.status);
+  }
+  const hasApptCustomer = new Set<number>();
+  for (const a of appts) if (a.customerId != null) hasApptCustomer.add(a.customerId);
+
+  for (const id of customerIds) {
+    map.set(id, deriveContactRelationship({
+      leadStages: stagesByCustomer.get(id) ?? [],
+      jobStatuses: jobStatusByCustomer.get(id) ?? [],
+      hasAppointment: hasApptCustomer.has(id),
+    }));
+  }
+  return map;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Router
 // ─────────────────────────────────────────────────────────────
@@ -169,10 +240,14 @@ export const customersRouter = router({
       if (input.assignedToId) conditions.push(eq(customers.assignedToId, input.assignedToId));
 
       const where = and(...conditions);
-      const [items, totalRows] = await Promise.all([
+      const [rows, totalRows] = await Promise.all([
         db.select().from(customers).where(where).orderBy(desc(customers.createdAt)).limit(input.limit).offset(input.offset),
         db.select({ count: sql<number>`COUNT(*)` }).from(customers).where(where),
       ]);
+      // Derive the true relationship (Lead/Prospect/Customer) from real signals
+      // instead of assuming every contact is a Customer.
+      const relationships = await computeRelationshipMap(db, rows.map(r => r.id));
+      const items = rows.map(r => ({ ...r, relationship: relationships.get(r.id) ?? "lead" as Relationship }));
       return { items, total: Number(totalRows[0]?.count ?? 0) };
     }),
 
@@ -187,16 +262,31 @@ export const customersRouter = router({
       const customer = rows[0];
       if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
 
-      const [props, appts, relatedLeads, relatedCaptures, calls, rebates] = await Promise.all([
+      // Appointments link by customerId, or fall back to a phone/email match so
+      // visits booked before conversion still surface under the contact.
+      const phoneKey = normalizePhone(customer.phone);
+      const emailKey = customer.email?.trim().toLowerCase() || null;
+      const apptMatch = [eq(appointments.customerId, input.id)];
+      if (phoneKey) apptMatch.push(sql`RIGHT(REGEXP_REPLACE(${appointments.phone}, '[^0-9]', ''), 10) = ${phoneKey}`);
+      if (emailKey) apptMatch.push(sql`LOWER(${appointments.email}) = ${emailKey}`);
+
+      const [props, appts, relatedLeads, relatedCaptures, calls, rebates, relJobs] = await Promise.all([
         db.select().from(properties).where(eq(properties.customerId, input.id)).orderBy(desc(properties.isPrimary), desc(properties.createdAt)),
-        db.select().from(appointments).where(eq(appointments.customerId, input.id)).orderBy(desc(appointments.createdAt)).limit(50),
+        db.select().from(appointments).where(or(...apptMatch)).orderBy(desc(appointments.scheduledAt), desc(appointments.createdAt)).limit(50),
         db.select().from(leads).where(eq(leads.customerId, input.id)).orderBy(desc(leads.createdAt)).limit(50),
         db.select().from(leadCaptures).where(eq(leadCaptures.customerId, input.id)).orderBy(desc(leadCaptures.createdAt)).limit(50),
         db.select().from(callLogs).where(eq(callLogs.customerId, input.id)).orderBy(desc(callLogs.createdAt)).limit(50),
         db.select().from(rebateCalculations).where(eq(rebateCalculations.customerId, input.id)).orderBy(desc(rebateCalculations.createdAt)).limit(20),
+        db.select({ status: jobs.status }).from(jobs).where(eq(jobs.customerId, input.id)),
       ]);
 
-      return { customer, properties: props, appointments: appts, leads: relatedLeads, captures: relatedCaptures, callLogs: calls, rebateCalculations: rebates };
+      const relationship = deriveContactRelationship({
+        leadStages: relatedCaptures.map(c => c.status),
+        jobStatuses: relJobs.map(j => j.status),
+        hasAppointment: appts.length > 0,
+      });
+
+      return { customer, relationship, properties: props, appointments: appts, leads: relatedLeads, captures: relatedCaptures, callLogs: calls, rebateCalculations: rebates };
     }),
 
   create: protectedProcedure.input(customerInput).mutation(async ({ input }) => {

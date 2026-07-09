@@ -3,6 +3,7 @@ import {
   LEAD_STAGES, LEAD_STAGE_ENUM, PIPELINE_ORDER,
   normalizeStage, stageLabel, stageIndex, isWon, isLost, isOpen,
   deriveRelationship, relationshipLabel, leadAgeLabel,
+  deriveContactRelationship, furthestStage, isWonJobStatus, buildLeadCapturePatch,
 } from "./leadPipeline";
 
 describe("lead stages", () => {
@@ -84,6 +85,86 @@ describe("deriveRelationship (Lead → Prospect → Customer)", () => {
     expect(relationshipLabel("lead")).toBe("Lead");
     expect(relationshipLabel("prospect")).toBe("Prospect");
     expect(relationshipLabel("customer")).toBe("Customer");
+  });
+});
+
+describe("isWonJobStatus", () => {
+  it("treats approved/completed/invoiced/paid/closed jobs as won business", () => {
+    for (const s of ["approved", "completed", "invoice_sent", "paid", "closed"]) {
+      expect(isWonJobStatus(s)).toBe(true);
+    }
+  });
+  it("does not treat in-progress jobs (or none) as won", () => {
+    for (const s of ["new", "scheduled", "in_progress", "waiting_parts", "cancelled", null, undefined]) {
+      expect(isWonJobStatus(s)).toBe(false);
+    }
+  });
+});
+
+describe("furthestStage (most-advanced linked capture)", () => {
+  it("prefers a won capture over open ones", () => {
+    expect(furthestStage(["new", "won", "contacted"])).toBe("won");
+  });
+  it("returns the furthest open stage when none are won", () => {
+    expect(furthestStage(["new", "contacted", "assessment_scheduled"])).toBe("assessment_scheduled");
+  });
+  it("normalizes legacy values", () => {
+    expect(furthestStage(["booked"])).toBe("assessment_scheduled");
+  });
+  it("returns null for an empty list", () => {
+    expect(furthestStage([])).toBeNull();
+  });
+});
+
+describe("deriveContactRelationship (lifecycle rules)", () => {
+  it("website submission with no engagement → Lead", () => {
+    expect(deriveContactRelationship({ leadStages: ["new"] })).toBe("lead");
+  });
+  it("brand-new manual contact (no signals at all) → Lead, never Customer", () => {
+    expect(deriveContactRelationship({})).toBe("lead");
+    expect(deriveContactRelationship({ leadStages: [], jobStatuses: [] })).toBe("lead");
+  });
+  it("assessment scheduled → Prospect", () => {
+    expect(deriveContactRelationship({ leadStages: ["assessment_scheduled"] })).toBe("prospect");
+    expect(deriveContactRelationship({ leadStages: ["proposal_sent"] })).toBe("prospect");
+    expect(deriveContactRelationship({ leadStages: ["follow_up"] })).toBe("prospect");
+  });
+  it("an appointment makes a fresh lead a Prospect", () => {
+    expect(deriveContactRelationship({ leadStages: ["new"], hasAppointment: true })).toBe("prospect");
+  });
+  it("won lead → Customer", () => {
+    expect(deriveContactRelationship({ leadStages: ["won"] })).toBe("customer");
+  });
+  it("a completed job or accepted proposal → Customer", () => {
+    expect(deriveContactRelationship({ leadStages: ["new"], jobStatuses: ["completed"] })).toBe("customer");
+    expect(deriveContactRelationship({ leadStages: ["contacted"], acceptedProposal: true })).toBe("customer");
+  });
+  it("a mere customer link (open stage, no won business) is NOT a Customer", () => {
+    // Regression: Hector is linked to a customer record but only 'contacted'.
+    expect(deriveContactRelationship({ leadStages: ["contacted"], jobStatuses: ["new"] })).toBe("prospect");
+    expect(deriveContactRelationship({ leadStages: ["new"], jobStatuses: ["scheduled"] })).toBe("lead");
+  });
+});
+
+describe("buildLeadCapturePatch (editing lead saves)", () => {
+  it("maps editable fields and recomputes name from first/last", () => {
+    const patch = buildLeadCapturePatch({ firstName: "Ana", lastName: "Haynes", phone: "8624191763" });
+    expect(patch).toMatchObject({ firstName: "Ana", lastName: "Haynes", phone: "8624191763", name: "Ana Haynes" });
+  });
+  it("coerces empty strings to null", () => {
+    const patch = buildLeadCapturePatch({ email: "", phone: "" });
+    expect(patch.email).toBeNull();
+    expect(patch.phone).toBeNull();
+  });
+  it("omits fields that were not provided (partial edit never nulls untouched columns)", () => {
+    const patch = buildLeadCapturePatch({ notes: "called back" });
+    expect(patch).toEqual({ notes: "called back" });
+    expect("phone" in patch).toBe(false);
+    expect("name" in patch).toBe(false);
+  });
+  it("maps requested service → message and source → captureType", () => {
+    const patch = buildLeadCapturePatch({ message: "Heat pump install", captureType: "quick_quote" });
+    expect(patch).toEqual({ message: "Heat pump install", captureType: "quick_quote" });
   });
 });
 

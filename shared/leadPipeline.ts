@@ -104,6 +104,96 @@ export function relationshipLabel(r: Relationship): string {
   return RELATIONSHIP_LABELS[r];
 }
 
+/**
+ * Job statuses that represent real, won business (→ Customer). Aligns with the
+ * rule "Won or accepted QuickBooks proposal/estimate = Customer" and
+ * "Existing completed jobs/invoices may show Customer". A mere linkage to a
+ * customer record (customerId) is NOT enough — only these outcomes are.
+ */
+export const WON_JOB_STATUSES = ["approved", "completed", "invoice_sent", "paid", "closed"] as const;
+export function isWonJobStatus(status?: string | null): boolean {
+  return !!status && (WON_JOB_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * Pick the most-advanced stage among several linked lead captures (a single
+ * contact may have more than one). Won ranks highest; unknown/lost lowest.
+ */
+export function furthestStage(stages: (string | null | undefined)[]): string | null {
+  let best: string | null = null;
+  let bestRank = -Infinity;
+  for (const s of stages) {
+    const rank = isWon(s) ? 100 : isLost(s) ? -1 : stageIndex(s);
+    if (rank > bestRank) {
+      bestRank = rank;
+      best = normalizeStage(s);
+    }
+  }
+  return best;
+}
+
+/**
+ * Full set of signals for a Contact (unifies a customer record with any linked
+ * lead captures / jobs / appointments). This is the single place that decides
+ * Lead vs Prospect vs Customer for a contact, per the lifecycle rules:
+ *  - Customer: a won lead, an accepted proposal, or a completed job/invoice.
+ *  - Prospect: engaged (contacted → follow_up stage, or has an appointment).
+ *  - Lead: a fresh website submission or a new manual contact — the DEFAULT.
+ * Crucially, a plain link to a customer record does NOT make someone a Customer.
+ */
+export interface ContactSignals {
+  /** Stages of every lead capture linked to this contact. */
+  leadStages?: (string | null | undefined)[];
+  /** Statuses of every job linked to this contact. */
+  jobStatuses?: (string | null | undefined)[];
+  /** The contact has at least one appointment. */
+  hasAppointment?: boolean;
+  /** An estimate/proposal has been explicitly accepted. */
+  acceptedProposal?: boolean;
+}
+
+export function deriveContactRelationship(s: ContactSignals): Relationship {
+  const wonStage = (s.leadStages ?? []).some(isWon);
+  const wonJob = (s.jobStatuses ?? []).some(isWonJobStatus);
+  const isCustomer = wonStage || wonJob || Boolean(s.acceptedProposal);
+  const stage = furthestStage(s.leadStages ?? []);
+  return deriveRelationship({ stage, isCustomer, hasEngagement: s.hasAppointment });
+}
+
+/** Editable lead-capture fields exposed in the Lead Inbox popup. */
+export interface LeadCaptureEdit {
+  firstName?: string | null;
+  lastName?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  /** Requested service — stored on `message`. */
+  message?: string | null;
+  /** Source — stored on `captureType`. */
+  captureType?: string | null;
+  assignedTo?: string | null;
+  notes?: string | null;
+}
+
+/**
+ * Build a `leadCaptures` SET patch from the editable fields: recomputes the
+ * denormalized `name` when either name part changes, coerces "" → null, and
+ * drops keys that were not provided (so a partial edit never nulls untouched
+ * columns). Pure — safe to unit test.
+ */
+export function buildLeadCapturePatch(edit: LeadCaptureEdit): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  const assign = (key: keyof LeadCaptureEdit) => {
+    const v = edit[key];
+    if (v !== undefined) patch[key] = v === "" ? null : v;
+  };
+  (["firstName", "lastName", "phone", "email", "message", "captureType", "assignedTo", "notes"] as const).forEach(assign);
+  if (edit.firstName !== undefined || edit.lastName !== undefined) {
+    const name = [edit.firstName, edit.lastName].filter(Boolean).join(" ").trim();
+    patch.name = name || null;
+  }
+  return patch;
+}
+
 // ── Lead age (Submitted → now) as a human label ──
 export function leadAgeLabel(createdAt: Date | string, now: Date | string): string {
   const start = new Date(createdAt).getTime();
