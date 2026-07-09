@@ -53,6 +53,7 @@ import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
 import Jobs from "./pages/Jobs";
+import Opportunities from "./pages/Opportunities";
 import JobDetail from "./pages/JobDetail";
 import Integrations from "./pages/settings/Integrations";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
@@ -277,6 +278,7 @@ function Router() {
       <Route path={"/field/today"} component={protect(FieldToday)} />
       <Route path={"/jobs"} component={protect(Jobs)} />
       <Route path={"/jobs/:id"} component={protect(JobDetail)} />
+      <Route path={"/opportunities"} component={protect(Opportunities)} />
       <Route path={"/campaign-performance"} component={protect(CampaignPerformance)} />
       <Route path={"/google-ads-campaigns"} component={protect(GoogleAdsCampaigns)} />
       <Route path={"/facebook-campaigns"} component={protect(FacebookCampaigns)} />

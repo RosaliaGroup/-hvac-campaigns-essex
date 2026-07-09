@@ -13,6 +13,7 @@ import { getDb } from "../db";
 import { customers, properties, quickbooksSyncLogs, type Customer, type Property } from "../../drizzle/schema";
 import { getAccountingProvider } from "../integrations/accounting";
 import { quickbooksProvider, buildAuthorizeUrl, getQboConfig, signState, writeSyncLog } from "../integrations/accounting/quickbooks";
+import { syncSalesDocuments } from "../integrations/accounting/salesDocSync";
 import type { AccountingCustomerInput, ConflictResolution, PushCustomerResult } from "../integrations/accounting/types";
 
 const provider = getAccountingProvider("quickbooks");
@@ -202,6 +203,29 @@ export const quickbooksRouter = router({
     }
     return summary;
   }),
+
+  /**
+   * Admin: "Sync QuickBooks Now" — incremental pull of Estimates since the
+   * cursor (or the 60-day backfill on first run). Safe to click repeatedly.
+   */
+  syncSalesDocumentsNow: adminProcedure.mutation(async () => {
+    const result = await syncSalesDocuments({ mode: "incremental" });
+    if (!result.ok && result.error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
+    }
+    return result;
+  }),
+
+  /** Admin: force the 60-day (configurable) backfill, ignoring the cursor. */
+  backfillSalesDocuments: adminProcedure
+    .input(z.object({ sinceDays: z.number().int().min(1).max(365).default(60) }).optional())
+    .mutation(async ({ input }) => {
+      const result = await syncSalesDocuments({ mode: "backfill", sinceDays: input?.sinceDays ?? 60 });
+      if (!result.ok && result.error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
+      }
+      return result;
+    }),
 
   /** Recent sync-log activity for the Integrations page. */
   recentLogs: protectedProcedure
