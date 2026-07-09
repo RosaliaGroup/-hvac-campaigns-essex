@@ -1,0 +1,1 @@
+ALTER TABLE `leadCaptures` MODIFY COLUMN `status` enum('new','contacted','assessment_scheduled','assessment_completed','proposal_sent','follow_up','won','lost','qualified','booked') NOT NULL DEFAULT 'new';
