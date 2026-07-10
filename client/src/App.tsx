@@ -1,5 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { isInternalRoute } from "@/lib/navigation";
 import { Route, Switch, useLocation } from "wouter";
 import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -307,6 +308,16 @@ function Router() {
   );
 }
 
+/**
+ * Jessica lives on the public marketing site only. On protected/internal CRM
+ * routes the chatbot is hidden so it never floats over dashboard pages.
+ */
+function PublicChat() {
+  const [location] = useLocation();
+  if (isInternalRoute(location)) return null;
+  return <LiveChatWidget />;
+}
+
 function App() {
   return (
     <ErrorBoundary>
@@ -314,7 +325,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
-          <LiveChatWidget />
+          <PublicChat />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

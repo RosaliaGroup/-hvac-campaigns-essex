@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import InternalNav from "@/components/InternalNav";
-import Navigation from "@/components/Navigation";
 
 const WEEKLY_GOAL = 20;
 
@@ -134,7 +133,6 @@ export default function MarketingAutopilot() {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       <InternalNav />
-      <Navigation />
       <div className="flex-1 overflow-y-auto">
       <div className="container py-4 max-w-7xl mx-auto">
         {/* Header */}

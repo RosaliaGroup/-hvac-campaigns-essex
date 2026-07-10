@@ -1,222 +1,121 @@
-import { useEffect } from "react";
-import { Link } from "wouter";
+import { useMemo } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
-import InternalNav from "@/components/InternalNav";
-import Navigation from "@/components/Navigation";
-import DashboardFooter from "@/components/DashboardFooter";
+import { iconFor } from "@/components/navIcons";
 import {
-  BarChart3,
-  Facebook,
-  Instagram,
-  Globe,
-  TrendingUp,
-  MessageSquare,
-  Settings,
-  Users,
-  Zap,
-  Bot,
-  FileText,
-  Star,
-  Mail,
-  Phone,
-  Target,
-  ShieldCheck,
-  Megaphone,
-  LayoutDashboard,
-  ChevronRight,
-  Handshake,
-  Wrench,
-  Building2,
-  Home,
-} from "lucide-react";
+  getVisibleDepartments,
+  resolveNavRole,
+  type NavDepartment,
+  type NavItem,
+} from "@/lib/navigation";
+import { LayoutDashboard, ChevronRight } from "lucide-react";
 
-type Tool = {
-  label: string;
-  href: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: string;
-  badgeColor?: string;
+/** Accent colour per department card. */
+const DEPT_COLORS: Record<string, string> = {
+  sales: "#1e3a5f",
+  dispatch: "#0f766e",
+  marketing: "#ff6b35",
+  accounting: "#7c3aed",
+  ai: "#2563eb",
+  analytics: "#059669",
+  admin: "#dc2626",
 };
 
-type Category = {
-  title: string;
-  color: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tools: Tool[];
-};
-
-const categories: Category[] = [
-  {
-    title: "Campaigns & Ads",
-    color: "#ff6b35",
-    icon: Megaphone,
-    tools: [
-      { label: "Marketing Dashboard", href: "/marketing-dashboard", description: "Campaign library, social posts, budget calculator", icon: LayoutDashboard, badge: "Hub", badgeColor: "bg-[#ff6b35] text-white" },
-      { label: "Google Ads Campaigns", href: "/google-ads-campaigns", description: "Create & manage Google Search and Display campaigns", icon: BarChart3 },
-      { label: "Facebook Campaigns", href: "/facebook-campaigns", description: "Facebook & Instagram ad campaigns", icon: Facebook },
-      { label: "Email & SMS Campaigns", href: "/email-sms-campaigns", description: "Drip sequences and broadcast messages", icon: Mail },
-      { label: "SMS Campaign Manager", href: "/sms-campaigns", description: "Telnyx SMS — contact list, 3-message drip, send history", icon: MessageSquare, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "Campaign Generator", href: "/campaign-generator", description: "AI-powered ad copy and campaign builder", icon: Zap, badge: "AI", badgeColor: "bg-purple-100 text-purple-800" },
-      { label: "Marketing Autopilot", href: "/marketing-autopilot", description: "Automated campaign recommendations and scheduling", icon: TrendingUp },
-    ],
-  },
-  {
-    title: "Lead Management",
-    color: "#1e3a5f",
-    icon: Users,
-    tools: [
-      { label: "Lead Dashboard", href: "/lead-dashboard", description: "All leads with status, source, and follow-up tracking", icon: LayoutDashboard, badge: "Hub", badgeColor: "bg-[#1e3a5f] text-white" },
-      { label: "Assessment Submissions", href: "/assessment-submissions", description: "Rebate calculator leads — homeowners who requested a free assessment", icon: Home, badge: "New", badgeColor: "bg-orange-100 text-orange-800" },
-      { label: "Lead Tracker", href: "/leads", description: "Log and manage individual leads manually", icon: Target },
-      { label: "Lead Scoring", href: "/lead-scoring", description: "Hot / Warm / Cold scoring with priority queue", icon: Star },
-      { label: "Campaign Performance", href: "/campaign-performance", description: "ROI, cost-per-lead, and conversion analytics", icon: TrendingUp },
-    ],
-  },
-  {
-    title: "AI Virtual Assistant",
-    color: "#7c3aed",
-    icon: Bot,
-    tools: [
-      { label: "AI VA Dashboard", href: "/ai-va-dashboard", description: "Call logs, SMS conversations, social interactions", icon: Bot, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "AI VA Settings", href: "/ai-va-settings", description: "Configure Vapi, Twilio, Facebook, Google credentials", icon: Settings },
-      { label: "AI Assistant Prompts", href: "/ai-assistant-prompts", description: "Master prompt library for all lead scenarios", icon: MessageSquare },
-      { label: "AI Script Manager", href: "/ai-script-manager", description: "Create and manage custom conversation scripts", icon: FileText },
-    ],
-  },
-  {
-    title: "Landing Pages",
-    color: "#059669",
-    icon: Globe,
-    tools: [
-      { label: "Heat Pump Rebates LP", href: "/lp/heat-pump-rebates", description: "Up to $16,000 in rebates — residential", icon: Zap, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "Commercial VRV/VRF LP", href: "/lp/commercial-vrv", description: "VRV/VRF systems for commercial properties", icon: Building2, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "Emergency HVAC LP", href: "/lp/emergency-hvac", description: "24/7 emergency service — fast response", icon: Phone, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "Facebook Residential LP", href: "/lp/fb-residential", description: "Facebook ad landing page — residential", icon: Facebook, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "Facebook Commercial LP", href: "/lp/fb-commercial", description: "Facebook ad landing page — commercial", icon: Building2, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "Rebate Guide LP", href: "/lp/rebate-guide", description: "PSE&G rebate guide with lead capture", icon: FileText, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "Maintenance Subscription LP", href: "/lp/maintenance-offer", description: "3-tier plan selector — first month FREE", icon: Wrench, badge: "New", badgeColor: "bg-blue-100 text-blue-800" },
-      { label: "Referral Partner LP", href: "/lp/referral-partner", description: "Earn income by referring HVAC customers", icon: Handshake, badge: "New", badgeColor: "bg-blue-100 text-blue-800" },
-    ],
-  },
-  {
-    title: "Public Pages",
-    color: "#64748b",
-    icon: Globe,
-    tools: [
-      { label: "Home", href: "/", description: "Main website homepage", icon: Globe },
-      { label: "Services", href: "/services", description: "Full services overview", icon: Wrench },
-      { label: "Residential", href: "/residential", description: "Residential HVAC campaigns", icon: Globe },
-      { label: "Commercial", href: "/commercial", description: "Commercial HVAC campaigns", icon: Building2 },
-      { label: "Maintenance Plans", href: "/maintenance", description: "Subscription plan overview page", icon: Wrench },
-      { label: "Partnerships", href: "/partnerships", description: "Referral & partner program info", icon: Handshake },
-      { label: "Rebate Calculator", href: "/rebate-calculator", description: "Homeowner rebate estimator with assessment booking", icon: Home, badge: "Live", badgeColor: "bg-green-100 text-green-800" },
-      { label: "Rebate Guide", href: "/rebate-guide", description: "PSE&G rebate information", icon: FileText },
-      { label: "Testimonials", href: "/testimonials", description: "Customer reviews and ratings", icon: Star },
-      { label: "About", href: "/about", description: "Company background and certifications", icon: ShieldCheck },
-      { label: "Contact", href: "/contact", description: "Contact form and office info", icon: Phone },
-    ],
-  },
-  {
-    title: "Admin & Settings",
-    color: "#dc2626",
-    icon: ShieldCheck,
-    tools: [
-      { label: "Admin Portal", href: "/admin", description: "Full admin access — all tools in one view", icon: ShieldCheck, badge: "Admin", badgeColor: "bg-red-100 text-red-800" },
-      { label: "Team Access", href: "/team-management", description: "Invite team members, manage roles, suspend or remove access", icon: Users, badge: "New", badgeColor: "bg-blue-100 text-blue-800" },
-    ],
-  },
-];
-
+/**
+ * Command Center — the internal dashboard home. Shows one card per department
+ * (instead of every individual tool). Clicking a card opens that department's
+ * primary tool; individual tools are listed inside the card as quick links.
+ *
+ * The public website header, footer and Jessica chatbot are intentionally NOT
+ * rendered here — this page is mounted inside <DashboardLayout> (via
+ * ProtectedRoute), which provides the only internal navigation chrome.
+ */
 export default function CommandCenter() {
-  const { loading, isAuthenticated } = useAuth();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      window.location.href = getLoginUrl();
-    }
-  }, [loading, isAuthenticated]);
+  const role = useMemo(() => resolveNavRole(user), [user]);
+  // Department cards exclude "home" (this page itself).
+  const departments = useMemo(
+    () => getVisibleDepartments(role).filter((d) => d.id !== "home"),
+    [role]
+  );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b35]" />
-      </div>
-    );
-  }
+  const firstEnabled = (dept: NavDepartment): NavItem | undefined =>
+    dept.items.find((i) => i.path);
 
-  if (!isAuthenticated) return null;
+  const openDepartment = (dept: NavDepartment) => {
+    const target = firstEnabled(dept);
+    if (target) setLocation(target.path);
+  };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      <InternalNav />
-      <Navigation />
-
-      <div className="flex-1 overflow-y-auto">
-        <div className="container py-6">
-        {/* Header */}
-        <div className="mb-10">
-          <div className="flex items-center gap-3 mb-2">
-            <LayoutDashboard className="h-8 w-8 text-[#ff6b35]" />
-            <h1 className="text-4xl font-bold text-[#1e3a5f]">Command Center</h1>
-          </div>
-          <p className="text-muted-foreground text-lg">
-            Every tool, dashboard, and landing page — all in one place.
-          </p>
+    <div className="mx-auto max-w-6xl">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <LayoutDashboard className="h-7 w-7 text-[#ff6b35]" />
+          <h1 className="text-3xl font-bold text-[#1e3a5f]">Command Center</h1>
         </div>
-
-        {/* Categories */}
-        <div className="space-y-10">
-          {categories.map((cat) => (
-            <section key={cat.title}>
-              {/* Category Header */}
-              <div className="flex items-center gap-2 mb-4">
-                <cat.icon className="h-5 w-5 text-[#ff6b35]" />
-                <h2 className="text-xl font-bold text-[#1e3a5f]">{cat.title}</h2>
-                <div className="flex-1 h-px bg-gray-200 ml-2" />
-              </div>
-
-              {/* Tool Cards */}
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {cat.tools.map((tool) => (
-                  <Link key={tool.href} href={tool.href}>
-                    <div className="group bg-white rounded-xl border border-gray-200 p-4 hover:border-[#ff6b35] hover:shadow-md transition-all cursor-pointer h-full flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-start justify-between mb-3">
-                          <div
-                            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                            style={{ backgroundColor: `${cat.color}15` }}
-                          >
-                            <tool.icon className="h-5 w-5" />
-                          </div>
-                          {tool.badge && (
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${tool.badgeColor}`}>
-                              {tool.badge}
-                            </span>
-                          )}
-                        </div>
-                        <p className="font-semibold text-[#1e3a5f] text-sm mb-1 group-hover:text-[#ff6b35] transition-colors">
-                          {tool.label}
-                        </p>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          {tool.description}
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-end mt-3">
-                        <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-[#ff6b35] transition-colors" />
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-        </div>
+        <p className="text-muted-foreground">
+          Jump into any department. Each card opens that team's tools.
+        </p>
       </div>
 
-      <DashboardFooter />
+      {/* Department cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {departments.map((dept) => {
+          const color = DEPT_COLORS[dept.id] ?? "#1e3a5f";
+          const DeptIcon = iconFor(dept.icon);
+          const target = firstEnabled(dept);
+          return (
+            <div
+              key={dept.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => openDepartment(dept)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  openDepartment(dept);
+                }
+              }}
+              className={`group flex flex-col rounded-xl border border-gray-200 bg-white p-5 transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6b35] ${
+                target ? "cursor-pointer hover:border-[#ff6b35]" : "cursor-default"
+              }`}
+            >
+              <div className="mb-3 flex items-center justify-between">
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-lg"
+                  style={{ backgroundColor: `${color}15`, color }}
+                >
+                  <DeptIcon className="h-5 w-5" />
+                </div>
+                <ChevronRight className="h-5 w-5 text-gray-300 transition-colors group-hover:text-[#ff6b35]" />
+              </div>
+
+              <h2 className="mb-1 text-lg font-bold text-[#1e3a5f]">{dept.label}</h2>
+
+              <ul className="mt-2 space-y-1.5">
+                {dept.items.map((item) => (
+                  <li key={item.label}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (item.path) setLocation(item.path);
+                      }}
+                      className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-sm text-muted-foreground transition-colors hover:text-[#ff6b35]"
+                    >
+                      <span className="flex-1 truncate">{item.label}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

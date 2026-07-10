@@ -19,7 +19,6 @@ import {
   Download,
   CheckSquare
 } from "lucide-react";
-import Navigation from "@/components/Navigation";
 import DashboardFooter from "@/components/DashboardFooter";
 import CampaignLibrary from "@/components/CampaignLibrary";
 import { getLoginUrl } from "@/const";
@@ -332,7 +331,6 @@ export default function MarketingDashboard() {
   return (
     <div className="h-screen flex flex-col bg-secondary/30">
       <InternalNav />
-      <Navigation />
       
       <div className="flex-1 overflow-y-auto">
       <div className="container py-4">
