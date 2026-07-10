@@ -74,6 +74,9 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   const o = data?.opportunity;
   const c = data?.customer;
+  // Disable every stage/outcome control while any stage mutation is in flight,
+  // so rapid clicks can't fire duplicate markWon/markLost/setStage calls.
+  const stageMutating = setStage.isPending || markWon.isPending || markLost.isPending || followUpLater.isPending;
 
   const saveValue = () => {
     if (id == null) return;
@@ -127,17 +130,17 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
             <div className="flex flex-wrap gap-2 border-b p-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1"><GitBranch className="h-4 w-4" /> Change stage</Button>
+                  <Button variant="outline" size="sm" className="gap-1" disabled={stageMutating}><GitBranch className="h-4 w-4" /> Change stage</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   {STAGE_META.filter(s => s.value !== o.stage).map(s => (
-                    <DropdownMenuItem key={s.value} onSelect={() => id != null && setStage.mutate({ id, stage: s.value })}>{s.label}</DropdownMenuItem>
+                    <DropdownMenuItem key={s.value} disabled={stageMutating} onSelect={() => id != null && !stageMutating && setStage.mutate({ id, stage: s.value })}>{s.label}</DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline" size="sm" className="gap-1 text-green-700" onClick={() => id != null && markWon.mutate({ id })}><Trophy className="h-4 w-4" /> Won</Button>
-              <Button variant="outline" size="sm" className="gap-1 text-red-700" onClick={() => id != null && markLost.mutate({ id })}><XCircle className="h-4 w-4" /> Lost</Button>
-              <Button variant="outline" size="sm" className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
+              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => id != null && markWon.mutate({ id })}><Trophy className="h-4 w-4" /> Won</Button>
+              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => id != null && markLost.mutate({ id })}><XCircle className="h-4 w-4" /> Lost</Button>
+              <Button variant="outline" size="sm" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
             </div>
 
             <div className="space-y-5 p-4">

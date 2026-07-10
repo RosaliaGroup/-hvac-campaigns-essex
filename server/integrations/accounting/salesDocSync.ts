@@ -36,7 +36,11 @@ import {
   type EstimateContactInput,
   type QboEstimate,
 } from "./estimates";
-import { buildCustomerFieldUpdate, type IncomingCustomerFields } from "./customerMerge";
+import {
+  buildCustomerFieldUpdate,
+  planCustomerConflictWrites,
+  type IncomingCustomerFields,
+} from "./customerMerge";
 import { cancelOpenFollowups, ensureFollowupsForOpportunity } from "./followups";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -160,48 +164,29 @@ async function recordCustomerConflicts(
     })
     .from(customerSyncConflicts)
     .where(eq(customerSyncConflicts.customerId, customerId));
-  let openCount = 0;
-  for (const c of conflicts) {
-    if (c.conflictType === "missing") {
-      const dup = existing.find(r => r.fieldName === c.fieldName && (r.qboValue ?? "") === (c.qboValue ?? ""));
-      if (dup) continue;
-      await db.insert(customerSyncConflicts).values({
-        customerId,
-        quickbooksCustomerId: qbCustomerId,
-        fieldName: c.fieldName,
-        conflictType: "missing",
-        crmValue: c.crmValue,
-        qboValue: c.qboValue,
-        status: "resolved",
-        resolution: "use_qbo",
-        resolvedAt: now,
-      });
-      continue;
-    }
-    // overwrite_prevented — dedupe to a single open row per (customer, field).
-    const openRow = existing.find(r => r.fieldName === c.fieldName && r.status === "open");
-    if (openRow) {
-      openCount++;
-      if ((openRow.qboValue ?? "") !== (c.qboValue ?? "")) {
-        await db
-          .update(customerSyncConflicts)
-          .set({ qboValue: c.qboValue, crmValue: c.crmValue })
-          .where(eq(customerSyncConflicts.id, openRow.id));
-      }
-      continue;
-    }
+
+  // Pure planning keeps at most one open conflict per (customer, field).
+  const plan = planCustomerConflictWrites(existing, conflicts);
+  for (const ins of plan.inserts) {
     await db.insert(customerSyncConflicts).values({
       customerId,
       quickbooksCustomerId: qbCustomerId,
-      fieldName: c.fieldName,
-      conflictType: "overwrite_prevented",
-      crmValue: c.crmValue,
-      qboValue: c.qboValue,
-      status: "open",
+      fieldName: ins.fieldName,
+      conflictType: ins.conflictType,
+      crmValue: ins.crmValue,
+      qboValue: ins.qboValue,
+      status: ins.status,
+      resolution: ins.resolution,
+      resolvedAt: ins.status === "resolved" ? now : null,
     });
-    openCount++;
   }
-  return openCount;
+  for (const upd of plan.updates) {
+    await db
+      .update(customerSyncConflicts)
+      .set({ qboValue: upd.qboValue, crmValue: upd.crmValue })
+      .where(eq(customerSyncConflicts.id, upd.id));
+  }
+  return plan.openCount;
 }
 
 /**
@@ -235,11 +220,24 @@ async function enrichExistingCustomer(
       billingState: customers.billingState,
       billingZip: customers.billingZip,
       quickbooksCustomerId: customers.quickbooksCustomerId,
+      quickbooksCustomerUpdatedAt: customers.quickbooksCustomerUpdatedAt,
     })
     .from(customers)
     .where(eq(customers.id, customerId))
     .limit(1);
   if (!existing) return;
+
+  // Freshness guard: skip re-enriching when the QBO customer has not changed
+  // since our last enrichment. Keeps every-sync enrichment idempotent and avoids
+  // re-evaluating conflicts on unchanged records. (Existing customers predating
+  // this feature have a null timestamp, so they enrich once on the next sync.)
+  if (
+    existing.quickbooksCustomerUpdatedAt &&
+    contact.quickbooksUpdatedAt &&
+    existing.quickbooksCustomerUpdatedAt.getTime() >= contact.quickbooksUpdatedAt.getTime()
+  ) {
+    return;
+  }
 
   const { patch, conflicts } = buildCustomerFieldUpdate(existing, incomingFromContact(contact), { normalizePhone });
   const setValues: Record<string, unknown> = { ...patch };
@@ -267,6 +265,20 @@ async function enrichExistingCustomer(
     await db.update(customers).set(setValues).where(eq(customers.id, customerId));
   }
   await ensureServiceProperty(db, customerId, contact.serviceAddress, existing.type);
+}
+
+/**
+ * Enrich an already-linked customer from QuickBooks on a normal re-sync: fetch
+ * the QBO customer, fill only-empty CRM fields, attach billing/service
+ * addresses, and log conflicts (never overwrite). Idempotent via the freshness
+ * guard + one-open-conflict-per-field dedupe in enrichExistingCustomer.
+ */
+async function enrichLinkedCustomer(db: Db, customerId: number, estimate: QboEstimate, now: Date): Promise<void> {
+  const qbCustomerId = estimate.CustomerRef?.value ?? null;
+  if (!qbCustomerId) return;
+  const qboCustomer = await quickbooksProvider.fetchQboCustomer(qbCustomerId);
+  const contact = buildContactFromEstimate(estimate, qboCustomer);
+  await enrichExistingCustomer(db, customerId, contact, qbCustomerId, false, now);
 }
 
 /**
@@ -461,17 +473,25 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
     await db.select().from(quickbooksSalesDocuments).where(eq(quickbooksSalesDocuments.quickbooksId, mapped.quickbooksId)).limit(1)
   )[0];
 
-  if (existing && shouldSkipExistingDoc(existing, mapped)) {
-    result.skipped++;
-    return;
-  }
-
-  // Resolve/auto-create the contact (reuse the link if we already have one).
+  // Resolve/auto-create AND enrich the contact on EVERY sync — not only first
+  // import. Runs before the doc-skip guard so an already-linked customer still
+  // gets empty fields filled, billing/service addresses attached, and conflicts
+  // logged even when the estimate itself is unchanged. Enrichment is idempotent
+  // (fill-empty + one-open-conflict-per-field dedupe + a QBO-freshness guard).
   let customerId = existing?.customerId ?? null;
   if (customerId == null) {
     const c = await resolveOrCreateContact(db, estimate, now);
     customerId = c.customerId;
     if (c.created) result.contactsCreated++;
+  } else {
+    await enrichLinkedCustomer(db, customerId, estimate, now);
+  }
+
+  // Doc idempotency: skip re-writing an unchanged sales-doc/opportunity. The
+  // customer was already enriched above, so skipping here is safe.
+  if (existing && shouldSkipExistingDoc(existing, mapped)) {
+    result.skipped++;
+    return;
   }
 
   // Load the customer for the title + work-category classification.

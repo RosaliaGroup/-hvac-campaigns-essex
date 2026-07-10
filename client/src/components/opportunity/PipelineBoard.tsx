@@ -83,7 +83,7 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
   });
 
   const move = (id: number, stage: OpportunityStage, from?: string) => {
-    if (from === stage) return;
+    if (from === stage || setStage.isPending) return; // ignore no-op moves and re-fires while a move is in flight
     setStage.mutate({ id, stage });
     toast({ title: `Moved to ${STAGE_META.find(s => s.value === stage)?.label}` });
   };
