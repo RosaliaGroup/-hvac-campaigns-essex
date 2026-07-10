@@ -154,49 +154,64 @@ export async function findCustomerIdByPhone(phone: string | null | undefined): P
 }
 
 /**
- * Compute the derived relationship (Lead/Prospect/Customer) for a batch of
- * customer ids, using real signals — linked lead-capture stages, job outcomes,
- * and whether any appointment exists. Contacts with none of these default to
- * Lead, NOT Customer.
+ * A person whose relationship we want to derive. Used identically for a Contact
+ * (a `customers` row, keyed by its own id) and a Lead Inbox row (a `leadCaptures`
+ * row). Both screens funnel through the SAME derivation so a person can never
+ * read as Lead in one place and Prospect in another.
  */
-async function computeRelationshipMap(
+export interface RelationshipEntity {
+  id: number;
+  customerId?: number | null;
+  phone?: string | null;
+  email?: string | null;
+  /** Every lead-capture stage tied to this person (for a lead, just its own). */
+  leadStages: (string | null | undefined)[];
+}
+
+/**
+ * Pure per-entity relationship: appointment match (customerId → phone → email)
+ * + linked job outcomes + lead stages, all fed to the shared
+ * deriveContactRelationship. Exported for tests. This is the single source of
+ * truth shared by the Contacts list and the Lead Inbox.
+ */
+export function relationshipForEntity(
+  entity: RelationshipEntity,
+  appts: Array<{ customerId?: number | null; phone?: string | null; email?: string | null }>,
+  jobStatusesByCustomerId: Map<number, string[]>,
+): Relationship {
+  const hasAppointment = appts.some(a => appointmentMatchesLead(a, entity));
+  const jobStatuses = entity.customerId != null ? (jobStatusesByCustomerId.get(entity.customerId) ?? []) : [];
+  return deriveContactRelationship({ leadStages: entity.leadStages, jobStatuses, hasAppointment });
+}
+
+/**
+ * Batch-derive relationships for many entities with the same signals in both
+ * screens: appointments (matched by customerId OR phone/email fallback) and
+ * jobs linked to the person's customer record.
+ */
+export async function computeRelationships(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
-  customerIds: number[],
+  entities: RelationshipEntity[],
 ): Promise<Map<number, Relationship>> {
   const map = new Map<number, Relationship>();
-  if (customerIds.length === 0) return map;
+  if (entities.length === 0) return map;
 
-  const [caps, jbs, appts] = await Promise.all([
-    db.select({ customerId: leadCaptures.customerId, status: leadCaptures.status })
-      .from(leadCaptures)
-      .where(inArray(leadCaptures.customerId, customerIds)),
-    db.select({ customerId: jobs.customerId, status: jobs.status })
-      .from(jobs)
-      .where(inArray(jobs.customerId, customerIds)),
-    db.select({ customerId: appointments.customerId })
-      .from(appointments)
-      .where(inArray(appointments.customerId, customerIds)),
+  const customerIds = Array.from(new Set(entities.map(e => e.customerId).filter((x): x is number => x != null)));
+  const [appts, jbs] = await Promise.all([
+    db.select({ customerId: appointments.customerId, phone: appointments.phone, email: appointments.email }).from(appointments),
+    customerIds.length
+      ? db.select({ customerId: jobs.customerId, status: jobs.status }).from(jobs).where(inArray(jobs.customerId, customerIds))
+      : Promise.resolve([] as { customerId: number | null; status: string }[]),
   ]);
 
-  const stagesByCustomer = new Map<number, string[]>();
-  for (const c of caps) {
-    if (c.customerId == null) continue;
-    (stagesByCustomer.get(c.customerId) ?? stagesByCustomer.set(c.customerId, []).get(c.customerId)!).push(c.status);
-  }
   const jobStatusByCustomer = new Map<number, string[]>();
   for (const j of jbs) {
     if (j.customerId == null) continue;
     (jobStatusByCustomer.get(j.customerId) ?? jobStatusByCustomer.set(j.customerId, []).get(j.customerId)!).push(j.status);
   }
-  const hasApptCustomer = new Set<number>();
-  for (const a of appts) if (a.customerId != null) hasApptCustomer.add(a.customerId);
 
-  for (const id of customerIds) {
-    map.set(id, deriveContactRelationship({
-      leadStages: stagesByCustomer.get(id) ?? [],
-      jobStatuses: jobStatusByCustomer.get(id) ?? [],
-      hasAppointment: hasApptCustomer.has(id),
-    }));
+  for (const e of entities) {
+    map.set(e.id, relationshipForEntity(e, appts, jobStatusByCustomer));
   }
   return map;
 }
@@ -245,8 +260,22 @@ export const customersRouter = router({
         db.select({ count: sql<number>`COUNT(*)` }).from(customers).where(where),
       ]);
       // Derive the true relationship (Lead/Prospect/Customer) from real signals
-      // instead of assuming every contact is a Customer.
-      const relationships = await computeRelationshipMap(db, rows.map(r => r.id));
+      // instead of assuming every contact is a Customer. Same helper the Lead
+      // Inbox uses, so a person reads identically in both screens.
+      const stagesByCustomer = new Map<number, string[]>();
+      if (rows.length) {
+        const caps = await db
+          .select({ customerId: leadCaptures.customerId, status: leadCaptures.status })
+          .from(leadCaptures)
+          .where(inArray(leadCaptures.customerId, rows.map(r => r.id)));
+        for (const c of caps) {
+          if (c.customerId == null) continue;
+          (stagesByCustomer.get(c.customerId) ?? stagesByCustomer.set(c.customerId, []).get(c.customerId)!).push(c.status);
+        }
+      }
+      const relationships = await computeRelationships(db, rows.map(r => ({
+        id: r.id, customerId: r.id, phone: r.phone, email: r.email, leadStages: stagesByCustomer.get(r.id) ?? [],
+      })));
       const items = rows.map(r => ({ ...r, relationship: relationships.get(r.id) ?? "lead" as Relationship }));
       return { items, total: Number(totalRows[0]?.count ?? 0) };
     }),
