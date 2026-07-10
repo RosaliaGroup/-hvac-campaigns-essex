@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import {
   buildCustomerFieldUpdate,
   hasReviewableConflict,
+  planCustomerConflictWrites,
+  type ExistingConflictRow,
+  type FieldConflict,
   type IncomingCustomerFields,
   type MergeableCustomer,
 } from "./customerMerge";
@@ -109,5 +112,65 @@ describe("buildCustomerFieldUpdate — empty QBO fields are ignored", () => {
     const out = buildCustomerFieldUpdate(crm({ email: "keep@crm.com" }), qbo({ email: null, phone: "   " }));
     expect(out.patch).toEqual({});
     expect(out.conflicts).toEqual([]);
+  });
+});
+
+describe("planCustomerConflictWrites — no duplicate conflict rows across syncs", () => {
+  // Simulate a table: apply a plan against the current rows, return the new row set.
+  let nextId = 1;
+  function applyPlan(rows: ExistingConflictRow[], incoming: FieldConflict[]): ExistingConflictRow[] {
+    const plan = planCustomerConflictWrites(rows, incoming);
+    let next = rows.map(r => ({ ...r }));
+    for (const upd of plan.updates) {
+      const row = next.find(r => r.id === upd.id);
+      if (row) row.qboValue = upd.qboValue;
+    }
+    for (const ins of plan.inserts) {
+      next.push({ id: nextId++, fieldName: ins.fieldName, qboValue: ins.qboValue, status: ins.status });
+    }
+    return next;
+  }
+
+  it("keeps a single open row for the same overwrite_prevented conflict on every sync", () => {
+    const incoming: FieldConflict[] = [
+      { fieldName: "email", conflictType: "overwrite_prevented", crmValue: "old@crm.com", qboValue: "new@qbo.com" },
+    ];
+    let rows: ExistingConflictRow[] = [];
+    // Poll five times with the exact same conflict.
+    for (let i = 0; i < 5; i++) rows = applyPlan(rows, incoming);
+    const openEmail = rows.filter(r => r.fieldName === "email" && r.status === "open");
+    expect(openEmail).toHaveLength(1);
+  });
+
+  it("refreshes (not duplicates) the open row when the QBO value changes", () => {
+    let rows: ExistingConflictRow[] = [];
+    rows = applyPlan(rows, [
+      { fieldName: "email", conflictType: "overwrite_prevented", crmValue: "old@crm.com", qboValue: "a@qbo.com" },
+    ]);
+    rows = applyPlan(rows, [
+      { fieldName: "email", conflictType: "overwrite_prevented", crmValue: "old@crm.com", qboValue: "b@qbo.com" },
+    ]);
+    const openEmail = rows.filter(r => r.fieldName === "email" && r.status === "open");
+    expect(openEmail).toHaveLength(1);
+    expect(openEmail[0].qboValue).toBe("b@qbo.com");
+  });
+
+  it("does not re-insert a 'missing' auto-fill that was already recorded", () => {
+    const incoming: FieldConflict[] = [
+      { fieldName: "phone", conflictType: "missing", crmValue: null, qboValue: "9735550100" },
+    ];
+    let rows: ExistingConflictRow[] = [];
+    rows = applyPlan(rows, incoming);
+    rows = applyPlan(rows, incoming);
+    expect(rows.filter(r => r.fieldName === "phone")).toHaveLength(1);
+  });
+
+  it("dedupes duplicate conflicts within a single batch to one open row", () => {
+    const plan = planCustomerConflictWrites([], [
+      { fieldName: "companyName", conflictType: "overwrite_prevented", crmValue: "Acme HVAC", qboValue: "Acme LLC" },
+      { fieldName: "companyName", conflictType: "overwrite_prevented", crmValue: "Acme HVAC", qboValue: "Acme LLC" },
+    ]);
+    expect(plan.inserts).toHaveLength(1);
+    expect(plan.openCount).toBe(1);
   });
 });
