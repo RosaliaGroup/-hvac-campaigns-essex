@@ -16,6 +16,7 @@ import {
   customers,
 } from "../../drizzle/schema";
 import { computeDaysPending } from "../integrations/accounting/estimates";
+import { extractSalesDocSignals } from "@shared/opportunityCategory";
 
 const STAGE_ENUM = ["new", "proposal_sent", "pending", "won", "lost"] as const;
 
@@ -58,6 +59,7 @@ export const opportunitiesRouter = router({
           customerId: opportunities.customerId,
           customerName: customers.displayName,
           customerType: customers.type,
+          customerCompany: customers.companyName,
           docId: quickbooksSalesDocuments.id,
           docType: quickbooksSalesDocuments.docType,
           docNumber: quickbooksSalesDocuments.docNumber,
@@ -66,6 +68,9 @@ export const opportunitiesRouter = router({
           txnDate: quickbooksSalesDocuments.txnDate,
           sentAt: quickbooksSalesDocuments.sentAt,
           documentLink: quickbooksSalesDocuments.documentLink,
+          // Selected for server-side signal extraction only — stripped from the
+          // response below so the full QBO payload never reaches the browser.
+          raw: quickbooksSalesDocuments.raw,
           updatedAt: opportunities.updatedAt,
         })
         .from(opportunities)
@@ -77,10 +82,19 @@ export const opportunitiesRouter = router({
         .offset(input.offset);
 
       const now = new Date();
-      const items = rows.map(r => ({
-        ...r,
-        daysPending: computeDaysPending({ sentAt: r.sentAt, txnDate: r.txnDate }, now),
-      }));
+      // Attach compact, display-only classifier signals (memo/line text + a
+      // reliable "linked to existing job" flag). The Opportunity Center UI feeds
+      // these to the shared deriveWorkCategory() helper; the raw payload itself
+      // is dropped here and never sent to the client.
+      const items = rows.map(({ raw, ...r }) => {
+        const signals = extractSalesDocSignals(raw);
+        return {
+          ...r,
+          categoryText: signals.text,
+          linkedToExistingJob: signals.linkedToExistingJob,
+          daysPending: computeDaysPending({ sentAt: r.sentAt, txnDate: r.txnDate }, now),
+        };
+      });
 
       const [{ count } = { count: 0 }] = await db
         .select({ count: sql<number>`count(*)` })

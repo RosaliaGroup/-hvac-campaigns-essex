@@ -17,6 +17,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { FileText, RefreshCw, Search } from "lucide-react";
 import { formatMoney } from "@/lib/jobPresentation";
+import { deriveWorkCategory, workCategoryLabel, deriveDocTypeLabel, type WorkCategory } from "@shared/opportunityCategory";
+
+/** Primary work-category badge styling (large badge). */
+const WORK_CATEGORY_BADGE: Record<WorkCategory, string> = {
+  residential: "bg-sky-100 text-sky-800 border-sky-200",
+  commercial: "bg-violet-100 text-violet-800 border-violet-200",
+  change_order: "bg-orange-100 text-orange-800 border-orange-200",
+};
 
 const STAGE_META: { value: string; label: string; badge: string }[] = [
   { value: "new", label: "New", badge: "bg-slate-100 text-slate-700" },
@@ -127,7 +135,7 @@ export default function Opportunities() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Customer</TableHead>
-                    <TableHead>Type</TableHead>
+                    <TableHead>Work / Document</TableHead>
                     <TableHead>Doc #</TableHead>
                     <TableHead className="text-right">Amount</TableHead>
                     <TableHead>Status</TableHead>
@@ -139,10 +147,29 @@ export default function Opportunities() {
                 <TableBody>
                   {items.map(row => {
                     const stageMeta = STAGE_META.find(m => m.value === row.stage);
+                    // Single source of truth: the shared classifier. Primary badge
+                    // = work category; secondary = unchanged QBO document type.
+                    const category = deriveWorkCategory(
+                      {
+                        docType: row.docType,
+                        docNumber: row.docNumber,
+                        text: row.categoryText,
+                        linkedToExistingJob: row.linkedToExistingJob,
+                      },
+                      { type: row.customerType, companyName: row.customerCompany, displayName: row.customerName },
+                    );
+                    const docLabel = deriveDocTypeLabel({ docType: row.docType, text: row.categoryText });
                     return (
                       <TableRow key={row.id} className="hover:bg-muted/50">
                         <TableCell className="font-medium max-w-xs truncate">{row.customerName ?? "—"}</TableCell>
-                        <TableCell className="text-sm capitalize text-muted-foreground">{row.docType ?? "estimate"}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col items-start gap-1">
+                            <Badge variant="outline" className={`text-xs font-semibold px-2 py-0.5 ${WORK_CATEGORY_BADGE[category]}`}>
+                              {workCategoryLabel(category)}
+                            </Badge>
+                            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{docLabel}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className="font-mono text-sm">{row.docNumber ?? "—"}</TableCell>
                         <TableCell className="text-right font-medium">{formatMoney(Number(row.docAmount ?? row.amount ?? 0))}</TableCell>
                         <TableCell>
