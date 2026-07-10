@@ -132,8 +132,19 @@ describe("extractSalesDocSignals — raw QBO payload parsing (single source)", (
     expect(isChangeOrder({ text: sig.text, linkedToExistingJob: sig.linkedToExistingJob })).toBe(true);
   });
 
-  it("detects linkedToExistingJob from a non-empty LinkedTxn array", () => {
-    const raw = { LinkedTxn: [{ TxnId: "55", TxnType: "Invoice" }] };
+  it("does NOT treat an invoiced estimate (LinkedTxn=Invoice) as a job link", () => {
+    // A QBO estimate linked to its Invoice(s) was billed — not a change order.
+    const raw = { LinkedTxn: [{ TxnId: "55", TxnType: "Invoice" }, { TxnId: "56", TxnType: "Invoice" }] };
+    expect(extractSalesDocSignals(raw).linkedToExistingJob).toBe(false);
+  });
+
+  it("ignores other billing links (Payment/CreditMemo) too", () => {
+    expect(extractSalesDocSignals({ LinkedTxn: [{ TxnType: "Payment" }] }).linkedToExistingJob).toBe(false);
+    expect(extractSalesDocSignals({ LinkedTxn: [{ TxnType: "CreditMemo" }] }).linkedToExistingJob).toBe(false);
+  });
+
+  it("treats a non-billing linked transaction as a reliable existing-job link", () => {
+    const raw = { LinkedTxn: [{ TxnId: "9", TxnType: "Estimate" }] };
     expect(extractSalesDocSignals(raw).linkedToExistingJob).toBe(true);
   });
 

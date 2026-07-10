@@ -135,10 +135,16 @@ interface RawEstimateLike {
  * raw-payload parsing in ONE place so the server can attach compact signals to
  * list rows (and never ship the whole QBO payload to the browser).
  *
- * `linkedToExistingJob` is set only from the reliable `LinkedTxn` field (a
- * non-empty array means QuickBooks linked this estimate to an existing
- * transaction/job) — not inferred from free text.
+ * `linkedToExistingJob` is deliberately CONSERVATIVE: a QBO Estimate's
+ * `LinkedTxn` normally points to the Invoice(s) it was billed into, which means
+ * the estimate was *accepted/invoiced* — NOT that it is a change order to an
+ * existing job. So billing links (Invoice/Payment/CreditMemo/SalesReceipt/
+ * RefundReceipt) are ignored; only a non-billing linked transaction counts as a
+ * reliable existing-job/project link. This avoids flagging every invoiced
+ * estimate as a Change Order.
  */
+const BILLING_LINK_TYPES = new Set(["invoice", "payment", "creditmemo", "salesreceipt", "refundreceipt"]);
+
 export function extractSalesDocSignals(raw: unknown): {
   text: string;
   linkedToExistingJob: boolean;
@@ -165,6 +171,13 @@ export function extractSalesDocSignals(raw: unknown): {
       if (line && typeof line.Description === "string") parts.push(line.Description);
     }
   }
-  const linkedToExistingJob = Array.isArray(e.LinkedTxn) && e.LinkedTxn.length > 0;
+  const linkedToExistingJob =
+    Array.isArray(e.LinkedTxn) &&
+    e.LinkedTxn.some(l => {
+      const type =
+        l && typeof l === "object" && "TxnType" in l ? String((l as { TxnType?: unknown }).TxnType ?? "") : "";
+      const t = type.trim().toLowerCase();
+      return t !== "" && !BILLING_LINK_TYPES.has(t);
+    });
   return { text: parts.join(" · "), linkedToExistingJob };
 }
