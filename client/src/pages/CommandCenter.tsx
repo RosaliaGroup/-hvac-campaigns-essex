@@ -42,7 +42,7 @@ export default function CommandCenter() {
   );
 
   const firstEnabled = (dept: NavDepartment): NavItem | undefined =>
-    dept.items.find((i) => !i.disabled && i.path);
+    dept.items.find((i) => i.path);
 
   const openDepartment = (dept: NavDepartment) => {
     const target = firstEnabled(dept);
@@ -101,23 +101,13 @@ export default function CommandCenter() {
                   <li key={item.label}>
                     <button
                       type="button"
-                      disabled={item.disabled || !item.path}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (!item.disabled && item.path) setLocation(item.path);
+                        if (item.path) setLocation(item.path);
                       }}
-                      className={`flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-sm transition-colors ${
-                        item.disabled || !item.path
-                          ? "cursor-default text-muted-foreground/60"
-                          : "text-muted-foreground hover:text-[#ff6b35]"
-                      }`}
+                      className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-sm text-muted-foreground transition-colors hover:text-[#ff6b35]"
                     >
                       <span className="flex-1 truncate">{item.label}</span>
-                      {item.disabled && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
-                          Soon
-                        </span>
-                      )}
                     </button>
                   </li>
                 ))}

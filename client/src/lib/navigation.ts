@@ -14,12 +14,18 @@
 /* ── Roles ─────────────────────────────────────────────────────────────── */
 
 /**
- * Navigation roles. `admin` and `member` are the only roles the current auth
- * schema can actually produce (`users.role` is "user" | "admin", team sessions
- * add teamRole "admin" | "member" | "viewer"). The department roles
- * (sales / dispatcher / technician / marketing) are defined here so the
- * filtering mechanism is complete and tested; they activate automatically once
- * a role/department field exists on the user. No schema change is made here.
+ * Navigation roles.
+ *
+ * PRODUCTION roles — the only ones the current auth schema can actually produce
+ * and the only ones `resolveNavRole` ever returns:
+ *   - `admin`   users.role === "admin" OR team session teamRole "admin"
+ *   - `viewer`  team session teamRole "viewer" (read-only where supported)
+ *   - `member`  everyone else (default operational employee)
+ *
+ * FUTURE roles — `sales` / `dispatcher` / `technician` / `marketing` are kept as
+ * mapping helpers only. `getVisibleDepartments` understands them so the model is
+ * ready, but no user currently resolves to them and NO schema/auth change is made
+ * here. They activate once a role/department field is added in a later task.
  */
 export type NavRole =
   | "admin"
@@ -27,7 +33,8 @@ export type NavRole =
   | "dispatcher"
   | "technician"
   | "marketing"
-  | "member";
+  | "member"
+  | "viewer";
 
 export const ALL_ROLES: NavRole[] = [
   "admin",
@@ -36,13 +43,17 @@ export const ALL_ROLES: NavRole[] = [
   "technician",
   "marketing",
   "member",
+  "viewer",
 ];
+
+/** Roles a real user can currently be resolved to in production. */
+export const PRODUCTION_ROLES: NavRole[] = ["admin", "member", "viewer"];
 
 /* ── Nav model ─────────────────────────────────────────────────────────── */
 
 export type NavItem = {
   label: string;
-  /** Route the item links to. Empty string for `disabled` placeholders. */
+  /** Route the item links to. Every visible item opens a real, existing route. */
   path: string;
   /** lucide-react icon name (mapped to a component in the UI layer). */
   icon: string;
@@ -51,8 +62,6 @@ export type NavItem = {
    * is intentionally omitted from these arrays. An empty array => admin-only.
    */
   roles: NavRole[];
-  /** True for tools that do not have a page yet (rendered muted, not linked). */
-  disabled?: boolean;
 };
 
 export type NavDepartment = {
@@ -94,7 +103,8 @@ export const DEPARTMENTS: NavDepartment[] = [
     icon: "CalendarClock",
     items: [
       { label: "Calendar", path: "/calendar", icon: "CalendarClock", roles: ["sales", "dispatcher", "technician", CRM] },
-      { label: "Appointments", path: "", icon: "CalendarCheck", roles: ["dispatcher", "technician", CRM], disabled: true },
+      // No dedicated appointments route exists — appointments live on the calendar.
+      { label: "Appointments", path: "/calendar", icon: "CalendarCheck", roles: ["dispatcher", "technician", CRM] },
       { label: "Jobs", path: "/jobs", icon: "Briefcase", roles: ["dispatcher", "technician", CRM] },
       { label: "Field Today", path: "/field/today", icon: "MapPin", roles: ["dispatcher", "technician", CRM] },
     ],
@@ -116,12 +126,11 @@ export const DEPARTMENTS: NavDepartment[] = [
     label: "Accounting",
     icon: "Calculator",
     items: [
-      // No dedicated pages exist yet — surfaced as roadmap placeholders so the
-      // department taxonomy matches the spec ("Invoices when available").
-      { label: "QuickBooks", path: "", icon: "Calculator", roles: [CRM], disabled: true },
-      { label: "Estimates / Proposals", path: "", icon: "FileText", roles: [CRM], disabled: true },
-      { label: "Invoices", path: "", icon: "Receipt", roles: [CRM], disabled: true },
-      { label: "Sync Logs", path: "", icon: "RefreshCw", roles: [CRM], disabled: true },
+      // QuickBooks lives on the Integrations page; estimates/proposals are managed
+      // in the Opportunity Center. Invoices/Sync Logs are hidden until real pages
+      // exist (no placeholder links shown to users).
+      { label: "QuickBooks", path: "/settings/integrations", icon: "Calculator", roles: [CRM] },
+      { label: "Estimates / Proposals", path: "/opportunities", icon: "FileText", roles: [CRM] },
     ],
   },
   {
@@ -141,7 +150,6 @@ export const DEPARTMENTS: NavDepartment[] = [
     icon: "BarChart3",
     items: [
       { label: "Analytics & Reports", path: "/analytics", icon: "BarChart3", roles: ["marketing", CRM] },
-      { label: "Performance", path: "", icon: "TrendingUp", roles: ["marketing", CRM], disabled: true },
       { label: "AI Take-Off", path: "/takeoff-ai", icon: "Ruler", roles: [CRM] },
     ],
   },
@@ -154,7 +162,6 @@ export const DEPARTMENTS: NavDepartment[] = [
       { label: "Team Members", path: "/team-management", icon: "Users", roles: [] },
       { label: "Settings", path: "/admin", icon: "Settings", roles: [] },
       { label: "Integrations", path: "/settings/integrations", icon: "Plug", roles: [] },
-      { label: "Sync Conflicts", path: "", icon: "AlertTriangle", roles: [], disabled: true },
     ],
   },
 ];
@@ -219,26 +226,22 @@ type UserLike =
   | {
       role?: string | null;
       teamRole?: string | null;
-      // Optional forward-compatible fields; not in the current schema.
-      navRole?: string | null;
-      department?: string | null;
     }
   | null
   | undefined;
 
 /**
- * Map an authenticated user to a navigation role. Admins get everything;
- * everyone else falls back to `member` (full CRM minus Administration) unless a
- * forward-compatible `navRole`/`department` field pins them to a specialised
- * role. Never throws for unknown shapes.
+ * Map an authenticated user to a PRODUCTION navigation role. Only `admin`,
+ * `viewer` and `member` are ever returned, matching what the auth schema stores
+ * today (`users.role` "user"|"admin"; team sessions add teamRole
+ * "admin"|"member"|"viewer"). The specialised sales/dispatcher/technician/
+ * marketing roles are intentionally NOT produced here — no user resolves to them
+ * until a role/department field is added in a later task. Never throws.
  */
 export function resolveNavRole(user: UserLike): NavRole {
   if (!user) return "member";
   if (user.role === "admin" || user.teamRole === "admin") return "admin";
-
-  const explicit = (user.navRole ?? user.department ?? "").toString().toLowerCase();
-  if ((ALL_ROLES as string[]).includes(explicit)) return explicit as NavRole;
-
+  if (user.teamRole === "viewer") return "viewer";
   return "member";
 }
 
@@ -246,7 +249,9 @@ export function resolveNavRole(user: UserLike): NavRole {
 
 function itemVisibleForRole(item: NavItem, role: NavRole): boolean {
   if (role === "admin") return true;
-  return item.roles.includes(role);
+  // Viewer is read-only but sees the same operational departments as a member.
+  const effective: NavRole = role === "viewer" ? "member" : role;
+  return item.roles.includes(effective);
 }
 
 /**
@@ -288,6 +293,31 @@ export function getActiveDepartmentId(location: string): string | null {
     }
   }
   return bestDeptId;
+}
+
+/**
+ * Canonical active item, as a stable `${deptId}::${label}` key, chosen from an
+ * already role-filtered department list. When two items point at the same route
+ * (e.g. Calendar + Appointments → /calendar, or Opportunity Center + Estimates →
+ * /opportunities) only ONE — the primary, in the same department that
+ * `getActiveDepartmentId` expands — is highlighted. Returns null off-route.
+ */
+export function getActiveItemKey(
+  departments: NavDepartment[],
+  location: string
+): string | null {
+  const path = toPathname(location);
+  let bestKey: string | null = null;
+  let bestLen = -1;
+  for (const dept of departments) {
+    for (const item of dept.items) {
+      if (itemMatchesPath(item, path) && item.path.length > bestLen) {
+        bestLen = item.path.length;
+        bestKey = `${dept.id}::${item.label}`;
+      }
+    }
+  }
+  return bestKey;
 }
 
 /** The active item's exact path (for highlighting), or null. */

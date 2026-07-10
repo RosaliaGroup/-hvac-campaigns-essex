@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   DEPARTMENTS,
+  PRODUCTION_ROLES,
   isInternalRoute,
   resolveNavRole,
   getVisibleDepartments,
   getActiveDepartmentId,
+  getActiveItemKey,
   getActiveItemPath,
   isDepartmentOpen,
   loadDepartmentOpenState,
@@ -103,14 +105,10 @@ describe("department structure", () => {
     ]);
   });
 
-  it("only links items that map to a real route; placeholders are disabled", () => {
+  it("every visible item opens a real route (no disabled placeholders)", () => {
     for (const dept of DEPARTMENTS) {
       for (const item of dept.items) {
-        if (item.disabled) {
-          expect(item.path).toBe("");
-        } else {
-          expect(item.path.startsWith("/")).toBe(true);
-        }
+        expect(item.path.startsWith("/")).toBe(true);
       }
     }
   });
@@ -123,6 +121,7 @@ describe("resolveNavRole", () => {
     expect(resolveNavRole(null)).toBe("member");
     expect(resolveNavRole(undefined)).toBe("member");
     expect(resolveNavRole({ role: "user" })).toBe("member");
+    expect(resolveNavRole({ role: "user", teamRole: "member" })).toBe("member");
   });
 
   it("recognises admins by user role or team role", () => {
@@ -130,10 +129,24 @@ describe("resolveNavRole", () => {
     expect(resolveNavRole({ role: "user", teamRole: "admin" })).toBe("admin");
   });
 
-  it("honours a forward-compatible navRole/department field", () => {
-    expect(resolveNavRole({ role: "user", navRole: "sales" })).toBe("sales");
-    expect(resolveNavRole({ role: "user", department: "Dispatcher" })).toBe("dispatcher");
-    expect(resolveNavRole({ role: "user", department: "not-a-role" })).toBe("member");
+  it("resolves viewer team sessions to the read-only viewer role", () => {
+    expect(resolveNavRole({ role: "user", teamRole: "viewer" })).toBe("viewer");
+  });
+
+  it("only ever returns a production role (never a specialised one)", () => {
+    const samples = [
+      null,
+      undefined,
+      { role: "user" },
+      { role: "admin" },
+      { role: "user", teamRole: "admin" },
+      { role: "user", teamRole: "viewer" },
+      { role: "user", teamRole: "member" },
+    ];
+    for (const s of samples) {
+      expect(PRODUCTION_ROLES).toContain(resolveNavRole(s));
+    }
+    expect(PRODUCTION_ROLES).toEqual(["admin", "member", "viewer"]);
   });
 });
 
@@ -177,6 +190,16 @@ describe("getVisibleDepartments", () => {
       "analytics",
     ]);
   });
+
+  it("viewer (read-only) sees the same operational departments as a member", () => {
+    // Viewer is a production role: same visibility as member, read-only enforced
+    // by the app layer (not navigation).
+    expect(deptIds("viewer")).toEqual(deptIds("member"));
+  });
+
+  // The four tests below exercise the FUTURE role mapping helpers. No real user
+  // resolves to these roles yet (resolveNavRole only returns admin/member/viewer);
+  // they are kept and tested so the mechanism is ready when a role field is added.
 
   it("sales sees Sales tools, Calendar and Command Center — not Marketing or Dispatch jobs", () => {
     expect(deptIds("sales")).toEqual(["home", "sales", "dispatch"]);
@@ -240,8 +263,10 @@ describe("getActiveDepartmentId", () => {
     expect(getActiveDepartmentId("/team-management")).toBe("admin");
   });
 
-  it("prefers the longest matching route (settings/integrations => admin)", () => {
-    expect(getActiveDepartmentId("/settings/integrations")).toBe("admin");
+  it("resolves a route shared by two departments to the first that owns it", () => {
+    // QuickBooks (Accounting) and Integrations (Administration) both link to
+    // /settings/integrations; Accounting appears first in the sidebar.
+    expect(getActiveDepartmentId("/settings/integrations")).toBe("accounting");
   });
 
   it("returns null for unknown / public routes", () => {
@@ -251,6 +276,35 @@ describe("getActiveDepartmentId", () => {
   it("highlights the owning item path", () => {
     expect(getActiveItemPath("/customers/42")).toBe("/customers");
     expect(getActiveItemPath("/analytics")).toBe("/analytics");
+  });
+});
+
+/* ── De-duplicated active highlight (routes reused across departments) ──── */
+// Covers: "no duplicated nav highlight" — when two items share a route only the
+// primary one (matching the auto-expanded department) is highlighted.
+
+describe("getActiveItemKey", () => {
+  const admin = getVisibleDepartments("admin");
+
+  it("picks a single primary item when a route is shared", () => {
+    // /calendar => Calendar (primary), not Appointments.
+    expect(getActiveItemKey(admin, "/calendar")).toBe("dispatch::Calendar");
+    // /opportunities => Opportunity Center (Sales), not Estimates (Accounting).
+    expect(getActiveItemKey(admin, "/opportunities")).toBe("sales::Opportunity Center");
+    // /settings/integrations => QuickBooks (Accounting appears before Admin).
+    expect(getActiveItemKey(admin, "/settings/integrations")).toBe("accounting::QuickBooks");
+  });
+
+  it("respects role filtering (member can't match an admin-only owner)", () => {
+    const member = getVisibleDepartments("member");
+    // Member never sees Administration, so the integrations route resolves to
+    // the Accounting/QuickBooks entry they can actually see.
+    expect(getActiveItemKey(member, "/settings/integrations")).toBe("accounting::QuickBooks");
+  });
+
+  it("resolves nested routes and returns null off-route", () => {
+    expect(getActiveItemKey(admin, "/customers/42")).toBe("sales::Contacts");
+    expect(getActiveItemKey(admin, "/about")).toBeNull();
   });
 });
 

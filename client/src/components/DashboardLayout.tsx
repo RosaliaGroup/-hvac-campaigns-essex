@@ -26,10 +26,9 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import {
-  DEPARTMENTS,
   NAV_COLLAPSE_STORAGE_KEY,
   getActiveDepartmentId,
-  getActiveItemPath,
+  getActiveItemKey,
   getVisibleDepartments,
   isDepartmentOpen,
   loadDepartmentOpenState,
@@ -114,10 +113,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const role = useMemo(() => resolveNavRole(user), [user]);
   const departments = useMemo(() => getVisibleDepartments(role), [role]);
   const activeDeptId = getActiveDepartmentId(location);
-  const activeItemPath = getActiveItemPath(location);
-  const activeLabel =
-    DEPARTMENTS.flatMap((d) => d.items).find((i) => i.path === activeItemPath)?.label ??
-    "Dashboard";
+  const activeItemKey = useMemo(
+    () => getActiveItemKey(departments, location),
+    [departments, location]
+  );
+  // Breadcrumb label derived from the canonical active item key (`deptId::label`).
+  const activeLabel = activeItemKey
+    ? activeItemKey.slice(activeItemKey.indexOf("::") + 2)
+    : "Dashboard";
 
   // Persisted per-department open/closed state.
   const [openState, setOpenState] = useState<DepartmentOpenState>(() =>
@@ -142,7 +145,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     setOpenState((prev) => ({ ...prev, [deptId]: open }));
 
   const navigate = (item: NavItem) => {
-    if (item.disabled || !item.path) return;
+    if (!item.path) return;
     setLocation(item.path);
     if (isMobile) setOpenMobile(false);
   };
@@ -169,7 +172,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               dept={dept}
               open={isDepartmentOpen(dept.id, activeDeptId, openState)}
               onOpenChange={(open) => toggleDept(dept.id, open)}
-              activeItemPath={activeItemPath}
+              activeItemKey={activeItemKey}
               onNavigate={navigate}
             />
           ))}
@@ -226,13 +229,13 @@ function DepartmentSection({
   dept,
   open,
   onOpenChange,
-  activeItemPath,
+  activeItemKey,
   onNavigate,
 }: {
   dept: NavDepartment;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  activeItemPath: string | null;
+  activeItemKey: string | null;
   onNavigate: (item: NavItem) => void;
 }) {
   const DeptIcon = iconFor(dept.icon);
@@ -247,27 +250,17 @@ function DepartmentSection({
         <SidebarMenu className="py-0.5">
           {dept.items.map((item) => {
             const ItemIcon = iconFor(item.icon);
-            const isActive = !!item.path && item.path === activeItemPath;
+            const isActive = `${dept.id}::${item.label}` === activeItemKey;
             return (
               <SidebarMenuItem key={`${dept.id}-${item.label}`}>
                 <SidebarMenuButton
                   isActive={isActive}
-                  aria-disabled={item.disabled || undefined}
                   onClick={() => onNavigate(item)}
-                  tooltip={item.disabled ? `${item.label} (coming soon)` : item.label}
-                  className={`h-9 font-normal ${
-                    item.disabled
-                      ? "opacity-50 cursor-default hover:bg-transparent"
-                      : ""
-                  }`}
+                  tooltip={item.label}
+                  className="h-9 font-normal"
                 >
                   <ItemIcon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
                   <span className="flex-1">{item.label}</span>
-                  {item.disabled && (
-                    <span className="text-[9px] font-medium uppercase tracking-wide rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
-                      Soon
-                    </span>
-                  )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
