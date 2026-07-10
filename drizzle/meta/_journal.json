@@ -260,6 +260,13 @@
       "when": 1783595171975,
       "tag": "0036_qbo_sales_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "5",
+      "when": 1783684702157,
+      "tag": "0037_opportunity_center_v2",
+      "breakpoints": true
     }
   ]
 }
