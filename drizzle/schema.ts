@@ -942,6 +942,16 @@ export const customers = mysqlTable(
       .notNull(),
     quickbooksSyncedAt: timestamp("quickbooksSyncedAt"),
     quickbooksSyncError: text("quickbooksSyncError"),
+    /** QBO Customer.MetaData.LastUpdatedTime — drives "is the QBO record newer?" merges. */
+    quickbooksCustomerUpdatedAt: timestamp("quickbooksCustomerUpdatedAt"),
+    /** True when a QBO sync found a field value conflicting with existing CRM data (see customerSyncConflicts). */
+    hasQboConflicts: boolean("hasQboConflicts").default(false).notNull(),
+    // ── Billing address (mapped from QBO Customer.BillAddr; service address lives in `properties`) ──
+    billingLine1: varchar("billingLine1", { length: 255 }),
+    billingLine2: varchar("billingLine2", { length: 255 }),
+    billingCity: varchar("billingCity", { length: 120 }),
+    billingState: varchar("billingState", { length: 10 }),
+    billingZip: varchar("billingZip", { length: 20 }),
     // ── Provenance ──
     convertedFromLeadId: int("convertedFromLeadId"),
     convertedFromCaptureId: int("convertedFromCaptureId"),
@@ -1155,7 +1165,28 @@ export const opportunities = mysqlTable(
     /** Where the opportunity originated, e.g. "quickbooks". */
     source: varchar("source", { length: 64 }).default("quickbooks").notNull(),
     stage: mysqlEnum("stage", ["new", "proposal_sent", "pending", "won", "lost"]).default("new").notNull(),
+    /**
+     * CRM Opportunity Value (editable). Defaults to the backing QBO document's
+     * totalAmount via sync, but is the field a salesperson may override.
+     * The read-only QuickBooks Amount lives on quickbooksSalesDocuments.totalAmount.
+     */
     amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
+    /** Win probability 0–100. weightedValue = amount × probability/100. */
+    probability: int("probability"),
+    /** True once a human edits the value — sync then stops overwriting `amount`. */
+    amountOverridden: boolean("amountOverridden").default(false).notNull(),
+    /** True once a human moves the stage — sync then stops overwriting `stage`. */
+    stageOverridden: boolean("stageOverridden").default(false).notNull(),
+    /**
+     * Derived Residential/Commercial/Change-Order category, persisted at sync
+     * (via deriveWorkCategory) so it is server-side filterable/sortable. Null
+     * until first computed; UI falls back to on-the-fly derivation.
+     */
+    workCategory: mysqlEnum("workCategory", ["residential", "commercial", "change_order"]),
+    /** Reason captured when marked Won. */
+    closeReason: text("closeReason"),
+    /** Reason captured when marked Lost. */
+    lossReason: text("lossReason"),
     /** Short human label for the next follow-up step, shown on the dashboard. */
     nextAction: varchar("nextAction", { length: 255 }),
     nextActionDueAt: timestamp("nextActionDueAt"),
@@ -1283,3 +1314,54 @@ export const opportunityTasks = mysqlTable(
 );
 export type OpportunityTask = typeof opportunityTasks.$inferSelect;
 export type InsertOpportunityTask = typeof opportunityTasks.$inferInsert;
+
+/**
+ * Customer sync conflicts — append-only, human-reviewable log of how each
+ * incoming QuickBooks Customer field was reconciled against existing CRM data.
+ * QBO sync NEVER silently overwrites CRM data: it fills only empty fields and
+ * records disagreements here.
+ *
+ * conflictType:
+ *   - "missing"             CRM field was empty → filled from QBO (informational).
+ *   - "different"           CRM and QBO both had values and they differ.
+ *   - "overwrite_prevented" CRM value was kept over a differing QBO value (needs review).
+ * resolution (null until acted on):
+ *   - "keep_crm" | "use_qbo" | "merged".
+ *
+ * Dedupe: the sync writer keeps at most ONE open row per
+ * (customerId, fieldName, qboValue) so repeated polls don't pile up duplicate
+ * unresolved conflicts. Resolving sets status + resolution + resolvedBy/At (auditable).
+ */
+export const customerSyncConflicts = mysqlTable(
+  "customerSyncConflicts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    quickbooksCustomerId: varchar("quickbooksCustomerId", { length: 64 }),
+    /** CRM column name, e.g. "email", "phone", "companyName". */
+    fieldName: varchar("fieldName", { length: 64 }).notNull(),
+    conflictType: mysqlEnum("conflictType", ["missing", "different", "overwrite_prevented"]).notNull(),
+    /** Existing CRM value at the time of sync. */
+    crmValue: text("crmValue"),
+    /** Incoming QuickBooks value. */
+    qboValue: text("qboValue"),
+    status: mysqlEnum("status", ["open", "resolved", "ignored"]).default("open").notNull(),
+    resolution: mysqlEnum("resolution", ["keep_crm", "use_qbo", "merged"]),
+    notes: text("notes"),
+    resolvedById: int("resolvedById"),
+    resolvedAt: timestamp("resolvedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("customerSyncConflicts_customerId_idx").on(table.customerId),
+    statusIdx: index("customerSyncConflicts_status_idx").on(table.status),
+    /** Supports the "one open conflict per customer+field" dedupe lookup. */
+    lookupIdx: index("customerSyncConflicts_customer_field_status_idx").on(
+      table.customerId,
+      table.fieldName,
+      table.status,
+    ),
+  }),
+);
+export type CustomerSyncConflict = typeof customerSyncConflicts.$inferSelect;
+export type InsertCustomerSyncConflict = typeof customerSyncConflicts.$inferInsert;

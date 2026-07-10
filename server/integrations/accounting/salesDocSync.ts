@@ -16,10 +16,14 @@ import {
   opportunities,
   opportunityEvents,
   customers,
+  customerSyncConflicts,
+  properties,
   quickbooksConnections,
   type QuickbooksConnection,
 } from "../../../drizzle/schema";
 import { buildDisplayName, normalizePhone, splitName } from "../../routers/customers";
+import { deriveWorkCategory, extractSalesDocSignals } from "../../../shared/opportunityCategory";
+import type { WorkCategory } from "../../../shared/opportunityCategory";
 import { quickbooksProvider, writeSyncLog } from "./quickbooks";
 import {
   buildContactFromEstimate,
@@ -28,8 +32,11 @@ import {
   mapEstimateToSalesDoc,
   pickContactMatch,
   shouldSkipExistingDoc,
+  type ContactAddress,
+  type EstimateContactInput,
   type QboEstimate,
 } from "./estimates";
+import { buildCustomerFieldUpdate, type IncomingCustomerFields } from "./customerMerge";
 import { cancelOpenFollowups, ensureFollowupsForOpportunity } from "./followups";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -74,9 +81,199 @@ export interface SyncOptions {
   now?: Date;
 }
 
+/** Map the QBO-derived contact fields into the customer-merge input shape. */
+function incomingFromContact(contact: EstimateContactInput): IncomingCustomerFields {
+  return {
+    firstName: contact.firstName,
+    lastName: contact.lastName,
+    companyName: contact.companyName,
+    email: contact.email,
+    phone: contact.phone,
+    altPhone: contact.mobile,
+    notes: contact.notes,
+    status: contact.active == null ? null : contact.active ? "active" : "inactive",
+    billingLine1: contact.address?.line1 ?? null,
+    billingLine2: contact.address?.line2 ?? null,
+    billingCity: contact.address?.city ?? null,
+    billingState: contact.address?.state ?? null,
+    billingZip: contact.address?.zip ?? null,
+  };
+}
+
+/**
+ * Persist the QBO service address (ShipAddr) as a `properties` row — but only
+ * when the customer has no property with the same street line yet, so repeated
+ * syncs never create duplicate service locations.
+ */
+async function ensureServiceProperty(
+  db: Db,
+  customerId: number,
+  addr: ContactAddress | null,
+  customerType: string | null,
+): Promise<void> {
+  if (!addr || !addr.line1) return;
+  const line1 = addr.line1.trim().toLowerCase();
+  const dup = await db
+    .select({ id: properties.id })
+    .from(properties)
+    .where(and(eq(properties.customerId, customerId), sql`LOWER(TRIM(${properties.addressLine1})) = ${line1}`))
+    .limit(1);
+  if (dup[0]) return;
+  const primary = await db
+    .select({ id: properties.id })
+    .from(properties)
+    .where(and(eq(properties.customerId, customerId), eq(properties.isPrimary, true)))
+    .limit(1);
+  await db.insert(properties).values({
+    customerId,
+    label: "Service Address (QuickBooks)",
+    addressLine1: addr.line1,
+    addressLine2: addr.line2,
+    city: addr.city,
+    state: addr.state ?? "NJ",
+    zip: addr.zip,
+    propertyType: customerType === "commercial" ? "commercial" : "residential",
+    isPrimary: !primary[0],
+  });
+}
+
+/**
+ * Record field reconciliations, keeping at most ONE open conflict per
+ * (customer, field) so repeated polls never pile up duplicate unresolved rows.
+ * "missing" (auto-filled) rows are stored resolved for audit; "overwrite_prevented"
+ * rows are stored open for human review. Returns the count of open conflicts touched.
+ */
+async function recordCustomerConflicts(
+  db: Db,
+  customerId: number,
+  qbCustomerId: string | null,
+  conflicts: ReturnType<typeof buildCustomerFieldUpdate>["conflicts"],
+  now: Date,
+): Promise<number> {
+  if (!conflicts.length) return 0;
+  const existing = await db
+    .select({
+      id: customerSyncConflicts.id,
+      fieldName: customerSyncConflicts.fieldName,
+      qboValue: customerSyncConflicts.qboValue,
+      status: customerSyncConflicts.status,
+    })
+    .from(customerSyncConflicts)
+    .where(eq(customerSyncConflicts.customerId, customerId));
+  let openCount = 0;
+  for (const c of conflicts) {
+    if (c.conflictType === "missing") {
+      const dup = existing.find(r => r.fieldName === c.fieldName && (r.qboValue ?? "") === (c.qboValue ?? ""));
+      if (dup) continue;
+      await db.insert(customerSyncConflicts).values({
+        customerId,
+        quickbooksCustomerId: qbCustomerId,
+        fieldName: c.fieldName,
+        conflictType: "missing",
+        crmValue: c.crmValue,
+        qboValue: c.qboValue,
+        status: "resolved",
+        resolution: "use_qbo",
+        resolvedAt: now,
+      });
+      continue;
+    }
+    // overwrite_prevented — dedupe to a single open row per (customer, field).
+    const openRow = existing.find(r => r.fieldName === c.fieldName && r.status === "open");
+    if (openRow) {
+      openCount++;
+      if ((openRow.qboValue ?? "") !== (c.qboValue ?? "")) {
+        await db
+          .update(customerSyncConflicts)
+          .set({ qboValue: c.qboValue, crmValue: c.crmValue })
+          .where(eq(customerSyncConflicts.id, openRow.id));
+      }
+      continue;
+    }
+    await db.insert(customerSyncConflicts).values({
+      customerId,
+      quickbooksCustomerId: qbCustomerId,
+      fieldName: c.fieldName,
+      conflictType: "overwrite_prevented",
+      crmValue: c.crmValue,
+      qboValue: c.qboValue,
+      status: "open",
+    });
+    openCount++;
+  }
+  return openCount;
+}
+
+/**
+ * Enrich an already-matched CRM customer from the QBO record: fill only empty
+ * fields, log conflicts (never overwrite), attach the service address, and
+ * refresh the QuickBooks link/timestamp.
+ */
+async function enrichExistingCustomer(
+  db: Db,
+  customerId: number,
+  contact: EstimateContactInput,
+  qbCustomerId: string | null,
+  matchedByQbId: boolean,
+  now: Date,
+): Promise<void> {
+  const [existing] = await db
+    .select({
+      id: customers.id,
+      type: customers.type,
+      firstName: customers.firstName,
+      lastName: customers.lastName,
+      companyName: customers.companyName,
+      email: customers.email,
+      phone: customers.phone,
+      altPhone: customers.altPhone,
+      notes: customers.notes,
+      status: customers.status,
+      billingLine1: customers.billingLine1,
+      billingLine2: customers.billingLine2,
+      billingCity: customers.billingCity,
+      billingState: customers.billingState,
+      billingZip: customers.billingZip,
+      quickbooksCustomerId: customers.quickbooksCustomerId,
+    })
+    .from(customers)
+    .where(eq(customers.id, customerId))
+    .limit(1);
+  if (!existing) return;
+
+  const { patch, conflicts } = buildCustomerFieldUpdate(existing, incomingFromContact(contact), { normalizePhone });
+  const setValues: Record<string, unknown> = { ...patch };
+
+  if (patch.firstName != null || patch.lastName != null || patch.companyName != null) {
+    setValues.displayName = buildDisplayName({
+      companyName: patch.companyName ?? existing.companyName,
+      firstName: patch.firstName ?? existing.firstName,
+      lastName: patch.lastName ?? existing.lastName,
+      email: patch.email ?? existing.email,
+      phone: patch.phone ?? existing.phone,
+    });
+  }
+  if (qbCustomerId && !matchedByQbId && !existing.quickbooksCustomerId) {
+    setValues.quickbooksCustomerId = qbCustomerId;
+    setValues.quickbooksSyncStatus = "synced";
+    setValues.quickbooksSyncedAt = now;
+  }
+  if (contact.quickbooksUpdatedAt) setValues.quickbooksCustomerUpdatedAt = contact.quickbooksUpdatedAt;
+
+  const openCount = await recordCustomerConflicts(db, customerId, qbCustomerId, conflicts, now);
+  if (openCount > 0) setValues.hasQboConflicts = true;
+
+  if (Object.keys(setValues).length) {
+    await db.update(customers).set(setValues).where(eq(customers.id, customerId));
+  }
+  await ensureServiceProperty(db, customerId, contact.serviceAddress, existing.type);
+}
+
 /**
  * Resolve an existing CRM contact for this estimate, or auto-create one.
- * Dedup priority: quickbooksCustomerId → email → phone → name.
+ * Dedup priority: quickbooksCustomerId → email → phone → name. Whenever an
+ * existing contact is matched, its empty fields are filled from QuickBooks and
+ * any conflicting values are logged (never overwritten).
  */
 async function resolveOrCreateContact(
   db: Db,
@@ -85,6 +282,10 @@ async function resolveOrCreateContact(
 ): Promise<{ customerId: number; created: boolean; displayName: string }> {
   const qbCustomerId = estimate.CustomerRef?.value ?? null;
 
+  // Fetch the full QBO customer (best effort) up front — needed to enrich.
+  const qboCustomer = qbCustomerId ? await quickbooksProvider.fetchQboCustomer(qbCustomerId) : null;
+  const contact = buildContactFromEstimate(estimate, qboCustomer);
+
   // 1) Already linked by QuickBooks customer id — the strongest key.
   if (qbCustomerId) {
     const linked = await db
@@ -92,12 +293,12 @@ async function resolveOrCreateContact(
       .from(customers)
       .where(eq(customers.quickbooksCustomerId, qbCustomerId))
       .limit(1);
-    if (linked[0]) return { customerId: linked[0].id, created: false, displayName: linked[0].displayName };
+    if (linked[0]) {
+      await enrichExistingCustomer(db, linked[0].id, contact, qbCustomerId, true, now);
+      const dn = (await db.select({ displayName: customers.displayName }).from(customers).where(eq(customers.id, linked[0].id)).limit(1))[0];
+      return { customerId: linked[0].id, created: false, displayName: dn?.displayName ?? linked[0].displayName };
+    }
   }
-
-  // Fetch the full QBO customer for email/phone/address (best effort).
-  const qboCustomer = qbCustomerId ? await quickbooksProvider.fetchQboCustomer(qbCustomerId) : null;
-  const contact = buildContactFromEstimate(estimate, qboCustomer);
 
   // 2/3/4) Match existing local customers by email / phone / name.
   const emailKey = contact.email?.trim().toLowerCase() || null;
@@ -129,15 +330,9 @@ async function resolveOrCreateContact(
       normalizePhone,
     );
     if (match) {
-      // Backfill the QuickBooks link onto the matched contact if it lacks one.
-      const matched = candidates.find(c => c.id === match.id)!;
-      if (qbCustomerId && !matched.quickbooksCustomerId) {
-        await db
-          .update(customers)
-          .set({ quickbooksCustomerId: qbCustomerId, quickbooksSyncStatus: "synced", quickbooksSyncedAt: now })
-          .where(eq(customers.id, match.id));
-      }
-      return { customerId: match.id, created: false, displayName: matched.displayName };
+      await enrichExistingCustomer(db, match.id, contact, qbCustomerId, false, now);
+      const dn = (await db.select({ displayName: customers.displayName }).from(customers).where(eq(customers.id, match.id)).limit(1))[0];
+      return { customerId: match.id, created: false, displayName: dn?.displayName ?? "QuickBooks Customer" };
     }
   }
 
@@ -158,17 +353,33 @@ async function resolveOrCreateContact(
     displayName,
     email: contact.email,
     phone: contact.phone,
+    altPhone: contact.mobile,
+    status: contact.active === false ? "inactive" : "active",
     source: "quickbooks",
-    notes: "Created automatically from QuickBooks sales document.",
+    notes: contact.notes ?? "Created automatically from QuickBooks sales document.",
+    billingLine1: contact.address?.line1 ?? null,
+    billingLine2: contact.address?.line2 ?? null,
+    billingCity: contact.address?.city ?? null,
+    billingState: contact.address?.state ?? null,
+    billingZip: contact.address?.zip ?? null,
     quickbooksCustomerId: qbCustomerId,
     quickbooksSyncStatus: qbCustomerId ? "synced" : "not_synced",
     quickbooksSyncedAt: qbCustomerId ? now : null,
+    quickbooksCustomerUpdatedAt: contact.quickbooksUpdatedAt,
   });
   const customerId = Number((inserted as { insertId?: number }).insertId);
+  await ensureServiceProperty(db, customerId, contact.serviceAddress, contact.companyName ? "commercial" : "residential");
   return { customerId, created: true, displayName };
 }
 
-/** Create or update the opportunity backing a sales document. */
+/**
+ * Create or update the opportunity backing a sales document.
+ *
+ * Respects CRM overrides: once a human has edited the Opportunity Value
+ * (`amountOverridden`) or moved the stage (`stageOverridden`), sync leaves that
+ * field alone — QuickBooks still owns the document, but the CRM owns the deal.
+ * `workCategory` is always refreshed (it is derived, not user-owned).
+ */
 async function upsertOpportunity(
   db: Db,
   args: {
@@ -179,6 +390,7 @@ async function upsertOpportunity(
     totalAmount: string;
     status: (typeof quickbooksSalesDocuments.status.enumValues)[number];
     sentAt: Date | null;
+    workCategory: WorkCategory | null;
     now: Date;
   },
 ): Promise<{ id: number; created: boolean; stageChanged: boolean }> {
@@ -187,21 +399,30 @@ async function upsertOpportunity(
 
   if (args.existingOpportunityId) {
     const prev = (
-      await db.select({ stage: opportunities.stage, closedAt: opportunities.closedAt })
+      await db
+        .select({
+          stage: opportunities.stage,
+          closedAt: opportunities.closedAt,
+          amountOverridden: opportunities.amountOverridden,
+          stageOverridden: opportunities.stageOverridden,
+        })
         .from(opportunities)
         .where(eq(opportunities.id, args.existingOpportunityId))
         .limit(1)
     )[0];
-    const stageChanged = !prev || prev.stage !== stage;
-    await db
-      .update(opportunities)
-      .set({
-        customerId: args.customerId,
-        amount: args.totalAmount,
-        stage,
-        closedAt: isClosed ? prev?.closedAt ?? args.now : null,
-      })
-      .where(eq(opportunities.id, args.existingOpportunityId));
+    const setValues: Record<string, unknown> = {
+      customerId: args.customerId,
+      workCategory: args.workCategory,
+    };
+    // QuickBooks Amount stays read-only; it only seeds the CRM value until overridden.
+    if (!prev?.amountOverridden) setValues.amount = args.totalAmount;
+    let stageChanged = false;
+    if (!prev?.stageOverridden) {
+      stageChanged = !prev || prev.stage !== stage;
+      setValues.stage = stage;
+      setValues.closedAt = isClosed ? prev?.closedAt ?? args.now : null;
+    }
+    await db.update(opportunities).set(setValues).where(eq(opportunities.id, args.existingOpportunityId));
     if (stageChanged) {
       await db.insert(opportunityEvents).values({
         opportunityId: args.existingOpportunityId,
@@ -219,6 +440,7 @@ async function upsertOpportunity(
     source: "quickbooks",
     stage,
     amount: args.totalAmount,
+    workCategory: args.workCategory,
     closedAt: isClosed ? args.now : null,
   });
   const id = Number((inserted as { insertId?: number }).insertId);
@@ -246,16 +468,28 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
 
   // Resolve/auto-create the contact (reuse the link if we already have one).
   let customerId = existing?.customerId ?? null;
-  let displayName = "QuickBooks Customer";
   if (customerId == null) {
     const c = await resolveOrCreateContact(db, estimate, now);
     customerId = c.customerId;
-    displayName = c.displayName;
     if (c.created) result.contactsCreated++;
-  } else {
-    const row = (await db.select({ displayName: customers.displayName }).from(customers).where(eq(customers.id, customerId)).limit(1))[0];
-    displayName = row?.displayName ?? displayName;
   }
+
+  // Load the customer for the title + work-category classification.
+  const cust = (
+    await db
+      .select({ type: customers.type, companyName: customers.companyName, displayName: customers.displayName })
+      .from(customers)
+      .where(eq(customers.id, customerId))
+      .limit(1)
+  )[0];
+  const displayName = cust?.displayName ?? "QuickBooks Customer";
+
+  // Persist the derived Residential/Commercial/Change-Order category.
+  const signals = extractSalesDocSignals(estimate);
+  const workCategory = deriveWorkCategory(
+    { docType: "estimate", docNumber: mapped.docNumber ?? null, text: signals.text, linkedToExistingJob: signals.linkedToExistingJob },
+    { type: cust?.type ?? null, companyName: cust?.companyName ?? null, displayName: cust?.displayName ?? null },
+  );
 
   const opp = await upsertOpportunity(db, {
     existingOpportunityId: existing?.opportunityId ?? null,
@@ -265,19 +499,23 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
     totalAmount: mapped.totalAmount as string,
     status: mapped.status ?? "pending",
     sentAt: mapped.sentAt ?? null,
+    workCategory,
     now,
   });
   if (opp.created) result.opportunitiesCreated++;
 
   // Upsert the sales-document row (unique on quickbooksId).
+  let docId: number;
   if (existing) {
     await db
       .update(quickbooksSalesDocuments)
       .set({ ...mapped, customerId, opportunityId: opp.id })
       .where(eq(quickbooksSalesDocuments.id, existing.id));
+    docId = existing.id;
     result.updated++;
   } else {
-    await db.insert(quickbooksSalesDocuments).values({ ...mapped, customerId, opportunityId: opp.id });
+    const [insDoc] = await db.insert(quickbooksSalesDocuments).values({ ...mapped, customerId, opportunityId: opp.id });
+    docId = Number((insDoc as { insertId?: number }).insertId);
     result.created++;
     await db.insert(opportunityEvents).values({
       opportunityId: opp.id,
@@ -286,6 +524,13 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
       metadata: { quickbooksId: mapped.quickbooksId, status: mapped.status },
     });
   }
+
+  // Point the opportunity at its primary sales document (first one wins) so the
+  // dashboard can join one-to-one without row multiplication.
+  await db
+    .update(opportunities)
+    .set({ quickbooksSalesDocumentId: docId })
+    .where(and(eq(opportunities.id, opp.id), sql`${opportunities.quickbooksSalesDocumentId} IS NULL`));
 
   // Follow-up loop: open it for Sent/Pending docs; cancel it once the deal closes.
   if (mapped.status === "pending") {

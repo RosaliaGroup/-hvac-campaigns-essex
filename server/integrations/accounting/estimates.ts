@@ -132,7 +132,16 @@ export function mapEstimateToSalesDoc(
   };
 }
 
-/** Fields needed to auto-create a CRM contact from an estimate + its QBO customer. */
+/** A postal address parsed from a QBO Bill/Ship address. */
+export interface ContactAddress {
+  line1: string | null;
+  line2: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+}
+
+/** Fields needed to auto-create / enrich a CRM contact from an estimate + its QBO customer. */
 export interface EstimateContactInput {
   quickbooksCustomerId: string | null;
   displayName: string;
@@ -141,38 +150,63 @@ export interface EstimateContactInput {
   companyName: string | null;
   email: string | null;
   phone: string | null;
-  address: {
-    line1: string | null;
-    line2: string | null;
-    city: string | null;
-    state: string | null;
-    zip: string | null;
-  } | null;
+  /** QBO Mobile → CRM altPhone. */
+  mobile: string | null;
+  /** QBO Customer.Notes → CRM notes. */
+  notes: string | null;
+  /** QBO Customer.Active → CRM active/inactive. Null when not returned. */
+  active: boolean | null;
+  /** QBO Customer.MetaData.LastUpdatedTime — "is the QBO record newer?" cursor. */
+  quickbooksUpdatedAt: Date | null;
+  /** QBO BillAddr → CRM billing address (stored on customers). */
+  address: ContactAddress | null;
+  /** QBO ShipAddr → CRM service address (stored as a properties row). */
+  serviceAddress: ContactAddress | null;
 }
 
-/** Minimal QBO Customer shape used for contact auto-creation. */
+interface QboAddress {
+  Line1?: string;
+  Line2?: string;
+  City?: string;
+  CountrySubDivisionCode?: string;
+  PostalCode?: string;
+}
+
+/** Minimal QBO Customer shape used for contact auto-creation + enrichment. */
 export interface QboCustomerLite {
   Id?: string;
   DisplayName?: string;
   CompanyName?: string;
   GivenName?: string;
   FamilyName?: string;
+  Active?: boolean;
+  Notes?: string;
   PrimaryEmailAddr?: { Address?: string };
   PrimaryPhone?: { FreeFormNumber?: string };
-  BillAddr?: {
-    Line1?: string;
-    Line2?: string;
-    City?: string;
-    CountrySubDivisionCode?: string;
-    PostalCode?: string;
+  Mobile?: { FreeFormNumber?: string };
+  BillAddr?: QboAddress;
+  ShipAddr?: QboAddress;
+  MetaData?: { CreateTime?: string; LastUpdatedTime?: string };
+}
+
+function mapQboAddress(addr: QboAddress | undefined): ContactAddress | null {
+  if (!addr) return null;
+  const mapped: ContactAddress = {
+    line1: addr.Line1?.trim() || null,
+    line2: addr.Line2?.trim() || null,
+    city: addr.City?.trim() || null,
+    state: addr.CountrySubDivisionCode?.trim() || null,
+    zip: addr.PostalCode?.trim() || null,
   };
+  // Drop an address with no usable parts.
+  return mapped.line1 || mapped.city || mapped.zip ? mapped : null;
 }
 
 /**
- * Build the contact fields for auto-creation, preferring the full QBO Customer
- * record and falling back to what the estimate itself carries (BillEmail,
- * CustomerRef.name) so we can still create a usable contact if the customer
- * fetch failed.
+ * Build the contact fields for auto-creation/enrichment, preferring the full
+ * QBO Customer record and falling back to what the estimate itself carries
+ * (BillEmail, CustomerRef.name) so we can still create a usable contact if the
+ * customer fetch failed.
  */
 export function buildContactFromEstimate(e: QboEstimate, customer: QboCustomerLite | null): EstimateContactInput {
   const displayName =
@@ -180,7 +214,6 @@ export function buildContactFromEstimate(e: QboEstimate, customer: QboCustomerLi
     e.CustomerRef?.name?.trim() ||
     [customer?.GivenName, customer?.FamilyName].filter(Boolean).join(" ").trim() ||
     "QuickBooks Customer";
-  const addr = customer?.BillAddr;
   return {
     quickbooksCustomerId: e.CustomerRef?.value ?? customer?.Id ?? null,
     displayName,
@@ -189,15 +222,12 @@ export function buildContactFromEstimate(e: QboEstimate, customer: QboCustomerLi
     companyName: customer?.CompanyName?.trim() || null,
     email: customer?.PrimaryEmailAddr?.Address?.trim() || e.BillEmail?.Address?.trim() || null,
     phone: customer?.PrimaryPhone?.FreeFormNumber?.trim() || null,
-    address: addr
-      ? {
-          line1: addr.Line1?.trim() || null,
-          line2: addr.Line2?.trim() || null,
-          city: addr.City?.trim() || null,
-          state: addr.CountrySubDivisionCode?.trim() || null,
-          zip: addr.PostalCode?.trim() || null,
-        }
-      : null,
+    mobile: customer?.Mobile?.FreeFormNumber?.trim() || null,
+    notes: customer?.Notes?.trim() || null,
+    active: typeof customer?.Active === "boolean" ? customer.Active : null,
+    quickbooksUpdatedAt: parseQboDate(customer?.MetaData?.LastUpdatedTime),
+    address: mapQboAddress(customer?.BillAddr),
+    serviceAddress: mapQboAddress(customer?.ShipAddr),
   };
 }
 
