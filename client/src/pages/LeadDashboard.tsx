@@ -20,7 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   LEAD_STAGES, PIPELINE_ORDER, normalizeStage, stageLabel, stageIndex,
-  isWon, isLost, deriveRelationship, relationshipLabel, leadAgeLabel,
+  isWon, isLost, deriveContactRelationship, relationshipLabel, leadAgeLabel,
   type Relationship,
 } from "@shared/leadPipeline";
 
@@ -99,10 +99,11 @@ function getLeadName(lead: any) {
   return "Anonymous";
 }
 function leadRelationship(lead: LeadCapture): Relationship {
-  // Derive purely from the pipeline stage. A link to a customer record
-  // (customerId) is NOT proof of a won deal, so it must not force "Customer" —
-  // only a Won stage does. Job/proposal signals are folded in server-side.
-  return deriveRelationship({ stage: lead.status });
+  // Use the SERVER-derived relationship — the exact same signals the Contacts
+  // page uses (stage + appointments + jobs), so a lead never reads as Lead in
+  // one screen and Prospect in another. Fall back to stage-only if the server
+  // hasn't supplied it (e.g. an older cached row).
+  return lead.relationship ?? deriveContactRelationship({ leadStages: [lead.status] });
 }
 
 type LeadCapture = {
@@ -119,6 +120,8 @@ type LeadCapture = {
   notes?: string | null;
   assignedTo?: string | null;
   customerId?: number | null;
+  /** Server-derived Lead/Prospect/Customer (unified with the Contacts page). */
+  relationship?: Relationship;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -253,30 +256,30 @@ function LeadDetailModal({
 
   const infoRow = (label: string, value: React.ReactNode) => (
     <div className="flex justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-right">{value}</span>
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="font-medium text-right min-w-0 break-words">{value}</span>
     </div>
   );
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <Users className="h-5 w-5 text-[#1e3a5f]" />
-            {getLeadName(lead)}
-            <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-semibold ${RELATIONSHIP_STYLE[rel]}`}>
+          <DialogTitle className="flex flex-wrap items-center gap-2 text-lg sm:text-xl pr-10">
+            <Users className="h-5 w-5 text-[#1e3a5f] shrink-0" />
+            <span className="min-w-0 break-words">{getLeadName(lead)}</span>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 ${RELATIONSHIP_STYLE[rel]}`}>
               {relationshipLabel(rel)}
             </span>
             {!editing && (
-              <Button size="sm" variant="outline" className="ml-auto" onClick={() => setEditing(true)}>
+              <Button size="sm" variant="outline" className="ml-auto shrink-0" onClick={() => setEditing(true)}>
                 <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
               </Button>
             )}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           {editing ? (
             /* ── Edit lead details ─────────────────────────────── */
             <div className="space-y-4 rounded-lg border p-4">
@@ -331,7 +334,7 @@ function LeadDetailModal({
           ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             {/* Contact Information */}
-            <div className="space-y-3">
+            <div className="space-y-3 min-w-0">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact Information</h3>
               {lead.phone && (
                 <div className="flex items-center gap-2">
@@ -346,9 +349,9 @@ function LeadDetailModal({
                 </div>
               )}
               {lead.pageUrl && (
-                <div className="flex items-center gap-2">
-                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                  <a href={lead.pageUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate max-w-[200px]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <a href={lead.pageUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline truncate min-w-0">
                     {lead.pageUrl.replace(/^https?:\/\//, "")}
                   </a>
                 </div>
@@ -356,10 +359,10 @@ function LeadDetailModal({
             </div>
 
             {/* Lead Information */}
-            <div className="space-y-2">
+            <div className="space-y-2 min-w-0">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Lead Information</h3>
               {infoRow("Source", <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${sourceInfo.color}`}>{sourceInfo.icon} {sourceInfo.label}</span>)}
-              {infoRow("Requested Service", <span className="max-w-[180px] truncate inline-block">{requestedService}</span>)}
+              {infoRow("Requested Service", <span className="break-words">{requestedService}</span>)}
               {infoRow("Submitted", formatDate(lead.createdAt))}
               {infoRow("Assigned To", lead.assignedTo || "Unassigned")}
               {infoRow("Lead Age", leadAgeLabel(lead.createdAt, new Date()))}
@@ -420,12 +423,12 @@ function LeadDetailModal({
                       <CalendarClock className="h-4 w-4 text-[#1e3a5f] flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium capitalize">{String(appt.appointmentType).replace(/_/g, " ")}</span>
+                          <span className="text-sm font-medium capitalize break-words">{String(appt.appointmentType).replace(/_/g, " ")}</span>
                           <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium capitalize ${st}`}>{appt.status}</span>
                         </div>
-                        <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {when}</span>
-                          <span className="flex items-center gap-1"><User className="h-3 w-3" /> {appt.assigneeName || "Unassigned"}</span>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1 min-w-0"><Clock className="h-3 w-3 shrink-0" /> <span className="break-words">{when}</span></span>
+                          <span className="flex items-center gap-1 min-w-0"><User className="h-3 w-3 shrink-0" /> <span className="break-words">{appt.assigneeName || "Unassigned"}</span></span>
                         </div>
                       </div>
                       <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />

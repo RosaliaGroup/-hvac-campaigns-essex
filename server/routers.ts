@@ -1,5 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
-import { LEAD_STAGE_ENUM, buildLeadCapturePatch } from "@shared/leadPipeline";
+import { LEAD_STAGE_ENUM, buildLeadCapturePatch, deriveContactRelationship } from "@shared/leadPipeline";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
@@ -23,7 +23,7 @@ import { generateSocialPost } from "./integrations/ai-content-generator";
 import { postToGoogleBusiness } from "./integrations/google-business";
 import { postToFacebook, postToInstagram } from "./integrations/facebook";
 import { takeoffsRouter } from "./routers/takeoffs";
-import { customersRouter, findCustomerIdByPhone, normalizePhone } from "./routers/customers";
+import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelationships } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
 import { quickbooksRouter } from "./routers/quickbooks";
 import { opportunitiesRouter } from "./routers/opportunities";
@@ -376,7 +376,19 @@ export const appRouter = router({
         })
       )
       .query(async ({ input }) => {
-        return await db.getAllLeadCaptures(input);
+        const leads = await db.getAllLeadCaptures(input);
+        // Attach the SAME server-derived relationship the Contacts list uses,
+        // so a lead reads identically in both screens (stage alone is not enough
+        // — an appointment or won job also counts).
+        const dbi = await db.getDb();
+        if (!dbi || leads.length === 0) {
+          return leads.map((l: any) => ({ ...l, relationship: deriveContactRelationship({ leadStages: [l.status] }) }));
+        }
+        const relationships = await computeRelationships(
+          dbi,
+          leads.map((l: any) => ({ id: l.id, customerId: l.customerId, phone: l.phone, email: l.email, leadStages: [l.status] })),
+        );
+        return leads.map((l: any) => ({ ...l, relationship: relationships.get(l.id) ?? deriveContactRelationship({ leadStages: [l.status] }) }));
       }),
 
     updateStatus: protectedProcedure
