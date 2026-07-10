@@ -9,6 +9,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerSeoRoutes } from "../seo";
 import { startScheduledSmsProcessor } from "../services/scheduledSms";
+import { startSalesDocPoller } from "../services/salesDocPoller";
 import { registerSmsWebhookRoutes } from "../services/smsWebhook";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
@@ -77,6 +78,8 @@ async function startServer() {
     console.log(`Server running on http://localhost:${port}/`);
     // Start background SMS scheduler (checks every 5 min for due sends)
     startScheduledSmsProcessor();
+    // Start QuickBooks sales-document poller (incremental sync + follow-up dispatch)
+    startSalesDocPoller();
   });
 }
 

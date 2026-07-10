@@ -1,4 +1,4 @@
-import { boolean, decimal, index, int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1093,6 +1093,14 @@ export const quickbooksConnections = mysqlTable(
     connectedAt: timestamp("connectedAt").defaultNow().notNull(),
     lastRefreshAt: timestamp("lastRefreshAt"),
     lastSyncAt: timestamp("lastSyncAt"),
+    /**
+     * Incremental sales-document sync cursor: the max QBO
+     * MetaData.LastUpdatedTime processed so far. Null = never synced (the next
+     * run does the 60-day backfill). Advanced ONLY after a batch fully succeeds.
+     */
+    salesDocCursor: timestamp("salesDocCursor"),
+    /** When the sales-document sync last completed (success or attempt). */
+    salesDocLastSyncAt: timestamp("salesDocLastSyncAt"),
     status: mysqlEnum("status", ["connected", "expired", "revoked", "error"]).default("connected").notNull(),
     lastError: text("lastError"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -1130,3 +1138,148 @@ export const quickbooksSyncLogs = mysqlTable(
 );
 export type QuickbooksSyncLog = typeof quickbooksSyncLogs.$inferSelect;
 export type InsertQuickbooksSyncLog = typeof quickbooksSyncLogs.$inferInsert;
+
+/**
+ * Opportunities — the sales-pipeline record surfaced in the Opportunity Center.
+ * Distinct from `jobs` (operational/work execution): an opportunity tracks a
+ * deal from proposal → won/lost. For QuickBooks-sourced deals there is one
+ * opportunity per sales document; QuickBooks stays the source of truth and we
+ * only mirror in (never push edits out).
+ */
+export const opportunities = mysqlTable(
+  "opportunities",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    /** Where the opportunity originated, e.g. "quickbooks". */
+    source: varchar("source", { length: 64 }).default("quickbooks").notNull(),
+    stage: mysqlEnum("stage", ["new", "proposal_sent", "pending", "won", "lost"]).default("new").notNull(),
+    amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
+    /** Short human label for the next follow-up step, shown on the dashboard. */
+    nextAction: varchar("nextAction", { length: 255 }),
+    nextActionDueAt: timestamp("nextActionDueAt"),
+    /** The primary QuickBooks sales document backing this opportunity (quickbooksSalesDocuments.id). */
+    quickbooksSalesDocumentId: int("quickbooksSalesDocumentId"),
+    assignedToId: int("assignedToId"),
+    closedAt: timestamp("closedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("opportunities_customerId_idx").on(table.customerId),
+    stageIdx: index("opportunities_stage_idx").on(table.stage),
+  }),
+);
+export type Opportunity = typeof opportunities.$inferSelect;
+export type InsertOpportunity = typeof opportunities.$inferInsert;
+
+/**
+ * QuickBooks Sales Documents — local mirror of QBO Estimates/Proposals.
+ * QuickBooks is the source of truth; rows here exist for dashboard visibility
+ * and follow-up only. Keyed by `quickbooksId` (unique) — the idempotency anchor
+ * that guarantees re-syncing the same estimate never creates a duplicate.
+ * `docType` reserves "invoice" for a later task; only "estimate" is synced now.
+ */
+export const quickbooksSalesDocuments = mysqlTable(
+  "quickbooksSalesDocuments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    realmId: varchar("realmId", { length: 64 }),
+    /** QBO Estimate.Id — unique per realm; the sync idempotency key. */
+    quickbooksId: varchar("quickbooksId", { length: 64 }).notNull().unique(),
+    docType: mysqlEnum("docType", ["estimate", "invoice"]).default("estimate").notNull(),
+    docNumber: varchar("docNumber", { length: 64 }),
+    /** QBO CustomerRef value — used to resolve/auto-create the local contact. */
+    quickbooksCustomerId: varchar("quickbooksCustomerId", { length: 64 }),
+    /** Resolved local contact (customers.id); null only if resolution failed. */
+    customerId: int("customerId"),
+    /** The opportunity this document backs (opportunities.id). */
+    opportunityId: int("opportunityId"),
+    /** Normalized from QBO TxnStatus (+ expiry derivation). */
+    status: mysqlEnum("status", ["pending", "accepted", "closed", "rejected", "expired"]).default("pending").notNull(),
+    totalAmount: decimal("totalAmount", { precision: 12, scale: 2 }).default("0").notNull(),
+    /** QBO TxnDate — the document's issue date. */
+    txnDate: timestamp("txnDate"),
+    /** Derived from QBO EmailStatus = EmailSent; null when never sent. */
+    sentAt: timestamp("sentAt"),
+    /** QBO ExpirationDate, if present. */
+    expiresAt: timestamp("expiresAt"),
+    /** Public/shareable link if QuickBooks provides one (often absent for estimates). */
+    documentLink: text("documentLink"),
+    /** QBO MetaData.LastUpdatedTime — drives "is this newer?" and the sync cursor. */
+    quickbooksUpdatedAt: timestamp("quickbooksUpdatedAt"),
+    /** Full QBO payload snapshot for audit/debugging. */
+    raw: json("raw"),
+    lastSyncedAt: timestamp("lastSyncedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    qbCustomerIdx: index("qbSalesDocs_qbCustomerId_idx").on(table.quickbooksCustomerId),
+    statusIdx: index("qbSalesDocs_status_idx").on(table.status),
+    customerIdx: index("qbSalesDocs_customerId_idx").on(table.customerId),
+    opportunityIdx: index("qbSalesDocs_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type QuickbooksSalesDocument = typeof quickbooksSalesDocuments.$inferSelect;
+export type InsertQuickbooksSalesDocument = typeof quickbooksSalesDocuments.$inferInsert;
+
+/**
+ * Opportunity events — append-only audit/activity log for an opportunity
+ * (customer auto-created, document synced, status changed, task created, …).
+ * `type` is a free varchar so new event kinds don't require a migration.
+ */
+export const opportunityEvents = mysqlTable(
+  "opportunityEvents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    type: varchar("type", { length: 64 }).notNull(),
+    message: text("message"),
+    metadata: json("metadata"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityEvents_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type OpportunityEvent = typeof opportunityEvents.$inferSelect;
+export type InsertOpportunityEvent = typeof opportunityEvents.$inferInsert;
+
+/**
+ * Opportunity tasks — lightweight follow-up actions for a sent/pending deal:
+ * a same-day call, plus email/text touches on a 3-day close loop.
+ * - "call" tasks are worked by a human (never auto-dispatched).
+ * - "email"/"text" tasks are dispatched by processDueFollowups when due.
+ * - "text" tasks are created with status "gated" until 10DLC is approved
+ *   (SMS_FOLLOWUPS_ENABLED=true), so no SMS goes out prematurely.
+ */
+export const opportunityTasks = mysqlTable(
+  "opportunityTasks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    customerId: int("customerId"),
+    type: mysqlEnum("type", ["call", "email", "text"]).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    /** Message body for email/text dispatch. */
+    body: text("body"),
+    dueAt: timestamp("dueAt").notNull(),
+    status: mysqlEnum("status", ["open", "done", "cancelled", "snoozed", "gated"]).default("open").notNull(),
+    assignedToId: int("assignedToId"),
+    /** Step in the 3-day close loop: 0 = same-day, 1 = day-1, 3 = day-3. */
+    loopStep: int("loopStep").default(0).notNull(),
+    dispatchedAt: timestamp("dispatchedAt"),
+    lastError: text("lastError"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityTasks_opportunityId_idx").on(table.opportunityId),
+    dueIdx: index("opportunityTasks_status_dueAt_idx").on(table.status, table.dueAt),
+  }),
+);
+export type OpportunityTask = typeof opportunityTasks.$inferSelect;
+export type InsertOpportunityTask = typeof opportunityTasks.$inferInsert;

@@ -19,6 +19,7 @@ import {
 } from "../../../drizzle/schema";
 import { encrypt, decrypt, isEncryptionConfigured } from "../../_core/crypto";
 import { normalizePhone } from "../../routers/customers";
+import type { QboEstimate, QboCustomerLite } from "./estimates";
 import {
   NotImplementedError,
   type AccountingProvider,
@@ -642,6 +643,28 @@ export class QuickBooksProvider implements AccountingProvider {
       .update(quickbooksConnections)
       .set({ lastSyncAt: new Date() })
       .where(eq(quickbooksConnections.realmId, conn.realmId));
+  }
+
+  // ── Sales documents (Estimates) — read-only mirror ──────────────────────────
+
+  /**
+   * Fetch one page of Estimates for the given QBO query string. Returns [] on a
+   * non-OK response so a transient error skips the page rather than throwing
+   * mid-sync (the orchestrator logs the run outcome).
+   */
+  async fetchEstimates(query: string): Promise<QboEstimate[]> {
+    const res = await this.qboFetch(`/query?query=${encodeURIComponent(query)}`);
+    if (!res.ok) return [];
+    const json = (await res.json()) as { QueryResponse?: { Estimate?: QboEstimate[] } };
+    return json.QueryResponse?.Estimate ?? [];
+  }
+
+  /** Read a full QBO Customer (for contact auto-creation). Null if absent. */
+  async fetchQboCustomer(qbId: string): Promise<QboCustomerLite | null> {
+    const res = await this.qboFetch(`/customer/${qbId}`);
+    if (!res.ok) return null;
+    const json = (await res.json()) as { Customer?: QboCustomerLite };
+    return json.Customer ?? null;
   }
 
   // ── Not implemented in Task 7 (interface stubs) ──
