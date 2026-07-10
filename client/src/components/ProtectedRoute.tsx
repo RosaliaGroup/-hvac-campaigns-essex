@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -7,7 +8,13 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Wraps a page component and redirects unauthenticated visitors to the Manus login page.
+ * Wraps a page component and redirects unauthenticated visitors to the team
+ * login page. Also mounts the single internal dashboard chrome (left sidebar +
+ * mobile drawer) around every protected page, so the public website header,
+ * footer and Jessica chatbot never appear inside the CRM. Pages that still
+ * self-wrap in <DashboardLayout> are detected and passed through (no double
+ * sidebar) — see DashboardChromeContext in DashboardLayout.
+ *
  * Usage in App.tsx:
  *   <Route path="/marketing-autopilot" component={() => <ProtectedRoute component={MarketingAutopilot} />} />
  */
@@ -33,5 +40,9 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
     return null;
   }
 
-  return <Component />;
+  return (
+    <DashboardLayout>
+      <Component />
+    </DashboardLayout>
+  );
 }

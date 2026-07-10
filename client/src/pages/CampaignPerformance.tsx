@@ -22,7 +22,6 @@ import {
   Loader2
 } from "lucide-react";
 import InternalNav from "@/components/InternalNav";
-import Navigation from "@/components/Navigation";
 import DashboardFooter from "@/components/DashboardFooter";
 import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
@@ -108,7 +107,6 @@ export default function CampaignPerformance() {
   return (
     <div className="min-h-screen bg-secondary/30">
       <InternalNav />
-      <Navigation />
       
       <div className="container py-8">
         {/* Header */}
