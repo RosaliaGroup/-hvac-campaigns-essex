@@ -216,6 +216,14 @@ export async function updateLeadCaptureNotes(id: number, notes: string) {
   await db.update(leadCaptures).set({ notes, updatedAt: new Date() }).where(eq(leadCaptures.id, id));
 }
 
+/** Patch editable lead-capture fields (name/phone/email/service/source/assignee/notes). */
+export async function updateLeadCapture(id: number, patch: Record<string, unknown>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (Object.keys(patch).length === 0) return;
+  await db.update(leadCaptures).set({ ...patch, updatedAt: new Date() }).where(eq(leadCaptures.id, id));
+}
+
 export async function getLeadCaptureStats() {
   const db = await getDb();
   if (!db) {
