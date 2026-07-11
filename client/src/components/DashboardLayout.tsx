@@ -26,14 +26,12 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import {
-  NAV_COLLAPSE_STORAGE_KEY,
   getActiveDepartmentId,
   getActiveItemKey,
   getVisibleDepartments,
+  initialDepartmentOpenState,
   isDepartmentOpen,
-  loadDepartmentOpenState,
   resolveNavRole,
-  serializeDepartmentOpenState,
   type DepartmentOpenState,
   type NavDepartment,
   type NavItem,
@@ -122,26 +120,18 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     ? activeItemKey.slice(activeItemKey.indexOf("::") + 2)
     : "Dashboard";
 
-  // Persisted per-department open/closed state.
+  // Accordion open-state: only the active department is expanded by default.
+  // Recomputed whenever the active department changes (navigation), so the
+  // sidebar never accumulates a long list of open sections. Not persisted.
   const [openState, setOpenState] = useState<DepartmentOpenState>(() =>
-    typeof window === "undefined"
-      ? {}
-      : loadDepartmentOpenState(localStorage.getItem(NAV_COLLAPSE_STORAGE_KEY))
+    initialDepartmentOpenState(activeDeptId)
   );
 
   useEffect(() => {
-    localStorage.setItem(NAV_COLLAPSE_STORAGE_KEY, serializeDepartmentOpenState(openState));
-  }, [openState]);
-
-  // Always expand the department that owns the current page on navigation.
-  useEffect(() => {
-    if (!activeDeptId) return;
-    setOpenState((prev) =>
-      prev[activeDeptId] === true ? prev : { ...prev, [activeDeptId]: true }
-    );
+    setOpenState(initialDepartmentOpenState(activeDeptId));
   }, [activeDeptId]);
 
-  const toggleDept = (deptId: string, open: boolean) =>
+  const setDeptOpen = (deptId: string, open: boolean) =>
     setOpenState((prev) => ({ ...prev, [deptId]: open }));
 
   const navigate = (item: NavItem) => {
@@ -165,13 +155,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </Link>
         </SidebarHeader>
 
-        <SidebarContent className="gap-0 py-2">
+        <SidebarContent className="gap-0 py-1.5">
           {departments.map((dept) => (
             <DepartmentSection
               key={dept.id}
               dept={dept}
-              open={isDepartmentOpen(dept.id, activeDeptId, openState)}
-              onOpenChange={(open) => toggleDept(dept.id, open)}
+              open={isDepartmentOpen(dept.id, openState)}
+              onOpenChange={(open) => setDeptOpen(dept.id, open)}
               activeItemKey={activeItemKey}
               onNavigate={navigate}
             />
@@ -241,13 +231,15 @@ function DepartmentSection({
   const DeptIcon = iconFor(dept.icon);
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} className="px-2">
-      <CollapsibleTrigger className="group/dept flex w-full items-center gap-2 rounded-md px-2 py-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70 hover:text-foreground hover:bg-accent/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-        <DeptIcon className="h-3.5 w-3.5 shrink-0" />
+      {/* Whole row is the trigger — clicking anywhere on it expands/collapses. */}
+      <CollapsibleTrigger className="group/dept flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-foreground/70 hover:text-foreground hover:bg-accent/60 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+        <DeptIcon className="h-4 w-4 shrink-0" />
         <span className="flex-1 text-left">{dept.label}</span>
-        <ChevronRight className="h-3.5 w-3.5 shrink-0 transition-transform group-data-[state=open]/dept:rotate-90" />
+        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-data-[state=open]/dept:rotate-90" />
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <SidebarMenu className="py-0.5">
+        {/* Child links: normal weight, indented under the heading for hierarchy. */}
+        <SidebarMenu className="mb-0.5 ml-3.5 gap-0 border-l border-border/60 pl-1.5">
           {dept.items.map((item) => {
             const ItemIcon = iconFor(item.icon);
             const isActive = `${dept.id}::${item.label}` === activeItemKey;
@@ -257,7 +249,7 @@ function DepartmentSection({
                   isActive={isActive}
                   onClick={() => onNavigate(item)}
                   tooltip={item.label}
-                  className="h-9 font-normal"
+                  className="h-8 font-normal text-[13px]"
                 >
                   <ItemIcon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
                   <span className="flex-1">{item.label}</span>

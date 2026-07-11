@@ -68,6 +68,11 @@ export type NavDepartment = {
   id: string;
   label: string;
   icon: string;
+  /**
+   * The department's primary page — where the Dashboard card header/title links
+   * to, and a sensible landing for the department. Always an existing route.
+   */
+  primaryPath: string;
   items: NavItem[];
 };
 
@@ -82,14 +87,17 @@ export const DEPARTMENTS: NavDepartment[] = [
     id: "home",
     label: "Home",
     icon: "Home",
+    primaryPath: "/command-center",
     items: [
-      { label: "Command Center", path: "/command-center", icon: "LayoutDashboard", roles: ["sales", "dispatcher", "technician", "marketing", CRM] },
+      // The single business-overview dashboard. (User-facing name: "Dashboard".)
+      { label: "Dashboard", path: "/command-center", icon: "LayoutDashboard", roles: ["sales", "dispatcher", "technician", "marketing", CRM] },
     ],
   },
   {
     id: "sales",
     label: "Sales",
     icon: "Users",
+    primaryPath: "/lead-dashboard",
     items: [
       { label: "Lead Inbox", path: "/lead-dashboard", icon: "Inbox", roles: ["sales", "marketing", CRM] },
       { label: "Contacts", path: "/customers", icon: "UserRound", roles: ["sales", "dispatcher", CRM] },
@@ -101,9 +109,11 @@ export const DEPARTMENTS: NavDepartment[] = [
     id: "dispatch",
     label: "Dispatch & Field",
     icon: "CalendarClock",
+    primaryPath: "/calendar",
     items: [
       { label: "Calendar", path: "/calendar", icon: "CalendarClock", roles: ["sales", "dispatcher", "technician", CRM] },
-      // No dedicated appointments route exists — appointments live on the calendar.
+      // No dedicated appointments route exists — appointments live on the calendar
+      // (deliberate shared-route with Calendar; only Calendar highlights).
       { label: "Appointments", path: "/calendar", icon: "CalendarCheck", roles: ["dispatcher", "technician", CRM] },
       { label: "Jobs", path: "/jobs", icon: "Briefcase", roles: ["dispatcher", "technician", CRM] },
       { label: "Field Today", path: "/field/today", icon: "MapPin", roles: ["dispatcher", "technician", CRM] },
@@ -113,43 +123,49 @@ export const DEPARTMENTS: NavDepartment[] = [
     id: "marketing",
     label: "Marketing",
     icon: "Megaphone",
+    primaryPath: "/marketing-dashboard",
     items: [
       { label: "Marketing Dashboard", path: "/marketing-dashboard", icon: "Megaphone", roles: ["marketing", CRM] },
       { label: "SMS Campaigns", path: "/sms-campaigns", icon: "MessageSquare", roles: ["marketing", CRM] },
       { label: "Campaign Performance", path: "/campaign-performance", icon: "BarChart3", roles: ["marketing", CRM] },
       { label: "Google Ads", path: "/google-ads-campaigns", icon: "Search", roles: ["marketing", CRM] },
-      { label: "Facebook Ads", path: "/facebook-campaigns", icon: "Facebook", roles: ["marketing", CRM] },
+      { label: "Facebook/Instagram", path: "/facebook-campaigns", icon: "Facebook", roles: ["marketing", CRM] },
     ],
   },
   {
     id: "accounting",
     label: "Accounting",
     icon: "Calculator",
+    // No dedicated accounting dashboard exists; proposals/estimates live in the
+    // Opportunity Center, so that is the department's primary landing.
+    primaryPath: "/opportunities",
     items: [
-      // QuickBooks lives on the Integrations page; estimates/proposals are managed
-      // in the Opportunity Center. Invoices/Sync Logs are hidden until real pages
-      // exist (no placeholder links shown to users).
-      { label: "QuickBooks", path: "/settings/integrations", icon: "Calculator", roles: [CRM] },
+      // Estimates/proposals are managed in the Opportunity Center; QuickBooks lives
+      // on the Integrations page (Accounting owns Integrations — see Administration).
+      // Invoices/payments are hidden until real routes exist.
       { label: "Estimates / Proposals", path: "/opportunities", icon: "FileText", roles: [CRM] },
+      { label: "QuickBooks / Integrations", path: "/settings/integrations", icon: "Plug", roles: [CRM] },
     ],
   },
   {
     id: "ai",
     label: "AI & Automation",
     icon: "Bot",
+    primaryPath: "/ai-va-dashboard",
     items: [
       { label: "AI VA Dashboard", path: "/ai-va-dashboard", icon: "Bot", roles: [CRM] },
       { label: "AI Script Manager", path: "/ai-script-manager", icon: "FileText", roles: [CRM] },
-      { label: "AI VA Settings", path: "/ai-va-settings", icon: "Settings", roles: [CRM] },
-      { label: "Automations", path: "/marketing-autopilot", icon: "Zap", roles: [CRM] },
+      { label: "AI Settings", path: "/ai-va-settings", icon: "Settings", roles: [CRM] },
+      { label: "Marketing Autopilot", path: "/marketing-autopilot", icon: "Zap", roles: [CRM] },
     ],
   },
   {
     id: "analytics",
     label: "Analytics",
     icon: "BarChart3",
+    primaryPath: "/analytics",
     items: [
-      { label: "Analytics & Reports", path: "/analytics", icon: "BarChart3", roles: ["marketing", CRM] },
+      { label: "Analytics Dashboard", path: "/analytics", icon: "BarChart3", roles: ["marketing", CRM] },
       { label: "AI Take-Off", path: "/takeoff-ai", icon: "Ruler", roles: [CRM] },
     ],
   },
@@ -157,11 +173,13 @@ export const DEPARTMENTS: NavDepartment[] = [
     id: "admin",
     label: "Administration",
     icon: "ShieldCheck",
+    primaryPath: "/team-management",
     items: [
       // Admin-only: empty `roles` array means no non-admin role qualifies.
-      { label: "Team Members", path: "/team-management", icon: "Users", roles: [] },
+      // Integrations is intentionally owned by Accounting (QuickBooks / Integrations),
+      // so it is not duplicated here.
+      { label: "Team Management", path: "/team-management", icon: "Users", roles: [] },
       { label: "Settings", path: "/admin", icon: "Settings", roles: [] },
-      { label: "Integrations", path: "/settings/integrations", icon: "Plug", roles: [] },
     ],
   },
 ];
@@ -336,48 +354,41 @@ export function getActiveItemPath(location: string): string | null {
   return best;
 }
 
-/* ── Collapsible-department state (persisted to localStorage) ───────────── */
+/* ── Collapsible-department state (accordion, not persisted) ────────────── */
 
-export const NAV_COLLAPSE_STORAGE_KEY = "me-nav-open-departments";
-
-/** Map of departmentId -> explicit user open/closed choice. */
+/** Map of departmentId -> whether that section is currently expanded. */
 export type DepartmentOpenState = Record<string, boolean>;
 
-/** Parse persisted open-state; tolerant of missing/corrupt data. */
-export function loadDepartmentOpenState(raw: string | null): DepartmentOpenState {
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return {};
-    const out: DepartmentOpenState = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      if (typeof value === "boolean") out[key] = value;
-    }
-    return out;
-  } catch {
-    return {};
-  }
-}
-
-export function serializeDepartmentOpenState(state: DepartmentOpenState): string {
-  return JSON.stringify(state);
-}
-
 /**
- * Whether a department section should render expanded.
- *
- * Rules (spec §3):
- *  - an explicit user choice always wins (remembered collapsed state);
- *  - otherwise the department that owns the current page is expanded;
- *  - every other department is collapsed by default (never expand everything).
+ * The default open-state for a given active route: ONLY the active department is
+ * expanded; every other section is collapsed. This is recomputed on navigation,
+ * so the sidebar never accumulates a long list of open sections (spec §5). State
+ * is intentionally NOT persisted across reloads — that is what caused every
+ * visited section to stay open.
  */
+export function initialDepartmentOpenState(
+  activeDeptId: string | null
+): DepartmentOpenState {
+  return activeDeptId ? { [activeDeptId]: true } : {};
+}
+
+/** Toggle one department's expanded state (used when a row is clicked). */
+export function toggleDepartmentOpen(
+  state: DepartmentOpenState,
+  deptId: string
+): DepartmentOpenState {
+  return { ...state, [deptId]: !state[deptId] };
+}
+
+/** Whether a department section should render expanded. */
 export function isDepartmentOpen(
   deptId: string,
-  activeDeptId: string | null,
-  userState: DepartmentOpenState
+  state: DepartmentOpenState
 ): boolean {
-  if (Object.prototype.hasOwnProperty.call(userState, deptId)) {
-    return userState[deptId];
-  }
-  return deptId === activeDeptId;
+  return !!state[deptId];
+}
+
+/** The primary landing route for a department (Dashboard card header target). */
+export function getDepartmentPrimaryPath(deptId: string): string | null {
+  return DEPARTMENTS.find((d) => d.id === deptId)?.primaryPath ?? null;
 }
