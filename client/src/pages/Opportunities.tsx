@@ -6,7 +6,8 @@
  * value, follow-ups, assignments and closing analytics. A manual "Sync
  * QuickBooks Now" pulls estimates/proposals + related customers.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
@@ -24,6 +25,14 @@ export default function Opportunities() {
   const utils = trpc.useUtils();
   const [tab, setTab] = useState("overview");
   const [detailId, setDetailId] = useState<number | null>(null);
+  // Deep-link support: /opportunities?opportunityId=42 opens that drawer
+  // (used by the Job → Opportunity back-link in Phase A).
+  const search = useSearch();
+  useEffect(() => {
+    const raw = new URLSearchParams(search).get("opportunityId");
+    const parsed = raw ? Number(raw) : NaN;
+    if (Number.isFinite(parsed)) setDetailId(parsed);
+  }, [search]);
   const { data: stats } = trpc.opportunities.stats.useQuery();
 
   const sync = trpc.quickbooks.syncSalesDocumentsNow.useMutation({

@@ -97,7 +97,7 @@ export default function JobDetail() {
     );
   }
 
-  const { job, customer, property, lineItems, appointments, assignee, lineTotal } = data;
+  const { job, customer, property, lineItems, appointments, assignee, opportunity, lineTotal } = data;
   const statusMeta = JOB_STATUS_META.find(m => m.value === job.status);
 
   const qbLabel: Record<string, string> = { not_synced: "Not synced", pending: "Sync pending", synced: "Synced", error: "Sync error" };
@@ -154,6 +154,16 @@ export default function JobDetail() {
                 </Badge>
               )}
               {job.jobType && <Badge variant="secondary" className="capitalize">{job.jobType.replace(/_/g, " ")}</Badge>}
+              {/* Phase A: link back to the originating opportunity, if converted */}
+              {opportunity && (
+                <button
+                  onClick={() => navigate(`/opportunities?opportunityId=${opportunity.id}`)}
+                  className="inline-flex items-center gap-1 rounded border px-2 py-0.5 text-xs text-[#1e3a5f] hover:bg-muted"
+                >
+                  From Opportunity #{opportunity.id}
+                  <Badge variant="secondary" className="text-[10px] capitalize">{opportunity.stage.replace(/_/g, " ")}</Badge>
+                </button>
+              )}
               {/* QuickBooks — display-only until the sync task */}
               <Badge variant="outline" className="text-muted-foreground">QuickBooks: {qbLabel[job.quickbooksSyncStatus]}</Badge>
               {job.completedAt && <span className="text-muted-foreground">Completed {formatDate(job.completedAt)}</span>}
