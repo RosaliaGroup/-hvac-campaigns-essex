@@ -1,16 +1,17 @@
 /**
- * Direct persistence-path tests for the QBO sales-document sync.
+ * Direct persistence-path tests for the QBO sales-document sync, asserting the
+ * ACTUAL customer / property / conflict values handed to the DB layer (not just
+ * parser output). Built on main's canonical implementation (shared composite
+ * parser, enrichment-gate, customerSyncConflicts review flagging) with our
+ * additive create-path hardening ported on top.
  *
- * These assert the ACTUAL customer/property/conflict values handed to the DB
- * layer (not just parser output), using a fake Drizzle `db` that records every
- * insert/update and serves queued select results per table. They cover the exact
- * behaviours the deployment-readiness review required: company-vs-person creation,
- * the low-confidence-composite guard, manual-approval protection, dedup by
- * QBO-id / email / phone, idempotency, and the no-automatic-merge guarantee.
+ * Covers: company create (person fields cleared), person create, low-confidence
+ * composite withholding + review flag, manual-name protection (enrichment gate),
+ * dedup by QBO-id / email / phone, idempotency, backfill + incremental (poller)
+ * persistence, and the no-automatic-merge guarantee.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
-// Mock the QBO provider + writeSyncLog and getDb BEFORE importing the module.
 const { providerMock, getDbMock, writeSyncLogMock } = vi.hoisted(() => ({
   providerMock: {
     getConnection: vi.fn(),
@@ -30,7 +31,7 @@ import {
   syncSalesDocuments,
 } from "./salesDocSync";
 import type { EstimateContactInput } from "./estimates";
-import { customers, properties, customerSyncConflicts, opportunities, quickbooksSalesDocuments } from "../../../drizzle/schema";
+import { customers, properties, customerSyncConflicts, opportunities, quickbooksSalesDocuments, quickbooksConnections } from "../../../drizzle/schema";
 
 const NOW = new Date("2026-07-01T00:00:00Z");
 
@@ -38,7 +39,8 @@ const NOW = new Date("2026-07-01T00:00:00Z");
 function createFakeDb() {
   const selectQueues: Record<string, unknown[][]> = {};
   const captured: Record<string, unknown[]> = {};
-  const nextId: Record<string, number> = {};
+  const seq: Record<string, number> = {};
+  const base: Record<string, number> = { customers: 100, properties: 500, opportunities: 700, quickbooksSalesDocuments: 800, customerSyncConflicts: 900 };
 
   const name = (t: unknown): string =>
     t === customers ? "customers" :
@@ -46,6 +48,7 @@ function createFakeDb() {
     t === customerSyncConflicts ? "customerSyncConflicts" :
     t === opportunities ? "opportunities" :
     t === quickbooksSalesDocuments ? "quickbooksSalesDocuments" :
+    t === quickbooksConnections ? "quickbooksConnections" :
     "other";
 
   const push = (bucket: string, v: unknown) => { (captured[bucket] ??= []).push(v); };
@@ -74,8 +77,8 @@ function createFakeDb() {
       return {
         values(v: unknown) {
           push(`${tbl}:insert`, v);
-          const id = (nextId[tbl] ?? ({ customers: 100, properties: 500, opportunities: 700, quickbooksSalesDocuments: 800, customerSyncConflicts: 900, other: 1 }[tbl] ?? 1));
-          nextId[tbl] = id + 1;
+          const id = seq[tbl] ?? base[tbl] ?? 1;
+          seq[tbl] = id + 1;
           return Promise.resolve([{ insertId: id }]);
         },
       };
@@ -96,7 +99,6 @@ function makeContact(over: Partial<EstimateContactInput> = {}): EstimateContactI
     displayName: "",
     rawDisplayName: null,
     projectReference: null,
-    locationNotes: null,
     firstName: null,
     lastName: null,
     companyName: null,
@@ -134,10 +136,6 @@ function existingCustomer(over: Record<string, unknown> = {}) {
     billingZip: null,
     quickbooksCustomerId: null,
     quickbooksCustomerUpdatedAt: null,
-    // Preset (non-null) so fill-empty never rewrites these audit fields.
-    quickbooksRawDisplayName: "PRESET RAW",
-    projectReference: "PRESET",
-    displayNameManuallyApproved: false,
     ...over,
   };
 }
@@ -149,56 +147,29 @@ beforeEach(() => {
   providerMock.fetchQboCustomer.mockResolvedValue(null);
   getDbMock.mockReset();
   writeSyncLogMock.mockClear();
+  delete process.env.QBO_CUSTOMER_NAME_ENRICH; // ensure the name-enrich gate is OFF (canonical default)
 });
 
-// ── Property helper ──────────────────────────────────────────────────────────
+// ── Property helper (main: no locationNotes column; dup → no-op) ─────────────
 describe("ensureServiceProperty", () => {
-  it("creates a new service property with locationNotes + projectReference", async () => {
+  it("creates a new service property (primary when the customer has none)", async () => {
     const db = createFakeDb();
-    await ensureServiceProperty(
-      db as never,
-      5,
-      { line1: "444 Madison Avenue", line2: null, city: "New York", state: "NY", zip: "10022" },
-      "commercial",
-      { locationNotes: "28th Floor", projectReference: "PN#172" },
-    );
+    await ensureServiceProperty(db as never, 5, { line1: "444 Madison Avenue", line2: null, city: "New York", state: "NY", zip: "10022" }, "commercial");
     expect(db.ins("properties")).toHaveLength(1);
     expect(db.ins("properties")[0]).toMatchObject({
       customerId: 5,
       addressLine1: "444 Madison Avenue",
       propertyType: "commercial",
-      locationNotes: "28th Floor",
-      projectReference: "PN#172",
       isPrimary: true,
     });
   });
 
-  it("reuses an existing property (no duplicate) and fills only-empty detail", async () => {
+  it("reuses an existing property by street line — never duplicates", async () => {
     const db = createFakeDb();
-    db._seed("properties", [{ id: 9, locationNotes: null, projectReference: null }]); // dup found
-    await ensureServiceProperty(
-      db as never,
-      5,
-      { line1: "444 Madison Avenue", line2: null, city: null, state: null, zip: null },
-      "commercial",
-      { locationNotes: "28th Floor", projectReference: "PN#172" },
-    );
-    expect(db._captured["properties:insert"]).toBeUndefined(); // never duplicated
-    expect(db.upd("properties")[0]).toMatchObject({ locationNotes: "28th Floor", projectReference: "PN#172" });
-  });
-
-  it("does not overwrite curated property notes on reuse", async () => {
-    const db = createFakeDb();
-    db._seed("properties", [{ id: 9, locationNotes: "Suite 200 (human)", projectReference: "P-OLD" }]);
-    await ensureServiceProperty(
-      db as never,
-      5,
-      { line1: "1 Main St", line2: null, city: null, state: null, zip: null },
-      "residential",
-      { locationNotes: "Basement", projectReference: "PN#999" },
-    );
+    db._seed("properties", [{ id: 9 }]); // dup found
+    await ensureServiceProperty(db as never, 5, { line1: "444 Madison Avenue", line2: null, city: null, state: null, zip: null }, "commercial");
     expect(db._captured["properties:insert"]).toBeUndefined();
-    expect(db._captured["properties:update"]).toBeUndefined(); // both fields already set → no write
+    expect(db._captured["properties:update"]).toBeUndefined();
   });
 });
 
@@ -219,20 +190,13 @@ describe("resolveOrCreateContact — auto-create", () => {
       displayName: "Cushman & Wakefield",
       firstName: null,
       lastName: null,
-      quickbooksRawDisplayName: "PN#172 I Cushman & Wakefield I 28th Floor 444 Madison Avenue, New York, NY 10022",
-      projectReference: "PN#172",
       hasQboConflicts: false,
     });
     expect(db._captured["customerSyncConflicts:insert"]).toBeUndefined();
-    expect(db.ins("properties")[0]).toMatchObject({
-      propertyType: "commercial",
-      addressLine1: "444 Madison Avenue",
-      locationNotes: "28th Floor",
-      projectReference: "PN#172",
-    });
+    expect(db.ins("properties")[0]).toMatchObject({ propertyType: "commercial", addressLine1: "444 Madison Avenue" });
   });
 
-  it("person: splits the CLEAN parsed name, never the composite", async () => {
+  it("person: uses the clean parsed name, never the composite", async () => {
     const db = createFakeDb();
     const estimate = {
       CustomerRef: { name: "PN#165 I Cynthia Rodriguez I 36 Stuyvesant Rd, Teaneck, NJ 07666" },
@@ -240,31 +204,19 @@ describe("resolveOrCreateContact — auto-create", () => {
     };
     await resolveOrCreateContact(db as never, estimate as never, NOW);
     const c = db.ins("customers")[0];
-    expect(c).toMatchObject({
-      type: "residential",
-      firstName: "Cynthia",
-      lastName: "Rodriguez",
-      companyName: null,
-      displayName: "Cynthia Rodriguez",
-      projectReference: "PN#165",
-    });
+    expect(c).toMatchObject({ type: "residential", firstName: "Cynthia", lastName: "Rodriguez", companyName: null, displayName: "Cynthia Rodriguez" });
     expect(String(c.displayName)).not.toMatch(/ I |\|/);
   });
 
-  it("low-confidence composite: withholds the name (never the composite) and flags for review", async () => {
+  it("low-confidence composite / bare project code: withholds the name and flags for review", async () => {
     const db = createFakeDb();
-    const estimate = { CustomerRef: { name: "PN-220-C" } }; // no email/phone, unsegmentable
+    const estimate = { CustomerRef: { name: "PN-220-C" } }; // bare project code, no email/phone
     await resolveOrCreateContact(db as never, estimate as never, NOW);
     const c = db.ins("customers")[0];
-    // Never the composite, never an invented name, never the project code as a name.
     expect(c.displayName).toBe("Unnamed Customer");
     expect(String(c.displayName)).not.toContain("PN-220-C");
     expect(c.firstName).toBeNull();
     expect(c.lastName).toBeNull();
-    expect(c.companyName).toBeNull();
-    // Raw + project preserved for audit; record flagged.
-    expect(c.quickbooksRawDisplayName).toBe("PN-220-C");
-    expect(c.projectReference).toBe("PN-220-C");
     expect(c.hasQboConflicts).toBe(true);
     const flag = db.ins("customerSyncConflicts")[0];
     expect(flag).toMatchObject({
@@ -284,8 +236,8 @@ describe("resolveOrCreateContact — auto-create", () => {
     expect(c.displayName).toBe("who@example.test");
     expect(String(c.displayName)).not.toContain("PN#500");
     expect(c.firstName).toBeNull();
-    expect(c.lastName).toBeNull();
     expect(c.hasQboConflicts).toBe(true);
+    expect((db.ins("customerSyncConflicts")[0] as Record<string, unknown>).qboValue).toBe("PN#500 I 12 I 34");
   });
 });
 
@@ -294,8 +246,8 @@ describe("resolveOrCreateContact — dedup (never merges, never creates a duplic
   it("dedup by QuickBooks customer id — enriches the linked contact", async () => {
     const db = createFakeDb();
     db._seed("customers", [{ id: 5, displayName: "Cynthia Rodriguez" }]); // linked-by-qbId lookup
-    db._seed("customers", [existingCustomer({ id: 5 })]); // enrich: existing row
-    db._seed("properties", [{ id: 9, locationNotes: "x", projectReference: "y" }]); // property reuse (no insert)
+    db._seed("customers", [existingCustomer({ id: 5 })]); // enrich existing row
+    db._seed("properties", [{ id: 9 }]); // property reuse (no insert)
     db._seed("customers", [{ displayName: "Cynthia Rodriguez" }]); // post-enrich display re-read
     const estimate = { CustomerRef: { value: "QB-42", name: "PN#165 I Cynthia Rodriguez I 36 Stuyvesant Rd, Teaneck, NJ 07666" } };
     const r = await resolveOrCreateContact(db as never, estimate as never, NOW);
@@ -315,12 +267,7 @@ describe("resolveOrCreateContact — dedup (never merges, never creates a duplic
   });
 
   it("dedup by normalized phone — enriches the matched contact", async () => {
-    providerMock.fetchQboCustomer.mockResolvedValue({
-      Id: "QB-9",
-      GivenName: "Cynthia",
-      FamilyName: "Rodriguez",
-      PrimaryPhone: { FreeFormNumber: "(201) 555-0142" },
-    });
+    providerMock.fetchQboCustomer.mockResolvedValue({ Id: "QB-9", GivenName: "Cynthia", FamilyName: "Rodriguez", PrimaryPhone: { FreeFormNumber: "(201) 555-0142" } });
     const db = createFakeDb();
     db._seed("customers", []); // linked-by-qbId → none
     db._seed("customers", [{ id: 8, email: null, phone: "201-555-0142", displayName: "Cynthia R", companyName: null, quickbooksCustomerId: null }]);
@@ -329,45 +276,25 @@ describe("resolveOrCreateContact — dedup (never merges, never creates a duplic
     const estimate = { CustomerRef: { value: "QB-9", name: "Cynthia Rodriguez" } };
     const r = await resolveOrCreateContact(db as never, estimate as never, NOW);
     expect(r).toMatchObject({ customerId: 8, created: false });
-    expect(db._captured["customers:insert"]).toBeUndefined(); // matched → enriched, not merged
+    expect(db._captured["customers:insert"]).toBeUndefined();
   });
 });
 
-// ── Enrichment protections ───────────────────────────────────────────────────
+// ── Enrichment protections (main's canonical enrichment gate) ────────────────
 describe("enrichExistingCustomer", () => {
-  it("never overwrites a manually-approved displayName", async () => {
+  it("manual-name protection: with the enrich gate OFF (default), never writes displayName/first/last/company", async () => {
     const db = createFakeDb();
-    db._seed("customers", [existingCustomer({ id: 11, companyName: null, displayNameManuallyApproved: true })]);
+    db._seed("customers", [existingCustomer({ id: 11, firstName: null, lastName: null, companyName: null })]);
     const contact = makeContact({
-      companyName: "New Co Inc",
-      isCompany: true,
-      nameConfident: true,
-      displayName: "New Co Inc",
+      firstName: "Ignore", lastName: "Me", companyName: "New Co Inc", isCompany: true, nameConfident: true, displayName: "New Co Inc",
       quickbooksUpdatedAt: new Date("2026-06-01T00:00:00Z"),
     });
     await enrichExistingCustomer(db as never, 11, contact, "QB-11", true, NOW);
     const upd = (db.upd("customers")[0] ?? {}) as Record<string, unknown>;
-    expect(upd).not.toHaveProperty("displayName"); // approved name protected
-    expect(upd.companyName).toBe("New Co Inc"); // empty data field still fillable
-  });
-
-  it("recomputes displayName from structured fields (never the raw composite) when not approved", async () => {
-    const db = createFakeDb();
-    db._seed("customers", [existingCustomer({ id: 13, firstName: null, lastName: null, displayNameManuallyApproved: false })]);
-    const contact = makeContact({
-      firstName: "Marco",
-      lastName: "Weber",
-      nameConfident: true,
-      displayName: "Marco Weber",
-      rawDisplayName: "PN-173-B I Marco Weber I 9005 Smith Ave, North Bergen, NJ 07047 I Basement I",
-      quickbooksUpdatedAt: new Date("2026-06-01T00:00:00Z"),
-    });
-    await enrichExistingCustomer(db as never, 13, contact, "QB-13", true, NOW);
-    const upd = (db.upd("customers")[0] ?? {}) as Record<string, unknown>;
-    expect(upd.displayName).toBe("Marco Weber");
-    expect(String(upd.displayName)).not.toMatch(/ I |\|/);
-    // Raw preserved for audit (was empty preset? preset is non-null so not rewritten) — assert it is never the composite.
-    expect(upd.displayName).not.toContain("PN-173-B");
+    expect(upd).not.toHaveProperty("displayName");
+    expect(upd).not.toHaveProperty("firstName");
+    expect(upd).not.toHaveProperty("lastName");
+    expect(upd).not.toHaveProperty("companyName");
   });
 
   it("is idempotent — a fresh (unchanged) QBO record makes no writes", async () => {
@@ -403,7 +330,6 @@ describe("syncSalesDocuments — persistence via the sync engine", () => {
     expect(c).toBeTruthy();
     expect(c.displayName).toBe("Cynthia Rodriguez");
     expect(String(c.displayName)).not.toMatch(/ I |\|/);
-    expect(c.projectReference).toBe("PN#165");
   });
 
   it("incremental (the poller's path) persists via the same engine", async () => {
@@ -413,7 +339,6 @@ describe("syncSalesDocuments — persistence via the sync engine", () => {
     providerMock.fetchEstimates.mockResolvedValueOnce([cynthiaEstimate]).mockResolvedValue([]);
     const res = await syncSalesDocuments({ mode: "incremental", now: NOW });
     expect(res.ok).toBe(true);
-    const c = db.ins("customers")[0];
-    expect(c.displayName).toBe("Cynthia Rodriguez");
+    expect(db.ins("customers")[0].displayName).toBe("Cynthia Rodriguez");
   });
 });

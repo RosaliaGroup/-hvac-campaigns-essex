@@ -41,6 +41,7 @@ import {
   planCustomerConflictWrites,
   type IncomingCustomerFields,
 } from "./customerMerge";
+import { isCustomerNameEnrichEnabled, planCustomerEnrichment } from "./enrichmentGate";
 import { cancelOpenFollowups, ensureFollowupsForOpportunity } from "./followups";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -114,24 +115,15 @@ export async function ensureServiceProperty(
   customerId: number,
   addr: ContactAddress | null,
   customerType: string | null,
-  extra: { locationNotes?: string | null; projectReference?: string | null } = {},
 ): Promise<void> {
   if (!addr || !addr.line1) return;
   const line1 = addr.line1.trim().toLowerCase();
   const dup = await db
-    .select({ id: properties.id, locationNotes: properties.locationNotes, projectReference: properties.projectReference })
+    .select({ id: properties.id })
     .from(properties)
     .where(and(eq(properties.customerId, customerId), sql`LOWER(TRIM(${properties.addressLine1})) = ${line1}`))
     .limit(1);
-  if (dup[0]) {
-    // Reuse the existing service location; fill only-empty project/location detail
-    // so repeated syncs never duplicate a property or clobber curated notes.
-    const fill: Record<string, unknown> = {};
-    if (extra.locationNotes && !dup[0].locationNotes) fill.locationNotes = extra.locationNotes;
-    if (extra.projectReference && !dup[0].projectReference) fill.projectReference = extra.projectReference;
-    if (Object.keys(fill).length) await db.update(properties).set(fill).where(eq(properties.id, dup[0].id));
-    return;
-  }
+  if (dup[0]) return;
   const primary = await db
     .select({ id: properties.id })
     .from(properties)
@@ -145,8 +137,6 @@ export async function ensureServiceProperty(
     city: addr.city,
     state: addr.state ?? "NJ",
     zip: addr.zip,
-    locationNotes: extra.locationNotes ?? null,
-    projectReference: extra.projectReference ?? null,
     propertyType: customerType === "commercial" ? "commercial" : "residential",
     isPrimary: !primary[0],
   });
@@ -232,9 +222,6 @@ export async function enrichExistingCustomer(
       billingZip: customers.billingZip,
       quickbooksCustomerId: customers.quickbooksCustomerId,
       quickbooksCustomerUpdatedAt: customers.quickbooksCustomerUpdatedAt,
-      quickbooksRawDisplayName: customers.quickbooksRawDisplayName,
-      projectReference: customers.projectReference,
-      displayNameManuallyApproved: customers.displayNameManuallyApproved,
     })
     .from(customers)
     .where(eq(customers.id, customerId))
@@ -253,37 +240,22 @@ export async function enrichExistingCustomer(
     return;
   }
 
-  const { patch, conflicts } = buildCustomerFieldUpdate(existing, incomingFromContact(contact), { normalizePhone });
-  const setValues: Record<string, unknown> = { ...patch };
-
-  // Recompute the display name only when a name field was filled AND the name has
-  // not been manually approved/corrected. This is what stops a later QBO sync from
-  // ever restoring a bad composite name over a human-verified one.
-  if (
-    !existing.displayNameManuallyApproved &&
-    (patch.firstName != null || patch.lastName != null || patch.companyName != null)
-  ) {
-    setValues.displayName = buildDisplayName({
-      companyName: patch.companyName ?? existing.companyName,
-      firstName: patch.firstName ?? existing.firstName,
-      lastName: patch.lastName ?? existing.lastName,
-      email: patch.email ?? existing.email,
-      phone: patch.phone ?? existing.phone,
-    });
-  }
-  // Audit: preserve the raw QBO name and the parsed project reference (fill-empty only).
-  if (contact.rawDisplayName && !existing.quickbooksRawDisplayName) {
-    setValues.quickbooksRawDisplayName = contact.rawDisplayName;
-  }
-  if (contact.projectReference && !existing.projectReference) {
-    setValues.projectReference = contact.projectReference;
-  }
-  if (qbCustomerId && !matchedByQbId && !existing.quickbooksCustomerId) {
-    setValues.quickbooksCustomerId = qbCustomerId;
-    setValues.quickbooksSyncStatus = "synced";
-    setValues.quickbooksSyncedAt = now;
-  }
-  if (contact.quickbooksUpdatedAt) setValues.quickbooksCustomerUpdatedAt = contact.quickbooksUpdatedAt;
+  // Identity writes (firstName/lastName/companyName/displayName) are gated behind
+  // QBO_CUSTOMER_NAME_ENRICH (default OFF) so the sync never silently mutates a
+  // customer's name outside the reviewed repair workflow. Every non-identity
+  // behavior below — non-name fill-empty, QBO id/status/timestamps, conflict
+  // logging, service-property attachment — runs regardless of the flag.
+  const { setValues, conflicts } = planCustomerEnrichment({
+    existing,
+    incoming: incomingFromContact(contact),
+    quickbooksUpdatedAt: contact.quickbooksUpdatedAt ?? null,
+    qbCustomerId,
+    matchedByQbId,
+    now,
+    nameEnrichEnabled: isCustomerNameEnrichEnabled(),
+    buildDisplayName,
+    normalizePhone,
+  });
 
   const openCount = await recordCustomerConflicts(db, customerId, qbCustomerId, conflicts, now);
   if (openCount > 0) setValues.hasQboConflicts = true;
@@ -291,10 +263,7 @@ export async function enrichExistingCustomer(
   if (Object.keys(setValues).length) {
     await db.update(customers).set(setValues).where(eq(customers.id, customerId));
   }
-  await ensureServiceProperty(db, customerId, contact.serviceAddress, existing.type, {
-    locationNotes: contact.locationNotes,
-    projectReference: contact.projectReference,
-  });
+  await ensureServiceProperty(db, customerId, contact.serviceAddress, existing.type);
 }
 
 /**
@@ -379,25 +348,24 @@ export async function resolveOrCreateContact(
   }
 
   // 5) No match — auto-create the contact from the QuickBooks record.
-  // Company vs person vs unknown-identity — mirrors the repair logic. We never
-  // split a company name or a low-confidence composite into person fields, and
-  // never store the raw composite as the CRM name.
+  // Company vs structured-person vs confident-single-name vs unknown-identity.
+  // We NEVER split a company name or a low-confidence composite into person
+  // fields, and NEVER store the raw composite as the CRM name.
   let firstName: string | null;
   let lastName: string | null;
   let type: "residential" | "commercial";
   if (contact.isCompany) {
-    // Company: store companyName only; person fields stay NULL; commercial.
+    // Company: companyName only; person fields stay NULL; commercial.
     firstName = null;
     lastName = null;
     type = "commercial";
   } else if (contact.firstName || contact.lastName) {
-    // QBO provided a structured person name.
+    // Structured / confidently-parsed person name.
     firstName = contact.firstName;
     lastName = contact.lastName;
     type = "residential";
   } else if (contact.nameConfident && contact.displayName) {
-    // Confident single-string person name (confidently parsed composite or a
-    // plain non-composite name) — safe to split.
+    // Confident single-string person name — safe to split.
     const s = splitName(contact.displayName);
     firstName = s.firstName;
     lastName = s.lastName;
@@ -410,7 +378,7 @@ export async function resolveOrCreateContact(
     type = "residential";
   }
   // When the real name could not be determined, flag for human review instead of
-  // guessing. The raw composite is still preserved in quickbooksRawDisplayName.
+  // guessing. The raw composite is preserved in the conflict row's qboValue.
   const nameNeedsReview = !contact.isCompany && !contact.nameConfident;
 
   const displayName = buildDisplayName({
@@ -437,9 +405,6 @@ export async function resolveOrCreateContact(
     billingCity: contact.address?.city ?? null,
     billingState: contact.address?.state ?? null,
     billingZip: contact.address?.zip ?? null,
-    // Audit + temporary project storage (no Projects module yet).
-    quickbooksRawDisplayName: contact.rawDisplayName,
-    projectReference: contact.projectReference,
     quickbooksCustomerId: qbCustomerId,
     quickbooksSyncStatus: qbCustomerId ? "synced" : "not_synced",
     quickbooksSyncedAt: qbCustomerId ? now : null,
@@ -459,10 +424,7 @@ export async function resolveOrCreateContact(
       status: "open",
     });
   }
-  await ensureServiceProperty(db, customerId, contact.serviceAddress, type, {
-    locationNotes: contact.locationNotes,
-    projectReference: contact.projectReference,
-  });
+  await ensureServiceProperty(db, customerId, contact.serviceAddress, type);
   return { customerId, created: true, displayName };
 }
 
@@ -480,7 +442,6 @@ async function upsertOpportunity(
     existingOpportunityId: number | null;
     customerId: number;
     displayName: string;
-    projectReference?: string | null;
     docNumber: string | null;
     totalAmount: string;
     status: (typeof quickbooksSalesDocuments.status.enumValues)[number];
@@ -528,9 +489,7 @@ async function upsertOpportunity(
     return { id: args.existingOpportunityId, created: false, stageChanged };
   }
 
-  // Keep the project code visible on the deal until a Projects module exists.
-  const titlePrefix = args.projectReference ? `${args.projectReference} · ` : "";
-  const title = `${titlePrefix}${args.displayName} — Estimate${args.docNumber ? ` ${args.docNumber}` : ""}`;
+  const title = `${args.displayName} — Estimate${args.docNumber ? ` ${args.docNumber}` : ""}`;
   const [inserted] = await db.insert(opportunities).values({
     customerId: args.customerId,
     title,
@@ -582,12 +541,7 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
   // Load the customer for the title + work-category classification.
   const cust = (
     await db
-      .select({
-        type: customers.type,
-        companyName: customers.companyName,
-        displayName: customers.displayName,
-        projectReference: customers.projectReference,
-      })
+      .select({ type: customers.type, companyName: customers.companyName, displayName: customers.displayName })
       .from(customers)
       .where(eq(customers.id, customerId))
       .limit(1)
@@ -605,7 +559,6 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
     existingOpportunityId: existing?.opportunityId ?? null,
     customerId,
     displayName,
-    projectReference: cust?.projectReference ?? null,
     docNumber: mapped.docNumber ?? null,
     totalAmount: mapped.totalAmount as string,
     status: mapped.status ?? "pending",

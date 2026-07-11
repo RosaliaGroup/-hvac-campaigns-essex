@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "c62cfeaa-c488-4288-8e43-a4f471fef805",
+  "id": "6d69e93c-99ad-441c-af5f-f008d324e720",
   "prevId": "e92359da-3773-44d8-b72d-38b068a8776b",
   "tables": {
     "aiScripts": {
@@ -1725,6 +1725,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "quickbooksCustomerCheckedAt": {
+          "name": "quickbooksCustomerCheckedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "hasQboConflicts": {
           "name": "hasQboConflicts",
           "type": "boolean",
@@ -1798,28 +1805,6 @@
           "autoincrement": false,
           "onUpdate": true,
           "default": "(now())"
-        },
-        "quickbooksRawDisplayName": {
-          "name": "quickbooksRawDisplayName",
-          "type": "varchar(512)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "projectReference": {
-          "name": "projectReference",
-          "type": "varchar(120)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "displayNameManuallyApproved": {
-          "name": "displayNameManuallyApproved",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": false
         }
       },
       "indexes": {
@@ -2829,6 +2814,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "projectReference": {
+          "name": "projectReference",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
         "assignedToId": {
           "name": "assignedToId",
           "type": "int",
@@ -2873,6 +2865,13 @@
           "name": "opportunities_stage_idx",
           "columns": [
             "stage"
+          ],
+          "isUnique": false
+        },
+        "opportunities_projectReference_idx": {
+          "name": "opportunities_projectReference_idx",
+          "columns": [
+            "projectReference"
           ],
           "isUnique": false
         }
@@ -3311,20 +3310,6 @@
           "autoincrement": false,
           "onUpdate": true,
           "default": "(now())"
-        },
-        "locationNotes": {
-          "name": "locationNotes",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "projectReference": {
-          "name": "projectReference",
-          "type": "varchar(120)",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
         }
       },
       "indexes": {
@@ -3340,6 +3325,151 @@
       "compositePrimaryKeys": {
         "properties_id": {
           "name": "properties_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "qboRepairAuditLog": {
+      "name": "qboRepairAuditLog",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "runId": {
+          "name": "runId",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "kind": {
+          "name": "kind",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "actor": {
+          "name": "actor",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "parserVersion": {
+          "name": "parserVersion",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "manifestHash": {
+          "name": "manifestHash",
+          "type": "varchar(128)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "customerId": {
+          "name": "customerId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quickbooksCustomerId": {
+          "name": "quickbooksCustomerId",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "fieldName": {
+          "name": "fieldName",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "beforeValue": {
+          "name": "beforeValue",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "afterValue": {
+          "name": "afterValue",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdPropertyId": {
+          "name": "createdPropertyId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "opportunityId": {
+          "name": "opportunityId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "result": {
+          "name": "result",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "qboRepairAuditLog_runId_idx": {
+          "name": "qboRepairAuditLog_runId_idx",
+          "columns": [
+            "runId"
+          ],
+          "isUnique": false
+        },
+        "qboRepairAuditLog_customerId_idx": {
+          "name": "qboRepairAuditLog_customerId_idx",
+          "columns": [
+            "customerId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "qboRepairAuditLog_id": {
+          "name": "qboRepairAuditLog_id",
           "columns": [
             "id"
           ]

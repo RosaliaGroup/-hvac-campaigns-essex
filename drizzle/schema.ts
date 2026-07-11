@@ -942,28 +942,23 @@ export const customers = mysqlTable(
       .notNull(),
     quickbooksSyncedAt: timestamp("quickbooksSyncedAt"),
     quickbooksSyncError: text("quickbooksSyncError"),
-    /** QBO Customer.MetaData.LastUpdatedTime — drives "is the QBO record newer?" merges. */
+    /**
+     * QBO Customer.MetaData.LastUpdatedTime of the QBO record version we last
+     * APPLIED. Semantics = "which QBO version's data is reflected here" (drives
+     * the freshness/"is the QBO record newer?" guard). It is NOT "last time we
+     * checked QBO" — that is quickbooksCustomerCheckedAt.
+     */
     quickbooksCustomerUpdatedAt: timestamp("quickbooksCustomerUpdatedAt"),
+    /**
+     * Last time a direct QBO Customer fetch was successfully retrieved AND
+     * evaluated for this row — set on every successful refresh even when no
+     * field changed. Lets us prove a customer was reconciled without relying on
+     * a changed estimate. Distinct from quickbooksCustomerUpdatedAt (applied
+     * version). Null = never directly refreshed.
+     */
+    quickbooksCustomerCheckedAt: timestamp("quickbooksCustomerCheckedAt"),
     /** True when a QBO sync found a field value conflicting with existing CRM data (see customerSyncConflicts). */
     hasQboConflicts: boolean("hasQboConflicts").default(false).notNull(),
-    /**
-     * Original, unparsed QBO Customer.DisplayName kept for audit. When the QBO
-     * name is a composite ("PN-173-B | Marco Weber | <addr> | Basement I") the
-     * CRM `displayName` holds only the real customer while this holds the source.
-     */
-    quickbooksRawDisplayName: varchar("quickbooksRawDisplayName", { length: 512 }),
-    /**
-     * Temporary home for a project code parsed out of a composite QBO name
-     * (e.g. "PN-173-B") until a first-class Projects module exists. The project
-     * code is also mirrored onto the service `properties` row and the opportunity title.
-     */
-    projectReference: varchar("projectReference", { length: 120 }),
-    /**
-     * True once a human has set/confirmed the display name. QBO sync must never
-     * recompute or overwrite the name while this is set — protects manual fixes
-     * (including repairs applied by the composite-name repair script).
-     */
-    displayNameManuallyApproved: boolean("displayNameManuallyApproved").default(false).notNull(),
     // ── Billing address (mapped from QBO Customer.BillAddr; service address lives in `properties`) ──
     billingLine1: varchar("billingLine1", { length: 255 }),
     billingLine2: varchar("billingLine2", { length: 255 }),
@@ -1006,10 +1001,6 @@ export const properties = mysqlTable(
     /** Matches rebate-calculator vocabulary, e.g. "gas_furnace", "oil_boiler" */
     existingSystem: varchar("existingSystem", { length: 255 }),
     systemNotes: text("systemNotes"),
-    /** Floor/suite/basement/unit detail for this service location (e.g. "Basement I", "28th Floor"). */
-    locationNotes: varchar("locationNotes", { length: 255 }),
-    /** Project code tied to this service location when it came from a composite QBO name. */
-    projectReference: varchar("projectReference", { length: 120 }),
     isPrimary: boolean("isPrimary").default(false).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1214,6 +1205,13 @@ export const opportunities = mysqlTable(
     nextActionDueAt: timestamp("nextActionDueAt"),
     /** The primary QuickBooks sales document backing this opportunity (quickbooksSalesDocuments.id). */
     quickbooksSalesDocumentId: int("quickbooksSalesDocumentId"),
+    /**
+     * Dedicated project reference parsed out of a composite QuickBooks customer
+     * DisplayName (e.g. "PN#132"). Kept OFF the customer identity so a project
+     * code never contaminates a Contact name. Null for non-project deals.
+     * Interim home until a dedicated Projects module exists.
+     */
+    projectReference: varchar("projectReference", { length: 64 }),
     assignedToId: int("assignedToId"),
     closedAt: timestamp("closedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -1222,6 +1220,7 @@ export const opportunities = mysqlTable(
   table => ({
     customerIdx: index("opportunities_customerId_idx").on(table.customerId),
     stageIdx: index("opportunities_stage_idx").on(table.stage),
+    projectRefIdx: index("opportunities_projectReference_idx").on(table.projectReference),
   }),
 );
 export type Opportunity = typeof opportunities.$inferSelect;
@@ -1387,3 +1386,44 @@ export const customerSyncConflicts = mysqlTable(
 );
 export type CustomerSyncConflict = typeof customerSyncConflicts.$inferSelect;
 export type InsertCustomerSyncConflict = typeof customerSyncConflicts.$inferInsert;
+
+/**
+ * QBO composite-customer repair audit log — one row per field-level change made
+ * by the reviewed repair (or the standalone refresh apply path). Append-only.
+ * Durable before→after record enabling rollback-by-run-id. No sensitive
+ * financial data; emails/phones are NOT written here (they are never changed by
+ * repair). `beforeValue`/`afterValue` hold the specific field's values only.
+ */
+export const qboRepairAuditLog = mysqlTable(
+  "qboRepairAuditLog",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** Unique per repair/refresh invocation — the rollback key. */
+    runId: varchar("runId", { length: 64 }).notNull(),
+    /** "repair" | "refresh" | "rollback". */
+    kind: varchar("kind", { length: 24 }).notNull(),
+    actor: varchar("actor", { length: 128 }),
+    parserVersion: varchar("parserVersion", { length: 32 }),
+    manifestHash: varchar("manifestHash", { length: 128 }),
+    customerId: int("customerId").notNull(),
+    quickbooksCustomerId: varchar("quickbooksCustomerId", { length: 64 }),
+    /** Field changed, e.g. "displayName" | "firstName" | "projectReference" | "property.created". */
+    fieldName: varchar("fieldName", { length: 64 }).notNull(),
+    beforeValue: text("beforeValue"),
+    afterValue: text("afterValue"),
+    /** For property.created rows: the new properties.id. */
+    createdPropertyId: int("createdPropertyId"),
+    /** For project-reference rows: the opportunities.id updated. */
+    opportunityId: int("opportunityId"),
+    /** "applied" | "skipped" | "conflict" | "rolled_back". */
+    result: varchar("result", { length: 24 }).notNull(),
+    reason: text("reason"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    runIdx: index("qboRepairAuditLog_runId_idx").on(table.runId),
+    customerIdx: index("qboRepairAuditLog_customerId_idx").on(table.customerId),
+  }),
+);
+export type QboRepairAuditLog = typeof qboRepairAuditLog.$inferSelect;
+export type InsertQboRepairAuditLog = typeof qboRepairAuditLog.$inferInsert;

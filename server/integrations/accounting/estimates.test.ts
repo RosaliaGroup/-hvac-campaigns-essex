@@ -151,58 +151,40 @@ describe("buildContactFromEstimate", () => {
     expect(c.address).toBeNull();
   });
 
-  it("parses a composite QBO DisplayName into clean name + project + service address + notes", () => {
+  it("company via QBO CompanyName: isCompany=true and person fields cleared", () => {
     const c = buildContactFromEstimate(estimate(), {
-      Id: "77",
-      DisplayName: "PN-173-B | Marco Weber | 9005 Smith Ave, North Bergen, NJ 07047 | Basement I",
-      PrimaryEmailAddr: { Address: "marco@example.test" },
+      Id: "5",
+      DisplayName: "Acme HVAC LLC",
+      CompanyName: "Acme HVAC LLC",
+      GivenName: "Al",
+      FamilyName: "Ace",
     });
-    // Contact name is the REAL customer, never the composite.
-    expect(c.displayName).toBe("Marco Weber");
-    expect(c.companyName).toBeNull();
-    expect(c.projectReference).toBe("PN-173-B");
-    expect(c.locationNotes).toBe("Basement I");
-    expect(c.serviceAddress).toMatchObject({ line1: "9005 Smith Ave", city: "North Bergen", state: "NJ", zip: "07047" });
-    // Raw composite name preserved for audit.
-    expect(c.rawDisplayName).toBe("PN-173-B | Marco Weber | 9005 Smith Ave, North Bergen, NJ 07047 | Basement I");
-  });
-
-  it("routes a composite company name into companyName, not first/last", () => {
-    const c = buildContactFromEstimate(estimate(), {
-      Id: "88",
-      DisplayName: "PN#172 | Cushman & Wakefield | 28th Floor 444 Madison Avenue, New York, NY 10022",
-    });
-    expect(c.displayName).toBe("Cushman & Wakefield");
-    expect(c.companyName).toBe("Cushman & Wakefield");
+    expect(c.isCompany).toBe(true);
+    expect(c.companyName).toBe("Acme HVAC LLC");
+    expect(c.displayName).toBe("Acme HVAC LLC");
     expect(c.firstName).toBeNull();
-    expect(c.projectReference).toBe("PN#172");
-    expect(c.locationNotes).toBe("28th Floor");
-    expect(c.serviceAddress).toMatchObject({ line1: "444 Madison Avenue", city: "New York", state: "NY", zip: "10022" });
+    expect(c.lastName).toBeNull();
   });
 
-  it("leaves a non-composite name untouched and carries no project reference", () => {
-    const c = buildContactFromEstimate(estimate(), {
-      Id: "99",
-      DisplayName: "Helen Espiallat",
-      GivenName: "Helen",
-      FamilyName: "Espiallat",
-    });
-    expect(c.displayName).toBe("Helen Espiallat");
-    expect(c.projectReference).toBeNull();
-    expect(c.locationNotes).toBeNull();
-    expect(c.rawDisplayName).toBe("Helen Espiallat");
+  it("composite person: parses the clean name + project ref, withholds the composite", () => {
+    const e = { ...estimate(), CustomerRef: { name: "PN#165 I Cynthia Rodriguez I 36 Stuyvesant Rd, Teaneck, NJ 07666" } };
+    const c = buildContactFromEstimate(e, null);
+    expect(c.displayName).toBe("Cynthia Rodriguez");
+    expect(c.displayName).not.toMatch(/ I |\|/);
+    expect(c.nameConfident).toBe(true);
+    expect(c.isCompany).toBe(false);
+    expect(c.projectReference).toBe("PN#165");
+    expect(c.rawDisplayName).toContain("PN#165 I Cynthia Rodriguez");
   });
 
-  it("prefers an explicit QBO ShipAddr over the address parsed from the name", () => {
-    const c = buildContactFromEstimate(estimate(), {
-      Id: "77",
-      DisplayName: "PN-173-B | Marco Weber | 9005 Smith Ave, North Bergen, NJ 07047 | Basement I",
-      ShipAddr: { Line1: "500 Ship St", City: "Kearny", CountrySubDivisionCode: "NJ", PostalCode: "07032" },
-    });
-    expect(c.serviceAddress).toMatchObject({ line1: "500 Ship St", city: "Kearny" });
-    // The parsed project/notes still come through even when ShipAddr wins.
-    expect(c.projectReference).toBe("PN-173-B");
-    expect(c.locationNotes).toBe("Basement I");
+  it("low-confidence composite / bare project code: withholds the name (nameConfident=false)", () => {
+    for (const raw of ["PN-220-C", "PN#500 I 12 I 34"]) {
+      const c = buildContactFromEstimate({ ...estimate(), CustomerRef: { name: raw } }, null);
+      expect(c.displayName).toBe("");
+      expect(c.nameConfident).toBe(false);
+      expect(c.isCompany).toBe(false);
+      expect(c.rawDisplayName).toBe(raw);
+    }
   });
 });
 

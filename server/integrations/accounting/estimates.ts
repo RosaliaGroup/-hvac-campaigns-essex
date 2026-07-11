@@ -10,7 +10,7 @@
  * ever query the Estimate entity.
  */
 import type { InsertQuickbooksSalesDocument } from "../../../drizzle/schema";
-import { parseQboDisplayName, looksLikeCompanyName, isPlausibleName } from "./qboNameParser";
+import { parseQboCompositeName } from "../../../shared/qboCompositeName";
 
 /** Minimal shape of a QBO Estimate we read from the query API. */
 export interface QboEstimate {
@@ -145,14 +145,13 @@ export interface ContactAddress {
 /** Fields needed to auto-create / enrich a CRM contact from an estimate + its QBO customer. */
 export interface EstimateContactInput {
   quickbooksCustomerId: string | null;
-  /** The REAL customer name only — the composite QBO name is parsed away (see rawDisplayName). */
+  /** The REAL customer name only — a composite QBO name is parsed away, and a
+   *  composite we cannot segment confidently is WITHHELD (""), never copied here. */
   displayName: string;
-  /** The original, unparsed QBO DisplayName kept for audit (`customers.quickbooksRawDisplayName`). */
+  /** The original, unparsed QBO DisplayName kept for audit / review context. */
   rawDisplayName: string | null;
-  /** Project code parsed out of a composite QBO name, e.g. "PN-173-B". Null otherwise. */
+  /** Project code parsed out of a composite QBO name (e.g. "PN-173-B"); null otherwise. */
   projectReference: string | null;
-  /** Floor/suite/basement/unit note parsed out of a composite QBO name. Null otherwise. */
-  locationNotes: string | null;
   firstName: string | null;
   lastName: string | null;
   companyName: string | null;
@@ -160,9 +159,10 @@ export interface EstimateContactInput {
   isCompany: boolean;
   /**
    * True when the REAL customer name is confidently known (QBO structured name,
-   * a resolved company, a confidently-parsed composite, or a plain non-composite
-   * name). False for a composite we could NOT segment confidently — in that case
-   * the persistence layer must NOT store the raw composite as the CRM name.
+   * a resolved company, a high-confidence parsed composite, or a plain
+   * non-composite name). False for a composite that could NOT be segmented
+   * confidently — the persistence layer must then WITHHOLD the name, not store
+   * the raw composite.
    */
   nameConfident: boolean;
   email: string | null;
@@ -206,6 +206,16 @@ export interface QboCustomerLite {
   MetaData?: { CreateTime?: string; LastUpdatedTime?: string };
 }
 
+/**
+ * True when the whole string is JUST a project code (e.g. "PN-220-C", "PN#500",
+ * "WO 123A") with no customer name after it. main's composite parser needs ≥3
+ * " I " segments, so a bare project code parses as non-composite — we must still
+ * refuse to name a contact after it.
+ */
+function looksLikeBareProjectCode(s: string): boolean {
+  return /^(?:PN|PROJECT|PROJ|JOB|WO)\s*[#:.\-]?\s*\d+[A-Za-z0-9\-]*\s*$/i.test(s.trim());
+}
+
 function mapQboAddress(addr: QboAddress | undefined): ContactAddress | null {
   if (!addr) return null;
   const mapped: ContactAddress = {
@@ -226,71 +236,88 @@ function mapQboAddress(addr: QboAddress | undefined): ContactAddress | null {
  * customer fetch failed.
  */
 export function buildContactFromEstimate(e: QboEstimate, customer: QboCustomerLite | null): EstimateContactInput {
-  // The QBO-provided name (may be a composite "PN-… | Customer | addr | note").
-  const rawDisplayName =
+  // The QBO-provided name (may be a composite "PN-… I Customer I addr I note").
+  const rawName =
     customer?.DisplayName?.trim() ||
     e.CustomerRef?.name?.trim() ||
     [customer?.GivenName, customer?.FamilyName].filter(Boolean).join(" ").trim() ||
     null;
 
-  const parsed = parseQboDisplayName(rawDisplayName);
-
-  // Structured (given/family) name always wins; otherwise use the parsed customer.
+  // Canonical shared parser (same one main's reviewed repair path trusts).
+  const parsed = parseQboCompositeName(rawName);
   const givenName = customer?.GivenName?.trim() || null;
   const familyName = customer?.FamilyName?.trim() || null;
   const hasStructuredName = Boolean(givenName || familyName);
 
-  // Only trust the parsed customer name when the segmentation is confident enough
-  // (never "low" — that would risk naming a contact after a project code).
-  const useParsed = parsed.isComposite && parsed.confidence !== "low" && isPlausibleName(parsed.customerName);
+  // Only trust a parsed composite at HIGH confidence (main marks a clean
+  // person/company "high"; anything ambiguous stays medium/low and is withheld).
+  const useParsed = parsed.isComposite && parsed.confidence === "high";
 
-  // A parsed composite company (e.g. "Cushman & Wakefield") goes to companyName,
-  // not first/last — unless QBO already gave us an explicit CompanyName.
+  // Company: explicit QBO CompanyName, else a confidently-parsed composite company.
   let companyName = customer?.CompanyName?.trim() || null;
-  if (!companyName && !hasStructuredName && useParsed && looksLikeCompanyName(parsed.customerName)) {
-    companyName = parsed.customerName;
+  if (!companyName && !hasStructuredName && useParsed && parsed.customerKind === "company") {
+    companyName = parsed.companyName;
   }
   const isCompany = Boolean(companyName);
 
-  // Is the REAL customer name confidently known? A composite we could NOT segment
-  // confidently is NOT — we must never fall back to storing the raw composite as
-  // the CRM name, nor invent a name from the project code.
-  const nameConfident =
-    hasStructuredName || isCompany || useParsed || (!parsed.isComposite && Boolean(rawDisplayName));
+  // A raw string that is JUST a project code is never a real customer name.
+  const bareProjectCode = Boolean(rawName) && !parsed.isComposite && looksLikeBareProjectCode(rawName as string);
 
-  // The clean CRM display name. For a low-confidence composite we deliberately
-  // WITHHOLD the name here (""): the persistence layer then falls back to
-  // email/phone/"Unnamed" and flags the record — it never leaks the composite.
+  // Is the REAL customer name confidently known? A composite we could NOT segment
+  // confidently — or a bare project code — is NOT; we must never fall back to
+  // storing the raw composite/code as the CRM name.
+  const nameConfident =
+    !bareProjectCode &&
+    (hasStructuredName || isCompany || useParsed || (!parsed.isComposite && Boolean(rawName)));
+
+  // Clean CRM display name. For a low-confidence composite / bare project code we
+  // WITHHOLD (""): the persistence layer then falls back to email/phone and flags
+  // for review.
   let displayName: string;
   if (isCompany) displayName = companyName as string;
   else if (hasStructuredName) displayName = [givenName, familyName].filter(Boolean).join(" ");
-  else if (useParsed) displayName = parsed.customerName;
-  else if (!parsed.isComposite && rawDisplayName) displayName = rawDisplayName;
+  else if (useParsed) displayName = parsed.customerDisplayName ?? [parsed.firstName, parsed.lastName].filter(Boolean).join(" ");
+  else if (!parsed.isComposite && rawName && !bareProjectCode) displayName = rawName;
   else displayName = "";
 
-  // Service address: prefer an explicit QBO ShipAddr; otherwise the address parsed
-  // out of the composite name (only when segmentation was confident).
+  // Person first/last: structured wins; else confidently-parsed person parts;
+  // NEVER carried on a company record.
+  let firstName: string | null;
+  let lastName: string | null;
+  if (isCompany) {
+    firstName = null;
+    lastName = null;
+  } else if (hasStructuredName) {
+    firstName = givenName;
+    lastName = familyName;
+  } else if (useParsed && parsed.customerKind === "person") {
+    firstName = parsed.firstName;
+    lastName = parsed.lastName;
+  } else {
+    firstName = null;
+    lastName = null;
+  }
+
+  // Service address: prefer an explicit QBO ShipAddr; else the confidently-parsed one.
   const shipAddr = mapQboAddress(customer?.ShipAddr);
-  const parsedServiceAddress: ContactAddress | null = useParsed && parsed.serviceAddress
-    ? {
-        line1: parsed.serviceAddress.line1,
-        line2: parsed.serviceAddress.line2,
-        city: parsed.serviceAddress.city,
-        state: parsed.serviceAddress.state,
-        zip: parsed.serviceAddress.zip,
-      }
-    : null;
+  const parsedServiceAddress: ContactAddress | null =
+    useParsed && parsed.serviceAddressLine1
+      ? {
+          line1: parsed.serviceAddressLine1,
+          line2: parsed.serviceAddressLine2,
+          city: parsed.serviceCity,
+          state: parsed.serviceState,
+          zip: parsed.servicePostalCode,
+        }
+      : null;
 
   return {
     quickbooksCustomerId: e.CustomerRef?.value ?? customer?.Id ?? null,
     displayName,
-    rawDisplayName,
-    // Keep the project code + notes for audit even at low confidence.
+    rawDisplayName: rawName,
     projectReference: parsed.isComposite ? parsed.projectReference : null,
-    locationNotes: useParsed ? parsed.locationNotes : null,
-    // Never carry person first/last on a company record.
-    firstName: isCompany ? null : givenName,
-    lastName: isCompany ? null : familyName,
+    firstName,
+    lastName,
     companyName,
     isCompany,
     nameConfident,

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
-import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
+import { LEAD_CHANNELS, filterLeadsByChannel, type LeadChannel } from "@/lib/leadChannels";
 import DashboardLayout from "@/components/DashboardLayout";
 import AppointmentDialog from "@/components/AppointmentDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -544,13 +544,12 @@ const TAB_LABELS: Record<string, string> = {
 export default function LeadDashboard() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [channelFilter, setChannelFilter] = useState<LeadChannel>("all");
   const [selectedLead, setSelectedLead] = useState<LeadCapture | null>(null);
   const [activeTab, setActiveTab] = useState("all");
 
   const { data: stats, refetch: refetchStats } = trpc.leadCaptures.stats.useQuery();
   const { data: leads = [], isLoading, refetch: refetchLeads } = trpc.leadCaptures.list.useQuery({
-    captureType: sourceFilter !== "all" ? sourceFilter : undefined,
     search: searchQuery || undefined,
     limit: 200,
   });
@@ -582,16 +581,15 @@ export default function LeadDashboard() {
   const proposalCount = countOf(["proposal_sent"]);
   const wonCount = countOf(["won"]);
 
+  // Apply the source-channel filter, then the pipeline-stage tab (both client-side).
   const filteredLeads = useMemo(() => {
-    if (activeTab === "all") return leads;
-    const stages = TAB_STAGES[activeTab] ?? [];
-    return leads.filter((l: any) => stages.includes(normalizeStage(l.status)));
-  }, [leads, activeTab]);
-
-  const googleAdsLeads = leads.filter((l: any) => ["lp_heat_pump", "lp_commercial_vrv", "lp_emergency"].includes(l.captureType));
-  const facebookLeads = leads.filter((l: any) => ["lp_fb_residential", "lp_fb_commercial", "meta_lead_ad"].includes(l.captureType));
-  const websiteLeads = leads.filter((l: any) => ["exit_popup", "inline_form", "quick_quote", "exit_popup_residential", "exit_popup_commercial", "scroll_popup_residential", "scroll_popup_commercial"].includes(l.captureType));
-  const emailSmsLeads = leads.filter((l: any) => ["lp_rebate_guide", "lp_maintenance", "newsletter", "download_gate"].includes(l.captureType));
+    let out = filterLeadsByChannel(leads as any[], channelFilter);
+    if (activeTab !== "all") {
+      const stages = TAB_STAGES[activeTab] ?? [];
+      out = out.filter((l: any) => stages.includes(normalizeStage(l.status)));
+    }
+    return out;
+  }, [leads, activeTab, channelFilter]);
 
   const conversion = stats?.total ? Math.round((wonCount / stats.total) * 100) : 0;
 
@@ -607,7 +605,6 @@ export default function LeadDashboard() {
   return (
     <DashboardLayout>
       <div className="p-6 space-y-6 max-w-7xl mx-auto">
-        <InternalNav />
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -637,33 +634,39 @@ export default function LeadDashboard() {
           ))}
         </div>
 
-        {/* Channel Breakdown */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <ChannelCard title="Google Ads" count={googleAdsLeads.length} sub="Heat Pump, VRV, Emergency" icon={<Globe className="h-3.5 w-3.5 text-white" />} tone="blue" />
-          <ChannelCard title="Facebook/IG" count={facebookLeads.length} sub="Residential, Commercial" icon={<Facebook className="h-3.5 w-3.5 text-white" />} tone="indigo" />
-          <ChannelCard title="Website" count={websiteLeads.length} sub="Exit popups, Forms" icon={<Globe className="h-3.5 w-3.5 text-white" />} tone="orange" />
-          <ChannelCard title="Email/SMS" count={emailSmsLeads.length} sub="Rebate guide, Maintenance" icon={<Mail className="h-3.5 w-3.5 text-white" />} tone="green" />
+        {/* Filter by Lead Source — compact, clickable source filters. */}
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 flex items-center gap-1.5">
+            <Filter className="h-3.5 w-3.5" /> Filter by Lead Source
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {LEAD_CHANNELS.map((ch) => {
+              const count = ch.id === "all" ? leads.length : filterLeadsByChannel(leads as any[], ch.id).length;
+              const selected = channelFilter === ch.id;
+              return (
+                <button
+                  key={ch.id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => setChannelFilter(ch.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#ff6b35] ${
+                    selected
+                      ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+                      : "bg-white text-muted-foreground border-border hover:border-[#ff6b35] hover:text-[#1e3a5f]"
+                  }`}
+                >
+                  {ch.label}
+                  <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${selected ? "bg-white/20" : "bg-muted"}`}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search by name, email, or phone..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
-          </div>
-          <Select value={sourceFilter} onValueChange={setSourceFilter}>
-            <SelectTrigger className="w-full sm:w-48"><Filter className="h-4 w-4 mr-2" /><SelectValue placeholder="All Sources" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sources</SelectItem>
-              <SelectItem value="quick_quote">Quick Quote</SelectItem>
-              <SelectItem value="inline_form">Inline Form</SelectItem>
-              <SelectItem value="exit_popup">Exit Popup</SelectItem>
-              <SelectItem value="meta_lead_ad">Meta Lead Ad</SelectItem>
-              <SelectItem value="lp_heat_pump">Heat Pump LP</SelectItem>
-              <SelectItem value="lp_emergency">Emergency LP</SelectItem>
-              <SelectItem value="lp_rebate_guide">Rebate Guide LP</SelectItem>
-            </SelectContent>
-          </Select>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search by name, email, or phone..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
         </div>
 
         {/* Lead List */}
@@ -691,7 +694,7 @@ export default function LeadDashboard() {
                 <Users className="h-12 w-12 text-muted-foreground/30 mb-3" />
                 <p className="text-muted-foreground font-medium">No leads found</p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {searchQuery || sourceFilter !== "all" || activeTab !== "all" ? "Try adjusting your filters" : "New submissions appear here immediately."}
+                  {searchQuery || channelFilter !== "all" || activeTab !== "all" ? "Try adjusting your filters" : "New submissions appear here immediately."}
                 </p>
               </div>
             ) : (
@@ -743,24 +746,3 @@ export default function LeadDashboard() {
   );
 }
 
-function ChannelCard({ title, count, sub, icon, tone }: { title: string; count: number; sub: string; icon: React.ReactNode; tone: "blue" | "indigo" | "orange" | "green" }) {
-  const tones: Record<string, { bg: string; border: string; badge: string; text: string; sub: string }> = {
-    blue: { bg: "from-blue-50 to-blue-100/50", border: "border-blue-200", badge: "bg-blue-600", text: "text-blue-700", sub: "text-blue-600" },
-    indigo: { bg: "from-indigo-50 to-indigo-100/50", border: "border-indigo-200", badge: "bg-indigo-600", text: "text-indigo-700", sub: "text-indigo-600" },
-    orange: { bg: "from-orange-50 to-orange-100/50", border: "border-orange-200", badge: "bg-orange-500", text: "text-orange-700", sub: "text-orange-600" },
-    green: { bg: "from-green-50 to-green-100/50", border: "border-green-200", badge: "bg-green-600", text: "text-green-700", sub: "text-green-600" },
-  };
-  const t = tones[tone];
-  return (
-    <Card className={`bg-gradient-to-br ${t.bg} ${t.border}`}>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <div className={`w-6 h-6 ${t.badge} rounded flex items-center justify-center`}>{icon}</div>
-          <span className={`text-sm font-semibold ${t.text}`}>{title}</span>
-        </div>
-        <p className={`text-2xl font-bold ${t.text}`}>{count}</p>
-        <p className={`text-xs ${t.sub} mt-1`}>{sub}</p>
-      </CardContent>
-    </Card>
-  );
-}

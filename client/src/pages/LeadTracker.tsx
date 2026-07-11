@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Phone, Mail, User, Calendar, TrendingUp, Download, Plus, Bell, UserPlus, UserRound } from "lucide-react";
 import InternalNav from "@/components/InternalNav";
-import Navigation from "@/components/Navigation";
 import DashboardFooter from "@/components/DashboardFooter";
 import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
@@ -168,7 +167,6 @@ export default function LeadTracker() {
   return (
     <div className="min-h-screen bg-secondary/30">
       <InternalNav />
-      <Navigation />
       
       <div className="container py-8">
         {/* Header */}
