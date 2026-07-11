@@ -114,15 +114,24 @@ async function ensureServiceProperty(
   customerId: number,
   addr: ContactAddress | null,
   customerType: string | null,
+  extra: { locationNotes?: string | null; projectReference?: string | null } = {},
 ): Promise<void> {
   if (!addr || !addr.line1) return;
   const line1 = addr.line1.trim().toLowerCase();
   const dup = await db
-    .select({ id: properties.id })
+    .select({ id: properties.id, locationNotes: properties.locationNotes, projectReference: properties.projectReference })
     .from(properties)
     .where(and(eq(properties.customerId, customerId), sql`LOWER(TRIM(${properties.addressLine1})) = ${line1}`))
     .limit(1);
-  if (dup[0]) return;
+  if (dup[0]) {
+    // Reuse the existing service location; fill only-empty project/location detail
+    // so repeated syncs never duplicate a property or clobber curated notes.
+    const fill: Record<string, unknown> = {};
+    if (extra.locationNotes && !dup[0].locationNotes) fill.locationNotes = extra.locationNotes;
+    if (extra.projectReference && !dup[0].projectReference) fill.projectReference = extra.projectReference;
+    if (Object.keys(fill).length) await db.update(properties).set(fill).where(eq(properties.id, dup[0].id));
+    return;
+  }
   const primary = await db
     .select({ id: properties.id })
     .from(properties)
@@ -136,6 +145,8 @@ async function ensureServiceProperty(
     city: addr.city,
     state: addr.state ?? "NJ",
     zip: addr.zip,
+    locationNotes: extra.locationNotes ?? null,
+    projectReference: extra.projectReference ?? null,
     propertyType: customerType === "commercial" ? "commercial" : "residential",
     isPrimary: !primary[0],
   });
@@ -221,6 +232,9 @@ async function enrichExistingCustomer(
       billingZip: customers.billingZip,
       quickbooksCustomerId: customers.quickbooksCustomerId,
       quickbooksCustomerUpdatedAt: customers.quickbooksCustomerUpdatedAt,
+      quickbooksRawDisplayName: customers.quickbooksRawDisplayName,
+      projectReference: customers.projectReference,
+      displayNameManuallyApproved: customers.displayNameManuallyApproved,
     })
     .from(customers)
     .where(eq(customers.id, customerId))
@@ -242,7 +256,13 @@ async function enrichExistingCustomer(
   const { patch, conflicts } = buildCustomerFieldUpdate(existing, incomingFromContact(contact), { normalizePhone });
   const setValues: Record<string, unknown> = { ...patch };
 
-  if (patch.firstName != null || patch.lastName != null || patch.companyName != null) {
+  // Recompute the display name only when a name field was filled AND the name has
+  // not been manually approved/corrected. This is what stops a later QBO sync from
+  // ever restoring a bad composite name over a human-verified one.
+  if (
+    !existing.displayNameManuallyApproved &&
+    (patch.firstName != null || patch.lastName != null || patch.companyName != null)
+  ) {
     setValues.displayName = buildDisplayName({
       companyName: patch.companyName ?? existing.companyName,
       firstName: patch.firstName ?? existing.firstName,
@@ -250,6 +270,13 @@ async function enrichExistingCustomer(
       email: patch.email ?? existing.email,
       phone: patch.phone ?? existing.phone,
     });
+  }
+  // Audit: preserve the raw QBO name and the parsed project reference (fill-empty only).
+  if (contact.rawDisplayName && !existing.quickbooksRawDisplayName) {
+    setValues.quickbooksRawDisplayName = contact.rawDisplayName;
+  }
+  if (contact.projectReference && !existing.projectReference) {
+    setValues.projectReference = contact.projectReference;
   }
   if (qbCustomerId && !matchedByQbId && !existing.quickbooksCustomerId) {
     setValues.quickbooksCustomerId = qbCustomerId;
@@ -264,7 +291,10 @@ async function enrichExistingCustomer(
   if (Object.keys(setValues).length) {
     await db.update(customers).set(setValues).where(eq(customers.id, customerId));
   }
-  await ensureServiceProperty(db, customerId, contact.serviceAddress, existing.type);
+  await ensureServiceProperty(db, customerId, contact.serviceAddress, existing.type, {
+    locationNotes: contact.locationNotes,
+    projectReference: contact.projectReference,
+  });
 }
 
 /**
@@ -374,13 +404,19 @@ async function resolveOrCreateContact(
     billingCity: contact.address?.city ?? null,
     billingState: contact.address?.state ?? null,
     billingZip: contact.address?.zip ?? null,
+    // Audit + temporary project storage (no Projects module yet).
+    quickbooksRawDisplayName: contact.rawDisplayName,
+    projectReference: contact.projectReference,
     quickbooksCustomerId: qbCustomerId,
     quickbooksSyncStatus: qbCustomerId ? "synced" : "not_synced",
     quickbooksSyncedAt: qbCustomerId ? now : null,
     quickbooksCustomerUpdatedAt: contact.quickbooksUpdatedAt,
   });
   const customerId = Number((inserted as { insertId?: number }).insertId);
-  await ensureServiceProperty(db, customerId, contact.serviceAddress, contact.companyName ? "commercial" : "residential");
+  await ensureServiceProperty(db, customerId, contact.serviceAddress, contact.companyName ? "commercial" : "residential", {
+    locationNotes: contact.locationNotes,
+    projectReference: contact.projectReference,
+  });
   return { customerId, created: true, displayName };
 }
 
@@ -398,6 +434,7 @@ async function upsertOpportunity(
     existingOpportunityId: number | null;
     customerId: number;
     displayName: string;
+    projectReference?: string | null;
     docNumber: string | null;
     totalAmount: string;
     status: (typeof quickbooksSalesDocuments.status.enumValues)[number];
@@ -445,7 +482,9 @@ async function upsertOpportunity(
     return { id: args.existingOpportunityId, created: false, stageChanged };
   }
 
-  const title = `${args.displayName} — Estimate${args.docNumber ? ` ${args.docNumber}` : ""}`;
+  // Keep the project code visible on the deal until a Projects module exists.
+  const titlePrefix = args.projectReference ? `${args.projectReference} · ` : "";
+  const title = `${titlePrefix}${args.displayName} — Estimate${args.docNumber ? ` ${args.docNumber}` : ""}`;
   const [inserted] = await db.insert(opportunities).values({
     customerId: args.customerId,
     title,
@@ -497,7 +536,12 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
   // Load the customer for the title + work-category classification.
   const cust = (
     await db
-      .select({ type: customers.type, companyName: customers.companyName, displayName: customers.displayName })
+      .select({
+        type: customers.type,
+        companyName: customers.companyName,
+        displayName: customers.displayName,
+        projectReference: customers.projectReference,
+      })
       .from(customers)
       .where(eq(customers.id, customerId))
       .limit(1)
@@ -515,6 +559,7 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
     existingOpportunityId: existing?.opportunityId ?? null,
     customerId,
     displayName,
+    projectReference: cust?.projectReference ?? null,
     docNumber: mapped.docNumber ?? null,
     totalAmount: mapped.totalAmount as string,
     status: mapped.status ?? "pending",

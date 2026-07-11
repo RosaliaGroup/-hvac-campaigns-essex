@@ -946,6 +946,24 @@ export const customers = mysqlTable(
     quickbooksCustomerUpdatedAt: timestamp("quickbooksCustomerUpdatedAt"),
     /** True when a QBO sync found a field value conflicting with existing CRM data (see customerSyncConflicts). */
     hasQboConflicts: boolean("hasQboConflicts").default(false).notNull(),
+    /**
+     * Original, unparsed QBO Customer.DisplayName kept for audit. When the QBO
+     * name is a composite ("PN-173-B | Marco Weber | <addr> | Basement I") the
+     * CRM `displayName` holds only the real customer while this holds the source.
+     */
+    quickbooksRawDisplayName: varchar("quickbooksRawDisplayName", { length: 512 }),
+    /**
+     * Temporary home for a project code parsed out of a composite QBO name
+     * (e.g. "PN-173-B") until a first-class Projects module exists. The project
+     * code is also mirrored onto the service `properties` row and the opportunity title.
+     */
+    projectReference: varchar("projectReference", { length: 120 }),
+    /**
+     * True once a human has set/confirmed the display name. QBO sync must never
+     * recompute or overwrite the name while this is set — protects manual fixes
+     * (including repairs applied by the composite-name repair script).
+     */
+    displayNameManuallyApproved: boolean("displayNameManuallyApproved").default(false).notNull(),
     // ── Billing address (mapped from QBO Customer.BillAddr; service address lives in `properties`) ──
     billingLine1: varchar("billingLine1", { length: 255 }),
     billingLine2: varchar("billingLine2", { length: 255 }),
@@ -988,6 +1006,10 @@ export const properties = mysqlTable(
     /** Matches rebate-calculator vocabulary, e.g. "gas_furnace", "oil_boiler" */
     existingSystem: varchar("existingSystem", { length: 255 }),
     systemNotes: text("systemNotes"),
+    /** Floor/suite/basement/unit detail for this service location (e.g. "Basement I", "28th Floor"). */
+    locationNotes: varchar("locationNotes", { length: 255 }),
+    /** Project code tied to this service location when it came from a composite QBO name. */
+    projectReference: varchar("projectReference", { length: 120 }),
     isPrimary: boolean("isPrimary").default(false).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

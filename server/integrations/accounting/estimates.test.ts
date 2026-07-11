@@ -150,6 +150,60 @@ describe("buildContactFromEstimate", () => {
     expect(c.email).toBe("billing@acme.test");
     expect(c.address).toBeNull();
   });
+
+  it("parses a composite QBO DisplayName into clean name + project + service address + notes", () => {
+    const c = buildContactFromEstimate(estimate(), {
+      Id: "77",
+      DisplayName: "PN-173-B | Marco Weber | 9005 Smith Ave, North Bergen, NJ 07047 | Basement I",
+      PrimaryEmailAddr: { Address: "marco@example.test" },
+    });
+    // Contact name is the REAL customer, never the composite.
+    expect(c.displayName).toBe("Marco Weber");
+    expect(c.companyName).toBeNull();
+    expect(c.projectReference).toBe("PN-173-B");
+    expect(c.locationNotes).toBe("Basement I");
+    expect(c.serviceAddress).toMatchObject({ line1: "9005 Smith Ave", city: "North Bergen", state: "NJ", zip: "07047" });
+    // Raw composite name preserved for audit.
+    expect(c.rawDisplayName).toBe("PN-173-B | Marco Weber | 9005 Smith Ave, North Bergen, NJ 07047 | Basement I");
+  });
+
+  it("routes a composite company name into companyName, not first/last", () => {
+    const c = buildContactFromEstimate(estimate(), {
+      Id: "88",
+      DisplayName: "PN#172 | Cushman & Wakefield | 28th Floor 444 Madison Avenue, New York, NY 10022",
+    });
+    expect(c.displayName).toBe("Cushman & Wakefield");
+    expect(c.companyName).toBe("Cushman & Wakefield");
+    expect(c.firstName).toBeNull();
+    expect(c.projectReference).toBe("PN#172");
+    expect(c.locationNotes).toBe("28th Floor");
+    expect(c.serviceAddress).toMatchObject({ line1: "444 Madison Avenue", city: "New York", state: "NY", zip: "10022" });
+  });
+
+  it("leaves a non-composite name untouched and carries no project reference", () => {
+    const c = buildContactFromEstimate(estimate(), {
+      Id: "99",
+      DisplayName: "Helen Espiallat",
+      GivenName: "Helen",
+      FamilyName: "Espiallat",
+    });
+    expect(c.displayName).toBe("Helen Espiallat");
+    expect(c.projectReference).toBeNull();
+    expect(c.locationNotes).toBeNull();
+    expect(c.rawDisplayName).toBe("Helen Espiallat");
+  });
+
+  it("prefers an explicit QBO ShipAddr over the address parsed from the name", () => {
+    const c = buildContactFromEstimate(estimate(), {
+      Id: "77",
+      DisplayName: "PN-173-B | Marco Weber | 9005 Smith Ave, North Bergen, NJ 07047 | Basement I",
+      ShipAddr: { Line1: "500 Ship St", City: "Kearny", CountrySubDivisionCode: "NJ", PostalCode: "07032" },
+    });
+    expect(c.serviceAddress).toMatchObject({ line1: "500 Ship St", city: "Kearny" });
+    // The parsed project/notes still come through even when ShipAddr wins.
+    expect(c.projectReference).toBe("PN-173-B");
+    expect(c.locationNotes).toBe("Basement I");
+  });
 });
 
 describe("buildEstimateQuery", () => {

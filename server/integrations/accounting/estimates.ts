@@ -10,6 +10,7 @@
  * ever query the Estimate entity.
  */
 import type { InsertQuickbooksSalesDocument } from "../../../drizzle/schema";
+import { parseQboDisplayName, looksLikeCompanyName, isPlausibleName } from "./qboNameParser";
 
 /** Minimal shape of a QBO Estimate we read from the query API. */
 export interface QboEstimate {
@@ -144,7 +145,14 @@ export interface ContactAddress {
 /** Fields needed to auto-create / enrich a CRM contact from an estimate + its QBO customer. */
 export interface EstimateContactInput {
   quickbooksCustomerId: string | null;
+  /** The REAL customer name only — the composite QBO name is parsed away (see rawDisplayName). */
   displayName: string;
+  /** The original, unparsed QBO DisplayName kept for audit (`customers.quickbooksRawDisplayName`). */
+  rawDisplayName: string | null;
+  /** Project code parsed out of a composite QBO name, e.g. "PN-173-B". Null otherwise. */
+  projectReference: string | null;
+  /** Floor/suite/basement/unit note parsed out of a composite QBO name. Null otherwise. */
+  locationNotes: string | null;
   firstName: string | null;
   lastName: string | null;
   companyName: string | null;
@@ -209,17 +217,61 @@ function mapQboAddress(addr: QboAddress | undefined): ContactAddress | null {
  * customer fetch failed.
  */
 export function buildContactFromEstimate(e: QboEstimate, customer: QboCustomerLite | null): EstimateContactInput {
-  const displayName =
+  // The QBO-provided name (may be a composite "PN-… | Customer | addr | note").
+  const rawDisplayName =
     customer?.DisplayName?.trim() ||
     e.CustomerRef?.name?.trim() ||
     [customer?.GivenName, customer?.FamilyName].filter(Boolean).join(" ").trim() ||
-    "QuickBooks Customer";
+    null;
+
+  const parsed = parseQboDisplayName(rawDisplayName);
+
+  // Structured (given/family) name always wins; otherwise use the parsed customer.
+  const givenName = customer?.GivenName?.trim() || null;
+  const familyName = customer?.FamilyName?.trim() || null;
+  const hasStructuredName = Boolean(givenName || familyName);
+
+  // Only trust the parsed customer name when the segmentation is confident enough
+  // (never "low" — that would risk naming a contact after a project code). Low
+  // confidence falls back to the raw QBO name, but the project code + raw name are
+  // still preserved for audit.
+  const useParsed = parsed.isComposite && parsed.confidence !== "low" && isPlausibleName(parsed.customerName);
+
+  // Real customer name for the CRM: never the composite. Falls back to a safe label.
+  const cleanName = (useParsed ? parsed.customerName : rawDisplayName) || "QuickBooks Customer";
+
+  // A parsed composite company (e.g. "Cushman & Wakefield") goes to companyName,
+  // not first/last — unless QBO already gave us an explicit CompanyName.
+  let companyName = customer?.CompanyName?.trim() || null;
+  if (!companyName && !hasStructuredName && useParsed && looksLikeCompanyName(parsed.customerName)) {
+    companyName = parsed.customerName;
+  }
+
+  const displayName = companyName || (hasStructuredName ? [givenName, familyName].filter(Boolean).join(" ") : cleanName);
+
+  // Service address: prefer an explicit QBO ShipAddr; otherwise the address parsed
+  // out of the composite name (only when segmentation was confident).
+  const shipAddr = mapQboAddress(customer?.ShipAddr);
+  const parsedServiceAddress: ContactAddress | null = useParsed && parsed.serviceAddress
+    ? {
+        line1: parsed.serviceAddress.line1,
+        line2: parsed.serviceAddress.line2,
+        city: parsed.serviceAddress.city,
+        state: parsed.serviceAddress.state,
+        zip: parsed.serviceAddress.zip,
+      }
+    : null;
+
   return {
     quickbooksCustomerId: e.CustomerRef?.value ?? customer?.Id ?? null,
     displayName,
-    firstName: customer?.GivenName?.trim() || null,
-    lastName: customer?.FamilyName?.trim() || null,
-    companyName: customer?.CompanyName?.trim() || null,
+    rawDisplayName,
+    // Keep the project code + notes for audit even at low confidence.
+    projectReference: parsed.isComposite ? parsed.projectReference : null,
+    locationNotes: useParsed ? parsed.locationNotes : null,
+    firstName: givenName,
+    lastName: familyName,
+    companyName,
     email: customer?.PrimaryEmailAddr?.Address?.trim() || e.BillEmail?.Address?.trim() || null,
     phone: customer?.PrimaryPhone?.FreeFormNumber?.trim() || null,
     mobile: customer?.Mobile?.FreeFormNumber?.trim() || null,
@@ -227,7 +279,7 @@ export function buildContactFromEstimate(e: QboEstimate, customer: QboCustomerLi
     active: typeof customer?.Active === "boolean" ? customer.Active : null,
     quickbooksUpdatedAt: parseQboDate(customer?.MetaData?.LastUpdatedTime),
     address: mapQboAddress(customer?.BillAddr),
-    serviceAddress: mapQboAddress(customer?.ShipAddr),
+    serviceAddress: shipAddr ?? parsedServiceAddress,
   };
 }
 
