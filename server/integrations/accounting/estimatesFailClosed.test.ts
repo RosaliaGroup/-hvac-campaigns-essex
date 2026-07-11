@@ -75,7 +75,14 @@ describe("syncSalesDocuments fails closed when the estimate query throws", () =>
       .mockRejectedValue(new Error("QBO estimate query failed: 503 service unavailable"));
     const writeSyncLog = vi.spyOn(quickbooksModule, "writeSyncLog").mockResolvedValue(undefined as never);
 
-    const result = await syncSalesDocuments({ mode: "backfill" });
+    // Patch 2 requires the advisory lock; inject a fake that acquires cleanly so
+    // this test still exercises the fetchEstimates fail-closed path (not lock refusal).
+    const lockConnectionFactory = () => Promise.resolve({
+      query: async (sql: string) => (sql.includes("LOCK") ? [[{ v: 1 }], []] : [[], []]),
+      end: async () => {}, destroy: () => {}, on: () => {},
+    } as never);
+
+    const result = await syncSalesDocuments({ mode: "backfill", lockConnectionFactory });
 
     // (1) fetchEstimates threw → the run failed.
     expect(result.ok).toBe(false);
