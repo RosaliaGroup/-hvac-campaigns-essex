@@ -1,0 +1,72 @@
+{
+  "manifestVersion": "2026-07-10.1",
+  "parserVersion": "1.0.0",
+  "reviewedBy": "audit dry-run (SELECT-only), approved scope",
+  "note": "Only high-confidence composite customers. #9 PDC excluded (manual). #7/#8 name+projectReference only — NO property creation (comma-less addresses). No merges approved.",
+  "rows": [
+    {
+      "crmCustomerId": 7, "quickbooksCustomerId": "322",
+      "expectedDisplayName": "PN#160 I NATANYA L PHIPPS I 351 CENTRAL AVE HALEDON",
+      "approvedAction": "repair_name_and_project",
+      "customerFieldsMayChange": true, "projectReferenceMayChange": true,
+      "propertyCreationApproved": false, "mergeApproved": false,
+      "reviewNote": "Person. Comma-less address → property creation deferred to manual review."
+    },
+    {
+      "crmCustomerId": 8, "quickbooksCustomerId": "318",
+      "expectedDisplayName": "PN# 164 I Anibal Espailla I 75 Woodlawn Avenue Jersey City",
+      "approvedAction": "repair_name_and_project",
+      "customerFieldsMayChange": true, "projectReferenceMayChange": true,
+      "propertyCreationApproved": false, "mergeApproved": false,
+      "reviewNote": "Person. Comma-less address → property creation deferred to manual review."
+    },
+    {
+      "crmCustomerId": 10, "quickbooksCustomerId": "316",
+      "expectedDisplayName": "PN #163 I Colbert Watson I 360 Littleton Ave, Newark NJ 07103",
+      "approvedAction": "repair_name_project_property",
+      "customerFieldsMayChange": true, "projectReferenceMayChange": true,
+      "propertyCreationApproved": true, "mergeApproved": false,
+      "reviewNote": "Person. Clean comma address with ZIP."
+    },
+    {
+      "crmCustomerId": 11, "quickbooksCustomerId": "320",
+      "expectedDisplayName": "PN#165 I Cynthia Rodriguez I 36 Stuyvesant Rd, Teaneck, NJ 07666",
+      "approvedAction": "repair_name_project_property",
+      "customerFieldsMayChange": true, "projectReferenceMayChange": true,
+      "propertyCreationApproved": true, "mergeApproved": false,
+      "reviewNote": "Person. Clean comma address with ZIP."
+    },
+    {
+      "crmCustomerId": 12, "quickbooksCustomerId": "329",
+      "expectedDisplayName": "PN#167 I Anthony Paladino I 689 Elm St, Maywood, NJ",
+      "approvedAction": "repair_name_project_property",
+      "customerFieldsMayChange": true, "projectReferenceMayChange": true,
+      "propertyCreationApproved": true, "mergeApproved": false,
+      "reviewNote": "Person. Comma address, no ZIP (acceptable)."
+    },
+    {
+      "crmCustomerId": 14, "quickbooksCustomerId": "334",
+      "expectedDisplayName": "PN#171 I Helen Espiallat I 1600 Center Ave, Fort Lee, NJ",
+      "approvedAction": "repair_name_project_property",
+      "customerFieldsMayChange": true, "projectReferenceMayChange": true,
+      "propertyCreationApproved": true, "mergeApproved": false,
+      "reviewNote": "Person. Comma address, no ZIP (acceptable)."
+    },
+    {
+      "crmCustomerId": 15, "quickbooksCustomerId": "338",
+      "expectedDisplayName": "PN#172 I Cushman & Wakefield I 28th Floor 444 Madison Avenue, New York, NY 10022",
+      "approvedAction": "repair_name_project_property",
+      "customerFieldsMayChange": true, "projectReferenceMayChange": true,
+      "propertyCreationApproved": true, "mergeApproved": false,
+      "reviewNote": "Company (&). Floor detail → location notes; clean address."
+    },
+    {
+      "crmCustomerId": 23, "quickbooksCustomerId": "354",
+      "expectedDisplayName": "PN-173-B I Marco Weber I 9005 Smith Ave, North Bergen, NJ 07047 I Basement I",
+      "approvedAction": "repair_name_project_property",
+      "customerFieldsMayChange": true, "projectReferenceMayChange": true,
+      "propertyCreationApproved": true, "mergeApproved": false,
+      "reviewNote": "Person. Basement → location notes; clean address with ZIP."
+    }
+  ]
+}
