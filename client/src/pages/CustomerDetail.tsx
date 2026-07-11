@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -15,10 +15,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
 import { JOB_STATUS_META, formatMoney } from "@/lib/jobPresentation";
+import { resolveCustomerIdentity } from "@/lib/customerIdentity";
+import { jobRoute, opportunityRoute } from "@/lib/customerNavigation";
 import { Briefcase } from "lucide-react";
 import {
   ArrowLeft, Building2, Calendar, Home, Mail, MapPin, Pencil, Phone, PhoneCall,
   Plus, Star, Trash2, UserRound, Zap, RefreshCw, CheckCircle2, XCircle, Plug, Link2, Loader2,
+  Target, FileText, Receipt, Hash, Tag, DollarSign, Wallet, Clock,
 } from "lucide-react";
 
 function formatDate(date: Date | string | null | undefined) {
@@ -35,6 +38,35 @@ const APPT_STATUS: Record<string, string> = {
   cancelled: "bg-red-100 text-red-700",
   rescheduled: "bg-blue-100 text-blue-700",
 };
+
+const OPP_STAGE: Record<string, string> = {
+  new: "bg-gray-100 text-gray-700",
+  proposal_sent: "bg-blue-100 text-blue-700",
+  pending: "bg-amber-100 text-amber-700",
+  won: "bg-green-100 text-green-700",
+  lost: "bg-red-100 text-red-700",
+};
+
+const DOC_STATUS: Record<string, string> = {
+  pending: "bg-amber-100 text-amber-700",
+  accepted: "bg-green-100 text-green-700",
+  closed: "bg-gray-100 text-gray-600",
+  rejected: "bg-red-100 text-red-700",
+  expired: "bg-orange-100 text-orange-700",
+};
+
+/** Compact meta line used by the QBO-relationship tabs (project ref + QBO ref + address). */
+function MetaLine({ items }: { items: Array<{ icon: ReactNode; label: string } | null> }) {
+  const shown = items.filter(Boolean) as Array<{ icon: ReactNode; label: string }>;
+  if (shown.length === 0) return null;
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+      {shown.map((it, i) => (
+        <span key={i} className="inline-flex items-center gap-1">{it.icon}{it.label}</span>
+      ))}
+    </div>
+  );
+}
 
 const EMPTY_PROPERTY = {
   label: "",
@@ -106,7 +138,15 @@ export default function CustomerDetail() {
     );
   }
 
-  const { customer, properties, appointments, leads, captures, callLogs, rebateCalculations } = data;
+  const { customer, properties, appointments, leads, captures, callLogs, rebateCalculations, opportunities, estimates, invoices, counts, summary } = data;
+
+  // Display-only identity: prefers structured fields, falls back to the composite
+  // QBO name parser. Never writes back to the stored customer record.
+  const identity = resolveCustomerIdentity(customer);
+  const primaryProp = properties.find(p => p.isPrimary) ?? properties[0];
+  const primaryAddress = primaryProp
+    ? [primaryProp.addressLine1, primaryProp.city, primaryProp.state, primaryProp.zip].filter(Boolean).join(", ")
+    : identity.serviceAddress;
 
   const openEdit = () => {
     setEditForm({
@@ -185,8 +225,14 @@ export default function CustomerDetail() {
             </Button>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               {customer.type === "commercial" ? <Building2 className="h-6 w-6 text-[#1e3a5f]" /> : <UserRound className="h-6 w-6 text-[#1e3a5f]" />}
-              {customer.displayName}
+              {identity.name}
             </h1>
+            {(identity.projectReference || (identity.derivedFromComposite && identity.serviceAddress)) && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                {identity.projectReference && <span className="inline-flex items-center gap-1"><Tag className="h-3.5 w-3.5" /> Project {identity.projectReference}</span>}
+                {identity.serviceAddress && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {identity.serviceAddress}</span>}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2 text-sm">
               <Badge variant="secondary" className="capitalize">{customer.type}</Badge>
               <Badge variant="secondary" className={customer.status === "active" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}>{customer.status}</Badge>
@@ -200,36 +246,50 @@ export default function CustomerDetail() {
           <Button variant="outline" onClick={openEdit}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
         </div>
 
-        {/* QuickBooks sync */}
-        <QuickBooksCard customer={customer} customerId={customerId} onChange={refetch} />
+        {/* Summary cards — the customer dashboard at a glance */}
+        <SummaryCards summary={summary} customer={customer} qbLabel={qbLabel} />
 
-        {/* Contact card */}
-        <Card>
-          <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-[#1e3a5f]" />
-              {customer.phone ? <a href={`tel:${customer.phone}`} className="hover:underline">{customer.phone}</a> : <span className="text-muted-foreground">No phone</span>}
-              {customer.altPhone && <span className="text-muted-foreground">· alt {customer.altPhone}</span>}
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-[#1e3a5f]" />
-              {customer.email ? <a href={`mailto:${customer.email}`} className="hover:underline">{customer.email}</a> : <span className="text-muted-foreground">No email</span>}
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Calendar className="h-4 w-4" /> Customer since {formatDate(customer.createdAt)}
-            </div>
-            {customer.notes && (
-              <div className="md:col-span-3 text-muted-foreground whitespace-pre-wrap border-t pt-3">{customer.notes}</div>
-            )}
-          </CardContent>
-        </Card>
+        {/* Sections */}
+        <Tabs defaultValue="summary">
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="summary">Summary</TabsTrigger>
+            <TabsTrigger value="properties">Properties ({counts.properties})</TabsTrigger>
+            <TabsTrigger value="jobs">Jobs ({counts.jobs})</TabsTrigger>
+            <TabsTrigger value="opportunities">Opportunities ({counts.opportunities})</TabsTrigger>
+            <TabsTrigger value="estimates">Estimates / Proposals ({counts.estimates})</TabsTrigger>
+            <TabsTrigger value="invoices">Invoices ({counts.invoices})</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+          </TabsList>
 
-        {/* Properties */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4 text-[#1e3a5f]" /> Properties ({properties.length})</CardTitle>
-            <Button size="sm" variant="outline" onClick={openAddProperty}><Plus className="h-4 w-4 mr-1" /> Add Property</Button>
-          </CardHeader>
+          <TabsContent value="summary" className="space-y-4">
+            <QuickBooksCard customer={customer} customerId={customerId} onChange={refetch} />
+            <Card>
+              <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4 text-[#1e3a5f]" />
+                  {customer.phone ? <a href={`tel:${customer.phone}`} className="hover:underline">{customer.phone}</a> : <span className="text-muted-foreground">No phone</span>}
+                  {customer.altPhone && <span className="text-muted-foreground">· alt {customer.altPhone}</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4 text-[#1e3a5f]" />
+                  {customer.email ? <a href={`mailto:${customer.email}`} className="hover:underline">{customer.email}</a> : <span className="text-muted-foreground">No email</span>}
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Calendar className="h-4 w-4" /> Customer since {formatDate(customer.createdAt)}
+                </div>
+                {customer.notes && (
+                  <div className="md:col-span-3 text-muted-foreground whitespace-pre-wrap border-t pt-3">{customer.notes}</div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="properties">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4 text-[#1e3a5f]" /> Properties ({properties.length})</CardTitle>
+                <Button size="sm" variant="outline" onClick={openAddProperty}><Plus className="h-4 w-4 mr-1" /> Add Property</Button>
+              </CardHeader>
           <CardContent className="space-y-3">
             {properties.length === 0 ? (
               <p className="text-sm text-muted-foreground">No properties on file yet.</p>
@@ -258,109 +318,59 @@ export default function CustomerDetail() {
                 </div>
               ))
             )}
-          </CardContent>
-        </Card>
-
-        {/* Related records */}
-        <Tabs defaultValue="appointments">
-          <TabsList>
-            <TabsTrigger value="appointments">Appointments ({appointments.length})</TabsTrigger>
-            <TabsTrigger value="leads">Leads ({leads.length + captures.length})</TabsTrigger>
-            <TabsTrigger value="jobs">Jobs</TabsTrigger>
-            <TabsTrigger value="calls">Calls ({callLogs.length})</TabsTrigger>
-            <TabsTrigger value="rebates">Rebate Calcs ({rebateCalculations.length})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="appointments">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                <CardTitle className="text-base">Appointments</CardTitle>
-                <Button size="sm" variant="outline" onClick={() => { setEditingAppt(null); setApptOpen(true); }}>
-                  <Plus className="h-4 w-4 mr-1" /> New Appointment
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
-              {appointments.length === 0 ? <p className="text-sm text-muted-foreground">No appointments yet — book one with the button above.</p> :
-                appointments.map(a => (
-                  <div key={a.id} className="flex items-center justify-between border rounded-lg p-3 text-sm">
-                    <div>
-                      <div className="font-medium capitalize">{a.appointmentType.replace(/_/g, " ")}</div>
-                      <div className="text-muted-foreground">
-                        {a.scheduledAt ? formatDate(a.scheduledAt) : `${a.preferredDate} · ${a.preferredTime} (unscheduled)`}
-                        {a.durationMinutes ? ` · ${a.durationMinutes} min` : ""}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className={APPT_STATUS[a.status] || ""}>{a.status}</Badge>
-                      <Button size="icon" variant="ghost" onClick={() => { setEditingAppt(a as unknown as EditableAppointment); setApptOpen(true); }}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="leads">
-            <Card><CardContent className="pt-6 space-y-3">
-              {leads.length + captures.length === 0 ? <p className="text-sm text-muted-foreground">No linked leads.</p> : (
-                <>
-                  {leads.map(l => (
-                    <div key={`lead-${l.id}`} className="flex items-center justify-between border rounded-lg p-3 text-sm">
-                      <div>
-                        <div className="font-medium flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-amber-500" /> {l.service} <span className="text-muted-foreground">via {l.source}</span></div>
-                        <div className="text-muted-foreground">Converted {formatDate(l.convertedAt)}</div>
-                      </div>
-                      <Badge variant="secondary" className="capitalize">{l.status}</Badge>
-                    </div>
-                  ))}
-                  {captures.map(c => (
-                    <div key={`cap-${c.id}`} className="flex items-center justify-between border rounded-lg p-3 text-sm">
-                      <div>
-                        <div className="font-medium">{c.captureType.replace(/_/g, " ")}</div>
-                        <div className="text-muted-foreground">Captured {formatDate(c.createdAt)} · Converted {formatDate(c.convertedAt)}</div>
-                      </div>
-                      <Badge variant="secondary" className="capitalize">{c.status}</Badge>
-                    </div>
-                  ))}
-                </>
-              )}
-            </CardContent></Card>
           </TabsContent>
 
           <TabsContent value="jobs">
             <CustomerJobsTab customerId={customerId} />
           </TabsContent>
 
-          <TabsContent value="calls">
+          <TabsContent value="opportunities">
             <Card><CardContent className="pt-6 space-y-3">
-              {callLogs.length === 0 ? <p className="text-sm text-muted-foreground">No linked calls yet.</p> :
-                callLogs.map(cl => (
-                  <div key={cl.id} className="flex items-center justify-between border rounded-lg p-3 text-sm">
-                    <div className="flex items-center gap-2">
-                      <PhoneCall className="h-4 w-4 text-[#1e3a5f]" />
-                      <div>
-                        <div className="font-medium capitalize">{cl.direction} · {cl.phoneNumber}</div>
-                        <div className="text-muted-foreground">{formatDate(cl.createdAt)}{cl.duration ? ` · ${Math.round(cl.duration / 60)} min` : ""}</div>
-                      </div>
+              {opportunities.length === 0 ? <p className="text-sm text-muted-foreground">No opportunities linked to this customer.</p> :
+                opportunities.map(o => (
+                  <div
+                    key={o.id}
+                    className="flex items-start justify-between gap-3 border rounded-lg p-3 text-sm cursor-pointer hover:bg-muted/50"
+                    onClick={() => navigate(opportunityRoute(o))}
+                  >
+                    <div className="min-w-0">
+                      <div className="font-medium flex items-center gap-2"><Target className="h-3.5 w-3.5 text-[#1e3a5f] shrink-0" /><span className="truncate">{o.title}</span></div>
+                      <MetaLine items={[
+                        { icon: <Calendar className="h-3.5 w-3.5" />, label: formatDate(o.closedAt ?? o.createdAt) },
+                        o.projectReference ? { icon: <Tag className="h-3.5 w-3.5" />, label: o.projectReference } : null,
+                        o.quickbooksReference ? { icon: <Hash className="h-3.5 w-3.5" />, label: `QBO Estimate ${o.quickbooksReference}` } : null,
+                        primaryAddress ? { icon: <MapPin className="h-3.5 w-3.5" />, label: primaryAddress } : null,
+                      ]} />
                     </div>
-                    {cl.leadQuality && <Badge variant="secondary" className="capitalize">{cl.leadQuality}</Badge>}
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <Badge variant="secondary" className={OPP_STAGE[o.stage] ?? ""}>{o.stage.replace(/_/g, " ")}</Badge>
+                      <span className="font-semibold">{formatMoney(Number(o.amount))}</span>
+                    </div>
                   </div>
                 ))}
             </CardContent></Card>
           </TabsContent>
 
-          <TabsContent value="rebates">
-            <Card><CardContent className="pt-6 space-y-3">
-              {rebateCalculations.length === 0 ? <p className="text-sm text-muted-foreground">No linked rebate calculations.</p> :
-                rebateCalculations.map(r => (
-                  <div key={r.id} className="border rounded-lg p-3 text-sm">
-                    <div className="font-medium">{r.address}</div>
-                    <div className="text-muted-foreground">{formatDate(r.createdAt)}</div>
-                  </div>
-                ))}
-            </CardContent></Card>
+          <TabsContent value="estimates">
+            <SalesDocList docs={estimates} kind="estimate" primaryAddress={primaryAddress} onOpenOpportunity={id => navigate(opportunityRoute({ id }))} />
+          </TabsContent>
+
+          <TabsContent value="invoices">
+            <SalesDocList docs={invoices} kind="invoice" primaryAddress={primaryAddress} onOpenOpportunity={id => navigate(opportunityRoute({ id }))} />
+          </TabsContent>
+
+          <TabsContent value="timeline">
+            <TimelineTab
+              appointments={appointments}
+              leads={leads}
+              captures={captures}
+              callLogs={callLogs}
+              rebates={rebateCalculations}
+              onNewAppointment={() => { setEditingAppt(null); setApptOpen(true); }}
+              onEditAppointment={a => { setEditingAppt(a as unknown as EditableAppointment); setApptOpen(true); }}
+            />
           </TabsContent>
         </Tabs>
       </div>
@@ -538,7 +548,7 @@ function CustomerJobsTab({ customerId }: { customerId: number }) {
   const { toast } = useToast();
   const { data, refetch } = trpc.jobs.list.useQuery({ customerId, limit: 50, offset: 0 });
   const createJob = trpc.jobs.create.useMutation({
-    onSuccess: res => { toast({ title: `Job ${res.jobNumber} created` }); refetch(); navigate(`/jobs/${res.id}`); },
+    onSuccess: res => { toast({ title: `Job ${res.jobNumber} created` }); refetch(); navigate(jobRoute(res)); },
     onError: e => toast({ title: "Could not create job", description: e.message, variant: "destructive" }),
   });
   const items = data?.items ?? [];
@@ -565,7 +575,7 @@ function CustomerJobsTab({ customerId }: { customerId: number }) {
               <div
                 key={job.id}
                 className="flex items-center justify-between border rounded-lg p-3 text-sm cursor-pointer hover:bg-muted/50"
-                onClick={() => navigate(`/jobs/${job.id}`)}
+                onClick={() => navigate(jobRoute(job))}
               >
                 <div>
                   <div className="font-medium"><span className="font-mono text-muted-foreground mr-2">{job.jobNumber}</span>{job.title}</div>
@@ -578,6 +588,222 @@ function CustomerJobsTab({ customerId }: { customerId: number }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+type CustomerSummary = {
+  activeJobs: number;
+  openOpportunities: number;
+  estimates: number;
+  invoices: number;
+  properties: number;
+  lifetimeRevenue: number;
+  outstandingBalance: number;
+  lastActivityAt: string | null;
+};
+
+/** The nine at-a-glance metric cards at the top of the customer dashboard. */
+function SummaryCards({
+  summary, customer, qbLabel,
+}: {
+  summary: CustomerSummary;
+  customer: { quickbooksSyncStatus: string; quickbooksCustomerId: string | null };
+  qbLabel: Record<string, string>;
+}) {
+  const cards: Array<{ label: string; value: string; icon: ReactNode; hint?: string }> = [
+    { label: "Active Jobs", value: String(summary.activeJobs), icon: <Briefcase className="h-4 w-4" /> },
+    { label: "Open Opportunities", value: String(summary.openOpportunities), icon: <Target className="h-4 w-4" /> },
+    { label: "Estimates", value: String(summary.estimates), icon: <FileText className="h-4 w-4" /> },
+    { label: "Invoices", value: String(summary.invoices), icon: <Receipt className="h-4 w-4" /> },
+    { label: "Properties", value: String(summary.properties), icon: <MapPin className="h-4 w-4" /> },
+    { label: "Lifetime Revenue", value: formatMoney(summary.lifetimeRevenue), icon: <DollarSign className="h-4 w-4" /> },
+    { label: "Outstanding Balance", value: formatMoney(summary.outstandingBalance), icon: <Wallet className="h-4 w-4" /> },
+    { label: "Last Activity", value: summary.lastActivityAt ? formatDate(summary.lastActivityAt) : "—", icon: <Clock className="h-4 w-4" /> },
+    {
+      label: "QuickBooks",
+      value: qbLabel[customer.quickbooksSyncStatus] ?? customer.quickbooksSyncStatus,
+      hint: customer.quickbooksCustomerId ? `#${customer.quickbooksCustomerId}` : "Not linked",
+      icon: <Building2 className="h-4 w-4" />,
+    },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {cards.map(c => (
+        <Card key={c.label}>
+          <CardContent className="p-3">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{c.icon}<span className="truncate">{c.label}</span></div>
+            <div className="mt-1 text-lg font-bold text-[#1e3a5f] truncate">{c.value}</div>
+            {c.hint && <div className="text-[11px] text-muted-foreground truncate">{c.hint}</div>}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+interface TLAppt { id: number; appointmentType: string; scheduledAt: Date | string | null; preferredDate: string; preferredTime: string; durationMinutes: number | null; status: string }
+interface TLLead { id: number; service: string | null; source: string | null; convertedAt: Date | string | null; status: string }
+interface TLCapture { id: number; captureType: string; createdAt: Date | string | null; convertedAt: Date | string | null; status: string }
+interface TLCall { id: number; direction: string | null; phoneNumber: string | null; createdAt: Date | string | null; duration: number | null; leadQuality: string | null }
+interface TLRebate { id: number; address: string | null; createdAt: Date | string | null }
+
+/** Timeline section: appointments, leads/captures, calls and rebate calcs for this customer. */
+function TimelineTab({
+  appointments, leads, captures, callLogs, rebates, onNewAppointment, onEditAppointment,
+}: {
+  appointments: TLAppt[];
+  leads: TLLead[];
+  captures: TLCapture[];
+  callLogs: TLCall[];
+  rebates: TLRebate[];
+  onNewAppointment: () => void;
+  onEditAppointment: (a: TLAppt) => void;
+}) {
+  const isEmpty = appointments.length + leads.length + captures.length + callLogs.length + rebates.length === 0;
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4 text-[#1e3a5f]" /> Appointments ({appointments.length})</CardTitle>
+          <Button size="sm" variant="outline" onClick={onNewAppointment}><Plus className="h-4 w-4 mr-1" /> New Appointment</Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {appointments.length === 0 ? <p className="text-sm text-muted-foreground">No appointments yet.</p> :
+            appointments.map(a => (
+              <div key={a.id} className="flex items-center justify-between border rounded-lg p-3 text-sm cursor-pointer hover:bg-muted/50" onClick={() => onEditAppointment(a)}>
+                <div>
+                  <div className="font-medium capitalize">{a.appointmentType.replace(/_/g, " ")}</div>
+                  <div className="text-muted-foreground">
+                    {a.scheduledAt ? formatDate(a.scheduledAt) : `${a.preferredDate} · ${a.preferredTime} (unscheduled)`}
+                    {a.durationMinutes ? ` · ${a.durationMinutes} min` : ""}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className={APPT_STATUS[a.status] || ""}>{a.status}</Badge>
+                  <Pencil className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+            ))}
+        </CardContent>
+      </Card>
+
+      {(leads.length + captures.length > 0) && (
+        <Card><CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Zap className="h-4 w-4 text-amber-500" /> Leads ({leads.length + captures.length})</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {leads.map(l => (
+              <div key={`lead-${l.id}`} className="flex items-center justify-between border rounded-lg p-3 text-sm">
+                <div>
+                  <div className="font-medium flex items-center gap-2"><Zap className="h-3.5 w-3.5 text-amber-500" /> {l.service} <span className="text-muted-foreground">via {l.source}</span></div>
+                  <div className="text-muted-foreground">Converted {formatDate(l.convertedAt)}</div>
+                </div>
+                <Badge variant="secondary" className="capitalize">{l.status}</Badge>
+              </div>
+            ))}
+            {captures.map(c => (
+              <div key={`cap-${c.id}`} className="flex items-center justify-between border rounded-lg p-3 text-sm">
+                <div>
+                  <div className="font-medium">{c.captureType.replace(/_/g, " ")}</div>
+                  <div className="text-muted-foreground">Captured {formatDate(c.createdAt)} · Converted {formatDate(c.convertedAt)}</div>
+                </div>
+                <Badge variant="secondary" className="capitalize">{c.status}</Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {callLogs.length > 0 && (
+        <Card><CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><PhoneCall className="h-4 w-4 text-[#1e3a5f]" /> Calls ({callLogs.length})</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {callLogs.map(cl => (
+              <div key={cl.id} className="flex items-center justify-between border rounded-lg p-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <PhoneCall className="h-4 w-4 text-[#1e3a5f]" />
+                  <div>
+                    <div className="font-medium capitalize">{cl.direction} · {cl.phoneNumber}</div>
+                    <div className="text-muted-foreground">{formatDate(cl.createdAt)}{cl.duration ? ` · ${Math.round(cl.duration / 60)} min` : ""}</div>
+                  </div>
+                </div>
+                {cl.leadQuality && <Badge variant="secondary" className="capitalize">{cl.leadQuality}</Badge>}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {rebates.length > 0 && (
+        <Card><CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Zap className="h-4 w-4 text-green-600" /> Rebate Calculations ({rebates.length})</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            {rebates.map(r => (
+              <div key={r.id} className="border rounded-lg p-3 text-sm">
+                <div className="font-medium">{r.address}</div>
+                <div className="text-muted-foreground">{formatDate(r.createdAt)}</div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {isEmpty && <p className="text-sm text-muted-foreground">No activity recorded for this customer yet.</p>}
+    </div>
+  );
+}
+
+type ProfileSalesDoc = {
+  id: number;
+  docNumber: string | null;
+  quickbooksId: string;
+  quickbooksCustomerId: string | null;
+  status: string;
+  totalAmount: string;
+  txnDate: Date | string | null;
+  opportunityId: number | null;
+  projectReference: string | null;
+  opportunityTitle: string | null;
+};
+
+/** Estimates / Proposals and Invoices list on the customer 360 view. */
+function SalesDocList({
+  docs, kind, primaryAddress, onOpenOpportunity,
+}: {
+  docs: ProfileSalesDoc[];
+  kind: "estimate" | "invoice";
+  primaryAddress: string | null;
+  onOpenOpportunity: (opportunityId: number) => void;
+}) {
+  const empty = kind === "estimate"
+    ? "No estimates or proposals linked to this customer."
+    : "No invoices synced for this customer yet.";
+  return (
+    <Card><CardContent className="pt-6 space-y-3">
+      {docs.length === 0 ? <p className="text-sm text-muted-foreground">{empty}</p> :
+        docs.map(d => (
+          <div
+            key={d.id}
+            className={`flex items-start justify-between gap-3 border rounded-lg p-3 text-sm ${d.opportunityId ? "cursor-pointer hover:bg-muted/50" : ""}`}
+            onClick={() => d.opportunityId && onOpenOpportunity(d.opportunityId)}
+          >
+            <div className="min-w-0">
+              <div className="font-medium flex items-center gap-2">
+                {kind === "estimate" ? <FileText className="h-3.5 w-3.5 text-[#1e3a5f] shrink-0" /> : <Receipt className="h-3.5 w-3.5 text-[#1e3a5f] shrink-0" />}
+                <span className="truncate">{d.docNumber ? `#${d.docNumber}` : `QBO ${d.quickbooksId}`}</span>
+                {d.opportunityTitle && <span className="text-muted-foreground truncate hidden sm:inline">· {d.opportunityTitle}</span>}
+              </div>
+              <MetaLine items={[
+                { icon: <Calendar className="h-3.5 w-3.5" />, label: formatDate(d.txnDate) },
+                d.projectReference ? { icon: <Tag className="h-3.5 w-3.5" />, label: d.projectReference } : null,
+                { icon: <Hash className="h-3.5 w-3.5" />, label: `QBO ${kind === "estimate" ? "Estimate" : "Invoice"} ${d.quickbooksId}` },
+                d.quickbooksCustomerId ? { icon: <UserRound className="h-3.5 w-3.5" />, label: `QBO Customer ${d.quickbooksCustomerId}` } : null,
+                primaryAddress ? { icon: <MapPin className="h-3.5 w-3.5" />, label: primaryAddress } : null,
+              ]} />
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Badge variant="secondary" className={DOC_STATUS[d.status] ?? ""}>{d.status}</Badge>
+              <span className="font-semibold">{formatMoney(Number(d.totalAmount))}</span>
+            </div>
+          </div>
+        ))}
+    </CardContent></Card>
   );
 }
 
