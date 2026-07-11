@@ -8,11 +8,41 @@ import {
   getActiveDepartmentId,
   getActiveItemKey,
   getActiveItemPath,
+  getDepartmentPrimaryPath,
   isDepartmentOpen,
-  loadDepartmentOpenState,
-  serializeDepartmentOpenState,
+  initialDepartmentOpenState,
+  toggleDepartmentOpen,
   type NavRole,
 } from "./navigation";
+
+// Every route the dashboard nav is allowed to link to. Mirrors the protected
+// routes registered in App.tsx — a visible item pointing anywhere else would be
+// a dead link. Kept here so "no visible item points to a missing route" is
+// enforced by the test suite.
+const KNOWN_ROUTES = new Set<string>([
+  "/command-center",
+  "/lead-dashboard",
+  "/customers",
+  "/opportunities",
+  "/lead-scoring",
+  "/calendar",
+  "/jobs",
+  "/field/today",
+  "/marketing-dashboard",
+  "/sms-campaigns",
+  "/campaign-performance",
+  "/google-ads-campaigns",
+  "/facebook-campaigns",
+  "/settings/integrations",
+  "/ai-va-dashboard",
+  "/ai-script-manager",
+  "/ai-va-settings",
+  "/marketing-autopilot",
+  "/analytics",
+  "/takeoff-ai",
+  "/team-management",
+  "/admin",
+]);
 
 /* ── Public vs protected route detection ───────────────────────────────── */
 // Covers: "public pages show public header and chatbot" and
@@ -105,12 +135,56 @@ describe("department structure", () => {
     ]);
   });
 
-  it("every visible item opens a real route (no disabled placeholders)", () => {
+  it("Home has a single child named Dashboard → /command-center", () => {
+    const home = DEPARTMENTS.find((d) => d.id === "home")!;
+    expect(home.items).toHaveLength(1);
+    expect(home.items[0].label).toBe("Dashboard");
+    expect(home.items[0].path).toBe("/command-center");
+  });
+
+  it("every visible item opens a real, registered route (no dead links)", () => {
     for (const dept of DEPARTMENTS) {
       for (const item of dept.items) {
         expect(item.path.startsWith("/")).toBe(true);
+        expect(KNOWN_ROUTES.has(item.path)).toBe(true);
       }
     }
+  });
+
+  it("every department's primary route is a real, registered route", () => {
+    for (const dept of DEPARTMENTS) {
+      expect(KNOWN_ROUTES.has(dept.primaryPath)).toBe(true);
+    }
+  });
+
+  it("maps each department card title to its primary route", () => {
+    const primary = Object.fromEntries(DEPARTMENTS.map((d) => [d.id, d.primaryPath]));
+    expect(primary).toEqual({
+      home: "/command-center",
+      sales: "/lead-dashboard",
+      dispatch: "/calendar",
+      marketing: "/marketing-dashboard",
+      accounting: "/opportunities",
+      ai: "/ai-va-dashboard",
+      analytics: "/analytics",
+      admin: "/team-management",
+    });
+    expect(getDepartmentPrimaryPath("marketing")).toBe("/marketing-dashboard");
+    expect(getDepartmentPrimaryPath("nope")).toBeNull();
+  });
+
+  it("does not duplicate a route across departments except by deliberate shared-route rule", () => {
+    // /calendar (Calendar+Appointments, same dept) and /opportunities
+    // (Opportunity Center in Sales + Estimates in Accounting) are the only
+    // intentional shared routes. Nothing else should repeat.
+    const seen = new Map<string, string[]>();
+    for (const dept of DEPARTMENTS) {
+      for (const item of dept.items) {
+        seen.set(item.path, [...(seen.get(item.path) ?? []), `${dept.id}::${item.label}`]);
+      }
+    }
+    const shared = [...seen.entries()].filter(([, owners]) => owners.length > 1).map(([p]) => p);
+    expect(shared.sort()).toEqual(["/calendar", "/opportunities"]);
   });
 });
 
@@ -245,7 +319,7 @@ describe("getVisibleDepartments", () => {
       "SMS Campaigns",
       "Campaign Performance",
       "Google Ads",
-      "Facebook Ads",
+      "Facebook/Instagram",
     ]);
   });
 });
@@ -263,9 +337,9 @@ describe("getActiveDepartmentId", () => {
     expect(getActiveDepartmentId("/team-management")).toBe("admin");
   });
 
-  it("resolves a route shared by two departments to the first that owns it", () => {
-    // QuickBooks (Accounting) and Integrations (Administration) both link to
-    // /settings/integrations; Accounting appears first in the sidebar.
+  it("resolves the integrations route to Accounting (its sole owner)", () => {
+    // Integrations is now owned by Accounting (QuickBooks / Integrations) and is
+    // no longer duplicated under Administration.
     expect(getActiveDepartmentId("/settings/integrations")).toBe("accounting");
   });
 
@@ -291,15 +365,13 @@ describe("getActiveItemKey", () => {
     expect(getActiveItemKey(admin, "/calendar")).toBe("dispatch::Calendar");
     // /opportunities => Opportunity Center (Sales), not Estimates (Accounting).
     expect(getActiveItemKey(admin, "/opportunities")).toBe("sales::Opportunity Center");
-    // /settings/integrations => QuickBooks (Accounting appears before Admin).
-    expect(getActiveItemKey(admin, "/settings/integrations")).toBe("accounting::QuickBooks");
+    // /settings/integrations => the QuickBooks / Integrations entry under Accounting.
+    expect(getActiveItemKey(admin, "/settings/integrations")).toBe("accounting::QuickBooks / Integrations");
   });
 
-  it("respects role filtering (member can't match an admin-only owner)", () => {
+  it("resolves the integrations route the same for members (Accounting owns it)", () => {
     const member = getVisibleDepartments("member");
-    // Member never sees Administration, so the integrations route resolves to
-    // the Accounting/QuickBooks entry they can actually see.
-    expect(getActiveItemKey(member, "/settings/integrations")).toBe("accounting::QuickBooks");
+    expect(getActiveItemKey(member, "/settings/integrations")).toBe("accounting::QuickBooks / Integrations");
   });
 
   it("resolves nested routes and returns null off-route", () => {
@@ -308,28 +380,38 @@ describe("getActiveItemKey", () => {
   });
 });
 
-/* ── Collapsible department behaviour ──────────────────────────────────── */
-// Covers: "active department expands", collapse memory, and (as the data layer
-// behind) the mobile drawer, whose sections use the same open-state helpers.
+/* ── Accordion department behaviour ────────────────────────────────────── */
+// Covers: "active department auto-expands", "clicking the row expands/collapses",
+// and reduced clutter (only the active section open by default; not persisted).
 
-describe("collapsible departments", () => {
-  it("expands the active department by default and collapses the rest", () => {
-    expect(isDepartmentOpen("sales", "sales", {})).toBe(true);
-    expect(isDepartmentOpen("marketing", "sales", {})).toBe(false);
+describe("accordion departments", () => {
+  it("auto-expands ONLY the active department by default", () => {
+    const state = initialDepartmentOpenState("sales");
+    expect(isDepartmentOpen("sales", state)).toBe(true);
+    expect(isDepartmentOpen("marketing", state)).toBe(false);
+    expect(isDepartmentOpen("admin", state)).toBe(false);
+    // Off-route: nothing forced open.
+    expect(initialDepartmentOpenState(null)).toEqual({});
   });
 
-  it("remembers an explicit user choice over the active-department default", () => {
-    // User collapsed the active department -> stays collapsed.
-    expect(isDepartmentOpen("sales", "sales", { sales: false })).toBe(false);
-    // User expanded a non-active department -> stays open.
-    expect(isDepartmentOpen("marketing", "sales", { marketing: true })).toBe(true);
+  it("toggles a department open/closed when its row is clicked", () => {
+    let state = initialDepartmentOpenState("sales"); // { sales: true }
+    // Clicking a collapsed department opens it.
+    state = toggleDepartmentOpen(state, "marketing");
+    expect(isDepartmentOpen("marketing", state)).toBe(true);
+    // Clicking it again collapses it.
+    state = toggleDepartmentOpen(state, "marketing");
+    expect(isDepartmentOpen("marketing", state)).toBe(false);
+    // Clicking the active department collapses it too (full-row toggle).
+    state = toggleDepartmentOpen(state, "sales");
+    expect(isDepartmentOpen("sales", state)).toBe(false);
   });
 
-  it("round-trips persisted state and tolerates corrupt data", () => {
-    const state = { sales: false, marketing: true };
-    expect(loadDepartmentOpenState(serializeDepartmentOpenState(state))).toEqual(state);
-    expect(loadDepartmentOpenState(null)).toEqual({});
-    expect(loadDepartmentOpenState("{not json")).toEqual({});
-    expect(loadDepartmentOpenState('{"sales":"nope"}')).toEqual({});
+  it("does not keep every visited section open (state resets per active route)", () => {
+    // Simulate navigating sales -> marketing: the previous open section is gone.
+    const afterSales = initialDepartmentOpenState("sales");
+    const afterMarketing = initialDepartmentOpenState("marketing");
+    expect(isDepartmentOpen("sales", afterMarketing)).toBe(false);
+    expect(Object.keys(afterMarketing)).toEqual(["marketing"]);
   });
 });
