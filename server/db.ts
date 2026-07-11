@@ -1,5 +1,6 @@
 import { eq, desc, sql, and, like, or } from "drizzle-orm";
 import mysql from "mysql2";
+import { createConnection as createPromiseConnection } from "mysql2/promise";
 import { drizzle } from "drizzle-orm/mysql2";
 import { 
   InsertUser, users, leads, InsertLead, leadCaptures, InsertLeadCapture,
@@ -32,6 +33,21 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+/**
+ * Create a DEDICATED, non-pooled MySQL connection.
+ *
+ * Used to hold a session-scoped advisory lock (`GET_LOCK`) for the entire
+ * duration of a sync: the lock lives on this one connection and MySQL releases
+ * it automatically if the connection dies, so it MUST NOT be a pooled
+ * connection that could be handed to another caller. The caller owns this
+ * connection and is responsible for closing it (see dbSyncLock).
+ * timezone:"Z" mirrors the pool so any Date (de)serialization stays UTC.
+ */
+export async function createDedicatedConnection() {
+  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not set");
+  return createPromiseConnection({ uri: process.env.DATABASE_URL, timezone: "Z" });
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {

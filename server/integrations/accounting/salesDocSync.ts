@@ -10,7 +10,7 @@
  * Every run writes a quickbooksSyncLogs row (entityType "estimate").
  */
 import { and, eq, sql } from "drizzle-orm";
-import { getDb } from "../../db";
+import { getDb, createDedicatedConnection } from "../../db";
 import {
   quickbooksSalesDocuments,
   opportunities,
@@ -43,6 +43,8 @@ import {
 } from "./customerMerge";
 import { isCustomerNameEnrichEnabled, planCustomerEnrichment } from "./enrichmentGate";
 import { cancelOpenFollowups, ensureFollowupsForOpportunity } from "./followups";
+import { SyncLock } from "./syncLock";
+import { withDbLock, type DbLockLogEntry, type LockConnection } from "./dbSyncLock";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -84,6 +86,8 @@ export interface SyncOptions {
   mode?: "incremental" | "backfill";
   sinceDays?: number;
   now?: Date;
+  /** Test seam: override the dedicated-connection factory for the advisory lock. */
+  lockConnectionFactory?: () => Promise<LockConnection>;
 }
 
 /** Map the QBO-derived contact fields into the customer-merge input shape. */
@@ -464,7 +468,7 @@ async function upsertOpportunity(
 }
 
 /** Process one estimate end-to-end. Mutates `result` counters. */
-async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: QboEstimate, now: Date, result: SyncResult): Promise<void> {
+async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: QboEstimate, now: Date, result: SyncResult, assertLockHeld?: () => void): Promise<void> {
   const mapped = mapEstimateToSalesDoc(estimate, conn.realmId, now);
   result.pulled++;
 
@@ -478,6 +482,10 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
   // logged even when the estimate itself is unchanged. Enrichment is idempotent
   // (fill-empty + one-open-conflict-per-field dedupe + a QBO-freshness guard).
   let customerId = existing?.customerId ?? null;
+  // Immediately before any CRM write begins: if the advisory-lock connection was
+  // lost, MySQL already auto-released the lock — abort now so we make no writes
+  // that another instance could be making concurrently.
+  assertLockHeld?.();
   if (customerId == null) {
     const c = await resolveOrCreateContact(db, estimate, now);
     customerId = c.customerId;
@@ -575,10 +583,86 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
  * Run a full sync. Returns per-run counters and writes a sync-log row.
  * The cursor advances only after the whole run succeeds.
  */
+/**
+ * Concurrency guard for sales-doc syncs — two layers:
+ *
+ *   1. In-process SyncLock — a FAST LOCAL optimization only. It cheaply skips a
+ *      second sync inside the SAME Node process without opening a DB connection.
+ *   2. MySQL advisory lock (`GET_LOCK`) on a dedicated connection — the
+ *      AUTHORITATIVE cross-instance guard. An in-memory lock can't stop two
+ *      Railway instances (rolling deploy / >1 replica) or a post-restart process
+ *      from running concurrent backfills; the DB lock can, and MySQL auto-frees
+ *      it if the holder's connection dies.
+ *
+ * No QBO calls run until the advisory lock is held. Any refusal (busy) or lock
+ * DB error (GET_LOCK NULL) is recorded as a failed sync-log; the run never
+ * proceeds. Both locks always release in `finally`.
+ */
+const salesDocSyncLock = new SyncLock();
+const SALESDOC_LOCK_NAME = "qbo_salesdoc_backfill";
+
+/** Production factory: a fresh dedicated connection for the advisory lock. */
+const lockConnectionFactory = () =>
+  createDedicatedConnection() as unknown as Promise<LockConnection>;
+
+function logDbLock(entry: DbLockLogEntry): void {
+  // Request id + timing + outcome only — never credentials or SQL values.
+  console.log(JSON.stringify({ tag: "[QboSyncLock]", ...entry }));
+}
+
+async function recordRefusal(result: SyncResult, message: string, outcome: string): Promise<SyncResult> {
+  result.error = message;
+  await writeSyncLog({ entityType: "estimate", direction: "pull", success: false, errorMessage: message });
+  console.log(JSON.stringify({ tag: "[QboSalesDocSync]", ...result, lockOutcome: outcome }));
+  return result;
+}
+
 export async function syncSalesDocuments(opts: SyncOptions = {}): Promise<SyncResult> {
+  const now = opts.now ?? new Date();
+  const mode = opts.mode ?? "incremental";
+  const owner = `${mode}-${now.getTime()}`;
+  const requestId = owner;
+
+  // Layer 1: fast in-process pre-check (local optimization only).
+  if (!salesDocSyncLock.tryAcquire(owner)) {
+    return recordRefusal(
+      emptyResult(),
+      "another QuickBooks sync is already running in this process; skipped to avoid concurrent backfills",
+      "in_process_busy",
+    );
+  }
+
+  try {
+    // Layer 2: authoritative cross-instance advisory lock. QBO calls happen
+    // ONLY inside `run`, i.e. strictly after the lock is acquired.
+    const connect = opts.lockConnectionFactory ?? lockConnectionFactory;
+    return await withDbLock(
+      connect,
+      SALESDOC_LOCK_NAME,
+      handle => runSalesDocSync(opts, now, () => handle.assertHeld()),
+      (reason, error) =>
+        recordRefusal(
+          emptyResult(),
+          reason === "busy"
+            ? "another QuickBooks sync holds the advisory lock (another instance); skipped to avoid concurrent backfills"
+            : `advisory lock unavailable (database error): ${error?.message ?? "unknown"}; sync aborted safely`,
+          reason === "busy" ? "advisory_busy" : "advisory_db_error",
+        ),
+      { requestId, log: logDbLock },
+    );
+  } finally {
+    salesDocSyncLock.release(owner);
+  }
+}
+
+/**
+ * @param assertLockHeld throws if the advisory-lock connection was lost, so a
+ *        run whose lock silently freed (connection death → MySQL auto-release)
+ *        aborts with a failed status instead of racing another instance.
+ */
+async function runSalesDocSync(opts: SyncOptions, now: Date, assertLockHeld?: () => void): Promise<SyncResult> {
   const result = emptyResult();
   const started = Date.now();
-  const now = opts.now ?? new Date();
   const sinceDays = opts.sinceDays ?? 60;
 
   const db = await getDb();
@@ -597,10 +681,15 @@ export async function syncSalesDocuments(opts: SyncOptions = {}): Promise<SyncRe
 
   try {
     for (let page = 0; page < MAX_PAGES; page++) {
+      // Re-check the advisory lock before every QBO page: if the dedicated lock
+      // connection died mid-run, MySQL already auto-released the lock, so we must
+      // stop rather than keep issuing QBO calls another instance might duplicate.
+      assertLockHeld?.();
       const query = buildEstimateQuery({ cursor, sinceDays, startPosition: page * PAGE_SIZE + 1, pageSize: PAGE_SIZE, now });
       const estimates = await quickbooksProvider.fetchEstimates(query);
       for (const e of estimates) {
-        await processEstimate(db, conn, e, now, result);
+        assertLockHeld?.(); // re-check the lock before processing each estimate
+        await processEstimate(db, conn, e, now, result, assertLockHeld);
         const u = e.MetaData?.LastUpdatedTime ? new Date(e.MetaData.LastUpdatedTime) : null;
         if (u && !Number.isNaN(u.getTime()) && (!maxSeen || u.getTime() > maxSeen.getTime())) maxSeen = u;
       }
