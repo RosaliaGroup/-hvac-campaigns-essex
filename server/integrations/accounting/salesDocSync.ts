@@ -41,6 +41,7 @@ import {
   planCustomerConflictWrites,
   type IncomingCustomerFields,
 } from "./customerMerge";
+import { isCustomerNameEnrichEnabled, planCustomerEnrichment } from "./enrichmentGate";
 import { cancelOpenFollowups, ensureFollowupsForOpportunity } from "./followups";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -239,24 +240,22 @@ async function enrichExistingCustomer(
     return;
   }
 
-  const { patch, conflicts } = buildCustomerFieldUpdate(existing, incomingFromContact(contact), { normalizePhone });
-  const setValues: Record<string, unknown> = { ...patch };
-
-  if (patch.firstName != null || patch.lastName != null || patch.companyName != null) {
-    setValues.displayName = buildDisplayName({
-      companyName: patch.companyName ?? existing.companyName,
-      firstName: patch.firstName ?? existing.firstName,
-      lastName: patch.lastName ?? existing.lastName,
-      email: patch.email ?? existing.email,
-      phone: patch.phone ?? existing.phone,
-    });
-  }
-  if (qbCustomerId && !matchedByQbId && !existing.quickbooksCustomerId) {
-    setValues.quickbooksCustomerId = qbCustomerId;
-    setValues.quickbooksSyncStatus = "synced";
-    setValues.quickbooksSyncedAt = now;
-  }
-  if (contact.quickbooksUpdatedAt) setValues.quickbooksCustomerUpdatedAt = contact.quickbooksUpdatedAt;
+  // Identity writes (firstName/lastName/companyName/displayName) are gated behind
+  // QBO_CUSTOMER_NAME_ENRICH (default OFF) so the sync never silently mutates a
+  // customer's name outside the reviewed repair workflow. Every non-identity
+  // behavior below — non-name fill-empty, QBO id/status/timestamps, conflict
+  // logging, service-property attachment — runs regardless of the flag.
+  const { setValues, conflicts } = planCustomerEnrichment({
+    existing,
+    incoming: incomingFromContact(contact),
+    quickbooksUpdatedAt: contact.quickbooksUpdatedAt ?? null,
+    qbCustomerId,
+    matchedByQbId,
+    now,
+    nameEnrichEnabled: isCustomerNameEnrichEnabled(),
+    buildDisplayName,
+    normalizePhone,
+  });
 
   const openCount = await recordCustomerConflicts(db, customerId, qbCustomerId, conflicts, now);
   if (openCount > 0) setValues.hasQboConflicts = true;
