@@ -16,7 +16,7 @@ import {
   quickbooksSalesDocuments,
   type InsertCustomer,
 } from "../../drizzle/schema";
-import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { deriveContactRelationship, type Relationship } from "@shared/leadPipeline";
 import { assembleCustomerRelations } from "./customerRelations";
 
@@ -303,12 +303,28 @@ export const customersRouter = router({
       if (phoneKey) apptMatch.push(sql`RIGHT(REGEXP_REPLACE(${appointments.phone}, '[^0-9]', ''), 10) = ${phoneKey}`);
       if (emailKey) apptMatch.push(sql`LOWER(${appointments.email}) = ${emailKey}`);
 
-      // Sales documents (estimates/invoices) link by the resolved local customerId
-      // OR by the raw QBO CustomerRef, so a doc synced under a sibling QuickBooks
-      // customer id still surfaces here. Deduplicated in assembleCustomerRelations.
+      // Sales documents (estimates/invoices) reconcile to this customer by:
+      //  (a) the resolved local customerId FK,
+      //  (b) the raw QBO CustomerRef == the customer's ref, and
+      //  (c) the doc's PARENT ref == the customer's ref — i.e. an invoice/estimate
+      //      filed under a QBO sub-customer / child project whose parent is this
+      //      customer (the 351-vs-354 hierarchy case). Deduplicated in assembleCustomerRelations.
+      // A doc RESOLVED to a customer (customerId set) attaches ONLY via that FK,
+      // so a document can never be claimed by two customers. Ref / parent-ref
+      // matching is a fallback for docs the sync could not resolve (customerId
+      // IS NULL) — surfacing them under the right customer without double-claiming
+      // any already-resolved document.
       const docMatch = [eq(quickbooksSalesDocuments.customerId, input.id)];
       if (customer.quickbooksCustomerId) {
-        docMatch.push(eq(quickbooksSalesDocuments.quickbooksCustomerId, customer.quickbooksCustomerId));
+        docMatch.push(
+          and(
+            isNull(quickbooksSalesDocuments.customerId),
+            or(
+              eq(quickbooksSalesDocuments.quickbooksCustomerId, customer.quickbooksCustomerId),
+              eq(quickbooksSalesDocuments.quickbooksParentRef, customer.quickbooksCustomerId),
+            ),
+          )!,
+        );
       }
 
       const [props, appts, relatedLeads, relatedCaptures, calls, rebates, relJobs, relOpps, relDocs] = await Promise.all([
@@ -320,7 +336,22 @@ export const customersRouter = router({
         db.select().from(rebateCalculations).where(eq(rebateCalculations.customerId, input.id)).orderBy(desc(rebateCalculations.createdAt)).limit(20),
         db.select().from(jobs).where(eq(jobs.customerId, input.id)).orderBy(desc(jobs.createdAt)),
         db.select().from(opportunities).where(eq(opportunities.customerId, input.id)).orderBy(desc(opportunities.createdAt)),
-        db.select().from(quickbooksSalesDocuments).where(or(...docMatch)).orderBy(desc(quickbooksSalesDocuments.txnDate)),
+        db.select({
+          id: quickbooksSalesDocuments.id,
+          docType: quickbooksSalesDocuments.docType,
+          docNumber: quickbooksSalesDocuments.docNumber,
+          quickbooksId: quickbooksSalesDocuments.quickbooksId,
+          quickbooksCustomerId: quickbooksSalesDocuments.quickbooksCustomerId,
+          quickbooksParentRef: quickbooksSalesDocuments.quickbooksParentRef,
+          customerId: quickbooksSalesDocuments.customerId,
+          opportunityId: quickbooksSalesDocuments.opportunityId,
+          status: quickbooksSalesDocuments.status,
+          totalAmount: quickbooksSalesDocuments.totalAmount,
+          balance: quickbooksSalesDocuments.balance,
+          dueDate: quickbooksSalesDocuments.dueDate,
+          voided: quickbooksSalesDocuments.voided,
+          txnDate: quickbooksSalesDocuments.txnDate,
+        }).from(quickbooksSalesDocuments).where(or(...docMatch)).orderBy(desc(quickbooksSalesDocuments.txnDate)),
       ]);
 
       const relationship = deriveContactRelationship({

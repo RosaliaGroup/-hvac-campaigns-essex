@@ -26,10 +26,18 @@ export interface RelSalesDoc {
   docNumber: string | null;
   quickbooksId: string;
   quickbooksCustomerId: string | null;
+  /** Parent CustomerRef when this doc was filed under a QBO sub-customer/job. */
+  quickbooksParentRef?: string | null;
   customerId: number | null;
   opportunityId: number | null;
   status: string;
   totalAmount: string;
+  /** Invoice-only: unpaid amount (total − payments). Null/absent for estimates. */
+  balance?: string | null;
+  /** Invoice-only: QBO DueDate. */
+  dueDate?: Date | string | null;
+  /** Invoice-only: true when the QBO invoice is voided (excluded from money). */
+  voided?: boolean;
   txnDate: Date | string | null;
 }
 
@@ -58,8 +66,6 @@ export const ACTIVE_JOB_STATUSES = new Set([
 ]);
 /** Opportunity stages that are still open (not decided). */
 export const OPEN_OPPORTUNITY_STAGES = new Set(["new", "proposal_sent", "pending"]);
-/** Sales-doc statuses that still represent money not yet settled. */
-const OUTSTANDING_DOC_STATUSES = new Set(["pending", "accepted"]);
 
 function toTime(d: Date | string | null): number {
   if (!d) return 0;
@@ -118,16 +124,27 @@ export function assembleCustomerRelations(input: AssembleInput) {
   };
 
   const estimates = docs.filter((d) => d.docType === "estimate").map(enrichDoc);
-  const invoices = docs.filter((d) => d.docType === "invoice").map(enrichDoc);
+  // Reconciled invoice collection — the SINGLE source for invoice count, rows,
+  // lifetime revenue and outstanding balance. Voided invoices carry no
+  // receivable, so they are excluded (count == rows == money basis stay equal).
+  const invoices = docs.filter((d) => d.docType === "invoice" && !d.voided).map(enrichDoc);
 
+  const round2 = (n: number) => Math.round(n * 100) / 100;
   const activeJobs = input.jobs.filter((j) => ACTIVE_JOB_STATUSES.has(j.status)).length;
   const openOpportunities = input.opportunities.filter((o) => OPEN_OPPORTUNITY_STAGES.has(o.stage)).length;
-  const lifetimeRevenue = input.opportunities
-    .filter((o) => o.stage === "won")
-    .reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
-  const outstandingBalance = docs
-    .filter((d) => OUTSTANDING_DOC_STATUSES.has(d.status))
-    .reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0);
+  /** Won-opportunity CRM value — a pipeline figure, kept SEPARATE from invoiced revenue. */
+  const wonOpportunityValue = round2(
+    input.opportunities.filter((o) => o.stage === "won").reduce((sum, o) => sum + (Number(o.amount) || 0), 0),
+  );
+  // Collected revenue = cash collected on invoices (total − balance). $0 until
+  // invoices are synced from QuickBooks — honest, and consistent with the count.
+  const collectedRevenue = round2(
+    invoices.reduce((sum, d) => sum + Math.max(0, (Number(d.totalAmount) || 0) - (Number(d.balance) || 0)), 0),
+  );
+  // Outstanding balance = unpaid invoice balances (NOT open estimates).
+  const outstandingBalance = round2(invoices.reduce((sum, d) => sum + (Number(d.balance) || 0), 0));
+  /** Total invoiced (gross), for reference alongside collected revenue. */
+  const invoicedTotal = round2(invoices.reduce((sum, d) => sum + (Number(d.totalAmount) || 0), 0));
   const lastActivityAt = maxDate([
     ...input.opportunities.flatMap((o) => [o.createdAt, o.closedAt]),
     ...docs.map((d) => d.txnDate),
@@ -152,8 +169,14 @@ export function assembleCustomerRelations(input: AssembleInput) {
       estimates: estimates.length,
       invoices: invoices.length,
       properties: input.propertyCount,
-      lifetimeRevenue,
+      /** Cash collected on invoices (total − balance). Invoice-derived. */
+      collectedRevenue,
+      /** Unpaid invoice balances. Invoice-derived. */
       outstandingBalance,
+      /** Gross invoiced amount (reference). */
+      invoicedTotal,
+      /** Won-opportunity CRM value — pipeline, NOT invoiced revenue. Labelled separately. */
+      wonOpportunityValue,
       lastActivityAt,
     },
   };
