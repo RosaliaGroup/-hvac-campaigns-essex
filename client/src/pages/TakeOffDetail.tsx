@@ -4,6 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { extractPDFPages, buildSelectedText, buildImageBlocks, type ExtractedPage } from "@/lib/pdfExtract";
 import { DEFAULT_PRICEBOOK, matchPricebook, CSI_DIVISIONS, type PricebookEntry } from "@/lib/pricebook";
 import { runVerification } from "@/lib/takeoffVerify";
+import { batchSignature, loadBatches, saveBatch, clearBatches, tryAcquireRun, releaseRun } from "@/lib/takeoffBatchCache";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,6 +202,7 @@ export default function TakeOffDetail() {
 
   // Data from DB
   const { data: projectData, isLoading: loadingProject, refetch } = trpc.takeoffs.getById.useQuery({ id: projectId }, { enabled: projectId > 0 });
+  const analyzeBatchMutation = trpc.takeoffs.analyzeBatch.useMutation();
   const saveMutation = trpc.takeoffs.saveItems.useMutation();
   const updateMutation = trpc.takeoffs.update.useMutation();
   const veRunMutation = trpc.takeoffs.runVE.useMutation();
@@ -239,17 +241,8 @@ export default function TakeOffDetail() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const apiKeyRef = useRef<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initializedRef = useRef(false);
-
-  // Fetch API key on mount
-  useEffect(() => {
-    fetch("/.netlify/functions/get-api-config")
-      .then((r) => r.json())
-      .then((d) => { apiKeyRef.current = d.apiKey || null; })
-      .catch(() => {});
-  }, []);
 
   // Load project data from DB
   useEffect(() => {
@@ -370,6 +363,48 @@ export default function TakeOffDetail() {
     }
   };
 
+  // Persist the freshly-computed analysis directly (avoids stale-state reads),
+  // then clear the resume cache ONLY on a successful save. If the save fails the
+  // cache is kept so a re-run resumes from where it left off.
+  const persistAnalysis = async (pricedRows: TakeOffRow[], allFindings: Finding[]): Promise<boolean> => {
+    setRows(pricedRows);
+    setFindings(allFindings);
+    setDirty(true);
+    try {
+      await saveMutation.mutateAsync({
+        projectId,
+        items: pricedRows.map((r) => ({
+          category: r.category,
+          description: r.description,
+          tag: r.tag,
+          qty: r.qty,
+          unit: r.unit,
+          vendor: r.vendor,
+          model: r.model,
+          specs: r.specs,
+          source: r.source,
+          confidence: r.confidence,
+          unitPrice: r.unitPrice,
+          notes: r.notes,
+        })),
+        findings: allFindings.map((f) => ({
+          type: f.severity,
+          title: f.title,
+          body: f.detail,
+          source: "",
+        })),
+      });
+      setLastSaved(new Date());
+      setDirty(false);
+      clearBatches(projectId, analysisMode);
+      log("Saved to database.");
+      return true;
+    } catch (err: any) {
+      log(`Save error: ${err.message}. Analysis is cached — re-run to resume from where it left off.`);
+      return false;
+    }
+  };
+
   // ── File handling ─────────────────────────────────────────────────────────
   const handleFiles = useCallback(async (fileList: FileList | null) => {
     if (!fileList) return;
@@ -431,27 +466,31 @@ export default function TakeOffDetail() {
   }, [files.length]);
 
   // ── Helper: call Claude with retry ────────────────────────────────────────
-  const callClaude = async (system: string, messages: any[]): Promise<string> => {
-    if (!apiKeyRef.current) {
-      const cfgRes = await fetch("/.netlify/functions/get-api-config");
-      const cfg = await cfgRes.json();
-      apiKeyRef.current = cfg.apiKey || null;
+  // Calls Claude via the authenticated Railway tRPC mutation (takeoffs.analyzeBatch).
+  // The ANTHROPIC_API_KEY stays server-side and is never exposed to the browser.
+  // The model is chosen server-side from `mode` (quick = cost-efficient Sonnet,
+  // precise = stronger model), with automatic fallback for retired/unavailable
+  // models and server-side retry of transient errors. On a rate-limit we wait
+  // once client-side and retry, preserving the prior UX.
+  const callClaude = async (system: string, messages: any[], mode: "quick" | "precise" = analysisMode): Promise<string> => {
+    const runOnce = () => analyzeBatchMutation.mutateAsync({ mode, system, messages, maxTokens: 16000 });
+    try {
+      const data = await runOnce();
+      return data.text || "";
+    } catch (err: any) {
+      if (err?.data?.code === "TOO_MANY_REQUESTS") {
+        log("Rate limit hit — waiting 60 seconds then retrying…");
+        await new Promise((resolve) => setTimeout(resolve, 60000));
+        log("Retrying…");
+        try {
+          const data = await runOnce();
+          return data.text || "";
+        } catch (err2: any) {
+          throw new Error(err2?.message || "Analysis failed after retry. Please try again.");
+        }
+      }
+      throw new Error(err?.message || "Analysis failed. Please try again.");
     }
-    if (!apiKeyRef.current) throw new Error("API key not available");
-
-    const headers = { "Content-Type": "application/json", "x-api-key": apiKeyRef.current, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" };
-    const body = JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 16000, system, messages });
-
-    let res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body });
-    if (res.status === 429) {
-      log("Rate limit hit — waiting 60 seconds then retrying…");
-      await new Promise(resolve => setTimeout(resolve, 60000));
-      log("Retrying…");
-      res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body });
-    }
-    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-    const data = await res.json();
-    return data.content?.[0]?.text || "";
   };
 
   // ── STEP 2 + 3: Analyze with Claude (batched) + Reconcile ─────────────────
@@ -536,11 +575,26 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
         batches.push(selected);
       }
 
+      // Resume support: skip batches already completed in a prior run (same
+      // project, mode and page selection). Cache is keyed by a signature so a
+      // changed page selection starts fresh.
+      const sig = batchSignature(analysisMode, selected.map((p) => p.pageNum));
+      const cached = loadBatches(projectId, analysisMode, sig);
+      const cachedCount = Object.keys(cached).length;
+      if (cachedCount > 0) log(`Resuming: ${cachedCount} of ${batches.length} batch(es) already completed — skipping those.`);
+
       const batchResults: string[] = [];
 
       for (let b = 0; b < batches.length; b++) {
         const batch = batches[b];
         const batchLabel = needsBatching ? ` (batch ${b + 1}/${batches.length})` : "";
+
+        if (cached[String(b)] !== undefined) {
+          batchResults.push(cached[String(b)]);
+          log(`Batch ${b + 1} restored from cache (${cached[String(b)].length} chars).`);
+          continue;
+        }
+
         log(`Sending pages ${batch.map((p) => p.pageNum).join(", ")} to Claude${batchLabel}…`);
 
         // Build message content: ALWAYS send both images + text
@@ -554,6 +608,7 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
 
         const text = await callClaude(systemPrompt, [{ role: "user", content }]);
         batchResults.push(text);
+        saveBatch(projectId, analysisMode, sig, b, text);
         log(`Batch ${b + 1} response received (${text.length} chars).`);
       }
 
@@ -589,6 +644,9 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
       log("Parsing results…");
 
       const parsed = safeParseJSON(finalText);
+      if (!parsed.items || parsed.items.length === 0) {
+        throw new Error("The AI returned no line items for these pages. Please try again, or switch analysis mode.");
+      }
       const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
         id: uid(),
         category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
@@ -619,14 +677,11 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
       log("Running verification checks…");
       const verifyFindings = runVerification(pricedRows);
 
-      setRows(pricedRows);
-      setFindings([...newFindings, ...verifyFindings]);
-      setDirty(true);
       setAnalysisStep("idle");
       log(`Done! ${pricedRows.length} line items, ${newFindings.length + verifyFindings.length} findings (${verifyFindings.length} from verification).`);
 
-      // Auto-save immediately after analysis
-      setTimeout(() => saveToDb(), 500);
+      // Persist the freshly-computed analysis, then clear the resume cache on success.
+      await persistAnalysis(pricedRows, [...newFindings, ...verifyFindings]);
     } catch (err: any) {
       log(`Error: ${err.message}`);
       setAnalysisStep("idle");
@@ -769,6 +824,9 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
       // Parse and apply pricebook + verification (same as quick mode)
       log("Parsing results…");
       const parsed = safeParseJSON(finalText);
+      if (!parsed.items || parsed.items.length === 0) {
+        throw new Error("The AI returned no line items for these pages. Please try again, or switch analysis mode.");
+      }
       const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
         id: uid(),
         category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
@@ -796,12 +854,9 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
       log("Running verification checks…");
       const verifyFindings = runVerification(pricedRows);
 
-      setRows(pricedRows);
-      setFindings([...newFindings, ...verifyFindings]);
-      setDirty(true);
       setAnalysisStep("idle");
       log(`Done! ${pricedRows.length} line items, ${newFindings.length + verifyFindings.length} findings. [Precise mode — 5 agents]`);
-      setTimeout(() => saveToDb(), 500);
+      await persistAnalysis(pricedRows, [...newFindings, ...verifyFindings]);
     } catch (err: any) {
       log(`Error: ${err.message}`);
       setAnalysisStep("idle");
@@ -810,10 +865,16 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
     }
   };
 
-  // Dispatch to correct analysis mode
+  // Dispatch to correct analysis mode. Blocks duplicate concurrent runs for the
+  // same Take-Off in the current browser session, and releases the lock when the
+  // run settles.
   const runAnalysis = () => {
-    if (analysisMode === "precise") analyzeMultiAgent();
-    else analyzeWithClaude();
+    if (!tryAcquireRun(projectId)) {
+      log("Analysis is already running for this take-off in this browser session.");
+      return;
+    }
+    const run = analysisMode === "precise" ? analyzeMultiAgent : analyzeWithClaude;
+    void run().finally(() => releaseRun(projectId));
   };
 
   // ── Row editing ───────────────────────────────────────────────────────────
