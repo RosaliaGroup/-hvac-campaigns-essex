@@ -21,6 +21,7 @@ import { paymentRouter } from "./payment-router";
 import { runCampaignAnalysis } from "./services/campaignEngine";
 import { generateSocialPost } from "./integrations/ai-content-generator";
 import { publishSocialPost, retrySocialPost, PublishError } from "./services/socialPublisher";
+import * as marketingCanary from "./services/marketingCanary";
 import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelationships } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
@@ -654,6 +655,67 @@ export const appRouter = router({
         await db.deleteSocialPost(input.id);
         return { success: true };
       }),
+
+    // ── Marketing Publishing Canary (ADMIN ONLY, temporary) ──────────────────
+    // Exercises the live publish path against ONE connected destination using
+    // fixed, clearly-labeled test content. No real content, no schema change.
+    canary: router({
+      status: adminProcedure.query(async () => {
+        return await marketingCanary.getStatus();
+      }),
+
+      runSuccess: adminProcedure
+        .input(
+          z.object({
+            platform: z.enum(marketingCanary.CANARY_PLATFORMS),
+            // The UI confirmation checkbox — must be explicitly true.
+            confirmed: z.literal(true),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await marketingCanary.runSuccessCanary(input.platform, ctx.user?.id ?? null, input.confirmed);
+          } catch (err) {
+            if (err instanceof marketingCanary.CanaryError) throw new Error(err.message);
+            throw err;
+          }
+        }),
+
+      runFailureRetry: adminProcedure
+        .input(
+          z.object({
+            platform: z.enum(marketingCanary.CANARY_PLATFORMS),
+            confirmed: z.literal(true),
+          })
+        )
+        .mutation(async ({ input, ctx }) => {
+          try {
+            return await marketingCanary.runFailureRetryCanary(input.platform, ctx.user?.id ?? null, input.confirmed);
+          } catch (err) {
+            if (err instanceof marketingCanary.CanaryError) throw new Error(err.message);
+            throw err;
+          }
+        }),
+
+      audit: adminProcedure.query(async () => {
+        return await marketingCanary.getAudit();
+      }),
+
+      safetyChecks: adminProcedure.query(async () => {
+        return await marketingCanary.runSafetyChecks();
+      }),
+
+      deleteExternal: adminProcedure
+        .input(z.object({ id: z.number().int() }))
+        .mutation(async ({ input }) => {
+          try {
+            return await marketingCanary.deleteCanaryExternal(input.id);
+          } catch (err) {
+            if (err instanceof marketingCanary.CanaryError) throw new Error(err.message);
+            throw err;
+          }
+        }),
+    }),
   }),
 
   // Lead Scoring endpoints

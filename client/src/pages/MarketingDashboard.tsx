@@ -24,6 +24,8 @@ import CampaignLibrary from "@/components/CampaignLibrary";
 import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
+import MarketingCanaryPanel from "@/components/MarketingCanaryPanel";
+import { isCanaryAdmin } from "@/lib/marketingCanary";
 import { useLocation } from "wouter";
 import { Slider } from "@/components/ui/slider";
 import { trpc } from "@/lib/trpc";
@@ -462,12 +464,13 @@ export default function MarketingDashboard() {
 
         {/* Main Dashboard Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className={`grid w-full ${isCanaryAdmin(user) ? "grid-cols-6" : "grid-cols-5"}`}>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
             <TabsTrigger value="posts">Posts</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
+            {isCanaryAdmin(user) && <TabsTrigger value="canary">Canary</TabsTrigger>}
           </TabsList>
 
           {/* Overview Tab */}
@@ -881,6 +884,12 @@ onClick={() => window.open('https://business.facebook.com/latest/home?nav_ref=bm
               </CardContent>
             </Card>
           </TabsContent>
+
+          {isCanaryAdmin(user) && (
+            <TabsContent value="canary" className="space-y-6">
+              <MarketingCanaryPanel />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
       </div>
