@@ -5,9 +5,6 @@
 [functions]
   node_bundler = "esbuild"
 
-[functions."takeoff-analyze"]
-  included_files = []
-
 # Edge Function: inject correct SEO meta tags per-route into the HTML
 [[edge_functions]]
   function = "inject-meta"

@@ -1,0 +1,130 @@
+import { beforeEach, describe, expect, it } from "vitest";
+import {
+  batchCacheKey,
+  batchSignature,
+  computeBatchId,
+  hashString,
+  loadBatches,
+  saveBatch,
+  clearBatches,
+  tryAcquireRun,
+  releaseRun,
+  isRunActive,
+  __resetRunLockForTests,
+} from "./takeoffBatchCache";
+
+/** Minimal in-memory Storage for the node test environment. */
+function fakeStorage(): Storage {
+  const m = new Map<string, string>();
+  return {
+    get length() { return m.size; },
+    clear: () => m.clear(),
+    getItem: (k: string) => (m.has(k) ? m.get(k)! : null),
+    key: (i: number) => Array.from(m.keys())[i] ?? null,
+    removeItem: (k: string) => { m.delete(k); },
+    setItem: (k: string, v: string) => { m.set(k, v); },
+  } as Storage;
+}
+
+describe("batch cache key + signature", () => {
+  it("is versioned and tied to project + mode", () => {
+    expect(batchCacheKey(42, "quick")).toBe("takeoff-batches:v1:42:quick");
+    expect(batchCacheKey(42, "precise")).toBe("takeoff-batches:v1:42:precise");
+  });
+  it("signature changes when page selection changes", () => {
+    expect(batchSignature("quick", [1, 2, 3, 4])).not.toBe(batchSignature("quick", [1, 2, 3, 5]));
+    expect(batchSignature("quick", [1, 2])).not.toBe(batchSignature("precise", [1, 2]));
+  });
+});
+
+describe("idempotency batchId", () => {
+  const payload = { system: "sys", messages: [{ role: "user", content: "pages 1-4" }] };
+
+  it("hashString is deterministic and 8 hex chars", () => {
+    expect(hashString("abc")).toBe(hashString("abc"));
+    expect(hashString("abc")).toMatch(/^[0-9a-f]{8}$/);
+    expect(hashString("abc")).not.toBe(hashString("abd"));
+  });
+
+  it("is stable for identical (project, mode, payload) — so a retry reuses the cache", () => {
+    expect(computeBatchId(42, "quick", payload)).toBe(computeBatchId(42, "quick", payload));
+  });
+
+  it("changes when the document/page content changes (no stale reuse)", () => {
+    const other = { system: "sys", messages: [{ role: "user", content: "pages 5-8" }] };
+    expect(computeBatchId(42, "quick", payload)).not.toBe(computeBatchId(42, "quick", other));
+  });
+
+  it("changes across project and mode", () => {
+    expect(computeBatchId(42, "quick", payload)).not.toBe(computeBatchId(43, "quick", payload));
+    expect(computeBatchId(42, "quick", payload)).not.toBe(computeBatchId(42, "precise", payload));
+  });
+
+  it("carries no document text (opaque digest, bounded length)", () => {
+    const id = computeBatchId(42, "quick", { system: "SECRET-DOC", messages: [{ x: "customer address" }] });
+    expect(id).not.toContain("SECRET-DOC");
+    expect(id).not.toContain("customer address");
+    expect(id.length).toBeLessThan(60);
+  });
+});
+
+describe("resume cache", () => {
+  let store: Storage;
+  beforeEach(() => { store = fakeStorage(); });
+
+  it("round-trips completed batches", () => {
+    const sig = batchSignature("quick", [1, 2, 3, 4, 5, 6, 7, 8]);
+    saveBatch(1, "quick", sig, 0, "batch-0-text", store);
+    saveBatch(1, "quick", sig, 1, "batch-1-text", store);
+    const loaded = loadBatches(1, "quick", sig, store);
+    expect(loaded).toEqual({ "0": "batch-0-text", "1": "batch-1-text" });
+  });
+
+  it("ignores cache when the signature (page selection) changed", () => {
+    const sigA = batchSignature("quick", [1, 2, 3, 4]);
+    const sigB = batchSignature("quick", [5, 6, 7, 8]);
+    saveBatch(1, "quick", sigA, 0, "old", store);
+    expect(loadBatches(1, "quick", sigB, store)).toEqual({}); // invalidated
+  });
+
+  it("scopes cache per mode", () => {
+    const sig = batchSignature("quick", [1, 2]);
+    saveBatch(1, "quick", sig, 0, "q", store);
+    // precise uses a different key -> empty
+    expect(loadBatches(1, "precise", batchSignature("precise", [1, 2]), store)).toEqual({});
+  });
+
+  it("clearBatches removes the cache (only called after successful save)", () => {
+    const sig = batchSignature("quick", [1, 2]);
+    saveBatch(1, "quick", sig, 0, "q", store);
+    clearBatches(1, "quick", store);
+    expect(loadBatches(1, "quick", sig, store)).toEqual({});
+  });
+
+  it("returns {} on corrupt cache", () => {
+    store.setItem(batchCacheKey(1, "quick"), "not json");
+    expect(loadBatches(1, "quick", "sig", store)).toEqual({});
+  });
+});
+
+describe("duplicate-run lock", () => {
+  beforeEach(() => __resetRunLockForTests());
+
+  it("prevents a second concurrent run for the same take-off", () => {
+    expect(tryAcquireRun(7)).toBe(true);
+    expect(isRunActive(7)).toBe(true);
+    expect(tryAcquireRun(7)).toBe(false); // blocked
+  });
+
+  it("allows a different take-off to run concurrently", () => {
+    expect(tryAcquireRun(7)).toBe(true);
+    expect(tryAcquireRun(8)).toBe(true);
+  });
+
+  it("allows re-running after release", () => {
+    expect(tryAcquireRun(7)).toBe(true);
+    releaseRun(7);
+    expect(isRunActive(7)).toBe(false);
+    expect(tryAcquireRun(7)).toBe(true);
+  });
+});

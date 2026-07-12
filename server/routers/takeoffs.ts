@@ -10,6 +10,8 @@ import {
   takeoffFiles,
 } from "../../drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
+import { callAnthropicWithFallback, estimateCostUsd } from "../_core/anthropic";
+import { takeoffIdempotency } from "../_core/idempotency";
 
 const itemSchema = z.object({
   category: z.string(),
@@ -34,6 +36,94 @@ const findingSchema = z.object({
 });
 
 export const takeoffsRouter = router({
+  // Analyze ONE batch of drawing pages with Claude. The browser drives the
+  // 4-page batching and calls this once per batch (authenticated). The
+  // ANTHROPIC_API_KEY stays server-side and is never returned. Model is chosen
+  // from `mode` with automatic fallback for retired/unavailable models; only
+  // transient errors are retried (see server/_core/anthropic.ts).
+  analyzeBatch: protectedProcedure
+    .input(
+      z.object({
+        // Deterministic idempotency key (Take-Off id + mode + page range +
+        // document checksum) computed client-side. If the browser retries the
+        // same batch after a network blip, the same batchId returns the cached
+        // response instead of billing Anthropic again.
+        batchId: z.string().min(1).max(200),
+        mode: z.enum(["quick", "precise"]).default("quick"),
+        system: z.string().min(1),
+        messages: z.array(z.any()).min(1),
+        maxTokens: z.number().int().positive().max(16000).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (!apiKey) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "The AI service is not configured. Please contact support.",
+        });
+      }
+
+      const startedAt = Date.now();
+      // Idempotent: a completed batchId returns its cached result; an in-flight
+      // one coalesces onto the existing call. Only successes are cached, so a
+      // failed batch can still be retried.
+      const outcome = await takeoffIdempotency.run(
+        input.batchId,
+        () =>
+          callAnthropicWithFallback({
+            apiKey,
+            mode: input.mode,
+            system: input.system,
+            messages: input.messages,
+            maxTokens: input.maxTokens,
+          }),
+        { cacheable: (r) => r.ok },
+      );
+      const result = outcome.value;
+      const durationMs = Date.now() - startedAt;
+      // A new Anthropic call was billed only when this request neither hit the
+      // completed cache nor coalesced onto an in-flight one.
+      const billed = !outcome.cached && !outcome.coalesced;
+
+      // Structured server-only log. Contains the opaque batchId, timing, token
+      // usage and estimated cost — never the prompt, document text, or API key.
+      console.info(
+        JSON.stringify({
+          evt: "takeoff.analyzeBatch",
+          batchId: input.batchId,
+          mode: input.mode,
+          model: result.model ?? null,
+          ok: result.ok,
+          cached: outcome.cached,
+          coalesced: outcome.coalesced,
+          billed,
+          durationMs,
+          inputTokens: result.usage?.inputTokens ?? 0,
+          outputTokens: result.usage?.outputTokens ?? 0,
+          estCostUsd: billed ? estimateCostUsd(result.model, result.usage) : 0,
+          ...(result.ok ? {} : { code: result.code ?? null }),
+        })
+      );
+
+      if (!result.ok) {
+        // Log the raw upstream detail server-side only; never return it (or the key).
+        if (result.detail) {
+          console.error(`[takeoffs.analyzeBatch] batchId=${input.batchId} ${result.code}: ${result.detail}`);
+        }
+        throw new TRPCError({
+          code: result.status === 429 ? "TOO_MANY_REQUESTS" : "INTERNAL_SERVER_ERROR",
+          message: result.error || "AI analysis failed. Please try again.",
+        });
+      }
+
+      return {
+        text: result.text ?? "",
+        model: result.model,
+        cached: outcome.cached || outcome.coalesced,
+      };
+    }),
+
   // List all projects
   list: protectedProcedure.query(async () => {
     const db = await getDb();
@@ -271,39 +361,30 @@ export const takeoffsRouter = router({
       const apiKey = process.env.ANTHROPIC_API_KEY;
       if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 6000,
-          system: `You are an HVAC value engineer. Given a take-off, provide exactly 8 cost-saving suggestions. Mix types: redesign, substitution, scope_reduction, sequencing. Order by estimatedSavings descending.
+      const veResult = await callAnthropicWithFallback({
+        apiKey,
+        mode: "quick",
+        maxTokens: 6000,
+        system: `You are an HVAC value engineer. Given a take-off, provide exactly 8 cost-saving suggestions. Mix types: redesign, substitution, scope_reduction, sequencing. Order by estimatedSavings descending.
 
 Return ONLY a JSON array with exactly 8 objects. No wrapping object, no preamble, no explanation — just the array:
 [
 {"type":"substitution","title":"X","currentSpec":"X","alternativeSpec":"X","estimatedSavings":5000,"savingsPercent":8,"tradeOffs":"X","codeCompliant":true,"affectedItems":["X"],"implementationNotes":"X"},
 ...7 more items...
 ]`,
-          messages: [
-            {
-              role: "user",
-              content: `Project: ${project?.name || "HVAC"}\nLocation: ${project?.location || "NJ"}\n\nTAKE-OFF SUMMARY:\n${compactItems}\n\nTOTAL DIRECT COST: $${totalCost.toFixed(0)}\n\nReturn exactly 8 VE suggestions as a JSON array.`,
-            },
-          ],
-        }),
+        messages: [
+          {
+            role: "user",
+            content: `Project: ${project?.name || "HVAC"}\nLocation: ${project?.location || "NJ"}\n\nTAKE-OFF SUMMARY:\n${compactItems}\n\nTOTAL DIRECT COST: $${totalCost.toFixed(0)}\n\nReturn exactly 8 VE suggestions as a JSON array.`,
+          },
+        ],
       });
 
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Anthropic API error: ${err}`);
+      if (!veResult.ok) {
+        throw new Error(veResult.error || "Anthropic API error");
       }
 
-      const data = await res.json();
-      const text = data.content?.[0]?.text || "";
+      const text = veResult.text || "";
       console.log("[VE] Response length:", text.length, "Last 100 chars:", text.slice(-100));
 
       const typeFields = text.match(/"type"\s*:\s*"[^"]+"/g);
