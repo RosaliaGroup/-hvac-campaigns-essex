@@ -150,6 +150,42 @@ describe("buildContactFromEstimate", () => {
     expect(c.email).toBe("billing@acme.test");
     expect(c.address).toBeNull();
   });
+
+  it("company via QBO CompanyName: isCompany=true and person fields cleared", () => {
+    const c = buildContactFromEstimate(estimate(), {
+      Id: "5",
+      DisplayName: "Acme HVAC LLC",
+      CompanyName: "Acme HVAC LLC",
+      GivenName: "Al",
+      FamilyName: "Ace",
+    });
+    expect(c.isCompany).toBe(true);
+    expect(c.companyName).toBe("Acme HVAC LLC");
+    expect(c.displayName).toBe("Acme HVAC LLC");
+    expect(c.firstName).toBeNull();
+    expect(c.lastName).toBeNull();
+  });
+
+  it("composite person: parses the clean name + project ref, withholds the composite", () => {
+    const e = { ...estimate(), CustomerRef: { name: "PN#165 I Cynthia Rodriguez I 36 Stuyvesant Rd, Teaneck, NJ 07666" } };
+    const c = buildContactFromEstimate(e, null);
+    expect(c.displayName).toBe("Cynthia Rodriguez");
+    expect(c.displayName).not.toMatch(/ I |\|/);
+    expect(c.nameConfident).toBe(true);
+    expect(c.isCompany).toBe(false);
+    expect(c.projectReference).toBe("PN#165");
+    expect(c.rawDisplayName).toContain("PN#165 I Cynthia Rodriguez");
+  });
+
+  it("low-confidence composite / bare project code: withholds the name (nameConfident=false)", () => {
+    for (const raw of ["PN-220-C", "PN#500 I 12 I 34"]) {
+      const c = buildContactFromEstimate({ ...estimate(), CustomerRef: { name: raw } }, null);
+      expect(c.displayName).toBe("");
+      expect(c.nameConfident).toBe(false);
+      expect(c.isCompany).toBe(false);
+      expect(c.rawDisplayName).toBe(raw);
+    }
+  });
 });
 
 describe("buildEstimateQuery", () => {

@@ -114,7 +114,7 @@ function incomingFromContact(contact: EstimateContactInput): IncomingCustomerFie
  * when the customer has no property with the same street line yet, so repeated
  * syncs never create duplicate service locations.
  */
-async function ensureServiceProperty(
+export async function ensureServiceProperty(
   db: Db,
   customerId: number,
   addr: ContactAddress | null,
@@ -199,7 +199,7 @@ async function recordCustomerConflicts(
  * fields, log conflicts (never overwrite), attach the service address, and
  * refresh the QuickBooks link/timestamp.
  */
-async function enrichExistingCustomer(
+export async function enrichExistingCustomer(
   db: Db,
   customerId: number,
   contact: EstimateContactInput,
@@ -290,7 +290,7 @@ async function enrichLinkedCustomer(db: Db, customerId: number, estimate: QboEst
  * existing contact is matched, its empty fields are filled from QuickBooks and
  * any conflicting values are logged (never overwritten).
  */
-async function resolveOrCreateContact(
+export async function resolveOrCreateContact(
   db: Db,
   estimate: QboEstimate,
   now: Date,
@@ -352,18 +352,50 @@ async function resolveOrCreateContact(
   }
 
   // 5) No match — auto-create the contact from the QuickBooks record.
-  const name = contact.firstName || contact.lastName ? { firstName: contact.firstName, lastName: contact.lastName } : splitName(contact.displayName);
+  // Company vs structured-person vs confident-single-name vs unknown-identity.
+  // We NEVER split a company name or a low-confidence composite into person
+  // fields, and NEVER store the raw composite as the CRM name.
+  let firstName: string | null;
+  let lastName: string | null;
+  let type: "residential" | "commercial";
+  if (contact.isCompany) {
+    // Company: companyName only; person fields stay NULL; commercial.
+    firstName = null;
+    lastName = null;
+    type = "commercial";
+  } else if (contact.firstName || contact.lastName) {
+    // Structured / confidently-parsed person name.
+    firstName = contact.firstName;
+    lastName = contact.lastName;
+    type = "residential";
+  } else if (contact.nameConfident && contact.displayName) {
+    // Confident single-string person name — safe to split.
+    const s = splitName(contact.displayName);
+    firstName = s.firstName;
+    lastName = s.lastName;
+    type = "residential";
+  } else {
+    // Low-confidence composite / unknown identity: do NOT invent person fields
+    // and do NOT use the composite. buildDisplayName falls back to email/phone.
+    firstName = null;
+    lastName = null;
+    type = "residential";
+  }
+  // When the real name could not be determined, flag for human review instead of
+  // guessing. The raw composite is preserved in the conflict row's qboValue.
+  const nameNeedsReview = !contact.isCompany && !contact.nameConfident;
+
   const displayName = buildDisplayName({
     companyName: contact.companyName,
-    firstName: name.firstName,
-    lastName: name.lastName,
+    firstName,
+    lastName,
     email: contact.email,
     phone: contact.phone,
   });
   const [inserted] = await db.insert(customers).values({
-    type: contact.companyName ? "commercial" : "residential",
-    firstName: name.firstName,
-    lastName: name.lastName,
+    type,
+    firstName,
+    lastName,
     companyName: contact.companyName,
     displayName,
     email: contact.email,
@@ -381,9 +413,22 @@ async function resolveOrCreateContact(
     quickbooksSyncStatus: qbCustomerId ? "synced" : "not_synced",
     quickbooksSyncedAt: qbCustomerId ? now : null,
     quickbooksCustomerUpdatedAt: contact.quickbooksUpdatedAt,
+    hasQboConflicts: nameNeedsReview,
   });
   const customerId = Number((inserted as { insertId?: number }).insertId);
-  await ensureServiceProperty(db, customerId, contact.serviceAddress, contact.companyName ? "commercial" : "residential");
+  if (nameNeedsReview) {
+    // Surface the withheld raw name for a human to resolve (never auto-applied).
+    await db.insert(customerSyncConflicts).values({
+      customerId,
+      quickbooksCustomerId: qbCustomerId,
+      fieldName: "displayName",
+      conflictType: "overwrite_prevented",
+      crmValue: displayName,
+      qboValue: contact.rawDisplayName,
+      status: "open",
+    });
+  }
+  await ensureServiceProperty(db, customerId, contact.serviceAddress, type);
   return { customerId, created: true, displayName };
 }
 
