@@ -12,6 +12,9 @@ export default defineConfig({
       "@assets": path.resolve(templateRoot, "attached_assets"),
     },
   },
+  // Use React's automatic JSX runtime so component .tsx files render in tests
+  // without an explicit `import React` (matches the vite plugin-react build).
+  esbuild: { jsx: "automatic" },
   test: {
     environment: "node",
     // Server tests + framework-free client logic (pure helpers, no DOM).
