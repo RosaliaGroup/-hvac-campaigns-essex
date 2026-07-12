@@ -149,6 +149,8 @@ function assertCommercial(opp: { recordType: string | null } | undefined): void 
 // ─────────────────────────────────────────────────────────────────────────────
 
 const QA_TEMPLATE_NAME = "Commercial Opportunity QA";
+/** Stable unique key for the system QA template — makes seeding race-safe. */
+const QA_SYSTEM_KEY = "commercial_qa";
 /** Items with `required` are gates for Convert-to-Job (configurable thereafter). */
 const QA_CHECKLIST_ITEMS: Array<{ label: string; required?: boolean }> = [
   { label: "Members assigned" },
@@ -191,28 +193,46 @@ async function ensureStagesSeeded(db: Db) {
   );
 }
 
-/** Insert the Commercial QA checklist template if absent. Returns its id. Idempotent. */
+/**
+ * Insert the Commercial QA checklist template if absent. Returns its id.
+ * Idempotent AND concurrency-safe: a plain check-then-insert on the (non-unique)
+ * name let two concurrent first-time seeds each insert a duplicate template. We
+ * key off the UNIQUE `systemKey` and converge with ON DUPLICATE KEY UPDATE, so
+ * the second racer's insert is a no-op that keeps the single existing row. Items
+ * are likewise upserted against the UNIQUE (templateId, sortOrder) slot, so a
+ * concurrent seed never duplicates the checklist. (Mirrors how stage seeding is
+ * protected by unique(pipelineKey, stageKey).)
+ */
 async function ensureQaTemplateSeeded(db: Db): Promise<number> {
-  const existing = (
+  // Converge to exactly one template row on the unique systemKey.
+  await db
+    .insert(opportunityChecklistTemplates)
+    .values({
+      name: QA_TEMPLATE_NAME,
+      systemKey: QA_SYSTEM_KEY,
+      description: "Standard commercial bid readiness checklist.",
+      isSystem: true,
+    })
+    .onDuplicateKeyUpdate({ set: { systemKey: QA_SYSTEM_KEY } }); // no-op: keeps the existing row
+  const templateId = (
     await db
       .select({ id: opportunityChecklistTemplates.id })
       .from(opportunityChecklistTemplates)
-      .where(eq(opportunityChecklistTemplates.name, QA_TEMPLATE_NAME))
+      .where(eq(opportunityChecklistTemplates.systemKey, QA_SYSTEM_KEY))
       .limit(1)
-  )[0];
-  if (existing) return existing.id;
-  const res = await db
-    .insert(opportunityChecklistTemplates)
-    .values({ name: QA_TEMPLATE_NAME, description: "Standard commercial bid readiness checklist.", isSystem: true });
-  const templateId = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
-  await db.insert(opportunityChecklistTemplateItems).values(
-    QA_CHECKLIST_ITEMS.map((it, i) => ({
-      templateId,
-      label: it.label,
-      sortOrder: i + 1,
-      requiredForConversion: !!it.required,
-    })),
-  );
+  )[0]!.id;
+  // Upsert each item into its (templateId, sortOrder) slot — idempotent + race-safe.
+  await db
+    .insert(opportunityChecklistTemplateItems)
+    .values(
+      QA_CHECKLIST_ITEMS.map((it, i) => ({
+        templateId,
+        label: it.label,
+        sortOrder: i + 1,
+        requiredForConversion: !!it.required,
+      })),
+    )
+    .onDuplicateKeyUpdate({ set: { label: sql`values(\`label\`)`, requiredForConversion: sql`values(\`requiredForConversion\`)` } });
   return templateId;
 }
 

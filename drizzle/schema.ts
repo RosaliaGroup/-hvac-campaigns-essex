@@ -1709,15 +1709,28 @@ export type InsertOpportunityMember = typeof opportunityMembers.$inferInsert;
  * an opportunity, copying its items into opportunityChecklistItems. Checklists
  * only confirm PROCESS completion — never store structured customer/project data.
  */
-export const opportunityChecklistTemplates = mysqlTable("opportunityChecklistTemplates", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 120 }).notNull(),
-  description: text("description"),
-  isActive: boolean("isActive").default(true).notNull(),
-  isSystem: boolean("isSystem").default(false).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
+export const opportunityChecklistTemplates = mysqlTable(
+  "opportunityChecklistTemplates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+    /**
+     * Stable key for system-seeded templates (e.g. "commercial_qa"); NULL for
+     * user-created templates. Unique so a concurrent seed converges to a single
+     * row instead of inserting duplicates (MySQL allows many NULLs, so
+     * user-created templates are unconstrained).
+     */
+    systemKey: varchar("systemKey", { length: 48 }),
+    description: text("description"),
+    isActive: boolean("isActive").default(true).notNull(),
+    isSystem: boolean("isSystem").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    systemKeyUnique: unique("opportunityChecklistTemplates_systemKey_unique").on(table.systemKey),
+  }),
+);
 export type OpportunityChecklistTemplate = typeof opportunityChecklistTemplates.$inferSelect;
 export type InsertOpportunityChecklistTemplate = typeof opportunityChecklistTemplates.$inferInsert;
 
@@ -1734,6 +1747,12 @@ export const opportunityChecklistTemplateItems = mysqlTable(
   },
   table => ({
     templateIdx: index("opportunityChecklistTemplateItems_templateId_idx").on(table.templateId),
+    // One row per (template, position) so a repeated/concurrent seed upserts each
+    // item in place instead of duplicating the checklist.
+    templateSortUnique: unique("opportunityChecklistTemplateItems_template_sort_unique").on(
+      table.templateId,
+      table.sortOrder,
+    ),
   }),
 );
 export type OpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferSelect;
