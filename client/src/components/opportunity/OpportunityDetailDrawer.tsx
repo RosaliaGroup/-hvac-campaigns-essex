@@ -16,13 +16,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle, Wrench,
+  Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ConvertToJobControl } from "./ConvertToJobControl";
 import { STAGE_META, DOC_STATUS_BADGE, RELATIONSHIP_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate } from "./shared";
-
-/** A candidate property returned when the customer has multiple to choose from. */
-type PropertyChoice = { id: number; label: string | null; addressLine1: string; city: string | null; state: string | null; zip: string | null; isPrimary: boolean };
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -51,7 +48,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   const [valueDraft, setValueDraft] = useState("");
   const [probDraft, setProbDraft] = useState("");
-  const [propChoices, setPropChoices] = useState<PropertyChoice[] | null>(null); // non-null → property picker open
 
   useEffect(() => {
     if (data?.opportunity) {
@@ -76,16 +72,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
   const createTask = trpc.opportunities.createTask.useMutation({ onSuccess: r => { toast({ title: r.gated ? "Task created (SMS gated)" : "Task created" }); invalidate(); }, onError: onErr });
   const completeTask = trpc.opportunities.completeTask.useMutation({ onSuccess: () => invalidate(), onError: onErr });
   const resolveConflict = trpc.opportunities.resolveCustomerConflict.useMutation({ onSuccess: () => { toast({ title: "Conflict resolved" }); invalidate(); }, onError: onErr });
-  const convertToJob = trpc.opportunities.convertToJob.useMutation({
-    onSuccess: res => {
-      if (res.ok === false) { setPropChoices(res.candidates); return; } // ask the user to pick a property
-      setPropChoices(null);
-      toast({ title: res.alreadyConverted ? `Opportunity already linked to ${res.jobNumber}` : `Job ${res.jobNumber} created` });
-      invalidate();
-      utils.jobs.list.invalidate();
-    },
-    onError: onErr,
-  });
 
   const o = data?.opportunity;
   const c = data?.customer;
@@ -157,16 +143,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
               <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => id != null && markWon.mutate({ id })}><Trophy className="h-4 w-4" /> Won</Button>
               <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => id != null && markLost.mutate({ id })}><XCircle className="h-4 w-4" /> Lost</Button>
               <Button variant="outline" size="sm" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
-              {primaryJob ? (
-                <Button variant="outline" size="sm" className="gap-1 text-[#1e3a5f]" onClick={() => navigate(`/jobs/${primaryJob.id}`)}>
-                  <Wrench className="h-4 w-4" /> View Job {primaryJob.jobNumber || `#${primaryJob.id}`}
-                  <Badge variant="secondary" className="ml-1 text-[10px]">{primaryJob.status.replace(/_/g, " ")}</Badge>
-                </Button>
-              ) : (
-                <Button variant="outline" size="sm" className="gap-1" disabled={convertToJob.isPending} onClick={() => id != null && convertToJob.mutate({ id })}>
-                  <Wrench className="h-4 w-4" /> {convertToJob.isPending ? "Converting…" : "Convert to Job"}
-                </Button>
-              )}
+              <ConvertToJobControl opportunityId={id} primaryJob={primaryJob} onConverted={invalidate} />
             </div>
 
             <div className="space-y-5 p-4">
@@ -306,40 +283,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           </div>
         )}
       </SheetContent>
-
-      {/* Property picker — shown only when the customer has multiple properties
-          and none is a clear primary. We never create a property here. */}
-      <Dialog open={propChoices != null} onOpenChange={v => !v && setPropChoices(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Select a service property</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            This customer has more than one property. Choose which one the new job is for.
-          </p>
-          <div className="space-y-2 py-2">
-            {(propChoices ?? []).map(p => (
-              <button
-                key={p.id}
-                disabled={convertToJob.isPending}
-                onClick={() => id != null && convertToJob.mutate({ id, propertyId: p.id })}
-                className="flex w-full flex-col items-start rounded border p-2 text-left text-sm hover:bg-muted disabled:opacity-50"
-              >
-                <span className="font-medium">
-                  {p.label || p.addressLine1}
-                  {p.isPrimary ? <Badge variant="secondary" className="ml-2 text-[10px]">primary</Badge> : null}
-                </span>
-                <span className="text-[11px] text-muted-foreground">
-                  {[p.addressLine1, p.city, p.state, p.zip].filter(Boolean).join(", ")}
-                </span>
-              </button>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setPropChoices(null)}>Cancel</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Sheet>
   );
 }
