@@ -20,8 +20,7 @@ import { coursesRouter } from "./courses-router";
 import { paymentRouter } from "./payment-router";
 import { runCampaignAnalysis } from "./services/campaignEngine";
 import { generateSocialPost } from "./integrations/ai-content-generator";
-import { postToGoogleBusiness } from "./integrations/google-business";
-import { postToFacebook, postToInstagram } from "./integrations/facebook";
+import { publishSocialPost, retrySocialPost, PublishError } from "./services/socialPublisher";
 import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelationships } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
@@ -603,46 +602,49 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Publish a post immediately to the selected platform
+    // Publish a post to the selected platform. Idempotent: reuses an existing
+    // record and never creates a duplicate external post. Persists failures.
     publishPost: protectedProcedure
       .input(
         z.object({
+          // Optional existing socialPosts row to publish/reuse (e.g. a scheduled post).
+          id: z.number().int().optional(),
           platform: z.enum(["facebook", "instagram", "google_business", "nextdoor"] as const),
           content: z.string().min(1),
           contentType: z.string().optional(),
           mediaUrls: z.array(z.string()).optional(),
+          // Clicking "Publish" is an explicit human approval; defaults to approved.
+          approved: z.boolean().optional().default(true),
         })
       )
       .mutation(async ({ input }) => {
-        const credMap = await db.getAiVaCredentials(input.platform === "instagram" ? "facebook" : input.platform);
-        if (!credMap) {
-          throw new Error(`No credentials saved for ${input.platform}. Please configure in AI VA Settings.`);
+        try {
+          const result = await publishSocialPost({
+            id: input.id,
+            platform: input.platform,
+            content: input.content,
+            contentType: input.contentType,
+            mediaUrls: input.mediaUrls,
+            approved: input.approved,
+          });
+          return { success: result.status !== "failed", ...result };
+        } catch (err) {
+          if (err instanceof PublishError) throw new Error(err.message);
+          throw err;
         }
+      }),
 
-        if (input.platform === "google_business") {
-          await postToGoogleBusiness(
-            { accessToken: credMap.accessToken, accountId: credMap.accountId, locationId: credMap.locationId },
-            input.content,
-            input.mediaUrls
-          );
-        } else if (input.platform === "facebook") {
-          await postToFacebook(
-            { accessToken: credMap.accessToken, pageId: credMap.pageId, instagramAccountId: credMap.instagramAccountId },
-            input.content,
-            input.mediaUrls?.[0]
-          );
-        } else if (input.platform === "instagram") {
-          if (!input.mediaUrls?.[0]) throw new Error("Instagram posts require an image URL");
-          await postToInstagram(
-            { accessToken: credMap.accessToken, pageId: credMap.pageId, instagramAccountId: credMap.instagramAccountId },
-            input.content,
-            input.mediaUrls[0]
-          );
-        } else if (input.platform === "nextdoor") {
-          // Nextdoor does not have a public posting API — content is queued for manual posting
-          // The post is saved to DB with status 'scheduled' for manual publishing
+    // Retry a failed post on its existing row (no duplicate post / row).
+    retryPost: protectedProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ input }) => {
+        try {
+          const result = await retrySocialPost(input.id);
+          return { success: result.status !== "failed", ...result };
+        } catch (err) {
+          if (err instanceof PublishError) throw new Error(err.message);
+          throw err;
         }
-        return { success: true };
       }),
 
     // Delete a scheduled post

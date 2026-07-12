@@ -31,7 +31,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Loader2, Trash2, Send, Sparkles } from "lucide-react";
+import { Loader2, Trash2, Send, Sparkles, RefreshCw } from "lucide-react";
 
 const CONTENT_TYPES = [
   { value: "hvac_tip", label: "HVAC Tip" },
@@ -88,6 +88,19 @@ function SocialPostManager() {
       utils.aiVa.listSocialPosts.invalidate();
     },
     onError: (err: any) => toast({ title: "Delete failed", description: err.message, variant: "destructive" }),
+  });
+
+  const retryPost = trpc.aiVa.retryPost.useMutation({
+    onSuccess: (r: any) => {
+      toast({
+        title:
+          r.status === "posted"
+            ? r.alreadyPosted ? "Already published" : "Post published"
+            : r.status === "queued" ? "Queued for manual posting" : "Retry attempted",
+      });
+      utils.aiVa.listSocialPosts.invalidate();
+    },
+    onError: (err: any) => toast({ title: "Retry failed", description: err.message, variant: "destructive" }),
   });
 
   const handleSchedule = () => {
@@ -224,16 +237,32 @@ function SocialPostManager() {
                       )}
                     </div>
                     <p className="text-sm text-foreground line-clamp-3">{post.content}</p>
+                    {post.status === "failed" && post.errorMessage && (
+                      <p className="mt-1 text-xs text-destructive line-clamp-2">{post.errorMessage}</p>
+                    )}
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive flex-shrink-0"
-                    onClick={() => deletePost.mutate({ id: post.id })}
-                    disabled={deletePost.isPending}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {post.status === "failed" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => retryPost.mutate({ id: post.id })}
+                        disabled={retryPost.isPending}
+                        title="Retry publishing"
+                      >
+                        {retryPost.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => deletePost.mutate({ id: post.id })}
+                      disabled={deletePost.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>

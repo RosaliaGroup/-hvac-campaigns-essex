@@ -1,9 +1,11 @@
 /**
  * Google Business Profile Integration
  * Handles posting updates, photos, and managing reviews
+ *
+ * NOTE: postToGoogleBusiness is a pure API caller and DOES NOT write to the
+ * database. Persistence / idempotency / failure handling is owned by
+ * server/services/socialPublisher.ts. It returns the external post id.
  */
-
-import * as db from "../db";
 
 export interface GoogleBusinessCredentials {
   accessToken: string;
@@ -55,19 +57,9 @@ export async function postToGoogleBusiness(
   }
 
   const data = await response.json();
-  
-  // Log post to database
-  await db.createSocialPost({
-    platform: "google_business",
-    content,
-    mediaUrls: imageUrls ? JSON.stringify(imageUrls) : null,
-    postedAt: new Date(),
-    postId: data.name,
-    status: "posted",
-  });
 
   console.log("[Google Business] Post published:", data.name);
-  return data;
+  return String(data.name) as string;
 }
 
 /**

@@ -1,9 +1,12 @@
 /**
  * Facebook/Instagram Integration (Meta Graph API)
  * Handles posting to Facebook Pages and Instagram Business accounts
+ *
+ * NOTE: these functions are pure API callers — they DO NOT write to the
+ * database. Persistence (and idempotency / failure handling) is owned by
+ * server/services/socialPublisher.ts, which is the single writer of
+ * socialPosts rows. Each publish function returns the external post id.
  */
-
-import * as db from "../db";
 
 export interface FacebookCredentials {
   accessToken: string;
@@ -50,19 +53,9 @@ export async function postToFacebook(
   }
 
   const data = await response.json();
-  
-  // Log post to database
-  await db.createSocialPost({
-    platform: "facebook",
-    content,
-    mediaUrls: imageUrl ? JSON.stringify([imageUrl]) : null,
-    postedAt: new Date(),
-    postId: data.id,
-    status: "posted",
-  });
 
   console.log("[Facebook] Post published:", data.id);
-  return data;
+  return String(data.id) as string;
 }
 
 /**
@@ -122,19 +115,9 @@ export async function postToInstagram(
   }
 
   const data = await publishResponse.json();
-  
-  // Log post to database
-  await db.createSocialPost({
-    platform: "instagram",
-    content,
-    mediaUrls: JSON.stringify([imageUrl]),
-    postedAt: new Date(),
-    postId: data.id,
-    status: "posted",
-  });
 
   console.log("[Instagram] Post published:", data.id);
-  return data;
+  return String(data.id) as string;
 }
 
 /**
