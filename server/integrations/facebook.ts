@@ -121,6 +121,25 @@ export async function postToInstagram(
 }
 
 /**
+ * Delete a Facebook post by its external id. Used by the marketing canary
+ * cleanup to remove the visible test post. Returns void on success.
+ */
+export async function deleteFacebookPost(
+  credentials: FacebookCredentials,
+  postId: string
+): Promise<void> {
+  const { accessToken } = credentials;
+  if (!accessToken) throw new Error("Missing Facebook credentials");
+
+  const url = `https://graph.facebook.com/v18.0/${postId}?access_token=${encodeURIComponent(accessToken)}`;
+  const response = await fetch(url, { method: "DELETE" });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Facebook delete error: ${error}`);
+  }
+}
+
+/**
  * Get Facebook Page insights
  */
 export async function getFacebookInsights(
