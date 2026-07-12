@@ -35,6 +35,7 @@ import {
 } from "./opportunityToJob";
 import { evaluateCommercialConversion } from "./commercialConversion";
 import { opportunityPriorityToJobPriority } from "./commercialOpportunitiesLogic";
+import { assertCanEdit } from "./commercialOpportunities";
 import { computeDaysPending } from "../integrations/accounting/estimates";
 import { cancelOpenFollowups, smsFollowupsEnabled } from "../integrations/accounting/followups";
 import { extractSalesDocSignals, deriveDocTypeLabel, deriveWorkCategory } from "@shared/opportunityCategory";
@@ -604,6 +605,11 @@ export const opportunitiesRouter = router({
 
       // Commercial records enforce the structured conversion gate before any write.
       if (isCommercial) {
+        // Assignment-based authorization FIRST — identical to the commercial
+        // preview and edit paths (admin, or owner/estimator/PM/creator/member).
+        // Runs before the gate and before any existing-job return, so an
+        // unauthorized user gets FORBIDDEN and no conversion/job details.
+        await assertCanEdit(db, ctx, input.id);
         const stageKey = oppRow.stageId
           ? (await db.select({ stageKey: opportunityStages.stageKey }).from(opportunityStages).where(eq(opportunityStages.id, oppRow.stageId)).limit(1))[0]?.stageKey ?? null
           : null;

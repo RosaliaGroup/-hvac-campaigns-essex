@@ -14,6 +14,36 @@ import {
 } from "@shared/commercialPipeline";
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Assignment-based authorization (pure) — the single edit/convert rule
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface OpportunityPeople {
+  assignedToId: number | null;
+  estimatorId: number | null;
+  projectManagerId: number | null;
+  createdBy: number | null;
+  memberIds: number[];
+}
+
+/**
+ * Is a member associated with this opportunity? Owner / estimator / project
+ * manager / creator / explicit member. Admins are authorized separately (they
+ * bypass this); viewers never reach a mutation (blocked centrally). This is the
+ * ONE decision used by every commercial edit AND by Convert-to-Job (preview and
+ * execution), so an unassigned member is refused everywhere consistently.
+ */
+export function isAssignmentAuthorized(people: OpportunityPeople, meId: number | null): boolean {
+  if (meId == null) return false;
+  return (
+    people.assignedToId === meId ||
+    people.estimatorId === meId ||
+    people.projectManagerId === meId ||
+    people.createdBy === meId ||
+    people.memberIds.includes(meId)
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Financials — calculated vs overridden margin (never conflate the two)
 // ─────────────────────────────────────────────────────────────────────────────
 

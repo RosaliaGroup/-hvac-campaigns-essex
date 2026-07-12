@@ -53,6 +53,7 @@ import {
   planStageTransition,
   TransitionError,
   computeOpportunityUpdate,
+  isAssignmentAuthorized,
   type StageLike,
 } from "./commercialOpportunitiesLogic";
 import { evaluateCommercialConversion } from "./commercialConversion";
@@ -105,19 +106,12 @@ async function loadOppPeople(db: Db, oppId: number) {
  * or are an explicit member of. Viewers never reach mutations (blocked by the
  * protectedProcedure middleware). Throws FORBIDDEN/NOT_FOUND otherwise.
  */
-async function assertCanEdit(db: Db, ctx: TrpcContext, oppId: number) {
+export async function assertCanEdit(db: Db, ctx: TrpcContext, oppId: number) {
   if (isAdmin(ctx)) return;
   const people = await loadOppPeople(db, oppId);
   if (!people) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
   const me = currentTeamMemberId(ctx);
-  const allowed =
-    me != null &&
-    (people.assignedToId === me ||
-      people.estimatorId === me ||
-      people.projectManagerId === me ||
-      people.createdBy === me ||
-      people.memberIds.includes(me));
-  if (!allowed) {
+  if (!isAssignmentAuthorized(people, me)) {
     throw new TRPCError({ code: "FORBIDDEN", message: "You can only modify opportunities assigned to you." });
   }
 }
@@ -291,7 +285,10 @@ const createInput = z.object({
 
 const listInput = z
   .object({
-    recordType: z.string().default("commercial"),
+    // Server-pinned: the commercial list can ONLY ever query commercial records.
+    // A literal (not a free string) means a crafted request cannot ask for
+    // qbo_residential/other rows; the query below also hardcodes the filter.
+    recordType: z.literal("commercial").default("commercial"),
     search: z.string().max(255).optional(),
     stageId: z.array(z.number().int().positive()).optional(),
     opportunityType: z.array(opportunityTypeSchema).optional(),
@@ -817,7 +814,10 @@ export const commercialOpportunitiesRouter = router({
     const db = await getDb();
     if (!db) return { items: [], total: 0 };
 
-    const conds = [eq(opportunities.recordType, input.recordType as never)];
+    // Hardcoded to "commercial" (never input-derived) so the commercial list —
+    // rows AND the counts/totals below, which reuse this same `where` — can never
+    // return legacy qbo_residential opportunities.
+    const conds = [eq(opportunities.recordType, "commercial" as never)];
     if (input.stageId?.length) conds.push(inArray(opportunities.stageId, input.stageId));
     if (input.opportunityType?.length) conds.push(inArray(opportunities.opportunityType, input.opportunityType as never[]));
     if (input.priority?.length) conds.push(inArray(opportunities.priority, input.priority as never[]));
@@ -1136,11 +1136,15 @@ export const commercialOpportunitiesRouter = router({
   /** Structured Convert-to-Job validation preview (no writes). */
   convertToJobValidate: protectedProcedure
     .input(z.object({ id: z.number().int().positive(), propertyId: z.number().int().positive().optional() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw dbUnavailable();
       const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
-      if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
+      assertCommercial(opp); // commercial-only, consistent with get/update/transition
+      // Same assignment-based authorization as the conversion mutation: an
+      // unauthorized user must not reveal conversion-specific validation (or an
+      // existing job) for an opportunity they cannot edit.
+      await assertCanEdit(db, ctx, input.id);
       const stage = await resolveStage(db, opp.stageId);
       const [customer, propertyCandidates, requiredItems, existing, estimate] = await Promise.all([
         db.select({ id: customers.id }).from(customers).where(eq(customers.id, opp.customerId)).limit(1),
