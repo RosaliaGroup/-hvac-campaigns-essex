@@ -37,13 +37,14 @@ export async function sendTelnyxSms(
   const payload = { from: fromNumber, to, text: message };
   const startedAt = Date.now();
   try {
-    // Structured send log — one line per attempt, greppable as [TelnyxSms]
+    // Structured send log — one line per attempt, greppable as [TelnyxSms].
+    // Deliberately excludes the API key and the message body (Task 11): only
+    // the recipient, sender, and message length are recorded.
     console.log(JSON.stringify({
       tag: "[TelnyxSms] REQUEST",
       to,
       from: fromNumber,
       textLength: message.length,
-      textPreview: message.slice(0, 60),
     }));
 
     const res = await fetch("https://api.telnyx.com/v2/messages", {
@@ -77,13 +78,13 @@ export async function sendTelnyxSms(
       ms,
       telnyxMessageId: messageId ?? null,
       recipientStatus: data?.data?.to?.[0]?.status ?? null,
-      bodyPreview: messageId ? undefined : rawBody.slice(0, 300),
     }));
 
     if (!messageId) {
       // 2xx without an id is anomalous — accepted by SOMETHING, but not
-      // verifiably by Telnyx's message API. Surface it loudly.
-      console.warn(`[TelnyxSms] WARNING: 2xx response but no message id — body: ${rawBody.slice(0, 300)}`);
+      // verifiably by Telnyx's message API. Surface it loudly WITHOUT echoing
+      // the response body (which contains the message text — Task 11).
+      console.warn(`[TelnyxSms] WARNING: 2xx response but no message id (httpStatus=${res.status})`);
     }
 
     return { success: true, messageId };
