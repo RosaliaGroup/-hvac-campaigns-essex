@@ -31,11 +31,19 @@ import {
   mapDocStatusToStage,
   mapEstimateToSalesDoc,
   pickContactMatch,
+  planEstimateOutcome,
+  resolveCustomerIdentity,
   shouldSkipExistingDoc,
+  summarizeCoverage,
   type ContactAddress,
+  type CoverageTotals,
   type EstimateContactInput,
+  type EstimatePlanRow,
   type QboEstimate,
+  type QboCustomerLite,
+  type ResolvedCustomerIdentity,
 } from "./estimates";
+import { parseQboCompositeName } from "../../../shared/qboCompositeName";
 import {
   buildCustomerFieldUpdate,
   planCustomerConflictWrites,
@@ -82,8 +90,15 @@ function emptyResult(): SyncResult {
 }
 
 export interface SyncOptions {
-  /** "backfill" ignores the cursor and re-scans the window; "incremental" uses it. */
-  mode?: "incremental" | "backfill";
+  /**
+   * - "incremental" (default): uses the forward cursor (updated > cursor).
+   * - "backfill": ignores the cursor and re-scans a recent TxnDate window.
+   * - "full_history": ignores BOTH the cursor and the TxnDate window and pulls
+   *   EVERY estimate (all statuses, all ages) to close the coverage gap. It does
+   *   NOT advance the incremental cursor — the cursor stays owned by incremental
+   *   runs so a full-history pass can never regress or corrupt it.
+   */
+  mode?: "incremental" | "backfill" | "full_history";
   sinceDays?: number;
   now?: Date;
   /** Test seam: override the dedicated-connection factory for the advisory lock. */
@@ -290,16 +305,60 @@ async function enrichLinkedCustomer(db: Db, customerId: number, estimate: QboEst
  * existing contact is matched, its empty fields are filled from QuickBooks and
  * any conflicting values are logged (never overwritten).
  */
+/**
+ * Parent/sub-customer aware identity resolution for an estimate.
+ *
+ * Fetches the estimate's QBO customer; if it is a sub-customer/project (QBO
+ * `Job` / `ParentRef`), fetches the authoritative PARENT and builds the contact
+ * from the parent so we match/link on the parent's identity — never on the
+ * project/sub composite. The project reference is preserved from the sub name.
+ * Returns the authoritative QBO id used for exact-linkage matching.
+ */
+export async function resolveEstimateIdentity(
+  estimate: QboEstimate,
+): Promise<{
+  contact: EstimateContactInput;
+  identity: ResolvedCustomerIdentity;
+  authoritativeQboId: string | null;
+  /** True only when the service address came from a verified QBO ShipAddr. */
+  serviceAddressVerified: boolean;
+}> {
+  const subQbId = estimate.CustomerRef?.value ?? null;
+  const subCustomer: QboCustomerLite | null = subQbId ? await quickbooksProvider.fetchQboCustomer(subQbId) : null;
+
+  const parentRefId = subCustomer?.ParentRef?.value ?? null;
+  const isSub = Boolean(subCustomer && (subCustomer.Job === true || parentRefId));
+  // Only spend a second QBO call when this really is a sub-customer.
+  const parentCustomer: QboCustomerLite | null =
+    isSub && parentRefId ? await quickbooksProvider.fetchQboCustomer(parentRefId) : null;
+
+  const identity = resolveCustomerIdentity(subCustomer, parentCustomer);
+  const identityCustomer = identity.isSubCustomer ? parentCustomer ?? subCustomer : subCustomer;
+  const contact = buildContactFromEstimate(estimate, identityCustomer);
+
+  // Preserve the project reference from the sub/composite when the parent has none.
+  if (!contact.projectReference) {
+    const subRef = parseQboCompositeName(subCustomer?.DisplayName ?? estimate.CustomerRef?.name ?? null).projectReference;
+    if (subRef) contact.projectReference = subRef;
+  }
+  // Match/link by the authoritative (parent) QBO id.
+  const authoritativeQboId = identity.authoritativeQboId ?? subQbId;
+  contact.quickbooksCustomerId = authoritativeQboId;
+
+  const ship = identityCustomer?.ShipAddr;
+  const serviceAddressVerified = Boolean(ship && (ship.Line1 || ship.City || ship.PostalCode));
+  return { contact, identity, authoritativeQboId, serviceAddressVerified };
+}
+
 export async function resolveOrCreateContact(
   db: Db,
   estimate: QboEstimate,
   now: Date,
 ): Promise<{ customerId: number; created: boolean; displayName: string }> {
-  const qbCustomerId = estimate.CustomerRef?.value ?? null;
-
-  // Fetch the full QBO customer (best effort) up front — needed to enrich.
-  const qboCustomer = qbCustomerId ? await quickbooksProvider.fetchQboCustomer(qbCustomerId) : null;
-  const contact = buildContactFromEstimate(estimate, qboCustomer);
+  // Parent/sub-customer aware: for a sub-customer/project estimate the contact
+  // is built from the authoritative parent and linked by the parent's QBO id.
+  const { contact, authoritativeQboId } = await resolveEstimateIdentity(estimate);
+  const qbCustomerId = authoritativeQboId;
 
   // 1) Already linked by QuickBooks customer id — the strongest key.
   if (qbCustomerId) {
@@ -721,7 +780,9 @@ async function runSalesDocSync(opts: SyncOptions, now: Date, assertLockHeld?: ()
     return result;
   }
 
-  const cursor = opts.mode === "backfill" ? null : conn.salesDocCursor ?? null;
+  // full_history and backfill both ignore the forward cursor for coverage.
+  const isFullHistory = opts.mode === "full_history";
+  const cursor = opts.mode === "backfill" || isFullHistory ? null : conn.salesDocCursor ?? null;
   let maxSeen: Date | null = cursor;
 
   try {
@@ -730,7 +791,14 @@ async function runSalesDocSync(opts: SyncOptions, now: Date, assertLockHeld?: ()
       // connection died mid-run, MySQL already auto-released the lock, so we must
       // stop rather than keep issuing QBO calls another instance might duplicate.
       assertLockHeld?.();
-      const query = buildEstimateQuery({ cursor, sinceDays, startPosition: page * PAGE_SIZE + 1, pageSize: PAGE_SIZE, now });
+      const query = buildEstimateQuery({
+        cursor,
+        sinceDays,
+        startPosition: page * PAGE_SIZE + 1,
+        pageSize: PAGE_SIZE,
+        now,
+        fullHistory: isFullHistory,
+      });
       const estimates = await quickbooksProvider.fetchEstimates(query);
       for (const e of estimates) {
         assertLockHeld?.(); // re-check the lock before processing each estimate
@@ -742,13 +810,24 @@ async function runSalesDocSync(opts: SyncOptions, now: Date, assertLockHeld?: ()
       await new Promise(r => setTimeout(r, PAGE_THROTTLE_MS));
     }
 
-    // Advance the cursor only on a clean run.
-    await db
-      .update(quickbooksConnections)
-      .set({ salesDocCursor: maxSeen, salesDocLastSyncAt: now, lastSyncAt: now })
-      .where(eq(quickbooksConnections.realmId, conn.realmId));
+    // Cursor safety: a full-history pass must NOT touch the incremental cursor —
+    // it scans everything regardless, and writing a value here (even the global
+    // max) risks regressing the cursor if the run is partial. Incremental/backfill
+    // still advance the cursor on a clean run.
+    if (isFullHistory) {
+      await db
+        .update(quickbooksConnections)
+        .set({ salesDocLastSyncAt: now, lastSyncAt: now })
+        .where(eq(quickbooksConnections.realmId, conn.realmId));
+      result.cursorAdvancedTo = null; // unchanged
+    } else {
+      await db
+        .update(quickbooksConnections)
+        .set({ salesDocCursor: maxSeen, salesDocLastSyncAt: now, lastSyncAt: now })
+        .where(eq(quickbooksConnections.realmId, conn.realmId));
+      result.cursorAdvancedTo = maxSeen ? maxSeen.toISOString() : null;
+    }
     result.ok = true;
-    result.cursorAdvancedTo = maxSeen ? maxSeen.toISOString() : null;
   } catch (e) {
     result.error = (e as Error).message;
   }
@@ -766,4 +845,111 @@ async function runSalesDocSync(opts: SyncOptions, now: Date, assertLockHeld?: ()
   });
   console.log(JSON.stringify({ tag: "[QboSalesDocSync]", ...result }));
   return result;
+}
+
+// ─── Read-only full-history DRY RUN (preview) — makes ZERO database writes ────
+
+/**
+ * Read-only identity match against existing CRM customers, mirroring the write
+ * path's priority (exact QBO/parent linkage → email → phone → name) but WITHOUT
+ * enriching or creating anything.
+ */
+async function matchExistingCustomerReadOnly(
+  db: Db,
+  contact: EstimateContactInput,
+  authoritativeQboId: string | null,
+): Promise<{ matchedBy: "qbo_id" | "parent_qbo_id" | "email" | "phone" | "name"; crmCustomerId: number } | null> {
+  // 1) Exact QBO/parent linkage — strongest key.
+  if (authoritativeQboId) {
+    const linked = await db
+      .select({ id: customers.id })
+      .from(customers)
+      .where(eq(customers.quickbooksCustomerId, authoritativeQboId))
+      .limit(1);
+    if (linked[0]) {
+      return { matchedBy: contact.quickbooksCustomerId === authoritativeQboId ? "qbo_id" : "parent_qbo_id", crmCustomerId: linked[0].id };
+    }
+  }
+  // 2/3/4) email → phone → name.
+  const emailKey = contact.email?.trim().toLowerCase() || null;
+  const phoneKey = normalizePhone(contact.phone);
+  const nameKey = (contact.companyName?.trim() || contact.displayName?.trim() || "").toLowerCase() || null;
+  const orParts = [];
+  if (emailKey) orParts.push(sql`LOWER(${customers.email}) = ${emailKey}`);
+  if (phoneKey) orParts.push(sql`RIGHT(REGEXP_REPLACE(${customers.phone}, '[^0-9]', ''), 10) = ${phoneKey}`);
+  if (nameKey) {
+    orParts.push(sql`LOWER(${customers.companyName}) = ${nameKey}`);
+    orParts.push(sql`LOWER(${customers.displayName}) = ${nameKey}`);
+  }
+  if (!orParts.length) return null;
+  const candidates = await db
+    .select({ id: customers.id, email: customers.email, phone: customers.phone, displayName: customers.displayName, companyName: customers.companyName })
+    .from(customers)
+    .where(sql`(${sql.join(orParts, sql` OR `)})`)
+    .limit(25);
+  const m = pickContactMatch(
+    { email: contact.email, phone: contact.phone, displayName: contact.displayName, companyName: contact.companyName },
+    candidates,
+    normalizePhone,
+  );
+  return m ? { matchedBy: m.matchedBy, crmCustomerId: m.id } : null;
+}
+
+export interface PreviewResult {
+  ok: boolean;
+  estimatesFetched: number;
+  pagesFetched: number;
+  rows: EstimatePlanRow[];
+  totals: CoverageTotals;
+  cursorUnchanged: true;
+  databaseWrites: 0;
+  error?: string;
+}
+
+/**
+ * Full-history DRY RUN: pull EVERY estimate (all statuses, all ages) and produce
+ * the proposed outcome for each — WITHOUT writing anything. Reads existing
+ * sales-docs and customers only. Never advances the cursor, never takes the
+ * write advisory lock, never inserts/updates. Used for the coverage report.
+ */
+export async function previewSalesDocuments(
+  opts: { now?: Date } = {},
+): Promise<PreviewResult> {
+  const now = opts.now ?? new Date();
+  const rows: EstimatePlanRow[] = [];
+  const empty: PreviewResult = {
+    ok: false, estimatesFetched: 0, pagesFetched: 0, rows, totals: summarizeCoverage(rows), cursorUnchanged: true, databaseWrites: 0,
+  };
+
+  const db = await getDb();
+  if (!db) return { ...empty, error: "Database unavailable" };
+  const conn = await quickbooksProvider.getConnection();
+  if (!conn || conn.status !== "connected") return { ...empty, error: "QuickBooks is not connected" };
+
+  let pagesFetched = 0;
+  try {
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const query = buildEstimateQuery({ fullHistory: true, startPosition: page * PAGE_SIZE + 1, pageSize: PAGE_SIZE, now });
+      const estimates = await quickbooksProvider.fetchEstimates(query);
+      pagesFetched++;
+      for (const e of estimates) {
+        const { contact, identity, authoritativeQboId, serviceAddressVerified } = await resolveEstimateIdentity(e);
+        const existing = (
+          await db
+            .select({ id: quickbooksSalesDocuments.id, customerId: quickbooksSalesDocuments.customerId, quickbooksUpdatedAt: quickbooksSalesDocuments.quickbooksUpdatedAt })
+            .from(quickbooksSalesDocuments)
+            .where(eq(quickbooksSalesDocuments.quickbooksId, String(e.Id)))
+            .limit(1)
+        )[0];
+        const existingDoc = existing ? { id: existing.id, customerId: existing.customerId ?? null, quickbooksUpdatedAt: existing.quickbooksUpdatedAt ?? null } : null;
+        const match = existingDoc ? null : await matchExistingCustomerReadOnly(db, contact, authoritativeQboId);
+        rows.push(planEstimateOutcome({ estimate: e, contact, identity, existingDoc, match, serviceAddressVerified, now }));
+      }
+      if (estimates.length < PAGE_SIZE) break;
+      await new Promise(r => setTimeout(r, PAGE_THROTTLE_MS));
+    }
+    return { ok: true, estimatesFetched: rows.length, pagesFetched, rows, totals: summarizeCoverage(rows), cursorUnchanged: true, databaseWrites: 0 };
+  } catch (e) {
+    return { ...empty, pagesFetched, estimatesFetched: rows.length, totals: summarizeCoverage(rows), error: (e as Error).message };
+  }
 }

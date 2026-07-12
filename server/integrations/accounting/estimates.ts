@@ -204,6 +204,70 @@ export interface QboCustomerLite {
   BillAddr?: QboAddress;
   ShipAddr?: QboAddress;
   MetaData?: { CreateTime?: string; LastUpdatedTime?: string };
+  /** QBO sub-customer/project flag. A "job" is a sub-customer under a parent. */
+  Job?: boolean;
+  /** Parent customer reference when this is a sub-customer/project. */
+  ParentRef?: { value?: string; name?: string };
+}
+
+/**
+ * The authoritative identity to use when matching/linking an estimate to a CRM
+ * Customer. For a QBO sub-customer/project, the parent Customer is authoritative
+ * — we match on the PARENT, never on the project/sub-customer composite name.
+ */
+export interface ResolvedCustomerIdentity {
+  /** True when the estimate's QBO customer is a sub-customer/project. */
+  isSubCustomer: boolean;
+  /** QBO id we treat as the authoritative Customer (parent's id when a sub). */
+  authoritativeQboId: string | null;
+  /** The sub-customer's own QBO id (for audit), when applicable. */
+  subCustomerQboId: string | null;
+  /** Parent QBO id, when this is a sub-customer. */
+  parentQboId: string | null;
+  /** Parent display name (audit/context only — never used to CREATE a customer). */
+  parentName: string | null;
+  /** True when the parent could not be fetched/resolved for a flagged sub-customer. */
+  parentUnresolved: boolean;
+}
+
+/**
+ * Determine the authoritative customer identity for an estimate's QBO customer.
+ * Pure: `parent` is the already-fetched parent QboCustomerLite (or null).
+ *
+ * A QBO customer is a sub-customer/project when `Job === true` or it carries a
+ * `ParentRef`. In that case the PARENT is authoritative: the estimate must link
+ * to the parent's CRM Customer, and identity matching must prefer the parent's
+ * QBO id (exact linkage) — NOT incidental email on the sub-customer.
+ */
+export function resolveCustomerIdentity(
+  customer: QboCustomerLite | null,
+  parent: QboCustomerLite | null,
+): ResolvedCustomerIdentity {
+  const subId = customer?.Id ?? null;
+  const parentRefId = customer?.ParentRef?.value ?? null;
+  const isSub = Boolean(customer && (customer.Job === true || parentRefId));
+  if (!isSub) {
+    return {
+      isSubCustomer: false,
+      authoritativeQboId: subId,
+      subCustomerQboId: null,
+      parentQboId: null,
+      parentName: null,
+      parentUnresolved: false,
+    };
+  }
+  const resolvedParentId = parent?.Id ?? parentRefId ?? null;
+  return {
+    isSubCustomer: true,
+    // Prefer the parent as the authoritative link. Fall back to the ParentRef id
+    // even if the parent record itself could not be fetched.
+    authoritativeQboId: resolvedParentId,
+    subCustomerQboId: subId,
+    parentQboId: resolvedParentId,
+    parentName: parent?.DisplayName?.trim() || parent?.CompanyName?.trim() || customer?.ParentRef?.name?.trim() || null,
+    // Flagged as a sub-customer but we have neither a fetched parent nor a ParentRef id.
+    parentUnresolved: isSub && !resolvedParentId,
+  };
 }
 
 /**
@@ -341,24 +405,40 @@ export interface EstimateQueryOptions {
   pageSize?: number;
   /** Injected clock for deterministic tests. */
   now?: Date;
+  /**
+   * Full-history coverage mode. When true, the query has NO TxnDate lower bound
+   * and does NOT depend on the forward cursor — it selects EVERY Estimate (all
+   * statuses, all ages) so old, unchanged estimates that predate both the
+   * backfill window and the incremental cursor are still fetched. Pagination and
+   * LastUpdatedTime ordering are preserved. Takes precedence over `cursor`.
+   */
+  fullHistory?: boolean;
 }
 
 /**
  * Build the QBO query for one page of Estimates.
+ * - full_history → WHERE-less: every Estimate, all statuses, no TxnDate bound,
+ *   cursor-independent. This is the coverage-gap fix: incremental (updated>cursor)
+ *   and backfill (TxnDate>=window) each miss old unchanged estimates; full_history
+ *   catches them.
  * - With a cursor → incremental: WHERE MetaData.LastUpdatedTime > cursor.
  * - Without a cursor → backfill: WHERE TxnDate >= (today − sinceDays).
- * Always ordered by LastUpdatedTime so the cursor advances monotonically.
+ * Always ordered by LastUpdatedTime so pagination is stable and any cursor
+ * derived from a run advances monotonically.
  */
 export function buildEstimateQuery(opts: EstimateQueryOptions = {}): string {
-  const { cursor, sinceDays = 60, startPosition = 1, pageSize = 100, now = new Date() } = opts;
+  const { cursor, sinceDays = 60, startPosition = 1, pageSize = 100, now = new Date(), fullHistory = false } = opts;
   let where: string;
-  if (cursor) {
-    where = `WHERE MetaData.LastUpdatedTime > '${cursor.toISOString()}'`;
+  if (fullHistory) {
+    // No lower bound: every estimate, every status, independent of the cursor.
+    where = "";
+  } else if (cursor) {
+    where = `WHERE MetaData.LastUpdatedTime > '${cursor.toISOString()}' `;
   } else {
     const since = new Date(now.getTime() - sinceDays * DAY_MS);
-    where = `WHERE TxnDate >= '${toQboDateLiteral(since)}'`;
+    where = `WHERE TxnDate >= '${toQboDateLiteral(since)}' `;
   }
-  return `SELECT * FROM Estimate ${where} ORDERBY MetaData.LastUpdatedTime STARTPOSITION ${startPosition} MAXRESULTS ${pageSize}`;
+  return `SELECT * FROM Estimate ${where}ORDERBY MetaData.LastUpdatedTime STARTPOSITION ${startPosition} MAXRESULTS ${pageSize}`;
 }
 
 /**
@@ -414,6 +494,227 @@ export function pickContactMatch(
     if (m) return { matchedBy: "name", id: m.id };
   }
   return null;
+}
+
+// ─── Dry-run coverage planner (pure — no I/O, produces one report row) ───────
+
+export type CoverageCategory =
+  | "already_linked"
+  | "missing_safe_import"
+  | "missing_identity_ambiguous"
+  | "missing_property_ambiguous"
+  | "duplicate_noop"
+  | "manual_review";
+
+export type MatchedBy = "qbo_id" | "parent_qbo_id" | "email" | "phone" | "name";
+
+export interface EstimatePlanInput {
+  estimate: QboEstimate;
+  /** From buildContactFromEstimate (uses parent identity for a sub-customer). */
+  contact: EstimateContactInput;
+  /** From resolveCustomerIdentity. */
+  identity: ResolvedCustomerIdentity;
+  /** The already-mirrored sales-doc row, if any (keyed on QBO estimate id). */
+  existingDoc: { id: number; customerId: number | null; quickbooksUpdatedAt?: Date | null } | null;
+  /** The CRM customer matched (read-only) for this estimate, if any. */
+  match: { matchedBy: MatchedBy; crmCustomerId: number } | null;
+  /** True only when the service address came from a verified QBO ShipAddr (not a composite). */
+  serviceAddressVerified: boolean;
+  now?: Date;
+}
+
+export interface EstimatePlanRow {
+  qboEstimateId: string;
+  docNumber: string | null;
+  status: SalesDocStatus;
+  txnDate: string | null;
+  lastUpdatedTime: string | null;
+  qboCustomerRef: string | null;
+  parentResolution: string;
+  resolvedCrmCustomerId: number | null;
+  salesDocAction: "create" | "update" | "none";
+  opportunityAction: "create" | "reuse" | "none";
+  propertyAction: "create" | "reuse" | "proposal" | "none";
+  duplicateResult: "new" | "existing" | "reuse";
+  confidence: "high" | "medium" | "low";
+  manualReviewReason: string | null;
+  jobAction: "none";
+  customerCreationProposed: boolean;
+  coverageCategory: CoverageCategory;
+  /** Dry-run guarantee: always 0. */
+  dbWrites: 0;
+}
+
+/** Confidence of the identity match. Exact QBO/parent linkage is strongest. */
+function matchConfidence(by: MatchedBy): "high" | "medium" | "low" {
+  if (by === "qbo_id" || by === "parent_qbo_id") return "high";
+  if (by === "email" || by === "phone") return "medium";
+  return "low"; // name-only
+}
+
+/**
+ * Plan the proposed (dry-run) outcome for one estimate. Pure and deterministic;
+ * writes nothing. Encodes the coverage-audit rules:
+ *  - already-mirrored docs are "already_linked";
+ *  - a confident identity (exact QBO/parent linkage, email, or phone) is a safe
+ *    import; a name-only match or an unresolved parent is identity-ambiguous;
+ *  - a Customer is proposed for creation ONLY from a confident real identity —
+ *    NEVER from a project code, composite, or address;
+ *  - a Property is created only from a verified service address, else proposed
+ *    for manual review;
+ *  - Job action is always "none".
+ */
+export function planEstimateOutcome(input: EstimatePlanInput): EstimatePlanRow {
+  const { estimate, contact, identity, existingDoc, match, serviceAddressVerified, now = new Date() } = input;
+  const status = normalizeEstimateStatus(estimate, now);
+  const incoming = mapEstimateToSalesDoc(estimate, null, now);
+
+  const base = {
+    qboEstimateId: String(estimate.Id),
+    docNumber: estimate.DocNumber ?? null,
+    status,
+    txnDate: estimate.TxnDate ?? null,
+    lastUpdatedTime: estimate.MetaData?.LastUpdatedTime ?? null,
+    qboCustomerRef: estimate.CustomerRef?.value ?? null,
+    parentResolution: identity.isSubCustomer
+      ? identity.parentUnresolved
+        ? `sub-customer ${identity.subCustomerQboId ?? "?"} — PARENT UNRESOLVED`
+        : `sub-customer ${identity.subCustomerQboId ?? "?"} → parent ${identity.parentQboId}${identity.parentName ? ` (${identity.parentName})` : ""}`
+      : "direct customer (no parent)",
+    jobAction: "none" as const,
+    dbWrites: 0 as const,
+  };
+
+  // 1) Already mirrored → covered. Update only if the incoming copy is newer.
+  if (existingDoc) {
+    const needsUpdate = !shouldSkipExistingDoc(existingDoc, incoming);
+    return {
+      ...base,
+      resolvedCrmCustomerId: existingDoc.customerId ?? match?.crmCustomerId ?? null,
+      salesDocAction: needsUpdate ? "update" : "none",
+      opportunityAction: needsUpdate ? "reuse" : "none",
+      propertyAction: "none",
+      duplicateResult: "existing",
+      confidence: "high",
+      manualReviewReason: null,
+      customerCreationProposed: false,
+      coverageCategory: needsUpdate ? "duplicate_noop" : "already_linked",
+    };
+  }
+
+  // Property proposal: verified ShipAddr → create; composite-only → manual proposal.
+  const hasServiceAddress = Boolean(contact.serviceAddress && contact.serviceAddress.line1);
+  const propertyAction: EstimatePlanRow["propertyAction"] = hasServiceAddress
+    ? serviceAddressVerified
+      ? "create"
+      : "proposal"
+    : "none";
+
+  // 2) Matched an existing CRM customer.
+  if (match) {
+    const confidence = matchConfidence(match.matchedBy);
+    const identityAmbiguous = match.matchedBy === "name" || identity.parentUnresolved;
+    const propertyAmbiguous = propertyAction === "proposal";
+    const category: CoverageCategory = identityAmbiguous
+      ? "missing_identity_ambiguous"
+      : propertyAmbiguous
+        ? "missing_property_ambiguous"
+        : "missing_safe_import";
+    return {
+      ...base,
+      resolvedCrmCustomerId: match.crmCustomerId,
+      salesDocAction: "create",
+      opportunityAction: "create",
+      propertyAction,
+      duplicateResult: "new",
+      confidence,
+      manualReviewReason: identityAmbiguous
+        ? identity.parentUnresolved
+          ? "sub-customer parent could not be resolved"
+          : "matched only by name — low-confidence identity"
+        : propertyAmbiguous
+          ? "service location only in sub-customer/composite — needs approval"
+          : null,
+      customerCreationProposed: false,
+      coverageCategory: category,
+    };
+  }
+
+  // 3) No CRM match. May we safely CREATE a Customer? Only from a confident real
+  //    identity (company or confidently-known person) — NEVER from a project
+  //    code / composite / address / sub-customer name.
+  const canCreateCustomer = contact.isCompany || contact.nameConfident;
+  if (canCreateCustomer && !identity.parentUnresolved) {
+    const propertyAmbiguous = propertyAction === "proposal";
+    return {
+      ...base,
+      resolvedCrmCustomerId: null,
+      salesDocAction: "create",
+      opportunityAction: "create",
+      propertyAction,
+      duplicateResult: "new",
+      confidence: "medium",
+      manualReviewReason: propertyAmbiguous ? "service location only in composite — needs approval" : null,
+      customerCreationProposed: true,
+      coverageCategory: propertyAmbiguous ? "missing_property_ambiguous" : "missing_safe_import",
+    };
+  }
+
+  // 4) Low-confidence identity — hold for manual review, never invent a Customer.
+  return {
+    ...base,
+    resolvedCrmCustomerId: null,
+    salesDocAction: "none",
+    opportunityAction: "none",
+    propertyAction: hasServiceAddress ? "proposal" : "none",
+    duplicateResult: "new",
+    confidence: "low",
+    manualReviewReason: identity.parentUnresolved
+      ? "sub-customer parent unresolved — cannot link or create"
+      : "identity known only from project/composite/address — held for review",
+    customerCreationProposed: false,
+    coverageCategory: "missing_identity_ambiguous",
+  };
+}
+
+/** Aggregate plan rows into the report totals required by the coverage audit. */
+export interface CoverageTotals {
+  total: number;
+  alreadyLinked: number;
+  missingSafeImport: number;
+  missingIdentityAmbiguous: number;
+  missingPropertyAmbiguous: number;
+  duplicateNoop: number;
+  manualReview: number;
+  customerCreationsProposed: number;
+  jobCreationsProposed: number;
+  databaseWrites: number;
+}
+
+export function summarizeCoverage(rows: EstimatePlanRow[]): CoverageTotals {
+  const t: CoverageTotals = {
+    total: rows.length,
+    alreadyLinked: 0,
+    missingSafeImport: 0,
+    missingIdentityAmbiguous: 0,
+    missingPropertyAmbiguous: 0,
+    duplicateNoop: 0,
+    manualReview: 0,
+    customerCreationsProposed: 0,
+    jobCreationsProposed: 0,
+    databaseWrites: 0,
+  };
+  for (const r of rows) {
+    if (r.coverageCategory === "already_linked") t.alreadyLinked++;
+    else if (r.coverageCategory === "missing_safe_import") t.missingSafeImport++;
+    else if (r.coverageCategory === "missing_identity_ambiguous") t.missingIdentityAmbiguous++;
+    else if (r.coverageCategory === "missing_property_ambiguous") t.missingPropertyAmbiguous++;
+    else if (r.coverageCategory === "duplicate_noop") t.duplicateNoop++;
+    if (r.manualReviewReason) t.manualReview++;
+    if (r.customerCreationProposed) t.customerCreationsProposed++;
+    t.databaseWrites += r.dbWrites; // always 0
+  }
+  return t;
 }
 
 /** The maximum LastUpdatedTime across a batch, for advancing the sync cursor. */
