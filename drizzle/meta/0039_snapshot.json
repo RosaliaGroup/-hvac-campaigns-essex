@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "25c0bc5a-788a-46ce-a823-89ce005ff20c",
+  "id": "0a9ebc31-fd1b-422c-b959-40ef9e4c9342",
   "prevId": "6d69e93c-99ad-441c-af5f-f008d324e720",
   "tables": {
     "aiScripts": {
@@ -2420,21 +2420,7 @@
           "isUnique": false
         }
       },
-      "foreignKeys": {
-        "jobs_opportunityId_opportunities_id_fk": {
-          "name": "jobs_opportunityId_opportunities_id_fk",
-          "tableFrom": "jobs",
-          "tableTo": "opportunities",
-          "columnsFrom": [
-            "opportunityId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {
         "jobs_id": {
           "name": "jobs_id",

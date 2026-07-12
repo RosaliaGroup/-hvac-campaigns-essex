@@ -1032,8 +1032,11 @@ export const jobs = mysqlTable(
      * Nullable: jobs created via other paths (appointment, manual) have none.
      * One opportunity may produce MANY jobs; the standard "Convert to Job"
      * action is idempotent and returns the first (primary) converted job.
+     * No DB-level FK — this codebase enforces relations in application code
+     * (matching every other *Id column); integrity is validated in
+     * opportunityToJob.ts before any write.
      */
-    opportunityId: int("opportunityId").references(() => opportunities.id, { onDelete: "set null" }),
+    opportunityId: int("opportunityId"),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
     jobType: mysqlEnum("jobType", [
