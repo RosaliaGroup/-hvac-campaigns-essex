@@ -34,6 +34,40 @@ export function batchSignature(mode: string, pageNums: number[]): string {
   return `${mode}|${pageNums.join(",")}`;
 }
 
+/**
+ * Deterministic 32-bit FNV-1a hash of a string, as 8 hex chars. Dependency-free
+ * and stable across reloads/retries. Used only to key idempotent batch requests
+ * — NOT for security. It is a digest: it contains no source/document text.
+ */
+export function hashString(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16).padStart(8, "0");
+}
+
+/**
+ * Deterministic idempotency id for one billed batch request. Derived from the
+ * Take-Off id, analysis mode, and a checksum of the EXACT payload sent to the
+ * model (system + messages) — which encodes the page range and the document
+ * content for those pages. Properties:
+ *  - Same batch retried after a network blip → identical id → the server returns
+ *    the cached response instead of billing Anthropic again.
+ *  - Any change to page selection or document content → different id → a stale
+ *    result is never reused.
+ * The id is opaque (a hash); it carries no document text.
+ */
+export function computeBatchId(
+  projectId: number,
+  mode: string,
+  payload: { system: string; messages: unknown[] },
+): string {
+  const checksum = hashString(JSON.stringify(payload));
+  return `to:${projectId}:${mode}:${checksum}`;
+}
+
 function resolveStore(store?: Storage): Storage | null {
   if (store) return store;
   try {

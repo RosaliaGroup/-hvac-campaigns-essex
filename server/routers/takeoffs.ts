@@ -10,7 +10,8 @@ import {
   takeoffFiles,
 } from "../../drizzle/schema";
 import { eq, desc, sql } from "drizzle-orm";
-import { callAnthropicWithFallback } from "../_core/anthropic";
+import { callAnthropicWithFallback, estimateCostUsd } from "../_core/anthropic";
+import { takeoffIdempotency } from "../_core/idempotency";
 
 const itemSchema = z.object({
   category: z.string(),
@@ -43,6 +44,11 @@ export const takeoffsRouter = router({
   analyzeBatch: protectedProcedure
     .input(
       z.object({
+        // Deterministic idempotency key (Take-Off id + mode + page range +
+        // document checksum) computed client-side. If the browser retries the
+        // same batch after a network blip, the same batchId returns the cached
+        // response instead of billing Anthropic again.
+        batchId: z.string().min(1).max(200),
         mode: z.enum(["quick", "precise"]).default("quick"),
         system: z.string().min(1),
         messages: z.array(z.any()).min(1),
@@ -58,18 +64,52 @@ export const takeoffsRouter = router({
         });
       }
 
-      const result = await callAnthropicWithFallback({
-        apiKey,
-        mode: input.mode,
-        system: input.system,
-        messages: input.messages,
-        maxTokens: input.maxTokens,
-      });
+      const startedAt = Date.now();
+      // Idempotent: a completed batchId returns its cached result; an in-flight
+      // one coalesces onto the existing call. Only successes are cached, so a
+      // failed batch can still be retried.
+      const outcome = await takeoffIdempotency.run(
+        input.batchId,
+        () =>
+          callAnthropicWithFallback({
+            apiKey,
+            mode: input.mode,
+            system: input.system,
+            messages: input.messages,
+            maxTokens: input.maxTokens,
+          }),
+        { cacheable: (r) => r.ok },
+      );
+      const result = outcome.value;
+      const durationMs = Date.now() - startedAt;
+      // A new Anthropic call was billed only when this request neither hit the
+      // completed cache nor coalesced onto an in-flight one.
+      const billed = !outcome.cached && !outcome.coalesced;
+
+      // Structured server-only log. Contains the opaque batchId, timing, token
+      // usage and estimated cost — never the prompt, document text, or API key.
+      console.info(
+        JSON.stringify({
+          evt: "takeoff.analyzeBatch",
+          batchId: input.batchId,
+          mode: input.mode,
+          model: result.model ?? null,
+          ok: result.ok,
+          cached: outcome.cached,
+          coalesced: outcome.coalesced,
+          billed,
+          durationMs,
+          inputTokens: result.usage?.inputTokens ?? 0,
+          outputTokens: result.usage?.outputTokens ?? 0,
+          estCostUsd: billed ? estimateCostUsd(result.model, result.usage) : 0,
+          ...(result.ok ? {} : { code: result.code ?? null }),
+        })
+      );
 
       if (!result.ok) {
         // Log the raw upstream detail server-side only; never return it (or the key).
         if (result.detail) {
-          console.error(`[takeoffs.analyzeBatch] ${result.code}: ${result.detail}`);
+          console.error(`[takeoffs.analyzeBatch] batchId=${input.batchId} ${result.code}: ${result.detail}`);
         }
         throw new TRPCError({
           code: result.status === 429 ? "TOO_MANY_REQUESTS" : "INTERNAL_SERVER_ERROR",
@@ -77,7 +117,11 @@ export const takeoffsRouter = router({
         });
       }
 
-      return { text: result.text ?? "", model: result.model };
+      return {
+        text: result.text ?? "",
+        model: result.model,
+        cached: outcome.cached || outcome.coalesced,
+      };
     }),
 
   // List all projects

@@ -95,14 +95,43 @@ export function classifyAnthropicError(status: number, errType: string, rawText:
   return "fatal";
 }
 
+export interface TokenUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export interface AnthropicCallResult {
   ok: boolean;
   text?: string;   // assistant text (on success)
   model?: string;  // model that actually produced the response
+  usage?: TokenUsage; // token counts from the Anthropic response (for cost logging)
   status?: number; // HTTP status of the failing response (0 for network/timeout)
   code?: string;   // anthropic error type, or "network_error"/"timeout"/"all_models_unavailable"
   error?: string;  // user-facing message (on failure) — never contains the key
   detail?: string; // truncated raw error, for SERVER logs only (never returned to the browser)
+}
+
+/**
+ * Approximate USD pricing per 1M tokens, for structured cost logging only (not
+ * billing). Keep in sync with Anthropic's published rates; unknown models fall
+ * back to Opus-tier so estimates are never understated.
+ */
+const MODEL_PRICING: Record<string, { inPer1M: number; outPer1M: number }> = {
+  "claude-opus-4-8": { inPer1M: 5, outPer1M: 25 },
+  "claude-opus-4-7": { inPer1M: 5, outPer1M: 25 },
+  "claude-opus-4-6": { inPer1M: 5, outPer1M: 25 },
+  "claude-sonnet-5": { inPer1M: 3, outPer1M: 15 },
+  "claude-sonnet-4-6": { inPer1M: 3, outPer1M: 15 },
+  "claude-haiku-4-5": { inPer1M: 1, outPer1M: 5 },
+};
+const DEFAULT_PRICING = { inPer1M: 5, outPer1M: 25 };
+
+/** Estimated USD cost of a call, from the model and its token usage. */
+export function estimateCostUsd(model: string | undefined, usage: TokenUsage | undefined): number {
+  if (!usage) return 0;
+  const p = (model && MODEL_PRICING[model]) || DEFAULT_PRICING;
+  const cost = (usage.inputTokens / 1e6) * p.inPer1M + (usage.outputTokens / 1e6) * p.outPer1M;
+  return Number(cost.toFixed(6));
 }
 
 function friendlyMessage(status: number, errType: string, rawText: string): string {
@@ -135,7 +164,7 @@ const DEFAULT_RETRY: RetryConfig = {
 };
 
 type Attempt =
-  | { kind: "ok"; text: string }
+  | { kind: "ok"; text: string; usage?: TokenUsage }
   | { kind: ErrorClass; status: number; errType: string; detail: string };
 
 async function attemptOnce(
@@ -164,7 +193,13 @@ async function attemptOnce(
       const data: any = await res.json();
       const blocks: any[] = Array.isArray(data?.content) ? data.content : [];
       const text: string = blocks.find((b) => b?.type === "text")?.text ?? blocks[0]?.text ?? "";
-      return { kind: "ok", text };
+      const usage: TokenUsage | undefined = data?.usage
+        ? {
+            inputTokens: Number(data.usage.input_tokens ?? 0),
+            outputTokens: Number(data.usage.output_tokens ?? 0),
+          }
+        : undefined;
+      return { kind: "ok", text, usage };
     }
 
     const rawText = await res.text();
@@ -221,7 +256,7 @@ export async function callAnthropicWithFallback(opts: {
       const outcome = await attemptOnce(model, apiKey, system, messages, maxTokens, cfg.timeoutMs);
 
       if (outcome.kind === "ok") {
-        return { ok: true, text: outcome.text, model };
+        return { ok: true, text: outcome.text, model, usage: outcome.usage };
       }
 
       last = { status: outcome.status, errType: outcome.errType, detail: outcome.detail };

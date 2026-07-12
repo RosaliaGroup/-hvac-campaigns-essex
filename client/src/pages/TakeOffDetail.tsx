@@ -4,7 +4,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { extractPDFPages, buildSelectedText, buildImageBlocks, type ExtractedPage } from "@/lib/pdfExtract";
 import { DEFAULT_PRICEBOOK, matchPricebook, CSI_DIVISIONS, type PricebookEntry } from "@/lib/pricebook";
 import { runVerification } from "@/lib/takeoffVerify";
-import { batchSignature, loadBatches, saveBatch, clearBatches, tryAcquireRun, releaseRun } from "@/lib/takeoffBatchCache";
+import { batchSignature, computeBatchId, loadBatches, saveBatch, clearBatches, tryAcquireRun, releaseRun } from "@/lib/takeoffBatchCache";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -473,7 +473,11 @@ export default function TakeOffDetail() {
   // models and server-side retry of transient errors. On a rate-limit we wait
   // once client-side and retry, preserving the prior UX.
   const callClaude = async (system: string, messages: any[], mode: "quick" | "precise" = analysisMode): Promise<string> => {
-    const runOnce = () => analyzeBatchMutation.mutateAsync({ mode, system, messages, maxTokens: 16000 });
+    // Deterministic idempotency key: identical (project, mode, prompt+pages)
+    // yields the same batchId, so a retry after a network interruption returns
+    // the server's cached response instead of billing Anthropic twice.
+    const batchId = computeBatchId(projectId, mode, { system, messages });
+    const runOnce = () => analyzeBatchMutation.mutateAsync({ batchId, mode, system, messages, maxTokens: 16000 });
     try {
       const data = await runOnce();
       return data.text || "";

@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   batchCacheKey,
   batchSignature,
+  computeBatchId,
+  hashString,
   loadBatches,
   saveBatch,
   clearBatches,
@@ -32,6 +34,37 @@ describe("batch cache key + signature", () => {
   it("signature changes when page selection changes", () => {
     expect(batchSignature("quick", [1, 2, 3, 4])).not.toBe(batchSignature("quick", [1, 2, 3, 5]));
     expect(batchSignature("quick", [1, 2])).not.toBe(batchSignature("precise", [1, 2]));
+  });
+});
+
+describe("idempotency batchId", () => {
+  const payload = { system: "sys", messages: [{ role: "user", content: "pages 1-4" }] };
+
+  it("hashString is deterministic and 8 hex chars", () => {
+    expect(hashString("abc")).toBe(hashString("abc"));
+    expect(hashString("abc")).toMatch(/^[0-9a-f]{8}$/);
+    expect(hashString("abc")).not.toBe(hashString("abd"));
+  });
+
+  it("is stable for identical (project, mode, payload) — so a retry reuses the cache", () => {
+    expect(computeBatchId(42, "quick", payload)).toBe(computeBatchId(42, "quick", payload));
+  });
+
+  it("changes when the document/page content changes (no stale reuse)", () => {
+    const other = { system: "sys", messages: [{ role: "user", content: "pages 5-8" }] };
+    expect(computeBatchId(42, "quick", payload)).not.toBe(computeBatchId(42, "quick", other));
+  });
+
+  it("changes across project and mode", () => {
+    expect(computeBatchId(42, "quick", payload)).not.toBe(computeBatchId(43, "quick", payload));
+    expect(computeBatchId(42, "quick", payload)).not.toBe(computeBatchId(42, "precise", payload));
+  });
+
+  it("carries no document text (opaque digest, bounded length)", () => {
+    const id = computeBatchId(42, "quick", { system: "SECRET-DOC", messages: [{ x: "customer address" }] });
+    expect(id).not.toContain("SECRET-DOC");
+    expect(id).not.toContain("customer address");
+    expect(id.length).toBeLessThan(60);
   });
 });
 
