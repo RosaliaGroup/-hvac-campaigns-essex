@@ -24,6 +24,7 @@ const KNOWN_ROUTES = new Set<string>([
   "/lead-dashboard",
   "/customers",
   "/opportunities",
+  "/commercial-opportunities",
   "/lead-scoring",
   "/calendar",
   "/jobs",
@@ -131,6 +132,7 @@ describe("department structure", () => {
       "Lead Inbox",
       "Contacts",
       "Opportunity Center",
+      "Commercial Opportunities",
       "Lead Scoring",
     ]);
   });
@@ -281,6 +283,7 @@ describe("getVisibleDepartments", () => {
       "Lead Inbox",
       "Contacts",
       "Opportunity Center",
+      "Commercial Opportunities",
       "Lead Scoring",
     ]);
     // Only the Calendar leaks into Dispatch for a salesperson.

@@ -126,8 +126,32 @@ async function insertEvent(db: Db, opportunityId: number, type: string, message:
   await db.insert(opportunityEvents).values({ opportunityId, type, message, metadata: metadata ?? null });
 }
 
+/**
+ * Isolation guard: the commercial API only ever reads/writes commercial records.
+ * Any other recordType — above all the legacy QBO-synced `qbo_residential` rows
+ * with the classic 5-stage `stage` enum — is treated as not found, so a
+ * commercial page request can never load, mutate, or transition a legacy record.
+ * NOT_FOUND (not FORBIDDEN) is deliberate: it does not leak that the id exists.
+ */
+function assertCommercial(opp: { recordType: string | null } | undefined): void {
+  if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
+  if (opp.recordType !== "commercial") throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Seed (idempotent) — the 16 default stages + the Commercial QA checklist
+//
+// ⚠️ RUNTIME SEEDING (temporary, development-oriented — see
+//    reports/commercial-opportunities-seeding.md):
+//   • The MIGRATIONS (0042/0043) create the schema only; they do NOT seed rows.
+//   • The FIRST relevant commercial request (stages.list / create / checklist)
+//     performs an idempotent seed: it inserts the default stages / QA template
+//     only if they are absent. Safe to run repeatedly; never duplicates.
+//   • PRODUCTION: verify the app's DB user has INSERT permission on
+//     opportunityStages / opportunityChecklistTemplates(+Items), or the first
+//     request will error. Do NOT seed production manually as part of this phase.
+//   • FUTURE: this lazy seed may be replaced by an explicit seed command or a
+//     data-migration seeding strategy once the pipeline config stabilizes.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const QA_TEMPLATE_NAME = "Commercial Opportunity QA";
@@ -879,11 +903,21 @@ export const commercialOpportunitiesRouter = router({
         customerName: customers.displayName,
         customerCompany: customers.companyName,
         propertyId: opportunities.propertyId,
+        propertyAddress: properties.addressLine1,
         propertyCity: properties.city,
         propertyState: properties.state,
+        estimatorId: opportunities.estimatorId,
         stageKey: opportunityStages.stageKey,
         stageName: opportunityStages.name,
         stageClassification: opportunityStages.classification,
+        // Card enrichment (scalar subqueries so one round-trip powers the board).
+        ownerName: sql<string | null>`(SELECT name FROM ${teamMembers} WHERE id = ${opportunities.assignedToId})`,
+        estimatorName: sql<string | null>`(SELECT name FROM ${teamMembers} WHERE id = ${opportunities.estimatorId})`,
+        checklistTotal: sql<number>`(SELECT COUNT(*) FROM ${opportunityChecklistItems} ci WHERE ci.opportunityId = ${opportunities.id})`,
+        checklistDone: sql<number>`(SELECT COUNT(*) FROM ${opportunityChecklistItems} ci WHERE ci.opportunityId = ${opportunities.id} AND ci.isComplete = 1)`,
+        commentCount: sql<number>`(SELECT COUNT(*) FROM ${opportunityComments} oc WHERE oc.opportunityId = ${opportunities.id} AND oc.deletedAt IS NULL)`,
+        documentCount: sql<number>`(SELECT COUNT(*) FROM ${opportunityDocuments} od WHERE od.opportunityId = ${opportunities.id})`,
+        categories: sql<string | null>`(SELECT GROUP_CONCAT(pc.category) FROM ${opportunityProjectCategories} pc WHERE pc.opportunityId = ${opportunities.id})`,
         createdAt: opportunities.createdAt,
         updatedAt: opportunities.updatedAt,
       })
@@ -906,7 +940,19 @@ export const commercialOpportunitiesRouter = router({
     const items = rows.map(r => {
       const m = marginView(r.amount as string | null, r.estimatedCost as string | null, r.estimatedGrossMargin as string | null);
       const weighted = m.estimatedValue != null && r.probability != null ? (Number(m.estimatedValue) * Number(r.probability)) / 100 : null;
-      return { ...r, calculatedMargin: m.calculatedMargin, effectiveMargin: m.effectiveMargin, marginIsOverridden: m.marginIsOverridden, weightedValue: weighted };
+      const categoriesList = r.categories ? String(r.categories).split(",").filter(Boolean) : [];
+      return {
+        ...r,
+        categoriesList,
+        checklistTotal: Number(r.checklistTotal ?? 0),
+        checklistDone: Number(r.checklistDone ?? 0),
+        commentCount: Number(r.commentCount ?? 0),
+        documentCount: Number(r.documentCount ?? 0),
+        calculatedMargin: m.calculatedMargin,
+        effectiveMargin: m.effectiveMargin,
+        marginIsOverridden: m.marginIsOverridden,
+        weightedValue: weighted,
+      };
     });
     return { items, total: Number(agg.count) };
   }),
@@ -916,7 +962,7 @@ export const commercialOpportunitiesRouter = router({
     const db = await getDb();
     if (!db) throw dbUnavailable();
     const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
-    if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
+    assertCommercial(opp); // commercial detail never loads legacy/non-commercial records
 
     const [stage, customer, primaryContact, property, categories, members, checklist, comments, documents, tasks, appts, salesDocs, linkedJobs, events] =
       await Promise.all([
@@ -1016,7 +1062,7 @@ export const commercialOpportunitiesRouter = router({
       if (!db) throw dbUnavailable();
       await assertCanEdit(db, ctx, input.id);
       const existing = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
-      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
+      assertCommercial(existing); // commercial API never mutates legacy/non-commercial records
 
       // Validate re-parenting references (never create records as a side effect).
       const targetCustomerId = input.customerId ?? existing.customerId;
@@ -1035,6 +1081,23 @@ export const commercialOpportunitiesRouter = router({
       return { ok: true, changed: events.length };
     }),
 
+  /** Replace an opportunity's project categories (multi-select). */
+  setProjectCategories: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), categories: z.array(projectCategory).max(16) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw dbUnavailable();
+      await assertCanEdit(db, ctx, input.id);
+      const existing = (await db.select({ category: opportunityProjectCategories.category }).from(opportunityProjectCategories).where(eq(opportunityProjectCategories.opportunityId, input.id))).map(r => r.category);
+      const next = Array.from(new Set(input.categories));
+      const same = existing.length === next.length && existing.every(c => next.includes(c));
+      if (same) return { ok: true, changed: false };
+      await db.delete(opportunityProjectCategories).where(eq(opportunityProjectCategories.opportunityId, input.id));
+      if (next.length) await db.insert(opportunityProjectCategories).values(next.map(category => ({ opportunityId: input.id, category })));
+      await insertEvent(db, input.id, "categories_changed", "Project categories updated.", { categories: next });
+      return { ok: true, changed: true };
+    }),
+
   /** Server-authoritative commercial stage transition (see planStageTransition). */
   transitionStage: protectedProcedure
     .input(
@@ -1050,10 +1113,7 @@ export const commercialOpportunitiesRouter = router({
       if (!db) throw dbUnavailable();
       await assertCanEdit(db, ctx, input.id);
       const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
-      if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
-      if (opp.recordType === "qbo_residential") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Legacy QuickBooks opportunities use the classic stage flow." });
-      }
+      assertCommercial(opp); // stageId pipeline is commercial-only; legacy QBO keeps its classic stage enum
       const to = await resolveStage(db, input.toStageId);
       if (!to) throw new TRPCError({ code: "NOT_FOUND", message: "Target stage not found" });
       const from = await resolveStage(db, opp.stageId);
