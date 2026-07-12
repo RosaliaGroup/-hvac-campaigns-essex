@@ -14,6 +14,7 @@ import {
   customers,
   properties,
   teamMembers,
+  opportunities,
   type InsertJob,
 } from "../../drizzle/schema";
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
@@ -147,7 +148,7 @@ export const jobsRouter = router({
       const job = (await db.select().from(jobs).where(eq(jobs.id, input.id)).limit(1))[0];
       if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
 
-      const [customer, property, lineItems, jobAppointments, assignee] = await Promise.all([
+      const [customer, property, lineItems, jobAppointments, assignee, opportunity] = await Promise.all([
         db.select().from(customers).where(eq(customers.id, job.customerId)).limit(1).then(r => r[0] ?? null),
         job.propertyId
           ? db.select().from(properties).where(eq(properties.id, job.propertyId)).limit(1).then(r => r[0] ?? null)
@@ -157,10 +158,15 @@ export const jobsRouter = router({
         job.assignedToId
           ? db.select({ id: teamMembers.id, name: teamMembers.name }).from(teamMembers).where(eq(teamMembers.id, job.assignedToId)).limit(1).then(r => r[0] ?? null)
           : Promise.resolve(null),
+        // Phase A: the opportunity this job was converted from (Job → Opportunity link).
+        job.opportunityId
+          ? db.select({ id: opportunities.id, title: opportunities.title, stage: opportunities.stage })
+              .from(opportunities).where(eq(opportunities.id, job.opportunityId)).limit(1).then(r => r[0] ?? null)
+          : Promise.resolve(null),
       ]);
 
       const lineTotal = lineItems.reduce((sum, li) => sum + Number(li.total), 0);
-      return { job, customer, property, lineItems, appointments: jobAppointments, assignee, lineTotal };
+      return { job, customer, property, lineItems, appointments: jobAppointments, assignee, opportunity, lineTotal };
     }),
 
   /** Manual job creation (from customer detail or jobs list). */

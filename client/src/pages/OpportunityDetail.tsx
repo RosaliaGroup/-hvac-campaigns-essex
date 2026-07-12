@@ -5,6 +5,7 @@ import InternalNav from "@/components/InternalNav";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConvertToJobControl } from "@/components/opportunity/ConvertToJobControl";
 import { formatMoney } from "@/lib/jobPresentation";
 import { ArrowLeft, Target, FileText, Hash, Tag, UserRound, MapPin, Calendar } from "lucide-react";
 
@@ -37,6 +38,7 @@ export default function OpportunityDetail() {
   const params = useParams<{ id: string }>();
   const id = parseInt(params.id || "0");
   const [, navigate] = useLocation();
+  const utils = trpc.useUtils();
   const { data, isLoading } = trpc.opportunities.get.useQuery({ id }, { enabled: id > 0, retry: false });
 
   if (isLoading) {
@@ -66,7 +68,11 @@ export default function OpportunityDetail() {
           <Button variant="ghost" size="sm" onClick={() => navigate("/opportunities")} className="-ml-2 text-muted-foreground">
             <ArrowLeft className="h-4 w-4 mr-1" /> Opportunities
           </Button>
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Target className="h-6 w-6 text-[#1e3a5f]" /> {o.title}</h1>
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h1 className="text-2xl font-bold flex items-center gap-2"><Target className="h-6 w-6 text-[#1e3a5f]" /> {o.title}</h1>
+            {/* Same Opportunity → Job control as the detail drawer. */}
+            <ConvertToJobControl opportunityId={id} primaryJob={data.primaryJob} onConverted={() => utils.opportunities.get.invalidate({ id })} />
+          </div>
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge variant="secondary" className={OPP_STAGE[o.stage] ?? ""}>{o.stage.replace(/_/g, " ")}</Badge>
             {o.projectReference && <span className="inline-flex items-center gap-1 text-muted-foreground"><Tag className="h-3.5 w-3.5" /> {o.projectReference}</span>}

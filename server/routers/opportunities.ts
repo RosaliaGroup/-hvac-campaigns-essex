@@ -22,7 +22,15 @@ import {
   properties,
   appointments,
   teamMembers,
+  jobs,
+  type InsertJob,
 } from "../../drizzle/schema";
+import { makeJobNumber } from "./jobs";
+import {
+  convertOpportunityToJob,
+  ConvertError,
+  type ConvertJobPort,
+} from "./opportunityToJob";
 import { computeDaysPending } from "../integrations/accounting/estimates";
 import { cancelOpenFollowups, smsFollowupsEnabled } from "../integrations/accounting/followups";
 import { extractSalesDocSignals, deriveDocTypeLabel, deriveWorkCategory } from "@shared/opportunityCategory";
@@ -423,7 +431,7 @@ export const opportunitiesRouter = router({
     const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
     if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
 
-    const [customer, serviceAddresses, docs, tasks, appts, events, conflicts] = await Promise.all([
+    const [customer, serviceAddresses, docs, tasks, appts, events, conflicts, linkedJobs] = await Promise.all([
       db.select().from(customers).where(eq(customers.id, opp.customerId)).limit(1),
       db.select().from(properties).where(eq(properties.customerId, opp.customerId)),
       db.select().from(quickbooksSalesDocuments).where(eq(quickbooksSalesDocuments.opportunityId, input.id)),
@@ -431,6 +439,8 @@ export const opportunitiesRouter = router({
       db.select().from(appointments).where(eq(appointments.customerId, opp.customerId)).orderBy(desc(appointments.scheduledAt)),
       db.select().from(opportunityEvents).where(eq(opportunityEvents.opportunityId, input.id)).orderBy(desc(opportunityEvents.createdAt)),
       db.select().from(customerSyncConflicts).where(and(eq(customerSyncConflicts.customerId, opp.customerId), eq(customerSyncConflicts.status, "open"))),
+      db.select({ id: jobs.id, jobNumber: jobs.jobNumber, status: jobs.status, title: jobs.title, createdAt: jobs.createdAt })
+        .from(jobs).where(eq(jobs.opportunityId, input.id)).orderBy(jobs.id),
     ]);
 
     // Never ship the raw QBO payload; expose only the derived signals it needs.
@@ -480,6 +490,10 @@ export const opportunitiesRouter = router({
       appointments: appts,
       events,
       conflicts,
+      // Phase A: jobs converted from this opportunity. The first is the primary
+      // one the idempotent "Convert to Job" action returns.
+      linkedJobs,
+      primaryJob: linkedJobs[0] ?? null,
     };
   }),
 
@@ -555,6 +569,74 @@ export const opportunitiesRouter = router({
       await cancelOpenFollowups(input.id, "marked lost", db);
       await insertEvent(db, input.id, "status_changed", "Marked Lost (manual).", { lossReason: input.lossReason });
       return { ok: true };
+    }),
+
+  /**
+   * Convert an Opportunity into an operational Job (Phase A). Idempotent: the
+   * standard path returns the existing primary converted job instead of making
+   * a duplicate. Never touches QuickBooks and never silently creates a property
+   * — if the customer has multiple non-primary properties it returns
+   * `property_selection_required` and the UI prompts the user to choose.
+   */
+  convertToJob: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), propertyId: z.number().int().positive().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const port: ConvertJobPort = {
+        getOpportunity: async id => {
+          const o = (await db
+            .select({ id: opportunities.id, customerId: opportunities.customerId, title: opportunities.title, projectReference: opportunities.projectReference })
+            .from(opportunities)
+            .where(eq(opportunities.id, id))
+            .limit(1))[0];
+          return o ?? null;
+        },
+        customerExists: async customerId =>
+          !!(await db.select({ id: customers.id }).from(customers).where(eq(customers.id, customerId)).limit(1))[0],
+        getExistingConvertedJob: async opportunityId => {
+          const j = (await db
+            .select({ id: jobs.id, jobNumber: jobs.jobNumber, status: jobs.status, propertyId: jobs.propertyId })
+            .from(jobs)
+            .where(eq(jobs.opportunityId, opportunityId))
+            .orderBy(jobs.id)
+            .limit(1))[0];
+          return j ?? null;
+        },
+        getCustomerProperties: async customerId =>
+          (await db
+            .select({ id: properties.id, label: properties.label, addressLine1: properties.addressLine1, city: properties.city, state: properties.state, zip: properties.zip, isPrimary: properties.isPrimary })
+            .from(properties)
+            .where(eq(properties.customerId, customerId)))
+            .map(p => ({ ...p, isPrimary: !!p.isPrimary })),
+        createJob: async j => {
+          const values: InsertJob = {
+            jobNumber: "",
+            customerId: j.customerId,
+            opportunityId: j.opportunityId,
+            propertyId: j.propertyId,
+            title: j.title,
+            internalNotes: j.internalNotes,
+            status: "new",
+          };
+          const result = await db.insert(jobs).values(values);
+          const id = Number((result as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+          const jobNumber = makeJobNumber(id);
+          await db.update(jobs).set({ jobNumber }).where(eq(jobs.id, id));
+          return { id, jobNumber };
+        },
+        recordEvent: async (opportunityId, jobId, userId) => {
+          await insertEvent(db, opportunityId, "converted_to_job", `Converted to Job #${jobId}.`, { jobId, convertedByUserId: userId });
+        },
+      };
+
+      try {
+        return await convertOpportunityToJob(port, { opportunityId: input.id, propertyId: input.propertyId ?? null, userId: ctx.user.id });
+      } catch (e) {
+        if (e instanceof ConvertError) throw new TRPCError({ code: "NOT_FOUND", message: e.message });
+        throw e;
+      }
     }),
 
   /** Assign a salesperson (teamMembers.id) or clear the assignment. */

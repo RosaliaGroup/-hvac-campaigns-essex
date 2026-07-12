@@ -1049,6 +1049,16 @@ export const jobs = mysqlTable(
     jobNumber: varchar("jobNumber", { length: 32 }).notNull().default(""),
     customerId: int("customerId").notNull(),
     propertyId: int("propertyId"),
+    /**
+     * The Opportunity this Job was converted from (Phase A: Opportunity → Job).
+     * Nullable: jobs created via other paths (appointment, manual) have none.
+     * One opportunity may produce MANY jobs; the standard "Convert to Job"
+     * action is idempotent and returns the first (primary) converted job.
+     * No DB-level FK — this codebase enforces relations in application code
+     * (matching every other *Id column); integrity is validated in
+     * opportunityToJob.ts before any write.
+     */
+    opportunityId: int("opportunityId"),
     title: varchar("title", { length: 255 }).notNull(),
     description: text("description"),
     jobType: mysqlEnum("jobType", [
@@ -1083,6 +1093,7 @@ export const jobs = mysqlTable(
     customerIdx: index("jobs_customerId_idx").on(table.customerId),
     statusIdx: index("jobs_status_idx").on(table.status),
     jobNumberIdx: index("jobs_jobNumber_idx").on(table.jobNumber),
+    opportunityIdx: index("jobs_opportunityId_idx").on(table.opportunityId),
   }),
 );
 export type Job = typeof jobs.$inferSelect;
