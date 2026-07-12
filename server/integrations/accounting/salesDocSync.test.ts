@@ -31,6 +31,7 @@ import {
   syncSalesDocuments,
 } from "./salesDocSync";
 import type { EstimateContactInput } from "./estimates";
+import type { LockConnection } from "./dbSyncLock";
 import { customers, properties, customerSyncConflicts, opportunities, quickbooksSalesDocuments, quickbooksConnections } from "../../../drizzle/schema";
 
 const NOW = new Date("2026-07-01T00:00:00Z");
@@ -309,6 +310,26 @@ describe("enrichExistingCustomer", () => {
 });
 
 // ── Sync engine (backfill + poller/incremental persistence) ──────────────────
+/**
+ * Healthy fake dedicated lock connection (GET_LOCK/RELEASE_LOCK = 1, never
+ * killed) — the same pattern as salesDocSyncLockLoss.test.ts. Injected via the
+ * `lockConnectionFactory` seam so these end-to-end tests exercise the real
+ * persistence path WITHOUT opening a real MySQL advisory-lock connection. The
+ * advisory lock still runs and is genuinely acquired/asserted; only its
+ * connection is faked.
+ */
+function makeLockConn(): LockConnection {
+  const conn = {
+    query: async (sql: string) =>
+      sql.includes("GET_LOCK") || sql.includes("RELEASE_LOCK") ? [[{ v: 1 }], []] : [[], []],
+    end: async () => {},
+    destroy: () => {},
+    on: () => {},
+  };
+  return conn as unknown as LockConnection;
+}
+const lockFactory = () => Promise.resolve(makeLockConn());
+
 describe("syncSalesDocuments — persistence via the sync engine", () => {
   const cynthiaEstimate = {
     Id: "E1",
@@ -324,7 +345,7 @@ describe("syncSalesDocuments — persistence via the sync engine", () => {
     getDbMock.mockResolvedValue(db);
     providerMock.getConnection.mockResolvedValue({ status: "connected", realmId: "R1", salesDocCursor: null });
     providerMock.fetchEstimates.mockResolvedValueOnce([cynthiaEstimate]).mockResolvedValue([]);
-    const res = await syncSalesDocuments({ mode: "backfill", sinceDays: 60, now: NOW });
+    const res = await syncSalesDocuments({ mode: "backfill", sinceDays: 60, now: NOW, lockConnectionFactory: lockFactory });
     expect(res.ok).toBe(true);
     const c = db.ins("customers")[0];
     expect(c).toBeTruthy();
@@ -337,7 +358,7 @@ describe("syncSalesDocuments — persistence via the sync engine", () => {
     getDbMock.mockResolvedValue(db);
     providerMock.getConnection.mockResolvedValue({ status: "connected", realmId: "R1", salesDocCursor: new Date("2026-06-01T00:00:00Z") });
     providerMock.fetchEstimates.mockResolvedValueOnce([cynthiaEstimate]).mockResolvedValue([]);
-    const res = await syncSalesDocuments({ mode: "incremental", now: NOW });
+    const res = await syncSalesDocuments({ mode: "incremental", now: NOW, lockConnectionFactory: lockFactory });
     expect(res.ok).toBe(true);
     expect(db.ins("customers")[0].displayName).toBe("Cynthia Rodriguez");
   });
