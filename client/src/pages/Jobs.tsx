@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Briefcase, ChevronRight, ChevronLeft, Search, ArrowUpDown, Plus } from "lucide-react";
 import { JOB_STATUS_META, JOB_TYPE_LABELS, formatMoney } from "@/lib/jobPresentation";
+import { formatDisplayName } from "@shared/nameFormat";
 
 const PAGE_SIZE = 25;
 const SORTABLE = [
@@ -201,7 +202,7 @@ export default function Jobs() {
                             )}
                             {job.archivedAt && <Badge variant="outline" className="ml-2 text-muted-foreground">Archived</Badge>}
                           </TableCell>
-                          <TableCell className="text-sm">{customerName ?? "—"}</TableCell>
+                          <TableCell className="text-sm">{customerName ? formatDisplayName(customerName) : "—"}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {job.scheduledStartAt ? new Date(job.scheduledStartAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                           </TableCell>

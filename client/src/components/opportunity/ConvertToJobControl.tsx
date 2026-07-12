@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Wrench } from "lucide-react";
+import { formatAddress } from "@shared/nameFormat";
 import {
   convertControlMode,
   convertResultEffect,
@@ -100,10 +101,10 @@ export function ConvertToJobControl({
                 className="flex w-full flex-col items-start rounded border p-2 text-left text-sm hover:bg-muted disabled:opacity-50"
               >
                 <span className="font-medium">
-                  {p.label || p.addressLine1}
+                  {formatAddress(p.label || p.addressLine1)}
                   {p.isPrimary ? <Badge variant="secondary" className="ml-2 text-[10px]">primary</Badge> : null}
                 </span>
-                <span className="text-[11px] text-muted-foreground">{propertyChoiceAddress(p)}</span>
+                <span className="text-[11px] text-muted-foreground">{formatAddress(propertyChoiceAddress(p))}</span>
               </button>
             ))}
           </div>

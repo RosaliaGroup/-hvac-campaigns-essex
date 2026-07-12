@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
 import { JOB_STATUS_META, formatMoney } from "@/lib/jobPresentation";
 import { resolveCustomerIdentity } from "@/lib/customerIdentity";
+import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
 import { jobRoute, opportunityRoute } from "@/lib/customerNavigation";
 import { Briefcase } from "lucide-react";
 import {
@@ -152,8 +153,10 @@ export default function CustomerDetail() {
   const identity = resolveCustomerIdentity(customer);
   const primaryProp = properties.find(p => p.isPrimary) ?? properties[0];
   const primaryAddress = primaryProp
-    ? [primaryProp.addressLine1, primaryProp.city, primaryProp.state, primaryProp.zip].filter(Boolean).join(", ")
-    : identity.serviceAddress;
+    ? [formatAddress(primaryProp.addressLine1), formatDisplayName(primaryProp.city), formatStateCode(primaryProp.state), primaryProp.zip].filter(Boolean).join(", ")
+    : identity.serviceAddress
+      ? formatAddress(identity.serviceAddress)
+      : identity.serviceAddress;
 
   const openEdit = () => {
     setEditForm({
@@ -232,12 +235,12 @@ export default function CustomerDetail() {
             </Button>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               {customer.type === "commercial" ? <Building2 className="h-6 w-6 text-[#1e3a5f]" /> : <UserRound className="h-6 w-6 text-[#1e3a5f]" />}
-              {identity.name}
+              {formatDisplayName(identity.name)}
             </h1>
             {(identity.projectReference || (identity.derivedFromComposite && identity.serviceAddress)) && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                 {identity.projectReference && <span className="inline-flex items-center gap-1"><Tag className="h-3.5 w-3.5" /> Project {identity.projectReference}</span>}
-                {identity.serviceAddress && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {identity.serviceAddress}</span>}
+                {identity.serviceAddress && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {formatAddress(identity.serviceAddress)}</span>}
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -306,11 +309,11 @@ export default function CustomerDetail() {
                   <div className="text-sm space-y-0.5">
                     <div className="font-medium flex items-center gap-2">
                       {p.propertyType === "commercial" ? <Building2 className="h-4 w-4 text-muted-foreground" /> : <Home className="h-4 w-4 text-muted-foreground" />}
-                      {p.label || (p.propertyType === "commercial" ? "Commercial site" : "Residence")}
+                      {p.label ? formatDisplayName(p.label) : (p.propertyType === "commercial" ? "Commercial site" : "Residence")}
                       {p.isPrimary && <Badge variant="secondary" className="bg-blue-100 text-blue-700"><Star className="h-3 w-3 mr-0.5" /> Primary</Badge>}
                     </div>
                     <div className="text-muted-foreground">
-                      {p.addressLine1}{p.addressLine2 ? `, ${p.addressLine2}` : ""}{p.city ? `, ${p.city}` : ""}{p.state ? `, ${p.state}` : ""} {p.zip || ""}
+                      {formatAddress(p.addressLine1)}{p.addressLine2 ? `, ${formatAddress(p.addressLine2)}` : ""}{p.city ? `, ${formatDisplayName(p.city)}` : ""}{p.state ? `, ${formatStateCode(p.state)}` : ""} {p.zip || ""}
                     </div>
                     {(p.squareFeet || p.existingSystem) && (
                       <div className="text-xs text-muted-foreground">
@@ -781,7 +784,7 @@ function TimelineTab({
           <CardContent className="space-y-3">
             {rebates.map(r => (
               <div key={r.id} className="border rounded-lg p-3 text-sm">
-                <div className="font-medium">{r.address}</div>
+                <div className="font-medium">{formatAddress(r.address)}</div>
                 <div className="text-muted-foreground">{formatDate(r.createdAt)}</div>
               </div>
             ))}
@@ -950,7 +953,7 @@ function QuickBooksCard({
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
             <div className="font-medium text-amber-800">Matched an existing QuickBooks customer (by {conflict.matchedBy})</div>
             <div className="text-amber-900">
-              {conflict.candidate.displayName}
+              {formatDisplayName(conflict.candidate.displayName)}
               {conflict.candidate.email && <span className="text-muted-foreground"> · {conflict.candidate.email}</span>}
               {conflict.candidate.phone && <span className="text-muted-foreground"> · {conflict.candidate.phone}</span>}
             </div>

@@ -16,6 +16,7 @@ import {
   Building2, ChevronRight, Home, Mail, Phone, Plus, Search, UserRound, Users,
 } from "lucide-react";
 import { relationshipLabel } from "@shared/leadPipeline";
+import { formatDisplayName } from "@shared/nameFormat";
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-green-100 text-green-700",
@@ -189,7 +190,7 @@ export default function Customers() {
                           {c.type === "commercial"
                             ? <Building2 className="h-4 w-4 text-muted-foreground" />
                             : <UserRound className="h-4 w-4 text-muted-foreground" />}
-                          {c.displayName}
+                          {formatDisplayName(c.displayName)}
                         </div>
                       </TableCell>
                       <TableCell>
