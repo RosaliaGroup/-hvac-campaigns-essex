@@ -2,6 +2,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
+import { toPatch } from "../_core/zodPatch";
 import {
   customers,
   properties,
@@ -367,7 +368,7 @@ export const customersRouter = router({
   }),
 
   update: protectedProcedure
-    .input(customerInput.partial().extend({ id: z.number().int(), status: z.enum(["active", "inactive", "archived"]).optional() }))
+    .input(toPatch(customerInput).extend({ id: z.number().int(), status: z.enum(["active", "inactive", "archived"]).optional() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
@@ -414,7 +415,7 @@ export const customersRouter = router({
     }),
 
   updateProperty: protectedProcedure
-    .input(propertyInput.partial().extend({ id: z.number().int() }))
+    .input(toPatch(propertyInput).extend({ id: z.number().int() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
