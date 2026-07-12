@@ -1,0 +1,103 @@
+import { describe, it, expect } from "vitest";
+import { assembleCustomerRelations, dedupeSalesDocs, type RelSalesDoc, type RelOpportunity } from "./customerRelations";
+
+const doc = (over: Partial<RelSalesDoc> = {}): RelSalesDoc => ({
+  id: 1, docType: "estimate", docNumber: "1000", quickbooksId: "q1",
+  quickbooksCustomerId: "351", customerId: 23, opportunityId: 1,
+  status: "pending", totalAmount: "100.00", txnDate: null, ...over,
+});
+const opp = (over: Partial<RelOpportunity> = {}): RelOpportunity => ({
+  id: 1, title: "Opp", stage: "won", amount: "0.00", projectReference: null,
+  quickbooksSalesDocumentId: null, createdAt: null, closedAt: null, ...over,
+});
+
+// Marco Weber = customer 23: 3 opportunities, 3 estimates (all under QBO CustomerRef 351), 0 jobs, 1 property.
+function marco() {
+  return assembleCustomerRelations({
+    propertyCount: 1,
+    jobs: [],
+    opportunities: [
+      opp({ id: 22, title: "Estimate 2164", amount: "21579.00" }),
+      opp({ id: 25, title: "Estimate 2163", amount: "21579.00" }),
+      opp({ id: 26, title: "Estimate 2162", amount: "25000.00" }),
+    ],
+    salesDocs: [
+      doc({ id: 22, quickbooksId: "3341", docNumber: "2164-B", opportunityId: 22, status: "pending", totalAmount: "21579.00" }),
+      doc({ id: 25, quickbooksId: "3340", docNumber: "2163-2", opportunityId: 25, status: "pending", totalAmount: "21579.00" }),
+      doc({ id: 26, quickbooksId: "3339", docNumber: "2162-1", opportunityId: 26, status: "accepted", totalAmount: "23979.00" }),
+    ],
+  });
+}
+
+describe("assembleCustomerRelations — Marco (customer 23) regression", () => {
+  it("returns all 3 linked opportunities", () => {
+    expect(marco().opportunities.map(o => o.id).sort()).toEqual([22, 25, 26]);
+  });
+  it("returns all 3 estimates and 0 invoices", () => {
+    const r = marco();
+    expect(r.estimates.map(d => d.quickbooksId).sort()).toEqual(["3339", "3340", "3341"]);
+    expect(r.invoices).toHaveLength(0);
+  });
+  it("returns 0 jobs (QBO sync creates none)", () => {
+    expect(marco().jobs).toHaveLength(0);
+  });
+  it("computes correct profile counts", () => {
+    expect(marco().counts).toEqual({ properties: 1, opportunities: 3, jobs: 0, estimates: 3, invoices: 0 });
+  });
+  it("cross-links each opportunity to its backing QBO estimate id", () => {
+    const byId = Object.fromEntries(marco().opportunities.map(o => [o.id, o.quickbooksReference]));
+    expect(byId).toEqual({ 22: "3341", 25: "3340", 26: "3339" });
+  });
+  it("keeps the sales-doc QBO CustomerRef stable (351) — never mutated to the row's id", () => {
+    expect(marco().estimates.every(d => d.quickbooksCustomerId === "351")).toBe(true);
+  });
+});
+
+describe("assembleCustomerRelations — dedup / no duplicates", () => {
+  it("deduplicates a doc that matched by both customerId and QBO CustomerRef", () => {
+    const r = assembleCustomerRelations({
+      propertyCount: 0, jobs: [], opportunities: [opp({ id: 22 })],
+      salesDocs: [
+        doc({ id: 22, quickbooksId: "3341", opportunityId: 22 }),
+        doc({ id: 22, quickbooksId: "3341", opportunityId: 22 }), // same row from the OR union
+      ],
+    });
+    expect(r.estimates).toHaveLength(1);
+    expect(r.counts.estimates).toBe(1);
+  });
+  it("dedupeSalesDocs collapses by primary id and by QuickBooks document id", () => {
+    const out = dedupeSalesDocs([
+      doc({ id: 1, quickbooksId: "A" }),
+      doc({ id: 1, quickbooksId: "A" }),
+      doc({ id: 2, quickbooksId: "A" }), // duplicate QBO id, different pk
+      doc({ id: 3, quickbooksId: "B" }),
+    ]);
+    expect(out.map(d => d.id)).toEqual([1, 3]);
+  });
+});
+
+describe("assembleCustomerRelations — estimates, invoices, and PDC project reference", () => {
+  it("splits estimates and invoices by docType", () => {
+    const r = assembleCustomerRelations({
+      propertyCount: 0, jobs: [],
+      opportunities: [opp({ id: 1 }), opp({ id: 2 })],
+      salesDocs: [
+        doc({ id: 1, docType: "estimate", quickbooksId: "e1", opportunityId: 1 }),
+        doc({ id: 2, docType: "invoice", quickbooksId: "i1", opportunityId: 2 }),
+      ],
+    });
+    expect(r.estimates.map(d => d.quickbooksId)).toEqual(["e1"]);
+    expect(r.invoices.map(d => d.quickbooksId)).toEqual(["i1"]);
+    expect(r.counts).toMatchObject({ estimates: 1, invoices: 1 });
+  });
+  it("derives an estimate's project reference from its linked opportunity (PDC / PN#132)", () => {
+    const r = assembleCustomerRelations({
+      propertyCount: 0, jobs: [],
+      opportunities: [opp({ id: 20, title: "PDC — Estimate 2160", projectReference: "PN#132" })],
+      salesDocs: [doc({ id: 20, quickbooksId: "3314", docNumber: "2160", opportunityId: 20, quickbooksCustomerId: "119" })],
+    });
+    expect(r.estimates[0].projectReference).toBe("PN#132");
+    expect(r.estimates[0].opportunityTitle).toBe("PDC — Estimate 2160");
+    expect(r.estimates[0].quickbooksCustomerId).toBe("119"); // stable, unchanged
+  });
+});

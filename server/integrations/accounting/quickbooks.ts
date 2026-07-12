@@ -20,6 +20,7 @@ import {
 import { encrypt, decrypt, isEncryptionConfigured } from "../../_core/crypto";
 import { normalizePhone } from "../../routers/customers";
 import type { QboEstimate, QboCustomerLite } from "./estimates";
+import { resilientFetch, type QboFetchLogEntry } from "./qboHttp";
 import {
   NotImplementedError,
   type AccountingProvider,
@@ -32,6 +33,15 @@ import {
   type PushCustomerResult,
   type RemoteCustomerSummary,
 } from "./types";
+
+/**
+ * Structured log line for every QBO HTTP attempt (duration + request id +
+ * outcome). The entry deliberately carries no auth material — the bearer token
+ * lives only in the request headers and is never included here.
+ */
+function logQboHttp(entry: QboFetchLogEntry): void {
+  console.log(JSON.stringify({ tag: "[QboHttp]", ...entry }));
+}
 
 // ── Constants (same host for sandbox + production; only the API base differs) ──
 const TOKEN_URL = "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer";
@@ -139,15 +149,21 @@ export async function requestTokens(
       ? new URLSearchParams({ grant_type: "authorization_code", code: grant.code, redirect_uri: cfg.redirectUri })
       : new URLSearchParams({ grant_type: "refresh_token", refresh_token: grant.refreshToken });
 
-  const res = await fetchImpl(TOKEN_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${basic}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json",
+  // Timeout-only (maxRetries: 0): a refresh grant rotates the refresh token, so
+  // a retry could race a rotation and brick the connection.
+  const res = await resilientFetch(
+    TOKEN_URL,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${basic}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: body.toString(),
     },
-    body: body.toString(),
-  });
+    { label: "/oauth2/token", maxRetries: 0, fetchImpl, log: logQboHttp },
+  );
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`QuickBooks token request failed (${res.status}): ${text.slice(0, 200)}`);
@@ -424,11 +440,15 @@ export class QuickBooksProvider implements AccountingProvider {
       const cfg = this.cfg();
       const refreshToken = decrypt(conn.refreshTokenEncrypted);
       const basic = Buffer.from(`${cfg.clientId}:${cfg.clientSecret}`).toString("base64");
-      await fetch(REVOKE_URL, {
-        method: "POST",
-        headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ token: refreshToken }),
-      });
+      await resilientFetch(
+        REVOKE_URL,
+        {
+          method: "POST",
+          headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ token: refreshToken }),
+        },
+        { label: "/oauth2/revoke", maxRetries: 0, log: logQboHttp },
+      );
     } catch {
       /* ignore — we still remove the local connection */
     }
@@ -473,9 +493,11 @@ export class QuickBooksProvider implements AccountingProvider {
 
   private async fetchCompanyName(realmId: string, accessToken: string): Promise<string | null> {
     const base = qboApiBase(this.cfg().environment);
-    const res = await fetch(`${base}/v3/company/${realmId}/companyinfo/${realmId}?minorversion=${MINOR_VERSION}`, {
-      headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" },
-    });
+    const res = await resilientFetch(
+      `${base}/v3/company/${realmId}/companyinfo/${realmId}?minorversion=${MINOR_VERSION}`,
+      { headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" } },
+      { label: "/companyinfo", log: logQboHttp },
+    );
     if (!res.ok) return null;
     const json = (await res.json()) as { CompanyInfo?: { CompanyName?: string } };
     return json.CompanyInfo?.CompanyName ?? null;
@@ -485,15 +507,19 @@ export class QuickBooksProvider implements AccountingProvider {
     const { accessToken, realmId } = await this.getValidAccessToken();
     const base = qboApiBase(this.cfg().environment);
     const sep = path.includes("?") ? "&" : "?";
-    return fetch(`${base}/v3/company/${realmId}${path}${sep}minorversion=${MINOR_VERSION}`, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
-        ...(init?.body ? { "Content-Type": "application/json" } : {}),
-        ...(init?.headers ?? {}),
+    return resilientFetch(
+      `${base}/v3/company/${realmId}${path}${sep}minorversion=${MINOR_VERSION}`,
+      {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/json",
+          ...(init?.body ? { "Content-Type": "application/json" } : {}),
+          ...(init?.headers ?? {}),
+        },
       },
-    });
+      { label: path.split("?")[0], log: logQboHttp },
+    );
   }
 
   /** Query QBO for possible matches to a local customer (merge protection). */
@@ -654,7 +680,17 @@ export class QuickBooksProvider implements AccountingProvider {
    */
   async fetchEstimates(query: string): Promise<QboEstimate[]> {
     const res = await this.qboFetch(`/query?query=${encodeURIComponent(query)}`);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      // FAIL CLOSED: a non-2xx here (incl. an exhausted-retry 429/502/503/504
+      // returned by resilientFetch) must NOT read as "0 estimates" — that would
+      // let the sync record success and advance the cursor over an unread
+      // window. Throw so syncSalesDocuments writes a failed sync-log and the
+      // cursor stays put. The message carries only the numeric status and at
+      // most the first 200 chars of the response body — never the request URL,
+      // Authorization header, or access token (none of which appear in the body).
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      throw new Error(`QBO estimate query failed: ${res.status} ${body}`);
+    }
     const json = (await res.json()) as { QueryResponse?: { Estimate?: QboEstimate[] } };
     return json.QueryResponse?.Estimate ?? [];
   }

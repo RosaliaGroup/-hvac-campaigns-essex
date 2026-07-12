@@ -9,11 +9,12 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
-import { getDb } from "../db";
+import { getDb, createDedicatedConnection } from "../db";
 import { customers, properties, quickbooksSyncLogs, type Customer, type Property } from "../../drizzle/schema";
 import { getAccountingProvider } from "../integrations/accounting";
 import { quickbooksProvider, buildAuthorizeUrl, getQboConfig, signState, writeSyncLog } from "../integrations/accounting/quickbooks";
 import { syncSalesDocuments } from "../integrations/accounting/salesDocSync";
+import { runAdvisoryLockSelfTest, type DbLockLogEntry, type LockConnection } from "../integrations/accounting/dbSyncLock";
 import type { AccountingCustomerInput, ConflictResolution, PushCustomerResult } from "../integrations/accounting/types";
 
 const provider = getAccountingProvider("quickbooks");
@@ -226,6 +227,27 @@ export const quickbooksRouter = router({
       }
       return result;
     }),
+
+  /**
+   * Admin: no-op advisory-lock self-test. Touches NO application data — it uses
+   * a distinct lock name ("qbo_salesdoc_selftest") and proves, on the live
+   * database, that a second independent connection is refused while the first
+   * holds the lock (cross-instance mutual exclusion) and that the lock frees
+   * after release. Run this in Railway BEFORE re-enabling any backfill.
+   */
+  advisoryLockSelfTest: adminProcedure.mutation(async () => {
+    const result = await runAdvisoryLockSelfTest(
+      () => createDedicatedConnection() as unknown as Promise<LockConnection>,
+      { requestId: "selftest", log: (e: DbLockLogEntry) => console.log(JSON.stringify({ tag: "[QboSyncLock]", ...e })) },
+    );
+    if (!result.ok) {
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: `Advisory lock self-test FAILED: ${JSON.stringify(result.steps)}`,
+      });
+    }
+    return result;
+  }),
 
   /** Recent sync-log activity for the Integrations page. */
   recentLogs: protectedProcedure
