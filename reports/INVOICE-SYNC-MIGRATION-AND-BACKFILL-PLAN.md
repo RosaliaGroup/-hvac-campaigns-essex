@@ -47,18 +47,35 @@ share a numeric id coexist as two rows.
 > `__drizzle_migrations`**, and `drizzle-kit migrate` gates on `created_at`
 > timestamps — so on the next migrate it *will* re-encounter `0043`.
 
-**Migration strategy — idempotent (no baseline surgery required).** `0043.sql`
-was reconciled from raw DDL into `information_schema`-guarded dynamic SQL
-(`SET`/`PREPARE`/`EXECUTE`/`DEALLOCATE`, which drizzle runs over the mysql2 text
-protocol on one connection):
+**Migration strategy — idempotent + self-correcting (no baseline surgery required).**
+`0043.sql` was reconciled from raw DDL into `information_schema`-guarded dynamic
+SQL (`SET`/`PREPARE`/`EXECUTE`/`DEALLOCATE`, which drizzle runs over the mysql2
+text protocol on one connection):
 - If `quickbooksSalesDocuments_quickbooksId_unique` still exists → drop it; else no-op.
-- If `qbSalesDocs_realm_docType_qboId_uq` is absent → create it; else no-op.
+- The composite guard validates the **exact** definition, not the name alone:
+  `TABLE_SCHEMA = DATABASE()`, exact table + index name, `NON_UNIQUE = 0`, and all
+  three columns in the correct `SEQ_IN_INDEX` order (realmId#1, docType#2,
+  quickbooksId#3). If that exact index is present → no-op. If **absent** → create
+  it. If an index with the reserved name exists but is **wrong** (wrong columns/
+  order or non-unique) → drop it and recreate correctly (a wrong index is never
+  silently accepted). If live data then violates uniqueness, the recreate **fails
+  clearly** (`ER_DUP_ENTRY`) so a human deduplicates first.
 
 Result:
-- **Production** (already migrated): both branches are no-ops; `0043` runs cleanly
+- **Production** (already migrated): every branch is a no-op; `0043` runs cleanly
   and is finally *recorded* in `__drizzle_migrations`, so it never re-runs again.
-- **Fresh envs** (dev / CI / staging): both branches execute and apply the change,
-  keeping the DB consistent with `schema.ts` + the `0043` snapshot.
+- **Fresh envs** (dev / CI / staging): the change is applied, keeping the DB
+  consistent with `schema.ts` + the `0043` snapshot.
+
+**Executed through the real `drizzle-kit migrate` runner on disposable MySQL 8.0.36**
+(pre-state staged at the 0042 watermark so only 0043 applies):
+- **A** old-unique-present / composite-absent → old dropped, composite created in
+  correct order, 0043 recorded once. ✅
+- **B** production-equivalent (composite already correct) → no DDL error, 0043
+  recorded exactly once; a second migrate is a complete no-op. ✅
+- **C** reserved name with a *wrong* (non-unique, wrong-column) index → dropped and
+  recreated as the correct unique; enforcement confirmed (duplicate composite tuple
+  rejected); with violating data the recreate fails clearly with `ER_DUP_ENTRY`. ✅
 
 ### Apply (when approved)
 1. Preflight (read-only): confirm production has NO `quickbooksSalesDocuments_quickbooksId_unique`
