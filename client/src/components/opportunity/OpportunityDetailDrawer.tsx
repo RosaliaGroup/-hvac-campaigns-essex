@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
 } from "lucide-react";
+import { ConvertToJobControl } from "./ConvertToJobControl";
 import { STAGE_META, DOC_STATUS_BADGE, RELATIONSHIP_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate } from "./shared";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -74,6 +75,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   const o = data?.opportunity;
   const c = data?.customer;
+  const primaryJob = data?.primaryJob ?? null;
   // Disable every stage/outcome control while any stage mutation is in flight,
   // so rapid clicks can't fire duplicate markWon/markLost/setStage calls.
   const stageMutating = setStage.isPending || markWon.isPending || markLost.isPending || followUpLater.isPending;
@@ -141,6 +143,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
               <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => id != null && markWon.mutate({ id })}><Trophy className="h-4 w-4" /> Won</Button>
               <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => id != null && markLost.mutate({ id })}><XCircle className="h-4 w-4" /> Lost</Button>
               <Button variant="outline" size="sm" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
+              <ConvertToJobControl opportunityId={id} primaryJob={primaryJob} onConverted={invalidate} />
             </div>
 
             <div className="space-y-5 p-4">
