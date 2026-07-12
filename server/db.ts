@@ -431,6 +431,55 @@ export async function createSocialPost(post: InsertSocialPost) {
   return await db.insert(socialPosts).values(post);
 }
 
+/**
+ * Insert a social post and return its new primary-key id. Used by the
+ * publishing service so an external platform post maps 1:1 to a DB row
+ * (idempotency unit). MySQL returns the id via ResultSetHeader.insertId.
+ */
+export async function createSocialPostReturningId(post: InsertSocialPost): Promise<number> {
+  const db = await getDb();
+  if (!db) {
+    throw new Error("Database not available");
+  }
+  const result = await db.insert(socialPosts).values(post);
+  return Number((result as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+}
+
+/** Fetch a single social post by id (or null). */
+export async function getSocialPostById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(socialPosts).where(eq(socialPosts.id, id)).limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * Find the most recent social post matching a platform + exact content, used
+ * to reuse an existing record instead of creating a duplicate when the same
+ * content is published again (idempotency without a schema change).
+ */
+export async function findReusableSocialPost(platform: string, content: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(socialPosts)
+    .where(and(eq(socialPosts.platform, platform), eq(socialPosts.content, content)))
+    .orderBy(desc(socialPosts.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * Patch an existing social post row (status, postId, postedAt, errorMessage, …).
+ * Used by the publishing service to update-in-place rather than insert-new.
+ */
+export async function updateSocialPost(id: number, patch: Partial<InsertSocialPost>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(socialPosts).set(patch).where(eq(socialPosts.id, id));
+}
+
 export async function getSocialPosts(status?: "draft" | "scheduled" | "posted" | "failed", limit: number = 50, offset: number = 0) {
   const db = await getDb();
   if (!db) {

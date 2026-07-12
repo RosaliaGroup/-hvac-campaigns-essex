@@ -20,16 +20,70 @@ export interface GeneratedContent {
   hashtags: string[];
   callToAction: string;
   imagePrompt?: string;
+  /**
+   * True when the content could not be fully validated (e.g. the model
+   * returned malformed JSON and we fell back to the raw payload). The caller
+   * MUST have a human review before publishing.
+   */
+  unverified?: boolean;
+  /** True specifically when JSON parsing failed. */
+  parseError?: boolean;
 }
 
 /**
- * Generate social media post content using AI
+ * Hard factual guardrails. HVAC marketing for a real company must never invent
+ * customer-specific or regulated claims — doing so is a compliance/legal risk.
  */
-export async function generateSocialPost(
-  contentType: ContentType,
-  platform: "facebook" | "instagram" | "google_business" | "linkedin" | "nextdoor"
-): Promise<GeneratedContent> {
-  const systemPrompt = `You are a social media content creator for Mechanical Enterprise, an HVAC company in New Jersey specializing in VRF/VRV systems, heat pumps, and energy-efficient upgrades.
+export const FACTUAL_RULES = `STRICT FACTUAL RULES — you MUST follow these:
+- NEVER invent or imply a customer identity, name, direct quote, or testimonial.
+- NEVER invent dollar savings, energy-savings percentages, equipment make/model, tonnage, rebate eligibility/amounts for a specific job, warranty terms, or a job outcome.
+- Use ONLY facts explicitly provided under "Verified job facts". If a detail was not provided, do not state it as fact.
+- When a template would normally include such a specific and it was NOT provided, write an editable placeholder in square brackets (e.g. "[add verified savings]") instead of a number, and never present a placeholder as a fact.
+- General, non-job-specific educational statements about HVAC are fine.`;
+
+/**
+ * Parse the model's JSON response safely. On malformed JSON, preserve the raw
+ * payload as the content and flag it unverified rather than throwing — the
+ * workflow must not crash on a bad model response.
+ */
+export function parseGeneratedContent(raw: string): GeneratedContent {
+  try {
+    const g = JSON.parse(raw) as Partial<GeneratedContent>;
+    return {
+      content: typeof g.content === "string" ? g.content : String(g.content ?? ""),
+      hashtags: Array.isArray(g.hashtags) ? g.hashtags.map(String) : [],
+      callToAction: typeof g.callToAction === "string" ? g.callToAction : "",
+      imagePrompt: g.imagePrompt ? String(g.imagePrompt) : undefined,
+    };
+  } catch {
+    // Malformed JSON — keep the raw payload for debugging/human review.
+    return {
+      content: raw,
+      hashtags: [],
+      callToAction: "",
+      imagePrompt: undefined,
+      unverified: true,
+      parseError: true,
+    };
+  }
+}
+
+export interface GenerateSocialPostOptions {
+  /**
+   * Verified, caller-supplied job/customer facts the model may use. Anything
+   * outside this is off-limits (see FACTUAL_RULES). Required in practice for
+   * testimonial / before-after content.
+   */
+  facts?: string;
+  /** Injection seam for testing. Defaults to the real LLM. */
+  invoke?: typeof invokeLLM;
+}
+
+/**
+ * Build the system prompt (exported for testing the factual guardrails).
+ */
+export function buildSystemPrompt(platform: string): string {
+  return `You are a social media content creator for Mechanical Enterprise, an HVAC company in New Jersey specializing in VRF/VRV systems, heat pumps, and energy-efficient upgrades.
 
 Company details:
 - WMBE/SBE Certified
@@ -45,23 +99,41 @@ Create engaging, professional content that:
 - Highlights rebate opportunities
 - Builds trust and expertise
 - Includes clear call-to-action
-- Uses appropriate tone for ${platform}`;
+- Uses appropriate tone for ${platform}
+
+${FACTUAL_RULES}`;
+}
+
+/**
+ * Generate social media post content using AI
+ */
+export async function generateSocialPost(
+  contentType: ContentType,
+  platform: "facebook" | "instagram" | "google_business" | "linkedin" | "nextdoor",
+  opts: GenerateSocialPostOptions = {}
+): Promise<GeneratedContent> {
+  const invoke = opts.invoke ?? invokeLLM;
+  const systemPrompt = buildSystemPrompt(platform);
 
   const contentPrompts: Record<ContentType, string> = {
     hvac_tip: "Create a helpful HVAC tip that saves energy or money. Keep it practical and actionable.",
-    rebate_alert: "Highlight the amazing rebate opportunities available in NJ. Create urgency without being pushy.",
+    rebate_alert: "Highlight the rebate opportunities available in NJ using only the program facts you are sure of. Create urgency without being pushy. Do not state a specific rebate amount for any individual customer.",
     seasonal_advice: "Give seasonal HVAC advice relevant to the current time of year. Focus on preparation and maintenance.",
-    before_after: "Describe a successful HVAC upgrade project. Include the problem, solution, and results (energy savings, comfort improvement).",
-    customer_testimonial: "Share a customer success story (fictional but realistic). Include their problem, our solution, and their satisfaction.",
+    before_after: "Describe an HVAC upgrade project using ONLY the verified job facts provided (problem, solution, result). Do not invent metrics — use [placeholders] for any number not provided.",
+    customer_testimonial: "Write a testimonial-style post using ONLY the verified facts provided. Do NOT fabricate a customer, name, quote, or result. If no customer quote is provided, do not invent one — describe the project generically and invite real customers to leave a review.",
     faq: "Answer a common HVAC question that homeowners or business owners frequently ask.",
-    energy_savings: "Explain how modern HVAC systems save energy and money. Include specific percentages or dollar amounts.",
+    energy_savings: "Explain how modern HVAC systems save energy and money in general terms. Do not attribute specific savings numbers to a customer unless provided as a verified fact.",
     maintenance_reminder: "Remind followers about important HVAC maintenance tasks. Explain why it matters and what happens if neglected.",
   };
 
-  const response = await invokeLLM({
+  const factsBlock = opts.facts?.trim()
+    ? `\n\nVerified job facts you may use (do not go beyond these):\n${opts.facts.trim()}`
+    : `\n\nNo verified job facts were provided. Do NOT include any specific customer name, quote, savings number, equipment model, rebate amount, or outcome. Keep the post general/educational and use [placeholders] for any specific detail a human should fill in.`;
+
+  const response = await invoke({
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `${contentPrompts[contentType]}\n\nFormat your response as JSON with these fields:\n- content: The main post text (${getPlatformCharLimit(platform)} characters max)\n- hashtags: Array of 3-5 relevant hashtags\n- callToAction: A clear CTA (e.g., "Call now", "Get your free quote")\n- imagePrompt: A brief description of an image that would complement this post` },
+      { role: "user", content: `${contentPrompts[contentType]}${factsBlock}\n\nFormat your response as JSON with these fields:\n- content: The main post text (${getPlatformCharLimit(platform)} characters max)\n- hashtags: Array of 3-5 relevant hashtags\n- callToAction: A clear CTA (e.g., "Call now", "Get your free quote")\n- imagePrompt: A brief description of an image that would complement this post` },
     ],
     response_format: {
       type: "json_schema",
@@ -85,14 +157,7 @@ Create engaging, professional content that:
 
   const content = response.choices[0].message.content;
   const contentString = typeof content === 'string' ? content : JSON.stringify(content);
-  const generated = JSON.parse(contentString);
-  
-  return {
-    content: generated.content,
-    hashtags: generated.hashtags,
-    callToAction: generated.callToAction,
-    imagePrompt: generated.imagePrompt,
-  };
+  return parseGeneratedContent(contentString);
 }
 
 /**
