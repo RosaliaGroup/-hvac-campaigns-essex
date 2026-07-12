@@ -16,7 +16,7 @@ import {
   quickbooksSalesDocuments,
   type InsertCustomer,
 } from "../../drizzle/schema";
-import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { deriveContactRelationship, type Relationship } from "@shared/leadPipeline";
 import { assembleCustomerRelations } from "./customerRelations";
 
@@ -309,10 +309,22 @@ export const customersRouter = router({
       //  (c) the doc's PARENT ref == the customer's ref — i.e. an invoice/estimate
       //      filed under a QBO sub-customer / child project whose parent is this
       //      customer (the 351-vs-354 hierarchy case). Deduplicated in assembleCustomerRelations.
+      // A doc RESOLVED to a customer (customerId set) attaches ONLY via that FK,
+      // so a document can never be claimed by two customers. Ref / parent-ref
+      // matching is a fallback for docs the sync could not resolve (customerId
+      // IS NULL) — surfacing them under the right customer without double-claiming
+      // any already-resolved document.
       const docMatch = [eq(quickbooksSalesDocuments.customerId, input.id)];
       if (customer.quickbooksCustomerId) {
-        docMatch.push(eq(quickbooksSalesDocuments.quickbooksCustomerId, customer.quickbooksCustomerId));
-        docMatch.push(eq(quickbooksSalesDocuments.quickbooksParentRef, customer.quickbooksCustomerId));
+        docMatch.push(
+          and(
+            isNull(quickbooksSalesDocuments.customerId),
+            or(
+              eq(quickbooksSalesDocuments.quickbooksCustomerId, customer.quickbooksCustomerId),
+              eq(quickbooksSalesDocuments.quickbooksParentRef, customer.quickbooksCustomerId),
+            ),
+          )!,
+        );
       }
 
       const [props, appts, relatedLeads, relatedCaptures, calls, rebates, relJobs, relOpps, relDocs] = await Promise.all([

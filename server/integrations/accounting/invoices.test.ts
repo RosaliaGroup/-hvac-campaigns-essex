@@ -106,4 +106,38 @@ describe("docMatchesCustomer — hierarchy reconciliation rule", () => {
   it("does NOT match an unrelated ref (no hidden documents from other customers)", () => {
     expect(docMatchesCustomer({ customerId: 99, quickbooksCustomerId: "999", quickbooksParentRef: "888" }, marco)).toBe(false);
   });
+  it("the local FK takes precedence — a doc resolved to another customer never matches by a shared ref", () => {
+    const other = { id: 7, refs: new Set(["354"]) };
+    // Doc resolved to customer 23 (Marco) but carrying ref 354: docMatchesCustomer
+    // is a pure predicate, so both would "match"; the query layer only ref-matches
+    // UNRESOLVED docs (customerId IS NULL), which is what prevents the double-claim.
+    expect(docMatchesCustomer({ customerId: 23, quickbooksCustomerId: "354", quickbooksParentRef: null }, other)).toBe(true);
+    // …and an UNRESOLVED doc under an unrelated ref stays unmatched (no guess).
+    expect(docMatchesCustomer({ customerId: null, quickbooksCustomerId: "777", quickbooksParentRef: null }, marco)).toBe(false);
+  });
+  it("an unresolved invoice (customerId null, ref not in the set) is NOT force-assigned", () => {
+    expect(docMatchesCustomer({ customerId: null, quickbooksCustomerId: "351", quickbooksParentRef: null }, marco)).toBe(false); // 351 not in {354}
+  });
+});
+
+describe("invoice status transitions (derivable from balance/void — no stored transition)", () => {
+  it("partial → paid as balance is collected", () => {
+    expect(deriveInvoiceStatus(inv({ TotalAmt: 1000, Balance: 400 }))).toBe("partial");
+    expect(deriveInvoiceStatus(inv({ TotalAmt: 1000, Balance: 0 }))).toBe("paid");
+  });
+  it("a previously-active invoice becoming voided reads as void (excluded from money)", () => {
+    const active = inv({ TotalAmt: 1000, Balance: 1000 });
+    expect(deriveInvoiceStatus(active)).toBe("unpaid");
+    const voided = inv({ ...active, PrivateNote: "Voided 2026-07-01 by admin" });
+    expect(deriveInvoiceStatus(voided)).toBe("void");
+    expect(invoicePaidAmount({ totalAmount: "1000.00", balance: "1000.00", voided: true })).toBe(0);
+  });
+  it("sparse QBO response (no TotalAmt/Balance) does not crash → paid(0)", () => {
+    expect(deriveInvoiceStatus({ Id: "1", CustomerRef: { value: "1" } } as QboInvoice)).toBe("paid");
+    expect(mapInvoiceToSalesDoc({ Id: "1" } as QboInvoice, "r").totalAmount).toBe("0.00");
+  });
+  it("credit / negative balance is represented (not silently dropped)", () => {
+    // A credit memo-style negative balance → not 'unpaid'; paid-amount reflects it.
+    expect(invoicePaidAmount({ totalAmount: "1000.00", balance: "-50.00" })).toBe(1050);
+  });
 });

@@ -76,6 +76,48 @@ describe("assembleCustomerRelations — dedup / no duplicates", () => {
   });
 });
 
+describe("Marco Weber — child-project invoice hierarchy regression (no hard-coding)", () => {
+  // Marco: CRM customer 23 (QBO ref 354). His 3 estimates carry the CHILD ref 351
+  // (parent 354). Two invoices are filed under the child project 351 (parentRef
+  // 354) and reconcile to Marco via the parent. Fixture only — nothing is
+  // hard-coded to "Marco" in production code; matching is by id/ref/parentRef.
+  const marco = () =>
+    assembleCustomerRelations({
+      propertyCount: 1,
+      jobs: [],
+      opportunities: [
+        opp({ id: 22, stage: "won", amount: "21579.00" }),
+        opp({ id: 25, stage: "won", amount: "21579.00" }),
+        opp({ id: 26, stage: "won", amount: "25000.00" }),
+      ],
+      // As customers.getById would return them: estimates linked by customerId=23;
+      // child-project invoices reconciled (customerId=23) carrying parent ref 354.
+      salesDocs: [
+        doc({ id: 22, docType: "estimate", quickbooksId: "3341", customerId: 23, quickbooksCustomerId: "351", status: "pending", totalAmount: "21579.00" }),
+        doc({ id: 25, docType: "estimate", quickbooksId: "3340", customerId: 23, quickbooksCustomerId: "351", status: "pending", totalAmount: "21579.00" }),
+        doc({ id: 26, docType: "estimate", quickbooksId: "3339", customerId: 23, quickbooksCustomerId: "351", status: "accepted", totalAmount: "23979.00" }),
+        doc({ id: 40, docType: "invoice", quickbooksId: "5001", customerId: 23, quickbooksCustomerId: "351", quickbooksParentRef: "354", status: "paid", totalAmount: "21579.00", balance: "0.00" }),
+        doc({ id: 41, docType: "invoice", quickbooksId: "5002", customerId: 23, quickbooksCustomerId: "351", quickbooksParentRef: "354", status: "unpaid", totalAmount: "23979.00", balance: "23979.00" }),
+      ],
+    });
+
+  it("invoice count is 2 and the tab rows are the same 2", () => {
+    const r = marco();
+    expect(r.counts.invoices).toBe(2);
+    expect(r.invoices.map(d => d.quickbooksId)).toEqual(["5001", "5002"]);
+  });
+  it("lifetime revenue + outstanding balance derive from those SAME 2 invoice rows", () => {
+    const r = marco();
+    expect(r.summary.lifetimeRevenue).toBe(21579);      // (21579−0) + (23979−23979)
+    expect(r.summary.outstandingBalance).toBe(23979);   // 0 + 23979
+  });
+  it("estimate counts remain separate and unchanged (3)", () => {
+    const r = marco();
+    expect(r.counts.estimates).toBe(3);
+    expect(r.invoices.some(d => d.docType === "estimate")).toBe(false);
+  });
+});
+
 describe("assembleCustomerRelations — invoice reconciliation (revenue / balance / count)", () => {
   const invoiceSet = () =>
     assembleCustomerRelations({
