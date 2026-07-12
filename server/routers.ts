@@ -22,6 +22,7 @@ import { runCampaignAnalysis } from "./services/campaignEngine";
 import { generateSocialPost } from "./integrations/ai-content-generator";
 import { publishSocialPost, retrySocialPost, PublishError } from "./services/socialPublisher";
 import * as marketingCanary from "./services/marketingCanary";
+import { redactCredentials } from "./services/credentialSafety";
 import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelationships } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
@@ -502,24 +503,28 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // SECURITY: returns only non-secret metadata (connected + which keys are
+    // configured). Credential VALUES (tokens/keys/secrets) never leave the
+    // server — see redactCredentials.
     getCredentials: protectedProcedure
       .input(z.object({ service: z.enum(["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const) }))
       .query(async ({ input }) => {
-        return await db.getAiVaCredentials(input.service);
+        const creds = await db.getAiVaCredentials(input.service);
+        return redactCredentials(input.service, creds);
       }),
 
     getAllCredentials: protectedProcedure
       .query(async () => {
-        // Get all credentials for all services
+        // Return non-secret status only — no raw or encrypted credential values.
         const services = ["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const;
-        const allCredentials = await Promise.all(
+        const summaries = await Promise.all(
           services.map(async (service) => {
             const creds = await db.getAiVaCredentials(service);
-            return creds ? { service, credentials: creds } : null;
+            return redactCredentials(service, creds);
           })
         );
-        // Filter out null values (services with no credentials)
-        return allCredentials.filter(c => c !== null);
+        // Only services that actually have credentials configured.
+        return summaries.filter((s) => s.connected);
       }),
 
     listCallLogs: protectedProcedure

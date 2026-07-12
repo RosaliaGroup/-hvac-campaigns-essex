@@ -148,6 +148,21 @@ describe("marketingCanary — failure then retry", () => {
     const rows = h.rows.filter((x) => x.contentType === CANARY_TYPE_FAILURE);
     expect(rows).toHaveLength(1); // no duplicate row
     expect(h.externalPosts).toBe(1); // only the successful retry hit the API (failure made no call)
+
+    // The forced-failure error is a fixed string — no token/secret leakage.
+    expect(r.failedError).toMatch(/Canary forced failure/);
+    expect(r.failedError).not.toMatch(/token|secret|Bearer|accessToken/i);
+  });
+
+  it("canary rows carry only test content — no customer/job/campaign association", async () => {
+    const h = makeHarness();
+    await runSuccessCanary("facebook", 7, true, h.canaryDeps);
+    const row = h.rows.find((x) => x.contentType === CANARY_TYPE_SUCCESS)!;
+    expect(row.content).toBe(CANARY_CONTENT);
+    // socialPosts has no customer/job/campaign columns and the canary never sets any.
+    expect(Object.keys(row)).not.toContain("customerId");
+    expect(Object.keys(row)).not.toContain("jobId");
+    expect(Object.keys(row)).not.toContain("campaignId");
   });
 
   it("a second failure/retry run is idempotent (already posted)", async () => {
