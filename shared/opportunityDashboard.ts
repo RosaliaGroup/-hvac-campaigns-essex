@@ -15,7 +15,11 @@ import type { WorkCategory } from "./opportunityCategory";
 import { deriveRelationship, type Relationship } from "./leadPipeline";
 
 export type OpportunityStage = "new" | "proposal_sent" | "pending" | "won" | "lost";
-export type SalesDocStatus = "pending" | "accepted" | "closed" | "rejected" | "expired";
+export type SalesDocStatus =
+  | "pending" | "accepted" | "closed" | "rejected" | "expired"
+  // Invoice statuses (documents can be invoices too); estimate-oriented logic
+  // here treats these as "not accepted / not sent" and ignores them.
+  | "paid" | "partial" | "unpaid" | "void";
 export type WonLostOpen = "won" | "lost" | "open";
 export type AgingBucket = "0-3" | "4-7" | "8-14" | "15+";
 

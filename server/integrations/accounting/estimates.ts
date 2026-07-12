@@ -30,6 +30,8 @@ export interface QboEstimate {
 }
 
 export type SalesDocStatus = "pending" | "accepted" | "closed" | "rejected" | "expired";
+/** Every value the stored `status` column can hold (estimate + invoice statuses). */
+export type StoredDocStatus = SalesDocStatus | "paid" | "partial" | "unpaid" | "void";
 export type OpportunityStage = "new" | "proposal_sent" | "pending" | "won" | "lost";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -76,7 +78,7 @@ export function normalizeEstimateStatus(e: QboEstimate, now: Date = new Date()):
 }
 
 /** Map a normalized sales-doc status → opportunity pipeline stage. */
-export function mapDocStatusToStage(status: SalesDocStatus, sentAt: Date | null): OpportunityStage {
+export function mapDocStatusToStage(status: StoredDocStatus, sentAt: Date | null): OpportunityStage {
   switch (status) {
     case "accepted":
     case "closed":
