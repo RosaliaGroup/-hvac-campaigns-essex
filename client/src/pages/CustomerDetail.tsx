@@ -323,7 +323,7 @@ export default function CustomerDetail() {
           </TabsContent>
 
           <TabsContent value="jobs">
-            <CustomerJobsTab customerId={customerId} />
+            <CustomerJobsTab customerId={customerId} properties={properties} />
           </TabsContent>
 
           <TabsContent value="opportunities">
@@ -542,8 +542,8 @@ export default function CustomerDetail() {
 }
 
 
-/** Jobs tab on the customer 360 view (Task 6). */
-function CustomerJobsTab({ customerId }: { customerId: number }) {
+/** Jobs tab on the customer 360 view (Task 6). Shows property, scheduled date, technician. */
+function CustomerJobsTab({ customerId, properties }: { customerId: number; properties: Array<{ id: number; label: string | null; addressLine1: string; city: string | null }> }) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { data, refetch } = trpc.jobs.list.useQuery({ customerId, limit: 50, offset: 0 });
@@ -552,34 +552,54 @@ function CustomerJobsTab({ customerId }: { customerId: number }) {
     onError: e => toast({ title: "Could not create job", description: e.message, variant: "destructive" }),
   });
   const items = data?.items ?? [];
+  const total = data?.total ?? items.length;
+  const propLabel = (propertyId: number | null) => {
+    if (propertyId == null) return null;
+    const p = properties.find(x => x.id === propertyId);
+    if (!p) return null;
+    return p.label || [p.addressLine1, p.city].filter(Boolean).join(", ");
+  };
+  const shortDate = (d: Date | string | null | undefined) =>
+    d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4 text-[#1e3a5f]" /> Jobs ({items.length})</CardTitle>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={createJob.isPending}
-          onClick={() => createJob.mutate({ customerId, title: "New job", priority: "normal" })}
-        >
-          <Plus className="h-4 w-4 mr-1" /> New Job
-        </Button>
+        <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4 text-[#1e3a5f]" /> Jobs ({total})</CardTitle>
+        <div className="flex items-center gap-2">
+          {total > items.length && (
+            <Button size="sm" variant="ghost" onClick={() => navigate("/jobs")}>View all Jobs</Button>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={createJob.isPending}
+            onClick={() => createJob.mutate({ customerId, title: "New job", priority: "normal" })}
+          >
+            <Plus className="h-4 w-4 mr-1" /> New Job
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {items.length === 0 ? (
           <p className="text-sm text-muted-foreground">No jobs for this customer yet.</p>
         ) : (
-          items.map(({ job, lineTotal }) => {
+          items.map(({ job, assigneeName }) => {
             const meta = JOB_STATUS_META.find(m => m.value === job.status);
+            const address = propLabel(job.propertyId);
+            const scheduled = shortDate(job.scheduledStartAt);
             return (
               <div
                 key={job.id}
-                className="flex items-center justify-between border rounded-lg p-3 text-sm cursor-pointer hover:bg-muted/50"
+                className="flex items-start justify-between gap-3 border rounded-lg p-3 text-sm cursor-pointer hover:bg-muted/50"
                 onClick={() => navigate(jobRoute(job))}
               >
-                <div>
-                  <div className="font-medium"><span className="font-mono text-muted-foreground mr-2">{job.jobNumber}</span>{job.title}</div>
-                  <div className="text-muted-foreground">{formatMoney(Number(lineTotal))}</div>
+                <div className="min-w-0">
+                  <div className="font-medium truncate"><span className="font-mono text-muted-foreground mr-2">{job.jobNumber}</span>{job.title}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {address && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {address}</span>}
+                    {scheduled && <span className="inline-flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> {scheduled}</span>}
+                    <span className="inline-flex items-center gap-1"><UserRound className="h-3.5 w-3.5" /> {assigneeName ?? "Unassigned"}</span>
+                  </div>
                 </div>
                 <Badge variant="secondary" className={meta?.badge ?? ""}>{meta?.label ?? job.status}</Badge>
               </div>
