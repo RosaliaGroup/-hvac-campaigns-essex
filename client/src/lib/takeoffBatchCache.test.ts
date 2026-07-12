@@ -28,8 +28,8 @@ function fakeStorage(): Storage {
 
 describe("batch cache key + signature", () => {
   it("is versioned and tied to project + mode", () => {
-    expect(batchCacheKey(42, "quick")).toBe("takeoff-batches:v1:42:quick");
-    expect(batchCacheKey(42, "precise")).toBe("takeoff-batches:v1:42:precise");
+    expect(batchCacheKey(42, "quick")).toBe("takeoff-batches:v2:42:quick");
+    expect(batchCacheKey(42, "precise")).toBe("takeoff-batches:v2:42:precise");
   });
   it("signature changes when page selection changes", () => {
     expect(batchSignature("quick", [1, 2, 3, 4])).not.toBe(batchSignature("quick", [1, 2, 3, 5]));
