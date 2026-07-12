@@ -29,6 +29,7 @@ import { findCustomerIdByPhone, splitName, buildDisplayName } from "./customers"
 import {
   computeLaborMinutes, resolveJobSort, normalizeArchivedFilter, statusTransitionStamps,
 } from "./jobsLogic";
+import { toPatch } from "../_core/zodPatch";
 
 /** Append a job status-history row. Best-effort audit trail; never blocks the write it follows. */
 async function recordStatusChange(
@@ -390,7 +391,7 @@ export const jobsRouter = router({
     }),
 
   update: protectedProcedure
-    .input(jobInput.partial().extend({ id: z.number().int() }))
+    .input(toPatch(jobInput).extend({ id: z.number().int() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const { id, ...patch } = input;
@@ -486,7 +487,7 @@ export const jobsRouter = router({
     }),
 
   updateLineItem: protectedProcedure
-    .input(lineItemInput.partial().extend({ id: z.number().int() }))
+    .input(toPatch(lineItemInput).extend({ id: z.number().int() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const { id, ...patch } = input;
@@ -537,7 +538,7 @@ export const jobsRouter = router({
     }),
 
   updateLabor: protectedProcedure
-    .input(laborInput.partial().extend({ id: z.number().int() }))
+    .input(toPatch(laborInput).extend({ id: z.number().int() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const { id, ...patch } = input;
@@ -585,7 +586,7 @@ export const jobsRouter = router({
     }),
 
   updatePart: protectedProcedure
-    .input(partInput.partial().extend({ id: z.number().int() }))
+    .input(toPatch(partInput).extend({ id: z.number().int() }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const { id, ...patch } = input;
