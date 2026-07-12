@@ -1054,8 +1054,25 @@ export const jobs = mysqlTable(
     assignedToId: int("assignedToId"),
     equipmentServiced: text("equipmentServiced"),
     internalNotes: text("internalNotes"),
+    /** Notes safe to show the customer (distinct from internalNotes). */
+    customerVisibleNotes: text("customerVisibleNotes"),
+    /** Warranty classification for the work. Nullable = not a warranty job / unclassified. */
+    warrantyStatus: mysqlEnum("warrantyStatus", ["none", "manufacturer", "labor", "extended", "warranty_call"]),
+    /** Free-text summary written when the job is completed. */
+    completionSummary: text("completionSummary"),
+    /** The appointment this job originated from (Job created from an appointment). Nullable. */
+    originatingAppointmentId: int("originatingAppointmentId"),
+    /** Team member who created the job (teamMembers.id). Nullable for historical/system rows. */
+    createdById: int("createdById"),
+    // ── Scheduling / actuals (nullable; additive) ──
+    scheduledStartAt: timestamp("scheduledStartAt"),
+    scheduledEndAt: timestamp("scheduledEndAt"),
+    actualArrivalAt: timestamp("actualArrivalAt"),
+    actualCompletionAt: timestamp("actualCompletionAt"),
     /** Set automatically when status first reaches "completed" */
     completedAt: timestamp("completedAt"),
+    /** Soft-delete timestamp. Null = active; non-null = archived (restore by clearing). */
+    archivedAt: timestamp("archivedAt"),
     // ── QuickBooks-ready fields (Phase 2 later tasks — display only, NO sync logic) ──
     quickbooksEstimateId: varchar("quickbooksEstimateId", { length: 64 }),
     quickbooksInvoiceId: varchar("quickbooksInvoiceId", { length: 64 }),
@@ -1072,6 +1089,7 @@ export const jobs = mysqlTable(
     statusIdx: index("jobs_status_idx").on(table.status),
     jobNumberIdx: index("jobs_jobNumber_idx").on(table.jobNumber),
     opportunityIdx: index("jobs_opportunityId_idx").on(table.opportunityId),
+    archivedIdx: index("jobs_archivedAt_idx").on(table.archivedAt),
   }),
 );
 export type Job = typeof jobs.$inferSelect;
@@ -1102,6 +1120,162 @@ export const jobLineItems = mysqlTable(
 );
 export type JobLineItem = typeof jobLineItems.$inferSelect;
 export type InsertJobLineItem = typeof jobLineItems.$inferInsert;
+
+/**
+ * Job labor entries — operational time logged against a job by a technician.
+ * Normalized (one row per entry), NOT stored as JSON on the job. Operational
+ * only: no payroll, no billing export, no QuickBooks item sync.
+ */
+export const jobLaborEntries = mysqlTable(
+  "jobLaborEntries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    /** teamMembers.id who performed the work. Nullable = unassigned/backfilled. */
+    technicianId: int("technicianId"),
+    /** Calendar date the work happened (YYYY-MM-DD). */
+    workDate: timestamp("workDate"),
+    startTime: timestamp("startTime"),
+    endTime: timestamp("endTime"),
+    /** Duration in minutes. Stored explicitly so partial/manual entries don't require start+end. */
+    durationMinutes: int("durationMinutes"),
+    description: varchar("description", { length: 500 }).notNull(),
+    /** Whether this labor is billable to the customer (display/estimating only). */
+    billable: boolean("billable").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobLaborEntries_jobId_idx").on(table.jobId),
+  }),
+);
+export type JobLaborEntry = typeof jobLaborEntries.$inferSelect;
+export type InsertJobLaborEntry = typeof jobLaborEntries.$inferInsert;
+
+/**
+ * Job material / part line items used on a job. Normalized child table.
+ * Operational only — NO inventory, purchasing, warehouse, vendor ordering, or
+ * QuickBooks item synchronization. unitCost is internal; unitPrice is customer-facing.
+ */
+export const jobPartsItems = mysqlTable(
+  "jobPartsItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    itemName: varchar("itemName", { length: 255 }).notNull(),
+    description: varchar("description", { length: 500 }),
+    quantity: decimal("quantity", { precision: 10, scale: 2 }).default("1").notNull(),
+    unit: varchar("unit", { length: 32 }),
+    /** Internal cost (what we pay). Display/margin only; never synced. */
+    unitCost: decimal("unitCost", { precision: 10, scale: 2 }).default("0").notNull(),
+    /** Customer-facing price. */
+    unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).default("0").notNull(),
+    billable: boolean("billable").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobPartsItems_jobId_idx").on(table.jobId),
+  }),
+);
+export type JobPartsItem = typeof jobPartsItems.$inferSelect;
+export type InsertJobPartsItem = typeof jobPartsItems.$inferInsert;
+
+/**
+ * Additional technicians assigned to a job (beyond the primary jobs.assignedToId).
+ * One row per extra technician; the primary assignee is NOT duplicated here.
+ */
+export const jobTechnicians = mysqlTable(
+  "jobTechnicians",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    technicianId: int("technicianId").notNull(),
+    /** Optional role on this job, e.g. "helper", "lead". */
+    role: varchar("role", { length: 64 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobTechnicians_jobId_idx").on(table.jobId),
+    /** A technician appears at most once per job. */
+    jobTechUnique: index("jobTechnicians_job_tech_unique").on(table.jobId, table.technicianId),
+  }),
+);
+export type JobTechnician = typeof jobTechnicians.$inferSelect;
+export type InsertJobTechnician = typeof jobTechnicians.$inferInsert;
+
+/**
+ * Timestamped notes on a job (multiple). The single-value internalNotes /
+ * customerVisibleNotes fields on the job stay for quick access; this table is
+ * the running log. visibility controls whether a note is customer-safe.
+ */
+export const jobNotes = mysqlTable(
+  "jobNotes",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    body: text("body").notNull(),
+    visibility: mysqlEnum("visibility", ["internal", "customer"]).default("internal").notNull(),
+    /** teamMembers.id who wrote the note. Nullable for system notes. */
+    authorId: int("authorId"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobNotes_jobId_idx").on(table.jobId),
+  }),
+);
+export type JobNote = typeof jobNotes.$inferSelect;
+export type InsertJobNote = typeof jobNotes.$inferInsert;
+
+/**
+ * Attachments / photos on a job. Stores a reference (URL/path) plus metadata —
+ * the binary itself lives wherever the app already stores uploads.
+ */
+export const jobAttachments = mysqlTable(
+  "jobAttachments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    kind: mysqlEnum("kind", ["photo", "document", "other"]).default("photo").notNull(),
+    fileName: varchar("fileName", { length: 255 }).notNull(),
+    /** URL or storage path/key to the file. */
+    url: varchar("url", { length: 1024 }).notNull(),
+    mimeType: varchar("mimeType", { length: 128 }),
+    sizeBytes: int("sizeBytes"),
+    /** teamMembers.id who uploaded. Nullable. */
+    uploadedById: int("uploadedById"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobAttachments_jobId_idx").on(table.jobId),
+  }),
+);
+export type JobAttachment = typeof jobAttachments.$inferSelect;
+export type InsertJobAttachment = typeof jobAttachments.$inferInsert;
+
+/**
+ * Job status history — one row per status transition, for the audit trail on
+ * the job detail. Written whenever the job status changes.
+ */
+export const jobStatusHistory = mysqlTable(
+  "jobStatusHistory",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    /** Previous status; null for the initial/creation entry. */
+    fromStatus: varchar("fromStatus", { length: 32 }),
+    toStatus: varchar("toStatus", { length: 32 }).notNull(),
+    note: varchar("note", { length: 500 }),
+    /** teamMembers.id who made the change. Nullable for system transitions. */
+    changedById: int("changedById"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobStatusHistory_jobId_idx").on(table.jobId),
+  }),
+);
+export type JobStatusHistory = typeof jobStatusHistory.$inferSelect;
+export type InsertJobStatusHistory = typeof jobStatusHistory.$inferInsert;
 
 /**
  * QuickBooks Online connection (Phase 2, Task 7 — Accounting Integration).

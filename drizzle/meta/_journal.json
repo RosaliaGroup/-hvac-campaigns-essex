@@ -281,6 +281,13 @@
       "when": 1783822047420,
       "tag": "0039_opportunity_to_job",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "5",
+      "when": 1783824446074,
+      "tag": "0040_jobs_module_child_tables",
+      "breakpoints": true
     }
   ]
 }
