@@ -274,9 +274,21 @@ export const jobsRouter = router({
           .leftJoin(teamMembers, eq(jobTechnicians.technicianId, teamMembers.id))
           .where(eq(jobTechnicians.jobId, job.id)),
         db.select().from(jobStatusHistory).where(eq(jobStatusHistory.jobId, job.id)).orderBy(desc(jobStatusHistory.createdAt)),
-        // Related estimates/invoices via the linked opportunity (display-only; QBO untouched).
+        // Related estimates/invoices via the linked opportunity. Display-only; QBO
+        // untouched. Select explicit columns so the raw QBO payload (`raw`) is
+        // never shipped to the client (matches opportunities.get's guard).
         job.opportunityId
-          ? db.select().from(quickbooksSalesDocuments).where(eq(quickbooksSalesDocuments.opportunityId, job.opportunityId)).orderBy(desc(quickbooksSalesDocuments.txnDate))
+          ? db.select({
+              id: quickbooksSalesDocuments.id,
+              docType: quickbooksSalesDocuments.docType,
+              docNumber: quickbooksSalesDocuments.docNumber,
+              quickbooksId: quickbooksSalesDocuments.quickbooksId,
+              quickbooksCustomerId: quickbooksSalesDocuments.quickbooksCustomerId,
+              status: quickbooksSalesDocuments.status,
+              totalAmount: quickbooksSalesDocuments.totalAmount,
+              txnDate: quickbooksSalesDocuments.txnDate,
+              opportunityId: quickbooksSalesDocuments.opportunityId,
+            }).from(quickbooksSalesDocuments).where(eq(quickbooksSalesDocuments.opportunityId, job.opportunityId)).orderBy(desc(quickbooksSalesDocuments.txnDate))
           : Promise.resolve([]),
       ]);
 

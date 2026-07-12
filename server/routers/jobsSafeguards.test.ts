@@ -16,8 +16,10 @@ describe("Jobs module — QuickBooks safeguards", () => {
   });
 
   it("does not mutate stored QuickBooks CustomerRefs or sales documents from the jobs router", () => {
-    // The jobs router must never update customers' QBO ref or the sales-doc tables.
-    expect(jobsSrc).not.toMatch(/quickbooksCustomerId\s*:/);
+    // Never UPDATE an existing customer row (where the stored QBO CustomerRef lives).
+    // (createFromAppointment may INSERT a new local customer — that has no QBO ref.)
+    expect(jobsSrc).not.toMatch(/\.update\(\s*customers\b/);
+    // Never write the QBO sales-document table.
     expect(jobsSrc).not.toMatch(/\.update\(\s*quickbooksSalesDocuments/);
     expect(jobsSrc).not.toMatch(/\.insert\(\s*quickbooksSalesDocuments/);
   });
@@ -25,6 +27,12 @@ describe("Jobs module — QuickBooks safeguards", () => {
   it("treats the job's QuickBooks fields as read-only references (no auto-sync on write)", () => {
     // quickbooksSyncStatus/quickbooksSyncedAt must not be flipped to a synced state here.
     expect(jobsSrc).not.toMatch(/quickbooksSyncStatus\s*:\s*["']synced["']/);
+  });
+
+  it("never ships the raw QBO payload — sales docs are selected with explicit columns", () => {
+    // A bare `.select().from(quickbooksSalesDocuments)` would include the `raw`
+    // JSON payload; getById must project explicit display-only columns instead.
+    expect(jobsSrc).not.toMatch(/select\(\)\s*\.from\(\s*quickbooksSalesDocuments/);
   });
 });
 
