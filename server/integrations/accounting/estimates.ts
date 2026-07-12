@@ -422,6 +422,16 @@ export function pickContactMatch(
   return null;
 }
 
+/**
+ * Composite identity of a stored sales document. A QBO Estimate and Invoice can
+ * carry the same numeric Id, so a document is uniquely identified by
+ * (realmId, docType, quickbooksId) — NOT quickbooksId alone. This mirrors the
+ * qbSalesDocs_realm_docType_qboId_uq unique index and the upsert lookups.
+ */
+export function salesDocIdentityKey(doc: { realmId?: string | null; docType: string; quickbooksId: string }): string {
+  return `${doc.realmId ?? ""}::${doc.docType}::${doc.quickbooksId}`;
+}
+
 /** The maximum LastUpdatedTime across a batch, for advancing the sync cursor. */
 export function maxUpdatedAt(estimates: QboEstimate[]): Date | null {
   let max: Date | null = null;

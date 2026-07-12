@@ -1,4 +1,4 @@
-import { boolean, decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1454,8 +1454,12 @@ export const quickbooksSalesDocuments = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     realmId: varchar("realmId", { length: 64 }),
-    /** QBO Estimate.Id — unique per realm; the sync idempotency key. */
-    quickbooksId: varchar("quickbooksId", { length: 64 }).notNull().unique(),
+    /**
+     * QBO document Id. NOT globally unique on its own — QBO Estimate and Invoice
+     * ids can coincide — so identity is the composite (realmId, docType,
+     * quickbooksId) enforced by the unique index below.
+     */
+    quickbooksId: varchar("quickbooksId", { length: 64 }).notNull(),
     docType: mysqlEnum("docType", ["estimate", "invoice"]).default("estimate").notNull(),
     docNumber: varchar("docNumber", { length: 64 }),
     /** QBO CustomerRef value — used to resolve/auto-create the local contact. */
@@ -1511,6 +1515,8 @@ export const quickbooksSalesDocuments = mysqlTable(
     opportunityIdx: index("qbSalesDocs_opportunityId_idx").on(table.opportunityId),
     docTypeIdx: index("qbSalesDocs_docType_idx").on(table.docType),
     parentRefIdx: index("qbSalesDocs_parentRef_idx").on(table.quickbooksParentRef),
+    /** Durable document identity — an estimate and an invoice may share a QBO id. */
+    docIdentityUq: uniqueIndex("qbSalesDocs_realm_docType_qboId_uq").on(table.realmId, table.docType, table.quickbooksId),
   }),
 );
 export type QuickbooksSalesDocument = typeof quickbooksSalesDocuments.$inferSelect;

@@ -12,7 +12,7 @@
  * Every run writes a quickbooksSyncLogs row (entityType "invoice"). Gated:
  * only runs when QBO_INVOICE_SYNC_ENABLED=true, so it never runs unapproved.
  */
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../../db";
 import { quickbooksSalesDocuments, customers, quickbooksConnections } from "../../../drizzle/schema";
 import { quickbooksProvider, writeSyncLog } from "./quickbooks";
@@ -108,10 +108,20 @@ async function processInvoice(
   if (customerId != null) result.matched++;
   else result.unmatched++;
 
+  // Identity is the composite (realmId, docType, quickbooksId). Scoping the
+  // lookup to docType="invoice" means an estimate that happens to share this
+  // QBO id is simply not seen here — the two coexist as distinct rows, enforced
+  // by the qbSalesDocs_realm_docType_qboId_uq unique index.
   const existing = (await db
-    .select({ id: quickbooksSalesDocuments.id, quickbooksUpdatedAt: quickbooksSalesDocuments.quickbooksUpdatedAt, docType: quickbooksSalesDocuments.docType })
+    .select({ id: quickbooksSalesDocuments.id, quickbooksUpdatedAt: quickbooksSalesDocuments.quickbooksUpdatedAt })
     .from(quickbooksSalesDocuments)
-    .where(eq(quickbooksSalesDocuments.quickbooksId, row.quickbooksId))
+    .where(
+      and(
+        eq(quickbooksSalesDocuments.realmId, realmId),
+        eq(quickbooksSalesDocuments.docType, "invoice"),
+        eq(quickbooksSalesDocuments.quickbooksId, row.quickbooksId),
+      ),
+    )
     .limit(1))[0];
 
   if (!existing) {
@@ -119,8 +129,6 @@ async function processInvoice(
     result.created++;
     return;
   }
-  // Never convert an existing estimate row into an invoice (id collision guard).
-  if (existing.docType !== "invoice") { result.skipped++; return; }
   if (shouldSkipExistingDoc(existing, row)) { result.skipped++; return; }
   // Preserve the row id; update the mirrored fields.
   const { quickbooksId: _qid, ...patch } = row;

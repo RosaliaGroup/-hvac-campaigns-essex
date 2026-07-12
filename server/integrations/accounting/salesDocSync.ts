@@ -517,8 +517,20 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
   const mapped = mapEstimateToSalesDoc(estimate, conn.realmId, now);
   result.pulled++;
 
+  // Identity is the composite (realmId, docType, quickbooksId) — an estimate and
+  // an invoice may share a QBO id, so match on all three, not quickbooksId alone.
   const existing = (
-    await db.select().from(quickbooksSalesDocuments).where(eq(quickbooksSalesDocuments.quickbooksId, mapped.quickbooksId)).limit(1)
+    await db
+      .select()
+      .from(quickbooksSalesDocuments)
+      .where(
+        and(
+          eq(quickbooksSalesDocuments.realmId, conn.realmId),
+          eq(quickbooksSalesDocuments.docType, "estimate"),
+          eq(quickbooksSalesDocuments.quickbooksId, mapped.quickbooksId),
+        ),
+      )
+      .limit(1)
   )[0];
 
   // Resolve/auto-create AND enrich the contact on EVERY sync — not only first

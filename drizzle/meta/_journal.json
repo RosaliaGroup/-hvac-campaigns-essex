@@ -302,6 +302,13 @@
       "when": 1783883421474,
       "tag": "0042_qbo_invoice_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1783890137041,
+      "tag": "0043_qbo_doc_identity",
+      "breakpoints": true
     }
   ]
 }

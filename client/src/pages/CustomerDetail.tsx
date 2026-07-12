@@ -624,7 +624,7 @@ type CustomerSummary = {
   estimates: number;
   invoices: number;
   properties: number;
-  lifetimeRevenue: number;
+  collectedRevenue: number;
   outstandingBalance: number;
   invoicedTotal?: number;
   wonOpportunityValue?: number;
@@ -651,7 +651,7 @@ function SummaryCards({
     { label: "Estimates", value: String(summary.estimates), icon: <FileText className="h-4 w-4" />, tab: "estimates" },
     { label: "Invoices", value: String(summary.invoices), icon: <Receipt className="h-4 w-4" />, tab: "invoices" },
     { label: "Properties", value: String(summary.properties), icon: <MapPin className="h-4 w-4" />, tab: "properties" },
-    { label: "Invoiced Revenue", value: formatMoney(summary.lifetimeRevenue), hint: "collected on invoices", icon: <DollarSign className="h-4 w-4" />, tab: "invoices" },
+    { label: "Collected Revenue", value: formatMoney(summary.collectedRevenue), hint: "total − balance on invoices", icon: <DollarSign className="h-4 w-4" />, tab: "invoices" },
     { label: "Outstanding (Invoices)", value: formatMoney(summary.outstandingBalance), hint: "unpaid invoice balances", icon: <Wallet className="h-4 w-4" />, tab: "invoices" },
     { label: "Won Value", value: formatMoney(summary.wonOpportunityValue ?? 0), hint: "won opportunities (pipeline)", icon: <Target className="h-4 w-4" />, tab: "opportunities" },
     {

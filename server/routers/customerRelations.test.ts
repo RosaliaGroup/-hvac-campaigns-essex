@@ -106,9 +106,9 @@ describe("Marco Weber — child-project invoice hierarchy regression (no hard-co
     expect(r.counts.invoices).toBe(2);
     expect(r.invoices.map(d => d.quickbooksId)).toEqual(["5001", "5002"]);
   });
-  it("lifetime revenue + outstanding balance derive from those SAME 2 invoice rows", () => {
+  it("collected revenue + outstanding balance derive from those SAME 2 invoice rows", () => {
     const r = marco();
-    expect(r.summary.lifetimeRevenue).toBe(21579);      // (21579−0) + (23979−23979)
+    expect(r.summary.collectedRevenue).toBe(21579);      // (21579−0) + (23979−23979)
     expect(r.summary.outstandingBalance).toBe(23979);   // 0 + 23979
   });
   it("estimate counts remain separate and unchanged (3)", () => {
@@ -133,9 +133,9 @@ describe("assembleCustomerRelations — invoice reconciliation (revenue / balanc
       ],
     });
 
-  it("lifetime revenue = sum(total − balance) over NON-voided invoices", () => {
+  it("collected revenue = sum(total − balance) over NON-voided invoices", () => {
     // (1000−0) + (1000−400) + (500−500) = 1600 ; the estimate is NOT revenue
-    expect(invoiceSet().summary.lifetimeRevenue).toBe(1600);
+    expect(invoiceSet().summary.collectedRevenue).toBe(1600);
   });
   it("outstanding balance = sum(invoice balance), NOT open estimates", () => {
     expect(invoiceSet().summary.outstandingBalance).toBe(900); // 0 + 400 + 500
@@ -153,7 +153,7 @@ describe("assembleCustomerRelations — invoice reconciliation (revenue / balanc
   it("won-opportunity value is reported SEPARATELY from invoiced revenue", () => {
     const r = invoiceSet();
     expect(r.summary.wonOpportunityValue).toBe(5000); // pipeline value
-    expect(r.summary.lifetimeRevenue).toBe(1600);     // invoiced — independent
+    expect(r.summary.collectedRevenue).toBe(1600);     // invoiced — independent
   });
   it("estimates and invoices stay in separate collections", () => {
     const r = invoiceSet();
@@ -163,7 +163,7 @@ describe("assembleCustomerRelations — invoice reconciliation (revenue / balanc
   it("no invoices → revenue and balance are 0 (honest, consistent with count)", () => {
     const r = assembleCustomerRelations({ propertyCount: 0, jobs: [], opportunities: [opp({ id: 1, stage: "won", amount: "7000.00" })], salesDocs: [doc({ id: 1, docType: "estimate", quickbooksId: "e1" })] });
     expect(r.counts.invoices).toBe(0);
-    expect(r.summary.lifetimeRevenue).toBe(0);
+    expect(r.summary.collectedRevenue).toBe(0);
     expect(r.summary.outstandingBalance).toBe(0);
     expect(r.summary.wonOpportunityValue).toBe(7000);
   });

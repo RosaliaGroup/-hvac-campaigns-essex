@@ -1,0 +1,2 @@
+ALTER TABLE `quickbooksSalesDocuments` DROP INDEX `quickbooksSalesDocuments_quickbooksId_unique`;--> statement-breakpoint
+ALTER TABLE `quickbooksSalesDocuments` ADD CONSTRAINT `qbSalesDocs_realm_docType_qboId_uq` UNIQUE(`realmId`,`docType`,`quickbooksId`);

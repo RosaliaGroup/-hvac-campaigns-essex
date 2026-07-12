@@ -136,9 +136,9 @@ export function assembleCustomerRelations(input: AssembleInput) {
   const wonOpportunityValue = round2(
     input.opportunities.filter((o) => o.stage === "won").reduce((sum, o) => sum + (Number(o.amount) || 0), 0),
   );
-  // Lifetime revenue = cash collected on invoices (total − balance). $0 until
+  // Collected revenue = cash collected on invoices (total − balance). $0 until
   // invoices are synced from QuickBooks — honest, and consistent with the count.
-  const lifetimeRevenue = round2(
+  const collectedRevenue = round2(
     invoices.reduce((sum, d) => sum + Math.max(0, (Number(d.totalAmount) || 0) - (Number(d.balance) || 0)), 0),
   );
   // Outstanding balance = unpaid invoice balances (NOT open estimates).
@@ -170,7 +170,7 @@ export function assembleCustomerRelations(input: AssembleInput) {
       invoices: invoices.length,
       properties: input.propertyCount,
       /** Cash collected on invoices (total − balance). Invoice-derived. */
-      lifetimeRevenue,
+      collectedRevenue,
       /** Unpaid invoice balances. Invoice-derived. */
       outstandingBalance,
       /** Gross invoiced amount (reference). */

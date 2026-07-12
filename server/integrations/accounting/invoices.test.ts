@@ -4,6 +4,7 @@ import {
   buildInvoiceQuery, mapInvoiceToSalesDoc, maxInvoiceUpdatedAt, docMatchesCustomer,
   type QboInvoice,
 } from "./invoices";
+import { salesDocIdentityKey } from "./estimates";
 
 const inv = (over: Partial<QboInvoice> = {}): QboInvoice => ({
   Id: "9001", DocNumber: "INV-1", TxnDate: "2026-06-01", DueDate: "2026-07-01",
@@ -139,5 +140,26 @@ describe("invoice status transitions (derivable from balance/void — no stored 
   it("credit / negative balance is represented (not silently dropped)", () => {
     // A credit memo-style negative balance → not 'unpaid'; paid-amount reflects it.
     expect(invoicePaidAmount({ totalAmount: "1000.00", balance: "-50.00" })).toBe(1050);
+  });
+});
+
+describe("composite document identity (realmId, docType, quickbooksId)", () => {
+  const realm = "9130350000000";
+  it("an estimate and an invoice sharing one QBO id are DISTINCT identities (coexist)", () => {
+    // QBO numbers Estimates and Invoices in separate sequences — the same numeric
+    // id can name both. They must NOT collide onto one row.
+    const est = salesDocIdentityKey({ realmId: realm, docType: "estimate", quickbooksId: "130" });
+    const inv = salesDocIdentityKey({ realmId: realm, docType: "invoice", quickbooksId: "130" });
+    expect(est).not.toBe(inv);
+  });
+  it("two invoices with the same id in the same realm are the SAME identity (idempotent upsert)", () => {
+    const a = salesDocIdentityKey({ realmId: realm, docType: "invoice", quickbooksId: "5001" });
+    const b = salesDocIdentityKey({ realmId: realm, docType: "invoice", quickbooksId: "5001" });
+    expect(a).toBe(b);
+  });
+  it("the same invoice id in DIFFERENT realms is a DISTINCT identity (multi-realm safe)", () => {
+    const a = salesDocIdentityKey({ realmId: "realmA", docType: "invoice", quickbooksId: "5001" });
+    const b = salesDocIdentityKey({ realmId: "realmB", docType: "invoice", quickbooksId: "5001" });
+    expect(a).not.toBe(b);
   });
 });
