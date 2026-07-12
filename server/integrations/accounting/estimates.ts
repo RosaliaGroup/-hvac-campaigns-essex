@@ -206,6 +206,10 @@ export interface QboCustomerLite {
   BillAddr?: QboAddress;
   ShipAddr?: QboAddress;
   MetaData?: { CreateTime?: string; LastUpdatedTime?: string };
+  /** True when this is a QBO sub-customer / job (has a parent). */
+  Job?: boolean;
+  /** Parent customer when this is a sub-customer / job. */
+  ParentRef?: { value?: string; name?: string };
 }
 
 /**

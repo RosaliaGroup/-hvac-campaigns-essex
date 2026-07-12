@@ -76,6 +76,57 @@ describe("assembleCustomerRelations — dedup / no duplicates", () => {
   });
 });
 
+describe("assembleCustomerRelations — invoice reconciliation (revenue / balance / count)", () => {
+  const invoiceSet = () =>
+    assembleCustomerRelations({
+      propertyCount: 0,
+      jobs: [],
+      opportunities: [opp({ id: 1, stage: "won", amount: "5000.00" })],
+      salesDocs: [
+        doc({ id: 1, docType: "invoice", quickbooksId: "i1", status: "paid", totalAmount: "1000.00", balance: "0.00" }),
+        doc({ id: 2, docType: "invoice", quickbooksId: "i2", status: "partial", totalAmount: "1000.00", balance: "400.00" }),
+        doc({ id: 3, docType: "invoice", quickbooksId: "i3", status: "unpaid", totalAmount: "500.00", balance: "500.00" }),
+        doc({ id: 4, docType: "invoice", quickbooksId: "i4v", status: "void", totalAmount: "300.00", balance: "300.00", voided: true }),
+        doc({ id: 5, docType: "estimate", quickbooksId: "e1", status: "pending", totalAmount: "9999.00" }),
+      ],
+    });
+
+  it("lifetime revenue = sum(total − balance) over NON-voided invoices", () => {
+    // (1000−0) + (1000−400) + (500−500) = 1600 ; the estimate is NOT revenue
+    expect(invoiceSet().summary.lifetimeRevenue).toBe(1600);
+  });
+  it("outstanding balance = sum(invoice balance), NOT open estimates", () => {
+    expect(invoiceSet().summary.outstandingBalance).toBe(900); // 0 + 400 + 500
+  });
+  it("invoiced total = gross invoiced (non-voided)", () => {
+    expect(invoiceSet().summary.invoicedTotal).toBe(2500);
+  });
+  it("count == rows and both EXCLUDE the voided invoice", () => {
+    const r = invoiceSet();
+    expect(r.counts.invoices).toBe(3);
+    expect(r.invoices).toHaveLength(3);
+    expect(r.invoices.map(d => d.quickbooksId)).toEqual(["i1", "i2", "i3"]);
+    expect(r.invoices.find(d => d.quickbooksId === "i4v")).toBeUndefined();
+  });
+  it("won-opportunity value is reported SEPARATELY from invoiced revenue", () => {
+    const r = invoiceSet();
+    expect(r.summary.wonOpportunityValue).toBe(5000); // pipeline value
+    expect(r.summary.lifetimeRevenue).toBe(1600);     // invoiced — independent
+  });
+  it("estimates and invoices stay in separate collections", () => {
+    const r = invoiceSet();
+    expect(r.counts.estimates).toBe(1);
+    expect(r.estimates.map(d => d.quickbooksId)).toEqual(["e1"]);
+  });
+  it("no invoices → revenue and balance are 0 (honest, consistent with count)", () => {
+    const r = assembleCustomerRelations({ propertyCount: 0, jobs: [], opportunities: [opp({ id: 1, stage: "won", amount: "7000.00" })], salesDocs: [doc({ id: 1, docType: "estimate", quickbooksId: "e1" })] });
+    expect(r.counts.invoices).toBe(0);
+    expect(r.summary.lifetimeRevenue).toBe(0);
+    expect(r.summary.outstandingBalance).toBe(0);
+    expect(r.summary.wonOpportunityValue).toBe(7000);
+  });
+});
+
 describe("assembleCustomerRelations — estimates, invoices, and PDC project reference", () => {
   it("splits estimates and invoices by docType", () => {
     const r = assembleCustomerRelations({
