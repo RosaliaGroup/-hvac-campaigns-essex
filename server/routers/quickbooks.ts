@@ -13,7 +13,7 @@ import { getDb, createDedicatedConnection } from "../db";
 import { customers, properties, quickbooksSyncLogs, type Customer, type Property } from "../../drizzle/schema";
 import { getAccountingProvider } from "../integrations/accounting";
 import { quickbooksProvider, buildAuthorizeUrl, getQboConfig, signState, writeSyncLog } from "../integrations/accounting/quickbooks";
-import { syncSalesDocuments } from "../integrations/accounting/salesDocSync";
+import { syncSalesDocuments, previewSalesDocuments } from "../integrations/accounting/salesDocSync";
 import { runAdvisoryLockSelfTest, type DbLockLogEntry, type LockConnection } from "../integrations/accounting/dbSyncLock";
 import type { AccountingCustomerInput, ConflictResolution, PushCustomerResult } from "../integrations/accounting/types";
 
@@ -215,6 +215,18 @@ export const quickbooksRouter = router({
       throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
     }
     return result;
+  }),
+
+  /**
+   * Admin: READ-ONLY full-history import PREVIEW. Runs the existing dry-run
+   * planner (previewSalesDocuments) — the SAME planner the write path derives
+   * from — and returns the proposed action per estimate plus totals. Makes ZERO
+   * database writes and ZERO QuickBooks writes, never advances the salesDocCursor,
+   * and creates nothing (no customers/opportunities/properties/jobs, no audit or
+   * conflict rows). Nothing here mutates state; it only reads to plan.
+   */
+  previewFullHistory: adminProcedure.query(async () => {
+    return await previewSalesDocuments();
   }),
 
   /** Admin: force the 60-day (configurable) backfill, ignoring the cursor. */

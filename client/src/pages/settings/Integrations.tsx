@@ -3,7 +3,7 @@
  * QuickBooks Online is live; other providers are "coming soon" placeholders.
  * Admin-only actions (connect/disconnect/push-all) are gated on user.role.
  */
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
@@ -14,8 +14,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Plug, CheckCircle2, XCircle, RefreshCw, Building2, CreditCard, Mail,
-  CalendarClock, MessageSquare, Bot, Zap, Loader2,
+  CalendarClock, MessageSquare, Bot, Zap, Loader2, Eye, Download,
 } from "lucide-react";
+import { toPreviewCsv, isHighlightedRow, type PreviewRow } from "@/lib/qboPreviewCsv";
+
+function downloadBlob(filename: string, mime: string, content: string) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function fmt(d: Date | string | null | undefined): string {
   if (!d) return "—";
@@ -39,6 +50,19 @@ export default function Integrations() {
   const statusQ = trpc.quickbooks.getStatus.useQuery();
   const logsQ = trpc.quickbooks.recentLogs.useQuery({ limit: 25 });
   const status = statusQ.data;
+
+  // Read-only full-history import preview. Admin-only, fetched ONLY on click
+  // (it queries QuickBooks) — never runs automatically. Makes zero writes.
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const previewQ = trpc.quickbooks.previewFullHistory.useQuery(undefined, {
+    enabled: false,
+    retry: false,
+  });
+  const preview = previewQ.data as { ok: boolean; rows: PreviewRow[]; totals: Record<string, number>; databaseWrites: number; error?: string } | undefined;
+  const runPreview = () => {
+    setPreviewOpen(true);
+    previewQ.refetch();
+  };
 
   const gcalStatusQ = trpc.googleCalendar.getStatus.useQuery();
   const gcal = gcalStatusQ.data;
@@ -144,6 +168,12 @@ export default function Integrations() {
                   <Button variant="outline" onClick={() => pushAll.mutate()} disabled={!isAdmin || pushAll.isPending}>
                     {pushAll.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null} Push all unsynced customers
                   </Button>
+                  {isAdmin && (
+                    <Button variant="outline" onClick={runPreview} disabled={previewQ.isFetching}>
+                      {previewQ.isFetching ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Eye className="h-4 w-4 mr-1" />}
+                      Preview Historical Estimate Import
+                    </Button>
+                  )}
                   <Button variant="destructive" onClick={() => disconnect.mutate()} disabled={!isAdmin || disconnect.isPending}>
                     Disconnect
                   </Button>
@@ -153,6 +183,100 @@ export default function Integrations() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Full-history import PREVIEW (admin-only, read-only, zero writes) */}
+        {isAdmin && previewOpen && (
+          <Card className="border-amber-400/60">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-amber-500" /> Historical Estimate Import — Preview
+                <Badge variant="outline" className="ml-2">read-only · zero writes</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {previewQ.isFetching ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Running read-only preview against QuickBooks…
+                </div>
+              ) : previewQ.error ? (
+                <p className="text-sm text-red-600">Preview failed: {previewQ.error.message}</p>
+              ) : preview ? (
+                preview.ok ? (
+                  <>
+                    {/* Summary */}
+                    <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 md:grid-cols-4">
+                      {([
+                        ["Total estimates", preview.totals.total],
+                        ["Already linked", preview.totals.alreadyLinked],
+                        ["Safe imports", preview.totals.missingSafeImport],
+                        ["Duplicate / no-op", preview.totals.duplicateNoop],
+                        ["Property ambiguity", preview.totals.missingPropertyAmbiguous],
+                        ["Identity ambiguity", preview.totals.missingIdentityAmbiguous],
+                        ["Manual review", preview.totals.manualReview],
+                        ["Customer creations", preview.totals.customerCreationsProposed],
+                        ["Opportunity creations", preview.totals.opportunityCreationsProposed],
+                        ["Property creations", preview.totals.propertyCreationsProposed],
+                        ["Job creations", preview.totals.jobCreationsProposed],
+                        ["Database writes", preview.databaseWrites],
+                      ] as const).map(([label, value]) => (
+                        <div key={label} className="rounded-md border p-2">
+                          <div className="text-xs text-muted-foreground">{label}</div>
+                          <div className="text-lg font-semibold">{value}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm"
+                        onClick={() => downloadBlob(`qbo-import-preview-${Date.now()}.json`, "application/json", JSON.stringify(preview, null, 2))}>
+                        <Download className="h-4 w-4 mr-1" /> Download JSON
+                      </Button>
+                      <Button variant="outline" size="sm"
+                        onClick={() => downloadBlob(`qbo-import-preview-${Date.now()}.csv`, "text/csv", toPreviewCsv(preview.rows))}>
+                        <Download className="h-4 w-4 mr-1" /> Download CSV
+                      </Button>
+                    </div>
+
+                    {/* Table — highlighted rows (PN#132/PN#135/York Ave/PDC LLC) shown in amber */}
+                    <div className="max-h-[28rem] overflow-auto rounded-md border">
+                      <table className="w-full text-xs">
+                        <thead className="sticky top-0 bg-muted">
+                          <tr className="text-left">
+                            {["Est #", "QBO ID", "Status", "Customer", "Parent", "CRM Cust", "Opp", "Property", "Action", "Conf", "Review"].map(h => (
+                              <th key={h} className="px-2 py-1 font-medium">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {preview.rows.map((r) => (
+                            <tr key={r.qboEstimateId} className={isHighlightedRow(r) ? "bg-amber-100/60" : ""}>
+                              <td className="px-2 py-1">{r.docNumber ?? "—"}</td>
+                              <td className="px-2 py-1">{r.qboEstimateId}</td>
+                              <td className="px-2 py-1">{r.status}</td>
+                              <td className="px-2 py-1 max-w-[12rem] truncate">{r.qboCustomerName ?? "—"}</td>
+                              <td className="px-2 py-1">{r.parentCustomerName ?? "—"}</td>
+                              <td className="px-2 py-1">{r.resolvedCrmCustomerId ?? "—"}</td>
+                              <td className="px-2 py-1">{r.opportunityAction}</td>
+                              <td className="px-2 py-1">{r.propertyAction}</td>
+                              <td className="px-2 py-1">{r.salesDocAction}</td>
+                              <td className="px-2 py-1">{r.confidence}</td>
+                              <td className="px-2 py-1 max-w-[14rem] truncate text-muted-foreground">{r.manualReviewReason ?? ""}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Preview only — no records were written. Highlighted rows are the PDC LLC estimates (incl. PN#132, PN#135, York Ave).
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-red-600">Preview could not run: {preview.error ?? "unknown error"}</p>
+                )
+              ) : null}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Google Calendar */}
         <Card>

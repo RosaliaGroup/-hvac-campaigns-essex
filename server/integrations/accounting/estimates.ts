@@ -530,6 +530,12 @@ export interface EstimatePlanRow {
   txnDate: string | null;
   lastUpdatedTime: string | null;
   qboCustomerRef: string | null;
+  /** The estimate's QBO customer display name (the sub/project for a sub-customer). */
+  qboCustomerName: string | null;
+  /** Authoritative parent customer name when this is a sub-customer/project. */
+  parentCustomerName: string | null;
+  /** Project reference parsed from the sub/composite (e.g. "PN#135"), if any. */
+  projectReference: string | null;
   parentResolution: string;
   resolvedCrmCustomerId: number | null;
   salesDocAction: "create" | "update" | "none";
@@ -576,6 +582,9 @@ export function planEstimateOutcome(input: EstimatePlanInput): EstimatePlanRow {
     txnDate: estimate.TxnDate ?? null,
     lastUpdatedTime: estimate.MetaData?.LastUpdatedTime ?? null,
     qboCustomerRef: estimate.CustomerRef?.value ?? null,
+    qboCustomerName: estimate.CustomerRef?.name ?? contact.rawDisplayName ?? null,
+    parentCustomerName: identity.parentName,
+    projectReference: contact.projectReference,
     parentResolution: identity.isSubCustomer
       ? identity.parentUnresolved
         ? `sub-customer ${identity.subCustomerQboId ?? "?"} — PARENT UNRESOLVED`
@@ -687,6 +696,8 @@ export interface CoverageTotals {
   duplicateNoop: number;
   manualReview: number;
   customerCreationsProposed: number;
+  opportunityCreationsProposed: number;
+  propertyCreationsProposed: number;
   jobCreationsProposed: number;
   databaseWrites: number;
 }
@@ -701,6 +712,8 @@ export function summarizeCoverage(rows: EstimatePlanRow[]): CoverageTotals {
     duplicateNoop: 0,
     manualReview: 0,
     customerCreationsProposed: 0,
+    opportunityCreationsProposed: 0,
+    propertyCreationsProposed: 0,
     jobCreationsProposed: 0,
     databaseWrites: 0,
   };
@@ -712,6 +725,8 @@ export function summarizeCoverage(rows: EstimatePlanRow[]): CoverageTotals {
     else if (r.coverageCategory === "duplicate_noop") t.duplicateNoop++;
     if (r.manualReviewReason) t.manualReview++;
     if (r.customerCreationProposed) t.customerCreationsProposed++;
+    if (r.opportunityAction === "create") t.opportunityCreationsProposed++;
+    if (r.propertyAction === "create") t.propertyCreationsProposed++;
     t.databaseWrites += r.dbWrites; // always 0
   }
   return t;

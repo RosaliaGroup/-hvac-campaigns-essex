@@ -13,6 +13,7 @@ import {
   type QboCustomerLite,
   type EstimatePlanRow,
 } from "./estimates";
+import { parseQboCompositeName } from "../../../shared/qboCompositeName";
 
 const NOW = new Date("2026-07-12T00:00:00Z");
 
@@ -100,6 +101,10 @@ function planPdc(est: QboEstimate, sub: QboCustomerLite, existing: boolean, serv
   const identity = resolveCustomerIdentity(sub, PDC_PARENT);
   const contact = buildContactFromEstimate(est, PDC_PARENT);
   contact.quickbooksCustomerId = identity.authoritativeQboId;
+  // Mirror resolveEstimateIdentity: preserve the project reference from the sub.
+  if (!contact.projectReference) {
+    contact.projectReference = parseQboCompositeName(sub.DisplayName ?? est.CustomerRef?.name ?? null).projectReference;
+  }
   return planEstimateOutcome({
     estimate: est,
     contact,
@@ -143,6 +148,29 @@ describe("planEstimateOutcome — PDC LLC (customer id 9)", () => {
     expect(row.salesDocAction).toBe("none"); // already mirrored + unchanged
     expect(row.resolvedCrmCustomerId).toBe(9);
     expect(row.jobAction).toBe("none");
+  });
+
+  it("row carries Customer, Parent Customer, and project reference for the report", () => {
+    // Full composite (≥3 ' I ' segments) so the parser extracts the project code.
+    const name = "PN#135 I PDC LLC I 42 Main St, Newark, NJ 07102 I roof unit";
+    const sub = subCustomer("9135", name);
+    const row = planPdc(estimate("2141", "2141", "9135", name, "Closed", "2025-04-01"), sub, false);
+    expect(row.qboCustomerName).toContain("PN#135"); // the estimate's (sub) customer name
+    expect(row.parentCustomerName).toBe("PDC LLC"); // authoritative parent
+    expect(row.projectReference).toBe("PN#135"); // parsed from the composite
+  });
+
+  it("summarizeCoverage counts proposed opportunity/property creations (0 jobs)", () => {
+    const rows = [
+      planPdc(estimate("2140", "2140", "9132", "PN#132", "Rejected", "2025-03-01"), subCustomer("9132", "PN#132"), false),
+      planPdc(estimate("2141", "2141", "9135", "PN#135", "Closed", "2025-04-01"), subCustomer("9135", "PN#135"), false),
+    ];
+    const t = summarizeCoverage(rows);
+    expect(t.opportunityCreationsProposed).toBe(2); // one per missing estimate
+    expect(t.propertyCreationsProposed).toBe(0); // no verified ShipAddr here
+    expect(t.jobCreationsProposed).toBe(0);
+    expect(t.customerCreationsProposed).toBe(0);
+    expect(t.databaseWrites).toBe(0);
   });
 
   it("all three PDC estimates resolve under a single PDC customer — no duplicate, no merge, no job", () => {
