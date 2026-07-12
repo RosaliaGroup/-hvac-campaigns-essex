@@ -4,7 +4,12 @@
  */
 import { describe, it, expect } from "vitest";
 
-describe("Telnyx credentials", () => {
+// Live smoke test — hits the real Telnyx API. Only runs when credentials are
+// present (e.g. locally / CI with secrets). Skipped in the default suite so a
+// dev machine without keys or network does not fail the regression run.
+const hasLiveCreds = Boolean(process.env.TELNYX_API_KEY && process.env.TELNYX_FROM_NUMBER);
+
+describe.skipIf(!hasLiveCreds)("Telnyx credentials (live)", () => {
   it("should have TELNYX_API_KEY set", () => {
     expect(process.env.TELNYX_API_KEY).toBeTruthy();
     expect(process.env.TELNYX_API_KEY).toMatch(/^KEY/);

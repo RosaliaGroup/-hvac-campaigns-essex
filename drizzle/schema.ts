@@ -508,6 +508,10 @@ export type InsertScheduledSend = typeof scheduledSends.$inferInsert;
 export const smsInboxMessages = mysqlTable("smsInboxMessages", {
   id: int("id").autoincrement().primaryKey(),
   contactId: int("contactId"), // FK to smsContacts (null if unknown number)
+  // Best-effort links to other entities matched by phone on inbound (no new
+  // contacts are ever created from a reply — see services/smsWebhook.ts).
+  customerId: int("customerId"), // FK to customers (null if not matched)
+  leadId: int("leadId"), // FK to leads (null if not matched)
   phone: varchar("phone", { length: 50 }).notNull(), // E.164 format
   direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
   message: text("message").notNull(),
@@ -515,11 +519,29 @@ export const smsInboxMessages = mysqlTable("smsInboxMessages", {
   isRead: boolean("isRead").default(false).notNull(),
   // For outbound replies sent from the dashboard
   sentByName: varchar("sentByName", { length: 255 }), // team member who replied
-  textBeltId: varchar("textBeltId", { length: 255 }),
+  textBeltId: varchar("textBeltId", { length: 255 }), // legacy name; stores Telnyx message id
+  // Telnyx inbound message id — traceability + a secondary idempotency signal.
+  providerMessageId: varchar("providerMessageId", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 export type SmsInboxMessage = typeof smsInboxMessages.$inferSelect;
 export type InsertSmsInboxMessage = typeof smsInboxMessages.$inferInsert;
+
+/**
+ * SMS Webhook Events — idempotency ledger for inbound + delivery-status
+ * webhooks. Telnyx stamps each delivery with a unique top-level `data.id`;
+ * Telnyx (and carriers) can redeliver the same event. We record the event id
+ * on first receipt and short-circuit any duplicate so opt-outs, inbox rows,
+ * and delivery updates are applied at most once.
+ */
+export const smsWebhookEvents = mysqlTable("smsWebhookEvents", {
+  // Telnyx event id (data.id) — natural primary key for dedup.
+  eventId: varchar("eventId", { length: 255 }).primaryKey(),
+  eventType: varchar("eventType", { length: 100 }),
+  receivedAt: timestamp("receivedAt").defaultNow().notNull(),
+});
+export type SmsWebhookEvent = typeof smsWebhookEvents.$inferSelect;
+export type InsertSmsWebhookEvent = typeof smsWebhookEvents.$inferInsert;
 
 /**
  * Rebate Calculator Submissions

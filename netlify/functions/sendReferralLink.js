@@ -51,17 +51,21 @@ exports.handler = async (event) => {
       body: JSON.stringify({ from: fromNumber, to, text: message }),
     });
 
-    const data = await res.json();
+    const raw = await res.text();
+    let data = null;
+    try { data = JSON.parse(raw); } catch { /* non-JSON error body */ }
 
-    if (!data.success) {
-      console.error("[sendReferralLink] Textbelt error:", data.error);
+    // Telnyx success = 2xx with data.data.id. (No TextBelt-style success/quota.)
+    if (!res.ok || !data?.data?.id) {
+      const errDetail = data?.errors?.[0]?.detail || raw.slice(0, 200) || `HTTP ${res.status}`;
+      console.error("[sendReferralLink] Telnyx error:", errDetail);
       return {
-        statusCode: 500,
-        body: JSON.stringify({ error: data.error || "SMS failed" }),
+        statusCode: 502,
+        body: JSON.stringify({ error: "SMS failed" }),
       };
     }
 
-    console.log("[sendReferralLink] Sent to", phone, "quota:", data.quotaRemaining);
+    console.log("[sendReferralLink] Sent — telnyxMessageId:", data.data.id);
 
     return {
       statusCode: 200,
