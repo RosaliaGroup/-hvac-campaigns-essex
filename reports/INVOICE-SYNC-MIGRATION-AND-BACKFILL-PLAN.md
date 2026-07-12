@@ -34,6 +34,46 @@ attach correctly — **without editing any stored ref or hard-coding Marco**.
    Expect only `0042` (renumbered) to apply. Do **not** hand-edit the journal.
 3. Verify all columns/indexes exist; existing 26 estimate rows unchanged.
 
+## 1b. Schema migration `0043_qbo_doc_identity` — composite identity (RECONCILED)
+Document identity is the composite `(realmId, docType, quickbooksId)`: the old
+single-column unique on `quickbooksId` is dropped and replaced by the unique
+index `qbSalesDocs_realm_docType_qboId_uq`, so a QBO Estimate and Invoice that
+share a numeric id coexist as two rows.
+
+> **Production is already at the target state.** The old
+> `quickbooksSalesDocuments_quickbooksId_unique` index was dropped and
+> `qbSalesDocs_realm_docType_qboId_uq (realmId, docType, quickbooksId)` was
+> created + verified **manually / out-of-band**. That change left **no row in
+> `__drizzle_migrations`**, and `drizzle-kit migrate` gates on `created_at`
+> timestamps — so on the next migrate it *will* re-encounter `0043`.
+
+**Migration strategy — idempotent (no baseline surgery required).** `0043.sql`
+was reconciled from raw DDL into `information_schema`-guarded dynamic SQL
+(`SET`/`PREPARE`/`EXECUTE`/`DEALLOCATE`, which drizzle runs over the mysql2 text
+protocol on one connection):
+- If `quickbooksSalesDocuments_quickbooksId_unique` still exists → drop it; else no-op.
+- If `qbSalesDocs_realm_docType_qboId_uq` is absent → create it; else no-op.
+
+Result:
+- **Production** (already migrated): both branches are no-ops; `0043` runs cleanly
+  and is finally *recorded* in `__drizzle_migrations`, so it never re-runs again.
+- **Fresh envs** (dev / CI / staging): both branches execute and apply the change,
+  keeping the DB consistent with `schema.ts` + the `0043` snapshot.
+
+### Apply (when approved)
+1. Preflight (read-only): confirm production has NO `quickbooksSalesDocuments_quickbooksId_unique`
+   and DOES have `qbSalesDocs_realm_docType_qboId_uq` (matches the manual change);
+   note that `__drizzle_migrations` has no `0043` row yet.
+2. Run `drizzle-kit migrate` — **not** `push`. `0043` executes as a **no-op** on
+   production and records itself. **Do NOT** hand-run the raw `DROP INDEX` again
+   or hand-edit the journal.
+3. Verify the composite unique is present exactly once and the single-column
+   unique is absent; the 26 existing rows are unchanged.
+
+> ⚠️ **Numbering collision (unchanged):** the concurrent "commercial-opportunities"
+> branch also claims `0042/0043`. Whichever branch merges **second** renumbers its
+> two migrations. On today's `main` (max `0041`) this PR's numbering is correct.
+
 ## 2. Enable the sync (gated)
 The invoice sync is **disabled by default** — it no-ops unless
 `QBO_INVOICE_SYNC_ENABLED=true`. Flipping that flag is the deliberate approval
@@ -51,7 +91,7 @@ gate. When enabled:
 3. Inspect the returned `{ pulled, created, updated, skipped, matched, unmatched }`
    and the `quickbooksSyncLogs` (entityType "invoice") row.
 4. Read-only verify: Marco (customer 23) now shows his invoices; invoice
-   count == invoices-tab rows; `lifetimeRevenue == Σ(total−balance)` and
+   count == invoices-tab rows; `collectedRevenue == Σ(total−balance)` and
    `outstandingBalance == Σ(balance)` over the same non-voided collection;
    QBO CustomerRefs, estimate rows, and estimate cursor unchanged.
 5. After the one-time backfill, incremental runs pick up only newer invoices via
