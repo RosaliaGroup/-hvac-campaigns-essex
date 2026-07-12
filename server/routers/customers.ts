@@ -11,10 +11,13 @@ import {
   leadCaptures,
   callLogs,
   rebateCalculations,
+  opportunities,
+  quickbooksSalesDocuments,
   type InsertCustomer,
 } from "../../drizzle/schema";
 import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { deriveContactRelationship, type Relationship } from "@shared/leadPipeline";
+import { assembleCustomerRelations } from "./customerRelations";
 
 // ─────────────────────────────────────────────────────────────
 // Pure helpers (exported for unit tests)
@@ -299,14 +302,24 @@ export const customersRouter = router({
       if (phoneKey) apptMatch.push(sql`RIGHT(REGEXP_REPLACE(${appointments.phone}, '[^0-9]', ''), 10) = ${phoneKey}`);
       if (emailKey) apptMatch.push(sql`LOWER(${appointments.email}) = ${emailKey}`);
 
-      const [props, appts, relatedLeads, relatedCaptures, calls, rebates, relJobs] = await Promise.all([
+      // Sales documents (estimates/invoices) link by the resolved local customerId
+      // OR by the raw QBO CustomerRef, so a doc synced under a sibling QuickBooks
+      // customer id still surfaces here. Deduplicated in assembleCustomerRelations.
+      const docMatch = [eq(quickbooksSalesDocuments.customerId, input.id)];
+      if (customer.quickbooksCustomerId) {
+        docMatch.push(eq(quickbooksSalesDocuments.quickbooksCustomerId, customer.quickbooksCustomerId));
+      }
+
+      const [props, appts, relatedLeads, relatedCaptures, calls, rebates, relJobs, relOpps, relDocs] = await Promise.all([
         db.select().from(properties).where(eq(properties.customerId, input.id)).orderBy(desc(properties.isPrimary), desc(properties.createdAt)),
         db.select().from(appointments).where(or(...apptMatch)).orderBy(desc(appointments.scheduledAt), desc(appointments.createdAt)).limit(50),
         db.select().from(leads).where(eq(leads.customerId, input.id)).orderBy(desc(leads.createdAt)).limit(50),
         db.select().from(leadCaptures).where(eq(leadCaptures.customerId, input.id)).orderBy(desc(leadCaptures.createdAt)).limit(50),
         db.select().from(callLogs).where(eq(callLogs.customerId, input.id)).orderBy(desc(callLogs.createdAt)).limit(50),
         db.select().from(rebateCalculations).where(eq(rebateCalculations.customerId, input.id)).orderBy(desc(rebateCalculations.createdAt)).limit(20),
-        db.select({ status: jobs.status }).from(jobs).where(eq(jobs.customerId, input.id)),
+        db.select().from(jobs).where(eq(jobs.customerId, input.id)).orderBy(desc(jobs.createdAt)),
+        db.select().from(opportunities).where(eq(opportunities.customerId, input.id)).orderBy(desc(opportunities.createdAt)),
+        db.select().from(quickbooksSalesDocuments).where(or(...docMatch)).orderBy(desc(quickbooksSalesDocuments.txnDate)),
       ]);
 
       const relationship = deriveContactRelationship({
@@ -315,7 +328,29 @@ export const customersRouter = router({
         hasAppointment: appts.length > 0,
       });
 
-      return { customer, relationship, properties: props, appointments: appts, leads: relatedLeads, captures: relatedCaptures, callLogs: calls, rebateCalculations: rebates };
+      const relations = assembleCustomerRelations({
+        opportunities: relOpps,
+        salesDocs: relDocs,
+        jobs: relJobs,
+        propertyCount: props.length,
+      });
+
+      return {
+        customer,
+        relationship,
+        properties: props,
+        appointments: appts,
+        leads: relatedLeads,
+        captures: relatedCaptures,
+        callLogs: calls,
+        rebateCalculations: rebates,
+        opportunities: relations.opportunities,
+        estimates: relations.estimates,
+        invoices: relations.invoices,
+        jobs: relations.jobs,
+        counts: relations.counts,
+        summary: relations.summary,
+      };
     }),
 
   create: protectedProcedure.input(customerInput).mutation(async ({ input }) => {
