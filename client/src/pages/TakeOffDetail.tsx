@@ -3,6 +3,9 @@ import { useLocation, useParams } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import { extractPDFPages, buildSelectedText, buildImageBlocks, imageBlockFromDataUrl, recompressImage, type ExtractedPage } from "@/lib/pdfExtract";
 import { planTakeoffBatches } from "@/lib/takeoffBatchPlan";
+import { runBatchWithRecovery, halve } from "@/lib/takeoffRecovery";
+import { isGatewayTimeoutMessage } from "@/lib/proxyResponse";
+import { canStartAnalysis, selectionBlockMessage, needsCostConfirm, costConfirmMessage } from "@/lib/takeoffSelection";
 import { DEFAULT_PRICEBOOK, matchPricebook, CSI_DIVISIONS, type PricebookEntry } from "@/lib/pricebook";
 import { runVerification } from "@/lib/takeoffVerify";
 import { batchSignature, computeBatchId, loadBatches, saveBatch, clearBatches, tryAcquireRun, releaseRun } from "@/lib/takeoffBatchCache";
@@ -612,8 +615,13 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
         return encoder.encode(JSON.stringify(payload)).length;
       };
 
+      // Quick mode defaults to 2 pages per request: request latency tracks the
+      // model's OUTPUT (drawing complexity), and 4-page batches routinely run
+      // 18–35 s — over the API proxy's ~26 s response cap. Two pages reliably
+      // finish under ~20 s. The 8 MB size budget stays as a secondary guard, and
+      // the planner still splits to 1 page when a pair is too large.
       // Throws a clear error if a single page can't fit even strongly compressed.
-      const plan = await planTakeoffBatches(selected, { budgetBytes: SAFE_REQUEST_BYTES, measure });
+      const plan = await planTakeoffBatches(selected, { budgetBytes: SAFE_REQUEST_BYTES, measure, groupSize: 2 });
       const needsBatching = plan.length > 1;
       const budgetMb = (SAFE_REQUEST_BYTES / (1024 * 1024)).toFixed(0);
       log(`Prepared ${plan.length} batch(es) under the ${budgetMb} MB request budget${plan.some((p) => p.strong) ? " — some pages compressed to fit" : ""}.`);
@@ -625,6 +633,15 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
       const cached = loadBatches(projectId, analysisMode, sig);
       const cachedCount = Object.keys(cached).length;
       if (cachedCount > 0) log(`Resuming: ${cachedCount} of ${plan.length} batch(es) already completed — skipping those.`);
+
+      // Send one batch of pages (ALWAYS images + text; images pre-sized to the
+      // budget). callClaude computes the deterministic batchId from the content,
+      // so an identical retry reuses the server's idempotency cache.
+      const sendPages = async (pages: ExtractedPage[], strongFlag: boolean): Promise<string> => {
+        const content = await buildContent(pages, strongFlag);
+        return callClaude(systemPrompt, [{ role: "user", content }]);
+      };
+      const isTimeout = (err: any) => isGatewayTimeoutMessage(err?.message);
 
       const batchResults: string[] = [];
 
@@ -639,15 +656,29 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
         }
 
         const nums = batch.map((p) => p.pageNum).join(", ");
-        // ALWAYS send both images + text; images already sized to the budget.
-        const content = await buildContent(batch, strong);
         const payloadMb = ((await measure(batch, strong)) / (1024 * 1024)).toFixed(2);
         log(`Sending page${batch.length > 1 ? "s" : ""} ${nums} to Claude${batchLabel}${strong ? " (compressed to fit)" : ""} — ${payloadMb} MB payload…`);
 
-        const text = await callClaude(systemPrompt, [{ role: "user", content }]);
+        // One recovery cycle on a gateway timeout: retry the same idempotent
+        // batch once (reuses a late server completion — no rebilling), then
+        // subdivide once into smaller requests. Completed batches are unaffected.
+        const parts = await runBatchWithRecovery(batch, strong, {
+          send: sendPages,
+          isTimeout,
+          subdivide: halve,
+          onEvent: (e) => {
+            if (e.type === "timeout-retry")
+              log(`Batch ${b + 1} hit the gateway timeout — retrying once for a completed result…`);
+            else if (e.type === "subdivide")
+              log(`Batch ${b + 1} still timing out — splitting into ${e.parts} smaller request(s)…`);
+            else if (e.type === "give-up")
+              log(`Batch ${b + 1} could not be split further.`);
+          },
+        });
+        const text = parts.map((p) => p.text).join("\n\n");
         batchResults.push(text);
         saveBatch(projectId, analysisMode, sig, b, text);
-        log(`Batch ${b + 1} response received (${text.length} chars).`);
+        log(`Batch ${b + 1} response received (${text.length} chars${parts.length > 1 ? `, ${parts.length} sub-requests` : ""}).`);
       }
 
       // ── STEP 3: Reconcile if batched ──────────────────────────────────────
@@ -907,6 +938,18 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
   // same Take-Off in the current browser session, and releases the lock when the
   // run settles.
   const runAnalysis = () => {
+    // Page-selection safety: analyze ONLY the selected pages; never fall back to
+    // all. Block a run with zero selected pages with a clear message.
+    const selectedCount = extractedPages.filter((p) => p.selected).length;
+    if (!canStartAnalysis(selectedCount)) {
+      log(selectionBlockMessage(selectedCount) ?? "Select at least one page.");
+      return;
+    }
+    // Cost protection: confirm before a large (>20-page) run.
+    if (needsCostConfirm(selectedCount) && !window.confirm(costConfirmMessage(selectedCount))) {
+      log("Analysis cancelled.");
+      return;
+    }
     if (!tryAcquireRun(projectId)) {
       log("Analysis is already running for this take-off in this browser session.");
       return;
@@ -1247,8 +1290,8 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
                     onChange={(e) => setInstructions(e.target.value)}
                   />
                   {rows.length === 0 ? (
-                    <Button className="w-full" style={{ minHeight: "48px" }} onClick={runAnalysis} disabled={files.length === 0}>
-                      Analyze with AI
+                    <Button className="w-full" style={{ minHeight: "48px" }} onClick={runAnalysis} disabled={files.length === 0 || extractedPages.filter((p) => p.selected).length === 0}>
+                      {extractedPages.length > 0 && extractedPages.filter((p) => p.selected).length === 0 ? "Select at least one page" : "Analyze with AI"}
                     </Button>
                   ) : (
                     <Button variant="outline" className="w-full" style={{ minHeight: "48px" }} onClick={() => setShowReanalyzeConfirm(true)}>

@@ -45,3 +45,13 @@ export function describeProxyFailure(
   const ct = contentType ? `, ${contentType}` : "";
   return `The server returned a non-JSON response (HTTP ${status}${ct})${snippet}.${where}`;
 }
+
+/**
+ * True when an error message indicates a gateway/proxy timeout (HTTP 502/503/504
+ * or an aborted/timed-out request) — the signal to retry the same idempotent
+ * batch and then subdivide, rather than repeat the identical slow request.
+ */
+export function isGatewayTimeoutMessage(message: string | null | undefined): boolean {
+  if (!message) return false;
+  return /\bHTTP 50[234]\b/.test(message) || /\bgateway\b/i.test(message) || /\btimed?[\s-]?out\b/i.test(message);
+}
