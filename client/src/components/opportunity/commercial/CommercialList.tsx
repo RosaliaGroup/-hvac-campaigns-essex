@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  buildCommercialListInput, fmtMoney, fmtDate, financialView, type CommercialFilters, type CommercialView,
+  buildCommercialListInput, fmtMoney, fmtEstimatedValue, fmtDate, financialView, type CommercialFilters, type CommercialView,
 } from "@/lib/commercialOpportunities";
 import { PriorityBadge, StatusBadge, opportunityTypeLabel } from "./shared";
 
@@ -104,7 +104,7 @@ export default function CommercialList({ view, filters, onOpen }: { view: Commer
                   <TableCell><PriorityBadge priority={r.priority} /></TableCell>
                   <TableCell className="text-xs">{r.ownerName ?? "—"}</TableCell>
                   <TableCell className="text-xs">{r.estimatorName ?? "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmtMoney(r.amount)}</TableCell>
+                  <TableCell className="text-right tabular-nums">{fmtEstimatedValue(r.amount, "Not estimated")}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {fin.effectiveMargin != null ? fmtMoney(fin.effectiveMargin) : "—"}
                     {fin.marginIsOverridden ? <Badge variant="secondary" className="ml-1 text-[9px]">override</Badge> : null}

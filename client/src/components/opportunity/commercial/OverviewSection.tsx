@@ -19,7 +19,7 @@ import {
   OPPORTUNITY_TYPES, PROJECT_CATEGORIES, OPPORTUNITY_PRIORITIES,
   opportunityTypeLabel, projectCategoryLabel,
 } from "@shared/commercialPipeline";
-import { financialView, fmtMoney, fmtDate, type FinancialView } from "@/lib/commercialOpportunities";
+import { financialView, fmtMoney, fmtEstimatedValue, fmtDate, type FinancialView } from "@/lib/commercialOpportunities";
 import type { CommercialDetail } from "@/lib/commercialApiTypes";
 import { useCommercialPerms, CategoryChips, TypeBadge } from "./shared";
 import MembersSection from "./MembersSection";
@@ -31,8 +31,8 @@ const fromDateInput = (s: string) => (s ? new Date(s + "T00:00:00") : null);
 export function FinancialCard({ fin, probability }: { fin: FinancialView; probability: number | null | undefined }) {
   return (
     <div className="grid grid-cols-2 gap-3 rounded-lg border p-4 text-sm">
-      <Field label="Estimated value">{fmtMoney(fin.estimatedValue)}</Field>
-      <Field label="Estimated cost">{fin.estimatedCost != null ? fmtMoney(fin.estimatedCost) : "—"}</Field>
+      <Field label="Estimated value">{fmtEstimatedValue(fin.estimatedValue, "Not yet estimated")}</Field>
+      <Field label="Estimated cost">{fin.estimatedCost != null ? fmtMoney(fin.estimatedCost) : "Not yet estimated"}</Field>
       <Field label="Calculated gross margin">
         {fin.calculatedMargin != null ? fmtMoney(fin.calculatedMargin) : "—"}
         {fin.calculatedMarginPercent != null ? <span className="ml-1 text-xs text-muted-foreground">({fin.calculatedMarginPercent}%)</span> : null}
@@ -117,7 +117,7 @@ export default function OverviewSection({ detail }: { detail: CommercialDetail }
         projectManagerId: form.projectManagerId ?? null,
         communicationPlatform: form.communicationPlatform || null,
         externalReference: form.externalReference || null,
-        amount: form.amount === "" ? undefined : Number(form.amount),
+        amount: form.amount === "" ? null : Number(form.amount), // blank clears to NULL (not yet estimated)
         estimatedCost: form.estimatedCost === "" ? null : Number(form.estimatedCost),
         estimatedGrossMargin: form.estimatedGrossMargin === "" ? null : Number(form.estimatedGrossMargin),
         probability: form.probability ?? null,
@@ -215,8 +215,8 @@ export default function OverviewSection({ detail }: { detail: CommercialDetail }
         <L label="Project manager"><PersonSelect people={people} value={form.projectManagerId} onChange={id => set({ projectManagerId: id })} /></L>
         <L label="External ref"><Input value={form.externalReference} onChange={e => set({ externalReference: e.target.value })} /></L>
 
-        <L label="Estimated value"><Input type="number" value={String(form.amount)} onChange={e => set({ amount: e.target.value })} /></L>
-        <L label="Estimated cost"><Input type="number" value={String(form.estimatedCost)} onChange={e => set({ estimatedCost: e.target.value })} /></L>
+        <L label="Estimated value (optional)"><Input type="number" min={0} placeholder="Leave blank if unknown" value={String(form.amount)} onChange={e => set({ amount: e.target.value })} /></L>
+        <L label="Estimated cost (optional)"><Input type="number" min={0} placeholder="Leave blank if unknown" value={String(form.estimatedCost)} onChange={e => set({ estimatedCost: e.target.value })} /></L>
         <L label="Margin override (optional)"><Input type="number" placeholder="leave blank = calculated" value={String(form.estimatedGrossMargin)} onChange={e => set({ estimatedGrossMargin: e.target.value })} /></L>
         <L label="Probability %"><Input type="number" min={0} max={100} value={form.probability ?? ""} onChange={e => set({ probability: num(e.target.value) })} /></L>
 

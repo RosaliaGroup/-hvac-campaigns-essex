@@ -13,7 +13,7 @@ export interface RelOpportunity {
   id: number;
   title: string;
   stage: string;
-  amount: string;
+  amount: string | null;
   projectReference: string | null;
   quickbooksSalesDocumentId: number | null;
   createdAt: Date | string | null;

@@ -1398,11 +1398,12 @@ export const opportunities = mysqlTable(
     source: varchar("source", { length: 64 }).default("quickbooks").notNull(),
     stage: mysqlEnum("stage", ["new", "proposal_sent", "pending", "won", "lost"]).default("new").notNull(),
     /**
-     * CRM Opportunity Value (editable). Defaults to the backing QBO document's
-     * totalAmount via sync, but is the field a salesperson may override.
+     * CRM Opportunity Value (editable). Legacy QBO records default to the backing
+     * QBO document's totalAmount via sync (default "0"); commercial opportunities
+     * may leave it NULL ("not yet estimated") — NULL is never coerced to 0.
      * The read-only QuickBooks Amount lives on quickbooksSalesDocuments.totalAmount.
      */
-    amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
+    amount: decimal("amount", { precision: 12, scale: 2 }).default("0"),
     /** Win probability 0–100. weightedValue = amount × probability/100. */
     probability: int("probability"),
     /** True once a human edits the value — sync then stops overwriting `amount`. */

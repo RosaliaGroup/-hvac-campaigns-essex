@@ -67,17 +67,19 @@ describe("commercial migrations are additive & reversible", () => {
 });
 
 describe("journal registration agrees with the SQL files", () => {
-  it("registers 0042 and 0043 with matching tags", () => {
+  it("registers the commercial migrations (0042–0045) with matching tags", () => {
     const entries = JSON.parse(journal).entries as Array<{ idx: number; tag: string }>;
     const tags = entries.map(e => e.tag);
     expect(tags).toContain("0042_commercial_opportunities_core");
     expect(tags).toContain("0043_commercial_opportunities_children");
+    expect(tags).toContain("0044_commercial_qa_seed_race_guard");
+    expect(tags).toContain("0045_opportunity_amount_nullable");
     // contiguous, no duplicate idx
     const idxs = entries.map(e => e.idx);
     expect(new Set(idxs).size).toBe(idxs.length);
     expect(idxs).toEqual([...idxs].sort((a, b) => a - b));
-    // 43 is the last (highest) entry
-    expect(Math.max(...idxs)).toBe(43);
+    // 0045 (amount nullable) is the last (highest) entry
+    expect(Math.max(...idxs)).toBe(45);
   });
 });
 

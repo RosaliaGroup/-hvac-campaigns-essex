@@ -270,6 +270,20 @@ export function fmtMoney(n: string | number | null | undefined): string {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(n));
 }
 
+/**
+ * Format an estimated value that may be genuinely unknown. Unknown (NULL/blank)
+ * is NEVER shown as $0 — it renders an explicit "not estimated" label so the UI
+ * never implies a real $0 value. Callers pass the wording that fits the surface
+ * (e.g. "Not yet estimated" in detail, "Not estimated" on a board card).
+ */
+export function fmtEstimatedValue(
+  n: string | number | null | undefined,
+  fallback = "Not estimated",
+): string {
+  if (n == null || n === "") return fallback;
+  return fmtMoney(n);
+}
+
 export function fmtDate(d: string | Date | null | undefined): string {
   if (!d) return "—";
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });

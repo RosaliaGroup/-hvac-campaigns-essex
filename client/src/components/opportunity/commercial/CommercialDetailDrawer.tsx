@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ArrowRight, Briefcase } from "lucide-react";
-import { fmtDate, fmtMoney, type FinancialView } from "@/lib/commercialOpportunities";
+import { fmtDate, fmtMoney, fmtEstimatedValue, type FinancialView } from "@/lib/commercialOpportunities";
 import type { CommercialDetail } from "@/lib/commercialApiTypes";
 import { PriorityBadge, StatusBadge } from "./shared";
 import OverviewSection, { FinancialCard } from "./OverviewSection";
@@ -58,7 +58,13 @@ function DetailBody({ detail }: { detail: CommercialDetail }) {
         </div>
         <SheetTitle className="text-lg">{opp.title}</SheetTitle>
         <p className="text-sm text-muted-foreground">
-          {detail.customer?.displayName ?? "—"} · {fmtMoney(opp.amount)}
+          {detail.customer ? (
+            <Link href={`/customers/${detail.customer.id}`}>
+              <a className="font-medium text-[#1e3a5f] hover:underline">{detail.customer.displayName}</a>
+            </Link>
+          ) : "—"}
+          {" · "}
+          {fmtEstimatedValue(opp.amount, "Not yet estimated")}
           {detail.primaryJob ? (
             <Link href={`/jobs/${detail.primaryJob.id}`}>
               <a className="ml-2 inline-flex items-center gap-1 text-[#1e3a5f] hover:underline"><Briefcase className="h-3 w-3" />{detail.primaryJob.jobNumber}</a>
@@ -124,9 +130,14 @@ function DetailBody({ detail }: { detail: CommercialDetail }) {
             <Info label="Email" value={detail.customer?.email} />
             <Info label="Phone" value={detail.customer?.phone} />
           </div>
-          {detail.customer ? (
-            <Link href={`/customers/${detail.customer.id}`}><a className="mt-3 inline-flex items-center gap-1 text-sm text-[#1e3a5f] hover:underline">Open customer 360 <ArrowRight className="h-3.5 w-3.5" /></a></Link>
-          ) : null}
+          <div className="mt-3 flex flex-wrap gap-4">
+            {detail.customer ? (
+              <Link href={`/customers/${detail.customer.id}`}><a className="inline-flex items-center gap-1 text-sm text-[#1e3a5f] hover:underline">Open customer 360 <ArrowRight className="h-3.5 w-3.5" /></a></Link>
+            ) : null}
+            {detail.primaryContact ? (
+              <Link href={`/customers/${detail.primaryContact.id}`}><a className="inline-flex items-center gap-1 text-sm text-[#1e3a5f] hover:underline">Open primary contact <ArrowRight className="h-3.5 w-3.5" /></a></Link>
+            ) : null}
+          </div>
         </TabsContent>
 
         <TabsContent value="properties" className="mt-4">
@@ -134,6 +145,9 @@ function DetailBody({ detail }: { detail: CommercialDetail }) {
             <div className="rounded-lg border p-3 text-sm">
               <p className="font-medium">{detail.property.addressLine1}</p>
               <p className="text-muted-foreground">{[detail.property.city, detail.property.state, detail.property.zip].filter(Boolean).join(", ")}</p>
+              {detail.customer ? (
+                <Link href={`/customers/${detail.customer.id}`}><a className="mt-2 inline-flex items-center gap-1 text-xs text-[#1e3a5f] hover:underline">View in customer 360 <ArrowRight className="h-3 w-3" /></a></Link>
+              ) : null}
             </div>
           ) : <Empty>No property linked. Link one from the Overview.</Empty>}
         </TabsContent>

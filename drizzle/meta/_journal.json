@@ -316,6 +316,13 @@
 			"when": 1783898637837,
 			"tag": "0044_commercial_qa_seed_race_guard",
 			"breakpoints": true
+		},
+		{
+			"idx": 45,
+			"version": "5",
+			"when": 1783899000000,
+			"tag": "0045_opportunity_amount_nullable",
+			"breakpoints": true
 		}
 	]
 }

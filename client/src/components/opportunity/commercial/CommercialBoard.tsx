@@ -93,7 +93,11 @@ function Card({ row, stages, onOpen, onMove, dragging, onDragStart, onDragEnd, d
       </div>
 
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-sm font-bold tabular-nums">{fmtMoney(row.amount)}</span>
+        {row.amount == null || row.amount === "" ? (
+          <span className="text-xs italic text-muted-foreground">Not estimated</span>
+        ) : (
+          <span className="text-sm font-bold tabular-nums">{fmtMoney(row.amount)}</span>
+        )}
         {nd ? (
           <span className={`text-[11px] ${overdue ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
             {nd.kind === "bid" ? "Bid" : "Follow-up"} {fmtDate(nd.date)}
@@ -172,7 +176,9 @@ export default function CommercialBoard({ filters, onOpen }: { filters: Commerci
     <>
       <div className="flex gap-3 overflow-x-auto pb-4">
         {columns.map(({ stage, cards }) => {
-          const total = cards.reduce((s, r) => s + Number(r.amount ?? 0), 0);
+          // Totals exclude unknown (NULL) values rather than counting them as 0.
+          const known = cards.filter(r => r.amount != null && r.amount !== "");
+          const total = known.reduce((s, r) => s + Number(r.amount), 0);
           return (
             <div
               key={stage.id}
@@ -189,7 +195,7 @@ export default function CommercialBoard({ filters, onOpen }: { filters: Commerci
             >
               <div className="flex items-center justify-between px-3 py-2">
                 <span className="text-sm font-semibold">{stage.name}</span>
-                <span className="text-xs text-muted-foreground tabular-nums">{cards.length} · {fmtMoney(total)}</span>
+                <span className="text-xs text-muted-foreground tabular-nums">{cards.length} · {known.length ? fmtMoney(total) : "—"}</span>
               </div>
               <div className="flex-1 space-y-2 px-2 pb-3">
                 {cards.map(r => (

@@ -796,7 +796,7 @@ export const commercialOpportunitiesRouter = router({
       assignedToId: input.assignedToId ?? null,
       estimatorId: input.estimatorId ?? null,
       projectManagerId: input.projectManagerId ?? null,
-      amount: input.estimatedValue != null ? input.estimatedValue.toFixed(2) : "0",
+      amount: input.estimatedValue != null ? input.estimatedValue.toFixed(2) : null, // NULL = not yet estimated (never coerced to 0)
       estimatedCost: input.estimatedCost != null ? input.estimatedCost.toFixed(2) : null,
       estimatedGrossMargin: input.estimatedGrossMargin != null ? input.estimatedGrossMargin.toFixed(2) : null,
       probability: input.probability ?? firstStage?.defaultProbability ?? null,
