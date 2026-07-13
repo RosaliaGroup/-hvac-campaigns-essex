@@ -13,7 +13,9 @@
  * `globalThis.localStorage`.
  */
 
-export const BATCH_CACHE_VERSION = "v1";
+// v2: adaptive batch sizing (4→2→1 pages) changed how batches map to indices,
+// so v1 caches (fixed 4-page batches) must not be resumed against a v2 plan.
+export const BATCH_CACHE_VERSION = "v2";
 
 export interface BatchCache {
   signature: string;

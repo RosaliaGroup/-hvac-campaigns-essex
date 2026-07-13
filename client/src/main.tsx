@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { describeProxyFailure } from "@/lib/proxyResponse";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -43,10 +44,30 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      fetch(input, init) {
-        return globalThis.fetch(input, {
+      async fetch(input, init) {
+        const res = await globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+        });
+        // Guard against non-JSON / empty-body proxy failures (e.g. Netlify's
+        // ~10 MB /api request cap returns an empty 400; gateways return HTML
+        // 5xx). Reading the body once and re-wrapping lets tRPC parse normal
+        // JSON while we surface a clear message for the rest — without logging
+        // any request content (prompts, images, documents, keys).
+        const bodyText = await res.text();
+        const message = describeProxyFailure(
+          res.status,
+          res.headers.get("content-type"),
+          bodyText,
+        );
+        if (message) throw new Error(message);
+        // Re-wrap with only content-type: the original headers may advertise a
+        // content-encoding/length for a body fetch already decoded, which would
+        // mislead a second consumer. tRPC only needs the type and the body.
+        return new Response(bodyText, {
+          status: res.status,
+          statusText: res.statusText,
+          headers: { "content-type": res.headers.get("content-type") ?? "application/json" },
         });
       },
     }),

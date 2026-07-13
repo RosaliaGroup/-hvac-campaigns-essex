@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
-import { extractPDFPages, buildSelectedText, buildImageBlocks, type ExtractedPage } from "@/lib/pdfExtract";
+import { extractPDFPages, buildSelectedText, buildImageBlocks, imageBlockFromDataUrl, recompressImage, type ExtractedPage } from "@/lib/pdfExtract";
+import { planTakeoffBatches } from "@/lib/takeoffBatchPlan";
 import { DEFAULT_PRICEBOOK, matchPricebook, CSI_DIVISIONS, type PricebookEntry } from "@/lib/pricebook";
 import { runVerification } from "@/lib/takeoffVerify";
 import { batchSignature, computeBatchId, loadBatches, saveBatch, clearBatches, tryAcquireRun, releaseRun } from "@/lib/takeoffBatchCache";
@@ -567,31 +568,67 @@ Air devices: 0.5-1.0 hr each
 Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`;
 
     try {
-      // Split into batches of 4 pages if > 8 pages
-      const BATCH_SIZE = 4;
-      const needsBatching = selected.length > 8;
-      const batches: ExtractedPage[][] = [];
-      if (needsBatching) {
-        for (let i = 0; i < selected.length; i += BATCH_SIZE) {
-          batches.push(selected.slice(i, i + BATCH_SIZE));
-        }
-      } else {
-        batches.push(selected);
-      }
+      // ── Adaptive batching to fit the API proxy's request-body cap ─────────
+      // Netlify's /api proxy rejects request bodies over ~10 MB with an empty
+      // 400 (the payload never reaches Railway). Page images dominate the size,
+      // so plan each batch under a safe budget: prefer 4 pages, split to 2, then
+      // retry with stronger image compression, then 1 page, else fail clearly.
+      const SAFE_REQUEST_BYTES = 8 * 1024 * 1024; // margin under the ~10 MB cap
+      const STRONG = { maxDim: 1700, quality: 0.55 };
+      const encoder = new TextEncoder();
+
+      const instructionText = (pages: ExtractedPage[]) => {
+        const nums = pages.map((p) => p.pageNum).join(", ");
+        const batchText = pages.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        return `=== EXTRACTED TEXT FROM PAGES ${nums} ===\n${batchText}\n\n=== INSTRUCTIONS ===\nUse BOTH the images above AND the extracted text to perform the take-off:\n- IMAGES: Count every symbol visible — FD (fire damper), VD (volume damper), MD (motorized damper), thermostat symbols, supply/return/exhaust register symbols, ductwork runs (measure visually). Count graphical symbols that may not appear in text.\n- TEXT: Read equipment schedules, notes, specs, and tag labels precisely. Schedules are authoritative for equipment quantities.\n- Cross-reference both: if text says 75 KX fans but images show symbols on floor plans, verify the count matches.\nReturn complete take-off JSON.`;
+      };
+
+      // Build the request `content` (images + text) for a batch, recompressing
+      // images when the plan flagged this batch as needing stronger compression.
+      // Cached by (pages, strong) so the planner's sizing and the send loop never
+      // recompress the same batch twice.
+      const contentCache = new Map<string, any[]>();
+      const cacheKey = (pages: ExtractedPage[], strong: boolean) =>
+        `${strong ? "s" : "b"}|${pages.map((p) => p.pageNum).join(",")}`;
+      const buildContent = async (pages: ExtractedPage[], strong: boolean): Promise<any[]> => {
+        const key = cacheKey(pages, strong);
+        const hit = contentCache.get(key);
+        if (hit) return hit;
+        const imageDatas = strong
+          ? await Promise.all(pages.map((p) => recompressImage(p.thumbnail, STRONG.maxDim, STRONG.quality)))
+          : pages.map((p) => p.thumbnail);
+        const content: any[] = [
+          ...imageDatas.map(imageBlockFromDataUrl),
+          { type: "text", text: instructionText(pages) },
+        ];
+        contentCache.set(key, content);
+        return content;
+      };
+      // Serialized request size (bytes) for the planner — mirrors the actual
+      // mutation input so the budget check matches what crosses the proxy.
+      const measure = async (pages: ExtractedPage[], strong: boolean): Promise<number> => {
+        const content = await buildContent(pages, strong);
+        const payload = { mode: analysisMode, system: systemPrompt, messages: [{ role: "user", content }], maxTokens: 16000 };
+        return encoder.encode(JSON.stringify(payload)).length;
+      };
+
+      // Throws a clear error if a single page can't fit even strongly compressed.
+      const plan = await planTakeoffBatches(selected, { budgetBytes: SAFE_REQUEST_BYTES, measure });
+      const needsBatching = plan.length > 1;
 
       // Resume support: skip batches already completed in a prior run (same
-      // project, mode and page selection). Cache is keyed by a signature so a
-      // changed page selection starts fresh.
+      // project, mode and page selection). Signature covers all selected pages,
+      // so a changed selection starts fresh; the cache VERSION guards the scheme.
       const sig = batchSignature(analysisMode, selected.map((p) => p.pageNum));
       const cached = loadBatches(projectId, analysisMode, sig);
       const cachedCount = Object.keys(cached).length;
-      if (cachedCount > 0) log(`Resuming: ${cachedCount} of ${batches.length} batch(es) already completed — skipping those.`);
+      if (cachedCount > 0) log(`Resuming: ${cachedCount} of ${plan.length} batch(es) already completed — skipping those.`);
 
       const batchResults: string[] = [];
 
-      for (let b = 0; b < batches.length; b++) {
-        const batch = batches[b];
-        const batchLabel = needsBatching ? ` (batch ${b + 1}/${batches.length})` : "";
+      for (let b = 0; b < plan.length; b++) {
+        const { pages: batch, strong } = plan[b];
+        const batchLabel = needsBatching ? ` (batch ${b + 1}/${plan.length})` : "";
 
         if (cached[String(b)] !== undefined) {
           batchResults.push(cached[String(b)]);
@@ -599,16 +636,11 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
           continue;
         }
 
-        log(`Sending pages ${batch.map((p) => p.pageNum).join(", ")} to Claude${batchLabel}…`);
+        const nums = batch.map((p) => p.pageNum).join(", ");
+        log(`Sending page${batch.length > 1 ? "s" : ""} ${nums} to Claude${batchLabel}${strong ? " (compressed to fit)" : ""}…`);
 
-        // Build message content: ALWAYS send both images + text
-        const batchText = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
-        const imageBlocks = buildImageBlocks(batch, 4);
-
-        const content: any[] = [
-          ...imageBlocks,
-          { type: "text", text: `=== EXTRACTED TEXT FROM PAGES ${batch.map((p) => p.pageNum).join(", ")} ===\n${batchText}\n\n=== INSTRUCTIONS ===\nUse BOTH the images above AND the extracted text to perform the take-off:\n- IMAGES: Count every symbol visible — FD (fire damper), VD (volume damper), MD (motorized damper), thermostat symbols, supply/return/exhaust register symbols, ductwork runs (measure visually). Count graphical symbols that may not appear in text.\n- TEXT: Read equipment schedules, notes, specs, and tag labels precisely. Schedules are authoritative for equipment quantities.\n- Cross-reference both: if text says 75 KX fans but images show symbols on floor plans, verify the count matches.\nReturn complete take-off JSON.` },
-        ];
+        // ALWAYS send both images + text; images already sized to the budget.
+        const content = await buildContent(batch, strong);
 
         const text = await callClaude(systemPrompt, [{ role: "user", content }]);
         batchResults.push(text);
