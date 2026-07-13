@@ -101,6 +101,17 @@ describe("resume cache", () => {
     expect(loadBatches(1, "quick", sig, store)).toEqual({});
   });
 
+  it("resume: completed batches are restored and skipped (not re-sent → not rebilled)", () => {
+    const sig = batchSignature("quick", [1, 2, 3, 4]);
+    saveBatch(9, "quick", sig, 0, "batch-0", store);
+    saveBatch(9, "quick", sig, 1, "batch-1", store);
+    // Batch index 2 failed/never ran and was not saved.
+    const cached = loadBatches(9, "quick", sig, store);
+    expect(cached["0"]).toBe("batch-0"); // resumed → the loop skips these
+    expect(cached["1"]).toBe("batch-1");
+    expect(cached["2"]).toBeUndefined(); // only this one is re-requested
+  });
+
   it("returns {} on corrupt cache", () => {
     store.setItem(batchCacheKey(1, "quick"), "not json");
     expect(loadBatches(1, "quick", "sig", store)).toEqual({});

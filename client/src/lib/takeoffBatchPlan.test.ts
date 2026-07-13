@@ -67,6 +67,25 @@ describe("planTakeoffBatches", () => {
     expect(plan.map(nums)).toEqual([[1, 2, 3, 4], [5]]);
   });
 
+  it("Quick mode (groupSize 2): pages 1–4 produce exactly two 2-page batches", async () => {
+    const plan = await planTakeoffBatches(pages(1, 2, 3, 4), {
+      budgetBytes: 100,
+      groupSize: 2,
+      measure: measurer(flat(10), flat(10)),
+    });
+    expect(plan.map(nums)).toEqual([[1, 2], [3, 4]]);
+    expect(plan.every((b) => !b.strong)).toBe(true);
+  });
+
+  it("analyzes only the pages it is given (selection is the input)", async () => {
+    const plan = await planTakeoffBatches(pages(3, 4), {
+      budgetBytes: 100,
+      groupSize: 2,
+      measure: measurer(flat(10), flat(10)),
+    });
+    expect(plan.flatMap(nums)).toEqual([3, 4]);
+  });
+
   it("handles fewer than a full group", async () => {
     const plan = await planTakeoffBatches(pages(1, 2), {
       budgetBytes: 100,
