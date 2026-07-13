@@ -615,6 +615,8 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
       // Throws a clear error if a single page can't fit even strongly compressed.
       const plan = await planTakeoffBatches(selected, { budgetBytes: SAFE_REQUEST_BYTES, measure });
       const needsBatching = plan.length > 1;
+      const budgetMb = (SAFE_REQUEST_BYTES / (1024 * 1024)).toFixed(0);
+      log(`Prepared ${plan.length} batch(es) under the ${budgetMb} MB request budget${plan.some((p) => p.strong) ? " — some pages compressed to fit" : ""}.`);
 
       // Resume support: skip batches already completed in a prior run (same
       // project, mode and page selection). Signature covers all selected pages,
@@ -637,10 +639,10 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
         }
 
         const nums = batch.map((p) => p.pageNum).join(", ");
-        log(`Sending page${batch.length > 1 ? "s" : ""} ${nums} to Claude${batchLabel}${strong ? " (compressed to fit)" : ""}…`);
-
         // ALWAYS send both images + text; images already sized to the budget.
         const content = await buildContent(batch, strong);
+        const payloadMb = ((await measure(batch, strong)) / (1024 * 1024)).toFixed(2);
+        log(`Sending page${batch.length > 1 ? "s" : ""} ${nums} to Claude${batchLabel}${strong ? " (compressed to fit)" : ""} — ${payloadMb} MB payload…`);
 
         const text = await callClaude(systemPrompt, [{ role: "user", content }]);
         batchResults.push(text);
