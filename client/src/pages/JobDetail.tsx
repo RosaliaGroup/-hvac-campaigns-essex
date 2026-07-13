@@ -26,6 +26,7 @@ import {
   Receipt, Target, Trash2, UserRound, Users, Wrench, Archive, RotateCcw, StickyNote, Package, Hash,
 } from "lucide-react";
 import { JOB_STATUS_META, LINE_ITEM_TYPE_LABELS, WARRANTY_LABELS, formatMoney } from "@/lib/jobPresentation";
+import { formatDisplayName, formatAddress } from "@shared/nameFormat";
 
 function formatDate(d: Date | string | null | undefined) {
   if (!d) return "—";
@@ -281,7 +282,7 @@ export default function JobDetail() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="cursor-pointer hover:bg-muted/30" onClick={() => customer && navigate(`/customers/${customer.id}`)}>
             <CardContent className="pt-6 text-sm space-y-1">
-              <div className="font-medium flex items-center gap-2"><UserRound className="h-4 w-4 text-[#1e3a5f]" />{customer?.displayName ?? "—"}</div>
+              <div className="font-medium flex items-center gap-2"><UserRound className="h-4 w-4 text-[#1e3a5f]" />{customer?.displayName ? formatDisplayName(customer.displayName) : "—"}</div>
               {customer?.phone && <div className="flex items-center gap-1.5 text-muted-foreground"><Phone className="h-3 w-3" />{customer.phone}</div>}
               <div className="text-xs text-muted-foreground">View customer →</div>
             </CardContent>
@@ -290,7 +291,7 @@ export default function JobDetail() {
             <CardContent className="pt-6 text-sm space-y-1">
               <div className="font-medium flex items-center gap-2"><MapPin className="h-4 w-4 text-[#1e3a5f]" />Property</div>
               <div className="text-muted-foreground">
-                {property ? `${property.addressLine1}${property.city ? ", " + property.city : ""}` : "No property linked"}
+                {property ? `${formatAddress(property.addressLine1)}${property.city ? ", " + formatDisplayName(property.city) : ""}` : "No property linked"}
               </div>
             </CardContent>
           </Card>

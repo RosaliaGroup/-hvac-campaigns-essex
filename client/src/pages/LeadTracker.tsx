@@ -14,6 +14,7 @@ import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { formatDisplayName } from "@shared/nameFormat";
 import { toast } from "sonner";
 
 export default function LeadTracker() {
@@ -417,7 +418,7 @@ export default function LeadTracker() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <User className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{lead.name}</span>
+                            <span className="font-medium">{formatDisplayName(lead.name)}</span>
                           </div>
                         </TableCell>
                         <TableCell>

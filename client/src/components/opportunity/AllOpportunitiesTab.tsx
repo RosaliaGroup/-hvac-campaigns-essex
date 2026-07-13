@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDisplayName } from "@shared/nameFormat";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { Search, SlidersHorizontal, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
@@ -236,7 +237,7 @@ export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) =
                 {rows.map(r => (
                   <TableRow key={r.id} className="cursor-pointer hover:bg-muted/50" onClick={() => onOpen(r.id)}>
                     <TableCell className="max-w-[220px]">
-                      <p className="truncate font-medium">{r.customerCompany || r.customerName}</p>
+                      <p className="truncate font-medium">{formatDisplayName(r.customerCompany || r.customerName)}</p>
                       {r.assignedToId ? <p className="truncate text-xs text-muted-foreground">{spName[r.assignedToId] ?? "Assigned"}</p> : null}
                     </TableCell>
                     <TableCell><WorkCategoryBadge category={r.workCategory} /></TableCell>
@@ -268,7 +269,7 @@ export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) =
         ) : rows.map(r => (
           <button key={r.id} onClick={() => onOpen(r.id)} className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left">
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold">{r.customerCompany || r.customerName}</p>
+              <p className="truncate font-semibold">{formatDisplayName(r.customerCompany || r.customerName)}</p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <WorkCategoryBadge category={r.workCategory} />
                 <StageBadge stage={r.stage} />

@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { MoreVertical, GripVertical } from "lucide-react";
 import { STAGE_META, WorkCategoryBadge, fmtMoney, type OppRow } from "./shared";
+import { formatDisplayName } from "@shared/nameFormat";
 import type { OpportunityStage } from "@shared/opportunityDashboard";
 
 function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
@@ -33,8 +34,8 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{row.customerCompany || row.customerName}</p>
-          {row.customerCompany ? <p className="truncate text-xs text-muted-foreground">{row.customerName}</p> : null}
+          <p className="truncate text-sm font-semibold">{formatDisplayName(row.customerCompany || row.customerName)}</p>
+          {row.customerCompany ? <p className="truncate text-xs text-muted-foreground">{formatDisplayName(row.customerName)}</p> : null}
         </div>
         <div className="flex items-center gap-1">
           <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />

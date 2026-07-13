@@ -21,6 +21,7 @@ import {
   serviceTypeLabel,
 } from "@shared/appointmentTypes";
 import { buildDirectionsUrl, hasServiceAddress } from "@shared/fieldApp";
+import { formatDisplayName, formatAddress } from "@shared/nameFormat";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -293,12 +294,12 @@ function AppointmentCard({
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-base font-semibold">
             <UserRound className="h-4 w-4 text-muted-foreground" />
-            {customerName}
+            {formatDisplayName(customerName)}
           </div>
           {showCompany ? (
             <div className="flex items-center gap-2 pl-6 text-sm text-muted-foreground">
               <Building2 className="h-3.5 w-3.5" />
-              {appt.companyName}
+              {formatDisplayName(appt.companyName)}
             </div>
           ) : null}
           <a
@@ -310,7 +311,7 @@ function AppointmentCard({
           </a>
           <div className="flex items-start gap-2 pl-6 text-sm text-muted-foreground">
             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{appt.propertyAddress || "No service address"}</span>
+            <span>{appt.propertyAddress ? formatAddress(appt.propertyAddress) : "No service address"}</span>
           </div>
           <div className="flex items-center gap-2 pl-6 text-sm text-muted-foreground">
             <Briefcase className="h-3.5 w-3.5" />
