@@ -39,10 +39,20 @@ export function registerSeoSyncRoutes(app: Express) {
 }
 
 export function startSeoSyncScheduler(): void {
+  // Opt-out flag (mirrors QUICKBOOKS_POLL_ENABLED). Even when enabled the sync is
+  // safe on every instance: runSeoSync holds a MySQL advisory lock, so only one
+  // replica actually runs while the others no-op ("already_running"). Set this to
+  // "false" on all-but-one instance, or everywhere if an external cron drives
+  // POST /api/seo/sync instead.
+  if (process.env.SEO_SYNC_SCHEDULER_ENABLED === "false") {
+    console.log("[SEO] In-process sync scheduler disabled via SEO_SYNC_SCHEDULER_ENABLED=false");
+    return;
+  }
+
   const INTERVAL_MS = 24 * 60 * 60 * 1000; // daily
   const STARTUP_DELAY_MS = 60 * 1000; // let the server settle before the first pull
 
-  console.log("[SEO] Search Console sync scheduler started — daily");
+  console.log("[SEO] Search Console sync scheduler started — daily (advisory-locked across instances)");
 
   const run = () =>
     runSeoSync({ trigger: "scheduled" })

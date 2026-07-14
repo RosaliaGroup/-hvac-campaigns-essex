@@ -18,6 +18,7 @@ import {
   type SeoPageSignals,
 } from "@shared/seo";
 import { getDb } from "../../db";
+import { withDbLock, type LockConnection } from "../../integrations/accounting/dbSyncLock";
 import { seoPages, seoQueries, seoSyncHistory } from "../../../drizzle/schema";
 import {
   getSearchConsoleAccessToken,
@@ -71,17 +72,52 @@ export type SyncResult =
 
 let syncing = false;
 
+/** Cross-instance advisory lock name (distinct from the QBO sync locks). */
+const SEO_SYNC_LOCK = "seo_gsc_sync";
+const defaultLockFactory = () =>
+  import("../../db").then((m) => m.createDedicatedConnection()) as Promise<LockConnection>;
+
 /**
- * Run one full sync. Records a seoSyncHistory row for the whole lifecycle and
- * never throws — callers get a typed result and the dashboard is unaffected.
+ * Run one full sync. Guards against concurrency at TWO levels:
+ *   - an in-process flag (fast path within one Node process), and
+ *   - a MySQL GET_LOCK advisory lock (across ALL instances — so a rolling
+ *     deploy or multi-replica deployment can never run two syncs at once).
+ * Records a seoSyncHistory row for the whole lifecycle and never throws.
  */
-export async function runSeoSync(opts: { trigger?: string } = {}): Promise<SyncResult> {
+export async function runSeoSync(
+  opts: { trigger?: string; lockConnectionFactory?: () => Promise<LockConnection> } = {}
+): Promise<SyncResult> {
   const trigger = opts.trigger ?? "manual";
   const db = await getDb();
   if (!db) return { ok: false, reason: "no_db", error: "Database not configured" };
   if (syncing) return { ok: false, reason: "already_running" };
   syncing = true;
+  try {
+    const connect = opts.lockConnectionFactory ?? defaultLockFactory;
+    return await withDbLock(
+      connect,
+      SEO_SYNC_LOCK,
+      // Only the instance that holds the lock reaches performSync.
+      () => performSync(db, trigger),
+      (reason, error) =>
+        reason === "busy"
+          ? ({ ok: false, reason: "already_running" } as const)
+          : ({ ok: false, reason: "error", error: `advisory lock unavailable: ${error?.message ?? "unknown"}` } as const),
+      { requestId: `seo-${trigger}` }
+    );
+  } catch (err) {
+    // Last-resort guard: runSeoSync must NEVER throw (a DB error while opening
+    // the history row could otherwise escape performSync's own try/catch).
+    return { ok: false, reason: "error", error: (err as Error).message };
+  } finally {
+    syncing = false;
+  }
+}
 
+async function performSync(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  trigger: string
+): Promise<SyncResult> {
   const siteUrl = getSeoSiteUrl();
   const origin = getSiteOrigin();
   const windows = computeSyncWindows(new Date());
@@ -171,8 +207,6 @@ export async function runSeoSync(opts: { trigger?: string } = {}): Promise<SyncR
     }
     const unavailable = err instanceof SearchConsoleUnavailableError;
     return { ok: false, reason: unavailable ? "unavailable" : "error", error: message };
-  } finally {
-    syncing = false;
   }
 }
 
