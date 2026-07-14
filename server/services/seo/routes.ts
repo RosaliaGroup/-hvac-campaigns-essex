@@ -3,7 +3,7 @@
  *
  *   POST /api/seo/sync   — pull the last 90 days from Search Console into the
  *                          cache. Intended for cron / external triggers, so it is
- *                          guarded by a shared secret (SEO_SYNC_SECRET) rather
+ *                          guarded by a shared secret (SEO_SYNC_CRON_SECRET) rather
  *                          than a user session. The in-app button uses the
  *                          admin-only tRPC `seo.sync` instead.
  *
@@ -15,7 +15,7 @@ import { runSeoSync } from "./sync";
 
 export function registerSeoSyncRoutes(app: Express) {
   app.post("/api/seo/sync", async (req: Request, res: Response) => {
-    const secret = process.env.SEO_SYNC_SECRET;
+    const secret = process.env.SEO_SYNC_CRON_SECRET;
     if (secret) {
       const provided = req.header("x-seo-sync-secret");
       if (provided !== secret) {
@@ -23,7 +23,7 @@ export function registerSeoSyncRoutes(app: Express) {
         return;
       }
     } else {
-      console.warn("[SEO] POST /api/seo/sync is unauthenticated — set SEO_SYNC_SECRET to lock it down");
+      console.warn("[SEO] POST /api/seo/sync is unauthenticated — set SEO_SYNC_CRON_SECRET to lock it down");
     }
 
     try {
