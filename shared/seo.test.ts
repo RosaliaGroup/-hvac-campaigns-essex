@@ -7,8 +7,14 @@ import {
   applySeoFilters,
   hydrateOpportunity,
   isNotIndexed,
+  computePriority,
+  isDeclining,
+  deriveCategory,
+  deriveProblems,
+  summarizeIssue,
   type SeoOpportunity,
   type SeoOpportunitySeed,
+  type SeoPageSignals,
 } from "./seo";
 
 /* A small factory so each test starts from a known, valid row. */
@@ -28,6 +34,7 @@ function seed(overrides: Partial<SeoOpportunitySeed> = {}): SeoOpportunitySeed {
     ctr: 0.01,
     position: 8,
     indexStatus: "indexed",
+    lastIndexedAt: null,
     status: "needs_review",
     category: "residential",
     problems: [],
@@ -147,5 +154,85 @@ describe("applySeoFilters", () => {
   it("ANDs the attribute group with the category group", () => {
     // high priority AND (commercial OR blog) → a, c
     expect(ids(applySeoFilters(rows, ["high_priority", "commercial", "blog"]))).toEqual(["a", "c"]);
+  });
+});
+
+/* ── Phase 3: derivation from Search Console signals ─────────────────────── */
+
+function signals(o: Partial<SeoPageSignals> = {}): SeoPageSignals {
+  return { position: 5, ctr: 0.05, impressions: 1000, clicks: 50, previousClicks: 50, indexStatus: "indexed", ...o };
+}
+
+describe("computePriority (Phase 3 rules)", () => {
+  it("HIGH for a page ranking 8–20", () => {
+    expect(computePriority(signals({ position: 8 }))).toBe("high");
+    expect(computePriority(signals({ position: 20 }))).toBe("high");
+  });
+
+  it("HIGH for CTR < 1% (only with impressions)", () => {
+    expect(computePriority(signals({ position: 3, ctr: 0.004, impressions: 5000 }))).toBe("high");
+    // no impressions → the CTR rule must not fire
+    expect(computePriority(signals({ position: 3, ctr: 0, impressions: 0 }))).not.toBe("high");
+  });
+
+  it("HIGH for crawled-but-not-indexed regardless of position", () => {
+    expect(computePriority(signals({ position: 2, indexStatus: "crawled_not_indexed" }))).toBe("high");
+  });
+
+  it("MEDIUM for position 21–40", () => {
+    expect(computePriority(signals({ position: 21 }))).toBe("medium");
+    expect(computePriority(signals({ position: 40 }))).toBe("medium");
+  });
+
+  it("MEDIUM for declining clicks", () => {
+    expect(computePriority(signals({ position: 3, clicks: 10, previousClicks: 100 }))).toBe("medium");
+  });
+
+  it("LOW otherwise", () => {
+    expect(computePriority(signals({ position: 3, ctr: 0.08, clicks: 60, previousClicks: 50 }))).toBe("low");
+  });
+});
+
+describe("isDeclining", () => {
+  it("needs a real previous baseline and a >20% drop", () => {
+    expect(isDeclining({ clicks: 10, previousClicks: 100 })).toBe(true);
+    expect(isDeclining({ clicks: 90, previousClicks: 100 })).toBe(false);
+    expect(isDeclining({ clicks: 0, previousClicks: 0 })).toBe(false);
+  });
+});
+
+describe("deriveCategory", () => {
+  it("classifies by path", () => {
+    expect(deriveCategory("/blog/nj-heat-pump-rebates-2026")).toBe("blog");
+    expect(deriveCategory("/hvac-newark-nj")).toBe("city_page");
+    expect(deriveCategory("/commercial")).toBe("commercial");
+    expect(deriveCategory("/lp/commercial-vrv")).toBe("commercial");
+    expect(deriveCategory("/services/heat-pump-installation")).toBe("residential");
+    expect(deriveCategory("/maintenance")).toBe("residential");
+    expect(deriveCategory("/about")).toBe("other");
+  });
+});
+
+describe("deriveProblems", () => {
+  it("flags thin content for not-indexed pages", () => {
+    expect(deriveProblems(signals({ indexStatus: "crawled_not_indexed", impressions: 0, ctr: 0 }))).toContain("thin_content");
+  });
+
+  it("flags weak title & meta for low CTR", () => {
+    const p = deriveProblems(signals({ position: 5, ctr: 0.003, impressions: 4000 }));
+    expect(p).toEqual(expect.arrayContaining(["weak_title", "weak_meta"]));
+  });
+
+  it("is deduped", () => {
+    const p = deriveProblems(signals({ position: 25, indexStatus: "excluded", impressions: 0 }));
+    expect(p.filter((x) => x === "thin_content")).toHaveLength(1);
+  });
+});
+
+describe("summarizeIssue", () => {
+  it("leads with the most actionable signal", () => {
+    expect(summarizeIssue(signals({ indexStatus: "crawled_not_indexed" }))).toMatch(/not indexed/i);
+    expect(summarizeIssue(signals({ position: 11 }))).toMatch(/page 1/i);
+    expect(summarizeIssue(signals({ position: 3, ctr: 0.004, impressions: 5000 }))).toMatch(/low CTR/i);
   });
 });

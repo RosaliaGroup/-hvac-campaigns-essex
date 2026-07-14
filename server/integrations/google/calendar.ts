@@ -24,7 +24,13 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
 const CALENDAR_BASE = "https://www.googleapis.com/calendar/v3";
-const SCOPE = "openid email https://www.googleapis.com/auth/calendar.events";
+// Single shared Google grant. Search Console (read-only) is bundled here so the
+// SEO Intelligence module reuses this one OAuth flow rather than opening a
+// second consent screen — see server/integrations/searchConsole.ts. Existing
+// connections pick up the added scope on their next re-consent; until then a
+// GSC call simply 403s and the SEO dashboard degrades gracefully.
+const SCOPE =
+  "openid email https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/webmasters.readonly";
 /** Refresh the access token when fewer than this many ms remain. */
 export const REFRESH_SKEW_MS = 5 * 60 * 1000;
 export const DEFAULT_TIMEZONE = "America/New_York";

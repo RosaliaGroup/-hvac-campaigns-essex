@@ -6,11 +6,12 @@
  * workflow-status transitions all live here so the server data provider, the
  * tRPC router and the React UI can never drift apart.
  *
- * FUTURE-READY: none of this depends on where the numbers come from. Today they
- * are served by the in-memory mock provider (server/services/seo/mockProvider).
- * When Google Search Console / GA4 / the Indexing API are wired in, only the
- * *provider* changes — these types, labels, scores and filters stay identical,
- * so the UI does not need to be redesigned.
+ * FUTURE-READY: none of this depends on where the numbers come from. They are
+ * served by the cache-backed GoogleSearchConsoleProvider
+ * (server/services/seo/searchConsoleProvider) which reads the MySQL cache a sync
+ * populates from Google Search Console. GA4 / the Indexing API / CRM funnel
+ * attribution slot in behind the same provider interface — these types, labels,
+ * scores and filters stay identical, so the UI does not need to be redesigned.
  */
 
 /* ── Priority ───────────────────────────────────────────────────────────── */
@@ -206,6 +207,8 @@ export type SeoOpportunity = {
   /** Average Google position (lower is better; 0 === not ranking). */
   position: number;
   indexStatus: IndexStatus;
+  /** ISO date of the last successful Google crawl/index, when known. */
+  lastIndexedAt: string | null;
   status: SeoStatus;
   category: SeoCategory;
   problems: SeoProblem[];
@@ -281,6 +284,85 @@ export const SEO_FILTERS: SeoFilterDef[] = [
   { key: "blog", label: "Blog", group: "category", predicate: (o) => o.category === "blog" },
   { key: "city_page", label: "City Page", group: "category", predicate: (o) => o.category === "city_page" },
 ];
+
+/* ── Derivation from Search Console signals ─────────────────────────────── */
+
+/** The raw signals a sync has for one page — enough to derive priority/problems. */
+export type SeoPageSignals = {
+  position: number;
+  ctr: number;
+  impressions: number;
+  clicks: number;
+  previousClicks: number;
+  indexStatus: IndexStatus;
+};
+
+/** A CTR at or below this (1%) underperforms for the impressions it earns. */
+const LOW_CTR = 0.01;
+/** Clicks below this share of the previous window count count as "declining". */
+const DECLINE_RATIO = 0.8;
+
+/**
+ * Priority from live Search Console signals (Phase 3 rules):
+ *   High   — position 8–20, OR CTR < 1% (with impressions), OR crawled-not-indexed
+ *   Medium — position 21–40, OR declining clicks vs. the previous window
+ *   Low    — everything else
+ */
+export function computePriority(s: SeoPageSignals): SeoPriority {
+  if (s.indexStatus === "crawled_not_indexed") return "high";
+  if (s.position >= 8 && s.position <= 20) return "high";
+  if (s.impressions > 0 && s.ctr < LOW_CTR) return "high";
+  if (s.position >= 21 && s.position <= 40) return "medium";
+  if (s.previousClicks > 0 && s.clicks < s.previousClicks * DECLINE_RATIO) return "medium";
+  return "low";
+}
+
+/** Whether clicks fell meaningfully vs. the previous window. */
+export function isDeclining(s: Pick<SeoPageSignals, "clicks" | "previousClicks">): boolean {
+  return s.previousClicks > 0 && s.clicks < s.previousClicks * DECLINE_RATIO;
+}
+
+/** Categorise a page from its path (drives the category filters). */
+export function deriveCategory(path: string): SeoCategory {
+  const p = path.toLowerCase();
+  if (p === "/blog" || p.startsWith("/blog/")) return "blog";
+  if (/^\/hvac-[a-z-]+-nj\b/.test(p)) return "city_page";
+  if (p.startsWith("/commercial") || p.startsWith("/lp/commercial") || p.includes("commercial")) return "commercial";
+  if (
+    p.startsWith("/residential") ||
+    p.startsWith("/services") ||
+    p.startsWith("/maintenance") ||
+    p.startsWith("/lp/")
+  ) {
+    return "residential";
+  }
+  return "other";
+}
+
+/**
+ * Best-effort problem list derived from Search Console signals alone. This is a
+ * heuristic stand-in until the AI Optimization sprint reads the actual page
+ * (which will replace this with real on-page findings). Deterministic + deduped.
+ */
+export function deriveProblems(s: SeoPageSignals): SeoProblem[] {
+  const out: SeoProblem[] = [];
+  if (isNotIndexed(s.indexStatus)) out.push("thin_content");
+  if (s.impressions > 0 && s.ctr < LOW_CTR) out.push("weak_title", "weak_meta");
+  if (s.position >= 8 && s.position <= 20) out.push("weak_internal_links");
+  if (s.position >= 21) out.push("thin_content");
+  return Array.from(new Set(out));
+}
+
+/** One-line human summary for the table "Issue" column. */
+export function summarizeIssue(s: SeoPageSignals): string {
+  if (s.indexStatus === "crawled_not_indexed") return "Crawled — currently not indexed by Google";
+  if (isNotIndexed(s.indexStatus)) return "Not indexed — excluded from Google's index";
+  if (s.position >= 8 && s.position <= 20) return `Ranking #${s.position.toFixed(0)} — one push from page 1`;
+  if (s.impressions > 0 && s.ctr < LOW_CTR) return "High impressions, low CTR — title & meta need work";
+  if (isDeclining(s)) return "Declining clicks vs. the previous 90 days";
+  if (s.position >= 21 && s.position <= 40) return "Page 3–4 ranking — needs stronger content";
+  return "Stable — monitor";
+}
 
 /**
  * Filter opportunities. Within the "attribute" group every active filter must

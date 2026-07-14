@@ -24,7 +24,6 @@ import {
   Search,
   RefreshCw,
   Loader2,
-  Info,
   Target,
   Sparkles,
   Type,
@@ -38,6 +37,9 @@ import {
   ExternalLink,
   AlertTriangle,
   X,
+  Clock,
+  CloudOff,
+  DownloadCloud,
 } from "lucide-react";
 import InternalNav from "@/components/InternalNav";
 import DashboardFooter from "@/components/DashboardFooter";
@@ -295,15 +297,18 @@ function OpportunityDrawer({
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">On-page</p>
                 <div className="divide-y">
-                  <DetailRow label="Current title">{o.title}</DetailRow>
-                  <DetailRow label="Meta description">{o.metaDescription}</DetailRow>
-                  <DetailRow label="H1">{o.h1}</DetailRow>
+                  <DetailRow label="Current title">{o.title || "—"}</DetailRow>
+                  <DetailRow label="Meta description">{o.metaDescription || "—"}</DetailRow>
+                  <DetailRow label="H1">{o.h1 || "—"}</DetailRow>
                   <DetailRow label="Indexed status">
                     <span className={isNotIndexed(o.indexStatus) ? "text-red-600 font-medium" : "text-green-600 font-medium"}>
                       {INDEX_STATUS_LABELS[o.indexStatus]}
                     </span>
                   </DetailRow>
-                  <DetailRow label="Search Console">{o.searchConsoleIssue}</DetailRow>
+                  <DetailRow label="Last indexed">
+                    {o.lastIndexedAt ? new Date(o.lastIndexedAt).toLocaleDateString() : "—"}
+                  </DetailRow>
+                  <DetailRow label="Search Console">{o.searchConsoleIssue || "—"}</DetailRow>
                 </div>
               </div>
 
@@ -370,6 +375,7 @@ export default function SeoIntelligence() {
 
   const overview = trpc.seo.getOverview.useQuery(undefined, { enabled: isAuthenticated });
   const opportunities = trpc.seo.getOpportunities.useQuery(undefined, { enabled: isAuthenticated });
+  const syncStatus = trpc.seo.getSyncStatus.useQuery(undefined, { enabled: isAuthenticated });
 
   const [activeFilters, setActiveFilters] = useState<SeoFilterKey[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -385,6 +391,25 @@ export default function SeoIntelligence() {
     utils.seo.getOpportunities.invalidate();
     utils.seo.getOverview.invalidate();
   };
+
+  const sync = trpc.seo.sync.useMutation({
+    onSuccess: (res) => {
+      if (res.ok) {
+        toast.success(`Synced ${res.pagesSynced} pages from Search Console`);
+      } else if (res.reason === "unavailable") {
+        toast.error("Search Console unavailable — connect Google in Integrations");
+      } else if (res.reason === "no_db") {
+        toast.error("Database not configured");
+      } else if (res.reason === "already_running") {
+        toast.message("A sync is already running");
+      } else {
+        toast.error(res.error ?? "Sync failed");
+      }
+      invalidate();
+      utils.seo.getSyncStatus.invalidate();
+    },
+    onError: (err) => toast.error(err.message),
+  });
 
   const runAction = trpc.seo.runAction.useMutation({
     onSuccess: ({ updated }, vars) => {
@@ -487,10 +512,16 @@ export default function SeoIntelligence() {
                 {o ? ` · ${o.rangeLabel}` : ""}
               </p>
             </div>
-            <Button variant="outline" onClick={handleRefresh}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleRefresh}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={sync.isPending} onClick={() => sync.mutate()}>
+                {sync.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <DownloadCloud className="h-4 w-4 mr-2" />}
+                Sync from Google
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -522,14 +553,37 @@ export default function SeoIntelligence() {
           </CardContent>
         </Card>
 
-        {/* Placeholder-data notice */}
-        <div className="mb-6 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          <Info className="h-4 w-4 mt-0.5 shrink-0" />
-          <p>
-            <strong>Preview data.</strong> Figures are placeholders. Connect Google Search Console, GA4 and the
-            Indexing API to populate this queue with live metrics — the interface will not change.
-          </p>
-        </div>
+        {/* Sync status / freshness banner */}
+        {(() => {
+          const ss = syncStatus.data;
+          if (!ss) return null;
+          const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString() : "never");
+          // Warn when Search Console is unavailable, has never synced, or last run errored.
+          if (!ss.connected || ss.stale || ss.lastRunStatus === "error") {
+            return (
+              <div className="mb-6 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                <CloudOff className="h-4 w-4 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold">
+                    {ss.connected ? "Showing the last successful sync" : "Not yet synced with Google Search Console"}
+                  </p>
+                  <p className="text-amber-800">
+                    {ss.connected
+                      ? `Live refresh is unavailable right now. Last successful sync: ${fmt(ss.lastSuccessAt)} (${ss.pagesSynced} pages).`
+                      : "Connect Google in Integrations, then click “Sync from Google” to populate this dashboard."}
+                    {ss.lastError ? ` Last error: ${ss.lastError}` : ""}
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          return (
+            <div className="mb-6 flex items-center gap-2 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
+              Last synced from Search Console: {fmt(ss.lastSuccessAt)} · {ss.pagesSynced} pages
+            </div>
+          );
+        })()}
 
         {/* KPI cards */}
         {overview.isLoading || !o ? (

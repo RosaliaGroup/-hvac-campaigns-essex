@@ -1,7 +1,8 @@
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { SEO_ACTION, SEO_STATUS } from "@shared/seo";
 import { getSeoProvider } from "../services/seo/provider";
+import { runSeoSync, readSyncStatus } from "../services/seo/sync";
 
 /**
  * SEO Intelligence router.
@@ -60,4 +61,18 @@ export const seoRouter = router({
       const updated = await getSeoProvider().setStatus(input.ids, input.status);
       return { updated };
     }),
+
+  /** Last-sync metadata for the dashboard's freshness/warning banner. */
+  getSyncStatus: protectedProcedure.query(async () => {
+    return readSyncStatus();
+  }),
+
+  /**
+   * Trigger a Search Console sync from inside the app (the "Sync from Google"
+   * button). Same work as POST /api/seo/sync; admin-only since it hits Google's
+   * quota. Never throws — returns a typed result the UI can surface.
+   */
+  sync: adminProcedure.mutation(async () => {
+    return runSeoSync({ trigger: "manual" });
+  }),
 });

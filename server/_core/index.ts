@@ -15,6 +15,7 @@ import { attachBodyParsers } from "./bodyParser";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
+import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -55,6 +56,8 @@ async function startServer() {
   registerQuickbooksRoutes(app);
   // Google Calendar OAuth callback (/api/integrations/google-calendar/callback)
   registerGoogleCalendarRoutes(app);
+  // SEO Intelligence — Search Console sync (POST /api/seo/sync)
+  registerSeoSyncRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
@@ -83,6 +86,8 @@ async function startServer() {
     startScheduledSmsProcessor();
     // Start QuickBooks sales-document poller (incremental sync + follow-up dispatch)
     startSalesDocPoller();
+    // Start daily Search Console → cache sync for SEO Intelligence
+    startSeoSyncScheduler();
   });
 }
 

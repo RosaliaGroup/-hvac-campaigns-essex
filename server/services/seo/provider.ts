@@ -8,10 +8,11 @@
  * `SeoDataProvider` and returning it from `getSeoProvider()`. No router change,
  * no UI change.
  *
- * Planned real implementations (post-Phase 2):
- *   - GscSeoProvider   → clicks / impressions / CTR / position / coverage
- *   - Ga4LeadsProvider → organicLeads (currently mocked; later from CRM/GA4)
- *   - IndexingProvider → request_reindex actually calls the Indexing API
+ * Live (Phase 3): GoogleSearchConsoleProvider serves clicks / impressions / CTR
+ * / position / coverage from the MySQL cache that runSeoSync populates from
+ * Google Search Console. Still on the roadmap behind this same interface:
+ *   - request_reindex → call the Indexing API (AI Optimization sprint)
+ *   - organicLeads    → CRM funnel attribution (Organic → Leads → … → Revenue)
  */
 import type {
   SeoAction,
@@ -19,7 +20,7 @@ import type {
   SeoOverview,
   SeoStatus,
 } from "@shared/seo";
-import { MockSeoProvider } from "./mockProvider";
+import { GoogleSearchConsoleProvider } from "./searchConsoleProvider";
 
 export interface SeoDataProvider {
   /** Top KPI figures for the dashboard cards. */
@@ -34,17 +35,12 @@ export interface SeoDataProvider {
   setStatus(ids: string[], status: SeoStatus): Promise<SeoOpportunity[]>;
 }
 
-/**
- * Process-wide singleton. Swap the constructor here (e.g. behind an env flag)
- * once the live providers exist:
- *
- *   provider = process.env.SEO_LIVE === "1" ? new GscSeoProvider(...) : new MockSeoProvider();
- */
+/** Process-wide singleton — the cache-backed Google Search Console provider. */
 let provider: SeoDataProvider | null = null;
 
 export function getSeoProvider(): SeoDataProvider {
   if (!provider) {
-    provider = new MockSeoProvider();
+    provider = new GoogleSearchConsoleProvider();
   }
   return provider;
 }
