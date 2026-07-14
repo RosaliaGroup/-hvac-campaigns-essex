@@ -20,6 +20,7 @@ import Careers from "./pages/Careers";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import MarketingDashboard from "./pages/MarketingDashboard";
+import SeoIntelligence from "./pages/SeoIntelligence";
 import LeadTracker from "./pages/LeadTracker";
 import CampaignPerformance from "./pages/CampaignPerformance";
 import Testimonials from "./pages/Testimonials";
@@ -269,6 +270,7 @@ function Router() {
       <Route path={"/command-center"} component={protect(CommandCenter)} />
       <Route path={"/marketing-autopilot"} component={protect(MarketingAutopilot)} />
       <Route path={"/marketing-dashboard"} component={protect(MarketingDashboard)} />
+      <Route path={"/seo-intelligence"} component={protect(SeoIntelligence)} />
       <Route path={"/leads"} component={protect(LeadTracker)} />
       <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
       <Route path={"/customers"} component={protect(Customers)} />
