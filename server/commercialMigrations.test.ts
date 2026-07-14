@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 /**
- * Source-text safety net for the Commercial Opportunities migrations (0042/0043),
+ * Source-text safety net for the Commercial Opportunities migrations (0044–0047),
  * mirroring the jobsSafeguards approach. Guarantees the migrations are additive,
  * reversible, and that the SQL, journal, and schema stay in agreement — without
  * touching a database.
@@ -16,8 +16,8 @@ const stripComments = (sql: string) =>
     .filter(line => !/^\s*--/.test(line))
     .join("\n");
 
-const core = stripComments(read("../drizzle/0042_commercial_opportunities_core.sql"));
-const children = stripComments(read("../drizzle/0043_commercial_opportunities_children.sql"));
+const core = stripComments(read("../drizzle/0044_commercial_opportunities_core.sql"));
+const children = stripComments(read("../drizzle/0045_commercial_opportunities_children.sql"));
 const journal = read("../drizzle/meta/_journal.json");
 const schema = read("../drizzle/schema.ts");
 
@@ -67,19 +67,19 @@ describe("commercial migrations are additive & reversible", () => {
 });
 
 describe("journal registration agrees with the SQL files", () => {
-  it("registers the commercial migrations (0042–0045) with matching tags", () => {
+  it("registers the commercial migrations (0044–0047) with matching tags", () => {
     const entries = JSON.parse(journal).entries as Array<{ idx: number; tag: string }>;
     const tags = entries.map(e => e.tag);
-    expect(tags).toContain("0042_commercial_opportunities_core");
-    expect(tags).toContain("0043_commercial_opportunities_children");
-    expect(tags).toContain("0044_commercial_qa_seed_race_guard");
-    expect(tags).toContain("0045_opportunity_amount_nullable");
+    expect(tags).toContain("0044_commercial_opportunities_core");
+    expect(tags).toContain("0045_commercial_opportunities_children");
+    expect(tags).toContain("0046_commercial_qa_seed_race_guard");
+    expect(tags).toContain("0047_opportunity_amount_nullable");
     // contiguous, no duplicate idx
     const idxs = entries.map(e => e.idx);
     expect(new Set(idxs).size).toBe(idxs.length);
     expect(idxs).toEqual([...idxs].sort((a, b) => a - b));
-    // 0045 (amount nullable) is the last (highest) entry
-    expect(Math.max(...idxs)).toBe(45);
+    // 0047 (amount nullable) is the last (highest) entry
+    expect(Math.max(...idxs)).toBe(47);
   });
 });
 

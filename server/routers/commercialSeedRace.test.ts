@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
 const router = read("./commercialOpportunities.ts");
 const schema = read("../../drizzle/schema.ts");
-const migration = read("../../drizzle/0044_commercial_qa_seed_race_guard.sql");
+const migration = read("../../drizzle/0046_commercial_qa_seed_race_guard.sql");
 
 describe("QA template seed is concurrency-safe (no duplicate templates)", () => {
   it("keys the system template off a stable systemKey", () => {
@@ -47,7 +47,7 @@ describe("schema enforces the uniqueness the seed relies on", () => {
   });
 });
 
-describe("migration 0044 adds the guard additively", () => {
+describe("migration 0046 adds the guard additively", () => {
   it("adds the systemKey column and both unique constraints", () => {
     expect(migration).toMatch(/ADD `systemKey` varchar\(48\)/);
     expect(migration).toMatch(/ADD CONSTRAINT `opportunityChecklistTemplates_systemKey_unique` UNIQUE\(`systemKey`\)/);

@@ -12,7 +12,7 @@ import { computeOpportunityUpdate } from "./commercialOpportunitiesLogic";
 const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
 const router = read("./commercialOpportunities.ts");
 const schema = read("../../drizzle/schema.ts");
-const migration = read("../../drizzle/0045_opportunity_amount_nullable.sql");
+const migration = read("../../drizzle/0047_opportunity_amount_nullable.sql");
 const createDialog = read("../../client/src/components/opportunity/commercial/CreateCommercialDialog.tsx");
 const drawer = read("../../client/src/components/opportunity/commercial/CommercialDetailDrawer.tsx");
 const board = read("../../client/src/components/opportunity/commercial/CommercialBoard.tsx");
@@ -26,7 +26,7 @@ describe("unknown estimated value is stored as NULL, never 0", () => {
     expect(schema).toMatch(/amount: decimal\("amount", \{ precision: 12, scale: 2 \}\)\.default\("0"\),/);
     expect(schema).not.toMatch(/amount: decimal\("amount"[^\n]*\.notNull\(\)/);
   });
-  it("migration 0045 widens amount to NULL", () => {
+  it("migration 0047 widens amount to NULL", () => {
     expect(migration).toMatch(/MODIFY COLUMN `amount` decimal\(12,2\) DEFAULT '0\.00'/i);
   });
 });
