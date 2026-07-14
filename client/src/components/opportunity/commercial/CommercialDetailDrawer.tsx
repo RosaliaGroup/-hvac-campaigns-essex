@@ -74,7 +74,7 @@ function DetailBody({ detail }: { detail: CommercialDetail }) {
       </SheetHeader>
 
       <Tabs defaultValue="overview" className="mt-4">
-        <TabsList className="flex h-auto w-full justify-start gap-1 overflow-x-auto py-1 [&>button]:h-auto [&>button]:flex-none">
+        <TabsList className="flex h-10 w-full items-center justify-start gap-1 overflow-x-auto [&>button]:flex-none">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
           <TabsTrigger value="tasks">Tasks{detail.tasks.length ? ` (${detail.tasks.length})` : ""}</TabsTrigger>
