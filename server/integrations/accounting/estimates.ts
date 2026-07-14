@@ -30,6 +30,8 @@ export interface QboEstimate {
 }
 
 export type SalesDocStatus = "pending" | "accepted" | "closed" | "rejected" | "expired";
+/** Every value the stored `status` column can hold (estimate + invoice statuses). */
+export type StoredDocStatus = SalesDocStatus | "paid" | "partial" | "unpaid" | "void";
 export type OpportunityStage = "new" | "proposal_sent" | "pending" | "won" | "lost";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -76,7 +78,7 @@ export function normalizeEstimateStatus(e: QboEstimate, now: Date = new Date()):
 }
 
 /** Map a normalized sales-doc status → opportunity pipeline stage. */
-export function mapDocStatusToStage(status: SalesDocStatus, sentAt: Date | null): OpportunityStage {
+export function mapDocStatusToStage(status: StoredDocStatus, sentAt: Date | null): OpportunityStage {
   switch (status) {
     case "accepted":
     case "closed":
@@ -204,6 +206,10 @@ export interface QboCustomerLite {
   BillAddr?: QboAddress;
   ShipAddr?: QboAddress;
   MetaData?: { CreateTime?: string; LastUpdatedTime?: string };
+  /** True when this is a QBO sub-customer / job (has a parent). */
+  Job?: boolean;
+  /** Parent customer when this is a sub-customer / job. */
+  ParentRef?: { value?: string; name?: string };
 }
 
 /**
@@ -414,6 +420,16 @@ export function pickContactMatch(
     if (m) return { matchedBy: "name", id: m.id };
   }
   return null;
+}
+
+/**
+ * Composite identity of a stored sales document. A QBO Estimate and Invoice can
+ * carry the same numeric Id, so a document is uniquely identified by
+ * (realmId, docType, quickbooksId) — NOT quickbooksId alone. This mirrors the
+ * qbSalesDocs_realm_docType_qboId_uq unique index and the upsert lookups.
+ */
+export function salesDocIdentityKey(doc: { realmId?: string | null; docType: string; quickbooksId: string }): string {
+  return `${doc.realmId ?? ""}::${doc.docType}::${doc.quickbooksId}`;
 }
 
 /** The maximum LastUpdatedTime across a batch, for advancing the sync cursor. */

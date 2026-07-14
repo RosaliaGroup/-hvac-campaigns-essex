@@ -185,7 +185,6 @@ function TakeOffTool() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const apiKeyRef = useRef<string | null>(null);
 
   const log = useCallback((msg: string) => {
     const ts = new Date().toLocaleTimeString();
@@ -237,24 +236,17 @@ function TakeOffTool() {
   };
 
   // ── Helper: call Claude with retry ────────────────────────────────────────
-  const callClaude = async (system: string, messages: any[]): Promise<string> => {
-    if (!apiKeyRef.current) {
-      const cfgRes = await fetch("/.netlify/functions/get-api-config");
-      const cfg = await cfgRes.json();
-      apiKeyRef.current = cfg.apiKey || null;
-    }
-    if (!apiKeyRef.current) throw new Error("API key not available");
-    const headers: Record<string, string> = { "Content-Type": "application/json", "x-api-key": apiKeyRef.current, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" };
-    const body = JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 16000, system, messages });
-    let res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body });
-    if (res.status === 429) {
-      log("Rate limit hit — waiting 60 seconds...");
-      await new Promise(resolve => setTimeout(resolve, 60000));
-      res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body });
-    }
-    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-    const data = await res.json();
-    return data.content?.[0]?.text || "";
+  // Calls Claude via the server-side proxy — the API key stays on the server and
+  // is never exposed to the browser. Model is chosen server-side from `mode`
+  // (quick = cost-efficient Sonnet, precise = stronger model), with automatic
+  // fallback for retired/unavailable models.
+  // AI analysis is intentionally NOT available on the public estimating page:
+  // serving it would require either exposing an API key to anonymous browsers or
+  // opening an unauthenticated Anthropic endpoint — both are out of scope for
+  // this fix. Manual take-off, editing, and exports still work here. To run AI
+  // Take-Off, sign in and use the internal tool.
+  const callClaude = async (_system: string, _messages: any[], _mode: "quick" | "precise" = analysisMode): Promise<string> => {
+    throw new Error("AI analysis isn't available on the public estimating page. Please sign in to use AI Take-Off.");
   };
 
   // ── STEPS 2+3: Analyze + Reconcile ────────────────────────────────────────
@@ -368,6 +360,9 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
 
       log("Parsing results...");
       const parsed = safeParseJSON(finalText);
+      if (!parsed.items || parsed.items.length === 0) {
+        throw new Error("The AI returned no line items for these pages. Please try again, or switch analysis mode.");
+      }
       const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
         id: uid(), category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
         description: item.description || "", tag: item.tag || "",
@@ -492,6 +487,9 @@ Price using NJ direct costs. Respond ONLY with valid JSON: {"pages":${selected.l
 
       log("Parsing results…");
       const parsed = safeParseJSON(finalText);
+      if (!parsed.items || parsed.items.length === 0) {
+        throw new Error("The AI returned no line items for these pages. Please try again, or switch analysis mode.");
+      }
       const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
         id: uid(), category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
         description: item.description || "", tag: item.tag || "",
@@ -532,58 +530,10 @@ Price using NJ direct costs. Respond ONLY with valid JSON: {"pages":${selected.l
 
   // ── Value Engineering (local, no DB) ──────────────────────────────────────
   const runVE = async () => {
-    if (rows.length === 0) return;
-    setVeRunning(true);
-    log("Running Value Engineering analysis...");
-    try {
-      if (!apiKeyRef.current) {
-        const cfgRes = await fetch("/.netlify/functions/get-api-config");
-        const cfg = await cfgRes.json();
-        apiKeyRef.current = cfg.apiKey || null;
-      }
-      if (!apiKeyRef.current) { log("Error: API key not available."); setVeRunning(false); return; }
-
-      const compactItems = rows.slice(0, 50).map((i) => `${i.description} x${i.qty} @ $${i.unitPrice}`).join(" | ").slice(0, 400);
-      const totalCost = rows.reduce((s, r) => s + r.qty * r.unitPrice, 0);
-
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": apiKeyRef.current, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-        body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 6000,
-          system: `You are an HVAC value engineer. Given a take-off, provide exactly 8 cost-saving suggestions. Mix types: redesign, substitution, scope_reduction, sequencing. Order by estimatedSavings descending.\n\nReturn ONLY a JSON array with exactly 8 objects. No wrapping object, no preamble, no explanation — just the array:\n[\n{"type":"substitution","title":"X","currentSpec":"X","alternativeSpec":"X","estimatedSavings":5000,"savingsPercent":8,"tradeOffs":"X","codeCompliant":true,"affectedItems":["X"],"implementationNotes":"X"},\n...7 more items...\n]`,
-          messages: [{ role: "user", content: `Project: ${projectName}\nLocation: ${projectLocation}\n\nTAKE-OFF SUMMARY:\n${compactItems}\n\nTOTAL DIRECT COST: $${totalCost.toFixed(0)}\n\nReturn exactly 8 VE suggestions as a JSON array.` }],
-        }),
-      });
-
-      if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-
-      const data = await res.json();
-      const text = data.content?.[0]?.text || "";
-      let suggestions: any[] = [];
-      try {
-        const arrMatch = text.match(/\[[\s\S]*\]/);
-        if (arrMatch) suggestions = JSON.parse(arrMatch[0]);
-      } catch {
-        try {
-          const objMatch = text.match(/\{[\s\S]*\}/);
-          if (objMatch) { const obj = JSON.parse(objMatch[0]); suggestions = obj.suggestions || []; }
-        } catch {
-          const objRegex = /\{[^{}]*"type"\s*:\s*"[^"]*"[^{}]*"title"\s*:[^{}]*\}/g;
-          let match;
-          while ((match = objRegex.exec(text)) !== null) {
-            try { const s = JSON.parse(match[0]); if (s.type && s.title) suggestions.push(s); } catch {}
-          }
-        }
-      }
-      setVeSuggestions(suggestions.map((s: any) => ({ ...s, status: "pending" as const })));
-      log(`Generated ${suggestions.length} VE suggestions.`);
-    } catch (err: any) {
-      log(`VE error: ${err.message}`);
-    } finally {
-      setVeRunning(false);
-    }
+    // Value Engineering uses the AI service, which is intentionally unavailable
+    // on the public estimating page (see callClaude). No anonymous Anthropic
+    // usage and no API key in the browser. Sign in to use AI features.
+    log("Value Engineering isn't available on the public estimating page. Please sign in to use AI features.");
   };
 
   const applyVE = (idx: number) => { setVeSuggestions((prev) => prev.map((s, i) => (i === idx ? { ...s, status: "applied" } : s))); };

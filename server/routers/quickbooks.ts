@@ -14,6 +14,7 @@ import { customers, properties, quickbooksSyncLogs, type Customer, type Property
 import { getAccountingProvider } from "../integrations/accounting";
 import { quickbooksProvider, buildAuthorizeUrl, getQboConfig, signState, writeSyncLog } from "../integrations/accounting/quickbooks";
 import { syncSalesDocuments } from "../integrations/accounting/salesDocSync";
+import { syncInvoices } from "../integrations/accounting/invoiceSync";
 import { runAdvisoryLockSelfTest, type DbLockLogEntry, type LockConnection } from "../integrations/accounting/dbSyncLock";
 import type { AccountingCustomerInput, ConflictResolution, PushCustomerResult } from "../integrations/accounting/types";
 
@@ -222,6 +223,33 @@ export const quickbooksRouter = router({
     .input(z.object({ sinceDays: z.number().int().min(1).max(365).default(60) }).optional())
     .mutation(async ({ input }) => {
       const result = await syncSalesDocuments({ mode: "backfill", sinceDays: input?.sinceDays ?? 60 });
+      if (!result.ok && result.error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
+      }
+      return result;
+    }),
+
+  /**
+   * Admin: incremental INVOICE pull (read-only). Uses the independent invoice
+   * cursor; never touches the estimate cursor. No-op ("disabled") unless
+   * QBO_INVOICE_SYNC_ENABLED=true — that flag is the deliberate approval gate.
+   */
+  syncInvoicesNow: adminProcedure.mutation(async () => {
+    const result = await syncInvoices({ mode: "incremental" });
+    if (!result.ok && result.error) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
+    }
+    return result;
+  }),
+
+  /**
+   * Admin: bounded INVOICE backfill (read-only), gated by QBO_INVOICE_SYNC_ENABLED.
+   * Intended to be run ONCE, deliberately, after review — see the backfill plan.
+   */
+  backfillInvoices: adminProcedure
+    .input(z.object({ sinceDays: z.number().int().min(1).max(3650).default(365) }).optional())
+    .mutation(async ({ input }) => {
+      const result = await syncInvoices({ mode: "backfill", sinceDays: input?.sinceDays ?? 365 });
       if (!result.ok && result.error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
       }

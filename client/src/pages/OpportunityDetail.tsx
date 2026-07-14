@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConvertToJobControl } from "@/components/opportunity/ConvertToJobControl";
 import { formatMoney } from "@/lib/jobPresentation";
+import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
 import { ArrowLeft, Target, FileText, Hash, Tag, UserRound, MapPin, Calendar } from "lucide-react";
 
 function fmt(date: Date | string | null | undefined) {
@@ -57,7 +58,7 @@ export default function OpportunityDetail() {
 
   const { opportunity: o, customer, serviceAddresses, salesDocuments } = data;
   const primaryAddress = serviceAddresses?.[0]
-    ? [serviceAddresses[0].addressLine1, serviceAddresses[0].city, serviceAddresses[0].state, serviceAddresses[0].zip].filter(Boolean).join(", ")
+    ? [formatAddress(serviceAddresses[0].addressLine1), formatDisplayName(serviceAddresses[0].city), formatStateCode(serviceAddresses[0].state), serviceAddresses[0].zip].filter(Boolean).join(", ")
     : null;
 
   return (
@@ -78,7 +79,7 @@ export default function OpportunityDetail() {
             {o.projectReference && <span className="inline-flex items-center gap-1 text-muted-foreground"><Tag className="h-3.5 w-3.5" /> {o.projectReference}</span>}
             {customer && (
               <button className="inline-flex items-center gap-1 text-[#1e3a5f] hover:underline" onClick={() => navigate(`/customers/${customer.id}`)}>
-                <UserRound className="h-3.5 w-3.5" /> {customer.displayName}
+                <UserRound className="h-3.5 w-3.5" /> {formatDisplayName(customer.displayName)}
               </button>
             )}
             {primaryAddress && <span className="inline-flex items-center gap-1 text-muted-foreground"><MapPin className="h-3.5 w-3.5" /> {primaryAddress}</span>}

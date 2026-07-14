@@ -20,6 +20,7 @@ import {
 import { encrypt, decrypt, isEncryptionConfigured } from "../../_core/crypto";
 import { normalizePhone } from "../../routers/customers";
 import type { QboEstimate, QboCustomerLite } from "./estimates";
+import type { QboInvoice } from "./invoices";
 import { resilientFetch, type QboFetchLogEntry } from "./qboHttp";
 import {
   NotImplementedError,
@@ -693,6 +694,22 @@ export class QuickBooksProvider implements AccountingProvider {
     }
     const json = (await res.json()) as { QueryResponse?: { Estimate?: QboEstimate[] } };
     return json.QueryResponse?.Estimate ?? [];
+  }
+
+  /**
+   * Read one page of QBO Invoices. READ-ONLY. Fails closed exactly like
+   * fetchEstimates: a non-2xx (incl. exhausted-retry 429/502/503/504) throws so
+   * the invoice sync records a failure and leaves invoiceCursor put — never
+   * reads as "0 invoices". Error carries only status + ≤200 body chars.
+   */
+  async fetchInvoices(query: string): Promise<QboInvoice[]> {
+    const res = await this.qboFetch(`/query?query=${encodeURIComponent(query)}`);
+    if (!res.ok) {
+      const body = (await res.text().catch(() => "")).slice(0, 200);
+      throw new Error(`QBO invoice query failed: ${res.status} ${body}`);
+    }
+    const json = (await res.json()) as { QueryResponse?: { Invoice?: QboInvoice[] } };
+    return json.QueryResponse?.Invoice ?? [];
   }
 
   /** Read a full QBO Customer (for contact auto-creation). Null if absent. */

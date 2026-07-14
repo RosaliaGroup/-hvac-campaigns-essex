@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
 
@@ -1343,6 +1344,15 @@ export const quickbooksConnections = mysqlTable(
     salesDocCursor: timestamp("salesDocCursor"),
     /** When the sales-document sync last completed (success or attempt). */
     salesDocLastSyncAt: timestamp("salesDocLastSyncAt"),
+    /**
+     * Independent incremental cursor for the INVOICE pull (QBO
+     * MetaData.LastUpdatedTime of the newest invoice processed). Kept separate
+     * from salesDocCursor so invoice sync never resets/advances the estimate
+     * cursor. Null until the first invoice run does its bounded backfill.
+     */
+    invoiceCursor: timestamp("invoiceCursor"),
+    /** When the invoice sync last completed (success or attempt). */
+    invoiceLastSyncAt: timestamp("invoiceLastSyncAt"),
     status: mysqlEnum("status", ["connected", "expired", "revoked", "error"]).default("connected").notNull(),
     lastError: text("lastError"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -1523,8 +1533,12 @@ export const quickbooksSalesDocuments = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     realmId: varchar("realmId", { length: 64 }),
-    /** QBO Estimate.Id — unique per realm; the sync idempotency key. */
-    quickbooksId: varchar("quickbooksId", { length: 64 }).notNull().unique(),
+    /**
+     * QBO document Id. NOT globally unique on its own — QBO Estimate and Invoice
+     * ids can coincide — so identity is the composite (realmId, docType,
+     * quickbooksId) enforced by the unique index below.
+     */
+    quickbooksId: varchar("quickbooksId", { length: 64 }).notNull(),
     docType: mysqlEnum("docType", ["estimate", "invoice"]).default("estimate").notNull(),
     docNumber: varchar("docNumber", { length: 64 }),
     /** QBO CustomerRef value — used to resolve/auto-create the local contact. */
@@ -1533,15 +1547,36 @@ export const quickbooksSalesDocuments = mysqlTable(
     customerId: int("customerId"),
     /** The opportunity this document backs (opportunities.id). */
     opportunityId: int("opportunityId"),
-    /** Normalized from QBO TxnStatus (+ expiry derivation). */
-    status: mysqlEnum("status", ["pending", "accepted", "closed", "rejected", "expired"]).default("pending").notNull(),
+    /**
+     * Normalized document status. Estimate statuses: pending/accepted/closed/
+     * rejected/expired. Invoice statuses (additive): paid/partial/unpaid/void.
+     */
+    status: mysqlEnum("status", [
+      "pending", "accepted", "closed", "rejected", "expired",
+      "paid", "partial", "unpaid", "void",
+    ]).default("pending").notNull(),
     totalAmount: decimal("totalAmount", { precision: 12, scale: 2 }).default("0").notNull(),
     /** QBO TxnDate — the document's issue date. */
     txnDate: timestamp("txnDate"),
     /** Derived from QBO EmailStatus = EmailSent; null when never sent. */
     sentAt: timestamp("sentAt"),
-    /** QBO ExpirationDate, if present. */
+    /** QBO ExpirationDate (estimates), if present. */
     expiresAt: timestamp("expiresAt"),
+    // ── Invoice-specific fields (nullable; estimates leave these null). Read-only QBO ingestion. ──
+    /** QBO Invoice.DueDate. */
+    dueDate: timestamp("dueDate"),
+    /** QBO Invoice.Balance — unpaid amount (total − payments). Null for estimates. */
+    balance: decimal("balance", { precision: 12, scale: 2 }),
+    /** QBO CurrencyRef.value (e.g. "USD"). */
+    currency: varchar("currency", { length: 8 }),
+    /**
+     * When the doc's CustomerRef is a QBO sub-customer / job, the parent
+     * customer's QBO ref — captured so Customer 360 can reconcile documents
+     * filed under a child project back to the parent CRM customer.
+     */
+    quickbooksParentRef: varchar("quickbooksParentRef", { length: 64 }),
+    /** True when the QBO document is voided (kept for audit; excluded from revenue/balance). */
+    voided: boolean("voided").default(false).notNull(),
     /** Public/shareable link if QuickBooks provides one (often absent for estimates). */
     documentLink: text("documentLink"),
     /** QBO MetaData.LastUpdatedTime — drives "is this newer?" and the sync cursor. */
@@ -1557,6 +1592,10 @@ export const quickbooksSalesDocuments = mysqlTable(
     statusIdx: index("qbSalesDocs_status_idx").on(table.status),
     customerIdx: index("qbSalesDocs_customerId_idx").on(table.customerId),
     opportunityIdx: index("qbSalesDocs_opportunityId_idx").on(table.opportunityId),
+    docTypeIdx: index("qbSalesDocs_docType_idx").on(table.docType),
+    parentRefIdx: index("qbSalesDocs_parentRef_idx").on(table.quickbooksParentRef),
+    /** Durable document identity — an estimate and an invoice may share a QBO id. */
+    docIdentityUq: uniqueIndex("qbSalesDocs_realm_docType_qboId_uq").on(table.realmId, table.docType, table.quickbooksId),
   }),
 );
 export type QuickbooksSalesDocument = typeof quickbooksSalesDocuments.$inferSelect;

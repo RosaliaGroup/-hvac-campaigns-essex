@@ -1,9 +1,14 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
-import { extractPDFPages, buildSelectedText, buildImageBlocks, type ExtractedPage } from "@/lib/pdfExtract";
+import { extractPDFPages, buildSelectedText, buildImageBlocks, imageBlockFromDataUrl, recompressImage, type ExtractedPage } from "@/lib/pdfExtract";
+import { planTakeoffBatches } from "@/lib/takeoffBatchPlan";
+import { runBatchWithRecovery, halve } from "@/lib/takeoffRecovery";
+import { isGatewayTimeoutMessage } from "@/lib/proxyResponse";
+import { canStartAnalysis, selectionBlockMessage, needsCostConfirm, costConfirmMessage } from "@/lib/takeoffSelection";
 import { DEFAULT_PRICEBOOK, matchPricebook, CSI_DIVISIONS, type PricebookEntry } from "@/lib/pricebook";
 import { runVerification } from "@/lib/takeoffVerify";
+import { batchSignature, computeBatchId, loadBatches, saveBatch, clearBatches, tryAcquireRun, releaseRun } from "@/lib/takeoffBatchCache";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -201,6 +206,7 @@ export default function TakeOffDetail() {
 
   // Data from DB
   const { data: projectData, isLoading: loadingProject, refetch } = trpc.takeoffs.getById.useQuery({ id: projectId }, { enabled: projectId > 0 });
+  const analyzeBatchMutation = trpc.takeoffs.analyzeBatch.useMutation();
   const saveMutation = trpc.takeoffs.saveItems.useMutation();
   const updateMutation = trpc.takeoffs.update.useMutation();
   const veRunMutation = trpc.takeoffs.runVE.useMutation();
@@ -239,17 +245,8 @@ export default function TakeOffDetail() {
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const apiKeyRef = useRef<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initializedRef = useRef(false);
-
-  // Fetch API key on mount
-  useEffect(() => {
-    fetch("/.netlify/functions/get-api-config")
-      .then((r) => r.json())
-      .then((d) => { apiKeyRef.current = d.apiKey || null; })
-      .catch(() => {});
-  }, []);
 
   // Load project data from DB
   useEffect(() => {
@@ -370,6 +367,48 @@ export default function TakeOffDetail() {
     }
   };
 
+  // Persist the freshly-computed analysis directly (avoids stale-state reads),
+  // then clear the resume cache ONLY on a successful save. If the save fails the
+  // cache is kept so a re-run resumes from where it left off.
+  const persistAnalysis = async (pricedRows: TakeOffRow[], allFindings: Finding[]): Promise<boolean> => {
+    setRows(pricedRows);
+    setFindings(allFindings);
+    setDirty(true);
+    try {
+      await saveMutation.mutateAsync({
+        projectId,
+        items: pricedRows.map((r) => ({
+          category: r.category,
+          description: r.description,
+          tag: r.tag,
+          qty: r.qty,
+          unit: r.unit,
+          vendor: r.vendor,
+          model: r.model,
+          specs: r.specs,
+          source: r.source,
+          confidence: r.confidence,
+          unitPrice: r.unitPrice,
+          notes: r.notes,
+        })),
+        findings: allFindings.map((f) => ({
+          type: f.severity,
+          title: f.title,
+          body: f.detail,
+          source: "",
+        })),
+      });
+      setLastSaved(new Date());
+      setDirty(false);
+      clearBatches(projectId, analysisMode);
+      log("Saved to database.");
+      return true;
+    } catch (err: any) {
+      log(`Save error: ${err.message}. Analysis is cached — re-run to resume from where it left off.`);
+      return false;
+    }
+  };
+
   // ── File handling ─────────────────────────────────────────────────────────
   const handleFiles = useCallback(async (fileList: FileList | null) => {
     if (!fileList) return;
@@ -431,27 +470,35 @@ export default function TakeOffDetail() {
   }, [files.length]);
 
   // ── Helper: call Claude with retry ────────────────────────────────────────
-  const callClaude = async (system: string, messages: any[]): Promise<string> => {
-    if (!apiKeyRef.current) {
-      const cfgRes = await fetch("/.netlify/functions/get-api-config");
-      const cfg = await cfgRes.json();
-      apiKeyRef.current = cfg.apiKey || null;
+  // Calls Claude via the authenticated Railway tRPC mutation (takeoffs.analyzeBatch).
+  // The ANTHROPIC_API_KEY stays server-side and is never exposed to the browser.
+  // The model is chosen server-side from `mode` (quick = cost-efficient Sonnet,
+  // precise = stronger model), with automatic fallback for retired/unavailable
+  // models and server-side retry of transient errors. On a rate-limit we wait
+  // once client-side and retry, preserving the prior UX.
+  const callClaude = async (system: string, messages: any[], mode: "quick" | "precise" = analysisMode): Promise<string> => {
+    // Deterministic idempotency key: identical (project, mode, prompt+pages)
+    // yields the same batchId, so a retry after a network interruption returns
+    // the server's cached response instead of billing Anthropic twice.
+    const batchId = computeBatchId(projectId, mode, { system, messages });
+    const runOnce = () => analyzeBatchMutation.mutateAsync({ batchId, mode, system, messages, maxTokens: 16000 });
+    try {
+      const data = await runOnce();
+      return data.text || "";
+    } catch (err: any) {
+      if (err?.data?.code === "TOO_MANY_REQUESTS") {
+        log("Rate limit hit — waiting 60 seconds then retrying…");
+        await new Promise((resolve) => setTimeout(resolve, 60000));
+        log("Retrying…");
+        try {
+          const data = await runOnce();
+          return data.text || "";
+        } catch (err2: any) {
+          throw new Error(err2?.message || "Analysis failed after retry. Please try again.");
+        }
+      }
+      throw new Error(err?.message || "Analysis failed. Please try again.");
     }
-    if (!apiKeyRef.current) throw new Error("API key not available");
-
-    const headers = { "Content-Type": "application/json", "x-api-key": apiKeyRef.current, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" };
-    const body = JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 16000, system, messages });
-
-    let res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body });
-    if (res.status === 429) {
-      log("Rate limit hit — waiting 60 seconds then retrying…");
-      await new Promise(resolve => setTimeout(resolve, 60000));
-      log("Retrying…");
-      res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body });
-    }
-    if (!res.ok) throw new Error(`API ${res.status}: ${await res.text()}`);
-    const data = await res.json();
-    return data.content?.[0]?.text || "";
   };
 
   // ── STEP 2 + 3: Analyze with Claude (batched) + Reconcile ─────────────────
@@ -524,37 +571,114 @@ Air devices: 0.5-1.0 hr each
 Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"MACHINERY|SHEET METAL|COPPER|INSULATION|AIR DEVICES|ACCESSORIES|LABOR|OTHER","description":"<desc>","tag":"<tag>","qty":<number>,"unit":"EA|LF|SF|LS|HR","vendor":"<brand>","model":"<model>","specs":"<specs>","source":"<sheet>","confidence":"high|med|low","unitPrice":<number>,"notes":"<notes>"}],"findings":[{"type":"warning|info|success|alert","title":"<title>","body":"<body>","source":"<ref>"}]}`;
 
     try {
-      // Split into batches of 4 pages if > 8 pages
-      const BATCH_SIZE = 4;
-      const needsBatching = selected.length > 8;
-      const batches: ExtractedPage[][] = [];
-      if (needsBatching) {
-        for (let i = 0; i < selected.length; i += BATCH_SIZE) {
-          batches.push(selected.slice(i, i + BATCH_SIZE));
-        }
-      } else {
-        batches.push(selected);
-      }
+      // ── Adaptive batching to fit the API proxy's request-body cap ─────────
+      // Netlify's /api proxy rejects request bodies over ~10 MB with an empty
+      // 400 (the payload never reaches Railway). Page images dominate the size,
+      // so plan each batch under a safe budget: prefer 4 pages, split to 2, then
+      // retry with stronger image compression, then 1 page, else fail clearly.
+      const SAFE_REQUEST_BYTES = 8 * 1024 * 1024; // margin under the ~10 MB cap
+      const STRONG = { maxDim: 1700, quality: 0.55 };
+      const encoder = new TextEncoder();
+
+      const instructionText = (pages: ExtractedPage[]) => {
+        const nums = pages.map((p) => p.pageNum).join(", ");
+        const batchText = pages.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
+        return `=== EXTRACTED TEXT FROM PAGES ${nums} ===\n${batchText}\n\n=== INSTRUCTIONS ===\nUse BOTH the images above AND the extracted text to perform the take-off:\n- IMAGES: Count every symbol visible — FD (fire damper), VD (volume damper), MD (motorized damper), thermostat symbols, supply/return/exhaust register symbols, ductwork runs (measure visually). Count graphical symbols that may not appear in text.\n- TEXT: Read equipment schedules, notes, specs, and tag labels precisely. Schedules are authoritative for equipment quantities.\n- Cross-reference both: if text says 75 KX fans but images show symbols on floor plans, verify the count matches.\nReturn complete take-off JSON.`;
+      };
+
+      // Build the request `content` (images + text) for a batch, recompressing
+      // images when the plan flagged this batch as needing stronger compression.
+      // Cached by (pages, strong) so the planner's sizing and the send loop never
+      // recompress the same batch twice.
+      const contentCache = new Map<string, any[]>();
+      const cacheKey = (pages: ExtractedPage[], strong: boolean) =>
+        `${strong ? "s" : "b"}|${pages.map((p) => p.pageNum).join(",")}`;
+      const buildContent = async (pages: ExtractedPage[], strong: boolean): Promise<any[]> => {
+        const key = cacheKey(pages, strong);
+        const hit = contentCache.get(key);
+        if (hit) return hit;
+        const imageDatas = strong
+          ? await Promise.all(pages.map((p) => recompressImage(p.thumbnail, STRONG.maxDim, STRONG.quality)))
+          : pages.map((p) => p.thumbnail);
+        const content: any[] = [
+          ...imageDatas.map(imageBlockFromDataUrl),
+          { type: "text", text: instructionText(pages) },
+        ];
+        contentCache.set(key, content);
+        return content;
+      };
+      // Serialized request size (bytes) for the planner — mirrors the actual
+      // mutation input so the budget check matches what crosses the proxy.
+      const measure = async (pages: ExtractedPage[], strong: boolean): Promise<number> => {
+        const content = await buildContent(pages, strong);
+        const payload = { mode: analysisMode, system: systemPrompt, messages: [{ role: "user", content }], maxTokens: 16000 };
+        return encoder.encode(JSON.stringify(payload)).length;
+      };
+
+      // Quick mode defaults to 2 pages per request: request latency tracks the
+      // model's OUTPUT (drawing complexity), and 4-page batches routinely run
+      // 18–35 s — over the API proxy's ~26 s response cap. Two pages reliably
+      // finish under ~20 s. The 8 MB size budget stays as a secondary guard, and
+      // the planner still splits to 1 page when a pair is too large.
+      // Throws a clear error if a single page can't fit even strongly compressed.
+      const plan = await planTakeoffBatches(selected, { budgetBytes: SAFE_REQUEST_BYTES, measure, groupSize: 2 });
+      const needsBatching = plan.length > 1;
+      const budgetMb = (SAFE_REQUEST_BYTES / (1024 * 1024)).toFixed(0);
+      log(`Prepared ${plan.length} batch(es) under the ${budgetMb} MB request budget${plan.some((p) => p.strong) ? " — some pages compressed to fit" : ""}.`);
+
+      // Resume support: skip batches already completed in a prior run (same
+      // project, mode and page selection). Signature covers all selected pages,
+      // so a changed selection starts fresh; the cache VERSION guards the scheme.
+      const sig = batchSignature(analysisMode, selected.map((p) => p.pageNum));
+      const cached = loadBatches(projectId, analysisMode, sig);
+      const cachedCount = Object.keys(cached).length;
+      if (cachedCount > 0) log(`Resuming: ${cachedCount} of ${plan.length} batch(es) already completed — skipping those.`);
+
+      // Send one batch of pages (ALWAYS images + text; images pre-sized to the
+      // budget). callClaude computes the deterministic batchId from the content,
+      // so an identical retry reuses the server's idempotency cache.
+      const sendPages = async (pages: ExtractedPage[], strongFlag: boolean): Promise<string> => {
+        const content = await buildContent(pages, strongFlag);
+        return callClaude(systemPrompt, [{ role: "user", content }]);
+      };
+      const isTimeout = (err: any) => isGatewayTimeoutMessage(err?.message);
 
       const batchResults: string[] = [];
 
-      for (let b = 0; b < batches.length; b++) {
-        const batch = batches[b];
-        const batchLabel = needsBatching ? ` (batch ${b + 1}/${batches.length})` : "";
-        log(`Sending pages ${batch.map((p) => p.pageNum).join(", ")} to Claude${batchLabel}…`);
+      for (let b = 0; b < plan.length; b++) {
+        const { pages: batch, strong } = plan[b];
+        const batchLabel = needsBatching ? ` (batch ${b + 1}/${plan.length})` : "";
 
-        // Build message content: ALWAYS send both images + text
-        const batchText = batch.map((p) => `=== PAGE ${p.pageNum} ===\n${p.text}`).join("\n\n");
-        const imageBlocks = buildImageBlocks(batch, 4);
+        if (cached[String(b)] !== undefined) {
+          batchResults.push(cached[String(b)]);
+          log(`Batch ${b + 1} restored from cache (${cached[String(b)].length} chars).`);
+          continue;
+        }
 
-        const content: any[] = [
-          ...imageBlocks,
-          { type: "text", text: `=== EXTRACTED TEXT FROM PAGES ${batch.map((p) => p.pageNum).join(", ")} ===\n${batchText}\n\n=== INSTRUCTIONS ===\nUse BOTH the images above AND the extracted text to perform the take-off:\n- IMAGES: Count every symbol visible — FD (fire damper), VD (volume damper), MD (motorized damper), thermostat symbols, supply/return/exhaust register symbols, ductwork runs (measure visually). Count graphical symbols that may not appear in text.\n- TEXT: Read equipment schedules, notes, specs, and tag labels precisely. Schedules are authoritative for equipment quantities.\n- Cross-reference both: if text says 75 KX fans but images show symbols on floor plans, verify the count matches.\nReturn complete take-off JSON.` },
-        ];
+        const nums = batch.map((p) => p.pageNum).join(", ");
+        const payloadMb = ((await measure(batch, strong)) / (1024 * 1024)).toFixed(2);
+        log(`Sending page${batch.length > 1 ? "s" : ""} ${nums} to Claude${batchLabel}${strong ? " (compressed to fit)" : ""} — ${payloadMb} MB payload…`);
 
-        const text = await callClaude(systemPrompt, [{ role: "user", content }]);
+        // One recovery cycle on a gateway timeout: retry the same idempotent
+        // batch once (reuses a late server completion — no rebilling), then
+        // subdivide once into smaller requests. Completed batches are unaffected.
+        const parts = await runBatchWithRecovery(batch, strong, {
+          send: sendPages,
+          isTimeout,
+          subdivide: halve,
+          onEvent: (e) => {
+            if (e.type === "timeout-retry")
+              log(`Batch ${b + 1} hit the gateway timeout — retrying once for a completed result…`);
+            else if (e.type === "subdivide")
+              log(`Batch ${b + 1} still timing out — splitting into ${e.parts} smaller request(s)…`);
+            else if (e.type === "give-up")
+              log(`Batch ${b + 1} could not be split further.`);
+          },
+        });
+        const text = parts.map((p) => p.text).join("\n\n");
         batchResults.push(text);
-        log(`Batch ${b + 1} response received (${text.length} chars).`);
+        saveBatch(projectId, analysisMode, sig, b, text);
+        log(`Batch ${b + 1} response received (${text.length} chars${parts.length > 1 ? `, ${parts.length} sub-requests` : ""}).`);
       }
 
       // ── STEP 3: Reconcile if batched ──────────────────────────────────────
@@ -589,6 +713,9 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
       log("Parsing results…");
 
       const parsed = safeParseJSON(finalText);
+      if (!parsed.items || parsed.items.length === 0) {
+        throw new Error("The AI returned no line items for these pages. Please try again, or switch analysis mode.");
+      }
       const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
         id: uid(),
         category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
@@ -619,14 +746,11 @@ Produce the final reconciled take-off JSON. Every per-apartment item must have q
       log("Running verification checks…");
       const verifyFindings = runVerification(pricedRows);
 
-      setRows(pricedRows);
-      setFindings([...newFindings, ...verifyFindings]);
-      setDirty(true);
       setAnalysisStep("idle");
       log(`Done! ${pricedRows.length} line items, ${newFindings.length + verifyFindings.length} findings (${verifyFindings.length} from verification).`);
 
-      // Auto-save immediately after analysis
-      setTimeout(() => saveToDb(), 500);
+      // Persist the freshly-computed analysis, then clear the resume cache on success.
+      await persistAnalysis(pricedRows, [...newFindings, ...verifyFindings]);
     } catch (err: any) {
       log(`Error: ${err.message}`);
       setAnalysisStep("idle");
@@ -769,6 +893,9 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
       // Parse and apply pricebook + verification (same as quick mode)
       log("Parsing results…");
       const parsed = safeParseJSON(finalText);
+      if (!parsed.items || parsed.items.length === 0) {
+        throw new Error("The AI returned no line items for these pages. Please try again, or switch analysis mode.");
+      }
       const newRows: TakeOffRow[] = (parsed.items || []).map((item: any) => ({
         id: uid(),
         category: CATEGORIES.includes(item.category) ? item.category : "OTHER",
@@ -796,12 +923,9 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
       log("Running verification checks…");
       const verifyFindings = runVerification(pricedRows);
 
-      setRows(pricedRows);
-      setFindings([...newFindings, ...verifyFindings]);
-      setDirty(true);
       setAnalysisStep("idle");
       log(`Done! ${pricedRows.length} line items, ${newFindings.length + verifyFindings.length} findings. [Precise mode — 5 agents]`);
-      setTimeout(() => saveToDb(), 500);
+      await persistAnalysis(pricedRows, [...newFindings, ...verifyFindings]);
     } catch (err: any) {
       log(`Error: ${err.message}`);
       setAnalysisStep("idle");
@@ -810,10 +934,28 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
     }
   };
 
-  // Dispatch to correct analysis mode
+  // Dispatch to correct analysis mode. Blocks duplicate concurrent runs for the
+  // same Take-Off in the current browser session, and releases the lock when the
+  // run settles.
   const runAnalysis = () => {
-    if (analysisMode === "precise") analyzeMultiAgent();
-    else analyzeWithClaude();
+    // Page-selection safety: analyze ONLY the selected pages; never fall back to
+    // all. Block a run with zero selected pages with a clear message.
+    const selectedCount = extractedPages.filter((p) => p.selected).length;
+    if (!canStartAnalysis(selectedCount)) {
+      log(selectionBlockMessage(selectedCount) ?? "Select at least one page.");
+      return;
+    }
+    // Cost protection: confirm before a large (>20-page) run.
+    if (needsCostConfirm(selectedCount) && !window.confirm(costConfirmMessage(selectedCount))) {
+      log("Analysis cancelled.");
+      return;
+    }
+    if (!tryAcquireRun(projectId)) {
+      log("Analysis is already running for this take-off in this browser session.");
+      return;
+    }
+    const run = analysisMode === "precise" ? analyzeMultiAgent : analyzeWithClaude;
+    void run().finally(() => releaseRun(projectId));
   };
 
   // ── Row editing ───────────────────────────────────────────────────────────
@@ -1148,8 +1290,8 @@ Respond ONLY with valid JSON: {"pages":${selected.length},"items":[{"category":"
                     onChange={(e) => setInstructions(e.target.value)}
                   />
                   {rows.length === 0 ? (
-                    <Button className="w-full" style={{ minHeight: "48px" }} onClick={runAnalysis} disabled={files.length === 0}>
-                      Analyze with AI
+                    <Button className="w-full" style={{ minHeight: "48px" }} onClick={runAnalysis} disabled={files.length === 0 || extractedPages.filter((p) => p.selected).length === 0}>
+                      {extractedPages.length > 0 && extractedPages.filter((p) => p.selected).length === 0 ? "Select at least one page" : "Analyze with AI"}
                     </Button>
                   ) : (
                     <Button variant="outline" className="w-full" style={{ minHeight: "48px" }} onClick={() => setShowReanalyzeConfirm(true)}>

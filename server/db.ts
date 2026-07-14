@@ -480,6 +480,35 @@ export async function updateSocialPost(id: number, patch: Partial<InsertSocialPo
   await db.update(socialPosts).set(patch).where(eq(socialPosts.id, id));
 }
 
+/**
+ * Find the latest social post for a platform + exact contentType. Used by the
+ * marketing canary to reuse its dedicated canary row (contentType "canary" /
+ * "canary_fail") instead of creating duplicates — no schema change needed.
+ */
+export async function findSocialPostByPlatformAndType(platform: string, contentType: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(socialPosts)
+    .where(and(eq(socialPosts.platform, platform), eq(socialPosts.contentType, contentType)))
+    .orderBy(desc(socialPosts.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/** List all canary rows (contentType starting with "canary") for the audit view. */
+export async function listCanarySocialPosts() {
+  const db = await getDb();
+  if (!db) return [];
+  return await db
+    .select()
+    .from(socialPosts)
+    .where(like(socialPosts.contentType, "canary%"))
+    .orderBy(desc(socialPosts.createdAt))
+    .limit(50);
+}
+
 export async function getSocialPosts(status?: "draft" | "scheduled" | "posted" | "failed", limit: number = 50, offset: number = 0) {
   const db = await getDb();
   if (!db) {

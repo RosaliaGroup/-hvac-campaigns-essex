@@ -63,6 +63,29 @@ export async function postToGoogleBusiness(
 }
 
 /**
+ * Delete a Google Business local post by its resource name (the value stored in
+ * socialPosts.postId, e.g. "accounts/.../localPosts/..."). Used by the canary
+ * cleanup. Returns void on success.
+ */
+export async function deleteGoogleBusinessPost(
+  credentials: GoogleBusinessCredentials,
+  localPostName: string
+): Promise<void> {
+  const { accessToken } = credentials;
+  if (!accessToken) throw new Error("Missing Google Business credentials");
+
+  const url = `https://mybusiness.googleapis.com/v4/${localPostName}`;
+  const response = await fetch(url, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Google Business delete error: ${error}`);
+  }
+}
+
+/**
  * Get Google Business Profile reviews
  */
 export async function getGoogleBusinessReviews(

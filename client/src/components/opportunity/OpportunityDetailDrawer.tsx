@@ -15,6 +15,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
 import {
   Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
 } from "lucide-react";
@@ -102,7 +103,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           <div className="flex flex-col">
             <SheetHeader className="border-b p-4">
               <SheetTitle className="flex items-center gap-2 text-lg">
-                {c?.companyName || c?.displayName || "Opportunity"}
+                {formatDisplayName(c?.companyName || c?.displayName) || "Opportunity"}
                 {data?.opportunity.relationship ? (
                   <Badge variant="secondary" className={RELATIONSHIP_BADGE[data.opportunity.relationship] ?? ""}>{data.opportunity.relationship}</Badge>
                 ) : null}
@@ -177,8 +178,8 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
               {/* Contact */}
               <Section title="Contact">
                 <div className="text-sm">
-                  <p className="font-medium">{c?.displayName}</p>
-                  {c?.companyName ? <p className="text-muted-foreground">{c.companyName}</p> : null}
+                  <p className="font-medium">{formatDisplayName(c?.displayName)}</p>
+                  {c?.companyName ? <p className="text-muted-foreground">{formatDisplayName(c.companyName)}</p> : null}
                   <p className="text-muted-foreground">{c?.phone ?? "no phone"} · {c?.email ?? "no email"}</p>
                   {c?.quickbooksCustomerId ? <p className="text-[11px] text-muted-foreground">QBO customer #{c.quickbooksCustomerId}</p> : null}
                 </div>
@@ -188,14 +189,14 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
               <div className="grid grid-cols-2 gap-3">
                 <Section title="Billing address">
                   <p className="text-sm text-muted-foreground">
-                    {c?.billingLine1 ? <>{c.billingLine1}{c.billingLine2 ? `, ${c.billingLine2}` : ""}<br />{[c.billingCity, c.billingState, c.billingZip].filter(Boolean).join(", ")}</> : "—"}
+                    {c?.billingLine1 ? <>{formatAddress(c.billingLine1)}{c.billingLine2 ? `, ${formatAddress(c.billingLine2)}` : ""}<br />{[formatDisplayName(c.billingCity), formatStateCode(c.billingState), c.billingZip].filter(Boolean).join(", ")}</> : "—"}
                   </p>
                 </Section>
                 <Section title="Service address">
                   {data && data.serviceAddresses.length > 0 ? (
                     <p className="text-sm text-muted-foreground">
-                      {data.serviceAddresses[0].addressLine1}<br />
-                      {[data.serviceAddresses[0].city, data.serviceAddresses[0].state, data.serviceAddresses[0].zip].filter(Boolean).join(", ")}
+                      {formatAddress(data.serviceAddresses[0].addressLine1)}<br />
+                      {[formatDisplayName(data.serviceAddresses[0].city), formatStateCode(data.serviceAddresses[0].state), data.serviceAddresses[0].zip].filter(Boolean).join(", ")}
                     </p>
                   ) : <p className="text-sm text-muted-foreground">—</p>}
                 </Section>

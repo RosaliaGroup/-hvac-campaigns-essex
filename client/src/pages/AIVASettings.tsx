@@ -77,53 +77,16 @@ export default function AIVASettings() {
     }
   }
 
-  // Load existing credentials
+  // Load existing credential STATUS only. For security the server never returns
+  // credential values (tokens/keys/secrets), so form secret fields are never
+  // pre-filled — leave a field blank to keep the current value, re-enter to
+  // replace. `credentials` is now a list of { service, connected, configuredKeys }.
   const { data: credentials, refetch: refetchCredentials } = trpc.aiVa.getAllCredentials.useQuery();
-
-  // Populate form fields when credentials are loaded
-  useEffect(() => {
-    if (credentials) {
-      // Load Vapi credentials
-      const vapiCreds = credentials.find((c: any) => c.service === 'vapi');
-      if (vapiCreds && vapiCreds.credentials) {
-        setVapiApiKey(vapiCreds.credentials.apiKey || "");
-        setVapiAssistantId(vapiCreds.credentials.assistantId || "");
-      }
-
-      // Load Twilio credentials
-      const twilioCreds = credentials.find((c: any) => c.service === 'twilio');
-      if (twilioCreds && twilioCreds.credentials) {
-        setTwilioAccountSid(twilioCreds.credentials.accountSid || "");
-        setTwilioAuthToken(twilioCreds.credentials.authToken || "");
-        setTwilioPhoneNumber(twilioCreds.credentials.phoneNumber || "");
-      }
-
-      // Load Facebook credentials
-      const facebookCreds = credentials.find((c: any) => c.service === 'facebook');
-      if (facebookCreds && facebookCreds.credentials) {
-        setFacebookAppId(facebookCreds.credentials.appId || "");
-        setFacebookAppSecret(facebookCreds.credentials.appSecret || "");
-        setFacebookAccessToken(facebookCreds.credentials.accessToken || "");
-      }
-
-      // Load Google credentials
-      const googleCreds = credentials.find((c: any) => c.service === 'google_business');
-      if (googleCreds && googleCreds.credentials) {
-        setGoogleApiKey(googleCreds.credentials.apiKey || "");
-        setGoogleClientId(googleCreds.credentials.clientId || "");
-        setGoogleClientSecret(googleCreds.credentials.clientSecret || "");
-      }
-
-      // Load Google Ads credentials
-      const gadsCreds = credentials.find((c: any) => c.service === 'google_ads_config');
-      if (gadsCreds && gadsCreds.credentials) {
-        setGadsCustomerId(gadsCreds.credentials.customerId || "");
-        setGadsDeveloperToken(gadsCreds.credentials.developerToken || "");
-        setGadsClientId(gadsCreds.credentials.clientId || "");
-        setGadsClientSecret(gadsCreds.credentials.clientSecret || "");
-      }
-    }
-  }, [credentials]);
+  const configuredServices = new Set(
+    ((credentials as Array<{ service: string; connected: boolean }> | undefined) ?? [])
+      .filter((c) => c.connected)
+      .map((c) => c.service)
+  );
 
   const saveCredentialsMutation = trpc.aiVa.saveCredentials.useMutation({
     onSuccess: () => {
@@ -305,7 +268,13 @@ export default function AIVASettings() {
         <Alert className="mb-6 border-[#ff6b35] bg-[#ff6b35]/10">
           <AlertCircle className="h-4 w-4 text-[#ff6b35]" />
           <AlertDescription className="text-sm">
-            All credentials are encrypted and stored securely. Never share your API keys publicly.
+            Credentials are stored securely and, for your protection, are never sent back to the browser —
+            saved secret fields stay blank. Leave a field blank to keep its current value; re-enter to replace.
+            {configuredServices.size > 0 && (
+              <span className="block mt-1 font-medium">
+                Configured: {Array.from(configuredServices).join(", ")}.
+              </span>
+            )}
           </AlertDescription>
         </Alert>
 

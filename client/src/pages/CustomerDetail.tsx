@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
 import { JOB_STATUS_META, formatMoney } from "@/lib/jobPresentation";
 import { resolveCustomerIdentity } from "@/lib/customerIdentity";
+import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
 import { jobRoute, opportunityRoute } from "@/lib/customerNavigation";
 import { Briefcase } from "lucide-react";
 import {
@@ -48,11 +49,17 @@ const OPP_STAGE: Record<string, string> = {
 };
 
 const DOC_STATUS: Record<string, string> = {
+  // estimate statuses
   pending: "bg-amber-100 text-amber-700",
   accepted: "bg-green-100 text-green-700",
   closed: "bg-gray-100 text-gray-600",
   rejected: "bg-red-100 text-red-700",
   expired: "bg-orange-100 text-orange-700",
+  // invoice statuses
+  paid: "bg-green-100 text-green-700",
+  partial: "bg-amber-100 text-amber-700",
+  unpaid: "bg-red-100 text-red-700",
+  void: "bg-gray-100 text-gray-500 line-through",
 };
 
 /** Compact meta line used by the QBO-relationship tabs (project ref + QBO ref + address). */
@@ -92,6 +99,7 @@ export default function CustomerDetail() {
     { enabled: customerId > 0, retry: false },
   );
 
+  const [tab, setTab] = useState("summary");
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({ firstName: "", lastName: "", companyName: "", email: "", phone: "", altPhone: "", notes: "", status: "active" as "active" | "inactive" | "archived", type: "residential" as "residential" | "commercial" });
 
@@ -145,8 +153,10 @@ export default function CustomerDetail() {
   const identity = resolveCustomerIdentity(customer);
   const primaryProp = properties.find(p => p.isPrimary) ?? properties[0];
   const primaryAddress = primaryProp
-    ? [primaryProp.addressLine1, primaryProp.city, primaryProp.state, primaryProp.zip].filter(Boolean).join(", ")
-    : identity.serviceAddress;
+    ? [formatAddress(primaryProp.addressLine1), formatDisplayName(primaryProp.city), formatStateCode(primaryProp.state), primaryProp.zip].filter(Boolean).join(", ")
+    : identity.serviceAddress
+      ? formatAddress(identity.serviceAddress)
+      : identity.serviceAddress;
 
   const openEdit = () => {
     setEditForm({
@@ -225,12 +235,12 @@ export default function CustomerDetail() {
             </Button>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               {customer.type === "commercial" ? <Building2 className="h-6 w-6 text-[#1e3a5f]" /> : <UserRound className="h-6 w-6 text-[#1e3a5f]" />}
-              {identity.name}
+              {formatDisplayName(identity.name)}
             </h1>
             {(identity.projectReference || (identity.derivedFromComposite && identity.serviceAddress)) && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
                 {identity.projectReference && <span className="inline-flex items-center gap-1"><Tag className="h-3.5 w-3.5" /> Project {identity.projectReference}</span>}
-                {identity.serviceAddress && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {identity.serviceAddress}</span>}
+                {identity.serviceAddress && <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {formatAddress(identity.serviceAddress)}</span>}
               </div>
             )}
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -246,11 +256,11 @@ export default function CustomerDetail() {
           <Button variant="outline" onClick={openEdit}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
         </div>
 
-        {/* Summary cards — the customer dashboard at a glance */}
-        <SummaryCards summary={summary} customer={customer} qbLabel={qbLabel} />
+        {/* Summary cards — the customer dashboard at a glance (cards drill into tabs) */}
+        <SummaryCards summary={summary} customer={customer} qbLabel={qbLabel} onSelectTab={setTab} />
 
         {/* Sections */}
-        <Tabs defaultValue="summary">
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="properties">Properties ({counts.properties})</TabsTrigger>
@@ -299,11 +309,11 @@ export default function CustomerDetail() {
                   <div className="text-sm space-y-0.5">
                     <div className="font-medium flex items-center gap-2">
                       {p.propertyType === "commercial" ? <Building2 className="h-4 w-4 text-muted-foreground" /> : <Home className="h-4 w-4 text-muted-foreground" />}
-                      {p.label || (p.propertyType === "commercial" ? "Commercial site" : "Residence")}
+                      {p.label ? formatDisplayName(p.label) : (p.propertyType === "commercial" ? "Commercial site" : "Residence")}
                       {p.isPrimary && <Badge variant="secondary" className="bg-blue-100 text-blue-700"><Star className="h-3 w-3 mr-0.5" /> Primary</Badge>}
                     </div>
                     <div className="text-muted-foreground">
-                      {p.addressLine1}{p.addressLine2 ? `, ${p.addressLine2}` : ""}{p.city ? `, ${p.city}` : ""}{p.state ? `, ${p.state}` : ""} {p.zip || ""}
+                      {formatAddress(p.addressLine1)}{p.addressLine2 ? `, ${formatAddress(p.addressLine2)}` : ""}{p.city ? `, ${formatDisplayName(p.city)}` : ""}{p.state ? `, ${formatStateCode(p.state)}` : ""} {p.zip || ""}
                     </div>
                     {(p.squareFeet || p.existingSystem) && (
                       <div className="text-xs text-muted-foreground">
@@ -617,28 +627,36 @@ type CustomerSummary = {
   estimates: number;
   invoices: number;
   properties: number;
-  lifetimeRevenue: number;
+  collectedRevenue: number;
   outstandingBalance: number;
+  invoicedTotal?: number;
+  wonOpportunityValue?: number;
   lastActivityAt: string | null;
 };
 
-/** The nine at-a-glance metric cards at the top of the customer dashboard. */
+/**
+ * The at-a-glance metric cards. Cards that back a record set are clickable and
+ * jump to the matching tab (drill-through). Money cards are labelled by their
+ * TRUE source: revenue/outstanding come from INVOICES; won-opportunity value is
+ * shown separately so a $0 invoiced figure never reads as "no business".
+ */
 function SummaryCards({
-  summary, customer, qbLabel,
+  summary, customer, qbLabel, onSelectTab,
 }: {
   summary: CustomerSummary;
   customer: { quickbooksSyncStatus: string; quickbooksCustomerId: string | null };
   qbLabel: Record<string, string>;
+  onSelectTab: (tab: string) => void;
 }) {
-  const cards: Array<{ label: string; value: string; icon: ReactNode; hint?: string }> = [
-    { label: "Active Jobs", value: String(summary.activeJobs), icon: <Briefcase className="h-4 w-4" /> },
-    { label: "Open Opportunities", value: String(summary.openOpportunities), icon: <Target className="h-4 w-4" /> },
-    { label: "Estimates", value: String(summary.estimates), icon: <FileText className="h-4 w-4" /> },
-    { label: "Invoices", value: String(summary.invoices), icon: <Receipt className="h-4 w-4" /> },
-    { label: "Properties", value: String(summary.properties), icon: <MapPin className="h-4 w-4" /> },
-    { label: "Lifetime Revenue", value: formatMoney(summary.lifetimeRevenue), icon: <DollarSign className="h-4 w-4" /> },
-    { label: "Outstanding Balance", value: formatMoney(summary.outstandingBalance), icon: <Wallet className="h-4 w-4" /> },
-    { label: "Last Activity", value: summary.lastActivityAt ? formatDate(summary.lastActivityAt) : "—", icon: <Clock className="h-4 w-4" /> },
+  const cards: Array<{ label: string; value: string; icon: ReactNode; hint?: string; tab?: string }> = [
+    { label: "Active Jobs", value: String(summary.activeJobs), icon: <Briefcase className="h-4 w-4" />, tab: "jobs" },
+    { label: "Open Opportunities", value: String(summary.openOpportunities), icon: <Target className="h-4 w-4" />, tab: "opportunities" },
+    { label: "Estimates", value: String(summary.estimates), icon: <FileText className="h-4 w-4" />, tab: "estimates" },
+    { label: "Invoices", value: String(summary.invoices), icon: <Receipt className="h-4 w-4" />, tab: "invoices" },
+    { label: "Properties", value: String(summary.properties), icon: <MapPin className="h-4 w-4" />, tab: "properties" },
+    { label: "Collected Revenue", value: formatMoney(summary.collectedRevenue), hint: "total − balance on invoices", icon: <DollarSign className="h-4 w-4" />, tab: "invoices" },
+    { label: "Outstanding (Invoices)", value: formatMoney(summary.outstandingBalance), hint: "unpaid invoice balances", icon: <Wallet className="h-4 w-4" />, tab: "invoices" },
+    { label: "Won Value", value: formatMoney(summary.wonOpportunityValue ?? 0), hint: "won opportunities (pipeline)", icon: <Target className="h-4 w-4" />, tab: "opportunities" },
     {
       label: "QuickBooks",
       value: qbLabel[customer.quickbooksSyncStatus] ?? customer.quickbooksSyncStatus,
@@ -648,15 +666,25 @@ function SummaryCards({
   ];
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {cards.map(c => (
-        <Card key={c.label}>
-          <CardContent className="p-3">
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{c.icon}<span className="truncate">{c.label}</span></div>
-            <div className="mt-1 text-lg font-bold text-[#1e3a5f] truncate">{c.value}</div>
-            {c.hint && <div className="text-[11px] text-muted-foreground truncate">{c.hint}</div>}
-          </CardContent>
-        </Card>
-      ))}
+      {cards.map(c => {
+        const clickable = !!c.tab;
+        return (
+          <Card
+            key={c.label}
+            className={clickable ? "cursor-pointer transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a5f]" : ""}
+            role={clickable ? "button" : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            onClick={clickable ? () => onSelectTab(c.tab!) : undefined}
+            onKeyDown={clickable ? e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectTab(c.tab!); } } : undefined}
+          >
+            <CardContent className="p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{c.icon}<span className="truncate">{c.label}</span></div>
+              <div className="mt-1 text-lg font-bold text-[#1e3a5f] truncate">{c.value}</div>
+              {c.hint && <div className="text-[11px] text-muted-foreground truncate">{c.hint}</div>}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }
@@ -756,7 +784,7 @@ function TimelineTab({
           <CardContent className="space-y-3">
             {rebates.map(r => (
               <div key={r.id} className="border rounded-lg p-3 text-sm">
-                <div className="font-medium">{r.address}</div>
+                <div className="font-medium">{formatAddress(r.address)}</div>
                 <div className="text-muted-foreground">{formatDate(r.createdAt)}</div>
               </div>
             ))}
@@ -774,8 +802,12 @@ type ProfileSalesDoc = {
   docNumber: string | null;
   quickbooksId: string;
   quickbooksCustomerId: string | null;
+  quickbooksParentRef?: string | null;
   status: string;
   totalAmount: string;
+  balance?: string | null;
+  dueDate?: Date | string | null;
+  voided?: boolean;
   txnDate: Date | string | null;
   opportunityId: number | null;
   projectReference: string | null;
@@ -811,15 +843,19 @@ function SalesDocList({
               </div>
               <MetaLine items={[
                 { icon: <Calendar className="h-3.5 w-3.5" />, label: formatDate(d.txnDate) },
+                kind === "invoice" && d.dueDate ? { icon: <Clock className="h-3.5 w-3.5" />, label: `Due ${formatDate(d.dueDate)}` } : null,
                 d.projectReference ? { icon: <Tag className="h-3.5 w-3.5" />, label: d.projectReference } : null,
                 { icon: <Hash className="h-3.5 w-3.5" />, label: `QBO ${kind === "estimate" ? "Estimate" : "Invoice"} ${d.quickbooksId}` },
-                d.quickbooksCustomerId ? { icon: <UserRound className="h-3.5 w-3.5" />, label: `QBO Customer ${d.quickbooksCustomerId}` } : null,
+                d.quickbooksCustomerId ? { icon: <UserRound className="h-3.5 w-3.5" />, label: `QBO Customer ${d.quickbooksCustomerId}${d.quickbooksParentRef ? ` → parent ${d.quickbooksParentRef}` : ""}` } : null,
                 primaryAddress ? { icon: <MapPin className="h-3.5 w-3.5" />, label: primaryAddress } : null,
               ]} />
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
               <Badge variant="secondary" className={DOC_STATUS[d.status] ?? ""}>{d.status}</Badge>
               <span className="font-semibold">{formatMoney(Number(d.totalAmount))}</span>
+              {kind === "invoice" && d.balance != null && Number(d.balance) > 0 && (
+                <span className="text-xs text-amber-700">Balance {formatMoney(Number(d.balance))}</span>
+              )}
             </div>
           </div>
         ))}
@@ -917,7 +953,7 @@ function QuickBooksCard({
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
             <div className="font-medium text-amber-800">Matched an existing QuickBooks customer (by {conflict.matchedBy})</div>
             <div className="text-amber-900">
-              {conflict.candidate.displayName}
+              {formatDisplayName(conflict.candidate.displayName)}
               {conflict.candidate.email && <span className="text-muted-foreground"> · {conflict.candidate.email}</span>}
               {conflict.candidate.phone && <span className="text-muted-foreground"> · {conflict.candidate.phone}</span>}
             </div>
