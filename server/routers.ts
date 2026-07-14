@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { LEAD_STAGE_ENUM, buildLeadCapturePatch, deriveContactRelationship } from "@shared/leadPipeline";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router, mergeRouters } from "./_core/trpc";
 import { enforceRateLimit, getClientIp, HOUR_MS } from "./_core/rateLimit";
 import { z } from "zod";
 import * as db from "./db";
@@ -28,6 +28,7 @@ import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelation
 import { jobsRouter } from "./routers/jobs";
 import { quickbooksRouter } from "./routers/quickbooks";
 import { opportunitiesRouter } from "./routers/opportunities";
+import { commercialOpportunitiesRouter } from "./routers/commercialOpportunities";
 import { googleCalendarRouter } from "./routers/googleCalendar";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
@@ -71,7 +72,9 @@ export const appRouter = router({
   customers: customersRouter,
   jobs: jobsRouter,
   quickbooks: quickbooksRouter,
-  opportunities: opportunitiesRouter,
+  // Commercial Opportunities extend the same system — nested under `commercial`
+  // so legacy `opportunities.*` procedures are untouched.
+  opportunities: mergeRouters(opportunitiesRouter, router({ commercial: commercialOpportunitiesRouter })),
   googleCalendar: googleCalendarRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

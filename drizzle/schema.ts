@@ -1,4 +1,17 @@
-import { boolean, decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import {
+  boolean,
+  decimal,
+  index,
+  int,
+  json,
+  mysqlEnum,
+  mysqlTable,
+  text,
+  timestamp,
+  unique,
+  uniqueIndex,
+  varchar,
+} from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1395,11 +1408,12 @@ export const opportunities = mysqlTable(
     source: varchar("source", { length: 64 }).default("quickbooks").notNull(),
     stage: mysqlEnum("stage", ["new", "proposal_sent", "pending", "won", "lost"]).default("new").notNull(),
     /**
-     * CRM Opportunity Value (editable). Defaults to the backing QBO document's
-     * totalAmount via sync, but is the field a salesperson may override.
+     * CRM Opportunity Value (editable). Legacy QBO records default to the backing
+     * QBO document's totalAmount via sync (default "0"); commercial opportunities
+     * may leave it NULL ("not yet estimated") — NULL is never coerced to 0.
      * The read-only QuickBooks Amount lives on quickbooksSalesDocuments.totalAmount.
      */
-    amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
+    amount: decimal("amount", { precision: 12, scale: 2 }).default("0"),
     /** Win probability 0–100. weightedValue = amount × probability/100. */
     probability: int("probability"),
     /** True once a human edits the value — sync then stops overwriting `amount`. */
@@ -1428,8 +1442,68 @@ export const opportunities = mysqlTable(
      * Interim home until a dedicated Projects module exists.
      */
     projectReference: varchar("projectReference", { length: 64 }),
+    /** Sales owner of the deal. Kept as the legacy name for compatibility. */
     assignedToId: int("assignedToId"),
     closedAt: timestamp("closedAt"),
+
+    // --- Commercial Opportunities (Phase 1, migration 0042). All additive/nullable. ---
+    /**
+     * Workspace discriminator. Legacy QuickBooks-synced deals stay
+     * "qbo_residential" (default) and keep using the `stage` enum + salesDocSync.
+     * "commercial" (and future kinds) use the configurable `stageId` pipeline.
+     */
+    recordType: mysqlEnum("recordType", [
+      "qbo_residential",
+      "commercial",
+      "residential",
+      "maintenance",
+      "service_contract",
+    ])
+      .default("qbo_residential")
+      .notNull(),
+    /** Configurable pipeline stage (opportunityStages.id) — used by non-QBO records. */
+    stageId: int("stageId"),
+    /** Coarse open/won/lost classification for commercial records (derived from stage). */
+    status: mysqlEnum("status", ["open", "awarded", "lost", "on_hold", "cancelled"]),
+    /** Human-facing identifier, e.g. "OPP-2026-0042"; generated from id on create. */
+    opportunityNumber: varchar("opportunityNumber", { length: 32 }),
+    description: text("description"),
+    opportunityType: mysqlEnum("opportunityType", [
+      "commercial",
+      "residential",
+      "public_work",
+      "decarbonization",
+      "direct_replacement",
+      "new_construction",
+      "service_contract",
+      "preventive_maintenance",
+      "other",
+    ]),
+    priority: mysqlEnum("priority", ["low", "normal", "high", "urgent"]),
+    /** Primary contact — a customers.id (customers IS the person/company entity). */
+    primaryContactId: int("primaryContactId"),
+    /** Job/site property (properties.id). Opportunities previously reached this via the customer. */
+    propertyId: int("propertyId"),
+    estimatorId: int("estimatorId"),
+    projectManagerId: int("projectManagerId"),
+    /** Internal cost estimate. `amount` remains the (sell) value; margin = amount − cost. */
+    estimatedCost: decimal("estimatedCost", { precision: 12, scale: 2 }),
+    /** Optional override of the derived gross margin (amount − estimatedCost). */
+    estimatedGrossMargin: decimal("estimatedGrossMargin", { precision: 12, scale: 2 }),
+    bidDueAt: timestamp("bidDueAt"),
+    siteVisitAt: timestamp("siteVisitAt"),
+    proposalDueAt: timestamp("proposalDueAt"),
+    proposalSentAt: timestamp("proposalSentAt"),
+    followUpAt: timestamp("followUpAt"),
+    expectedCloseAt: timestamp("expectedCloseAt"),
+    awardedAt: timestamp("awardedAt"),
+    lostAt: timestamp("lostAt"),
+    /** Free label for the channel used to communicate on this deal (Teams, email, etc.). */
+    communicationPlatform: varchar("communicationPlatform", { length: 64 }),
+    /** External system reference (GC bid portal id, Procore, etc.). */
+    externalReference: varchar("externalReference", { length: 128 }),
+    createdBy: int("createdBy"),
+
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
@@ -1437,6 +1511,11 @@ export const opportunities = mysqlTable(
     customerIdx: index("opportunities_customerId_idx").on(table.customerId),
     stageIdx: index("opportunities_stage_idx").on(table.stage),
     projectRefIdx: index("opportunities_projectReference_idx").on(table.projectReference),
+    recordTypeIdx: index("opportunities_recordType_idx").on(table.recordType),
+    stageIdIdx: index("opportunities_stageId_idx").on(table.stageId),
+    opportunityNumberIdx: index("opportunities_opportunityNumber_idx").on(table.opportunityNumber),
+    propertyIdx: index("opportunities_propertyId_idx").on(table.propertyId),
+    assignedRecordTypeIdx: index("opportunities_assignedTo_recordType_idx").on(table.assignedToId, table.recordType),
   }),
 );
 export type Opportunity = typeof opportunities.$inferSelect;
@@ -1580,6 +1659,249 @@ export const opportunityTasks = mysqlTable(
 );
 export type OpportunityTask = typeof opportunityTasks.$inferSelect;
 export type InsertOpportunityTask = typeof opportunityTasks.$inferInsert;
+
+/**
+ * Configurable opportunity pipeline (migration 0042). Rows define the stages a
+ * commercial (or other non-QBO) opportunity moves through. Seeded with the 16
+ * approved defaults for `pipelineKey = "commercial"`; administrators may add,
+ * rename, reorder, or deactivate stages. `stageKey` is the stable internal key
+ * (never displayed from the label alone); `classification` drives won/lost/open
+ * behavior; `isSystem` protects seeded defaults from deletion.
+ */
+export const opportunityStages = mysqlTable(
+  "opportunityStages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pipelineKey: varchar("pipelineKey", { length: 48 }).default("commercial").notNull(),
+    stageKey: varchar("stageKey", { length: 48 }).notNull(),
+    name: varchar("name", { length: 80 }).notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    isActive: boolean("isActive").default(true).notNull(),
+    /** Default win probability 0–100 applied when an opp enters this stage. */
+    defaultProbability: int("defaultProbability"),
+    classification: mysqlEnum("classification", ["open", "won", "lost"]).default("open").notNull(),
+    isSystem: boolean("isSystem").default(false).notNull(),
+    color: varchar("color", { length: 24 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    pipelineOrderIdx: index("opportunityStages_pipeline_order_idx").on(table.pipelineKey, table.sortOrder),
+    pipelineStageKeyUnique: unique("opportunityStages_pipeline_stageKey_unique").on(table.pipelineKey, table.stageKey),
+  }),
+);
+export type OpportunityStage = typeof opportunityStages.$inferSelect;
+export type InsertOpportunityStage = typeof opportunityStages.$inferInsert;
+
+/**
+ * Multi-select project categories for an opportunity (migration 0043).
+ * Normalized (not a JSON blob) so it is server-side filterable. Distinct from
+ * pipeline stages and from opportunityType. `category` is a stable key validated
+ * against shared/commercialPipeline.ts PROJECT_CATEGORY keys.
+ */
+export const opportunityProjectCategories = mysqlTable(
+  "opportunityProjectCategories",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    category: varchar("category", { length: 48 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityProjectCategories_opportunityId_idx").on(table.opportunityId),
+    oppCategoryUnique: unique("opportunityProjectCategories_opp_category_unique").on(
+      table.opportunityId,
+      table.category,
+    ),
+  }),
+);
+export type OpportunityProjectCategory = typeof opportunityProjectCategories.$inferSelect;
+export type InsertOpportunityProjectCategory = typeof opportunityProjectCategories.$inferInsert;
+
+/**
+ * Additional opportunity team members (migration 0043) beyond the owner /
+ * estimator / project-manager columns on `opportunities`. `role` is a free label
+ * (sales_owner, estimator, project_manager, member, …).
+ */
+export const opportunityMembers = mysqlTable(
+  "opportunityMembers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    teamMemberId: int("teamMemberId").notNull(),
+    role: varchar("role", { length: 48 }).default("member").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityMembers_opportunityId_idx").on(table.opportunityId),
+    oppMemberRoleUnique: unique("opportunityMembers_opp_member_role_unique").on(
+      table.opportunityId,
+      table.teamMemberId,
+      table.role,
+    ),
+  }),
+);
+export type OpportunityMember = typeof opportunityMembers.$inferSelect;
+export type InsertOpportunityMember = typeof opportunityMembers.$inferInsert;
+
+/**
+ * Reusable checklist templates (migration 0043). A template is instantiated onto
+ * an opportunity, copying its items into opportunityChecklistItems. Checklists
+ * only confirm PROCESS completion — never store structured customer/project data.
+ */
+export const opportunityChecklistTemplates = mysqlTable(
+  "opportunityChecklistTemplates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+    /**
+     * Stable key for system-seeded templates (e.g. "commercial_qa"); NULL for
+     * user-created templates. Unique so a concurrent seed converges to a single
+     * row instead of inserting duplicates (MySQL allows many NULLs, so
+     * user-created templates are unconstrained).
+     */
+    systemKey: varchar("systemKey", { length: 48 }),
+    description: text("description"),
+    isActive: boolean("isActive").default(true).notNull(),
+    isSystem: boolean("isSystem").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    systemKeyUnique: unique("opportunityChecklistTemplates_systemKey_unique").on(table.systemKey),
+  }),
+);
+export type OpportunityChecklistTemplate = typeof opportunityChecklistTemplates.$inferSelect;
+export type InsertOpportunityChecklistTemplate = typeof opportunityChecklistTemplates.$inferInsert;
+
+export const opportunityChecklistTemplateItems = mysqlTable(
+  "opportunityChecklistTemplateItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    templateId: int("templateId").notNull(),
+    label: varchar("label", { length: 255 }).notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    /** When true, this item must be complete before Convert-to-Job is allowed. */
+    requiredForConversion: boolean("requiredForConversion").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    templateIdx: index("opportunityChecklistTemplateItems_templateId_idx").on(table.templateId),
+    // One row per (template, position) so a repeated/concurrent seed upserts each
+    // item in place instead of duplicating the checklist.
+    templateSortUnique: unique("opportunityChecklistTemplateItems_template_sort_unique").on(
+      table.templateId,
+      table.sortOrder,
+    ),
+  }),
+);
+export type OpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferSelect;
+export type InsertOpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferInsert;
+
+/**
+ * Per-opportunity checklist item instances (migration 0043). Support
+ * complete/incomplete, assignee, due date, completion timestamp, completed-by,
+ * and optional notes. `requiredForConversion` is copied from the template item
+ * and consulted by the Convert-to-Job validation.
+ */
+export const opportunityChecklistItems = mysqlTable(
+  "opportunityChecklistItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    /** Provenance: the template item this was copied from (null for ad-hoc items). */
+    templateItemId: int("templateItemId"),
+    label: varchar("label", { length: 255 }).notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    isComplete: boolean("isComplete").default(false).notNull(),
+    requiredForConversion: boolean("requiredForConversion").default(false).notNull(),
+    assigneeId: int("assigneeId"),
+    dueAt: timestamp("dueAt"),
+    completedAt: timestamp("completedAt"),
+    completedById: int("completedById"),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityChecklistItems_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type OpportunityChecklistItem = typeof opportunityChecklistItems.$inferSelect;
+export type InsertOpportunityChecklistItem = typeof opportunityChecklistItems.$inferInsert;
+
+/**
+ * Opportunity comments (migration 0043) — human discussion, distinct from the
+ * append-only `opportunityEvents` activity timeline. Edit/delete are soft
+ * (editedAt/deletedAt) and gated by existing permissions in the router.
+ */
+export const opportunityComments = mysqlTable(
+  "opportunityComments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    authorId: int("authorId"),
+    body: text("body").notNull(),
+    editedAt: timestamp("editedAt"),
+    deletedAt: timestamp("deletedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityComments_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type OpportunityComment = typeof opportunityComments.$inferSelect;
+export type InsertOpportunityComment = typeof opportunityComments.$inferInsert;
+
+/**
+ * Opportunity documents/attachments (migration 0043). Metadata-only, mirroring
+ * jobAttachments: the binary lives elsewhere; only a URL/link is stored. `kind`
+ * distinguishes an uploaded file from an external link — the clean extension
+ * point for Google Drive later. `category` is one of the 18 expanded categories.
+ */
+export const opportunityDocuments = mysqlTable(
+  "opportunityDocuments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    category: mysqlEnum("category", [
+      "photos",
+      "drone_photos",
+      "videos",
+      "drawings",
+      "plans",
+      "scope",
+      "proposal",
+      "estimate",
+      "contract",
+      "permit",
+      "equipment",
+      "specifications",
+      "submittals",
+      "rfis",
+      "change_orders",
+      "closeout",
+      "warranty",
+      "miscellaneous",
+    ])
+      .default("miscellaneous")
+      .notNull(),
+    kind: mysqlEnum("kind", ["file", "link"]).default("file").notNull(),
+    fileName: varchar("fileName", { length: 255 }),
+    url: varchar("url", { length: 1024 }).notNull(),
+    mimeType: varchar("mimeType", { length: 128 }),
+    sizeBytes: int("sizeBytes"),
+    uploadedById: int("uploadedById"),
+    notes: varchar("notes", { length: 500 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityDocuments_opportunityId_idx").on(table.opportunityId),
+    oppCategoryIdx: index("opportunityDocuments_opp_category_idx").on(table.opportunityId, table.category),
+  }),
+);
+export type OpportunityDocument = typeof opportunityDocuments.$inferSelect;
+export type InsertOpportunityDocument = typeof opportunityDocuments.$inferInsert;
 
 /**
  * Customer sync conflicts — append-only, human-reviewable log of how each

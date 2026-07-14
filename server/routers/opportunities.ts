@@ -16,6 +16,8 @@ import {
   opportunities,
   opportunityEvents,
   opportunityTasks,
+  opportunityStages,
+  opportunityChecklistItems,
   quickbooksSalesDocuments,
   customers,
   customerSyncConflicts,
@@ -31,6 +33,9 @@ import {
   ConvertError,
   type ConvertJobPort,
 } from "./opportunityToJob";
+import { evaluateCommercialConversion } from "./commercialConversion";
+import { opportunityPriorityToJobPriority } from "./commercialOpportunitiesLogic";
+import { assertCanEdit } from "./commercialOpportunities";
 import { computeDaysPending } from "../integrations/accounting/estimates";
 import { cancelOpenFollowups, smsFollowupsEnabled } from "../integrations/accounting/followups";
 import { extractSalesDocSignals, deriveDocTypeLabel, deriveWorkCategory } from "@shared/opportunityCategory";
@@ -584,6 +589,53 @@ export const opportunitiesRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
 
+      // Load record-type + copy fields so commercial records get the extra gate
+      // and copy their project data onto the job. Legacy QBO records are unchanged.
+      const oppRow = (await db
+        .select({
+          id: opportunities.id, customerId: opportunities.customerId, recordType: opportunities.recordType,
+          stageId: opportunities.stageId, description: opportunities.description, priority: opportunities.priority,
+          assignedToId: opportunities.assignedToId, primaryContactId: opportunities.primaryContactId, propertyId: opportunities.propertyId,
+        })
+        .from(opportunities)
+        .where(eq(opportunities.id, input.id))
+        .limit(1))[0];
+      if (!oppRow) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
+      const isCommercial = oppRow.recordType === "commercial";
+
+      // Commercial records enforce the structured conversion gate before any write.
+      if (isCommercial) {
+        // Assignment-based authorization FIRST — identical to the commercial
+        // preview and edit paths (admin, or owner/estimator/PM/creator/member).
+        // Runs before the gate and before any existing-job return, so an
+        // unauthorized user gets FORBIDDEN and no conversion/job details.
+        await assertCanEdit(db, ctx, input.id);
+        const stageKey = oppRow.stageId
+          ? (await db.select({ stageKey: opportunityStages.stageKey }).from(opportunityStages).where(eq(opportunityStages.id, oppRow.stageId)).limit(1))[0]?.stageKey ?? null
+          : null;
+        const [customer, propertyCandidates, requiredItems, existing, estimate] = await Promise.all([
+          db.select({ id: customers.id }).from(customers).where(eq(customers.id, oppRow.customerId)).limit(1),
+          db.select({ id: properties.id, label: properties.label, addressLine1: properties.addressLine1, city: properties.city, state: properties.state, zip: properties.zip, isPrimary: properties.isPrimary }).from(properties).where(eq(properties.customerId, oppRow.customerId)),
+          db.select({ id: opportunityChecklistItems.id, label: opportunityChecklistItems.label, isComplete: opportunityChecklistItems.isComplete }).from(opportunityChecklistItems).where(and(eq(opportunityChecklistItems.opportunityId, input.id), eq(opportunityChecklistItems.requiredForConversion, true))),
+          db.select({ id: jobs.id, jobNumber: jobs.jobNumber, status: jobs.status }).from(jobs).where(eq(jobs.opportunityId, input.id)).orderBy(jobs.id).limit(1),
+          db.select({ id: quickbooksSalesDocuments.id }).from(quickbooksSalesDocuments).where(eq(quickbooksSalesDocuments.opportunityId, input.id)).limit(1),
+        ]);
+        const validation = evaluateCommercialConversion({
+          recordType: oppRow.recordType, stageKey, customerId: oppRow.customerId,
+          customerExists: !!customer[0],
+          propertyCandidates: propertyCandidates.map(p => ({ ...p, isPrimary: !!p.isPrimary })),
+          explicitPropertyId: input.propertyId ?? oppRow.propertyId ?? null,
+          requiredChecklistItems: requiredItems.map(i => ({ id: i.id, label: i.label, isComplete: !!i.isComplete })),
+          existingJob: existing[0] ?? null,
+          primaryContactId: oppRow.primaryContactId ?? null,
+          linkedEstimateId: estimate[0]?.id ?? null,
+        });
+        // Idempotent: an already-converted opp still returns its existing job below.
+        if (!validation.canConvert && !validation.alreadyConverted) {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: validation.blockers.map(b => b.message).join(" "), cause: validation });
+        }
+      }
+
       const port: ConvertJobPort = {
         getOpportunity: async id => {
           const o = (await db
@@ -611,6 +663,8 @@ export const opportunitiesRouter = router({
             .where(eq(properties.customerId, customerId)))
             .map(p => ({ ...p, isPrimary: !!p.isPrimary })),
         createJob: async j => {
+          // Commercial conversions copy project data (description, priority, owner)
+          // onto the job. Legacy QBO conversions keep their minimal shape.
           const values: InsertJob = {
             jobNumber: "",
             customerId: j.customerId,
@@ -619,6 +673,14 @@ export const opportunitiesRouter = router({
             title: j.title,
             internalNotes: j.internalNotes,
             status: "new",
+            ...(isCommercial
+              ? {
+                  description: oppRow.description ?? null,
+                  priority: opportunityPriorityToJobPriority(oppRow.priority),
+                  assignedToId: oppRow.assignedToId ?? null,
+                  createdById: ctx.user.id,
+                }
+              : {}),
           };
           const result = await db.insert(jobs).values(values);
           const id = Number((result as unknown as [{ insertId: number }])[0]?.insertId ?? 0);

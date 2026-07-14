@@ -8,6 +8,7 @@ import {
   BarChart3,
   Bot,
   Briefcase,
+  Building2,
   CalendarCheck,
   CalendarClock,
   Calculator,
@@ -35,7 +36,7 @@ import {
 } from "lucide-react";
 
 export const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
-  AlertTriangle, BarChart3, Bot, Briefcase, CalendarCheck, CalendarClock,
+  AlertTriangle, BarChart3, Bot, Briefcase, Building2, CalendarCheck, CalendarClock,
   Calculator, Facebook, FileText, Home, Inbox, LayoutDashboard, MapPin,
   Megaphone, MessageSquare, Plug, Receipt, RefreshCw, Ruler, Search, Settings,
   ShieldCheck, Star, Target, TrendingUp, UserRound, Users, Zap,
