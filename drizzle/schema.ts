@@ -68,6 +68,24 @@ export const leadCaptures = mysqlTable("leadCaptures", {
   captureType: mysqlEnum("captureType", ["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "qualify_form", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance", "lp_referral_partner", "lp_maintenance_subscription", "career_application", "partnership_inquiry", "pseg_checklist_download", "meta_lead_ad"]).notNull(),
   pageUrl: varchar("pageUrl", { length: 500 }),
   message: text("message"),
+  // ── Marketing attribution (SEO/revenue attribution workstream, migration 0046) ──
+  // All nullable and captured at submit time from the page's URL/referrer. First-touch
+  // only: written once at creation, never overwritten. `channel` is derived
+  // deterministically from gclid/UTM/referrer and defaults to "unknown" — it is NEVER
+  // guessed as "organic". These feed revenue-by-page / revenue-by-source reporting.
+  /** normalizePath(pageUrl) at capture — the join key to seoPages.page. */
+  firstTouchLandingPath: varchar("firstTouchLandingPath", { length: 512 }),
+  utmSource: varchar("utmSource", { length: 255 }),
+  utmMedium: varchar("utmMedium", { length: 255 }),
+  utmCampaign: varchar("utmCampaign", { length: 255 }),
+  utmTerm: varchar("utmTerm", { length: 255 }),
+  utmContent: varchar("utmContent", { length: 255 }),
+  /** Google Ads click id — presence alone forces channel = "paid". */
+  gclid: varchar("gclid", { length: 255 }),
+  /** Host of document.referrer as sent by the client (e.g. "google.com"). */
+  referrerHost: varchar("referrerHost", { length: 255 }),
+  /** Deterministic classification; defaults to "unknown" so nothing is silently credited to organic. */
+  channel: mysqlEnum("channel", ["organic", "paid", "direct", "referral", "social", "email", "unknown"]).default("unknown").notNull(),
   // Lead pipeline stage. Additive: new stages + retained legacy (qualified/booked)
   // so pre-migration rows stay valid. Keep in sync with shared/leadPipeline.ts.
   status: mysqlEnum("status", [
@@ -1428,6 +1446,14 @@ export const opportunities = mysqlTable(
      * Interim home until a dedicated Projects module exists.
      */
     projectReference: varchar("projectReference", { length: 64 }),
+    /**
+     * Explicit, auditable link to the web lead that generated this deal
+     * (leadCaptures.id). Null for QBO-origin / walk-in / phone deals — which is
+     * MOST of them. Attribution reporting credits a landing page/channel only
+     * when this is set, or when a temporal+customer match rule holds; it never
+     * spreads a customer's lifetime QBO revenue across pages. (Migration 0046.)
+     */
+    sourceLeadCaptureId: int("sourceLeadCaptureId"),
     assignedToId: int("assignedToId"),
     closedAt: timestamp("closedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -1,5 +1,6 @@
 import { COOKIE_NAME } from "@shared/const";
 import { LEAD_STAGE_ENUM, buildLeadCapturePatch, deriveContactRelationship } from "@shared/leadPipeline";
+import { extractAttribution } from "@shared/attribution";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
@@ -29,6 +30,7 @@ import { jobsRouter } from "./routers/jobs";
 import { quickbooksRouter } from "./routers/quickbooks";
 import { opportunitiesRouter } from "./routers/opportunities";
 import { seoRouter } from "./routers/seo";
+import { attributionRouter } from "./routers/attribution";
 import { googleCalendarRouter } from "./routers/googleCalendar";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
@@ -74,6 +76,7 @@ export const appRouter = router({
   quickbooks: quickbooksRouter,
   opportunities: opportunitiesRouter,
   seo: seoRouter,
+  attribution: attributionRouter,
   googleCalendar: googleCalendarRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -153,6 +156,9 @@ export const appRouter = router({
           captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "qualify_form", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance", "lp_referral_partner", "lp_maintenance_subscription", "career_application", "partnership_inquiry", "pseg_checklist_download"]),
           pageUrl: z.string().optional(),
           message: z.string().optional(),
+          // First-touch marketing attribution: the client sends document.referrer
+          // (empty string for a direct visit). UTM/gclid are parsed from pageUrl.
+          referrer: z.string().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
@@ -163,7 +169,17 @@ export const appRouter = router({
           throw new Error("Either email or phone is required");
         }
 
-        await db.createLeadCapture(input);
+        // Derive first-touch attribution from the landing URL + referrer. Self-host
+        // (the landing page's own host) is passed so internal navigation is not
+        // miscounted as a referral. `channel` defaults to "unknown" — never organic.
+        let selfHost: string | undefined;
+        try {
+          if (input.pageUrl && /^https?:\/\//i.test(input.pageUrl)) selfHost = new URL(input.pageUrl).host;
+        } catch { /* ignore malformed pageUrl */ }
+        const attribution = extractAttribution(input.pageUrl, input.referrer, selfHost);
+        const { referrer: _referrer, ...captureInput } = input;
+
+        await db.createLeadCapture({ ...captureInput, ...attribution });
         
         // Send email notification to owner
         const contactInfo = [];
