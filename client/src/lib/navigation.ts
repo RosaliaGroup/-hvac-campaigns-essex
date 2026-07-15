@@ -128,6 +128,8 @@ export const DEPARTMENTS: NavDepartment[] = [
       { label: "Marketing Dashboard", path: "/marketing-dashboard", icon: "Megaphone", roles: ["marketing", CRM] },
       { label: "SEO Intelligence", path: "/seo-intelligence", icon: "LineChart", roles: ["marketing", CRM] },
       { label: "Revenue Attribution", path: "/revenue-attribution", icon: "TrendingUp", roles: ["marketing", CRM] },
+      // GA4 Analytics — admin-only (empty roles array => no non-admin role qualifies).
+      { label: "Analytics", path: "/marketing/analytics", icon: "BarChart3", roles: [] },
       { label: "SMS Campaigns", path: "/sms-campaigns", icon: "MessageSquare", roles: ["marketing", CRM] },
       { label: "Campaign Performance", path: "/campaign-performance", icon: "BarChart3", roles: ["marketing", CRM] },
       { label: "Google Ads", path: "/google-ads-campaigns", icon: "Search", roles: ["marketing", CRM] },
@@ -197,6 +199,7 @@ export const INTERNAL_ROUTE_PREFIXES: string[] = [
   "/command-center",
   "/marketing-autopilot",
   "/marketing-dashboard",
+  "/marketing/analytics",
   "/seo-intelligence",
   "/revenue-attribution",
   "/leads",

@@ -330,6 +330,13 @@
       "when": 1784133417906,
       "tag": "0046_seo_attribution",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "5",
+      "when": 1784156013971,
+      "tag": "0047_ga4_analytics",
+      "breakpoints": true
     }
   ]
 }

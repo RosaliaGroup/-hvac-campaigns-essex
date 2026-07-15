@@ -42,6 +42,10 @@ export const GOOGLE_OAUTH_SCOPES: readonly string[] = [
   "https://www.googleapis.com/auth/calendar.events",
   // Search Console (read-only): SEO Intelligence metrics + URL inspection.
   "https://www.googleapis.com/auth/webmasters.readonly",
+  // Google Analytics (read-only): GA4 Analytics Data API for the Marketing →
+  // Analytics dashboard. Additive — connections authorized before this was added
+  // must re-consent once; until then a GA4 call 403s and the dashboard degrades.
+  "https://www.googleapis.com/auth/analytics.readonly",
 ];
 
 /** Space-delimited scope string for the OAuth `scope` parameter. */

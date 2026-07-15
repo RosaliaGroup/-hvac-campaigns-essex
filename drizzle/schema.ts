@@ -1857,3 +1857,93 @@ export const seoAiDrafts = mysqlTable(
 );
 export type SeoAiDraftRow = typeof seoAiDrafts.$inferSelect;
 export type InsertSeoAiDraft = typeof seoAiDrafts.$inferInsert;
+
+/* ── GA4 Analytics ──────────────────────────────────────────────────────── */
+
+/**
+ * GA4 daily metrics cache — one row per unique acquisition slice for a day:
+ * (property, date, source, medium, campaign, landingPage, channelGroup). The
+ * Marketing → Analytics dashboard reads ONLY from this cache; it never calls the
+ * Google Analytics Data API on the request path (mirrors seoPages / the Search
+ * Console cache). A daily sync upserts these rows from a single GA4 runReport.
+ *
+ * This table is additive and self-contained: no existing table is modified, and
+ * it shares nothing with the SEO (0044/0045) or Revenue-Attribution (0046)
+ * tables or the Google Ads integration.
+ */
+export const ga4DailyMetrics = mysqlTable(
+  "ga4DailyMetrics",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** GA4 numeric property id (e.g. "480827123"). */
+    propertyId: varchar("propertyId", { length: 32 }).notNull(),
+    /** GA4 `date` dimension, normalised to YYYY-MM-DD. */
+    date: varchar("date", { length: 10 }).notNull(),
+    // ── Acquisition dimensions (session-scoped) ──
+    /** `sessionSource`, e.g. "google", "(direct)", "newsletter". */
+    source: varchar("source", { length: 255 }).notNull().default(""),
+    /** `sessionMedium`, e.g. "organic", "cpc", "referral", "(none)". */
+    medium: varchar("medium", { length: 255 }).notNull().default(""),
+    /** `sessionCampaignName`, e.g. "(organic)", "spring-promo". */
+    campaign: varchar("campaign", { length: 512 }).notNull().default(""),
+    /** `landingPage` path (query string stripped by GA4). */
+    landingPage: varchar("landingPage", { length: 1024 }).notNull().default(""),
+    /** `sessionDefaultChannelGroup` (Organic Search, Paid Search, Direct, …). */
+    channelGroup: varchar("channelGroup", { length: 64 }).notNull().default(""),
+    /** Coarse Organic-vs-Paid-vs-Other bucket derived at sync time (see @shared/ga4). */
+    trafficType: mysqlEnum("trafficType", ["organic", "paid", "other"]).notNull().default("other"),
+    // ── Metrics ──
+    /** `screenPageViews`. */
+    pageViews: int("pageViews").notNull().default(0),
+    /** `sessions`. */
+    sessions: int("sessions").notNull().default(0),
+    /** `totalUsers`. */
+    users: int("users").notNull().default(0),
+    /** `conversions` (may be fractional for attributed conversions). */
+    conversions: decimal("conversions", { precision: 18, scale: 4 }).notNull().default("0"),
+    /** `eventCount`. */
+    events: int("events").notNull().default(0),
+    /** sha256 of (propertyId + date + source + medium + campaign + landingPage + channelGroup) — the upsert key. */
+    rowHash: varchar("rowHash", { length: 64 }).notNull(),
+    syncedAt: timestamp("syncedAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    rowHashIdx: uniqueIndex("ga4DailyMetrics_rowHash_uq").on(table.rowHash),
+    propertyDateIdx: index("ga4DailyMetrics_property_date_idx").on(table.propertyId, table.date),
+    dateIdx: index("ga4DailyMetrics_date_idx").on(table.date),
+    campaignIdx: index("ga4DailyMetrics_campaign_idx").on(table.campaign),
+    mediumIdx: index("ga4DailyMetrics_medium_idx").on(table.medium),
+  }),
+);
+export type Ga4DailyMetricRow = typeof ga4DailyMetrics.$inferSelect;
+export type InsertGa4DailyMetric = typeof ga4DailyMetrics.$inferInsert;
+
+/**
+ * GA4 sync audit trail (mirrors seoSyncHistory). One row per sync attempt, so a
+ * crash still leaves a record and the dashboard can surface freshness/staleness.
+ */
+export const ga4SyncHistory = mysqlTable(
+  "ga4SyncHistory",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    propertyId: varchar("propertyId", { length: 32 }).notNull(),
+    status: mysqlEnum("status", ["running", "success", "error"]).default("running").notNull(),
+    startedAt: timestamp("startedAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+    /** Window pulled from GA4 (ISO dates). */
+    rangeStart: varchar("rangeStart", { length: 32 }),
+    rangeEnd: varchar("rangeEnd", { length: 32 }),
+    rowsSynced: int("rowsSynced").notNull().default(0),
+    /** How the sync was triggered: "manual" | "scheduled" | "api". */
+    trigger: varchar("trigger", { length: 32 }).default("manual").notNull(),
+    error: text("error"),
+  },
+  table => ({
+    propertyIdx: index("ga4SyncHistory_property_idx").on(table.propertyId),
+    startedIdx: index("ga4SyncHistory_startedAt_idx").on(table.startedAt),
+  }),
+);
+export type Ga4SyncHistoryRow = typeof ga4SyncHistory.$inferSelect;
+export type InsertGa4SyncHistory = typeof ga4SyncHistory.$inferInsert;

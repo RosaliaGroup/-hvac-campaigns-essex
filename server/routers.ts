@@ -31,6 +31,7 @@ import { quickbooksRouter } from "./routers/quickbooks";
 import { opportunitiesRouter } from "./routers/opportunities";
 import { seoRouter } from "./routers/seo";
 import { attributionRouter } from "./routers/attribution";
+import { analyticsRouter } from "./routers/analytics";
 import { googleCalendarRouter } from "./routers/googleCalendar";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
@@ -77,6 +78,7 @@ export const appRouter = router({
   opportunities: opportunitiesRouter,
   seo: seoRouter,
   attribution: attributionRouter,
+  analytics: analyticsRouter,
   googleCalendar: googleCalendarRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

@@ -119,6 +119,7 @@ describe("buildAuthorizeUrl", () => {
       "email",
       "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/webmasters.readonly",
+      "https://www.googleapis.com/auth/analytics.readonly",
     ]);
   });
 });
