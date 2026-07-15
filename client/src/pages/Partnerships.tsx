@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Link } from "wouter";
 import { Users, TrendingUp, FileText, Handshake, Building2, Home, Zap, DollarSign, Clock, CheckCircle2, CheckCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
@@ -51,7 +52,7 @@ export default function Partnerships() {
       email: form.email,
       phone: form.phone,
       captureType: "partnership_inquiry" as any,
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: `Company: ${form.companyName}\nPartnership Type: ${form.partnershipType}\nWebsite: ${form.website}\nMessage: ${form.message}`,
     });
   };

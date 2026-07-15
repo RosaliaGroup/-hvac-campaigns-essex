@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,7 +60,7 @@ export default function QuickQuoteForm({
       email: formData.email || undefined,
       phone: formData.phone || undefined,
       captureType: "quick_quote",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: `Service: ${formData.service}\\n\\n${formData.message}`,
     });
   };

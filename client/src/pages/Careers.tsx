@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ export default function Careers() {
       email: form.email,
       phone: form.phone,
       captureType: "career_application" as any,
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: `Position: ${form.position}\nExperience: ${form.experience}\nLicensed: ${form.licensed}\nCover Letter: ${form.coverLetter}`,
     });
   };

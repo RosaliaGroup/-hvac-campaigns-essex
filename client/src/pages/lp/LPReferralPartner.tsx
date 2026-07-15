@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -69,7 +70,7 @@ export default function LPReferralPartner() {
       email: form.email,
       phone: form.phone,
       captureType: "lp_referral_partner",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: `Referral Partner LP: Occupation: ${form.occupation || "Not specified"}`,
     });
   };

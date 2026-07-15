@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +43,7 @@ export default function LPHeatPumpRebates() {
       email: form.email,
       phone: form.phone,
       captureType: "lp_heat_pump",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: "Google Ads LP: Heat Pump Rebates",
     });
   };

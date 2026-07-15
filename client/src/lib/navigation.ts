@@ -127,6 +127,7 @@ export const DEPARTMENTS: NavDepartment[] = [
     items: [
       { label: "Marketing Dashboard", path: "/marketing-dashboard", icon: "Megaphone", roles: ["marketing", CRM] },
       { label: "SEO Intelligence", path: "/seo-intelligence", icon: "LineChart", roles: ["marketing", CRM] },
+      { label: "Revenue Attribution", path: "/revenue-attribution", icon: "TrendingUp", roles: ["marketing", CRM] },
       { label: "SMS Campaigns", path: "/sms-campaigns", icon: "MessageSquare", roles: ["marketing", CRM] },
       { label: "Campaign Performance", path: "/campaign-performance", icon: "BarChart3", roles: ["marketing", CRM] },
       { label: "Google Ads", path: "/google-ads-campaigns", icon: "Search", roles: ["marketing", CRM] },
@@ -197,6 +198,7 @@ export const INTERNAL_ROUTE_PREFIXES: string[] = [
   "/marketing-autopilot",
   "/marketing-dashboard",
   "/seo-intelligence",
+  "/revenue-attribution",
   "/leads",
   "/lead-dashboard",
   "/customers",

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { X, FileText, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,7 +83,7 @@ export default function ExitIntentPopup() {
     createCapture.mutate({
       email,
       captureType: "pseg_checklist_download",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: "Exit popup checklist download",
     });
   };
