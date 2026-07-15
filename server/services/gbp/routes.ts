@@ -16,14 +16,17 @@ import { runGbpSync } from "./sync";
 export function registerGbpSyncRoutes(app: Express) {
   app.post("/api/gbp/sync", async (req: Request, res: Response) => {
     const secret = process.env.GBP_SYNC_CRON_SECRET;
-    if (secret) {
-      const provided = req.header("x-gbp-sync-secret");
-      if (provided !== secret) {
-        res.status(401).json({ ok: false, error: "unauthorized" });
-        return;
-      }
-    } else {
-      console.warn("[GBP] POST /api/gbp/sync is unauthenticated — set GBP_SYNC_CRON_SECRET to lock it down");
+    // Fail CLOSED: without a configured secret the cron endpoint is disabled
+    // entirely (the admin-only tRPC `gbp.sync` remains the in-app path). This is
+    // deliberately stricter than the SEO route, which warns-and-runs.
+    if (!secret) {
+      console.warn("[GBP] POST /api/gbp/sync is disabled — set GBP_SYNC_CRON_SECRET to enable it");
+      res.status(503).json({ ok: false, error: "GBP_SYNC_CRON_SECRET not configured" });
+      return;
+    }
+    if (req.header("x-gbp-sync-secret") !== secret) {
+      res.status(401).json({ ok: false, error: "unauthorized" });
+      return;
     }
 
     try {
@@ -36,11 +39,13 @@ export function registerGbpSyncRoutes(app: Express) {
 }
 
 export function startGbpSyncScheduler(): void {
-  // Opt-out flag (mirrors SEO_SYNC_SCHEDULER_ENABLED). Even when enabled the sync
-  // is safe on every instance: runGbpSync holds a MySQL advisory lock, so only
-  // one replica actually runs while the others no-op ("already_running").
-  if (process.env.GBP_SYNC_SCHEDULER_ENABLED === "false") {
-    console.log("[GBP] In-process sync scheduler disabled via GBP_SYNC_SCHEDULER_ENABLED=false");
+  // Opt-IN flag: the in-process scheduler is OFF by default and only runs when
+  // GBP_SYNC_SCHEDULER_ENABLED === "true". This keeps an unmerged / undeployed
+  // feature dormant unless an operator explicitly turns it on. Even when enabled
+  // the sync is safe on every instance: runGbpSync holds a MySQL advisory lock,
+  // so only one replica actually runs while the others no-op ("already_running").
+  if (process.env.GBP_SYNC_SCHEDULER_ENABLED !== "true") {
+    console.log("[GBP] In-process sync scheduler disabled (set GBP_SYNC_SCHEDULER_ENABLED=true to enable)");
     return;
   }
 
