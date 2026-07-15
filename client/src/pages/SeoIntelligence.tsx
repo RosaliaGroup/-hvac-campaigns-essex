@@ -75,6 +75,8 @@ const STATUS_STYLES: Record<SeoStatus, string> = {
   needs_review: "bg-slate-100 text-slate-700 border-slate-200",
   queued: "bg-blue-100 text-blue-800 border-blue-200",
   optimizing: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  waiting_review: "bg-purple-100 text-purple-800 border-purple-200",
+  approved: "bg-emerald-100 text-emerald-800 border-emerald-200",
   published: "bg-teal-100 text-teal-800 border-teal-200",
   waiting_for_indexing: "bg-amber-100 text-amber-800 border-amber-200",
   ranking_improved: "bg-green-100 text-green-800 border-green-200",

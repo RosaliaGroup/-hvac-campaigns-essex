@@ -1724,6 +1724,8 @@ export const seoPages = mysqlTable(
       "needs_review",
       "queued",
       "optimizing",
+      "waiting_review",
+      "approved",
       "published",
       "waiting_for_indexing",
       "ranking_improved",
@@ -1789,3 +1791,43 @@ export const seoSyncHistory = mysqlTable(
 );
 export type SeoSyncHistoryRow = typeof seoSyncHistory.$inferSelect;
 export type InsertSeoSyncHistory = typeof seoSyncHistory.$inferInsert;
+
+/**
+ * AI SEO Optimization drafts (PR #23). One editable draft record per page —
+ * the AI-generated title / meta / H1 / FAQ / internal links / schema / content
+ * expansion. These are DRAFTS ONLY: nothing here is published to the live site.
+ * Written by the mock AI optimization service; preserved across Search Console
+ * syncs (the sync never touches this table).
+ */
+export const seoAiDrafts = mysqlTable(
+  "seoAiDrafts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** seoPages.id this draft optimizes (1:1). */
+    pageId: int("pageId").notNull(),
+    siteUrl: varchar("siteUrl", { length: 512 }).notNull(),
+    // ── AI-generated fields (all nullable until generated) ──
+    generatedTitle: text("generatedTitle"),
+    generatedMetaDescription: text("generatedMetaDescription"),
+    generatedH1: text("generatedH1"),
+    /** AiFaqItem[] (see @shared/seo). */
+    faq: json("faq"),
+    /** AiInternalLink[] (see @shared/seo). */
+    internalLinks: json("internalLinks"),
+    /** schema.org JSON-LD object. */
+    schema: json("schema"),
+    contentExpansion: text("contentExpansion"),
+    /** Which AI provider/model produced this draft (mock today). */
+    model: varchar("model", { length: 64 }).default("mock-v1").notNull(),
+    /** Draft lifecycle — never "published" (publishing is out of scope). */
+    status: mysqlEnum("status", ["draft", "edited", "approved"]).default("draft").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    pageIdx: uniqueIndex("seoAiDrafts_pageId_uq").on(table.pageId),
+    siteIdx: index("seoAiDrafts_site_idx").on(table.siteUrl),
+  }),
+);
+export type SeoAiDraftRow = typeof seoAiDrafts.$inferSelect;
+export type InsertSeoAiDraft = typeof seoAiDrafts.$inferInsert;
