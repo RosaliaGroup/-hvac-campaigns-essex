@@ -28,6 +28,7 @@ import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelation
 import { jobsRouter } from "./routers/jobs";
 import { quickbooksRouter } from "./routers/quickbooks";
 import { opportunitiesRouter } from "./routers/opportunities";
+import { seoRouter } from "./routers/seo";
 import { googleCalendarRouter } from "./routers/googleCalendar";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
@@ -72,6 +73,7 @@ export const appRouter = router({
   jobs: jobsRouter,
   quickbooks: quickbooksRouter,
   opportunities: opportunitiesRouter,
+  seo: seoRouter,
   googleCalendar: googleCalendarRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

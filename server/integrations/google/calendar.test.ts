@@ -3,6 +3,7 @@ import {
   mapToGoogleEvent,
   parseTokenResponse,
   buildAuthorizeUrl,
+  GOOGLE_OAUTH_SCOPES,
   signState,
   verifyState,
   getGoogleConfig,
@@ -95,16 +96,30 @@ describe("OAuth state signing", () => {
 });
 
 describe("buildAuthorizeUrl", () => {
-  it("requests offline access with forced consent and calendar scope", () => {
-    const url = buildAuthorizeUrl(
-      { clientId: "cid", clientSecret: "sec", redirectUri: "https://app/cb" },
-      signState("n"),
-    );
+  const url = buildAuthorizeUrl(
+    { clientId: "cid", clientSecret: "sec", redirectUri: "https://app/cb" },
+    signState("n"),
+  );
+
+  it("requests offline access with forced consent (re-prompts for the new scope)", () => {
     expect(url).toContain("client_id=cid");
     expect(url).toContain("access_type=offline");
     expect(url).toContain("prompt=consent");
-    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/calendar.events"));
     expect(url).toContain(encodeURIComponent("https://app/cb"));
+  });
+
+  it("requests BOTH Calendar and Search Console scopes in one consent flow", () => {
+    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/calendar.events"));
+    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/webmasters.readonly"));
+  });
+
+  it("exposes the exact scope set", () => {
+    expect(GOOGLE_OAUTH_SCOPES).toEqual([
+      "openid",
+      "email",
+      "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/webmasters.readonly",
+    ]);
   });
 });
 

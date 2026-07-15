@@ -24,7 +24,28 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo";
 const CALENDAR_BASE = "https://www.googleapis.com/calendar/v3";
-const SCOPE = "openid email https://www.googleapis.com/auth/calendar.events";
+/**
+ * Scopes requested in the SINGLE shared Google consent flow. Both Calendar and
+ * Search Console are granted together so the SEO Intelligence module reuses this
+ * one connection rather than opening a second consent screen
+ * (see server/integrations/searchConsole.ts). Listed explicitly (not a single
+ * opaque string) so the set is obvious, exportable and test-asserted.
+ *
+ * Existing connections authorized before Search Console was added must RE-CONSENT
+ * once (disconnect + reconnect Google) to pick up webmasters.readonly; until then
+ * a GSC call 403s and the SEO dashboard degrades gracefully.
+ */
+export const GOOGLE_OAUTH_SCOPES: readonly string[] = [
+  "openid",
+  "email",
+  // Calendar: create/read/update appointment events (unchanged, existing feature).
+  "https://www.googleapis.com/auth/calendar.events",
+  // Search Console (read-only): SEO Intelligence metrics + URL inspection.
+  "https://www.googleapis.com/auth/webmasters.readonly",
+];
+
+/** Space-delimited scope string for the OAuth `scope` parameter. */
+export const SCOPE = GOOGLE_OAUTH_SCOPES.join(" ");
 /** Refresh the access token when fewer than this many ms remain. */
 export const REFRESH_SKEW_MS = 5 * 60 * 1000;
 export const DEFAULT_TIMEZONE = "America/New_York";

@@ -1672,3 +1672,120 @@ export const qboRepairAuditLog = mysqlTable(
 );
 export type QboRepairAuditLog = typeof qboRepairAuditLog.$inferSelect;
 export type InsertQboRepairAuditLog = typeof qboRepairAuditLog.$inferInsert;
+
+/* ── SEO Intelligence (Phase 3: Search Console cache) ─────────────────────
+ * These three tables are the ON-DISK CACHE the SEO dashboard reads from. A sync
+ * (POST /api/seo/sync) pulls the last 90 days from Google Search Console and
+ * upserts here; the dashboard never calls Google directly. GSC-sourced columns
+ * are overwritten on every sync; the operational columns (`status`, `problems`)
+ * are owned by the team/AI and preserved across syncs.
+ */
+export const seoPages = mysqlTable(
+  "seoPages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** The Search Console property, e.g. "https://mechanicalenterprise.com/" or "sc-domain:…". */
+    siteUrl: varchar("siteUrl", { length: 512 }).notNull(),
+    /** Path only, e.g. "/hvac-newark-nj". */
+    page: varchar("page", { length: 1024 }).notNull(),
+    /** Fully-qualified URL. */
+    url: varchar("url", { length: 1024 }).notNull(),
+    /** sha256(siteUrl + "\n" + page) — the upsert key (varchars are too long to index directly). */
+    pageHash: varchar("pageHash", { length: 64 }).notNull(),
+    // ── Google Search Console metrics (current 90-day window) ──
+    clicks: int("clicks").default(0).notNull(),
+    impressions: int("impressions").default(0).notNull(),
+    /** Click-through rate as a fraction (0.021 === 2.1%). */
+    ctr: decimal("ctr", { precision: 8, scale: 6 }).default("0").notNull(),
+    /** Average Google position (lower is better). */
+    position: decimal("position", { precision: 6, scale: 2 }).default("0").notNull(),
+    /** Same metrics for the previous 90-day window — powers "declining clicks" + deltas. */
+    previousClicks: int("previousClicks").default(0).notNull(),
+    previousImpressions: int("previousImpressions").default(0).notNull(),
+    // ── Coverage / indexing (URL Inspection, best-effort) ──
+    indexStatus: mysqlEnum("indexStatus", [
+      "indexed",
+      "crawled_not_indexed",
+      "discovered_not_indexed",
+      "excluded",
+    ]).default("indexed").notNull(),
+    lastIndexedAt: timestamp("lastIndexedAt"),
+    searchConsoleIssue: varchar("searchConsoleIssue", { length: 512 }),
+    // ── On-page (nullable; populated by the AI sprint's page reader) ──
+    title: varchar("title", { length: 512 }),
+    metaDescription: varchar("metaDescription", { length: 1024 }),
+    h1: varchar("h1", { length: 512 }),
+    // ── Derived at sync time ──
+    priority: mysqlEnum("priority", ["high", "medium", "low"]).default("low").notNull(),
+    category: mysqlEnum("category", ["commercial", "residential", "blog", "city_page", "other"]).default("other").notNull(),
+    issue: varchar("issue", { length: 512 }),
+    // ── Operational state (owned by team/AI; preserved across syncs) ──
+    status: mysqlEnum("status", [
+      "needs_review",
+      "queued",
+      "optimizing",
+      "published",
+      "waiting_for_indexing",
+      "ranking_improved",
+    ]).default("needs_review").notNull(),
+    /** SeoProblem[] (see @shared/seo). */
+    problems: json("problems"),
+    lastSyncedAt: timestamp("lastSyncedAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    pageHashIdx: uniqueIndex("seoPages_pageHash_uq").on(table.pageHash),
+    siteIdx: index("seoPages_site_idx").on(table.siteUrl),
+    priorityIdx: index("seoPages_priority_idx").on(table.priority),
+  }),
+);
+export type SeoPageRow = typeof seoPages.$inferSelect;
+export type InsertSeoPage = typeof seoPages.$inferInsert;
+
+export const seoQueries = mysqlTable(
+  "seoQueries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    siteUrl: varchar("siteUrl", { length: 512 }).notNull(),
+    /** Search query / keyword. */
+    query: varchar("query", { length: 512 }).notNull(),
+    /** Landing page path for the query, when synced with the page dimension. */
+    page: varchar("page", { length: 1024 }),
+    clicks: int("clicks").default(0).notNull(),
+    impressions: int("impressions").default(0).notNull(),
+    ctr: decimal("ctr", { precision: 8, scale: 6 }).default("0").notNull(),
+    position: decimal("position", { precision: 6, scale: 2 }).default("0").notNull(),
+    syncedAt: timestamp("syncedAt").defaultNow().notNull(),
+  },
+  table => ({
+    siteIdx: index("seoQueries_site_idx").on(table.siteUrl),
+  }),
+);
+export type SeoQueryRow = typeof seoQueries.$inferSelect;
+export type InsertSeoQuery = typeof seoQueries.$inferInsert;
+
+export const seoSyncHistory = mysqlTable(
+  "seoSyncHistory",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    siteUrl: varchar("siteUrl", { length: 512 }).notNull(),
+    status: mysqlEnum("status", ["running", "success", "error"]).default("running").notNull(),
+    startedAt: timestamp("startedAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+    /** Window pulled from Search Console (ISO dates). */
+    rangeStart: varchar("rangeStart", { length: 32 }),
+    rangeEnd: varchar("rangeEnd", { length: 32 }),
+    pagesSynced: int("pagesSynced").default(0).notNull(),
+    queriesSynced: int("queriesSynced").default(0).notNull(),
+    /** How the sync was triggered: "manual" | "scheduled" | "api". */
+    trigger: varchar("trigger", { length: 32 }).default("manual").notNull(),
+    error: text("error"),
+  },
+  table => ({
+    siteIdx: index("seoSyncHistory_site_idx").on(table.siteUrl),
+    startedIdx: index("seoSyncHistory_startedAt_idx").on(table.startedAt),
+  }),
+);
+export type SeoSyncHistoryRow = typeof seoSyncHistory.$inferSelect;
+export type InsertSeoSyncHistory = typeof seoSyncHistory.$inferInsert;
