@@ -48,6 +48,7 @@ import {
   Building2,
   Wrench,
   CalendarX2,
+  UserCog,
 } from "lucide-react";
 
 // ── Status presentation (includes the new "arrived" status) ──────────────────
@@ -426,6 +427,7 @@ function AppointmentCard({
 }
 
 export default function FieldToday() {
+  const [, navigate] = useLocation();
   const { data, isLoading, isError, error, refetch, isRefetching } =
     trpc.appointments.fieldToday.useQuery(undefined, {
       refetchOnWindowFocus: true,
@@ -447,6 +449,15 @@ export default function FieldToday() {
             <Badge variant="secondary" className="text-sm">
               {appts.length} {appts.length === 1 ? "stop" : "stops"}
             </Badge>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => navigate("/field/profile")}
+              aria-label="My Profile"
+              className="h-9 w-9"
+            >
+              <UserCog className="h-4 w-4" />
+            </Button>
             <Button
               size="icon"
               variant="ghost"
