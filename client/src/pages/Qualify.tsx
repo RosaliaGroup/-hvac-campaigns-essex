@@ -3,6 +3,7 @@
  * Homeowners enter house details → see rebate amount → out-of-pocket cost → book free assessment
  */
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -95,7 +96,7 @@ export default function Qualify() {
       email: form.email || undefined,
       phone: form.phone || undefined,
       captureType: "qualify_form",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: `Service: Heat Pump Assessment\nHome Type: ${form.homeType}\nSq Ft: ${form.sqft}\nCurrent System: ${form.currentSystem}\nIncome Level: ${form.income}\nOwn/Rent: ${form.ownOrRent}\nZIP: ${form.zip}\nEstimated Rebate: $${rebate.toLocaleString()}\nOut of Pocket: $${outOfPocket.toLocaleString()}\nPreferred Date: ${bookingForm.preferredDate || "Not specified"}\nPreferred Time: ${bookingForm.preferredTime || "Not specified"}\nNotes: ${bookingForm.notes || "None"}`,
     });
   }

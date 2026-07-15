@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ export default function LPFBCommercial() {
       email: form.email,
       phone: form.phone,
       captureType: "lp_fb_commercial",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: `Facebook LP: Commercial Business | Company: ${form.company} | Sq Ft: ${form.sqft}`,
     });
   };

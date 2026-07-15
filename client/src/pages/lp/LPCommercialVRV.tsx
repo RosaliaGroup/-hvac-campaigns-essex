@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +42,7 @@ export default function LPCommercialVRV() {
       email: form.email,
       phone: form.phone,
       captureType: "lp_commercial_vrv",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: `Google Ads LP: Commercial VRV/VRF | Company: ${form.company}`,
     });
   };

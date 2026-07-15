@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +38,7 @@ export default function LPRebateGuide() {
       email: form.email,
       phone: form.phone,
       captureType: "download_gate",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: "Email LP: Rebate Guide Download",
     });
   };

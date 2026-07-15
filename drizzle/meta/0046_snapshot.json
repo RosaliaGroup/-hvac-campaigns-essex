@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "e698b4dd-b2cd-423d-84e6-72ad3bb99368",
-  "prevId": "52fb4fce-11cd-462d-8af6-d27bc4ea0acc",
+  "id": "6331a33b-0121-4b92-a98a-096e4c38b3c8",
+  "prevId": "0f0beb0b-dbd8-4cc4-8b7f-a509f807b2a1",
   "tables": {
     "aiScripts": {
       "name": "aiScripts",
@@ -5287,6 +5287,141 @@
       "uniqueConstraints": {},
       "checkConstraint": {}
     },
+    "seoAiDrafts": {
+      "name": "seoAiDrafts",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "pageId": {
+          "name": "pageId",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "siteUrl": {
+          "name": "siteUrl",
+          "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "generatedTitle": {
+          "name": "generatedTitle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "generatedMetaDescription": {
+          "name": "generatedMetaDescription",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "generatedH1": {
+          "name": "generatedH1",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "faq": {
+          "name": "faq",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "internalLinks": {
+          "name": "internalLinks",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "schema": {
+          "name": "schema",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "contentExpansion": {
+          "name": "contentExpansion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "model": {
+          "name": "model",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'mock-v1'"
+        },
+        "status": {
+          "name": "status",
+          "type": "enum('draft','edited','approved')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'draft'"
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(now())"
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {
+        "seoAiDrafts_pageId_uq": {
+          "name": "seoAiDrafts_pageId_uq",
+          "columns": [
+            "pageId"
+          ],
+          "isUnique": true
+        },
+        "seoAiDrafts_site_idx": {
+          "name": "seoAiDrafts_site_idx",
+          "columns": [
+            "siteUrl"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "seoAiDrafts_id": {
+          "name": "seoAiDrafts_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
     "seoPages": {
       "name": "seoPages",
       "columns": {
@@ -5441,7 +5576,7 @@
         },
         "status": {
           "name": "status",
-          "type": "enum('needs_review','queued','optimizing','published','waiting_for_indexing','ranking_improved')",
+          "type": "enum('needs_review','queued','optimizing','waiting_review','approved','published','waiting_for_indexing','ranking_improved')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,

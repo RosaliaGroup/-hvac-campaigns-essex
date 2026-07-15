@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +55,7 @@ export default function LPPsegChecklist() {
       email: form.email || undefined,
       phone: form.phone || undefined,
       captureType: "pseg_checklist_download",
-      pageUrl: window.location.href,
+      ...captureContext(),
       message: `Property Type: ${form.propertyType}`,
     });
   };

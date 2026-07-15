@@ -136,6 +136,38 @@ describe("buildRevenueAttribution — report shape & honesty", () => {
     expect(total).toBe(1111 + 2222 + 3333);
   });
 
+  it("NO DOUBLE-COUNTING: every won opp lands in exactly one tier, counts reconcile", () => {
+    const leads = [
+      lead({ id: 1, customerId: 5, channel: "organic" }),
+      lead({ id: 2, customerId: 6, channel: "paid", createdAt: T0 }),
+    ];
+    const opps = [
+      won({ id: 10, customerId: 5, sourceLeadCaptureId: 1, amount: 100 }), // confirmed
+      won({ id: 11, customerId: 6, amount: 200, wonAt: T0 + 5 * DAY }), // inferred
+      won({ id: 12, customerId: 6, amount: 300, wonAt: T0 + 5 * DAY }), // inferred (same lead, distinct opp)
+      won({ id: 13, customerId: 99, amount: 400 }), // unattributed
+    ];
+    const r = buildRevenueAttribution(leads, opps, [], { inferenceWindowDays: 180 });
+
+    // Each attribution decision is for a distinct opportunity, one tier each.
+    expect(r.attributions).toHaveLength(4);
+    expect(new Set(r.attributions.map(a => a.opportunityId)).size).toBe(4);
+
+    const confirmedWon = r.byChannel.reduce((s, b) => s + b.confirmedWon, 0);
+    const inferredWon = r.byChannel.reduce((s, b) => s + b.inferredWon, 0);
+    expect(confirmedWon + inferredWon + r.unattributed.wonCount).toBe(opps.length); // 4, no double count
+    // Revenue also reconciles exactly to the sum of amounts.
+    const totalRev = r.totals.confirmedRevenue + r.totals.inferredRevenue + r.totals.unattributedRevenue;
+    expect(totalRev).toBe(100 + 200 + 300 + 400);
+  });
+
+  it("UNKNOWN preserved: unknown-channel leads are not reclassified as organic", () => {
+    const leads = [lead({ id: 1, channel: "unknown", landingPath: "/x" })];
+    const r = buildRevenueAttribution(leads, [], []);
+    expect(r.byChannel.find(b => b.key === "unknown")!.leads).toBe(1);
+    expect(r.byChannel.find(b => b.key === "organic")!.leads).toBe(0);
+  });
+
   it("joins organic clicks to pages by normalized path (case/trailing-slash insensitive)", () => {
     const leads = [lead({ id: 1, channel: "organic", landingPath: "https://site.com/HVAC-Newark-NJ/" })];
     const traffic = [{ page: "/hvac-newark-nj", clicks: 240, impressions: 5000 }];

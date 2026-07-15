@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { captureContext } from "@/lib/captureContext";
 import { X, Gift, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,7 +85,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
     createCapture.mutate({
       email: email,
       captureType: `exit_popup_${pageType}`,
-      pageUrl: window.location.href,
+      ...captureContext(),
     });
   };
 
