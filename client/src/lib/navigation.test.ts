@@ -32,6 +32,7 @@ const KNOWN_ROUTES = new Set<string>([
   "/marketing/analytics",
   "/seo-intelligence",
   "/revenue-attribution",
+  "/local-seo",
   "/sms-campaigns",
   "/campaign-performance",
   "/google-ads-campaigns",

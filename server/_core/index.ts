@@ -17,6 +17,7 @@ import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
 import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
+import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -61,6 +62,8 @@ async function startServer() {
   registerSeoSyncRoutes(app);
   // GA4 Analytics — Analytics Data API sync (POST /api/analytics/ga4/sync)
   registerGa4SyncRoutes(app);
+  // Local SEO — Google Business Profile sync (POST /api/gbp/sync)
+  registerGbpSyncRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
@@ -93,6 +96,8 @@ async function startServer() {
     startSeoSyncScheduler();
     // Start daily GA4 Analytics Data API → cache sync for Marketing Analytics
     startGa4SyncScheduler();
+    // Start daily Business Profile → cache sync for Local SEO
+    startGbpSyncScheduler();
   });
 }
 

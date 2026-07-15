@@ -24,6 +24,7 @@ import MarketingDashboard from "./pages/MarketingDashboard";
 import SeoIntelligence from "./pages/SeoIntelligence";
 import RevenueAttribution from "./pages/RevenueAttribution";
 import MarketingAnalytics from "./pages/MarketingAnalytics";
+import LocalSeo from "./pages/LocalSeo";
 import LeadTracker from "./pages/LeadTracker";
 import CampaignPerformance from "./pages/CampaignPerformance";
 import Testimonials from "./pages/Testimonials";
@@ -322,6 +323,7 @@ function Router() {
       <Route path={"/seo-intelligence"} component={protect(SeoIntelligence)} />
       <Route path={"/revenue-attribution"} component={protect(RevenueAttribution)} />
       <Route path={"/marketing/analytics"} component={protect(MarketingAnalytics)} />
+      <Route path={"/local-seo"} component={protect(LocalSeo)} />
       <Route path={"/leads"} component={protect(LeadTracker)} />
       <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
       <Route path={"/customers"} component={protect(Customers)} />

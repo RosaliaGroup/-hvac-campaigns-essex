@@ -124,6 +124,10 @@ describe("buildAuthorizeUrl", () => {
     expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/calendar.events");
     expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/webmasters.readonly");
     expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/analytics.readonly");
+  it("requests Calendar, Search Console and Business Profile scopes in one consent flow", () => {
+    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/calendar.events"));
+    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/webmasters.readonly"));
+    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/business.manage"));
   });
 
   it("exposes the exact scope set", () => {
@@ -133,6 +137,7 @@ describe("buildAuthorizeUrl", () => {
       "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/webmasters.readonly",
       "https://www.googleapis.com/auth/analytics.readonly",
+      "https://www.googleapis.com/auth/business.manage",
     ]);
   });
 });
