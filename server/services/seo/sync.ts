@@ -130,7 +130,9 @@ async function performSync(
     rangeStart: windows.current.start,
     rangeEnd: windows.current.end,
   });
-  const historyId = Number((inserted as unknown as { insertId?: number })?.insertId ?? 0);
+  // drizzle/mysql2 returns [ResultSetHeader, FieldPacket[]] — the id is on [0]
+  // (same pattern as createSocialPostReturningId in server/db.ts).
+  const historyId = Number((inserted as unknown as [{ insertId?: number }])[0]?.insertId ?? 0);
 
   try {
     const accessToken = await getSearchConsoleAccessToken();
