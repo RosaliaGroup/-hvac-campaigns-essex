@@ -40,7 +40,16 @@ import {
   Clock,
   CloudOff,
   DownloadCloud,
+  Copy,
+  Check,
+  Ban,
+  Save,
+  Info,
+  ShieldAlert,
+  DollarSign,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import InternalNav from "@/components/InternalNav";
 import DashboardFooter from "@/components/DashboardFooter";
 import { getLoginUrl } from "@/const";
@@ -61,6 +70,8 @@ import {
   type SeoStatus,
   type SeoAction,
   type SeoFilterKey,
+  type AiDraftStatus,
+  type BusinessImpact,
 } from "@shared/seo";
 
 /* ── Formatting helpers ─────────────────────────────────────────────────── */
@@ -75,6 +86,8 @@ const STATUS_STYLES: Record<SeoStatus, string> = {
   needs_review: "bg-slate-100 text-slate-700 border-slate-200",
   queued: "bg-blue-100 text-blue-800 border-blue-200",
   optimizing: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  waiting_review: "bg-purple-100 text-purple-800 border-purple-200",
+  approved: "bg-emerald-100 text-emerald-800 border-emerald-200",
   published: "bg-teal-100 text-teal-800 border-teal-200",
   waiting_for_indexing: "bg-amber-100 text-amber-800 border-amber-200",
   ranking_improved: "bg-green-100 text-green-800 border-green-200",
@@ -224,18 +237,397 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
+/* ── AI draft workspace (Phase 2) ───────────────────────────────────────── */
+
+const DRAFT_STATUS_STYLE: Record<AiDraftStatus, string> = {
+  draft: "bg-slate-100 text-slate-700 border-slate-200",
+  edited: "bg-amber-100 text-amber-800 border-amber-200",
+  approved: "bg-emerald-100 text-emerald-800 border-emerald-200",
+};
+
+function CopyButton({ text, label = "Copy" }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+      disabled={!text}
+      onClick={async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          toast.error("Couldn't copy to clipboard");
+        }
+      }}
+    >
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? "Copied" : label}
+    </Button>
+  );
+}
+
+function SectionHeader({
+  title,
+  copyText,
+  action,
+  onRegenerate,
+  regenerating,
+  disabled,
+}: {
+  title: string;
+  copyText: string;
+  action: SeoAction;
+  onRegenerate: (a: SeoAction) => void;
+  regenerating: boolean;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+      <div className="flex items-center gap-1">
+        <CopyButton text={copyText} />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1 px-2 text-xs text-muted-foreground"
+          disabled={disabled}
+          onClick={() => onRegenerate(action)}
+        >
+          {regenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+          Regenerate
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DraftWorkspace({ opportunity, isAdmin }: { opportunity: SeoOpportunity; isAdmin: boolean }) {
+  const pageId = Number(opportunity.id);
+  const utils = trpc.useUtils();
+  const draftQ = trpc.seo.getOptimization.useQuery({ id: pageId });
+  const draft = draftQ.data;
+
+  const [edit, setEdit] = useState<{
+    title: string;
+    metaDescription: string;
+    h1: string;
+    contentExpansion: string;
+    schema: string;
+  } | null>(null);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    // Refresh the editable copy from the server draft when we have no pending
+    // edits (so generate/regenerate/approve results flow into the fields).
+    if (draft && !dirty) {
+      setEdit({
+        title: draft.title ?? "",
+        metaDescription: draft.metaDescription ?? "",
+        h1: draft.h1 ?? "",
+        contentExpansion: draft.contentExpansion ?? "",
+        schema: draft.schema ? JSON.stringify(draft.schema, null, 2) : "",
+      });
+    }
+  }, [draft, dirty]);
+
+  const afterWrite = () => {
+    utils.seo.getOptimization.invalidate({ id: pageId });
+    utils.seo.getOpportunities.invalidate();
+    utils.seo.getBusinessImpact.invalidate();
+  };
+
+  const generate = trpc.seo.generateOptimization.useMutation({
+    onSuccess: () => { setDirty(false); afterWrite(); toast.success("Draft generated"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const regenerate = trpc.seo.regenerateOptimization.useMutation({
+    onSuccess: () => { setDirty(false); afterWrite(); toast.success("Draft regenerated"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const save = trpc.seo.updateOptimizationDraft.useMutation({
+    onSuccess: () => { setDirty(false); afterWrite(); toast.success("Edits saved"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const approve = trpc.seo.approveOptimization.useMutation({
+    onSuccess: () => { afterWrite(); toast.success("Draft approved for review"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const reject = trpc.seo.rejectOptimization.useMutation({
+    onSuccess: () => { afterWrite(); toast.success("Draft rejected — page back to needs review"); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const busy =
+    generate.isPending || regenerate.isPending || save.isPending || approve.isPending || reject.isPending;
+  const genAction = generate.isPending ? generate.variables?.action : undefined;
+  const regenAction = regenerate.isPending ? regenerate.variables?.action : undefined;
+  const writeDisabled = !isAdmin || busy;
+
+  const hasDraft =
+    !!draft &&
+    !!(
+      draft.title ||
+      draft.metaDescription ||
+      draft.h1 ||
+      draft.contentExpansion ||
+      draft.faq.length > 0 ||
+      draft.internalLinks.length > 0 ||
+      draft.schema
+    );
+
+  const doGenerate = (action: SeoAction) => generate.mutate({ id: pageId, action });
+  const doRegenerate = (action: SeoAction) => regenerate.mutate({ id: pageId, action });
+
+  const onSave = () => {
+    if (!edit) return;
+    let schemaVal: Record<string, unknown> | null = null;
+    if (edit.schema.trim()) {
+      try {
+        schemaVal = JSON.parse(edit.schema) as Record<string, unknown>;
+      } catch {
+        toast.error("Schema must be valid JSON");
+        return;
+      }
+    }
+    save.mutate({
+      id: pageId,
+      patch: {
+        title: edit.title || null,
+        metaDescription: edit.metaDescription || null,
+        h1: edit.h1 || null,
+        contentExpansion: edit.contentExpansion || null,
+        schema: schemaVal,
+      },
+    });
+  };
+
+  const field = (k: "title" | "metaDescription" | "h1" | "contentExpansion" | "schema", v: string) => {
+    setEdit((p) => (p ? { ...p, [k]: v } : p));
+    setDirty(true);
+  };
+
+  const faqText = (draft?.faq ?? []).map((f) => `Q: ${f.question}\nA: ${f.answer}`).join("\n\n");
+  const linksText = (draft?.internalLinks ?? [])
+    .map((l) => `${l.anchor} → ${l.targetPath} (${l.rationale})`)
+    .join("\n");
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+        <Info className="mt-0.5 h-4 w-4 shrink-0" />
+        <span>Drafts only — nothing here is published to your live site. Generate, edit, then approve for human review.</span>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-[#1e3a5f]">AI Draft</span>
+          {draft && (
+            <Badge variant="outline" className={`text-xs ${DRAFT_STATUS_STYLE[draft.status]}`}>
+              {draft.status === "edited" ? "Edited" : draft.status === "approved" ? "Approved" : "Draft"}
+            </Badge>
+          )}
+          {draft?.model && draft.model !== "none" && (
+            <span className="text-xs text-muted-foreground">· {draft.model}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" size="sm" variant="outline" disabled={writeDisabled || !hasDraft} onClick={() => reject.mutate({ id: pageId })}>
+            <Ban className="mr-1.5 h-4 w-4" /> Reject
+          </Button>
+          <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-600/90" disabled={writeDisabled || !hasDraft} onClick={() => approve.mutate({ id: pageId })}>
+            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve
+          </Button>
+        </div>
+      </div>
+
+      {!isAdmin && (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+          <ShieldAlert className="h-4 w-4 shrink-0" /> Admin access is required to generate, edit, or approve drafts.
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        {CONTENT_ACTIONS.map((action) => {
+          const Icon = ACTION_ICONS[action];
+          return (
+            <Button key={action} type="button" variant="outline" size="sm" className="justify-start" disabled={writeDisabled} onClick={() => doGenerate(action)}>
+              {genAction === action ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Icon className="mr-2 h-4 w-4" />}
+              {SEO_ACTION_LABELS[action]}
+            </Button>
+          );
+        })}
+      </div>
+      <Button type="button" size="sm" className="w-full justify-center bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={writeDisabled} onClick={() => doGenerate("optimize_everything")}>
+        {genAction === "optimize_everything" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+        {SEO_ACTION_LABELS.optimize_everything}
+      </Button>
+
+      {draftQ.isLoading ? (
+        <div className="flex items-center justify-center gap-2 py-6 text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin" /> Loading draft…
+        </div>
+      ) : !hasDraft ? (
+        <p className="py-4 text-center text-sm text-muted-foreground">No draft yet — generate one above.</p>
+      ) : edit ? (
+        <div className="space-y-5">
+          <div className="space-y-1.5">
+            <SectionHeader title="SEO Title" copyText={edit.title} action="rewrite_title" onRegenerate={doRegenerate} regenerating={regenAction === "rewrite_title"} disabled={writeDisabled} />
+            <Input value={edit.title} onChange={(e) => field("title", e.target.value)} disabled={!isAdmin} placeholder="No title drafted yet" />
+            <p className="text-[11px] text-muted-foreground">{edit.title.length}/60 characters</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <SectionHeader title="H1 Heading" copyText={edit.h1} action="rewrite_title" onRegenerate={doRegenerate} regenerating={regenAction === "rewrite_title"} disabled={writeDisabled} />
+            <Input value={edit.h1} onChange={(e) => field("h1", e.target.value)} disabled={!isAdmin} placeholder="No H1 drafted yet" />
+          </div>
+
+          <div className="space-y-1.5">
+            <SectionHeader title="Meta Description" copyText={edit.metaDescription} action="rewrite_meta" onRegenerate={doRegenerate} regenerating={regenAction === "rewrite_meta"} disabled={writeDisabled} />
+            <Textarea rows={3} value={edit.metaDescription} onChange={(e) => field("metaDescription", e.target.value)} disabled={!isAdmin} placeholder="No meta description drafted yet" />
+            <p className="text-[11px] text-muted-foreground">{edit.metaDescription.length}/158 characters</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <SectionHeader title="Content Expansion" copyText={edit.contentExpansion} action="expand_content" onRegenerate={doRegenerate} regenerating={regenAction === "expand_content"} disabled={writeDisabled} />
+            <Textarea rows={8} className="font-mono text-xs" value={edit.contentExpansion} onChange={(e) => field("contentExpansion", e.target.value)} disabled={!isAdmin} placeholder="No content drafted yet" />
+          </div>
+
+          <div className="space-y-1.5">
+            <SectionHeader title="FAQ" copyText={faqText} action="generate_faq" onRegenerate={doRegenerate} regenerating={regenAction === "generate_faq"} disabled={writeDisabled} />
+            {draft && draft.faq.length > 0 ? (
+              <ul className="space-y-2">
+                {draft.faq.map((f, i) => (
+                  <li key={i} className="rounded-md border p-2.5 text-sm">
+                    <p className="font-medium text-[#1e3a5f]">{f.question}</p>
+                    <p className="mt-0.5 text-muted-foreground">{f.answer}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No FAQ drafted yet.</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <SectionHeader title="Internal Links" copyText={linksText} action="add_internal_links" onRegenerate={doRegenerate} regenerating={regenAction === "add_internal_links"} disabled={writeDisabled} />
+            {draft && draft.internalLinks.length > 0 ? (
+              <ul className="space-y-2">
+                {draft.internalLinks.map((l, i) => (
+                  <li key={i} className="rounded-md border p-2.5 text-sm">
+                    <p className="font-medium text-[#1e3a5f]">
+                      {l.anchor} <span className="font-normal text-muted-foreground">→ {l.targetPath}</span>
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{l.rationale}</p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">No internal links drafted yet.</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <SectionHeader title="Service / FAQ Schema (JSON-LD)" copyText={edit.schema} action="generate_schema" onRegenerate={doRegenerate} regenerating={regenAction === "generate_schema"} disabled={writeDisabled} />
+            <Textarea rows={8} className="font-mono text-xs" value={edit.schema} onChange={(e) => field("schema", e.target.value)} disabled={!isAdmin} placeholder="No schema drafted yet" />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 border-t pt-3">
+            {dirty && <span className="text-xs text-amber-700">Unsaved edits</span>}
+            <Button type="button" size="sm" variant="outline" disabled={writeDisabled || !dirty} onClick={onSave}>
+              {save.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+              Save edits
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function BusinessImpactPanel({ data, loading }: { data?: BusinessImpact; loading: boolean }) {
+  const [show, setShow] = useState(false);
+  const fmtMoney = (n: number) => `$${Math.round(n).toLocaleString()}`;
+  const rows = data
+    ? [
+        { label: "Clicks / mo", cur: data.current.clicks, proj: data.projected.clicks },
+        { label: "Leads", cur: data.current.leads, proj: data.projected.leads },
+        { label: "Appointments", cur: data.current.appointments, proj: data.projected.appointments },
+        { label: "Estimates", cur: data.current.estimates, proj: data.projected.estimates },
+      ]
+    : [];
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base text-[#1e3a5f]">
+              <DollarSign className="h-4 w-4 text-[#ff6b35]" /> Projected Business Impact
+            </CardTitle>
+            <CardDescription>Estimated upside if drafted optimizations are approved and rankings improve.</CardDescription>
+          </div>
+          <button onClick={() => setShow((s) => !s)} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+            <Info className="h-3.5 w-3.5" /> {show ? "Hide" : "Assumptions"}
+          </button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex items-center gap-2 py-4 text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Calculating…
+          </div>
+        ) : !data ? (
+          <p className="text-sm text-muted-foreground">No data yet.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {rows.map((r) => (
+                <div key={r.label} className="rounded-lg border p-3">
+                  <p className="text-xs text-muted-foreground">{r.label}</p>
+                  <p className="text-lg font-bold text-[#1e3a5f]">{fmtInt(r.proj)}</p>
+                  <p className="text-[11px] text-muted-foreground">now {fmtInt(r.cur)}</p>
+                </div>
+              ))}
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <p className="text-xs text-emerald-700">Est. revenue / mo</p>
+                <p className="text-lg font-bold text-emerald-700">{fmtMoney(data.projected.revenue)}</p>
+                <p className="text-[11px] text-emerald-700">+{fmtMoney(data.deltaRevenue)}</p>
+              </div>
+            </div>
+            {show && (
+              <div className="mt-3 space-y-1 rounded-lg border bg-slate-50 p-3 text-xs text-muted-foreground">
+                <p className="font-semibold text-[#1e3a5f]">Estimate assumptions (placeholder until live CRM attribution lands):</p>
+                <ul className="grid grid-cols-2 gap-x-4 gap-y-0.5 sm:grid-cols-3">
+                  <li>Click → lead: {fmtPct(data.conversions.clickToLead)}</li>
+                  <li>Lead → appointment: {fmtPct(data.conversions.leadToAppointment)}</li>
+                  <li>Appt → estimate: {fmtPct(data.conversions.appointmentToEstimate)}</li>
+                  <li>Estimate → won: {fmtPct(data.conversions.estimateToWon)}</li>
+                  <li>Avg job value: {fmtMoney(data.conversions.avgJobValue)}</li>
+                </ul>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function OpportunityDrawer({
   opportunity,
   open,
   onClose,
-  onAction,
-  pendingAction,
+  isAdmin,
 }: {
   opportunity: SeoOpportunity | null;
   open: boolean;
   onClose: () => void;
-  onAction: (ids: string[], action: SeoAction) => void;
-  pendingAction: SeoAction | null;
+  isAdmin: boolean;
 }) {
   const o = opportunity;
   return (
@@ -314,51 +706,8 @@ function OpportunityDrawer({
 
               <Separator />
 
-              {/* AI actions */}
-              <div>
-                <p className="text-sm font-semibold text-[#1e3a5f] mb-1">AI Actions</p>
-                <p className="text-xs text-muted-foreground mb-3">Generate optimizations for this page (preview — no changes are published yet).</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {CONTENT_ACTIONS.map((action) => {
-                    const Icon = ACTION_ICONS[action];
-                    const pending = pendingAction === action;
-                    return (
-                      <Button
-                        key={action}
-                        variant="outline"
-                        size="sm"
-                        className="justify-start"
-                        disabled={pendingAction !== null}
-                        onClick={() => onAction([o.id], action)}
-                      >
-                        {pending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Icon className="h-4 w-4 mr-2" />}
-                        {SEO_ACTION_LABELS[action]}
-                      </Button>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="justify-start"
-                    disabled={pendingAction !== null}
-                    onClick={() => onAction([o.id], "request_reindex")}
-                  >
-                    {pendingAction === "request_reindex" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RotateCw className="h-4 w-4 mr-2" />}
-                    {SEO_ACTION_LABELS.request_reindex}
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="justify-start bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                    disabled={pendingAction !== null}
-                    onClick={() => onAction([o.id], "optimize_everything")}
-                  >
-                    {pendingAction === "optimize_everything" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                    {SEO_ACTION_LABELS.optimize_everything}
-                  </Button>
-                </div>
-              </div>
+              {/* AI draft workspace */}
+              <DraftWorkspace opportunity={o} isAdmin={isAdmin} />
             </div>
           </>
         )}
@@ -370,16 +719,23 @@ function OpportunityDrawer({
 /* ── Page ───────────────────────────────────────────────────────────────── */
 
 export default function SeoIntelligence() {
-  const { loading, isAuthenticated } = useAuth();
+  const { loading, isAuthenticated, user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const utils = trpc.useUtils();
 
   const overview = trpc.seo.getOverview.useQuery(undefined, { enabled: isAuthenticated });
   const opportunities = trpc.seo.getOpportunities.useQuery(undefined, { enabled: isAuthenticated });
   const syncStatus = trpc.seo.getSyncStatus.useQuery(undefined, { enabled: isAuthenticated });
+  const businessImpact = trpc.seo.getBusinessImpact.useQuery(undefined, { enabled: isAuthenticated });
 
   const [activeFilters, setActiveFilters] = useState<SeoFilterKey[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [bulkResult, setBulkResult] = useState<{
+    succeeded: number;
+    failed: number;
+    failures: { pageId: number; error: string }[];
+  } | null>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -390,6 +746,7 @@ export default function SeoIntelligence() {
   const invalidate = () => {
     utils.seo.getOpportunities.invalidate();
     utils.seo.getOverview.invalidate();
+    utils.seo.getBusinessImpact.invalidate();
   };
 
   const sync = trpc.seo.sync.useMutation({
@@ -411,10 +768,20 @@ export default function SeoIntelligence() {
     onError: (err) => toast.error(err.message),
   });
 
-  const runAction = trpc.seo.runAction.useMutation({
-    onSuccess: ({ updated }, vars) => {
+  const bulkGenerate = trpc.seo.bulkGenerateOptimization.useMutation({
+    onSuccess: (res, vars) => {
       invalidate();
-      toast.success(`${SEO_ACTION_LABELS[vars.action]} · ${updated.length} page${updated.length === 1 ? "" : "s"} queued`);
+      setBulkResult({
+        succeeded: res.succeeded,
+        failed: res.failed,
+        failures: res.results.filter((r) => !r.ok).map((r) => ({ pageId: r.pageId, error: !r.ok ? r.error : "" })),
+      });
+      const label = SEO_ACTION_LABELS[vars.action];
+      if (res.failed === 0) {
+        toast.success(`${label} · ${res.succeeded} page${res.succeeded === 1 ? "" : "s"} drafted`);
+      } else {
+        toast.message(`${label} · ${res.succeeded} drafted, ${res.failed} failed`);
+      }
     },
     onError: (err) => toast.error(err.message),
   });
@@ -470,14 +837,16 @@ export default function SeoIntelligence() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  const handleAction = (ids: string[], action: SeoAction) => runAction.mutate({ ids, action });
+  const toIds = (ids: string[]) => ids.map(Number).filter(Number.isInteger);
 
   const bulkOptimize = () => {
-    runAction.mutate({ ids: selectedVisible, action: "optimize_everything" });
+    setBulkResult(null);
+    bulkGenerate.mutate({ ids: toIds(selectedVisible), action: "optimize_everything" });
     clearSelection();
   };
   const bulkReindex = () => {
-    runAction.mutate({ ids: selectedVisible, action: "request_reindex" });
+    setBulkResult(null);
+    bulkGenerate.mutate({ ids: toIds(selectedVisible), action: "request_reindex" });
     clearSelection();
   };
   const bulkComplete = () => {
@@ -491,7 +860,6 @@ export default function SeoIntelligence() {
     toast.success("Refreshing SEO data…");
   };
 
-  const pendingAction = runAction.isPending ? runAction.variables?.action ?? null : null;
   const leadsPct = o ? Math.min(100, Math.round((o.organicLeads.thisMonth / o.organicLeads.goal) * 100)) : 0;
 
   return (
@@ -601,6 +969,9 @@ export default function SeoIntelligence() {
           </div>
         )}
 
+        {/* Projected business impact (transparent estimates) */}
+        <BusinessImpactPanel data={businessImpact.data} loading={businessImpact.isLoading} />
+
         {/* SEO Opportunities work queue */}
         <Card>
           <CardHeader>
@@ -649,19 +1020,46 @@ export default function SeoIntelligence() {
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#ff6b35]/30 bg-[#ff6b35]/5 p-2.5">
                 <span className="text-sm font-medium text-[#1e3a5f] px-1">{selectedVisible.length} selected</span>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={runAction.isPending} onClick={bulkOptimize}>
-                    <Sparkles className="h-4 w-4 mr-1.5" /> Optimize Selected
+                  <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkOptimize}>
+                    {bulkGenerate.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />} Optimize Selected
                   </Button>
-                  <Button size="sm" variant="outline" disabled={runAction.isPending} onClick={bulkReindex}>
+                  <Button size="sm" variant="outline" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkReindex}>
                     <RotateCw className="h-4 w-4 mr-1.5" /> Request Reindex
                   </Button>
-                  <Button size="sm" variant="outline" disabled={setStatus.isPending} onClick={bulkComplete}>
+                  <Button size="sm" variant="outline" disabled={!isAdmin || setStatus.isPending} onClick={bulkComplete}>
                     <CheckCircle2 className="h-4 w-4 mr-1.5" /> Mark Complete
                   </Button>
                 </div>
+                {!isAdmin && <span className="text-xs text-amber-700">Admin only</span>}
                 <button onClick={clearSelection} className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                   <X className="h-3 w-3" /> Clear
                 </button>
+              </div>
+            )}
+
+            {/* Bulk run progress + per-page failures */}
+            {bulkGenerate.isPending && (
+              <div className="mb-3 flex items-center gap-2 rounded-lg border bg-slate-50 p-2.5 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Generating drafts with bounded concurrency — this runs a few pages at a time.
+              </div>
+            )}
+            {bulkResult && (
+              <div className={`mb-3 rounded-lg border p-2.5 text-sm ${bulkResult.failed > 0 ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={bulkResult.failed > 0 ? "text-amber-800" : "text-emerald-800"}>
+                    Bulk run complete · {bulkResult.succeeded} drafted{bulkResult.failed > 0 ? `, ${bulkResult.failed} failed` : ""}
+                  </span>
+                  <button onClick={() => setBulkResult(null)} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                    <X className="h-3 w-3" /> Dismiss
+                  </button>
+                </div>
+                {bulkResult.failures.length > 0 && (
+                  <ul className="mt-1.5 space-y-0.5 text-xs text-amber-800">
+                    {bulkResult.failures.map((f) => (
+                      <li key={f.pageId}>Page #{f.pageId}: {f.error}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 
@@ -725,8 +1123,7 @@ export default function SeoIntelligence() {
                               variant="ghost"
                               size="sm"
                               className="text-[#ff6b35] hover:text-[#ff6b35] hover:bg-[#ff6b35]/10 whitespace-nowrap"
-                              disabled={runAction.isPending}
-                              onClick={() => handleAction([r.id], "optimize_everything")}
+                              onClick={() => setDrawerId(r.id)}
                             >
                               <Sparkles className="h-3.5 w-3.5 mr-1" /> Optimize
                             </Button>
@@ -746,8 +1143,7 @@ export default function SeoIntelligence() {
         opportunity={drawerOpportunity}
         open={drawerId !== null}
         onClose={() => setDrawerId(null)}
-        onAction={handleAction}
-        pendingAction={pendingAction}
+        isAdmin={isAdmin}
       />
 
       <DashboardFooter />
