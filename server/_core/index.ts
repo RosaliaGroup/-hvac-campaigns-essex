@@ -16,6 +16,7 @@ import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
 import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
+import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -58,6 +59,8 @@ async function startServer() {
   registerGoogleCalendarRoutes(app);
   // SEO Intelligence — Search Console sync (POST /api/seo/sync)
   registerSeoSyncRoutes(app);
+  // GA4 Analytics — Analytics Data API sync (POST /api/analytics/ga4/sync)
+  registerGa4SyncRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",
@@ -88,6 +91,8 @@ async function startServer() {
     startSalesDocPoller();
     // Start daily Search Console → cache sync for SEO Intelligence
     startSeoSyncScheduler();
+    // Start daily GA4 Analytics Data API → cache sync for Marketing Analytics
+    startGa4SyncScheduler();
   });
 }
 
