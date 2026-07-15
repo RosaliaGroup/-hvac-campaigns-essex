@@ -1,9 +1,11 @@
 import { describe, it, expect, afterEach } from "vitest";
 import {
   normalizeGa4Date,
+  normalizeLandingPage,
   parseRunReport,
   fetchWithRetry,
   getGa4PropertyId,
+  isValidGa4PropertyId,
   Ga4UnavailableError,
 } from "./ga4";
 
@@ -15,6 +17,40 @@ describe("normalizeGa4Date", () => {
     expect(normalizeGa4Date("2026-07-14")).toBe("2026-07-14");
     expect(normalizeGa4Date("")).toBe("");
     expect(normalizeGa4Date(undefined)).toBe("");
+  });
+});
+
+describe("normalizeLandingPage (URL normalization)", () => {
+  it("adds a leading slash to a bare path", () => {
+    expect(normalizeLandingPage("hvac-newark-nj")).toBe("/hvac-newark-nj");
+  });
+  it("keeps an already-rooted path (with query) intact", () => {
+    expect(normalizeLandingPage("/services?x=1")).toBe("/services?x=1");
+  });
+  it("reduces a full URL to path + query so the same page never splits", () => {
+    expect(normalizeLandingPage("https://mechanicalenterprise.com/hvac?ref=a")).toBe("/hvac?ref=a");
+    // Both forms collapse to one cache key.
+    expect(normalizeLandingPage("https://mechanicalenterprise.com/hvac?ref=a")).toBe(normalizeLandingPage("/hvac?ref=a"));
+  });
+  it("preserves GA4 placeholder tokens verbatim", () => {
+    expect(normalizeLandingPage("(not set)")).toBe("(not set)");
+    expect(normalizeLandingPage("(direct)")).toBe("(direct)");
+  });
+  it("maps empty / missing to empty string", () => {
+    expect(normalizeLandingPage("")).toBe("");
+    expect(normalizeLandingPage(undefined)).toBe("");
+  });
+});
+
+describe("isValidGa4PropertyId", () => {
+  it("accepts a numeric property id", () => {
+    expect(isValidGa4PropertyId("480827123")).toBe(true);
+  });
+  it("rejects measurement ids, UA ids and junk", () => {
+    expect(isValidGa4PropertyId("G-ABC123")).toBe(false);
+    expect(isValidGa4PropertyId("UA-12345-1")).toBe(false);
+    expect(isValidGa4PropertyId("")).toBe(false);
+    expect(isValidGa4PropertyId("480827123 ")).toBe(false);
   });
 });
 
@@ -68,17 +104,26 @@ describe("parseRunReport", () => {
 
 describe("getGa4PropertyId", () => {
   const prev = process.env.GA4_PROPERTY_ID;
+  const prevAlt = process.env.GA4_ANALYTICS_PROPERTY_ID;
   afterEach(() => {
     if (prev === undefined) delete process.env.GA4_PROPERTY_ID;
     else process.env.GA4_PROPERTY_ID = prev;
+    if (prevAlt === undefined) delete process.env.GA4_ANALYTICS_PROPERTY_ID;
+    else process.env.GA4_ANALYTICS_PROPERTY_ID = prevAlt;
   });
   it("strips a properties/ prefix and trims", () => {
+    delete process.env.GA4_ANALYTICS_PROPERTY_ID;
     process.env.GA4_PROPERTY_ID = " properties/480827123 ";
     expect(getGa4PropertyId()).toBe("480827123");
   });
   it("returns empty string when unset", () => {
     delete process.env.GA4_PROPERTY_ID;
     delete process.env.GA4_ANALYTICS_PROPERTY_ID;
+    expect(getGa4PropertyId()).toBe("");
+  });
+  it("rejects a non-numeric value (e.g. a G- measurement id) → empty", () => {
+    delete process.env.GA4_ANALYTICS_PROPERTY_ID;
+    process.env.GA4_PROPERTY_ID = "G-ABC123";
     expect(getGa4PropertyId()).toBe("");
   });
 });
@@ -101,6 +146,28 @@ describe("fetchWithRetry", () => {
     const res = await fetchWithRetry("u", {}, { fetchImpl: async () => resp(seq[i++]), sleepImpl: noSleep, baseDelayMs: 1 });
     expect(res.status).toBe(200);
     expect(i).toBe(3);
+  });
+
+  it("honours a Retry-After header (seconds → ms) over exponential backoff", async () => {
+    const delays: number[] = [];
+    const record = async (ms: number) => { delays.push(ms); };
+    const seq = [
+      resp(429, { "retry-after": "2" }), // → 2000ms
+      resp(200),
+    ];
+    let i = 0;
+    const res = await fetchWithRetry("u", {}, { fetchImpl: async () => seq[i++], sleepImpl: record, baseDelayMs: 500 });
+    expect(res.status).toBe(200);
+    expect(delays).toEqual([2000]); // used Retry-After, not baseDelay*2^0 = 500
+  });
+
+  it("falls back to exponential backoff when no Retry-After is present", async () => {
+    const delays: number[] = [];
+    const record = async (ms: number) => { delays.push(ms); };
+    const seq = [resp(503), resp(503), resp(200)];
+    let i = 0;
+    await fetchWithRetry("u", {}, { fetchImpl: async () => seq[i++], sleepImpl: record, baseDelayMs: 100 });
+    expect(delays).toEqual([100, 200]); // 100*2^0, 100*2^1
   });
 
   it("does not retry a non-retryable 4xx", async () => {

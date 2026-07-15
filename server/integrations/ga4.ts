@@ -24,13 +24,31 @@ export class Ga4UnavailableError extends Error {
 }
 
 /**
+ * A GA4 property id is the numeric id from the property settings (NOT the
+ * "G-XXXX" measurement id, NOT a "UA-…" Universal Analytics id). Validated so a
+ * mis-pasted measurement id degrades to "unconfigured" instead of 400-ing GA4.
+ */
+export function isValidGa4PropertyId(id: string): boolean {
+  return /^[0-9]+$/.test(id);
+}
+
+/**
  * The GA4 property to sync (numeric id, e.g. "480827123"). Accepts a bare id or
- * a "properties/480827123" form. Empty string when unconfigured — the sync
- * reports "unavailable" and the dashboard stays empty rather than throwing.
+ * a "properties/480827123" form. Returns "" when unconfigured OR when the value
+ * is not a valid numeric property id — the sync reports "unconfigured" and the
+ * dashboard stays empty rather than throwing.
  */
 export function getGa4PropertyId(): string {
   const raw = (process.env.GA4_PROPERTY_ID || process.env.GA4_ANALYTICS_PROPERTY_ID || "").trim();
-  return raw.replace(/^properties\//, "");
+  const cleaned = raw.replace(/^properties\//, "");
+  if (!cleaned) return "";
+  if (!isValidGa4PropertyId(cleaned)) {
+    console.warn(
+      `[GA4] GA4_PROPERTY_ID="${raw}" is not a numeric property id (expected e.g. "480827123", not a "G-"/"UA-" id) — analytics disabled`,
+    );
+    return "";
+  }
+  return cleaned;
 }
 
 /* ── Report definition (the single runReport this integration issues) ────── */
@@ -64,6 +82,29 @@ export function normalizeGa4Date(value: string | undefined | null): string {
   const s = (value ?? "").trim();
   if (/^\d{8}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
   return s;
+}
+
+/**
+ * Normalise a GA4 `landingPage` value to a stable site-relative path so the
+ * cache never splits the same page across "/x", "x" and "https://host/x", and
+ * the dashboard's "top landing pages" grouping is exact.
+ *
+ * GA4 placeholder tokens like "(not set)" / "(direct)" are preserved verbatim.
+ * A full URL is reduced to path + query; a bare path gets a leading slash.
+ */
+export function normalizeLandingPage(value: string | undefined | null): string {
+  const s = (value ?? "").trim();
+  if (!s) return "";
+  if (s.startsWith("(") && s.endsWith(")")) return s; // "(not set)", "(direct)", …
+  if (/^https?:\/\//i.test(s)) {
+    try {
+      const u = new URL(s);
+      return `${u.pathname || "/"}${u.search}`;
+    } catch {
+      /* fall through to the bare-path handling */
+    }
+  }
+  return s.startsWith("/") ? s : `/${s}`;
 }
 
 export type Ga4ReportRow = {
@@ -101,7 +142,7 @@ export function parseRunReport(json: unknown): Ga4ReportRow[] {
       source: (d[1]?.value ?? "").slice(0, 255),
       medium: (d[2]?.value ?? "").slice(0, 255),
       campaign: (d[3]?.value ?? "").slice(0, 512),
-      landingPage: (d[4]?.value ?? "").slice(0, 1024),
+      landingPage: normalizeLandingPage(d[4]?.value).slice(0, 1024),
       channelGroup: (d[5]?.value ?? "").slice(0, 64),
       pageViews: Math.round(num(m[0]?.value)),
       sessions: Math.round(num(m[1]?.value)),

@@ -108,9 +108,22 @@ describe("buildAuthorizeUrl", () => {
     expect(url).toContain(encodeURIComponent("https://app/cb"));
   });
 
-  it("requests BOTH Calendar and Search Console scopes in one consent flow", () => {
+  it("requests Calendar, Search Console AND GA4 Analytics scopes in one consent flow", () => {
     expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/calendar.events"));
     expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/webmasters.readonly"));
+    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/analytics.readonly"));
+  });
+
+  it("preserves every required scope in the authorization URL (nothing dropped)", () => {
+    // Adding analytics.readonly must not remove any previously-granted scope.
+    for (const scope of GOOGLE_OAUTH_SCOPES) {
+      expect(url).toContain(encodeURIComponent(scope));
+    }
+    expect(GOOGLE_OAUTH_SCOPES).toContain("openid");
+    expect(GOOGLE_OAUTH_SCOPES).toContain("email");
+    expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/calendar.events");
+    expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/webmasters.readonly");
+    expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/analytics.readonly");
   });
 
   it("exposes the exact scope set", () => {

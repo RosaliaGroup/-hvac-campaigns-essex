@@ -3,13 +3,16 @@
  *
  *   POST /api/analytics/ga4/sync — pull the rolling window from the GA4 Data API
  *                                  into the cache. Intended for cron / external
- *                                  triggers, so it is guarded by a shared secret
+ *                                  triggers, so it REQUIRES a shared secret
  *                                  (GA4_SYNC_CRON_SECRET) rather than a user
- *                                  session. The in-app button uses the admin-only
- *                                  tRPC `analytics.sync` instead.
+ *                                  session — the endpoint is DISABLED (503) until
+ *                                  that secret is configured, so it can never run
+ *                                  unauthenticated. The in-app button uses the
+ *                                  admin-only tRPC `analytics.sync` instead.
  *
- * A once-daily interval also runs the sync in-process (mirrors the SEO / SMS /
- * QBO schedulers), with one run shortly after boot.
+ * An optional once-daily interval can also run the sync in-process, but it is
+ * OPT-IN (GA4_SYNC_SCHEDULER_ENABLED must be "true") — off by default so no
+ * automatic GA4 traffic starts until it is deliberately enabled.
  */
 import type { Express, Request, Response } from "express";
 import { runGa4Sync } from "./sync";
@@ -17,14 +20,15 @@ import { runGa4Sync } from "./sync";
 export function registerGa4SyncRoutes(app: Express) {
   app.post("/api/analytics/ga4/sync", async (req: Request, res: Response) => {
     const secret = process.env.GA4_SYNC_CRON_SECRET;
-    if (secret) {
-      const provided = req.header("x-ga4-sync-secret");
-      if (provided !== secret) {
-        res.status(401).json({ ok: false, error: "unauthorized" });
-        return;
-      }
-    } else {
-      console.warn("[GA4] POST /api/analytics/ga4/sync is unauthenticated — set GA4_SYNC_CRON_SECRET to lock it down");
+    // Fail closed: without a configured secret the endpoint is disabled entirely.
+    if (!secret) {
+      res.status(503).json({ ok: false, error: "sync endpoint disabled — set GA4_SYNC_CRON_SECRET" });
+      return;
+    }
+    const provided = req.header("x-ga4-sync-secret");
+    if (provided !== secret) {
+      res.status(401).json({ ok: false, error: "unauthorized" });
+      return;
     }
 
     try {
@@ -40,11 +44,13 @@ export function registerGa4SyncRoutes(app: Express) {
 }
 
 export function startGa4SyncScheduler(): void {
-  // Opt-out flag (mirrors SEO_SYNC_SCHEDULER_ENABLED). Even when enabled the sync
-  // is safe on every instance: runGa4Sync holds a MySQL advisory lock, so only one
-  // replica actually runs while the others no-op ("already_running").
-  if (process.env.GA4_SYNC_SCHEDULER_ENABLED === "false") {
-    console.log("[GA4] In-process sync scheduler disabled via GA4_SYNC_SCHEDULER_ENABLED=false");
+  // OPT-IN: the scheduler stays off unless GA4_SYNC_SCHEDULER_ENABLED === "true".
+  // This keeps automated GA4 traffic disabled by default (nothing runs until it
+  // is deliberately turned on). When enabled the sync is still safe on every
+  // instance: runGa4Sync holds a MySQL advisory lock, so only one replica runs
+  // while the others no-op ("already_running").
+  if (process.env.GA4_SYNC_SCHEDULER_ENABLED !== "true") {
+    console.log("[GA4] In-process sync scheduler disabled (default) — set GA4_SYNC_SCHEDULER_ENABLED=true to enable");
     return;
   }
 
