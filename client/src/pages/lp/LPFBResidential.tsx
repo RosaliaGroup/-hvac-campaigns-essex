@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,16 +18,25 @@ export default function LPFBResidential() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  // Stable per-mount idempotency key for the GA4 conversion.
+  const [convKey] = useState(() => `lp_fb_residential-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      // Existing Facebook Pixel + Google Ads conversions — left untouched.
       if (typeof window !== "undefined" && (window as any).fbq) {
         (window as any).fbq("track", "Lead");
       }
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/fb_residential_lp" });
       }
+      // Additive GA4 conversion (no PII) — fires only when GA4 is configured.
+      trackConversion(
+        "residential_quote_request",
+        { form_type: "lp_fb_residential", service_category: "residential", customer_segment: "residential", lead_source_surface: "lp_fb_residential" },
+        { dedupeKey: convKey },
+      );
     },
     onError: () => {
       toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });

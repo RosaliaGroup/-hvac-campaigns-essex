@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +18,22 @@ export default function LPFBCommercial() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "", sqft: "" });
   const [submitted, setSubmitted] = useState(false);
+  // Stable per-mount idempotency key for the GA4 conversion.
+  const [convKey] = useState(() => `lp_fb_commercial-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      // Existing Facebook Pixel conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).fbq) {
         (window as any).fbq("track", "Lead");
       }
+      // Additive GA4 conversion (no PII) — fires only when GA4 is configured.
+      trackConversion(
+        "commercial_quote_request",
+        { form_type: "lp_fb_commercial", service_category: "commercial", customer_segment: "commercial", lead_source_surface: "lp_fb_commercial" },
+        { dedupeKey: convKey },
+      );
     },
     onError: () => {
       toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });

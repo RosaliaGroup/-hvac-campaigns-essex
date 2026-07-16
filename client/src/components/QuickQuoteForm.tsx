@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
+import { trackConversion, mapServiceToConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,9 +30,29 @@ export default function QuickQuoteForm({
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  // Holds the current submission's idempotency key + the service picked at
+  // submit time, so the GA4 conversion fires once with the right (non-PII)
+  // classification even though formData is reset inside onSuccess.
+  const pendingRef = useRef<{ key: string; service: string } | null>(null);
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
+      // Confirmed success (CRM lead persisted). Fire exactly one GA4 conversion,
+      // keyed on this submission so retries/double-clicks/re-renders can't dupe.
+      const pending = pendingRef.current;
+      if (pending) {
+        const mapping = mapServiceToConversion(pending.service);
+        trackConversion(
+          mapping.event,
+          {
+            form_type: "quick_quote_form",
+            service_category: mapping.service_category,
+            customer_segment: mapping.customer_segment,
+            lead_source_surface: "quick_quote_form",
+          },
+          { dedupeKey: pending.key },
+        );
+      }
       toast.success("Quote request received! We'll contact you within 24 hours.");
       setSubmitted(true);
       setFormData({
@@ -54,6 +75,12 @@ export default function QuickQuoteForm({
       toast.error("Please provide either email or phone number");
       return;
     }
+
+    // Fresh idempotency key per submit attempt; consumed once in onSuccess.
+    pendingRef.current = {
+      key: `quick_quote-${Date.now()}-${Math.floor(Math.random() * 1e9)}`,
+      service: formData.service,
+    };
 
     createCapture.mutate({
       name: formData.name || undefined,
