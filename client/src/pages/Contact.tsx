@@ -122,7 +122,8 @@ export default function Contact() {
       <section className="py-20 bg-secondary/30">
         <div className="container">
           <div className="max-w-3xl mx-auto">
-            <QuickQuoteForm 
+            <QuickQuoteForm
+              source="contact"
               title="Request a Free Quote"
               description="Fill out the form below and we'll get back to you within 24 hours with a detailed quote for your HVAC project"
             />
