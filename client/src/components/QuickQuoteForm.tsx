@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
-import { trackConversion, mapServiceToConversion } from "@/lib/conversions";
+import { trackConversion, resolveQuickQuoteConversion, type QuickQuoteSource } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,12 +15,20 @@ interface QuickQuoteFormProps {
   title?: string;
   description?: string;
   defaultService?: string;
+  /**
+   * Where this form is placed. Pass `"contact"` on the Contact page so a generic
+   * submission (no specific service picked) resolves to the `contact_form_submit`
+   * conversion. A deliberately-picked high-value service still resolves to its own
+   * event (e.g. replacement/installation) — see `resolveQuickQuoteConversion`.
+   */
+  source?: QuickQuoteSource;
 }
 
-export default function QuickQuoteForm({ 
-  title = "Get a Free Quote", 
+export default function QuickQuoteForm({
+  title = "Get a Free Quote",
   description = "Tell us about your HVAC needs and we'll get back to you within 24 hours",
-  defaultService 
+  defaultService,
+  source,
 }: QuickQuoteFormProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -33,7 +41,7 @@ export default function QuickQuoteForm({
   // Holds the current submission's idempotency key + the service picked at
   // submit time, so the GA4 conversion fires once with the right (non-PII)
   // classification even though formData is reset inside onSuccess.
-  const pendingRef = useRef<{ key: string; service: string } | null>(null);
+  const pendingRef = useRef<{ key: string; service: string; source: QuickQuoteSource } | null>(null);
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -41,14 +49,14 @@ export default function QuickQuoteForm({
       // keyed on this submission so retries/double-clicks/re-renders can't dupe.
       const pending = pendingRef.current;
       if (pending) {
-        const mapping = mapServiceToConversion(pending.service);
+        const mapping = resolveQuickQuoteConversion(pending.source, pending.service);
         trackConversion(
           mapping.event,
           {
             form_type: "quick_quote_form",
             service_category: mapping.service_category,
             customer_segment: mapping.customer_segment,
-            lead_source_surface: "quick_quote_form",
+            lead_source_surface: pending.source === "contact" ? "contact_page" : "quick_quote_form",
           },
           { dedupeKey: pending.key },
         );
@@ -80,6 +88,7 @@ export default function QuickQuoteForm({
     pendingRef.current = {
       key: `quick_quote-${Date.now()}-${Math.floor(Math.random() * 1e9)}`,
       service: formData.service,
+      source,
     };
 
     createCapture.mutate({
@@ -174,6 +183,7 @@ export default function QuickQuoteForm({
                   <SelectItem value="Heat Pump Installation">Heat Pump Installation</SelectItem>
                   <SelectItem value="AC Installation">AC Installation</SelectItem>
                   <SelectItem value="Heating Installation">Heating Installation</SelectItem>
+                  <SelectItem value="HVAC System Replacement">HVAC System Replacement</SelectItem>
                   <SelectItem value="VRF/VRV System">VRF/VRV System</SelectItem>
                   <SelectItem value="Maintenance Subscription">Maintenance Subscription</SelectItem>
                   <SelectItem value="Commercial HVAC">Commercial HVAC</SelectItem>
