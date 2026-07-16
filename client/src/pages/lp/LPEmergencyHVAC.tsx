@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +18,23 @@ export default function LPEmergencyHVAC() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  // Stable per-mount idempotency key for the GA4 conversion (this LP shows a
+  // one-time confirmation, so one key per mount is exactly one conversion).
+  const [convKey] = useState(() => `lp_emergency-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      // Existing Google Ads conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/emergency_lp" });
       }
+      // Additive GA4 conversion (no PII) — fires only when GA4 is configured.
+      trackConversion(
+        "service_request",
+        { form_type: "lp_emergency", service_category: "emergency", customer_segment: "residential", lead_source_surface: "lp_emergency" },
+        { dedupeKey: convKey },
+      );
     },
     onError: () => {
       toast({ title: "Something went wrong", description: "Call us now: (862) 423-9396", variant: "destructive" });

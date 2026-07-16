@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,14 +18,22 @@ export default function LPHeatPumpRebates() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  // Stable per-mount idempotency key for the GA4 conversion.
+  const [convKey] = useState(() => `lp_heat_pump-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
-      // Google Ads conversion tracking
+      // Existing Google Ads conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/heat_pump_lp" });
       }
+      // Additive GA4 conversion (no PII) — fires only when GA4 is configured.
+      trackConversion(
+        "installation_request",
+        { form_type: "lp_heat_pump", service_category: "heat_pump", customer_segment: "residential", lead_source_surface: "lp_heat_pump" },
+        { dedupeKey: convKey },
+      );
     },
     onError: () => {
       toast({ title: "Something went wrong", description: "Please call us directly at (862) 423-9396", variant: "destructive" });

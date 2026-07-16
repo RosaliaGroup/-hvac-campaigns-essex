@@ -337,6 +337,13 @@
       "when": 1784156013971,
       "tag": "0047_ga4_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "5",
+      "when": 1784159104665,
+      "tag": "0048_technician_contact_details",
+      "breakpoints": true
     }
   ]
 }
