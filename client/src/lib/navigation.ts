@@ -169,6 +169,8 @@ export const DEPARTMENTS: NavDepartment[] = [
     icon: "BarChart3",
     primaryPath: "/analytics",
     items: [
+      // Executive Dashboards — admin-only (empty roles array => no non-admin role qualifies).
+      { label: "Executive Dashboards", path: "/executive-dashboards", icon: "BarChart3", roles: [] },
       { label: "Analytics Dashboard", path: "/analytics", icon: "BarChart3", roles: ["marketing", CRM] },
       { label: "AI Take-Off", path: "/takeoff-ai", icon: "Ruler", roles: [CRM] },
     ],
@@ -197,6 +199,7 @@ export const DEPARTMENTS: NavDepartment[] = [
  */
 export const INTERNAL_ROUTE_PREFIXES: string[] = [
   "/command-center",
+  "/executive-dashboards",
   "/marketing-autopilot",
   "/marketing-dashboard",
   "/marketing/analytics",
