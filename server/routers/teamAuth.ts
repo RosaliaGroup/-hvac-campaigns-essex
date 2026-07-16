@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import * as db from "../db";
+import type { TeamMemberContactFields } from "../db";
+import { formatUsPhone } from "@shared/validation";
 import { sdk } from "../_core/sdk";
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
@@ -27,15 +29,140 @@ async function createTeamSession(memberId: number, name: string): Promise<string
   );
 }
 
+/** Resolve the logged-in team member's id from a "team:<id>" session, else null. */
+function currentTeamMemberId(ctx: { user?: { openId?: string | null } | null }): number | null {
+  const openId = ctx.user?.openId;
+  if (typeof openId !== "string" || !openId.startsWith(TEAM_SESSION_PREFIX)) return null;
+  const id = parseInt(openId.slice(TEAM_SESSION_PREFIX.length), 10);
+  return Number.isFinite(id) ? id : null;
+}
+
+/** ~1.5MB base64 ceiling; the client resizes photos well below this. */
+const PHOTO_MAX_LEN = 2_000_000;
+
+/**
+ * Optional contact-detail inputs shared by invite / update / updateMyProfile.
+ * `.nullish()` = may be omitted (leave unchanged) or null (clear the value).
+ * Deliberately EXCLUDES name/email/role/status so self-service callers cannot
+ * change identity, permissions, or account status.
+ */
+const contactInputSchema = z.object({
+  mobilePhone: z.string().trim().nullish(),
+  streetAddress: z.string().trim().max(255).nullish(),
+  city: z.string().trim().max(120).nullish(),
+  state: z.string().trim().max(2).nullish(),
+  zipCode: z.string().trim().max(10).nullish(),
+  emergencyContactName: z.string().trim().max(255).nullish(),
+  emergencyContactRelationship: z.string().trim().max(120).nullish(),
+  emergencyContactPhone: z.string().trim().nullish(),
+  preferredContactMethod: z.enum(["phone", "text", "email"]).nullish(),
+  preferredLanguage: z.string().trim().max(64).nullish(),
+  profilePhoto: z
+    .string()
+    .max(PHOTO_MAX_LEN, "Photo is too large — please choose a smaller image.")
+    .nullish(),
+});
+type ContactInput = z.infer<typeof contactInputSchema>;
+
+/** Trim a string; treat empty/whitespace as null (clear). Preserve undefined (unchanged). */
+function cleanStr(v: string | null | undefined): string | null | undefined {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+  const t = v.trim();
+  return t === "" ? null : t;
+}
+
+/**
+ * Validate + normalize contact inputs into DB-ready fields: format US phones,
+ * upper-case the state code, blank strings become null, and only keys that were
+ * actually provided are returned (so updates never overwrite untouched columns).
+ */
+function processContactFields(input: ContactInput): TeamMemberContactFields {
+  const out: TeamMemberContactFields = {};
+
+  if (input.streetAddress !== undefined) out.streetAddress = cleanStr(input.streetAddress) ?? null;
+  if (input.city !== undefined) out.city = cleanStr(input.city) ?? null;
+  if (input.state !== undefined) {
+    const s = cleanStr(input.state);
+    out.state = s ? s.toUpperCase() : null;
+  }
+  if (input.zipCode !== undefined) out.zipCode = cleanStr(input.zipCode) ?? null;
+  if (input.emergencyContactName !== undefined) out.emergencyContactName = cleanStr(input.emergencyContactName) ?? null;
+  if (input.emergencyContactRelationship !== undefined) out.emergencyContactRelationship = cleanStr(input.emergencyContactRelationship) ?? null;
+  if (input.preferredContactMethod !== undefined) out.preferredContactMethod = input.preferredContactMethod ?? null;
+  if (input.preferredLanguage !== undefined) out.preferredLanguage = cleanStr(input.preferredLanguage) ?? null;
+
+  if (input.profilePhoto !== undefined) {
+    const p = input.profilePhoto;
+    if (p === null || p.trim() === "") {
+      out.profilePhoto = null;
+    } else if (/^data:image\/(png|jpe?g|webp);base64,/.test(p)) {
+      out.profilePhoto = p;
+    } else {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "Profile photo must be an image file." });
+    }
+  }
+
+  if (input.mobilePhone !== undefined) {
+    const raw = cleanStr(input.mobilePhone);
+    if (raw === null) {
+      out.mobilePhone = null;
+    } else {
+      const formatted = formatUsPhone(raw);
+      if (!formatted) throw new TRPCError({ code: "BAD_REQUEST", message: "Enter a valid 10-digit US mobile phone number." });
+      out.mobilePhone = formatted;
+    }
+  }
+  if (input.emergencyContactPhone !== undefined) {
+    const raw = cleanStr(input.emergencyContactPhone);
+    if (raw === null) {
+      out.emergencyContactPhone = null;
+    } else {
+      const formatted = formatUsPhone(raw);
+      if (!formatted) throw new TRPCError({ code: "BAD_REQUEST", message: "Enter a valid 10-digit emergency contact phone number." });
+      out.emergencyContactPhone = formatted;
+    }
+  }
+
+  return out;
+}
+
+/** Safe, client-facing projection of a team member (no passwordHash / tokens). */
+function publicProfile(m: NonNullable<Awaited<ReturnType<typeof db.getTeamMemberById>>>) {
+  return {
+    id: m.id,
+    email: m.email,
+    name: m.name,
+    firstName: m.firstName,
+    lastName: m.lastName,
+    role: m.role,
+    status: m.status,
+    mobilePhone: m.mobilePhone,
+    streetAddress: m.streetAddress,
+    city: m.city,
+    state: m.state,
+    zipCode: m.zipCode,
+    emergencyContactName: m.emergencyContactName,
+    emergencyContactRelationship: m.emergencyContactRelationship,
+    emergencyContactPhone: m.emergencyContactPhone,
+    preferredContactMethod: m.preferredContactMethod,
+    preferredLanguage: m.preferredLanguage,
+    profilePhoto: m.profilePhoto,
+  };
+}
+
 export const teamAuthRouter = router({
   /**
    * Owner invites a new team member by email.
    * Protected — only logged-in owner/admin can invite.
    */
   invite: adminProcedure
-    .input(z.object({
-      email: z.string().email(),
-      name: z.string().min(1).max(100),
+    .input(contactInputSchema.extend({
+      // Required on create (validation spec): first/last name, mobile phone, work email.
+      firstName: z.string().trim().min(1, "First name is required").max(120),
+      lastName: z.string().trim().min(1, "Last name is required").max(120),
+      email: z.string().trim().email("Enter a valid work email address."),
+      mobilePhone: z.string().trim().min(1, "Mobile phone is required"),
       role: z.enum(["admin", "member", "viewer"]).default("member"),
       origin: z.string().url(),
     }))
@@ -48,13 +175,22 @@ export const teamAuthRouter = router({
       const token = generateToken();
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
+      const firstName = input.firstName.trim();
+      const lastName = input.lastName.trim();
+      // `name` stays the canonical display name used by assignments elsewhere.
+      const name = `${firstName} ${lastName}`.trim();
+      const contact = processContactFields(input); // validates + formats mobilePhone
+
       await db.createTeamMember({
         email: input.email,
-        name: input.name,
+        name,
         role: input.role,
         inviteToken: token,
         inviteExpiresAt: expiresAt,
         invitedBy: ctx.user?.name ?? ctx.user?.email ?? "Owner",
+        firstName,
+        lastName,
+        ...contact,
       });
 
       const inviteUrl = `${input.origin}/accept-invite?token=${token}`;
@@ -62,15 +198,15 @@ export const teamAuthRouter = router({
       // Send invite email directly to the new team member
       const emailSent = await sendTeamInviteEmail(
         input.email,
-        input.name,
+        name,
         inviteUrl,
         ctx.user?.name ?? ctx.user?.email ?? "Owner"
       ).catch(() => false);
 
       // Also notify owner (as backup)
       await notifyOwner({
-        title: `Team Invite Sent: ${input.name} (${input.email})`,
-        content: `You invited ${input.name} (${input.email}) as ${input.role}.${emailSent ? " An invite email was sent directly to them." : " Note: Email delivery failed — send them this link manually:"}\n\n${inviteUrl}\n\nExpires in 7 days.`,
+        title: `Team Invite Sent: ${name} (${input.email})`,
+        content: `You invited ${name} (${input.email}) as ${input.role}.${emailSent ? " An invite email was sent directly to them." : " Note: Email delivery failed — send them this link manually:"}\n\n${inviteUrl}\n\nExpires in 7 days.`,
       }).catch(() => {});
 
       return { success: true, inviteUrl };
@@ -230,6 +366,9 @@ export const teamAuthRouter = router({
       id: m.id,
       email: m.email,
       name: m.name,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      mobilePhone: m.mobilePhone,
       role: m.role,
       status: m.status,
       invitedBy: m.invitedBy,
@@ -237,6 +376,93 @@ export const teamAuthRouter = router({
       createdAt: m.createdAt,
     }));
   }),
+
+  /**
+   * Full profile of one team member (owner/admin only) — used to populate the
+   * dashboard edit form. Excludes passwordHash / tokens via publicProfile().
+   */
+  get: adminProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      const member = await db.getTeamMemberById(input.id);
+      if (!member) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Team member not found." });
+      }
+      return publicProfile(member);
+    }),
+
+  /**
+   * Admin edit of a team member's identity + contact details.
+   * Does NOT touch passwordHash / tokens / status (status has its own mutation),
+   * so existing login access and assignments are preserved.
+   */
+  update: adminProcedure
+    .input(contactInputSchema.extend({
+      id: z.number(),
+      firstName: z.string().trim().max(120).optional(),
+      lastName: z.string().trim().max(120).optional(),
+      email: z.string().trim().email("Enter a valid work email address.").optional(),
+      role: z.enum(["admin", "member", "viewer"]).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const member = await db.getTeamMemberById(input.id);
+      if (!member) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Team member not found." });
+      }
+
+      // If the work email is changing, guard the unique constraint up-front.
+      if (input.email && input.email.toLowerCase() !== member.email.toLowerCase()) {
+        const clash = await db.getTeamMemberByEmail(input.email);
+        if (clash && clash.id !== member.id) {
+          throw new TRPCError({ code: "CONFLICT", message: "Another team member already uses this email." });
+        }
+      }
+
+      const patch: Parameters<typeof db.updateTeamMember>[1] = { ...processContactFields(input) };
+      if (input.email !== undefined) patch.email = input.email;
+      if (input.role !== undefined) patch.role = input.role;
+
+      // Recompose the display `name` whenever first/last changes, keeping the
+      // untouched half from the existing record.
+      if (input.firstName !== undefined || input.lastName !== undefined) {
+        const first = (input.firstName ?? member.firstName ?? "").trim();
+        const last = (input.lastName ?? member.lastName ?? "").trim();
+        patch.firstName = first || null;
+        patch.lastName = last || null;
+        const composed = `${first} ${last}`.trim();
+        if (composed) patch.name = composed;
+      }
+
+      await db.updateTeamMember(input.id, patch);
+      return { success: true };
+    }),
+
+  /**
+   * The logged-in technician's own profile (field app "My Profile" screen).
+   * Returns null when the session isn't a team member (e.g. OAuth owner).
+   */
+  me: protectedProcedure.query(async ({ ctx }) => {
+    const memberId = currentTeamMemberId(ctx);
+    if (memberId == null) return null;
+    const member = await db.getTeamMemberById(memberId);
+    return member ? publicProfile(member) : null;
+  }),
+
+  /**
+   * Self-service profile update from the field app. Whitelisted to contact
+   * fields only — a technician CANNOT change their name, work email, role,
+   * permissions, status, or work assignments through this endpoint.
+   */
+  updateMyProfile: protectedProcedure
+    .input(contactInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const memberId = currentTeamMemberId(ctx);
+      if (memberId == null) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Your login isn't linked to a technician profile." });
+      }
+      const updated = await db.updateTeamMember(memberId, processContactFields(input));
+      return updated ? publicProfile(updated) : null;
+    }),
 
   /**
    * Suspend or reactivate a team member (owner only).

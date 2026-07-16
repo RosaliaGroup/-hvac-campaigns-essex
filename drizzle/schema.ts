@@ -1,4 +1,4 @@
-import { boolean, decimal, index, int, json, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, decimal, index, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -428,6 +428,27 @@ export const teamMembers = mysqlTable("teamMembers", {
   resetToken: varchar("resetToken", { length: 128 }),
   resetExpiresAt: timestamp("resetExpiresAt"),
   invitedBy: varchar("invitedBy", { length: 255 }),
+  // ── Contact details (added 0047; all nullable so existing rows keep working) ──
+  /** Given name. `name` above stays the canonical display name for assignments. */
+  firstName: varchar("firstName", { length: 120 }),
+  /** Family name. */
+  lastName: varchar("lastName", { length: 120 }),
+  /** Mobile phone, stored formatted as "(555) 123-4567". */
+  mobilePhone: varchar("mobilePhone", { length: 32 }),
+  streetAddress: varchar("streetAddress", { length: 255 }),
+  city: varchar("city", { length: 120 }),
+  /** Two-letter US state code (e.g. "NJ"). */
+  state: varchar("state", { length: 2 }),
+  /** 5-digit or ZIP+4 (e.g. "07001" or "07001-1234"). */
+  zipCode: varchar("zipCode", { length: 10 }),
+  emergencyContactName: varchar("emergencyContactName", { length: 255 }),
+  emergencyContactRelationship: varchar("emergencyContactRelationship", { length: 120 }),
+  emergencyContactPhone: varchar("emergencyContactPhone", { length: 32 }),
+  preferredContactMethod: mysqlEnum("preferredContactMethod", ["phone", "text", "email"]),
+  /** Free-form language name, e.g. "English", "Spanish". */
+  preferredLanguage: varchar("preferredLanguage", { length: 64 }),
+  /** Profile photo as a resized base64 data URL (image/jpeg). Client caps the size. */
+  profilePhoto: mediumtext("profilePhoto"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn"),

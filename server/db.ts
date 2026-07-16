@@ -877,6 +877,26 @@ export async function getTeamMemberByResetToken(token: string) {
   return rows[0] ?? null;
 }
 
+/**
+ * Contact-detail columns a team member (technician) can carry.
+ * All optional/nullable so existing rows and blank fields keep working.
+ */
+export type TeamMemberContactFields = {
+  firstName?: string | null;
+  lastName?: string | null;
+  mobilePhone?: string | null;
+  streetAddress?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zipCode?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactRelationship?: string | null;
+  emergencyContactPhone?: string | null;
+  preferredContactMethod?: "phone" | "text" | "email" | null;
+  preferredLanguage?: string | null;
+  profilePhoto?: string | null;
+};
+
 export async function createTeamMember(data: {
   email: string;
   name: string;
@@ -884,19 +904,46 @@ export async function createTeamMember(data: {
   inviteToken: string;
   inviteExpiresAt: Date;
   invitedBy: string;
-}) {
+} & TeamMemberContactFields) {
   const db = await getDb();
   if (!db) return null;
+  const { email, name, role, inviteToken, inviteExpiresAt, invitedBy, ...contact } = data;
   await db.insert(teamMembers).values({
-    email: data.email.toLowerCase(),
-    name: data.name,
-    role: data.role,
+    email: email.toLowerCase(),
+    name,
+    role,
     status: "invited",
-    inviteToken: data.inviteToken,
-    inviteExpiresAt: data.inviteExpiresAt,
-    invitedBy: data.invitedBy,
+    inviteToken,
+    inviteExpiresAt,
+    invitedBy,
+    ...contact,
   });
-  return getTeamMemberByEmail(data.email);
+  return getTeamMemberByEmail(email);
+}
+
+/**
+ * Update an existing team member. Only keys present in `data` are written,
+ * so callers can pass a narrow whitelist (e.g. self-service profile edits).
+ * Never touches passwordHash / tokens / status here.
+ */
+export async function updateTeamMember(
+  id: number,
+  data: Partial<{
+    name: string;
+    email: string;
+    role: "admin" | "member" | "viewer";
+  } & TeamMemberContactFields>,
+) {
+  const db = await getDb();
+  if (!db) return null;
+  const set: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(data)) {
+    if (v === undefined) continue;
+    set[k] = k === "email" && typeof v === "string" ? v.toLowerCase() : v;
+  }
+  if (Object.keys(set).length === 0) return getTeamMemberById(id);
+  await db.update(teamMembers).set(set).where(eq(teamMembers.id, id));
+  return getTeamMemberById(id);
 }
 
 export async function activateTeamMember(id: number, passwordHash: string) {
