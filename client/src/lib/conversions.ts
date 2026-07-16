@@ -236,6 +236,38 @@ export function mapServiceToConversion(service: string | undefined): ServiceMapp
   return { event: "quote_request", service_category: "general", customer_segment: segmentFor(s) };
 }
 
+/**
+ * Where a QuickQuoteForm instance is placed. A `"contact"` source marks the
+ * general Contact-page form; anything else (or `undefined`) is a service-led
+ * placement classified purely by the picked service.
+ */
+export type QuickQuoteSource = "contact" | undefined;
+
+/**
+ * Resolve the conversion event for a QuickQuoteForm submission, combining the
+ * form's placement (`source`) with the visitor's picked `service`. Pure &
+ * deterministic — never touches `window`, never sees PII.
+ *
+ * Rule: a service the visitor *deliberately* selected keeps its own high-value
+ * event (replacement/installation/repair/commercial/maintenance/residential),
+ * so those stay independently trackable no matter where the form lives. Only
+ * when no specific intent was expressed (service unset / "Other" / rebate →
+ * `quote_request`) does a `"contact"` placement classify the submission as
+ * `contact_form_submit`. This keeps BOTH `contact_form_submit` (generic contact
+ * lead) and `replacement_request` (explicit replacement pick) reachable from the
+ * same Contact-page form, and never *infers* a replacement from an installation.
+ */
+export function resolveQuickQuoteConversion(
+  source: QuickQuoteSource,
+  service: string | undefined,
+): ServiceMapping {
+  const mapping = mapServiceToConversion(service);
+  if (source === "contact" && mapping.event === "quote_request") {
+    return { event: "contact_form_submit", service_category: "contact", customer_segment: mapping.customer_segment };
+  }
+  return mapping;
+}
+
 /** Test-only: clear the idempotency guard between cases. Not for app use. */
 export function __resetConversionTrackingForTests(): void {
   firedDedupeKeys.clear();
