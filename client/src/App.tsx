@@ -1,6 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isInternalRoute } from "@/lib/navigation";
+import { trackPageView } from "@/lib/analytics";
 import { Route, Switch, useLocation } from "wouter";
 import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -97,10 +98,25 @@ function ScrollToTop() {
   return null;
 }
 
+/**
+ * Sends a GA4 page_view on initial load and on every wouter route change. The
+ * effect runs on mount (initial view) and whenever `location` changes, so each
+ * view is counted exactly once. No-ops entirely when GA4 is unconfigured (see
+ * client/src/lib/analytics.ts).
+ */
+function AnalyticsTracker() {
+  const [location] = useLocation();
+  useEffect(() => {
+    trackPageView(location);
+  }, [location]);
+  return null;
+}
+
 function Router() {
   return (
     <>
       <ScrollToTop />
+      <AnalyticsTracker />
       <Switch>
       {/* ── Public routes ─────────────────────────────────────────── */}
       <Route path={"/"} component={Home} />
