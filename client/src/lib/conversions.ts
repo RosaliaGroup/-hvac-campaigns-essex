@@ -192,6 +192,29 @@ export interface ServiceMapping {
   customer_segment?: CustomerSegment;
 }
 
+/**
+ * Explicit form-surface hint. Some forms live on a page whose intent is not
+ * captured by the service field — e.g. the Contact page. `"contact"` forces the
+ * `contact_form_submit` event regardless of the (optional) service picked.
+ */
+export type FormConversionSource = "contact";
+
+/**
+ * Resolve a CONFIRMED lead submission to its conversion event. An explicit
+ * `source` takes precedence over service classification; otherwise the free-text
+ * service label is classified via {@link mapServiceToConversion}. Pure and
+ * deterministic — the raw service string is only classified, never forwarded.
+ */
+export function resolveFormConversion(input: {
+  source?: FormConversionSource;
+  service?: string;
+}): ServiceMapping {
+  if (input.source === "contact") {
+    return { event: "contact_form_submit", service_category: "contact" };
+  }
+  return mapServiceToConversion(input.service);
+}
+
 function segmentFor(s: string): CustomerSegment | undefined {
   if (/(commercial|vrf|vrv|rtu|warehouse|office|restaurant|property manag)/.test(s)) {
     return "commercial";
