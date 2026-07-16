@@ -32,6 +32,7 @@ import { opportunitiesRouter } from "./routers/opportunities";
 import { seoRouter } from "./routers/seo";
 import { attributionRouter } from "./routers/attribution";
 import { analyticsRouter } from "./routers/analytics";
+import { executiveDashboardsRouter } from "./routers/executiveDashboards";
 import { googleCalendarRouter } from "./routers/googleCalendar";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
@@ -79,6 +80,7 @@ export const appRouter = router({
   seo: seoRouter,
   attribution: attributionRouter,
   analytics: analyticsRouter,
+  executiveDashboards: executiveDashboardsRouter,
   googleCalendar: googleCalendarRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),

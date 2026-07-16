@@ -82,6 +82,7 @@ import DirectInstallIndex from "./pages/DirectInstallIndex";
 import DirectInstallPage from "./pages/DirectInstallPage";
 import Presentation from "./pages/Presentation";
 import AnalyticsReports from "./pages/AnalyticsReports";
+import ExecutiveDashboards from "./pages/ExecutiveDashboards";
 import TakeOffAI from "./pages/TakeOffAI";
 import TakeOffDetail from "./pages/TakeOffDetail";
 import TakeOffPublic from "./pages/TakeOffPublic";
@@ -320,6 +321,7 @@ function Router() {
       <Route path={"/team-management"} component={protect(TeamManagement)} />
       <Route path={"/assessment-submissions"} component={protect(AssessmentSubmissions)} />
       <Route path={"/analytics"} component={protect(AnalyticsReports)} />
+      <Route path={"/executive-dashboards"} component={protect(ExecutiveDashboards)} />
       <Route path={"/takeoff-ai"} component={protect(TakeOffAI)} />
       <Route path={"/takeoff-ai/:id"} component={protect(TakeOffDetail)} />
 
