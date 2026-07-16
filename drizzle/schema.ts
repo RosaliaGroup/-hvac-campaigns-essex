@@ -1968,3 +1968,265 @@ export const ga4SyncHistory = mysqlTable(
 );
 export type Ga4SyncHistoryRow = typeof ga4SyncHistory.$inferSelect;
 export type InsertGa4SyncHistory = typeof ga4SyncHistory.$inferInsert;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CUSTOMER PORTAL (self-contained module — customer-facing surface)
+//
+// A distinct auth realm from team members: portal accounts belong to an
+// existing `customers` row and authenticate with their own `portal_session`
+// cookie (openId prefix "portal:<id>"). All tables below are OWNED by the
+// portal module; the portal also READS existing tables (customers, properties,
+// quickbooksSalesDocuments, appointments, jobs, jobStatusHistory) but never
+// alters their schema. Links are app-enforced int columns (no DB FKs), matching
+// the rest of this file.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Portal accounts — a customer's login identity for the self-service portal.
+ * One (at most) per customer. Separate from team members / OAuth users.
+ */
+export const portalAccounts = mysqlTable(
+  "portalAccounts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** The customer this login belongs to (customers.id). One account per customer. */
+    customerId: int("customerId").notNull(),
+    /** Login email — normalized lowercase. Unique across portal accounts. */
+    email: varchar("email", { length: 320 }).notNull().unique(),
+    /** bcrypt hash (cost 12). Null until the customer sets a password (magic-link-only accounts). */
+    passwordHash: varchar("passwordHash", { length: 255 }),
+    /** Display name shown in the portal chrome. */
+    name: varchar("name", { length: 255 }),
+    status: mysqlEnum("status", ["invited", "active", "suspended"]).default("active").notNull(),
+    /** Single-use token for magic-link login OR password reset (hex). */
+    loginToken: varchar("loginToken", { length: 128 }),
+    loginTokenExpiresAt: timestamp("loginTokenExpiresAt"),
+    lastLoginAt: timestamp("lastLoginAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("portalAccounts_customerId_idx").on(table.customerId),
+    loginTokenIdx: index("portalAccounts_loginToken_idx").on(table.loginToken),
+  }),
+);
+export type PortalAccount = typeof portalAccounts.$inferSelect;
+export type InsertPortalAccount = typeof portalAccounts.$inferInsert;
+
+/**
+ * Portal payments — a payment made (or attempted) by a customer against an
+ * invoice (quickbooksSalesDocuments row with docType="invoice"). This is the
+ * portal's own ledger; QBO invoice sync is owned elsewhere and untouched.
+ */
+export const portalPayments = mysqlTable(
+  "portalPayments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    /** The invoice being paid (quickbooksSalesDocuments.id). Nullable for account credits. */
+    invoiceId: int("invoiceId"),
+    /** Denormalized invoice display number for receipts even if the doc is re-synced. */
+    invoiceNumber: varchar("invoiceNumber", { length: 64 }),
+    amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+    currency: varchar("currency", { length: 8 }).default("USD").notNull(),
+    method: mysqlEnum("method", ["card", "ach", "cash", "check", "other"]).default("card").notNull(),
+    status: mysqlEnum("status", ["pending", "succeeded", "failed", "refunded"]).default("pending").notNull(),
+    /** Stripe Checkout Session id used to initiate + confirm the payment. */
+    stripeSessionId: varchar("stripeSessionId", { length: 255 }),
+    stripePaymentIntentId: varchar("stripePaymentIntentId", { length: 255 }),
+    paidAt: timestamp("paidAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("portalPayments_customerId_idx").on(table.customerId),
+    invoiceIdx: index("portalPayments_invoiceId_idx").on(table.invoiceId),
+    sessionIdx: index("portalPayments_stripeSessionId_idx").on(table.stripeSessionId),
+  }),
+);
+export type PortalPayment = typeof portalPayments.$inferSelect;
+export type InsertPortalPayment = typeof portalPayments.$inferInsert;
+
+/**
+ * Customer equipment — installed HVAC units/assets at a customer site.
+ * (No such table existed; equipment was only free-text on properties/jobs.)
+ */
+export const customerEquipment = mysqlTable(
+  "customerEquipment",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    /** Which service location the unit is installed at (properties.id). Optional. */
+    propertyId: int("propertyId"),
+    /** e.g. "Furnace", "AC Condenser", "Heat Pump", "Boiler", "Mini-Split". */
+    category: varchar("category", { length: 100 }),
+    make: varchar("make", { length: 120 }),
+    model: varchar("model", { length: 120 }),
+    serialNumber: varchar("serialNumber", { length: 120 }),
+    /** Where in the building the unit lives ("Basement", "Roof", "Unit 2B"). */
+    location: varchar("location", { length: 255 }),
+    installedAt: timestamp("installedAt"),
+    /** True once retired/removed — kept for history. */
+    status: mysqlEnum("status", ["active", "retired"]).default("active").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("customerEquipment_customerId_idx").on(table.customerId),
+    propertyIdx: index("customerEquipment_propertyId_idx").on(table.propertyId),
+  }),
+);
+export type CustomerEquipment = typeof customerEquipment.$inferSelect;
+export type InsertCustomerEquipment = typeof customerEquipment.$inferInsert;
+
+/**
+ * Equipment warranties — coverage records, optionally tied to a specific unit.
+ */
+export const equipmentWarranties = mysqlTable(
+  "equipmentWarranties",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    /** The covered unit (customerEquipment.id). Nullable for whole-home/labor warranties. */
+    equipmentId: int("equipmentId"),
+    /** "manufacturer" | "labor" | "extended" | "parts" | "home". */
+    type: mysqlEnum("type", ["manufacturer", "labor", "extended", "parts", "home"]).default("manufacturer").notNull(),
+    provider: varchar("provider", { length: 255 }),
+    policyNumber: varchar("policyNumber", { length: 120 }),
+    coverage: text("coverage"),
+    startsAt: timestamp("startsAt"),
+    expiresAt: timestamp("expiresAt"),
+    status: mysqlEnum("status", ["active", "expired", "void"]).default("active").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("equipmentWarranties_customerId_idx").on(table.customerId),
+    equipmentIdx: index("equipmentWarranties_equipmentId_idx").on(table.equipmentId),
+  }),
+);
+export type EquipmentWarranty = typeof equipmentWarranties.$inferSelect;
+export type InsertEquipmentWarranty = typeof equipmentWarranties.$inferInsert;
+
+/**
+ * Maintenance agreements — service contracts / plans a customer holds.
+ * (The existing subscription* tables are e-learning commerce, not HVAC plans.)
+ */
+export const maintenanceAgreements = mysqlTable(
+  "maintenanceAgreements",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    /** Plan display name, e.g. "Comfort Club — Silver". */
+    planName: varchar("planName", { length: 255 }).notNull(),
+    tier: varchar("tier", { length: 100 }),
+    status: mysqlEnum("status", ["active", "pending", "expired", "cancelled"]).default("active").notNull(),
+    billingFrequency: mysqlEnum("billingFrequency", ["monthly", "quarterly", "annual", "one_time"]).default("annual").notNull(),
+    price: decimal("price", { precision: 12, scale: 2 }),
+    visitsPerYear: int("visitsPerYear"),
+    startsAt: timestamp("startsAt"),
+    renewsAt: timestamp("renewsAt"),
+    nextServiceAt: timestamp("nextServiceAt"),
+    coverage: text("coverage"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("maintenanceAgreements_customerId_idx").on(table.customerId),
+  }),
+);
+export type MaintenanceAgreement = typeof maintenanceAgreements.$inferSelect;
+export type InsertMaintenanceAgreement = typeof maintenanceAgreements.$inferInsert;
+
+/**
+ * Customer documents — files a customer can view/download (or upload) in the
+ * portal: proposals, permits, warranties, invoices PDFs, inspection reports.
+ * Bytes live in the Forge storage proxy (server/storage.ts); we store the key/url.
+ */
+export const customerDocuments = mysqlTable(
+  "customerDocuments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    category: mysqlEnum("category", [
+      "proposal",
+      "invoice",
+      "permit",
+      "warranty",
+      "contract",
+      "report",
+      "photo",
+      "other",
+    ]).default("other").notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    fileName: varchar("fileName", { length: 255 }),
+    /** Resolved/stored URL from the storage proxy. */
+    url: varchar("url", { length: 1024 }),
+    /** Relative storage key for re-resolving a fresh download URL. */
+    storageKey: varchar("storageKey", { length: 512 }),
+    mimeType: varchar("mimeType", { length: 127 }),
+    sizeBytes: int("sizeBytes"),
+    /** "customer" (self-uploaded) | "staff" (shared by the company). */
+    uploadedBy: mysqlEnum("uploadedBy", ["customer", "staff"]).default("staff").notNull(),
+    /** Staff can stage a doc hidden from the customer until ready. */
+    visibleToCustomer: boolean("visibleToCustomer").default(true).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("customerDocuments_customerId_idx").on(table.customerId),
+    categoryIdx: index("customerDocuments_category_idx").on(table.category),
+  }),
+);
+export type CustomerDocument = typeof customerDocuments.$inferSelect;
+export type InsertCustomerDocument = typeof customerDocuments.$inferInsert;
+
+/**
+ * Portal message threads — in-app messaging between a customer and the company.
+ * Independent of SMS/Telnyx (owned elsewhere) to keep the portal self-contained.
+ */
+export const portalMessageThreads = mysqlTable(
+  "portalMessageThreads",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    customerId: int("customerId").notNull(),
+    subject: varchar("subject", { length: 255 }).notNull(),
+    status: mysqlEnum("status", ["open", "closed"]).default("open").notNull(),
+    /** Denormalized for inbox sorting without a join. */
+    lastMessageAt: timestamp("lastMessageAt").defaultNow().notNull(),
+    /** Unread counts per side, maintained on write. */
+    customerUnread: int("customerUnread").default(0).notNull(),
+    staffUnread: int("staffUnread").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    customerIdx: index("portalMessageThreads_customerId_idx").on(table.customerId),
+    lastMessageIdx: index("portalMessageThreads_lastMessageAt_idx").on(table.lastMessageAt),
+  }),
+);
+export type PortalMessageThread = typeof portalMessageThreads.$inferSelect;
+export type InsertPortalMessageThread = typeof portalMessageThreads.$inferInsert;
+
+/** Portal messages — individual messages within a thread. */
+export const portalMessages = mysqlTable(
+  "portalMessages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    threadId: int("threadId").notNull(),
+    customerId: int("customerId").notNull(),
+    /** Who wrote it. "customer" = the portal user; "staff" = the company. */
+    sender: mysqlEnum("sender", ["customer", "staff"]).notNull(),
+    /** For staff messages, the teamMembers.id author (optional). */
+    authorId: int("authorId"),
+    body: text("body").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    threadIdx: index("portalMessages_threadId_idx").on(table.threadId),
+    customerIdx: index("portalMessages_customerId_idx").on(table.customerId),
+  }),
+);
+export type PortalMessage = typeof portalMessages.$inferSelect;
+export type InsertPortalMessage = typeof portalMessages.$inferInsert;
