@@ -75,6 +75,8 @@ import LiveChatWidget from "./components/LiveChatWidget";
 import CompetitorPage from "./pages/CompetitorPage";
 import CityPage from "./pages/CityPage";
 import ServicePage from "./pages/ServicePage";
+import SeoLandingPage from "./pages/SeoLandingPage";
+import { SEO_LANDING_PAGES } from "./data/seoLandingPages";
 import LuxuryAreaPage from "./pages/LuxuryAreaPage";
 import BlogIndex from "./pages/BlogIndex";
 import BlogPost from "./pages/BlogPost";
@@ -110,6 +112,13 @@ function AnalyticsTracker() {
     trackPageView(location);
   }, [location]);
   return null;
+}
+
+/** Look up SEO landing-page content by slug (throws on a typo so it fails at build). */
+function lpData(slug: string) {
+  const d = SEO_LANDING_PAGES.find((p) => p.slug === slug);
+  if (!d) throw new Error(`Missing SEO landing page data for slug: ${slug}`);
+  return d;
 }
 
 function Router() {
@@ -233,6 +242,25 @@ function Router() {
       <Route path={"/vrv-vrf-installation-nj"} component={() => <ServicePage service="VRV/VRF System" slug="vrv-vrf-installation-nj" description="VRV/VRF variable refrigerant systems for NJ commercial properties. Multi-zone systems with individual room control, maximum energy efficiency, and rebates covering up to 80% of installation costs. Ideal for offices, retail, and multi-floor buildings." />} />
       <Route path={"/heat-pump-rebates-nj"} component={() => <ServicePage service="Heat Pump Rebates NJ" slug="heat-pump-rebates-nj" description="NJ homeowners can qualify for up to $16,000 in heat pump rebates plus a $2,000 federal tax credit in 2026. We assess your exact eligibility, recommend qualifying equipment, and handle all rebate applications at no cost to you." />} />
       <Route path={"/hvac-financing-nj"} component={() => <ServicePage service="HVAC Financing" slug="hvac-financing-nj" description="0% financing options available for NJ homeowners replacing their HVAC system. When combined with NJ rebates up to $16,000 and the federal tax credit up to $2,000, many homeowners pay $0 out of pocket for a brand new system." />} />
+
+      {/* ── SEO landing pages (repair/service intent) — content in data/seoLandingPages.ts ── */}
+      {/* Residential */}
+      <Route path={"/ac-repair-nj"} component={() => <SeoLandingPage data={lpData("ac-repair-nj")} />} />
+      <Route path={"/heating-repair-nj"} component={() => <SeoLandingPage data={lpData("heating-repair-nj")} />} />
+      <Route path={"/furnace-repair-nj"} component={() => <SeoLandingPage data={lpData("furnace-repair-nj")} />} />
+      <Route path={"/boiler-repair-nj"} component={() => <SeoLandingPage data={lpData("boiler-repair-nj")} />} />
+      <Route path={"/indoor-air-quality-nj"} component={() => <SeoLandingPage data={lpData("indoor-air-quality-nj")} />} />
+      <Route path={"/heat-pump-repair-nj"} component={() => <SeoLandingPage data={lpData("heat-pump-repair-nj")} />} />
+      <Route path={"/ductless-mini-split-repair-nj"} component={() => <SeoLandingPage data={lpData("ductless-mini-split-repair-nj")} />} />
+      <Route path={"/emergency-hvac-repair-nj"} component={() => <SeoLandingPage data={lpData("emergency-hvac-repair-nj")} />} />
+      {/* Commercial */}
+      <Route path={"/commercial-hvac-service-nj"} component={() => <SeoLandingPage data={lpData("commercial-hvac-service-nj")} />} />
+      <Route path={"/commercial-rtu-service-nj"} component={() => <SeoLandingPage data={lpData("commercial-rtu-service-nj")} />} />
+      <Route path={"/commercial-hvac-maintenance-nj"} component={() => <SeoLandingPage data={lpData("commercial-hvac-maintenance-nj")} />} />
+      <Route path={"/restaurant-hvac-nj"} component={() => <SeoLandingPage data={lpData("restaurant-hvac-nj")} />} />
+      <Route path={"/warehouse-hvac-nj"} component={() => <SeoLandingPage data={lpData("warehouse-hvac-nj")} />} />
+      <Route path={"/office-building-hvac-nj"} component={() => <SeoLandingPage data={lpData("office-building-hvac-nj")} />} />
+      <Route path={"/industrial-hvac-nj"} component={() => <SeoLandingPage data={lpData("industrial-hvac-nj")} />} />
 
       {/* Luxury area pages — premium messaging */}
       <Route path={"/hvac-madison-nj"} component={() => <LuxuryAreaPage area="Madison" slug="madison" county="Morris County" incomeContext="affluent Morris County suburb" />} />

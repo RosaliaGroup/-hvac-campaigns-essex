@@ -91,6 +91,28 @@ const PAGE_META: Record<string, PageMeta> = {
   },
 };
 
+// ── SEO landing pages (repair/service intent) ──────────────────────────────
+// Titles/descriptions MUST stay in sync with client/src/data/seoLandingPages.ts
+// (that file drives the client-side useSEO; this drives the crawler-facing meta).
+interface LandingMeta { title: string; description: string; parent: "Residential" | "Commercial"; name: string }
+const SEO_LANDING_META: Record<string, LandingMeta> = {
+  "/ac-repair-nj": { parent: "Residential", name: "AC Repair", title: "AC Repair NJ | Same-Day Air Conditioning Repair | Mechanical Enterprise", description: "Same-day AC repair across New Jersey. Licensed techs, all makes, upfront pricing, rebates on upgrades. Call (862) 423-9396." },
+  "/heating-repair-nj": { parent: "Residential", name: "Heating Repair", title: "Heating Repair NJ | Same-Day No-Heat Service | Mechanical Enterprise", description: "Fast heating repair across NJ — furnaces, boilers & heat pumps. Same-day & 24/7 no-heat service, upfront pricing. Call (862) 423-9396." },
+  "/furnace-repair-nj": { parent: "Residential", name: "Furnace Repair", title: "Furnace Repair NJ | 24/7 No-Heat Service | Mechanical Enterprise", description: "Gas & electric furnace repair across NJ. Same-day & 24/7 no-heat service, safety checks, upfront pricing. Call (862) 423-9396." },
+  "/boiler-repair-nj": { parent: "Residential", name: "Boiler Repair", title: "Boiler Repair NJ | Steam & Hot-Water Boilers | Mechanical Enterprise", description: "Boiler repair across NJ — steam & hot-water systems, no heat, leaks, low pressure. Same-day & 24/7 service. Call (862) 423-9396." },
+  "/indoor-air-quality-nj": { parent: "Residential", name: "Indoor Air Quality", title: "Indoor Air Quality NJ | Air Purifiers & Filtration | Mechanical Enterprise", description: "Improve your NJ home's air — purifiers, filtration, UV lights, humidity control & duct sealing. Free assessment. Call (862) 423-9396." },
+  "/heat-pump-repair-nj": { parent: "Residential", name: "Heat Pump Repair", title: "Heat Pump Repair NJ | Ducted & Ductless | Mechanical Enterprise", description: "Expert heat pump repair across NJ — no heat/cooling, defrost & refrigerant faults, all brands. Upgrade rebates. Call (862) 423-9396." },
+  "/ductless-mini-split-repair-nj": { parent: "Residential", name: "Ductless Mini-Split Repair", title: "Ductless Mini-Split Repair NJ | All Brands | Mechanical Enterprise", description: "Mini-split repair across NJ — not cooling, leaks, error codes, comm faults. Mitsubishi, Daikin, Fujitsu & more. Call (862) 423-9396." },
+  "/emergency-hvac-repair-nj": { parent: "Residential", name: "Emergency HVAC Repair", title: "Emergency HVAC Repair NJ | 24/7 No Heat / No AC | Mechanical Enterprise", description: "24/7 emergency HVAC repair across New Jersey. No heat, no AC, sudden breakdowns — fast local response. Call (862) 423-9396 now." },
+  "/commercial-hvac-service-nj": { parent: "Commercial", name: "Commercial HVAC Service", title: "Commercial HVAC Service & Repair NJ | Mechanical Enterprise", description: "Commercial HVAC service & repair across NJ — RTUs, splits, VRF, controls. Service agreements & 24/7 response. Call (862) 419-1763." },
+  "/commercial-rtu-service-nj": { parent: "Commercial", name: "RTU Service", title: "Commercial RTU Service & Repair NJ | Rooftop Units | Mechanical Enterprise", description: "Rooftop unit (RTU) service, repair & replacement across NJ. Economizers, compressors, PM programs. Minimize downtime. Call (862) 419-1763." },
+  "/commercial-hvac-maintenance-nj": { parent: "Commercial", name: "Commercial HVAC Maintenance", title: "Commercial HVAC Maintenance NJ | PM Agreements | Mechanical Enterprise", description: "Commercial HVAC preventive maintenance plans across NJ. Fewer breakdowns, longer equipment life, priority service. Call (862) 419-1763." },
+  "/restaurant-hvac-nj": { parent: "Commercial", name: "Restaurant HVAC", title: "Restaurant HVAC & Kitchen Ventilation NJ | Mechanical Enterprise", description: "Restaurant HVAC across NJ — kitchen exhaust & makeup air, dining comfort, RTUs. Off-hours service to avoid closures. Call (862) 419-1763." },
+  "/warehouse-hvac-nj": { parent: "Commercial", name: "Warehouse HVAC", title: "Warehouse HVAC NJ | Heating, Ventilation & Cooling | Mechanical Enterprise", description: "Warehouse & distribution HVAC across NJ — unit heaters, ventilation, HVLS, rooftop units. Worker comfort & compliance. Call (862) 419-1763." },
+  "/office-building-hvac-nj": { parent: "Commercial", name: "Office Building HVAC", title: "Office Building HVAC NJ | Multi-Zone Comfort | Mechanical Enterprise", description: "Office HVAC across NJ — RTUs, VAV/VRF, chillers, controls & IAQ. Tenant comfort, fewer complaints. Call (862) 419-1763." },
+  "/industrial-hvac-nj": { parent: "Commercial", name: "Industrial HVAC", title: "Industrial HVAC NJ | Process Cooling & Chillers | Mechanical Enterprise", description: "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. 24/7 uptime & compliance. Call (862) 419-1763." },
+};
+
 // ── Dynamic page metadata generators ──────────────────────────────────────
 
 function getCityMeta(slug: string): PageMeta & { canonical: string } {
@@ -190,6 +212,12 @@ function getMetaForPath(urlPath: string): PageMeta & { canonical: string } {
   if (clean.startsWith("/lp/")) {
     const slug = clean.replace("/lp/", "");
     return getLandingPageMeta(slug);
+  }
+
+  // SEO landing page (repair/service intent)
+  const landing = SEO_LANDING_META[clean];
+  if (landing) {
+    return { title: landing.title, description: landing.description, canonical: `${BASE}${clean}` };
   }
 
   // Known static page
@@ -348,6 +376,11 @@ function buildBreadcrumbs(path: string): Array<{"@type": string; position: numbe
     items.push({ "@type": "ListItem", position: 3, name: `${city}, NJ`, item: `${BASE}${path}` });
   } else if (path.startsWith("/lp/")) {
     items.push({ "@type": "ListItem", position: 2, name: "Offers", item: `${BASE}/lp/heat-pump-rebates` });
+  } else if (SEO_LANDING_META[path]) {
+    const lp = SEO_LANDING_META[path];
+    const parentPath = lp.parent === "Commercial" ? "/commercial" : "/residential";
+    items.push({ "@type": "ListItem", position: 2, name: `${lp.parent} HVAC`, item: `${BASE}${parentPath}` });
+    items.push({ "@type": "ListItem", position: 3, name: lp.name, item: `${BASE}${path}` });
   } else {
     const pageName = path.slice(1).split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
     items.push({ "@type": "ListItem", position: 2, name: pageName, item: `${BASE}${path}` });
