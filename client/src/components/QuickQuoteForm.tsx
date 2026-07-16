@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import { trackLeadConversion } from "@/lib/conversions";
+import { toPagePath } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +16,40 @@ interface QuickQuoteFormProps {
   title?: string;
   description?: string;
   defaultService?: string;
+  /** Marks this instance as the Contact page form → fires `contact_form_submit`. */
+  source?: "contact";
+  /**
+   * Page-level intent (e.g. a ServicePage `service + slug`) used to resolve the
+   * conversion event. Takes precedence over the service select so a per-service
+   * page always attributes to its own event. When absent, the select drives it.
+   */
+  conversionIntent?: string;
 }
 
-export default function QuickQuoteForm({ 
-  title = "Get a Free Quote", 
+/** Best-effort unique token per submission (falls back when crypto is absent). */
+function newSubmissionToken(): string {
+  try {
+    const c = (globalThis as unknown as { crypto?: Crypto }).crypto;
+    if (c && typeof c.randomUUID === "function") return c.randomUUID();
+  } catch {
+    /* fall through */
+  }
+  return `${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+}
+
+/** Current path incl. query/hash — the conversions helper strips query/hash. */
+function currentPath(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const l = window.location;
+  return `${l.pathname}${l.search}${l.hash}`;
+}
+
+export default function QuickQuoteForm({
+  title = "Get a Free Quote",
   description = "Tell us about your HVAC needs and we'll get back to you within 24 hours",
-  defaultService 
+  defaultService,
+  source,
+  conversionIntent,
 }: QuickQuoteFormProps) {
   const [formData, setFormData] = useState({
     name: "",
@@ -30,8 +60,24 @@ export default function QuickQuoteForm({
   });
   const [submitted, setSubmitted] = useState(false);
 
+  // Conversion state captured at submit time (so a form reset in onSuccess can't
+  // race it) and a one-shot guard so a re-invoked onSuccess never double-fires.
+  const pendingConversion = useRef<{ token: string; intent: string; source?: "contact" } | null>(null);
+
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
+      // Fire ONLY here — after the CRM leadCapture is confirmed persisted.
+      const pending = pendingConversion.current;
+      if (pending) {
+        pendingConversion.current = null; // guard: at most one fire per submission
+        trackLeadConversion({
+          source: pending.source,
+          intent: pending.intent,
+          dedupeKey: `lead:${pending.token}`,
+          pagePath: currentPath(),
+        });
+      }
+
       toast.success("Quote request received! We'll contact you within 24 hours.");
       setSubmitted(true);
       setFormData({
@@ -43,17 +89,30 @@ export default function QuickQuoteForm({
       });
     },
     onError: (error) => {
+      // No conversion on failure. Clear the pending token so a later success of
+      // a *different* submission can't reuse it.
+      pendingConversion.current = null;
       toast.error(`Failed to submit: ${error.message}`);
     },
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.email && !formData.phone) {
+      // Validation failure — no conversion, no pending token.
       toast.error("Please provide either email or phone number");
       return;
     }
+
+    // Capture conversion context now; nothing is emitted until onSuccess.
+    const resolvedSource =
+      source ?? (currentPath() && toPagePath(window.location.pathname) === "/contact" ? "contact" : undefined);
+    pendingConversion.current = {
+      token: newSubmissionToken(),
+      intent: conversionIntent ?? formData.service,
+      source: resolvedSource,
+    };
 
     createCapture.mutate({
       name: formData.name || undefined,

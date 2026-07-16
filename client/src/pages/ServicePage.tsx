@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Phone, ArrowRight } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import QuickQuoteForm from "@/components/QuickQuoteForm";
 import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
 
@@ -115,6 +116,20 @@ export default function ServicePage({ service, slug, description }: ServicePageP
                 </Button>
               </a>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Request a Quote — fires the per-service conversion (resolved from service + slug) */}
+      <section className="py-16 bg-white">
+        <div className="container">
+          <div className="max-w-2xl mx-auto">
+            <QuickQuoteForm
+              title={`Request a Free ${service} Quote`}
+              description="Tell us about your project and we'll follow up within 24 hours with next steps and your rebate eligibility."
+              defaultService={service}
+              conversionIntent={`${service} ${slug}`}
+            />
           </div>
         </div>
       </section>
