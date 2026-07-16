@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Phone, MessageSquare, Share2, CheckCircle2, AlertCircle, Loader2, FileText, Target, Link2, ExternalLink } from "lucide-react";
+import { Phone, Share2, CheckCircle2, AlertCircle, Loader2, FileText, Target, Link2, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
@@ -20,11 +20,6 @@ export default function AIVASettings() {
   // Vapi credentials
   const [vapiApiKey, setVapiApiKey] = useState("");
   const [vapiAssistantId, setVapiAssistantId] = useState("");
-
-  // Twilio credentials
-  const [twilioAccountSid, setTwilioAccountSid] = useState("");
-  const [twilioAuthToken, setTwilioAuthToken] = useState("");
-  const [twilioPhoneNumber, setTwilioPhoneNumber] = useState("");
 
   // Facebook/Instagram credentials
   const [facebookAppId, setFacebookAppId] = useState("");
@@ -121,26 +116,6 @@ export default function AIVASettings() {
       credentials: {
         apiKey: vapiApiKey,
         assistantId: vapiAssistantId,
-      },
-    });
-  };
-
-  const handleSaveTwilio = () => {
-    if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all Twilio credentials",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    saveCredentialsMutation.mutate({
-      service: "twilio",
-      credentials: {
-        accountSid: twilioAccountSid,
-        authToken: twilioAuthToken,
-        phoneNumber: twilioPhoneNumber,
       },
     });
   };
@@ -279,14 +254,10 @@ export default function AIVASettings() {
         </Alert>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="vapi">
               <Phone className="h-4 w-4 mr-2" />
               Vapi (Voice)
-            </TabsTrigger>
-            <TabsTrigger value="twilio">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Twilio (SMS)
             </TabsTrigger>
             <TabsTrigger value="facebook">
               <Share2 className="h-4 w-4 mr-2" />
@@ -368,83 +339,6 @@ export default function AIVASettings() {
                       <li>Create a new Assistant with HVAC lead qualification prompts</li>
                       <li>Copy your API key and Assistant ID here</li>
                       <li>Configure your phone number in Vapi to forward to this system</li>
-                    </ol>
-                  </AlertDescription>
-                </Alert>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Twilio Tab */}
-          <TabsContent value="twilio">
-            <Card>
-              <CardHeader>
-                <CardTitle>Twilio SMS Configuration</CardTitle>
-                <CardDescription>
-                  Configure Twilio for two-way SMS conversations. Your AI VA will respond to texts instantly and send automated follow-ups.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="twilio-account-sid">Account SID</Label>
-                  <Input
-                    id="twilio-account-sid"
-                    placeholder="Enter your Twilio Account SID"
-                    value={twilioAccountSid}
-                    onChange={(e) => setTwilioAccountSid(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="twilio-auth-token">Auth Token</Label>
-                  <Input
-                    id="twilio-auth-token"
-                    type="password"
-                    placeholder="Enter your Twilio Auth Token"
-                    value={twilioAuthToken}
-                    onChange={(e) => setTwilioAuthToken(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="twilio-phone">Phone Number</Label>
-                  <Input
-                    id="twilio-phone"
-                    placeholder="+1234567890"
-                    value={twilioPhoneNumber}
-                    onChange={(e) => setTwilioPhoneNumber(e.target.value)}
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Include country code (e.g., +1 for US)
-                  </p>
-                </div>
-
-                <Button
-                  onClick={handleSaveTwilio}
-                  disabled={saveCredentialsMutation.isPending}
-                  className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                >
-                  {saveCredentialsMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Save Twilio Credentials
-                    </>
-                  )}
-                </Button>
-
-                <Alert>
-                  <AlertDescription className="text-sm">
-                    <strong>Setup Guide:</strong>
-                    <ol className="list-decimal list-inside mt-2 space-y-1">
-                      <li>Log in to your Twilio Console at twilio.com/console</li>
-                      <li>Find your Account SID and Auth Token on the dashboard</li>
-                      <li>Purchase a phone number if you haven't already</li>
-                      <li>Configure webhook URL in Twilio to point to this system</li>
                     </ol>
                   </AlertDescription>
                 </Alert>

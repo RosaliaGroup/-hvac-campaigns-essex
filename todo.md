@@ -103,7 +103,10 @@
 - [x] Store call recordings and transcriptions
 - [x] Create call logs viewer in dashboard
 
-### Phase 3: Twilio SMS System
+### Phase 3: SMS System
+> RETIRED (July 2026): The Twilio provider was removed. SMS runs entirely on
+> Telnyx (see server/services/telnyxSms.ts); AI VA inbound uses the Telnyx
+> webhook via server/integrations/aiVaSms.ts. Items below are historical.
 - [x] Set up Twilio webhook for incoming SMS
 - [x] Build two-way SMS conversation handler
 - [x] Create automated follow-up sequences (Day 1, 3, 7)

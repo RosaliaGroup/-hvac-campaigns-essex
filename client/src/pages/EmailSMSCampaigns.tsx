@@ -564,11 +564,11 @@ export default function EmailSMSCampaigns() {
                 </h3>
                 <div className="space-y-2">
                   {[
-                    "Your Twilio account is already configured in AI VA Settings",
+                    "Telnyx SMS is configured server-side via the production environment",
                     "The AI VA system handles SMS follow-ups automatically",
                     "Go to AI VA Dashboard to monitor SMS conversations",
                     "Customize message templates in AI Script Manager",
-                    "Ensure Twilio webhook is pointing to production URL",
+                    "Ensure the Telnyx inbound webhook is pointing to production URL",
                     "Test by submitting a lead form with your own phone number",
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-2">

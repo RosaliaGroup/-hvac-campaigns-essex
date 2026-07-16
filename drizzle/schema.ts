@@ -127,7 +127,7 @@ export type InsertDripCampaignSchedule = typeof dripCampaignSchedule.$inferInser
  */
 export const aiVaCredentials = mysqlTable("aiVaCredentials", {
   id: int("id").autoincrement().primaryKey(),
-  service: varchar("service", { length: 50 }).notNull(), // 'vapi', 'twilio', 'facebook', 'google_business'
+  service: varchar("service", { length: 50 }).notNull(), // 'vapi', 'facebook', 'google_business'
   credentialKey: varchar("credentialKey", { length: 100 }).notNull(),
   credentialValue: text("credentialValue").notNull(), // encrypted
   isActive: int("isActive").default(1).notNull(),
@@ -164,7 +164,7 @@ export type CallLog = typeof callLogs.$inferSelect;
 export type InsertCallLog = typeof callLogs.$inferInsert;
 
 /**
- * SMS Conversations - Twilio text message records
+ * SMS Conversations - AI VA inbound/outbound text message records (Telnyx)
  */
 export const smsConversations = mysqlTable("smsConversations", {
   id: int("id").autoincrement().primaryKey(),

@@ -8,7 +8,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { handleVapiWebhook } from "./integrations/vapi";
 import { handleVapiToolCalls } from "./integrations/vapiTools";
-import { handleIncomingSms } from "./integrations/twilio";
+import { handleIncomingSms } from "./integrations/aiVaSms";
 import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
 import { metaAdsRouter } from "./routers/metaAds";
@@ -494,7 +494,7 @@ export const appRouter = router({
     saveCredentials: adminProcedure
       .input(
         z.object({
-          service: z.enum(["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const),
+          service: z.enum(["vapi", "facebook", "google_business", "google_ads_config"] as const),
           credentials: z.record(z.string(), z.string()),
         })
       )
@@ -509,7 +509,7 @@ export const appRouter = router({
     // configured). Credential VALUES (tokens/keys/secrets) never leave the
     // server — see redactCredentials.
     getCredentials: protectedProcedure
-      .input(z.object({ service: z.enum(["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const) }))
+      .input(z.object({ service: z.enum(["vapi", "facebook", "google_business", "google_ads_config"] as const) }))
       .query(async ({ input }) => {
         const creds = await db.getAiVaCredentials(input.service);
         return redactCredentials(input.service, creds);
@@ -518,7 +518,7 @@ export const appRouter = router({
     getAllCredentials: protectedProcedure
       .query(async () => {
         // Return non-secret status only — no raw or encrypted credential values.
-        const services = ["vapi", "twilio", "facebook", "google_business", "google_ads_config"] as const;
+        const services = ["vapi", "facebook", "google_business", "google_ads_config"] as const;
         const summaries = await Promise.all(
           services.map(async (service) => {
             const creds = await db.getAiVaCredentials(service);
@@ -1194,7 +1194,7 @@ export const appRouter = router({
   }),
 
   // Webhook endpoints for external services
-  // PUBLIC by design: called by external services (Vapi, Twilio) that cannot
+  // PUBLIC by design: called by external services (Vapi, Telnyx) that cannot
   // hold a session. Payload validation is the auth boundary here.
   webhooks: router({
 
@@ -1214,8 +1214,9 @@ export const appRouter = router({
         return result;
       }),
 
-    // Twilio SMS webhook
-    twilio: publicProcedure
+    // AI VA inbound SMS webhook (Telnyx). Records the inbound text to the AI VA
+    // conversation inbox and returns an acknowledgement reply.
+    aiVaSmsInbound: publicProcedure
       .input(z.any())
       .mutation(async ({ input }) => {
         const response = await handleIncomingSms(input);

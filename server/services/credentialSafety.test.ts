@@ -39,8 +39,8 @@ describe("redactCredentials", () => {
   });
 
   it("ignores empty-string values (not configured)", () => {
-    const s = redactCredentials("twilio", { accountSid: "AC123", authToken: "" });
-    expect(s.configuredKeys).toEqual(["accountSid"]);
+    const s = redactCredentials("facebook", { appId: "AC123", appSecret: "" });
+    expect(s.configuredKeys).toEqual(["appId"]);
   });
 });
 
