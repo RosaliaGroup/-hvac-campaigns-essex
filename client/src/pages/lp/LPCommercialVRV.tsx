@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -17,13 +18,22 @@ export default function LPCommercialVRV() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "" });
   const [submitted, setSubmitted] = useState(false);
+  // Stable per-mount idempotency key for the GA4 conversion.
+  const [convKey] = useState(() => `lp_commercial_vrv-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      // Existing Google Ads conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/commercial_vrv_lp" });
       }
+      // Additive GA4 conversion (no PII) — fires only when GA4 is configured.
+      trackConversion(
+        "commercial_quote_request",
+        { form_type: "lp_commercial_vrv", service_category: "commercial", customer_segment: "commercial", lead_source_surface: "lp_commercial_vrv" },
+        { dedupeKey: convKey },
+      );
     },
     onError: () => {
       toast({ title: "Something went wrong", description: "Please call us at (862) 423-9396", variant: "destructive" });

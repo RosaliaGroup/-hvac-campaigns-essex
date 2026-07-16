@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -93,13 +94,22 @@ export default function LPMaintenanceOffer() {
     address: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  // Stable per-mount idempotency key for the GA4 conversion.
+  const [convKey] = useState(() => `lp_maintenance-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      // Existing Google Ads conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/lp_maintenance_subscription" });
       }
+      // Additive GA4 conversion (no PII). Segment omitted — plans span home + commercial.
+      trackConversion(
+        "maintenance_plan_inquiry",
+        { form_type: "lp_maintenance", service_category: "maintenance", lead_source_surface: "lp_maintenance" },
+        { dedupeKey: convKey },
+      );
     },
     onError: () => {
       toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
