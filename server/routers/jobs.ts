@@ -3,7 +3,7 @@
  * The Job is the operational record: Customer → Property → Job → N Appointments.
  * QuickBooks fields on jobs are inert placeholders; NO sync logic here.
  */
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
@@ -18,6 +18,11 @@ import {
   jobAttachmentBlobs,
   jobStatusHistory,
   jobWorkStatusEvents,
+  jobTimeEvents,
+  jobFieldParts,
+  jobSignatures,
+  jobCompletions,
+  companySettings,
   appointments,
   customers,
   properties,
@@ -48,6 +53,17 @@ import {
   type NoteType,
   type PhotoRejectReason,
 } from "../../shared/jobMedia";
+import {
+  TIME_EVENT_TYPES,
+  canAddTimeEvent,
+  computeTimeSummary,
+  type TimeState,
+} from "../../shared/jobTime";
+import {
+  canMutateField,
+  validateJobCompletion,
+  COMPLETION_BLOCK_MESSAGE,
+} from "../../shared/jobCompletion";
 
 /** Append a job status-history row. Best-effort audit trail; never blocks the write it follows. */
 async function recordStatusChange(
@@ -624,6 +640,228 @@ export const jobsRouter = router({
         id: att.id, mimeType: att.mimeType,
         dataUrl: `data:${att.mimeType ?? "image/jpeg"};base64,${blob.data}` as string | null,
         url: null as string | null,
+      };
+    }),
+
+  // ── Job completion workflow (PR #41): time / parts / signature / complete ──
+  // All access-scoped via resolveFieldJobAccess. Field mutations respect the
+  // completion lock (technicians locked after completion; admins override).
+
+  /** True when the technician is locked out (job completed and caller is not admin). */
+  // (helper inlined per-procedure below via canMutateField)
+
+  /** Append a time-clock event (Start Travel / Arrived / … / Finish Work). */
+  fieldAddTimeEvent: protectedProcedure
+    .input(z.object({ jobId: z.number().int(), eventType: z.enum(TIME_EVENT_TYPES) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job, memberId, isAdmin } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const completed = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) === "completed";
+      if (!canMutateField(completed, isAdmin)) throw new TRPCError({ code: "FORBIDDEN", message: "Job is completed — time entries are locked." });
+      const prior = await db.select({ eventType: jobTimeEvents.eventType, occurredAt: jobTimeEvents.occurredAt }).from(jobTimeEvents).where(eq(jobTimeEvents.jobId, input.jobId)).orderBy(asc(jobTimeEvents.occurredAt));
+      const state: TimeState = computeTimeSummary(prior as any).state;
+      if (!canAddTimeEvent(state, input.eventType)) throw new TRPCError({ code: "BAD_REQUEST", message: `Cannot ${input.eventType} from ${state}.` });
+      await db.insert(jobTimeEvents).values({ jobId: input.jobId, eventType: input.eventType, createdById: memberId ?? null });
+      // Stamp job actuals on milestones (reuse existing columns; additive).
+      if (input.eventType === "arrived") await db.update(jobs).set({ actualArrivalAt: new Date() }).where(eq(jobs.id, input.jobId));
+      return { success: true };
+    }),
+
+  /** Time events + computed travel/labor/pause/elapsed summary for a job. */
+  fieldListTime: protectedProcedure
+    .input(z.object({ jobId: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const events = await db.select({ id: jobTimeEvents.id, eventType: jobTimeEvents.eventType, occurredAt: jobTimeEvents.occurredAt })
+        .from(jobTimeEvents).where(eq(jobTimeEvents.jobId, input.jobId)).orderBy(asc(jobTimeEvents.occurredAt));
+      return { events, summary: computeTimeSummary(events as any, new Date()) };
+    }),
+
+  // ── Parts used ──
+  fieldAddPart: protectedProcedure
+    .input(z.object({
+      jobId: z.number().int(),
+      partNumber: z.string().max(120).optional().nullable(),
+      description: z.string().min(1).max(500),
+      quantity: z.number().min(0).max(999999).default(1),
+      unit: z.string().max(32).optional().nullable(),
+      notes: z.string().max(500).optional().nullable(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job, memberId, isAdmin } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const completed = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) === "completed";
+      if (!canMutateField(completed, isAdmin)) throw new TRPCError({ code: "FORBIDDEN", message: "Job is completed — parts are locked." });
+      const res = await db.insert(jobFieldParts).values({
+        jobId: input.jobId, partNumber: input.partNumber ?? null, description: input.description,
+        quantity: String(input.quantity), unit: input.unit ?? null, notes: input.notes ?? null, createdById: memberId ?? null,
+      });
+      return { id: Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0) };
+    }),
+
+  fieldUpdatePart: protectedProcedure
+    .input(z.object({
+      id: z.number().int(),
+      partNumber: z.string().max(120).optional().nullable(),
+      description: z.string().min(1).max(500).optional(),
+      quantity: z.number().min(0).max(999999).optional(),
+      unit: z.string().max(32).optional().nullable(),
+      notes: z.string().max(500).optional().nullable(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const part = (await db.select().from(jobFieldParts).where(eq(jobFieldParts.id, input.id)).limit(1))[0];
+      if (!part) throw new TRPCError({ code: "NOT_FOUND", message: "Part not found" });
+      const { job, isAdmin } = await resolveFieldJobAccess(db, part.jobId, ctx.user);
+      const completed = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) === "completed";
+      if (!canMutateField(completed, isAdmin)) throw new TRPCError({ code: "FORBIDDEN", message: "Job is completed — parts are locked." });
+      const set: Record<string, unknown> = {};
+      if (input.partNumber !== undefined) set.partNumber = input.partNumber;
+      if (input.description !== undefined) set.description = input.description;
+      if (input.quantity !== undefined) set.quantity = String(input.quantity);
+      if (input.unit !== undefined) set.unit = input.unit;
+      if (input.notes !== undefined) set.notes = input.notes;
+      if (Object.keys(set).length) await db.update(jobFieldParts).set(set).where(eq(jobFieldParts.id, input.id));
+      return { success: true };
+    }),
+
+  fieldDeletePart: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const part = (await db.select().from(jobFieldParts).where(eq(jobFieldParts.id, input.id)).limit(1))[0];
+      if (!part) throw new TRPCError({ code: "NOT_FOUND", message: "Part not found" });
+      const { job, isAdmin } = await resolveFieldJobAccess(db, part.jobId, ctx.user);
+      const completed = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) === "completed";
+      if (!canMutateField(completed, isAdmin)) throw new TRPCError({ code: "FORBIDDEN", message: "Job is completed — parts are locked." });
+      await db.delete(jobFieldParts).where(eq(jobFieldParts.id, input.id));
+      return { success: true };
+    }),
+
+  fieldListParts: protectedProcedure
+    .input(z.object({ jobId: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job, isAdmin } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const completed = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) === "completed";
+      const parts = await db.select().from(jobFieldParts).where(eq(jobFieldParts.jobId, input.jobId)).orderBy(desc(jobFieldParts.createdAt));
+      return { parts, editable: canMutateField(completed, isAdmin) };
+    }),
+
+  // ── Signature ──
+  fieldSaveSignature: protectedProcedure
+    .input(z.object({ jobId: z.number().int(), dataUrl: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job, memberId, isAdmin } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const completed = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) === "completed";
+      if (!canMutateField(completed, isAdmin)) throw new TRPCError({ code: "FORBIDDEN", message: "Job is completed — signature is read-only." });
+      const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(input.dataUrl.trim());
+      if (!m) throw new TRPCError({ code: "BAD_REQUEST", message: "Signature must be a PNG image." });
+      const existing = (await db.select({ id: jobSignatures.id }).from(jobSignatures).where(eq(jobSignatures.jobId, input.jobId)).limit(1))[0];
+      if (existing) await db.update(jobSignatures).set({ data: m[1], technicianId: memberId ?? null, signedAt: new Date() }).where(eq(jobSignatures.jobId, input.jobId));
+      else await db.insert(jobSignatures).values({ jobId: input.jobId, data: m[1], technicianId: memberId ?? null });
+      return { success: true };
+    }),
+
+  fieldGetSignature: protectedProcedure
+    .input(z.object({ jobId: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const sig = (await db.select().from(jobSignatures).where(eq(jobSignatures.jobId, input.jobId)).limit(1))[0];
+      if (!sig) return { hasSignature: false, dataUrl: null as string | null, signedAt: null as Date | null };
+      return { hasSignature: true, dataUrl: `data:image/png;base64,${sig.data}`, signedAt: sig.signedAt };
+    }),
+
+  // ── Completion settings (admin) ──
+  getCompletionSettings: protectedProcedure.query(async () => {
+    const db = await requireDb();
+    const row = (await db.select().from(companySettings).where(eq(companySettings.id, 1)).limit(1))[0];
+    return { requireCompletionSignature: row?.requireCompletionSignature ?? false };
+  }),
+  setCompletionSettings: adminProcedure
+    .input(z.object({ requireCompletionSignature: z.boolean() }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+      const row = (await db.select({ id: companySettings.id }).from(companySettings).where(eq(companySettings.id, 1)).limit(1))[0];
+      if (row) await db.update(companySettings).set({ requireCompletionSignature: input.requireCompletionSignature }).where(eq(companySettings.id, 1));
+      else await db.insert(companySettings).values({ id: 1, requireCompletionSignature: input.requireCompletionSignature });
+      return { success: true };
+    }),
+
+  // ── Complete the job ──
+  completeJob: protectedProcedure
+    .input(z.object({ jobId: z.number().int(), noCompletionNote: z.boolean().default(false) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job, memberId, isAdmin } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const current = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) as TechnicianWorkStatus;
+      if (current === "completed") return { success: true, alreadyCompleted: true };
+
+      const [custNote] = await db.select({ id: jobNotes.id }).from(jobNotes)
+        .where(and(eq(jobNotes.jobId, input.jobId), eq(jobNotes.visibility, "customer"))).limit(1);
+      const [sig] = await db.select({ id: jobSignatures.id }).from(jobSignatures).where(eq(jobSignatures.jobId, input.jobId)).limit(1);
+      const settings = (await db.select().from(companySettings).where(eq(companySettings.id, 1)).limit(1))[0];
+      const requireSignature = settings?.requireCompletionSignature ?? false;
+
+      const v = validateJobCompletion({
+        currentWorkStatus: current,
+        hasCustomerNote: !!custNote,
+        noCompletionNote: input.noCompletionNote,
+        requireSignature,
+        hasSignature: !!sig,
+      });
+      if (!v.ok) throw new TRPCError({ code: "BAD_REQUEST", message: COMPLETION_BLOCK_MESSAGE[v.reason] });
+
+      const events = await db.select({ eventType: jobTimeEvents.eventType, occurredAt: jobTimeEvents.occurredAt }).from(jobTimeEvents).where(eq(jobTimeEvents.jobId, input.jobId)).orderBy(asc(jobTimeEvents.occurredAt));
+      const summary = computeTimeSummary(events as any, new Date());
+      const now = new Date();
+
+      // Finalize status (preserve status history), stamp actuals, snapshot completion.
+      await db.update(jobs).set({ technicianWorkStatus: "completed", completedAt: now, actualCompletionAt: now }).where(eq(jobs.id, input.jobId));
+      let changedByName: string | null = ctx.user?.name ?? null;
+      if (memberId != null) { const mm = (await db.select({ name: teamMembers.name }).from(teamMembers).where(eq(teamMembers.id, memberId)).limit(1))[0]; changedByName = mm?.name ?? changedByName; }
+      await db.insert(jobWorkStatusEvents).values({ jobId: input.jobId, fromStatus: current, toStatus: "completed", changedById: memberId ?? null, changedByName });
+      await db.insert(jobCompletions).values({
+        jobId: input.jobId, completedById: memberId ?? null, completedAt: now,
+        noteMode: custNote ? "note" : "no_note", hadSignature: !!sig,
+        travelMs: summary.travelMs, laborMs: summary.laborMs, pauseMs: summary.pauseMs, elapsedMs: summary.elapsedMs,
+      });
+      return { success: true, completedAt: now };
+    }),
+
+  /**
+   * Structured completion summary (PR #41) — read-only. Assembles customer,
+   * property, technician, time totals, status timeline, notes, parts, photos,
+   * signature presence and the completion stamp. No PDF/AI/email/portal.
+   */
+  jobCompletionSummary: protectedProcedure
+    .input(z.object({ jobId: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const [customer, property, assignee, timeEvents, statusTimeline, notes, parts, photos, sig, completion] = await Promise.all([
+        db.select({ displayName: customers.displayName, phone: customers.phone, email: customers.email }).from(customers).where(eq(customers.id, job.customerId)).limit(1).then(r => r[0] ?? null),
+        job.propertyId ? db.select().from(properties).where(eq(properties.id, job.propertyId)).limit(1).then(r => r[0] ?? null) : Promise.resolve(null),
+        job.assignedToId ? db.select({ id: teamMembers.id, name: teamMembers.name }).from(teamMembers).where(eq(teamMembers.id, job.assignedToId)).limit(1).then(r => r[0] ?? null) : Promise.resolve(null),
+        db.select({ eventType: jobTimeEvents.eventType, occurredAt: jobTimeEvents.occurredAt }).from(jobTimeEvents).where(eq(jobTimeEvents.jobId, input.jobId)).orderBy(asc(jobTimeEvents.occurredAt)),
+        db.select().from(jobWorkStatusEvents).where(eq(jobWorkStatusEvents.jobId, input.jobId)).orderBy(asc(jobWorkStatusEvents.createdAt)),
+        db.select({ id: jobNotes.id, body: jobNotes.body, visibility: jobNotes.visibility, createdAt: jobNotes.createdAt }).from(jobNotes).where(eq(jobNotes.jobId, input.jobId)).orderBy(desc(jobNotes.createdAt)),
+        db.select().from(jobFieldParts).where(eq(jobFieldParts.jobId, input.jobId)).orderBy(asc(jobFieldParts.createdAt)),
+        db.select({ id: jobAttachments.id, category: jobAttachments.category, fileName: jobAttachments.fileName }).from(jobAttachments).where(and(eq(jobAttachments.jobId, input.jobId), eq(jobAttachments.kind, "photo"))),
+        db.select({ signedAt: jobSignatures.signedAt }).from(jobSignatures).where(eq(jobSignatures.jobId, input.jobId)).limit(1).then(r => r[0] ?? null),
+        db.select().from(jobCompletions).where(eq(jobCompletions.jobId, input.jobId)).limit(1).then(r => r[0] ?? null),
+      ]);
+      return {
+        job: { id: job.id, jobNumber: job.jobNumber, title: job.title, technicianWorkStatus: job.technicianWorkStatus ?? DEFAULT_WORK_STATUS, completedAt: job.completedAt },
+        customer, property, technician: assignee,
+        time: computeTimeSummary(timeEvents as any),
+        statusTimeline, notes, parts,
+        photos: { count: photos.length, byCategory: photos },
+        signature: { hasSignature: !!sig, signedAt: sig?.signedAt ?? null },
+        completion,
       };
     }),
 

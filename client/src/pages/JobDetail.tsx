@@ -11,6 +11,7 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
+import { OfficeFieldSummary } from "@/components/field/OfficeFieldSummary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -595,6 +596,9 @@ export default function JobDetail() {
             <CardContent className="text-sm whitespace-pre-wrap">{job.completionSummary}</CardContent>
           </Card>
         )}
+
+        {/* Field completion (PR #41) — read-only time/parts/signature */}
+        <OfficeFieldSummary jobId={jobId} />
 
         {/* Status history */}
         <Card>
