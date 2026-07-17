@@ -295,33 +295,52 @@ describe("LPEmergencyHVAC — GA4 added beside the existing Ads conversion (Ads 
 
 /* ── Fix 1 (contact_form_submit) + Fix 2 (replacement_request) ─────────────── */
 
-describe("resolveFormConversion — source precedence + service classification", () => {
-  it("Fix 1: an explicit contact source resolves to contact_form_submit, service ignored", () => {
-    expect(resolveFormConversion({ source: "contact" }).event).toBe("contact_form_submit");
-    // Source wins even if a service is picked on the Contact page.
-    expect(resolveFormConversion({ source: "contact", service: "Commercial HVAC" }).event).toBe(
-      "contact_form_submit",
-    );
-  });
-
-  it("Fix 2: the HVAC System Replacement selection resolves to replacement_request", () => {
-    expect(resolveFormConversion({ service: "HVAC System Replacement" }).event).toBe("replacement_request");
-  });
-
-  it("installation selections are NOT treated as replacement", () => {
-    for (const s of ["Heat Pump Installation", "AC Installation", "Heating Installation"]) {
-      expect(resolveFormConversion({ service: s }).event).toBe("installation_request");
+describe("resolveFormConversion — service classified first; contact source overrides only the generic fallback", () => {
+  it("Fix 1: Contact + generic inquiry → contact_form_submit", () => {
+    for (const service of [undefined, "", "Other", "Rebate Consultation"]) {
+      expect(resolveFormConversion({ source: "contact", service }).event).toBe("contact_form_submit");
     }
-    expect(resolveFormConversion({ service: "HVAC System Replacement" }).event).not.toBe("installation_request");
   });
 
-  it("with no source, falls back to service classification", () => {
+  it("Fix 2: Contact + HVAC System Replacement → replacement_request (specific intent wins over source)", () => {
+    expect(resolveFormConversion({ source: "contact", service: "HVAC System Replacement" }).event).toBe("replacement_request");
+  });
+
+  it("Contact + installation → installation_request (never contact_form_submit / replacement_request)", () => {
+    for (const s of ["Heat Pump Installation", "AC Installation", "Heating Installation"]) {
+      const e = resolveFormConversion({ source: "contact", service: s }).event;
+      expect(e).toBe("installation_request");
+      expect(e).not.toBe("replacement_request");
+      expect(e).not.toBe("contact_form_submit");
+    }
+  });
+
+  it("Contact + repair → repair_request", () => {
+    expect(resolveFormConversion({ source: "contact", service: "Emergency Repair" }).event).toBe("repair_request");
+  });
+
+  it("Contact preserves the other specific service events (maintenance / commercial / residential)", () => {
+    expect(resolveFormConversion({ source: "contact", service: "Maintenance Subscription" }).event).toBe("maintenance_plan_inquiry");
+    expect(resolveFormConversion({ source: "contact", service: "Commercial HVAC" }).event).toBe("commercial_quote_request");
+    expect(resolveFormConversion({ source: "contact", service: "Residential HVAC" }).event).toBe("residential_quote_request");
+  });
+
+  it("non-contact forms retain their existing service mappings", () => {
+    expect(resolveFormConversion({ service: "HVAC System Replacement" }).event).toBe("replacement_request");
     expect(resolveFormConversion({ service: "Emergency Repair" }).event).toBe("repair_request");
+    expect(resolveFormConversion({ service: "Heat Pump Installation" }).event).toBe("installation_request");
     expect(resolveFormConversion({}).event).toBe("quote_request");
+    // contact_form_submit is contact-only: a non-contact generic submission stays quote_request.
+    expect(resolveFormConversion({ service: "Other" }).event).toBe("quote_request");
   });
 
-  it("never forwards the raw service string", () => {
-    const m = resolveFormConversion({ service: "Jane's replacement at 5 Main St 07030" });
+  it("installation is never treated as replacement (and vice-versa)", () => {
+    expect(resolveFormConversion({ service: "HVAC System Replacement" }).event).not.toBe("installation_request");
+    expect(resolveFormConversion({ source: "contact", service: "AC Installation" }).event).not.toBe("replacement_request");
+  });
+
+  it("never forwards the raw service string (no PII in the resolved mapping)", () => {
+    const m = resolveFormConversion({ source: "contact", service: "Jane's replacement at 5 Main St 07030" });
     expect(m.event).toBe("replacement_request");
     expect(JSON.stringify(m)).not.toMatch(/Jane|Main St|07030/);
   });
@@ -330,8 +349,8 @@ describe("resolveFormConversion — source precedence + service classification",
 describe("Fix 1/2 — confirmed-success firing is exactly-once and non-duplicating", () => {
   beforeEach(enableGa4);
 
-  it("Contact success fires contact_form_submit exactly once (repeat onSuccess dedupes)", () => {
-    const m = resolveFormConversion({ source: "contact", service: "Residential HVAC" });
+  it("Contact generic success fires contact_form_submit exactly once (repeat onSuccess dedupes)", () => {
+    const m = resolveFormConversion({ source: "contact", service: "Other" });
     const params = { form_type: "quick_quote_form", service_category: m.service_category, lead_source_surface: "contact_page" };
     // Simulate onSuccess invoked twice for the same submission key.
     trackConversion(m.event, params, { dedupeKey: "contact-1" });
@@ -340,17 +359,23 @@ describe("Fix 1/2 — confirmed-success firing is exactly-once and non-duplicati
     expect(gtag).toHaveBeenCalledWith("event", "contact_form_submit", expect.objectContaining({ send_to: GA4_ID }));
   });
 
-  it("Replacement success fires replacement_request exactly once", () => {
-    const m = resolveFormConversion({ service: "HVAC System Replacement" });
+  it("Contact + replacement success fires replacement_request exactly once", () => {
+    const m = resolveFormConversion({ source: "contact", service: "HVAC System Replacement" });
     trackConversion(m.event, { service_category: m.service_category }, { dedupeKey: "repl-1" });
     expect(gtag).toHaveBeenCalledTimes(1);
     expect(gtag).toHaveBeenCalledWith("event", "replacement_request", expect.objectContaining({ send_to: GA4_ID }));
   });
 
-  it("Installation success still fires installation_request", () => {
-    const m = resolveFormConversion({ service: "Heat Pump Installation" });
+  it("Contact + installation success fires installation_request", () => {
+    const m = resolveFormConversion({ source: "contact", service: "Heat Pump Installation" });
     trackConversion(m.event, { service_category: m.service_category }, { dedupeKey: "inst-1" });
     expect(gtag).toHaveBeenCalledWith("event", "installation_request", expect.objectContaining({ send_to: GA4_ID }));
+  });
+
+  it("Contact + repair success fires repair_request", () => {
+    const m = resolveFormConversion({ source: "contact", service: "Emergency Repair" });
+    trackConversion(m.event, { service_category: m.service_category }, { dedupeKey: "repair-1" });
+    expect(gtag).toHaveBeenCalledWith("event", "repair_request", expect.objectContaining({ send_to: GA4_ID }));
   });
 
   it("separate legitimate submissions remain trackable (distinct keys)", () => {

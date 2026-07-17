@@ -194,25 +194,31 @@ export interface ServiceMapping {
 
 /**
  * Explicit form-surface hint. Some forms live on a page whose intent is not
- * captured by the service field — e.g. the Contact page. `"contact"` forces the
- * `contact_form_submit` event regardless of the (optional) service picked.
+ * captured by the service field — e.g. the Contact page. `"contact"` maps an
+ * OTHERWISE-GENERIC submission to `contact_form_submit`; a deliberately-picked
+ * specific service still wins (see {@link resolveFormConversion}).
  */
 export type FormConversionSource = "contact";
 
 /**
- * Resolve a CONFIRMED lead submission to its conversion event. An explicit
- * `source` takes precedence over service classification; otherwise the free-text
- * service label is classified via {@link mapServiceToConversion}. Pure and
- * deterministic — the raw service string is only classified, never forwarded.
+ * Resolve a CONFIRMED lead submission to its conversion event. The picked service
+ * is classified FIRST via {@link mapServiceToConversion}; a `"contact"` source
+ * only overrides the generic `quote_request` fallback to `contact_form_submit`.
+ * That keeps specific, high-value intents (replacement/installation/repair/
+ * maintenance/commercial/residential) intact even on the Contact page, so both
+ * `contact_form_submit` and `replacement_request` are reachable from the one
+ * form. Pure and deterministic — the raw service string is only classified,
+ * never forwarded.
  */
 export function resolveFormConversion(input: {
   source?: FormConversionSource;
   service?: string;
 }): ServiceMapping {
-  if (input.source === "contact") {
-    return { event: "contact_form_submit", service_category: "contact" };
+  const mapping = mapServiceToConversion(input.service);
+  if (input.source === "contact" && mapping.event === "quote_request") {
+    return { event: "contact_form_submit", service_category: "contact", customer_segment: mapping.customer_segment };
   }
-  return mapServiceToConversion(input.service);
+  return mapping;
 }
 
 function segmentFor(s: string): CustomerSegment | undefined {
