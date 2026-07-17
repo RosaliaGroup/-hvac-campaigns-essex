@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
+import { evaluateBulkSend } from "@/lib/smsSendGate";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -47,6 +48,7 @@ import {
   Inbox,
   Reply,
   Circle,
+  UserPlus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
@@ -317,23 +319,24 @@ export default function SmsCampaigns() {
   }
 
   async function handleSend() {
-    const ids =
-      sendTarget === "all"
-        ? activeContacts.map((c) => c.id)
-        : selectedContactIds.filter((id) => {
-            const c = filteredContacts.find((x) => x.id === id);
-            return c && !c.optedOut;
-          });
-
-    if (ids.length === 0) {
-      toast({ title: "No contacts to send to", variant: "destructive" });
+    // Gate the send with an explicit, testable decision so a blocked case
+    // NEVER fires a network request (and never reaches Telnyx) and always
+    // explains why — instead of silently doing nothing.
+    const gate = evaluateBulkSend({
+      target: sendTarget,
+      message: msgTexts[activeMsg],
+      selectedContactIds,
+      contacts: filteredContacts,
+    });
+    if (!gate.ok) {
+      toast({ title: gate.message, variant: "destructive" });
       return;
     }
 
     setIsSending(true);
     setSendResult(null);
     await sendBulkMutation.mutateAsync({
-      contactIds: ids,
+      contactIds: gate.contactIds,
       messageNum: activeMsg,
       messageText: msgTexts[activeMsg],
     });
@@ -1128,6 +1131,25 @@ function SmsInboxTab() {
     onError: (e) => toast({ title: "Reply failed", description: e.message, variant: "destructive" }),
   });
 
+  // Quick-add an inbound number that isn't yet in SMS Contacts. This only
+  // creates the contact (explicit user action = consent to store); it never
+  // sends a message. The user can then message them from the Contacts tab.
+  const addContactMutation = trpc.smsCampaigns.importContacts.useMutation({
+    onSuccess: (data) => {
+      toast({
+        title: data.imported > 0 ? "Added to SMS Contacts" : "Already in SMS Contacts",
+        description:
+          data.imported > 0
+            ? "You can now message this number from the SMS Contacts tab."
+            : "This number is already in your contacts.",
+      });
+      refetchConvs();
+      utils.smsCampaigns.getConversations.invalidate();
+      utils.smsCampaigns.listContacts.invalidate();
+    },
+    onError: (e) => toast({ title: "Couldn't add contact", description: e.message, variant: "destructive" }),
+  });
+
   function selectConversation(key: string) {
     setSelectedConvKey(key);
     const conv = conversations.find((c) => c.key === key);
@@ -1301,8 +1323,28 @@ function SmsInboxTab() {
                     <p className="text-xs text-gray-400 mt-1">Press Ctrl+Enter to send</p>
                   </div>
                 ) : (
-                  <div className="p-4 border-t bg-yellow-50">
-                    <p className="text-xs text-yellow-700">This number is not in your contacts list. Add them as a contact to reply.</p>
+                  <div className="p-4 border-t bg-yellow-50 space-y-2">
+                    <p className="text-xs text-yellow-700">
+                      This number is not in SMS Contacts. Add or import the contact before sending.
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      disabled={addContactMutation.isPending}
+                      onClick={() =>
+                        addContactMutation.mutate([
+                          { firstName: `SMS ${String(selectedConv.phone).slice(-4)}`, phone: selectedConv.phone },
+                        ])
+                      }
+                    >
+                      {addContactMutation.isPending ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-4 w-4" />
+                      )}
+                      Add to SMS Contacts
+                    </Button>
                   </div>
                 )}
               </>
