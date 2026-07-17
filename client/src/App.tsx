@@ -90,6 +90,7 @@ import TakeOffAI from "./pages/TakeOffAI";
 import TakeOffDetail from "./pages/TakeOffDetail";
 import TakeOffPublic from "./pages/TakeOffPublic";
 import FieldToday from "./pages/FieldToday";
+import FieldMyJobs from "./pages/FieldMyJobs";
 import FieldProfile from "./pages/FieldProfile";
 import PortalApp from "./pages/portal/PortalApp";
 
@@ -332,7 +333,10 @@ function Router() {
       <Route path={"/settings/integrations"} component={protect(Integrations)} />
       <Route path={"/calendar"} component={protect(AppointmentCalendar)} />
       {/* Field App (mobile) — today's assigned appointments for technicians/sales */}
-      <Route path={"/field/today"} component={protect(FieldToday)} />
+      {/* My Jobs dashboard replaces the old Today screen; /field/my-jobs is an alias.
+          FieldToday (legacy single-list view) is retained but no longer routed. */}
+      <Route path={"/field/today"} component={protect(FieldMyJobs)} />
+      <Route path={"/field/my-jobs"} component={protect(FieldMyJobs)} />
       <Route path={"/field/profile"} component={protect(FieldProfile)} />
       <Route path={"/jobs"} component={protect(Jobs)} />
       <Route path={"/jobs/:id"} component={protect(JobDetail)} />
