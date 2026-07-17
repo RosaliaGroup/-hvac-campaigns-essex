@@ -88,15 +88,16 @@ describe("buildAppointmentDescription (ordering)", () => {
     propertyAddress: "12 Elm St, Newark NJ",
     appointmentType: "assessment",
     serviceType: "mini_split_installation",
+    issueDescription: "No heat upstairs",
     assignedTechnician: "Mike R.",
     additionalTechnicians: ["Sam T.", "Dana K."],
     notes: "Rear unit",
   });
 
-  it("orders sections Customer → Phone → Email → Service Address → Appointment Type → Service Type → Assigned Technician → Additional Technicians → Notes", () => {
+  it("orders sections Customer → Phone → Email → Service Address → Appointment Type → Service Type → Job Description → Assigned Technician → Additional Technicians → Notes", () => {
     const order = [
       "Customer", "Phone", "Email", "Service Address",
-      "Appointment Type", "Service Type", "Assigned Technician", "Additional Technicians", "Notes",
+      "Appointment Type", "Service Type", "Job Description", "Assigned Technician", "Additional Technicians", "Notes",
     ].map(l => desc.indexOf(l));
     const sorted = [...order].sort((a, b) => a - b);
     expect(order).toEqual(sorted);
@@ -118,6 +119,14 @@ describe("buildAppointmentDescription (ordering)", () => {
     expect(minimal).not.toContain("Phone");
     expect(minimal).not.toContain("Service Type");
     expect(minimal).not.toContain("Additional Technicians");
+    expect(minimal).not.toContain("Job Description");
+  });
+
+  it("renders the job description (issueDescription) as its own section", () => {
+    expect(desc).toContain("Job Description\nNo heat upstairs");
+    // Positioned after Service Type and before the technician sections.
+    expect(desc.indexOf("Service Type")).toBeLessThan(desc.indexOf("Job Description"));
+    expect(desc.indexOf("Job Description")).toBeLessThan(desc.indexOf("Assigned Technician"));
   });
 });
 

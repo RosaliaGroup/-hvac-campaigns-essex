@@ -129,7 +129,10 @@ export async function resolveTechnicians(appt: Appointment, attendees: Appointme
 }
 
 export function appointmentDescription(
-  appt: Pick<Appointment, "fullName" | "phone" | "email" | "propertyAddress" | "appointmentType" | "serviceType" | "notes">,
+  appt: Pick<
+    Appointment,
+    "fullName" | "phone" | "email" | "propertyAddress" | "appointmentType" | "serviceType" | "issueDescription" | "notes"
+  >,
   techs?: TechnicianNames,
 ): string {
   return buildAppointmentDescription({
@@ -139,6 +142,7 @@ export function appointmentDescription(
     propertyAddress: appt.propertyAddress,
     appointmentType: appt.appointmentType,
     serviceType: appt.serviceType,
+    issueDescription: appt.issueDescription,
     assignedTechnician: techs?.assignedTechnician ?? null,
     additionalTechnicians: techs?.additionalTechnicians ?? [],
     notes: appt.notes,

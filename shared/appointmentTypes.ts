@@ -126,6 +126,8 @@ export interface DescriptionFields {
   propertyAddress?: string | null;
   appointmentType?: string | null;
   serviceType?: string | null;
+  /** The written job/problem description captured on the appointment (issueDescription). */
+  issueDescription?: string | null;
   assignedTechnician?: string | null;
   additionalTechnicians?: string[];
   notes?: string | null;
@@ -143,6 +145,7 @@ export function buildAppointmentDescription(f: DescriptionFields): string {
   add("Service Address", f.propertyAddress);
   add("Appointment Type", appointmentTypeLabel(f.appointmentType));
   add("Service Type", serviceTypeLabel(f.serviceType));
+  add("Job Description", f.issueDescription);
   add("Assigned Technician", f.assignedTechnician);
   const extra = (f.additionalTechnicians ?? []).map(s => s.trim()).filter(Boolean);
   if (extra.length) blocks.push(`Additional Technicians\n${extra.join(", ")}`);

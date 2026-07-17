@@ -108,6 +108,59 @@ async function findExistingCustomer(
   return rows[0] ?? null;
 }
 
+/**
+ * Pure predicate mirroring the WHERE clause of relinkAppointmentsToCustomer:
+ * an appointment is relinked to the converting lead's customer ONLY when it is
+ * not already linked (customerId == null) AND it matches the lead by last-10
+ * phone or case-insensitive email. Exported for tests. Keep in lockstep with
+ * the SQL in relinkAppointmentsToCustomer below.
+ */
+export function appointmentQualifiesForRelink(
+  appt: { customerId?: number | null; phone?: string | null; email?: string | null },
+  target: { phone?: string | null; email?: string | null },
+): boolean {
+  if (appt.customerId != null) return false;
+  const tp = normalizePhone(target.phone);
+  const ap = normalizePhone(appt.phone);
+  if (tp && ap && tp === ap) return true;
+  const te = target.email?.trim().toLowerCase() || null;
+  const ae = appt.email?.trim().toLowerCase() || null;
+  if (te && ae && te === ae) return true;
+  return false;
+}
+
+/**
+ * Re-point appointments to a customer on lead conversion, using the same
+ * relationship model applied elsewhere (last-10-digit phone match,
+ * case-insensitive email — see appointmentQualifiesForRelink). Only appointments
+ * that are NOT already linked (customerId IS NULL) are touched, so an appointment
+ * already attributed to a different customer is never stolen. Returns the number
+ * of rows relinked. (Call logs are intentionally NOT relinked here — see
+ * convertFromLead.)
+ */
+async function relinkAppointmentsToCustomer(
+  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  customerId: number,
+  phone: string | null | undefined,
+  email: string | null | undefined,
+): Promise<number> {
+  const phoneKey = normalizePhone(phone);
+  const emailKey = email?.trim().toLowerCase() || null;
+  const matchers = [];
+  if (phoneKey) {
+    matchers.push(sql`RIGHT(REGEXP_REPLACE(${appointments.phone}, '[^0-9]', ''), 10) = ${phoneKey}`);
+  }
+  if (emailKey) {
+    matchers.push(sql`LOWER(${appointments.email}) = ${emailKey}`);
+  }
+  if (matchers.length === 0) return 0;
+  const result = await db
+    .update(appointments)
+    .set({ customerId })
+    .where(and(isNull(appointments.customerId), or(...matchers)));
+  return Number((result as unknown as [{ affectedRows?: number }])[0]?.affectedRows ?? 0);
+}
+
 const customerInput = z.object({
   type: z.enum(["residential", "commercial"]).default("residential"),
   firstName: z.string().max(255).optional().nullable(),
@@ -527,7 +580,14 @@ export const customersRouter = router({
       }
 
       await db.update(leads).set({ customerId, convertedAt: new Date() }).where(eq(leads.id, lead.id));
-      return { customerId, merged, alreadyConverted: false };
+
+      // Keep appointment history linked: re-point matching unlinked appointments to
+      // the resolved customer (phone/email match, same model used elsewhere).
+      // Call logs are NOT relinked — they have no email, are joined strictly by
+      // customerId in read paths (no phone-match precedent), and their leadId FK is
+      // not populated, so phone-matching them would be an unsafe new heuristic.
+      const relinkedAppointments = await relinkAppointmentsToCustomer(db, customerId, phone, email);
+      return { customerId, merged, alreadyConverted: false, relinkedAppointments };
     }),
 
   /** Convert a `leadCaptures` row into a customer, with the same dedupe rule. */
@@ -570,7 +630,11 @@ export const customersRouter = router({
       }
 
       await db.update(leadCaptures).set({ customerId, convertedAt: new Date() }).where(eq(leadCaptures.id, capture.id));
-      return { customerId, merged, alreadyConverted: false };
+
+      // Re-point matching unlinked appointments so the converted customer keeps its
+      // appointment history (same phone/email model as convertFromLead).
+      const relinkedAppointments = await relinkAppointmentsToCustomer(db, customerId, capture.phone, capture.email);
+      return { customerId, merged, alreadyConverted: false, relinkedAppointments };
     }),
 
   /** Dashboard counts by type and status. */

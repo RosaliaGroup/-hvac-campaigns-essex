@@ -98,7 +98,9 @@ export default function AppointmentDialog({
   /** When set, dialog edits this appointment; otherwise creates a new one. */
   appointment?: EditableAppointment | null;
   /** Prefills for create mode (e.g. from a customer record or a calendar day). */
-  defaults?: Partial<Pick<EditableAppointment, "fullName" | "phone" | "email" | "propertyAddress" | "propertyType">> & {
+  defaults?: Partial<
+    Pick<EditableAppointment, "fullName" | "phone" | "email" | "propertyAddress" | "propertyType" | "issueDescription">
+  > & {
     customerId?: number;
     propertyId?: number;
     jobId?: number;
@@ -186,7 +188,7 @@ export default function AppointmentDialog({
         source: "none",
         reminderMinutes: "none",
         googleMeet: false,
-        issueDescription: "",
+        issueDescription: defaults?.issueDescription || "",
         notes: "",
         sendConfirmation: true,
       }));
