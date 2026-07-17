@@ -234,6 +234,7 @@ export function JobCard({
   const [notesDraft, setNotesDraft] = useState(appt.notes ?? "");
 
   const directionsUrl = buildDirectionsUrl(appt.propertyAddress);
+  const hasPhone = Boolean(appt.phone && appt.phone.trim());
   const customerName = appt.companyName || appt.customerDisplayName || appt.fullName;
   const showCompany = Boolean(appt.companyName) && appt.companyName !== customerName;
 
@@ -318,13 +319,20 @@ export function JobCard({
               {formatDisplayName(appt.companyName)}
             </div>
           ) : null}
-          <a
-            href={`tel:${dialable(appt.phone)}`}
-            className="flex items-center gap-2 pl-6 text-sm font-medium text-[#ff6b35]"
-          >
-            <Phone className="h-3.5 w-3.5" />
-            {appt.phone}
-          </a>
+          {hasPhone ? (
+            <a
+              href={`tel:${dialable(appt.phone)}`}
+              className="flex items-center gap-2 pl-6 text-sm font-medium text-[#ff6b35]"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              {appt.phone}
+            </a>
+          ) : (
+            <div className="flex items-center gap-2 pl-6 text-sm text-muted-foreground">
+              <Phone className="h-3.5 w-3.5" />
+              No phone number
+            </div>
+          )}
           <div className="flex items-start gap-2 pl-6 text-sm text-muted-foreground">
             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>{appt.propertyAddress ? formatAddress(appt.propertyAddress) : "No service address"}</span>
@@ -356,20 +364,20 @@ export function JobCard({
           </div>
         )}
 
-        {/* Communication actions */}
-        <div className="grid grid-cols-2 gap-2">
-          <ActionButton icon={Phone} label="Call" href={`tel:${dialable(appt.phone)}`} />
-          <ActionButton icon={MessageSquare} label="Text" href={`sms:${dialable(appt.phone)}`} />
-        </div>
+        {/* Communication actions — shown only when a phone number exists. */}
+        {hasPhone ? (
+          <div className="grid grid-cols-2 gap-2">
+            <ActionButton icon={Phone} label="Call" href={`tel:${dialable(appt.phone)}`} />
+            <ActionButton icon={MessageSquare} label="Text" href={`sms:${dialable(appt.phone)}`} />
+          </div>
+        ) : null}
 
-        {/* Navigation + record actions */}
+        {/* Navigation + record actions. Directions shows only with an address;
+            Open Job always shows (disabled without a linked job). */}
         <div className="grid grid-cols-2 gap-2">
-          <ActionButton
-            icon={Navigation}
-            label="Directions"
-            href={directionsUrl ?? undefined}
-            disabled={!directionsUrl}
-          />
+          {directionsUrl ? (
+            <ActionButton icon={Navigation} label="Directions" href={directionsUrl} />
+          ) : null}
           <ActionButton
             icon={UserRound}
             label="View Customer"
