@@ -556,7 +556,8 @@ export const smsCampaignsRouter = router({
     }),
 
   getConversations: protectedProcedure.query(async () => {
-    // Returns one row per contact that has inbox messages, with latest message and unread count
+    // Returns one conversation per phone number that has inbox messages, with
+    // latest message and unread count.
     const db = await requireDb();
     const messages = await db
       .select()
@@ -564,7 +565,11 @@ export const smsCampaignsRouter = router({
       .orderBy(desc(smsInboxMessages.createdAt))
       .limit(500);
 
-    // Group by contactId (or phone for unknown contacts)
+    // Group by NORMALIZED phone (last-10), NOT by contactId. A number whose
+    // history is partly linked to a contact and partly unlinked (rows that
+    // arrived before the contact existed, contactId null) must collapse into a
+    // SINGLE conversation — not split into a "c:<id>" and a "p:<phone>" entry.
+    // This matches the phone-based detail thread: one list row ⇄ one thread.
     const convMap = new Map<string, {
       key: string;
       contactId: number | null;
@@ -576,7 +581,7 @@ export const smsCampaignsRouter = router({
     }>();
 
     for (const msg of messages) {
-      const key = msg.contactId ? `c:${msg.contactId}` : `p:${msg.phone}`;
+      const key = last10Digits(msg.phone) || `raw:${msg.phone}`;
       if (!convMap.has(key)) {
         convMap.set(key, {
           key,
@@ -591,6 +596,11 @@ export const smsCampaignsRouter = router({
       const conv = convMap.get(key)!;
       conv.totalCount++;
       if (!msg.isRead && msg.direction === "inbound") conv.unreadCount++;
+      // Adopt a contact link from ANY row for this number, so a conversation
+      // with even one linked row shows the contact name and allows replying.
+      if (conv.contactId == null && msg.contactId != null) conv.contactId = msg.contactId;
+      // Prefer an E.164-formatted phone for display if one exists on any row.
+      if (!conv.phone.startsWith("+") && msg.phone.startsWith("+")) conv.phone = msg.phone;
       // Keep the latest message (messages are desc so first is latest)
       if (msg.createdAt > conv.latestAt) {
         conv.latestMessage = msg.message;
