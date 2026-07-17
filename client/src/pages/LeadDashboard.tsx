@@ -475,7 +475,9 @@ function LeadDetailModal({
               fullName: getLeadName(lead),
               phone: lead.phone,
               email: lead.email,
-              requestedService,
+              // Only carry an actual requested-service message into the job description;
+              // don't leak the channel-label fallback (e.g. "Phone Call") into invites.
+              requestedService: lead.message?.trim() || "",
               customerId: lead.customerId,
             })}
           />
