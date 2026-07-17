@@ -22,6 +22,8 @@ import {
   nextWorkStatuses,
   type TechnicianWorkStatus,
 } from "@shared/workStatus";
+import { WorkOrderNotes } from "@/components/field/WorkOrderNotes";
+import { WorkOrderPhotos } from "@/components/field/WorkOrderPhotos";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -328,41 +330,13 @@ export default function FieldWorkOrder() {
                 ))}
               </div>
 
-              {/* Previous notes */}
-              <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-muted-foreground">Previous notes</div>
-                {data.history.notes.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No notes yet.</p>
-                ) : data.history.notes.map(n => (
-                  <div key={n.id} className="rounded-lg bg-muted/50 p-2 text-xs">
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <StickyNote className="h-3.5 w-3.5" /> {dateTimeLabel(n.createdAt)}{n.authorName ? ` · ${n.authorName}` : ""}
-                    </div>
-                    <p className="mt-0.5">{n.body}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Previous photos (if available) */}
-              <div className="space-y-1.5">
-                <div className="text-xs font-semibold text-muted-foreground">Previous photos</div>
-                {data.history.photos.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No photos.</p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {data.history.photos.map(p => (
-                      <a key={p.id} href={p.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border">
-                        <img src={p.url} alt={p.fileName} className="h-20 w-full object-cover"
-                          onError={e => { (e.currentTarget.style.display = "none"); }} />
-                        <div className="flex items-center justify-center gap-1 bg-muted/50 px-1 py-1 text-[10px] text-muted-foreground">
-                          <ImageIcon className="h-3 w-3" /> photo
-                        </div>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
             </SectionCard>
+
+            {/* Notes (PR #40) — internal / customer, editable per server rules */}
+            <WorkOrderNotes jobId={jobId} />
+
+            {/* Photos (PR #40) — capture/upload + category gallery */}
+            <WorkOrderPhotos jobId={jobId} />
           </>
         ) : null}
       </main>

@@ -15,6 +15,7 @@ import {
   jobTechnicians,
   jobNotes,
   jobAttachments,
+  jobAttachmentBlobs,
   jobStatusHistory,
   jobWorkStatusEvents,
   appointments,
@@ -39,6 +40,14 @@ import {
   DEFAULT_WORK_STATUS,
   type TechnicianWorkStatus,
 } from "../../shared/workStatus";
+import {
+  NOTE_TYPES,
+  PHOTO_CATEGORIES,
+  canEditNote,
+  validatePhotoUpload,
+  type NoteType,
+  type PhotoRejectReason,
+} from "../../shared/jobMedia";
 
 /** Append a job status-history row. Best-effort audit trail; never blocks the write it follows. */
 async function recordStatusChange(
@@ -94,6 +103,16 @@ async function resolveFieldJobAccess(
     throw new TRPCError({ code: "FORBIDDEN", message: "This work order isn't assigned to you." });
   }
   return { job, memberId, isAdmin };
+}
+
+/** Human message for a rejected photo upload (server-side guard). */
+function photoRejectMessage(reason: PhotoRejectReason): string {
+  switch (reason) {
+    case "unsupported_type": return "Unsupported file type. Please upload a JPEG, PNG, or WebP image.";
+    case "too_large": return "Image is too large. Please use a smaller or more compressed photo.";
+    case "empty": return "The image appears to be empty.";
+    case "not_data_url": return "Invalid image data.";
+  }
 }
 
 /** Join a property's parts into a single-line address, or null if empty. */
@@ -468,6 +487,144 @@ export const jobsRouter = router({
         changedById: memberId ?? null, changedByName,
       });
       return { success: true, status: input.status };
+    }),
+
+  // ── Field work-order notes (PR #40) ───────────────────────────────────────
+  // Technician-scoped, access-enforced via resolveFieldJobAccess. Distinct from
+  // the office addNote/deleteNote (which stay untouched for backward-compat).
+
+  /** Add a note (internal or customer) to a work order. */
+  fieldAddNote: protectedProcedure
+    .input(z.object({
+      jobId: z.number().int(),
+      body: z.string().min(1).max(5000),
+      visibility: z.enum(NOTE_TYPES).default("internal"),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { memberId } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const result = await db.insert(jobNotes).values({
+        jobId: input.jobId, body: input.body, visibility: input.visibility,
+        authorId: memberId ?? null, edited: false,
+      });
+      return { id: Number((result as unknown as [{ insertId: number }])[0]?.insertId ?? 0) };
+    }),
+
+  /**
+   * Edit a note's text. Enforces the shared canEditNote rule (own-notes-only for
+   * technicians; after completion, internal→admin-only and customer→locked). Sets
+   * the edited flag; updatedAt is stamped by the column.
+   */
+  fieldUpdateNote: protectedProcedure
+    .input(z.object({ id: z.number().int(), body: z.string().min(1).max(5000) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const note = (await db.select().from(jobNotes).where(eq(jobNotes.id, input.id)).limit(1))[0];
+      if (!note) throw new TRPCError({ code: "NOT_FOUND", message: "Note not found" });
+      const { job, memberId, isAdmin } = await resolveFieldJobAccess(db, note.jobId, ctx.user);
+      const jobCompleted = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) === "completed";
+      if (!canEditNote({ isAdmin, memberId, note: { authorId: note.authorId, visibility: note.visibility as NoteType }, jobCompleted })) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You can't edit this note." });
+      }
+      await db.update(jobNotes).set({ body: input.body, edited: true }).where(eq(jobNotes.id, input.id));
+      return { success: true };
+    }),
+
+  /** Notes on a work order, newest first, with author name/photo + per-note editability. */
+  fieldListNotes: protectedProcedure
+    .input(z.object({ jobId: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job, memberId, isAdmin } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const jobCompleted = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) === "completed";
+      const rows = await db.select({
+        id: jobNotes.id, body: jobNotes.body, visibility: jobNotes.visibility, authorId: jobNotes.authorId,
+        edited: jobNotes.edited, createdAt: jobNotes.createdAt, updatedAt: jobNotes.updatedAt,
+        attachmentId: jobNotes.attachmentId,
+        authorName: teamMembers.name, authorPhoto: teamMembers.profilePhoto,
+      })
+        .from(jobNotes).leftJoin(teamMembers, eq(jobNotes.authorId, teamMembers.id))
+        .where(eq(jobNotes.jobId, input.jobId)).orderBy(desc(jobNotes.createdAt));
+      return {
+        jobCompleted,
+        notes: rows.map(n => ({
+          ...n,
+          canEdit: canEditNote({ isAdmin, memberId, note: { authorId: n.authorId, visibility: n.visibility as NoteType }, jobCompleted }),
+        })),
+      };
+    }),
+
+  // ── Field work-order photos (PR #40) ──────────────────────────────────────
+  // Bytes live in jobAttachmentBlobs (separate table → lean gallery queries) and
+  // are served ONLY through fieldGetPhoto (authorized; no guessable public URL).
+
+  /** Upload a compressed photo (data URL) to a work order under a category. */
+  fieldAddPhoto: protectedProcedure
+    .input(z.object({
+      jobId: z.number().int(),
+      category: z.enum(PHOTO_CATEGORIES).default("general"),
+      fileName: z.string().min(1).max(255),
+      dataUrl: z.string().min(1),
+      noteId: z.number().int().optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { memberId } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const check = validatePhotoUpload(input.dataUrl);
+      if (!check.ok) throw new TRPCError({ code: "BAD_REQUEST", message: photoRejectMessage(check.reason) });
+      const { mime, base64, bytes } = check.value;
+      const result = await db.insert(jobAttachments).values({
+        jobId: input.jobId, kind: "photo", category: input.category, fileName: input.fileName,
+        url: null, mimeType: mime, sizeBytes: bytes, uploadedById: memberId ?? null,
+        noteId: input.noteId ?? null,
+      });
+      const attachmentId = Number((result as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+      await db.insert(jobAttachmentBlobs).values({ attachmentId, data: base64 });
+      // If attached to a note, back-link the note to this photo.
+      if (input.noteId) await db.update(jobNotes).set({ attachmentId }).where(eq(jobNotes.id, input.noteId));
+      return { id: attachmentId };
+    }),
+
+  /** Photo metadata for a work order (NO bytes) — feeds the category gallery. */
+  fieldListPhotos: protectedProcedure
+    .input(z.object({ jobId: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const photos = await db.select({
+        id: jobAttachments.id, category: jobAttachments.category, fileName: jobAttachments.fileName,
+        mimeType: jobAttachments.mimeType, sizeBytes: jobAttachments.sizeBytes,
+        createdAt: jobAttachments.createdAt, noteId: jobAttachments.noteId,
+        uploaderName: teamMembers.name,
+      })
+        .from(jobAttachments).leftJoin(teamMembers, eq(jobAttachments.uploadedById, teamMembers.id))
+        .where(and(eq(jobAttachments.jobId, input.jobId), eq(jobAttachments.kind, "photo")))
+        .orderBy(desc(jobAttachments.createdAt));
+      return { photos };
+    }),
+
+  /**
+   * Return one photo's bytes as a data URL, authorized by the photo's job. This
+   * is the ONLY way to read a field photo — there is no public URL to guess.
+   */
+  fieldGetPhoto: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const att = (await db.select().from(jobAttachments).where(eq(jobAttachments.id, input.id)).limit(1))[0];
+      if (!att || att.kind !== "photo") throw new TRPCError({ code: "NOT_FOUND", message: "Photo not found" });
+      await resolveFieldJobAccess(db, att.jobId, ctx.user); // enforce access by the photo's job
+      const blob = (await db.select({ data: jobAttachmentBlobs.data })
+        .from(jobAttachmentBlobs).where(eq(jobAttachmentBlobs.attachmentId, att.id)).limit(1))[0];
+      if (!blob) {
+        // Legacy/office attachment stored by URL rather than blob.
+        return { id: att.id, mimeType: att.mimeType, dataUrl: null as string | null, url: att.url };
+      }
+      return {
+        id: att.id, mimeType: att.mimeType,
+        dataUrl: `data:${att.mimeType ?? "image/jpeg"};base64,${blob.data}` as string | null,
+        url: null as string | null,
+      };
     }),
 
   /** Manual job creation (from customer / property / opportunity / jobs list). */
