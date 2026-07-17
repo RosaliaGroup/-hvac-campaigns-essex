@@ -8,7 +8,7 @@ export default function Footer() {
   return (
     <footer className="bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white py-12">
       <div className="container">
-        <div className="grid md:grid-cols-4 gap-8">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Company Info */}
           <div>
             <img 
@@ -35,6 +35,19 @@ export default function Footer() {
               <li><Link href="/ductless-mini-split-installation-nj" className="text-white/80 hover:text-white transition-colors">Ductless Mini-Split</Link></li>
               <li><Link href="/vrv-vrf-installation-nj" className="text-white/80 hover:text-white transition-colors">VRV/VRF Systems</Link></li>
               <li><Link href="/direct-install" className="text-white/80 hover:text-white transition-colors">Direct Install Program</Link></li>
+            </ul>
+          </div>
+
+          {/* Repair & Service */}
+          <div>
+            <h4 className="font-semibold mb-4">Repair &amp; Service</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/ac-repair-nj" className="text-white/80 hover:text-white transition-colors">AC Repair</Link></li>
+              <li><Link href="/heating-repair-nj" className="text-white/80 hover:text-white transition-colors">Heating Repair</Link></li>
+              <li><Link href="/emergency-hvac-repair-nj" className="text-white/80 hover:text-white transition-colors">Emergency HVAC</Link></li>
+              <li><Link href="/commercial-hvac-service-nj" className="text-white/80 hover:text-white transition-colors">Commercial HVAC Service</Link></li>
+              <li><Link href="/commercial-rtu-service-nj" className="text-white/80 hover:text-white transition-colors">RTU Service</Link></li>
+              <li><Link href="/commercial-hvac-maintenance-nj" className="text-white/80 hover:text-white transition-colors">Maintenance Plans</Link></li>
             </ul>
           </div>
 

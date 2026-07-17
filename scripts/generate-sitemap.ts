@@ -59,8 +59,19 @@ const diSlugs = Array.from(diSrc.matchAll(/slug:\s*"([^"]+)"/g)).map(m => m[1]);
 
 // ── 4. Classify priorities ──────────────────────────────────────────────────
 
+// SEO landing pages (repair/service intent) — keep in sync with data/seoLandingPages.ts
+const SEO_LANDING_SLUGS = new Set([
+  "/ac-repair-nj", "/heating-repair-nj", "/furnace-repair-nj", "/boiler-repair-nj",
+  "/indoor-air-quality-nj", "/heat-pump-repair-nj", "/ductless-mini-split-repair-nj",
+  "/emergency-hvac-repair-nj", "/commercial-hvac-service-nj", "/commercial-rtu-service-nj",
+  "/commercial-hvac-maintenance-nj", "/restaurant-hvac-nj", "/warehouse-hvac-nj",
+  "/office-building-hvac-nj", "/industrial-hvac-nj",
+]);
+
 function getPriority(p: string, line: string): string {
   if (p === "/") return "1.0";
+  if (p === "/emergency-hvac-repair-nj") return "0.9";
+  if (SEO_LANDING_SLUGS.has(p)) return "0.8";
   if (["/residential", "/commercial", "/rebate-calculator"].includes(p)) return "0.9";
   if (p === "/blog" || p.startsWith("/heat-pump-") || p.startsWith("/central-ac-") ||
       p.startsWith("/ductless-") || p.startsWith("/oil-to-") || p.startsWith("/commercial-") ||
