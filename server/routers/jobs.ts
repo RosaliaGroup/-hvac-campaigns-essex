@@ -16,6 +16,7 @@ import {
   jobNotes,
   jobAttachments,
   jobStatusHistory,
+  jobWorkStatusEvents,
   appointments,
   customers,
   properties,
@@ -30,6 +31,13 @@ import {
   computeLaborMinutes, resolveJobSort, normalizeArchivedFilter, statusTransitionStamps,
 } from "./jobsLogic";
 import { toPatch } from "../_core/zodPatch";
+import { resolveTeamMemberId } from "../../shared/fieldApp";
+import {
+  TECHNICIAN_WORK_STATUSES,
+  canTransitionWorkStatus,
+  DEFAULT_WORK_STATUS,
+  type TechnicianWorkStatus,
+} from "../../shared/workStatus";
 
 /** Append a job status-history row. Best-effort audit trail; never blocks the write it follows. */
 async function recordStatusChange(
@@ -41,6 +49,61 @@ async function recordStatusChange(
   note?: string | null,
 ) {
   await db.insert(jobStatusHistory).values({ jobId, fromStatus, toStatus, changedById, note: note ?? null });
+}
+
+/**
+ * Field work-order authorization. Loads the job and enforces that a technician
+ * may only reach work assigned to them; admins may reach any. "Assigned" means
+ * the job's assignee, an additional technician on the job, or the assignee of
+ * any appointment linked to the job (the field app reaches a work order via an
+ * appointment). Returns the job + resolved identity, or throws:
+ *   - NOT_FOUND   when the job doesn't exist
+ *   - FORBIDDEN   when a technician requests a job that isn't theirs
+ * Server-side only — the client can never widen this by passing another id.
+ */
+async function resolveFieldJobAccess(
+  db: Awaited<ReturnType<typeof requireDb>>,
+  jobId: number,
+  user: { id?: number | null; openId?: string | null; role?: string | null } | null | undefined,
+) {
+  const job = (await db.select().from(jobs).where(eq(jobs.id, jobId)).limit(1))[0];
+  if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "Work order not found" });
+
+  const isAdmin = user?.role === "admin";
+  const memberId = resolveTeamMemberId(user);
+  if (isAdmin) return { job, memberId, isAdmin };
+
+  if (memberId == null) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Your login isn't linked to a technician profile." });
+  }
+
+  let authorized = job.assignedToId === memberId;
+  if (!authorized) {
+    const viaAppt = await db.select({ id: appointments.id }).from(appointments)
+      .where(and(eq(appointments.jobId, jobId), eq(appointments.assignedToId, memberId))).limit(1);
+    authorized = viaAppt.length > 0;
+  }
+  if (!authorized) {
+    const viaTech = await db.select({ id: jobTechnicians.id }).from(jobTechnicians)
+      .where(and(eq(jobTechnicians.jobId, jobId), eq(jobTechnicians.technicianId, memberId))).limit(1);
+    authorized = viaTech.length > 0;
+  }
+  if (!authorized) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "This work order isn't assigned to you." });
+  }
+  return { job, memberId, isAdmin };
+}
+
+/** Join a property's parts into a single-line address, or null if empty. */
+function formatPropertyAddress(p: {
+  addressLine1?: string | null; addressLine2?: string | null;
+  city?: string | null; state?: string | null; zip?: string | null;
+} | null): string | null {
+  if (!p) return null;
+  const line1 = [p.addressLine1, p.addressLine2].filter(Boolean).join(" ").trim();
+  const cityState = [p.city, p.state].filter(Boolean).join(", ");
+  const full = [line1, cityState, p.zip].filter(Boolean).join(", ").trim();
+  return full.length ? full : null;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -304,6 +367,104 @@ export const jobsRouter = router({
         estimates, invoices,
         lineTotal, partsTotal,
       };
+    }),
+
+  /**
+   * Field work-order view — technician-scoped, read-only, NO financial data.
+   * Returns exactly what a technician needs to run the service call: customer
+   * contact, property/address (for directions), the originating appointment,
+   * assignment, history (prior visits / notes / photos), and the technician
+   * work-status lifecycle + audit trail. Access enforced server-side by
+   * resolveFieldJobAccess (assigned-only for technicians; admins see all).
+   */
+  fieldWorkOrder: protectedProcedure
+    .input(z.object({ id: z.number().int() }))
+    .query(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job, isAdmin } = await resolveFieldJobAccess(db, input.id, ctx.user);
+
+      const [customer, property, assignee, originatingAppt, visits, notes, photos, events] = await Promise.all([
+        db.select({ displayName: customers.displayName, phone: customers.phone, email: customers.email })
+          .from(customers).where(eq(customers.id, job.customerId)).limit(1).then(r => r[0] ?? null),
+        job.propertyId
+          ? db.select().from(properties).where(eq(properties.id, job.propertyId)).limit(1).then(r => r[0] ?? null)
+          : Promise.resolve(null),
+        job.assignedToId
+          ? db.select({ id: teamMembers.id, name: teamMembers.name }).from(teamMembers).where(eq(teamMembers.id, job.assignedToId)).limit(1).then(r => r[0] ?? null)
+          : Promise.resolve(null),
+        job.originatingAppointmentId
+          ? db.select().from(appointments).where(eq(appointments.id, job.originatingAppointmentId)).limit(1).then(r => r[0] ?? null)
+          : Promise.resolve(null),
+        // Prior visits = appointments linked to this job (newest first) + tech name.
+        db.select({
+            id: appointments.id, scheduledAt: appointments.scheduledAt, status: appointments.status,
+            appointmentType: appointments.appointmentType, serviceType: appointments.serviceType,
+            technicianName: teamMembers.name,
+          })
+          .from(appointments)
+          .leftJoin(teamMembers, eq(appointments.assignedToId, teamMembers.id))
+          .where(eq(appointments.jobId, job.id)).orderBy(desc(appointments.scheduledAt)),
+        db.select({ id: jobNotes.id, body: jobNotes.body, createdAt: jobNotes.createdAt, authorName: teamMembers.name })
+          .from(jobNotes).leftJoin(teamMembers, eq(jobNotes.authorId, teamMembers.id))
+          .where(eq(jobNotes.jobId, job.id)).orderBy(desc(jobNotes.createdAt)),
+        // Previous photos (if available) — attachments of kind "photo"; metadata/URL only.
+        db.select({ id: jobAttachments.id, fileName: jobAttachments.fileName, url: jobAttachments.url, mimeType: jobAttachments.mimeType, createdAt: jobAttachments.createdAt })
+          .from(jobAttachments).where(and(eq(jobAttachments.jobId, job.id), eq(jobAttachments.kind, "photo"))).orderBy(desc(jobAttachments.createdAt)),
+        db.select().from(jobWorkStatusEvents).where(eq(jobWorkStatusEvents.jobId, job.id)).orderBy(desc(jobWorkStatusEvents.createdAt)),
+      ]);
+
+      // Prefer the structured property address; fall back to the appointment's free-text address.
+      const address = formatPropertyAddress(property) ?? originatingAppt?.propertyAddress ?? null;
+
+      return {
+        isAdmin,
+        job: {
+          id: job.id, jobNumber: job.jobNumber, title: job.title, description: job.description,
+          priority: job.priority,
+          technicianWorkStatus: (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) as TechnicianWorkStatus,
+          scheduledStartAt: job.scheduledStartAt,
+        },
+        customer,
+        property: { address, directionsAvailable: Boolean(address) },
+        appointment: originatingAppt ? {
+          appointmentType: originatingAppt.appointmentType, serviceType: originatingAppt.serviceType,
+          priority: originatingAppt.priority, description: originatingAppt.issueDescription,
+          scheduledAt: originatingAppt.scheduledAt, dispatcherNotes: originatingAppt.notes,
+        } : null,
+        assignee,
+        history: { visits, notes, photos },
+        workStatusEvents: events,
+      };
+    }),
+
+  /**
+   * Advance the technician work status on a work order. Enforces the shared
+   * single-step transition rules and records prev/new/user/timestamp in
+   * jobWorkStatusEvents. Never touches jobs.status or appointments.status.
+   * Access enforced by resolveFieldJobAccess (assigned-only / admin).
+   */
+  setTechnicianWorkStatus: protectedProcedure
+    .input(z.object({ id: z.number().int(), status: z.enum(TECHNICIAN_WORK_STATUSES) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await requireDb();
+      const { job, memberId } = await resolveFieldJobAccess(db, input.id, ctx.user);
+      const current = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) as TechnicianWorkStatus;
+      if (input.status === current) return { success: true, status: current, unchanged: true };
+      if (!canTransitionWorkStatus(current, input.status)) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Cannot move from ${current} to ${input.status}.` });
+      }
+      // Denormalized display name for the audit row (technician or admin).
+      let changedByName: string | null = ctx.user?.name ?? null;
+      if (memberId != null) {
+        const m = (await db.select({ name: teamMembers.name }).from(teamMembers).where(eq(teamMembers.id, memberId)).limit(1))[0];
+        changedByName = m?.name ?? changedByName;
+      }
+      await db.update(jobs).set({ technicianWorkStatus: input.status }).where(eq(jobs.id, job.id));
+      await db.insert(jobWorkStatusEvents).values({
+        jobId: job.id, fromStatus: current, toStatus: input.status,
+        changedById: memberId ?? null, changedByName,
+      });
+      return { success: true, status: input.status };
     }),
 
   /** Manual job creation (from customer / property / opportunity / jobs list). */

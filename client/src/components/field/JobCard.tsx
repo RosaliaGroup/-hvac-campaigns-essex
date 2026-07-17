@@ -387,7 +387,7 @@ export function JobCard({
           <ActionButton
             icon={Briefcase}
             label="Open Job"
-            onClick={() => appt.jobId && navigate(`/jobs/${appt.jobId}`)}
+            onClick={() => appt.jobId && navigate(`/field/jobs/${appt.jobId}`)}
             disabled={!appt.jobId}
           />
           {!readOnly ? (

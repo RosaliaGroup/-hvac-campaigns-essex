@@ -1121,6 +1121,15 @@ export const jobs = mysqlTable(
     warrantyStatus: mysqlEnum("warrantyStatus", ["none", "manufacturer", "labor", "extended", "warranty_call"]),
     /** Free-text summary written when the job is completed. */
     completionSummary: text("completionSummary"),
+    /**
+     * Technician field lifecycle for the service call, SEPARATE from `status`
+     * (office pipeline) and from `appointments.status` (dispatch). Managed only
+     * by the field work-order screen; see shared/workStatus.ts. Audit trail in
+     * `jobWorkStatusEvents`.
+     */
+    technicianWorkStatus: mysqlEnum("technicianWorkStatus", [
+      "assigned", "accepted", "en_route", "arrived", "working", "waiting_parts", "completed",
+    ]).default("assigned").notNull(),
     /** The appointment this job originated from (Job created from an appointment). Nullable. */
     originatingAppointmentId: int("originatingAppointmentId"),
     /** Team member who created the job (teamMembers.id). Nullable for historical/system rows. */
@@ -1337,6 +1346,33 @@ export const jobStatusHistory = mysqlTable(
 );
 export type JobStatusHistory = typeof jobStatusHistory.$inferSelect;
 export type InsertJobStatusHistory = typeof jobStatusHistory.$inferInsert;
+
+/**
+ * Technician work-status events — audit trail for the field lifecycle on a work
+ * order (jobs.technicianWorkStatus). One row per transition, recording the
+ * previous status, new status, who changed it, and when. Kept separate from
+ * `jobStatusHistory` (office pipeline) so the two lifecycles never interfere.
+ */
+export const jobWorkStatusEvents = mysqlTable(
+  "jobWorkStatusEvents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    /** Previous technician work status; null for the initial entry. */
+    fromStatus: varchar("fromStatus", { length: 32 }),
+    toStatus: varchar("toStatus", { length: 32 }).notNull(),
+    /** teamMembers.id who made the change. Nullable for system/admin rows. */
+    changedById: int("changedById"),
+    /** Denormalized display name of who changed it (technician/admin), for the timeline. */
+    changedByName: varchar("changedByName", { length: 255 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobWorkStatusEvents_jobId_idx").on(table.jobId),
+  }),
+);
+export type JobWorkStatusEvent = typeof jobWorkStatusEvents.$inferSelect;
+export type InsertJobWorkStatusEvent = typeof jobWorkStatusEvents.$inferInsert;
 
 /**
  * QuickBooks Online connection (Phase 2, Task 7 — Accounting Integration).
