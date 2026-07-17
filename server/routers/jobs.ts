@@ -29,6 +29,7 @@ import { and, asc, desc, eq, gte, isNull, isNotNull, like, lte, or, sql } from "
 import { findCustomerIdByPhone, splitName, buildDisplayName } from "./customers";
 import {
   computeLaborMinutes, resolveJobSort, normalizeArchivedFilter, statusTransitionStamps,
+  canAccessWorkOrder,
 } from "./jobsLogic";
 import { toPatch } from "../_core/zodPatch";
 import { resolveTeamMemberId } from "../../shared/fieldApp";
@@ -77,18 +78,19 @@ async function resolveFieldJobAccess(
     throw new TRPCError({ code: "FORBIDDEN", message: "Your login isn't linked to a technician profile." });
   }
 
-  let authorized = job.assignedToId === memberId;
-  if (!authorized) {
-    const viaAppt = await db.select({ id: appointments.id }).from(appointments)
-      .where(and(eq(appointments.jobId, jobId), eq(appointments.assignedToId, memberId))).limit(1);
-    authorized = viaAppt.length > 0;
+  // Compute the access inputs lazily (skip the extra queries once satisfied),
+  // then let the pure rule decide (canAccessWorkOrder — unit-tested exhaustively).
+  let viaAppointment = false;
+  let viaTechnician = false;
+  if (job.assignedToId !== memberId) {
+    viaAppointment = (await db.select({ id: appointments.id }).from(appointments)
+      .where(and(eq(appointments.jobId, jobId), eq(appointments.assignedToId, memberId))).limit(1)).length > 0;
+    if (!viaAppointment) {
+      viaTechnician = (await db.select({ id: jobTechnicians.id }).from(jobTechnicians)
+        .where(and(eq(jobTechnicians.jobId, jobId), eq(jobTechnicians.technicianId, memberId))).limit(1)).length > 0;
+    }
   }
-  if (!authorized) {
-    const viaTech = await db.select({ id: jobTechnicians.id }).from(jobTechnicians)
-      .where(and(eq(jobTechnicians.jobId, jobId), eq(jobTechnicians.technicianId, memberId))).limit(1);
-    authorized = viaTech.length > 0;
-  }
-  if (!authorized) {
+  if (!canAccessWorkOrder({ isAdmin, memberId, assignedToId: job.assignedToId, viaAppointment, viaTechnician })) {
     throw new TRPCError({ code: "FORBIDDEN", message: "This work order isn't assigned to you." });
   }
   return { job, memberId, isAdmin };
@@ -420,7 +422,7 @@ export const jobsRouter = router({
         isAdmin,
         job: {
           id: job.id, jobNumber: job.jobNumber, title: job.title, description: job.description,
-          priority: job.priority,
+          priority: job.priority, customerId: job.customerId,
           technicianWorkStatus: (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) as TechnicianWorkStatus,
           scheduledStartAt: job.scheduledStartAt,
         },
@@ -430,6 +432,7 @@ export const jobsRouter = router({
           appointmentType: originatingAppt.appointmentType, serviceType: originatingAppt.serviceType,
           priority: originatingAppt.priority, description: originatingAppt.issueDescription,
           scheduledAt: originatingAppt.scheduledAt, dispatcherNotes: originatingAppt.notes,
+          source: originatingAppt.source,
         } : null,
         assignee,
         history: { visits, notes, photos },

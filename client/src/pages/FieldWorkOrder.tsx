@@ -28,7 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, Phone, Mail, MapPin, Navigation, UserRound, Briefcase, Wrench, Clock,
   CalendarClock, StickyNote, Image as ImageIcon, CheckCircle2, Loader2, ChevronRight,
-  History as HistoryIcon, ClipboardList,
+  History as HistoryIcon, ClipboardList, MessageSquare, AlertTriangle, Radio,
 } from "lucide-react";
 
 // Verb-forward labels for the status action buttons.
@@ -122,6 +122,23 @@ export default function FieldWorkOrder() {
   const current = (data?.job.technicianWorkStatus ?? "assigned") as TechnicianWorkStatus;
   const actions = useMemo(() => nextWorkStatuses(current), [current]);
 
+  // Derived (safe when data is absent). Quick actions render only when their
+  // underlying data exists (phone → Call/Text, address → Directions, customer → Open).
+  const isEmergency = data?.job.priority === "emergency" || data?.appointment?.priority === "emergency";
+  const phone = data?.customer?.phone ?? null;
+  const address = data?.property.address ?? null;
+  const customerId = data?.job.customerId ?? null;
+  const directionsUrl = buildDirectionsUrl(address);
+  type QuickAction = { key: string; label: string; icon: React.ComponentType<{ className?: string }>; href?: string; external?: boolean; onClick?: () => void };
+  const quickActions: QuickAction[] = data
+    ? ([
+        phone ? { key: "call", label: "Call", icon: Phone, href: `tel:${dialable(phone)}` } : null,
+        phone ? { key: "text", label: "Text", icon: MessageSquare, href: `sms:${dialable(phone)}` } : null,
+        directionsUrl ? { key: "dir", label: "Directions", icon: Navigation, href: directionsUrl, external: true } : null,
+        customerId != null ? { key: "cust", label: "Customer", icon: UserRound, onClick: () => navigate(`/customers/${customerId}`) } : null,
+      ].filter(Boolean) as QuickAction[])
+    : [];
+
   return (
     <div className="min-h-screen bg-muted/30">
       <header className="sticky top-0 z-20 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -141,7 +158,7 @@ export default function FieldWorkOrder() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-xl space-y-4 px-3 py-4">
+      <main className="mx-auto max-w-xl space-y-4 px-3 py-4 pb-28">
         {isLoading ? (
           <div className="flex flex-col items-center gap-3 py-20 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-[#ff6b35]" />
@@ -157,6 +174,14 @@ export default function FieldWorkOrder() {
           </Card>
         ) : data ? (
           <>
+            {/* Emergency work is visually unmistakable */}
+            {isEmergency ? (
+              <div className="flex items-center gap-2 rounded-xl border border-red-700 bg-red-600 px-4 py-3 text-white shadow">
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                <span className="text-sm font-bold uppercase tracking-wide">Emergency — respond immediately</span>
+              </div>
+            ) : null}
+
             {/* Title + priority */}
             <div className="px-1">
               <div className="flex items-center gap-2">
@@ -225,11 +250,6 @@ export default function FieldWorkOrder() {
               ) : (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground"><Mail className="h-4 w-4" /> No email</div>
               )}
-              {data.customer?.phone ? (
-                <Button asChild variant="outline" className="mt-1 h-12 w-full">
-                  <a href={`tel:${dialable(data.customer.phone)}`}><Phone className="mr-2 h-5 w-5" /> Call Customer</a>
-                </Button>
-              ) : null}
             </SectionCard>
 
             {/* Property */}
@@ -238,13 +258,6 @@ export default function FieldWorkOrder() {
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <span>{data.property.address ? formatAddress(data.property.address) : "No service address"}</span>
               </div>
-              {hasServiceAddress(data.property.address) ? (
-                <Button asChild variant="outline" className="h-12 w-full">
-                  <a href={buildDirectionsUrl(data.property.address) ?? undefined} target="_blank" rel="noopener noreferrer">
-                    <Navigation className="mr-2 h-5 w-5" /> Directions
-                  </a>
-                </Button>
-              ) : null}
             </SectionCard>
 
             {/* Appointment */}
@@ -275,6 +288,11 @@ export default function FieldWorkOrder() {
                 <Briefcase className="h-4 w-4 text-muted-foreground" />
                 {data.assignee?.name ? `Assigned to ${data.assignee.name}` : "Unassigned"}
               </div>
+              {data.appointment?.source ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Radio className="h-4 w-4" /> Source: <span className="capitalize">{data.appointment.source.replace(/_/g, " ")}</span>
+                </div>
+              ) : null}
             </SectionCard>
 
             {/* History */}
@@ -348,6 +366,33 @@ export default function FieldWorkOrder() {
           </>
         ) : null}
       </main>
+
+      {/* Sticky quick-action bar — large touch targets; only actions with data. */}
+      {quickActions.length > 0 ? (
+        <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
+          <div
+            className="mx-auto grid max-w-xl gap-1 px-2 py-2"
+            style={{ gridTemplateColumns: `repeat(${quickActions.length}, minmax(0, 1fr))` }}
+          >
+            {quickActions.map(a => {
+              const inner = (
+                <>
+                  <a.icon className="h-5 w-5" />
+                  <span className="text-xs font-semibold">{a.label}</span>
+                </>
+              );
+              const cls = "flex h-14 w-full flex-col items-center justify-center gap-1";
+              return a.href ? (
+                <Button key={a.key} asChild variant="ghost" className={cls}>
+                  <a href={a.href} target={a.external ? "_blank" : undefined} rel="noopener noreferrer">{inner}</a>
+                </Button>
+              ) : (
+                <Button key={a.key} variant="ghost" className={cls} onClick={a.onClick}>{inner}</Button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import {
   JOB_STATUSES, JOB_STATUS_LABELS, jobStatusLabel, resolveJobSort,
   computeLaborMinutes, partLineTotal, partMargin, summarizeParts,
   propertyBelongsToCustomer, normalizeArchivedFilter, statusTransitionStamps,
+  canAccessWorkOrder,
 } from "./jobsLogic";
 
 describe("jobsLogic — status labels preserve stored values", () => {
@@ -113,5 +114,39 @@ describe("jobsLogic — relationship validation & filters", () => {
     expect(normalizeArchivedFilter("nonsense")).toBe("active");
     expect(normalizeArchivedFilter("archived")).toBe("archived");
     expect(normalizeArchivedFilter("all")).toBe("all");
+  });
+});
+
+describe("jobsLogic — canAccessWorkOrder (field work-order permissions)", () => {
+  const base = { isAdmin: false, memberId: 5, assignedToId: 5, viaAppointment: false, viaTechnician: false };
+
+  it("ADMIN may access any work order (even unassigned / no member profile)", () => {
+    expect(canAccessWorkOrder({ ...base, isAdmin: true, memberId: null, assignedToId: 999 })).toBe(true);
+    expect(canAccessWorkOrder({ ...base, isAdmin: true, assignedToId: 123 })).toBe(true);
+  });
+
+  it("TECHNICIAN may access a work order assigned directly to them", () => {
+    expect(canAccessWorkOrder({ ...base, assignedToId: 5 })).toBe(true);
+  });
+
+  it("TECHNICIAN may access via a linked appointment they own", () => {
+    expect(canAccessWorkOrder({ ...base, assignedToId: 99, viaAppointment: true })).toBe(true);
+  });
+
+  it("TECHNICIAN may access as an additional technician on the job", () => {
+    expect(canAccessWorkOrder({ ...base, assignedToId: 99, viaTechnician: true })).toBe(true);
+  });
+
+  it("TECHNICIAN is DENIED a work order not theirs by any path (unauthorized URL access)", () => {
+    expect(canAccessWorkOrder({ ...base, assignedToId: 99 })).toBe(false);
+  });
+
+  it("a login with no team profile (OAuth, memberId null) and not admin is DENIED", () => {
+    expect(canAccessWorkOrder({ ...base, memberId: null, assignedToId: null })).toBe(false);
+  });
+
+  it("does not treat a null assignee as matching a null memberId", () => {
+    // memberId null already denied; but guard the assignedToId===memberId comparison too.
+    expect(canAccessWorkOrder({ ...base, memberId: null, assignedToId: null, viaAppointment: true })).toBe(false);
   });
 });
