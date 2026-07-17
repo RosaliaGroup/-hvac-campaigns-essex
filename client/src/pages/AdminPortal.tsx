@@ -140,7 +140,7 @@ export default function AdminPortal() {
         },
         {
           name: "AI VA Settings",
-          description: "Configure Vapi, Twilio, and social media credentials",
+          description: "Configure Vapi and social media credentials",
           icon: Settings,
           path: "/ai-va-settings"
         },

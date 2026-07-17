@@ -331,7 +331,7 @@ function SmsConversations() {
               </div>
             ))
           ) : (
-            <p className="text-center text-muted-foreground py-8">No SMS conversations yet. Configure Twilio credentials to start texting.</p>
+            <p className="text-center text-muted-foreground py-8">No SMS conversations yet. Inbound texts appear here once the Telnyx SMS webhook is receiving messages.</p>
           )}
         </div>
       </CardContent>
