@@ -1134,8 +1134,11 @@ function SmsInboxTab() {
     setSelectedConvKey(key);
     const conv = conversations.find((c) => c.key === key);
     if (conv && conv.unreadCount > 0) {
-      // Mark read by contactId when known, otherwise by phone (unknown number).
-      markReadMutation.mutate(conv.contactId ? { contactId: conv.contactId } : { phone: conv.phone });
+      // Mark read by PHONE (the conversation identity). A contact-linked thread
+      // can still contain unread rows with contactId null (arrived before the
+      // number was linked); marking by contactId would leave those unread, so we
+      // always scope by phone to clear the whole number's history.
+      markReadMutation.mutate({ phone: conv.phone });
     }
   }
 
