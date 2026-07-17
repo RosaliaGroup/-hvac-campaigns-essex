@@ -8,7 +8,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
 import { smsContacts, smsCampaigns, smsSends, scheduledSends, smsInboxMessages } from "../../drizzle/schema";
-import { eq, desc, and, gte, or } from "drizzle-orm";
+import { eq, desc, and, gte, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 
 type DbInstance = ReturnType<typeof drizzle>;
@@ -21,6 +21,24 @@ function normalizePhone(raw: string): string {
   const ten = digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
   if (ten.length !== 10) return ten;
   return `+1${ten}`;
+}
+
+/** The last 10 digits of any phone string — the stable conversation identity.
+ *  +19735181815, 19735181815, 9735181815, and (973) 518-1815 all collapse to
+ *  "9735181815". Exported for tests. */
+export function last10Digits(raw: string): string {
+  return raw.replace(/\D/g, "").slice(-10);
+}
+/** Last-10-digit SQL match against a (possibly formatted) phone column, so a
+ *  conversation resolves regardless of how the row's phone was stored. Mirrors
+ *  the same helper used by the inbound webhook (services/smsWebhook.ts). */
+function last10Match(column: unknown, raw: string) {
+  return sql`RIGHT(REGEXP_REPLACE(${column}, '[^0-9]', ''), 10) = ${last10Digits(raw)}`;
+}
+/** A raw phone string carries enough digits to identify a US number. Exported
+ *  for tests. */
+export function hasFullPhone(raw: string | undefined | null): raw is string {
+  return !!raw && raw.replace(/\D/g, "").length >= 10;
 }
 
 // Replace {{contact.firstname}} merge tag
@@ -420,11 +438,27 @@ export const smsCampaignsRouter = router({
   // ── 2-Way SMS Inbox ───────────────────────────────────────────────────────
   listInboxMessages: protectedProcedure
     .input(z.object({
+      // A conversation is identified by its normalized phone number. contactId
+      // is kept for backwards compatibility but a phone-only thread (number not
+      // in Contacts) must still return its full history — a contact record is
+      // NOT required to view a thread.
+      phone: z.string().optional(),
       contactId: z.number().optional(),
       limit: z.number().default(100),
     }))
     .query(async ({ input }) => {
       const db = await requireDb();
+      // Prefer phone: every inbox row (inbound + outbound) stores the number in
+      // E.164, so a last-10 match returns the complete chronological thread even
+      // for rows whose contactId is null (unknown number) or was linked later.
+      if (hasFullPhone(input.phone)) {
+        return db
+          .select()
+          .from(smsInboxMessages)
+          .where(last10Match(smsInboxMessages.phone, input.phone))
+          .orderBy(desc(smsInboxMessages.createdAt))
+          .limit(input.limit);
+      }
       if (input.contactId) {
         return db
           .select()
@@ -463,16 +497,23 @@ export const smsCampaignsRouter = router({
     }),
 
   markConversationRead: protectedProcedure
-    .input(z.object({ contactId: z.number() }))
+    // Accept phone OR contactId so unknown-number conversations (contactId null)
+    // can still be marked read. Phone takes precedence and scopes by last-10.
+    .input(z.object({
+      phone: z.string().optional(),
+      contactId: z.number().optional(),
+    }).refine((v) => hasFullPhone(v.phone) || v.contactId != null, {
+      message: "phone or contactId is required",
+    }))
     .mutation(async ({ input }) => {
       const db = await requireDb();
+      const target = hasFullPhone(input.phone)
+        ? last10Match(smsInboxMessages.phone, input.phone)
+        : eq(smsInboxMessages.contactId, input.contactId!);
       await db
         .update(smsInboxMessages)
         .set({ isRead: true })
-        .where(and(
-          eq(smsInboxMessages.contactId, input.contactId),
-          eq(smsInboxMessages.isRead, false)
-        ));
+        .where(and(target, eq(smsInboxMessages.isRead, false)));
       return { success: true };
     }),
 
