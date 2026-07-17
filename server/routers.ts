@@ -34,6 +34,7 @@ import { attributionRouter } from "./routers/attribution";
 import { analyticsRouter } from "./routers/analytics";
 import { executiveDashboardsRouter } from "./routers/executiveDashboards";
 import { googleCalendarRouter } from "./routers/googleCalendar";
+import { portalRouter } from "./routers/portal";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
 import {
@@ -82,6 +83,8 @@ export const appRouter = router({
   analytics: analyticsRouter,
   executiveDashboards: executiveDashboardsRouter,
   googleCalendar: googleCalendarRouter,
+  // Customer-facing self-service portal (separate auth realm; see server/routers/portal).
+  portal: portalRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {

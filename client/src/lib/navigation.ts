@@ -231,6 +231,9 @@ export const INTERNAL_ROUTE_PREFIXES: string[] = [
   "/assessment-submissions",
   "/analytics",
   "/takeoff-ai",
+  // Customer-facing self-service portal — has its own shell, so suppress the
+  // public marketing chrome (header/footer/Jessica) on these routes.
+  "/portal",
 ];
 
 /** Strip query string / hash and normalise a location to its pathname. */

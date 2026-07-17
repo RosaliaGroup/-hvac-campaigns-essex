@@ -344,6 +344,13 @@
       "when": 1784159104665,
       "tag": "0048_technician_contact_details",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "5",
+      "when": 1784236087448,
+      "tag": "0049_customer_portal",
+      "breakpoints": true
     }
   ]
 }

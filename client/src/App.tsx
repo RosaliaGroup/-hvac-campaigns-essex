@@ -88,6 +88,7 @@ import TakeOffDetail from "./pages/TakeOffDetail";
 import TakeOffPublic from "./pages/TakeOffPublic";
 import FieldToday from "./pages/FieldToday";
 import FieldProfile from "./pages/FieldProfile";
+import PortalApp from "./pages/portal/PortalApp";
 
 // Helper to wrap a page in ProtectedRoute cleanly
 const protect = (Page: React.ComponentType) => () => <ProtectedRoute component={Page} />;
@@ -326,6 +327,10 @@ function Router() {
       <Route path={"/executive-dashboards"} component={protect(ExecutiveDashboards)} />
       <Route path={"/takeoff-ai"} component={protect(TakeOffAI)} />
       <Route path={"/takeoff-ai/:id"} component={protect(TakeOffDetail)} />
+
+      {/* ── Customer Portal (public entry; self-guarded, own auth realm) ── */}
+      <Route path={"/portal"} component={PortalApp} />
+      <Route path={"/portal/:rest*"} component={PortalApp} />
 
       <Route path={"/presentation-2026"} component={Presentation} />
       <Route path={"/404"} component={NotFound} />
