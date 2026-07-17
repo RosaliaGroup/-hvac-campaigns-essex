@@ -2230,3 +2230,173 @@ export const portalMessages = mysqlTable(
 );
 export type PortalMessage = typeof portalMessages.$inferSelect;
 export type InsertPortalMessage = typeof portalMessages.$inferInsert;
+
+/* ── Google Business Profile (Local SEO) ────────────────────────────────────
+ * Read-only cache of a Google Business Profile location: rating/review counts,
+ * the daily performance time series (calls / directions / website clicks /
+ * search & maps views), reviews, photos and local posts. Populated by the daily
+ * `runGbpSync` (server/services/gbp/sync.ts) from the Business Profile APIs; the
+ * admin-only Local SEO dashboard reads ONLY from these tables, never from Google
+ * on the request path (mirrors the SEO Intelligence / Search Console design).
+ */
+export const gbpLocations = mysqlTable("gbpLocations", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Google Business Profile account id (numeric, from the resource name). */
+  accountId: varchar("accountId", { length: 128 }).notNull(),
+  /** Location id (numeric/opaque, from the resource name). */
+  locationId: varchar("locationId", { length: 128 }).notNull(),
+  /** Full resource name "accounts/{account}/locations/{location}" — the upsert key. */
+  locationName: varchar("locationName", { length: 256 }).notNull().unique(),
+  title: varchar("title", { length: 512 }),
+  storefrontAddress: varchar("storefrontAddress", { length: 512 }),
+  primaryPhone: varchar("primaryPhone", { length: 64 }),
+  websiteUrl: varchar("websiteUrl", { length: 512 }),
+  /** Current average star rating (0–5). */
+  rating: decimal("rating", { precision: 3, scale: 2 }).default("0").notNull(),
+  totalReviews: int("totalReviews").default(0).notNull(),
+  totalPhotos: int("totalPhotos").default(0).notNull(),
+  totalPosts: int("totalPosts").default(0).notNull(),
+  lastSyncedAt: timestamp("lastSyncedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type GbpLocationRow = typeof gbpLocations.$inferSelect;
+export type InsertGbpLocation = typeof gbpLocations.$inferInsert;
+
+export const gbpDailyMetrics = mysqlTable(
+  "gbpDailyMetrics",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationName: varchar("locationName", { length: 256 }).notNull(),
+    /** ISO date "YYYY-MM-DD" for this datapoint. */
+    date: varchar("date", { length: 10 }).notNull(),
+    /** sha256(locationName + "\n" + date) — the upsert key. */
+    metricHash: varchar("metricHash", { length: 64 }).notNull(),
+    /** "Call" button clicks. */
+    callClicks: int("callClicks").default(0).notNull(),
+    /** Driving-direction requests. */
+    directionRequests: int("directionRequests").default(0).notNull(),
+    /** Website link clicks. */
+    websiteClicks: int("websiteClicks").default(0).notNull(),
+    /** Business impressions on Google Search (mobile + desktop). */
+    searchViews: int("searchViews").default(0).notNull(),
+    /** Business impressions on Google Maps (mobile + desktop). */
+    mapsViews: int("mapsViews").default(0).notNull(),
+    /** Rating snapshot for the day — powers the rating trend. */
+    rating: decimal("rating", { precision: 3, scale: 2 }).default("0").notNull(),
+    /** Review-count snapshot for the day. */
+    reviewCount: int("reviewCount").default(0).notNull(),
+    syncedAt: timestamp("syncedAt").defaultNow().notNull(),
+  },
+  table => ({
+    metricHashIdx: uniqueIndex("gbpDailyMetrics_metricHash_uq").on(table.metricHash),
+    locIdx: index("gbpDailyMetrics_loc_idx").on(table.locationName),
+    dateIdx: index("gbpDailyMetrics_date_idx").on(table.date),
+  }),
+);
+export type GbpDailyMetricRow = typeof gbpDailyMetrics.$inferSelect;
+export type InsertGbpDailyMetric = typeof gbpDailyMetrics.$inferInsert;
+
+export const gbpReviews = mysqlTable(
+  "gbpReviews",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationName: varchar("locationName", { length: 256 }).notNull(),
+    /** Full review resource name. */
+    reviewName: text("reviewName").notNull(),
+    /** sha256(reviewName) — the upsert key (resource name is too long to index). */
+    reviewHash: varchar("reviewHash", { length: 64 }).notNull(),
+    reviewerName: varchar("reviewerName", { length: 256 }),
+    /** Star rating 1–5 (0 when unspecified). */
+    starRating: int("starRating").default(0).notNull(),
+    comment: text("comment"),
+    createTime: timestamp("createTime"),
+    updateTime: timestamp("updateTime"),
+    /** Business owner's reply, when present. */
+    replyComment: text("replyComment"),
+    replyTime: timestamp("replyTime"),
+    syncedAt: timestamp("syncedAt").defaultNow().notNull(),
+  },
+  table => ({
+    reviewHashIdx: uniqueIndex("gbpReviews_reviewHash_uq").on(table.reviewHash),
+    locIdx: index("gbpReviews_loc_idx").on(table.locationName),
+    createIdx: index("gbpReviews_createTime_idx").on(table.createTime),
+  }),
+);
+export type GbpReviewRow = typeof gbpReviews.$inferSelect;
+export type InsertGbpReview = typeof gbpReviews.$inferInsert;
+
+export const gbpPhotos = mysqlTable(
+  "gbpPhotos",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationName: varchar("locationName", { length: 256 }).notNull(),
+    mediaName: text("mediaName").notNull(),
+    /** sha256(mediaName) — the upsert key. */
+    mediaHash: varchar("mediaHash", { length: 64 }).notNull(),
+    /** Location association category (e.g. PROFILE, COVER, ADDITIONAL). */
+    category: varchar("category", { length: 64 }),
+    googleUrl: text("googleUrl"),
+    /** View count from the media item's insights — powers "photo performance". */
+    viewCount: int("viewCount").default(0).notNull(),
+    createTime: timestamp("createTime"),
+    syncedAt: timestamp("syncedAt").defaultNow().notNull(),
+  },
+  table => ({
+    mediaHashIdx: uniqueIndex("gbpPhotos_mediaHash_uq").on(table.mediaHash),
+    locIdx: index("gbpPhotos_loc_idx").on(table.locationName),
+  }),
+);
+export type GbpPhotoRow = typeof gbpPhotos.$inferSelect;
+export type InsertGbpPhoto = typeof gbpPhotos.$inferInsert;
+
+export const gbpPosts = mysqlTable(
+  "gbpPosts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationName: varchar("locationName", { length: 256 }).notNull(),
+    postName: text("postName").notNull(),
+    /** sha256(postName) — the upsert key. */
+    postHash: varchar("postHash", { length: 64 }).notNull(),
+    summary: text("summary"),
+    topicType: varchar("topicType", { length: 64 }),
+    state: varchar("state", { length: 64 }),
+    searchUrl: text("searchUrl"),
+    createTime: timestamp("createTime"),
+    updateTime: timestamp("updateTime"),
+    syncedAt: timestamp("syncedAt").defaultNow().notNull(),
+  },
+  table => ({
+    postHashIdx: uniqueIndex("gbpPosts_postHash_uq").on(table.postHash),
+    locIdx: index("gbpPosts_loc_idx").on(table.locationName),
+  }),
+);
+export type GbpPostRow = typeof gbpPosts.$inferSelect;
+export type InsertGbpPost = typeof gbpPosts.$inferInsert;
+
+export const gbpSyncHistory = mysqlTable(
+  "gbpSyncHistory",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    locationName: varchar("locationName", { length: 256 }).notNull(),
+    status: mysqlEnum("status", ["running", "success", "error"]).default("running").notNull(),
+    startedAt: timestamp("startedAt").defaultNow().notNull(),
+    completedAt: timestamp("completedAt"),
+    /** Performance window pulled (ISO dates). */
+    rangeStart: varchar("rangeStart", { length: 32 }),
+    rangeEnd: varchar("rangeEnd", { length: 32 }),
+    reviewsSynced: int("reviewsSynced").default(0).notNull(),
+    metricsSynced: int("metricsSynced").default(0).notNull(),
+    photosSynced: int("photosSynced").default(0).notNull(),
+    postsSynced: int("postsSynced").default(0).notNull(),
+    /** How the sync was triggered: "manual" | "scheduled" | "api". */
+    trigger: varchar("trigger", { length: 32 }).default("manual").notNull(),
+    error: text("error"),
+  },
+  table => ({
+    locIdx: index("gbpSyncHistory_loc_idx").on(table.locationName),
+    startedIdx: index("gbpSyncHistory_startedAt_idx").on(table.startedAt),
+  }),
+);
+export type GbpSyncHistoryRow = typeof gbpSyncHistory.$inferSelect;
+export type InsertGbpSyncHistory = typeof gbpSyncHistory.$inferInsert;

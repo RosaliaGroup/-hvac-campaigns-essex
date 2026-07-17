@@ -46,6 +46,13 @@ export const GOOGLE_OAUTH_SCOPES: readonly string[] = [
   // Analytics dashboard. Additive — connections authorized before this was added
   // must re-consent once; until then a GA4 call 403s and the dashboard degrades.
   "https://www.googleapis.com/auth/analytics.readonly",
+  // Google Business Profile: Local SEO reads reviews / performance insights /
+  // photos / posts from the same shared grant (see
+  // server/integrations/gbp.ts). Business Profile does not publish a narrower
+  // read-only scope, so business.manage is requested; the Local SEO integration
+  // only ever performs GET reads. Connections authorized before this was added
+  // must re-consent once (disconnect + reconnect Google) to pick it up.
+  "https://www.googleapis.com/auth/business.manage",
 ];
 
 /** Space-delimited scope string for the OAuth `scope` parameter. */
