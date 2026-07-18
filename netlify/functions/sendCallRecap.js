@@ -14,12 +14,10 @@
 // No Rosalia / rosaliagroup endpoint, no SMTP secret, no Textbelt, no Twilio,
 // no hard-coded credentials.
 
-// Server base URL is read from config (never hard-coded). Any of these envs work.
-const API_BASE =
-  process.env.MECHANICAL_API_URL ||
-  process.env.MECHANICAL_APP_URL ||
-  process.env.APP_BASE_URL ||
-  "";
+// Canonical Mechanical backend origin — read from config, never hard-coded.
+// Single variable (no ambiguous fallback chain). Terminal 9 must reconcile this
+// name with the deployment config and point it at the Railway API origin.
+const API_BASE = process.env.MECHANICAL_API_URL || "";
 
 const RECAP_PATH = "/api/vapi/call-recap";
 

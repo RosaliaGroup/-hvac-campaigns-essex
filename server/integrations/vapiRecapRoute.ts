@@ -264,14 +264,24 @@ export function productionRecapDeps(): RecapDeps {
 
 export function registerVapiRecapRoute(app: Express): void {
   app.post("/api/vapi/call-recap", async (req: Request, res: Response) => {
-    // Optional shared-secret gate. Enforced ONLY when configured — non-breaking.
+    // FAIL-CLOSED shared-secret gate. This endpoint must never be publicly
+    // callable, so:
+    //   - secret NOT configured on the backend  → 503 (endpoint inert until set)
+    //   - secret configured, header missing/wrong → 401
+    //   - secret configured, header matches       → process
+    // Terminal 9 must set VAPI_WEBHOOK_SECRET on the Mechanical backend AND the
+    // matching Authorization: Bearer header in Vapi before rollout.
     const secret = process.env.VAPI_WEBHOOK_SECRET;
-    if (secret) {
-      const header = req.get("authorization") || req.get("x-vapi-secret") || "";
-      const provided = header.replace(/^Bearer\s+/i, "").trim();
-      if (provided !== secret) {
-        return res.status(401).json({ success: false, error: "Unauthorized" });
-      }
+    if (!secret) {
+      console.error(
+        "[VapiRecapRoute] VAPI_WEBHOOK_SECRET not configured — refusing recap request (fail-closed)",
+      );
+      return res.status(503).json({ success: false, error: "Recap endpoint not configured" });
+    }
+    const header = req.get("authorization") || req.get("x-vapi-secret") || "";
+    const provided = header.replace(/^Bearer\s+/i, "").trim();
+    if (provided !== secret) {
+      return res.status(401).json({ success: false, error: "Unauthorized" });
     }
 
     const body = (req.body ?? {}) as CallRecapInput;
