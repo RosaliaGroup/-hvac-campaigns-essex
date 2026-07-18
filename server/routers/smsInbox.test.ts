@@ -108,7 +108,9 @@ describe("listInboxMessages", () => {
     ]];
     const rows = await caller().smsCampaigns.listInboxMessages({ phone: "+19735181815", limit: 100 });
     expect(rows).toHaveLength(2); // inbound AND outbound both returned
-    expect(capturedWheres.join(" ")).toMatch(/RIGHT\(REGEXP_REPLACE/i);
+    // Scoped by the indexed phoneLast10 key (no REGEXP_REPLACE scan).
+    expect(capturedWheres.join(" ")).toContain("phoneLast10");
+    expect(capturedWheres.join(" ")).not.toMatch(/RIGHT\(REGEXP_REPLACE/i);
   });
 
   it("matches regardless of the queried phone's format", async () => {
@@ -125,7 +127,8 @@ describe("markConversationRead", () => {
     expect(res).toEqual({ success: true });
     expect(updates).toHaveLength(1);
     expect(updates[0].set).toEqual({ isRead: true });
-    expect(capturedWheres.join(" ")).toMatch(/RIGHT\(REGEXP_REPLACE/i);
+    // Scoped by the indexed phoneLast10 key (no REGEXP_REPLACE scan).
+    expect(capturedWheres.join(" ")).toContain("phoneLast10");
   });
 
   it("clears unread for a known contact via contactId", async () => {

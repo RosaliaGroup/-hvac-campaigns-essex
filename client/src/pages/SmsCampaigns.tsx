@@ -1092,11 +1092,34 @@ function OptOutSetupTab() {
   );
 }
 
+// Optimistic "sending…" bubble shown immediately after Send, before the server
+// row is refetched. Keyed to the selected conversation phone.
+type PendingReply = { tempId: string; phone: string; message: string; createdAt: Date };
+
+const FAILED_DELIVERY = new Set(["failed", "delivery_failed", "rejected", "carrier_filtered"]);
+/** Human label for an outbound row's delivery status (null = just accepted). */
+function outboundDeliveryLabel(s?: string | null): string {
+  switch (s) {
+    case "delivered": return "Delivered";
+    case "sent": return "Sent to carrier";
+    case "failed": return "Failed";
+    case "delivery_failed": return "Delivery failed";
+    case "rejected": return "Rejected";
+    case "carrier_filtered": return "Carrier filtered";
+    case "queued": return "Queued";
+    case "accepted":
+    case null:
+    case undefined:
+    default: return "Sent";
+  }
+}
+
 function SmsInboxTab() {
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const [selectedConvKey, setSelectedConvKey] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [pending, setPending] = useState<PendingReply[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: conversations = [], isLoading: convsLoading, refetch: refetchConvs } = trpc.smsCampaigns.getConversations.useQuery();
@@ -1123,14 +1146,30 @@ function SmsInboxTab() {
     },
   });
 
-  const replyMutation = trpc.smsCampaigns.replyToContact.useMutation({
-    onSuccess: () => {
-      setReplyText("");
-      refetchMsgs();
-      refetchConvs();
-      toast({ title: "Reply sent" });
+  // Send eligibility for the selected number: opt-out status (blocks sending)
+  // and which Mechanical sender number the reply will come from.
+  const { data: sendState } = trpc.smsCampaigns.conversationSendState.useQuery(
+    { phone: selectedConv?.phone ?? "" },
+    { enabled: !!selectedConv?.phone },
+  );
+
+  // Reply BY PHONE — works even when the number is not a saved contact.
+  const replyMutation = trpc.smsCampaigns.replyToConversation.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast({ title: "Reply sent" });
+      } else {
+        toast({ title: "Message not delivered", description: data.error ?? "Telnyx did not accept the message.", variant: "destructive" });
+      }
     },
-    onError: (e) => toast({ title: "Reply failed", description: e.message, variant: "destructive" }),
+    onError: (e) => {
+      toast({ title: "Reply failed", description: e.message, variant: "destructive" });
+    },
+    // Replace the optimistic bubble with the authoritative server row(s).
+    onSettled: async () => {
+      await Promise.all([refetchMsgs(), refetchConvs()]);
+      setPending([]);
+    },
   });
 
   // Quick-add an inbound number that isn't yet in SMS Contacts. This only
@@ -1165,18 +1204,24 @@ function SmsInboxTab() {
   }
 
   function handleSendReply() {
-    if (!replyText.trim() || !selectedConv?.contactId) return;
+    const text = replyText.trim();
+    // Reply by PHONE — allowed even when the number is not a saved contact.
+    // Blocked only when the number has opted out (STOP).
+    if (!text || !selectedConv?.phone || sendState?.optedOut) return;
+    setPending((p) => [...p, { tempId: `t-${Date.now()}`, phone: selectedConv.phone, message: text, createdAt: new Date() }]);
+    setReplyText("");
     replyMutation.mutate({
-      contactId: selectedConv.contactId,
-      message: replyText.trim(),
+      phone: selectedConv.phone,
+      contactId: selectedConv.contactId ?? undefined,
+      message: text,
       sentByName: "Team",
     });
   }
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages (or an optimistic bubble) change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [sortedMessages.length]);
+  }, [sortedMessages.length, pending.length]);
 
   if (convsLoading) return <div className="flex justify-center py-16"><RefreshCw className="animate-spin h-8 w-8 text-gray-400" /></div>;
 
@@ -1190,7 +1235,7 @@ function SmsInboxTab() {
             <span className="bg-[#ff6b35] text-white text-xs font-bold px-2 py-0.5 rounded-full">{unreadData.count} unread</span>
           )}
         </div>
-        <Button variant="outline" size="sm" className="gap-2" onClick={() => { refetchConvs(); if (selectedConv?.contactId) refetchMsgs(); }}>
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => { refetchConvs(); if (selectedConv?.phone) refetchMsgs(); }}>
           <RefreshCw className="h-4 w-4" /> Refresh
         </Button>
       </div>
@@ -1271,88 +1316,114 @@ function SmsInboxTab() {
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
                   {msgsLoading ? (
                     <div className="flex justify-center py-8"><RefreshCw className="animate-spin h-6 w-6 text-gray-300" /></div>
-                  ) : sortedMessages.length === 0 ? (
+                  ) : sortedMessages.length === 0 && pending.length === 0 ? (
                     <p className="text-center text-gray-400 text-sm py-8">No messages yet</p>
                   ) : (
-                    sortedMessages.map((msg) => (
-                      <div
-                        key={msg.id}
-                        className={`flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
-                      >
+                    sortedMessages.map((msg) => {
+                      const failed = msg.direction === "outbound" && FAILED_DELIVERY.has(String(msg.deliveryStatus));
+                      return (
                         <div
-                          className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
-                            msg.direction === "outbound"
-                              ? "bg-[#1e3a5f] text-white rounded-br-sm"
-                              : msg.isOptOut
-                              ? "bg-red-100 text-red-800 border border-red-200 rounded-bl-sm"
-                              : "bg-gray-100 text-gray-800 rounded-bl-sm"
-                          }`}
+                          key={msg.id}
+                          className={`flex ${msg.direction === "outbound" ? "justify-end" : "justify-start"}`}
                         >
-                          <p className="leading-relaxed">{msg.message}</p>
-                          <div className={`text-xs mt-1 ${
-                            msg.direction === "outbound" ? "text-blue-200" : "text-gray-400"
-                          }`}>
-                            {new Date(msg.createdAt).toLocaleString()}
-                            {msg.direction === "outbound" && msg.sentByName && ` · ${msg.sentByName}`}
-                            {msg.isOptOut && " · STOP"}
+                          <div
+                            title={msg.direction === "outbound" && msg.fromNumber ? `Sent from ${msg.fromNumber}` : undefined}
+                            className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${
+                              msg.direction === "outbound"
+                                ? failed
+                                  ? "bg-red-50 text-red-800 border border-red-300 rounded-br-sm"
+                                  : "bg-[#1e3a5f] text-white rounded-br-sm"
+                                : msg.isOptOut
+                                ? "bg-red-100 text-red-800 border border-red-200 rounded-bl-sm"
+                                : "bg-gray-100 text-gray-800 rounded-bl-sm"
+                            }`}
+                          >
+                            <p className="leading-relaxed">{msg.message}</p>
+                            <div className={`text-xs mt-1 ${
+                              msg.direction === "outbound" && !failed ? "text-blue-200" : "text-gray-400"
+                            }`}>
+                              {new Date(msg.createdAt).toLocaleString()}
+                              {msg.direction === "outbound" && msg.sentByName && ` · ${msg.sentByName}`}
+                              {msg.direction === "outbound" && msg.fromNumber && ` · from ${msg.fromNumber}`}
+                              {msg.direction === "outbound" && ` · ${outboundDeliveryLabel(msg.deliveryStatus)}`}
+                              {msg.isOptOut && " · STOP"}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
+                  {/* Optimistic outgoing bubbles (before the server row is refetched) */}
+                  {pending.map((p) => (
+                    <div key={p.tempId} className="flex justify-end">
+                      <div className="max-w-[75%] rounded-2xl rounded-br-sm px-4 py-2.5 text-sm bg-[#1e3a5f]/70 text-white">
+                        <p className="leading-relaxed">{p.message}</p>
+                        <div className="text-xs mt-1 text-blue-200 flex items-center gap-1">
+                          <RefreshCw className="h-3 w-3 animate-spin" /> Sending…
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                   <div ref={messagesEndRef} />
                 </div>
 
-                {/* Reply Box */}
-                {selectedConv.contactId ? (
-                  <div className="p-4 border-t bg-gray-50">
-                    <div className="flex gap-2">
-                      <Textarea
-                        value={replyText}
-                        onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Type your reply..."
-                        rows={2}
-                        className="text-sm resize-none flex-1"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSendReply();
-                        }}
-                      />
+                {/* Reply Box — enabled for ANY number (incl. non-contacts); blocked only on opt-out */}
+                <div className="p-4 border-t bg-gray-50 space-y-2">
+                  {!sendState?.isContact && (
+                    <div className="flex items-start justify-between gap-2 rounded-md bg-yellow-50 border border-yellow-200 px-3 py-2">
+                      <p className="text-xs text-yellow-700">
+                        This number is not in SMS Contacts. You can still reply — add them to save the contact.
+                      </p>
                       <Button
-                        className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 gap-2 self-end"
-                        onClick={handleSendReply}
-                        disabled={!replyText.trim() || replyMutation.isPending}
+                        size="sm"
+                        variant="outline"
+                        className="gap-1 shrink-0"
+                        disabled={addContactMutation.isPending}
+                        onClick={() =>
+                          addContactMutation.mutate([
+                            { firstName: `SMS ${String(selectedConv.phone).slice(-4)}`, phone: selectedConv.phone },
+                          ])
+                        }
                       >
-                        {replyMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Reply className="h-4 w-4" />}
-                        Send
+                        {addContactMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                        Add to SMS Contacts
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Press Ctrl+Enter to send</p>
-                  </div>
-                ) : (
-                  <div className="p-4 border-t bg-yellow-50 space-y-2">
-                    <p className="text-xs text-yellow-700">
-                      This number is not in SMS Contacts. Add or import the contact before sending.
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                      disabled={addContactMutation.isPending}
-                      onClick={() =>
-                        addContactMutation.mutate([
-                          { firstName: `SMS ${String(selectedConv.phone).slice(-4)}`, phone: selectedConv.phone },
-                        ])
-                      }
-                    >
-                      {addContactMutation.isPending ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <UserPlus className="h-4 w-4" />
-                      )}
-                      Add to SMS Contacts
-                    </Button>
-                  </div>
-                )}
+                  )}
+
+                  {sendState?.optedOut ? (
+                    <div className="rounded-md bg-red-50 border border-red-200 px-3 py-2 flex items-center gap-2">
+                      <Ban className="h-4 w-4 text-red-600 shrink-0" />
+                      <p className="text-xs text-red-700">This number has opted out (STOP). Replies are disabled to stay compliant.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <Textarea
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder="Type your reply..."
+                          rows={2}
+                          className="text-sm resize-none flex-1"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) handleSendReply();
+                          }}
+                        />
+                        <Button
+                          className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 gap-2 self-end"
+                          onClick={handleSendReply}
+                          disabled={!replyText.trim() || replyMutation.isPending}
+                        >
+                          {replyMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Reply className="h-4 w-4" />}
+                          Send
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {sendState?.fromNumber ? `Sending from ${sendState.fromNumber} · ` : ""}Press Ctrl+Enter to send
+                      </p>
+                    </>
+                  )}
+                </div>
               </>
             )}
           </Card>

@@ -4,6 +4,13 @@
  * SMS provider: Telnyx (active). TextBelt is legacy — removed July 2026.
  */
 import { sendTelnyxSms, telnyxConfigured } from "../services/telnyxSms";
+import {
+  sendAndRecordSms,
+  logOutboundBestEffort,
+  isPhoneOptedOut,
+  mechanicalSmsFrom,
+  inboxPhoneMatch,
+} from "../services/smsOutbound";
 import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
@@ -259,6 +266,18 @@ export const smsCampaignsRouter = router({
         quotaRemaining: result.quotaRemaining ?? null,
       });
 
+      // Also surface this send in the 2-Way Inbox thread (best-effort).
+      await logOutboundBestEffort(db, {
+        phone: contact.phone,
+        message: personalizedMsg,
+        fromNumber: mechanicalSmsFrom(),
+        telnyxMessageId: result.messageId ?? null,
+        deliveryStatus: result.success ? "accepted" : "failed",
+        source: "campaign",
+        contactId: input.contactId,
+        sentByName: "Campaign",
+      });
+
       return {
         success: result.success,
         error: result.error,
@@ -308,6 +327,18 @@ export const smsCampaignsRouter = router({
             textBeltId: result.messageId ?? null,
             errorMessage: result.error ?? null,
             quotaRemaining: null,
+          });
+
+          // Mirror the send into the 2-Way Inbox thread (best-effort).
+          await logOutboundBestEffort(db, {
+            phone: contact.phone,
+            message: personalizedMsg,
+            fromNumber: mechanicalSmsFrom(),
+            telnyxMessageId: result.messageId ?? null,
+            deliveryStatus: result.success ? "accepted" : "failed",
+            source: "campaign",
+            contactId,
+            sentByName: "Campaign",
           });
 
           if (result.success) {
@@ -455,7 +486,7 @@ export const smsCampaignsRouter = router({
         return db
           .select()
           .from(smsInboxMessages)
-          .where(last10Match(smsInboxMessages.phone, input.phone))
+          .where(inboxPhoneMatch(input.phone))
           .orderBy(desc(smsInboxMessages.createdAt))
           .limit(input.limit);
       }
@@ -508,7 +539,7 @@ export const smsCampaignsRouter = router({
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const target = hasFullPhone(input.phone)
-        ? last10Match(smsInboxMessages.phone, input.phone)
+        ? inboxPhoneMatch(input.phone)
         : eq(smsInboxMessages.contactId, input.contactId!);
       await db
         .update(smsInboxMessages)
@@ -553,6 +584,68 @@ export const smsCampaignsRouter = router({
         error: result.error,
         quotaRemaining: result.quotaRemaining,
       };
+    }),
+
+  /**
+   * Reply to a conversation by PHONE — works even when the number is NOT a saved
+   * SMS contact (contactId null). Opt-out is enforced before sending; the sent
+   * message is recorded as an outbound Inbox row so it appears in the thread.
+   */
+  replyToConversation: protectedProcedure
+    .input(z.object({
+      phone: z.string(),
+      contactId: z.number().optional(),
+      message: z.string().min(1),
+      sentByName: z.string().optional(),
+    }).refine((v) => hasFullPhone(v.phone), { message: "A valid phone number is required" }))
+    .mutation(async ({ input }) => {
+      const db = await requireDb();
+
+      // Resolve a contactId from the phone when not supplied (read-only; never
+      // creates a contact — unknown numbers stay unlinked).
+      let contactId = input.contactId ?? null;
+      if (contactId == null) {
+        const [c] = await db
+          .select({ id: smsContacts.id })
+          .from(smsContacts)
+          .where(last10Match(smsContacts.phone, input.phone))
+          .limit(1);
+        contactId = c?.id ?? null;
+      }
+
+      const res = await sendAndRecordSms(db, {
+        phone: input.phone,
+        message: input.message,
+        source: "inbox_reply",
+        contactId,
+        sentByName: input.sentByName ?? "Team",
+      });
+
+      // Opted-out numbers are refused outright (nothing sent or recorded).
+      if (res.blocked) throw new Error(res.error ?? "This number has opted out of SMS.");
+      return { success: res.success, error: res.error ?? null, messageId: res.messageId ?? null };
+    }),
+
+  /**
+   * Send-eligibility for a conversation phone: whether it is opted out (block
+   * sending), whether it is a saved contact, and which Mechanical sender number
+   * outbound messages will come from.
+   */
+  conversationSendState: protectedProcedure
+    .input(z.object({ phone: z.string() }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const fromNumber = mechanicalSmsFrom();
+      if (!hasFullPhone(input.phone)) {
+        return { optedOut: false, isContact: false, contactId: null as number | null, fromNumber };
+      }
+      const [contact] = await db
+        .select({ id: smsContacts.id })
+        .from(smsContacts)
+        .where(last10Match(smsContacts.phone, input.phone))
+        .limit(1);
+      const optedOut = await isPhoneOptedOut(db, input.phone);
+      return { optedOut, isContact: !!contact, contactId: contact?.id ?? null, fromNumber };
     }),
 
   getConversations: protectedProcedure.query(async () => {
