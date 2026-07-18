@@ -1,120 +1,112 @@
-const nodemailer = require("nodemailer");
+// sendCallRecap (Vapi tool endpoint)
+// -----------------------------------------------------------------------------
+// Mechanical Enterprise ONLY. This edge function no longer sends email itself
+// (the previous generic-SMTP/nodemailer path is removed). It forwards the call
+// recap to the Mechanical Enterprise server, which persists it to the CRM (best
+// available record), notifies the office via the Mechanical email service
+// (Resend), and — with consent — texts the caller via Telnyx.
+//
+// The external Vapi request/response contract is preserved:
+//   POST body: { name|caller_name, phone|caller_phone, email|caller_email,
+//                appointment_type, call_summary, outcome, ... }
+//   200 -> { success: true }
+//
+// No Rosalia / rosaliagroup endpoint, no SMTP secret, no Textbelt, no Twilio,
+// no hard-coded credentials.
+
+// Canonical Mechanical backend origin — read from config, never hard-coded.
+// Single variable (no ambiguous fallback chain). Terminal 9 must reconcile this
+// name with the deployment config and point it at the Railway API origin.
+const API_BASE = process.env.MECHANICAL_API_URL || "";
+
+const RECAP_PATH = "/api/vapi/call-recap";
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
 
+  let body;
   try {
-    const body = JSON.parse(event.body);
-    const name = body.name || body.caller_name;
-    const phone = body.phone || body.caller_phone;
-    const email = body.caller_email || body.email || "Not provided";
-    const appointmentType = body.appointment_type || "General Inquiry";
-    const callSummary = body.call_summary || "No details provided";
-    const outcome = body.outcome || "unknown";
+    body = JSON.parse(event.body || "{}");
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ error: "Invalid JSON" }) };
+  }
 
-    if (!name || !phone) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: "Name and phone are required" })
-      };
+  const name = body.name || body.caller_name;
+  const phone = body.phone || body.caller_phone;
+  if (!name || !phone) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: "Name and phone are required" }),
+    };
+  }
+
+  // Operational fields only — never forward prompts, system instructions,
+  // secrets, tokens, or unrelated payload keys.
+  const recap = {
+    call_id: body.call_id || body.vapiCallId || null,
+    name,
+    phone,
+    email: body.caller_email || body.email || null,
+    appointment_id: body.appointment_id || null,
+    reason_for_call: body.reason_for_call || null,
+    requested_service: body.requested_service || body.appointment_type || null,
+    appointment_type: body.appointment_type || null,
+    appointment_details: body.appointment_details || null,
+    property_address: body.property_address || null,
+    urgency: body.urgency || null,
+    ai_summary: body.ai_summary || body.call_summary || null,
+    call_summary: body.call_summary || null,
+    unresolved_questions: body.unresolved_questions || null,
+    follow_up_required: body.follow_up_required ?? null,
+    outcome: body.outcome || null,
+    send_customer_sms: body.send_customer_sms ?? false,
+    sms_consent: body.sms_consent ?? false,
+  };
+
+  if (!API_BASE) {
+    // No server configured — do NOT lose the recap. Log the operational fields
+    // (recoverable from function logs) and signal failure so Vapi retries.
+    console.error(
+      "[sendCallRecap] MECHANICAL_API_URL not configured — recap not persisted. Operational recap:",
+      JSON.stringify({ ...recap, email: recap.email ? "[provided]" : null }),
+    );
+    return {
+      statusCode: 502,
+      body: JSON.stringify({ error: "Recap service unavailable" }),
+    };
+  }
+
+  try {
+    const headers = { "Content-Type": "application/json" };
+    if (process.env.VAPI_WEBHOOK_SECRET) {
+      headers["Authorization"] = `Bearer ${process.env.VAPI_WEBHOOK_SECRET}`;
     }
 
-    const outcomeEmoji = {
-      booked: "✅",
-      needs_follow_up: "📞",
-      not_interested: "❌",
-      rescheduled: "🔄",
-      info_only: "ℹ️"
-    }[outcome] || "📋";
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: parseInt(process.env.SMTP_PORT || "465"),
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
+    const res = await fetch(`${API_BASE.replace(/\/+$/, "")}${RECAP_PATH}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(recap),
     });
 
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: #0a1628; padding: 24px; border-radius: 8px 8px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 20px;">
-            ${outcomeEmoji} New Lead: ${name}
-          </h1>
-          <p style="color: rgba(255,255,255,0.6); margin: 6px 0 0; font-size: 14px;">
-            ${appointmentType}
-          </p>
-        </div>
-        <div style="background: #f9f9f9; padding: 24px; border: 1px solid #eee;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr>
-              <td style="padding: 8px 0; color: #666; font-size: 14px; width: 140px;">Name</td>
-              <td style="padding: 8px 0; font-weight: 600; font-size: 14px;">${name}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666; font-size: 14px;">Phone</td>
-              <td style="padding: 8px 0; font-size: 14px;">
-                <a href="tel:${phone}" style="color: #e8813a;">${phone}</a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666; font-size: 14px;">Email</td>
-              <td style="padding: 8px 0; font-size: 14px;">
-                <a href="mailto:${email}" style="color: #e8813a;">${email}</a>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666; font-size: 14px;">Type</td>
-              <td style="padding: 8px 0; font-size: 14px;">${appointmentType}</td>
-            </tr>
-            <tr>
-              <td style="padding: 8px 0; color: #666; font-size: 14px;">Outcome</td>
-              <td style="padding: 8px 0; font-size: 14px;">${outcomeEmoji} ${outcome}</td>
-            </tr>
-          </table>
-          <div style="margin-top: 20px; padding: 16px; background: white; border-radius: 6px; border-left: 4px solid #e8813a;">
-            <p style="margin: 0 0 8px; color: #666; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
-              Details / Summary
-            </p>
-            <p style="margin: 0; font-size: 14px; white-space: pre-line; line-height: 1.6;">${callSummary}</p>
-          </div>
-          <div style="margin-top: 20px; text-align: center;">
-            <a href="tel:${phone}" style="background: #e8813a; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block;">
-              📞 Call ${name} Now
-            </a>
-          </div>
-        </div>
-        <div style="background: #eee; padding: 12px 24px; border-radius: 0 0 8px 8px; text-align: center;">
-          <p style="margin: 0; font-size: 12px; color: #999;">
-            Mechanical Enterprise LLC · (862) 423-9396 · ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} EST
-          </p>
-        </div>
-      </div>
-    `;
+    if (!res.ok) {
+      // Server rejected/failed. Log operational context and let Vapi retry;
+      // the server is idempotent on call_id, so a retry cannot duplicate.
+      console.error(
+        `[sendCallRecap] server returned ${res.status} — recap not confirmed. call_id=${recap.call_id || "none"}`,
+      );
+      return { statusCode: 502, body: JSON.stringify({ error: "Recap not stored" }) };
+    }
 
-    await transporter.sendMail({
-      from: `"Mechanical Enterprise" <${process.env.SMTP_USER}>`,
-      to: "sales@mechanicalenterprise.com",
-      subject: `${outcomeEmoji} ${appointmentType}: ${name} — ${phone}`,
-      html: emailHtml
+    console.log("[sendCallRecap] recap forwarded to Mechanical server", {
+      name,
+      hasAppointment: Boolean(recap.appointment_id),
+      outcome: recap.outcome,
     });
-
-    console.log("[Lead Captured & Emailed]", { name, phone, email, appointmentType, outcome });
-
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true })
-    };
-
+    return { statusCode: 200, body: JSON.stringify({ success: true }) };
   } catch (err) {
-    console.error("[sendCallRecap error]", err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: "Failed to send", details: err.message })
-    };
+    console.error("[sendCallRecap] forward failed:", err && err.message ? err.message : "unknown error");
+    return { statusCode: 502, body: JSON.stringify({ error: "Recap forward failed" }) };
   }
 };

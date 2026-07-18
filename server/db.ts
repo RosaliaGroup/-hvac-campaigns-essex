@@ -763,6 +763,51 @@ export async function createAppointment(data: InsertAppointment) {
   return result;
 }
 
+/**
+ * Look up an appointment by the Vapi call id that created it. Used by the Vapi
+ * bookHVAC handler to make webhook retries idempotent: Vapi re-delivers the same
+ * call id, so a second delivery finds the first row instead of double-booking.
+ */
+export async function getAppointmentByVapiCallId(vapiCallId: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const [appt] = await db.select().from(appointments)
+    .where(eq(appointments.vapiCallId, vapiCallId))
+    .orderBy(desc(appointments.createdAt))
+    .limit(1);
+  return appt || null;
+}
+
+/**
+ * Secondary duplicate guard for bookHVAC when no Vapi call id is present (or a
+ * retry lost it): the most recent appointment for the SAME normalized phone
+ * (last-10 digits) with the SAME preferred date + time. Returns null when no
+ * such row exists. Never throws.
+ */
+export async function findDuplicateAppointment(params: {
+  phone: string;
+  preferredDate: string;
+  preferredTime: string;
+}) {
+  try {
+    const db = await getDb();
+    if (!db) return null;
+    const phoneKey = params.phone.replace(/\D/g, "").slice(-10);
+    if (phoneKey.length < 7) return null;
+    const [appt] = await db.select().from(appointments)
+      .where(and(
+        sql`RIGHT(REGEXP_REPLACE(${appointments.phone}, '[^0-9]', ''), 10) = ${phoneKey}`,
+        eq(appointments.preferredDate, params.preferredDate),
+        eq(appointments.preferredTime, params.preferredTime),
+      ))
+      .orderBy(desc(appointments.createdAt))
+      .limit(1);
+    return appt || null;
+  } catch {
+    return null;
+  }
+}
+
 export async function getAllAppointments(limit = 100, offset = 0) {
   const db = await getDb();
   if (!db) return [];
@@ -785,20 +830,11 @@ export async function updateAppointmentStatus(id: number, status: "pending" | "c
   await db.update(appointments).set({ status }).where(eq(appointments.id, id));
 }
 
-export async function rescheduleAppointment(phone: string, newDate: string, newTime: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  // Find most recent pending appointment for this phone
-  const [appt] = await db.select().from(appointments)
-    .where(and(eq(appointments.phone, phone), eq(appointments.status, "pending")))
-    .orderBy(desc(appointments.createdAt))
-    .limit(1);
-  if (!appt) return null;
-  await db.update(appointments)
-    .set({ preferredDate: newDate, preferredTime: newTime, status: "rescheduled" })
-    .where(eq(appointments.id, appt.id));
-  return appt;
-}
+// NOTE: The legacy `rescheduleAppointment(phone, newDate, newTime)` helper was
+// removed. Rescheduling now goes through server/services/rescheduleAppointment.ts,
+// which enforces customer isolation, disambiguation, state guards, a future-time
+// check, Google Calendar mirroring and idempotency (the old helper matched by
+// phone only, skipped the calendar, and could touch the wrong appointment).
 
 export async function getAppointmentStats() {
   const db = await getDb();

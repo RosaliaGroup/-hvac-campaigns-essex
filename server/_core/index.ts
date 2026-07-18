@@ -13,11 +13,13 @@ import { startSalesDocPoller } from "../services/salesDocPoller";
 import { registerSmsWebhookRoutes, assertWebhookSecurityOrExit } from "../services/smsWebhook";
 import { attachBodyParsers } from "./bodyParser";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
+import { registerVapiToolRoutes } from "../services/vapiSendForm";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
 import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
+import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -54,6 +56,9 @@ async function startServer() {
   registerSmsWebhookRoutes(app);
   // Meta Lead Gen webhook (Instant Form submissions)
   registerMetaLeadWebhookRoutes(app);
+  // Vapi tool webhook — Jessica's sendForm (Mechanical booking link via Telnyx).
+  // Authenticated by VAPI_TOOL_SECRET; separate from the tRPC vapiTools webhook.
+  registerVapiToolRoutes(app);
   // QuickBooks OAuth callback (/api/integrations/quickbooks/callback)
   registerQuickbooksRoutes(app);
   // Google Calendar OAuth callback (/api/integrations/google-calendar/callback)
@@ -64,6 +69,8 @@ async function startServer() {
   registerGa4SyncRoutes(app);
   // Local SEO — Google Business Profile sync (POST /api/gbp/sync)
   registerGbpSyncRoutes(app);
+  // Vapi (Jessica) end-of-call recap — persist to Mechanical CRM + notify (POST /api/vapi/call-recap)
+  registerVapiRecapRoute(app);
   // tRPC API
   app.use(
     "/api/trpc",
