@@ -91,6 +91,7 @@ import TakeOffDetail from "./pages/TakeOffDetail";
 import TakeOffPublic from "./pages/TakeOffPublic";
 import FieldToday from "./pages/FieldToday";
 import FieldMyJobs from "./pages/FieldMyJobs";
+import FieldWorkOrder from "./pages/FieldWorkOrder";
 import FieldProfile from "./pages/FieldProfile";
 import PortalApp from "./pages/portal/PortalApp";
 
@@ -337,6 +338,7 @@ function Router() {
           FieldToday (legacy single-list view) is retained but no longer routed. */}
       <Route path={"/field/today"} component={protect(FieldMyJobs)} />
       <Route path={"/field/my-jobs"} component={protect(FieldMyJobs)} />
+      <Route path={"/field/jobs/:id"} component={protect(FieldWorkOrder)} />
       <Route path={"/field/profile"} component={protect(FieldProfile)} />
       <Route path={"/jobs"} component={protect(Jobs)} />
       <Route path={"/jobs/:id"} component={protect(JobDetail)} />

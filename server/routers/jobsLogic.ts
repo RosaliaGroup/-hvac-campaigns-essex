@@ -161,3 +161,28 @@ export type ArchivedFilter = "active" | "archived" | "all";
 export function normalizeArchivedFilter(v: string | undefined): ArchivedFilter {
   return v === "archived" || v === "all" ? v : "active";
 }
+
+/**
+ * Field work-order access rule (pure, exhaustively testable). A technician may
+ * open a work order only if it is assigned to them — directly (job assignee),
+ * via a linked appointment they own, or as an additional technician on the job.
+ * Admins may open any. Enforced server-side; the client cannot widen it.
+ */
+export function canAccessWorkOrder(input: {
+  isAdmin: boolean;
+  /** Resolved teamMembers.id for the caller, or null for non-team (OAuth) users. */
+  memberId: number | null;
+  assignedToId: number | null;
+  /** True if a linked appointment is assigned to the caller. */
+  viaAppointment: boolean;
+  /** True if the caller is an additional technician on the job. */
+  viaTechnician: boolean;
+}): boolean {
+  if (input.isAdmin) return true;
+  if (input.memberId == null) return false;
+  return (
+    input.assignedToId === input.memberId ||
+    input.viaAppointment ||
+    input.viaTechnician
+  );
+}
