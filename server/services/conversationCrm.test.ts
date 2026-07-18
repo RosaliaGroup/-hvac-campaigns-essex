@@ -81,4 +81,27 @@ describe("resolveConversationContext", () => {
     expect(ctx.lead?.id).toBe(3);
     expect(ctx.customer).toBeNull();
   });
+
+  it("flags a stale link when the confirmed customer no longer exists", async () => {
+    // link points at customer 5, but no customer row is returned (deleted).
+    const db = makeDb({ smsConversationLinks: [{ customerId: 5, leadId: null, leadCaptureId: null, propertyId: null }] });
+    const ctx = await resolveConversationContext(db, PHONE);
+    expect(ctx.staleLink).toBe(true);
+    expect(ctx.status).toBe("unlinked");
+    expect(ctx.customer).toBeNull(); // no stale data shown
+  });
+
+  it("surfaces the newest OPEN estimate + a count for '+N more'", async () => {
+    const db = makeDb({
+      customers: [{ id: 5, name: "Jane", phone: PHONE, type: "residential", status: "active" }],
+      // keys match the SELECT projection (totalAmount is aliased to `amount`)
+      quickbooksSalesDocuments: [
+        { id: 11, status: "pending", amount: "500.00" },
+        { id: 12, status: "accepted", amount: "300.00" },
+      ],
+    });
+    const ctx = await resolveConversationContext(db, PHONE);
+    expect(ctx.estimate?.amount).toBe("500.00");
+    expect(ctx.estimatesOpenCount).toBe(2); // "+1 more"
+  });
 });

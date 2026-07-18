@@ -15,7 +15,7 @@
  *  - Appointment/job/estimate/invoice are derived from the linked customer at
  *    read time — not stored on the link.
  */
-import { and, desc, eq, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import {
   customers, leads, leadCaptures, properties, appointments, jobs,
   quickbooksSalesDocuments, teamMembers, smsConversationLinks,
@@ -88,7 +88,16 @@ export interface ConversationContext {
   job: { id: number; jobNumber: string | null; title: string | null; status: string | null; priority: string | null } | null;
   estimate: { id: number; status: string | null; amount: string | null } | null;
   invoice: { id: number; status: string | null; balance: string | null } | null;
+  /** count of OPEN estimates/invoices for the linked customer (for "+N more"). */
+  estimatesOpenCount: number;
+  invoicesOpenCount: number;
+  /** true when a confirmed link points at a CRM record that no longer exists. */
+  staleLink: boolean;
 }
+
+/** Estimate/invoice statuses that count as "open" / outstanding. */
+const OPEN_ESTIMATE_STATUSES = ["pending", "accepted"] as const;
+const OPEN_INVOICE_STATUSES = ["unpaid", "partial"] as const;
 
 /** Resolve the full conversation workspace context for one phone number. */
 export async function resolveConversationContext(db: AnyDb, phoneRaw: string): Promise<ConversationContext> {
@@ -97,6 +106,7 @@ export async function resolveConversationContext(db: AnyDb, phoneRaw: string): P
     candidates: { customers: [], leads: [], leadCaptures: [] },
     customer: null, lead: null, leadCapture: null, properties: [], selectedProperty: null,
     appointment: null, job: null, estimate: null, invoice: null,
+    estimatesOpenCount: 0, invoicesOpenCount: 0, staleLink: false,
   };
   const l10 = normalizePhone(phoneRaw);
   if (!l10) return empty;
@@ -136,26 +146,39 @@ export async function resolveConversationContext(db: AnyDb, phoneRaw: string): P
     const [cust] = await db
       .select({ id: customers.id, name: customers.displayName, phone: customers.phone, type: customers.type, status: customers.status })
       .from(customers).where(eq(customers.id, customerId)).limit(1);
-    ctx.customer = cust ?? null;
 
-    const [props, appt, openJob, est, inv] = await Promise.all([
+    // Stale confirmed link: the customer it points at no longer exists. Do not
+    // show stale data or silently re-suggest — surface it as stale + unlinked.
+    if (!cust) {
+      if (status === "linked") { ctx.status = "unlinked"; ctx.staleLink = true; }
+      return ctx;
+    }
+    ctx.customer = cust;
+
+    // Derive related records STRICTLY by customerId (never by phone) so a shared
+    // phone can't leak another customer's appointment/job/estimate/invoice.
+    const [props, appt, openJob, estOpen, invOpen] = await Promise.all([
       db.select().from(properties).where(eq(properties.customerId, customerId)),
-      // upcoming/most-recent appointment by customerId OR phone (pre-conversion bookings)
       db.select({ id: appointments.id, status: appointments.status, scheduledAt: appointments.scheduledAt, assignedToId: appointments.assignedToId, address: appointments.propertyAddress })
-        .from(appointments).where(or(eq(appointments.customerId, customerId), phoneMatch(appointments.phone, l10)))
+        .from(appointments).where(eq(appointments.customerId, customerId))
         .orderBy(desc(appointments.scheduledAt)).limit(1),
       db.select({ id: jobs.id, jobNumber: jobs.jobNumber, title: jobs.title, status: jobs.status, priority: jobs.priority })
         .from(jobs).where(and(eq(jobs.customerId, customerId), sql`${jobs.archivedAt} IS NULL`, ne(jobs.status, "closed"), ne(jobs.status, "cancelled")))
         .orderBy(desc(jobs.id)).limit(1),
+      // OPEN estimates only (pending|accepted), newest first — never an unrelated/closed one.
       db.select({ id: quickbooksSalesDocuments.id, status: quickbooksSalesDocuments.status, amount: quickbooksSalesDocuments.totalAmount })
-        .from(quickbooksSalesDocuments).where(and(eq(quickbooksSalesDocuments.customerId, customerId), eq(quickbooksSalesDocuments.docType, "estimate")))
-        .orderBy(desc(quickbooksSalesDocuments.txnDate)).limit(1),
+        .from(quickbooksSalesDocuments)
+        .where(and(eq(quickbooksSalesDocuments.customerId, customerId), eq(quickbooksSalesDocuments.docType, "estimate"), inArray(quickbooksSalesDocuments.status, [...OPEN_ESTIMATE_STATUSES])))
+        .orderBy(desc(quickbooksSalesDocuments.txnDate)),
+      // OUTSTANDING invoices only (unpaid|partial), newest first.
       db.select({ id: quickbooksSalesDocuments.id, status: quickbooksSalesDocuments.status, balance: quickbooksSalesDocuments.balance })
-        .from(quickbooksSalesDocuments).where(and(eq(quickbooksSalesDocuments.customerId, customerId), eq(quickbooksSalesDocuments.docType, "invoice")))
-        .orderBy(desc(quickbooksSalesDocuments.txnDate)).limit(1),
+        .from(quickbooksSalesDocuments)
+        .where(and(eq(quickbooksSalesDocuments.customerId, customerId), eq(quickbooksSalesDocuments.docType, "invoice"), inArray(quickbooksSalesDocuments.status, [...OPEN_INVOICE_STATUSES])))
+        .orderBy(desc(quickbooksSalesDocuments.txnDate)),
     ]);
 
     ctx.properties = props.map((p) => ({ id: p.id, address: propertyAddress(p), label: p.label, isPrimary: !!p.isPrimary }));
+    // Only honor a remembered propertyId if it still belongs to this customer.
     const sel = link?.propertyId ? ctx.properties.find((p) => p.id === link.propertyId) : (ctx.properties.find((p) => p.isPrimary) ?? ctx.properties[0]);
     ctx.selectedProperty = sel ? { id: sel.id, address: sel.address } : null;
 
@@ -168,8 +191,10 @@ export async function resolveConversationContext(db: AnyDb, phoneRaw: string): P
       ctx.appointment = { id: appt[0].id, status: appt[0].status, scheduledAt: appt[0].scheduledAt, assignedTo, address: appt[0].address };
     }
     ctx.job = openJob[0] ?? null;
-    ctx.estimate = est[0] ?? null;
-    ctx.invoice = inv[0] ?? null;
+    ctx.estimate = estOpen[0] ?? null;
+    ctx.estimatesOpenCount = estOpen.length;
+    ctx.invoice = invOpen[0] ?? null;
+    ctx.invoicesOpenCount = invOpen.length;
   } else {
     // No linked customer — still surface an appointment matched purely by phone.
     const appt = await db

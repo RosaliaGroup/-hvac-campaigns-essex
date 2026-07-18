@@ -9,6 +9,7 @@
  * It loads on its own query (enabled per selected phone) so it never blocks the
  * Phase-1 thread render — the thread appears first, the CRM strip fills in.
  */
+import { useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -40,14 +41,21 @@ export default function ConversationCrmPanel({ phone }: { phone: string }) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
 
+  // Duplicate-warning prompt shown before creating a likely-duplicate record.
+  const [dup, setDup] = useState<{ kind: "lead" | "customer"; candidates: { id: number; name: string }[] } | null>(null);
+
   const { data: ctx, isLoading } = trpc.conversationCrm.context.useQuery({ phone }, { enabled: !!phone });
   const invalidate = () => utils.conversationCrm.context.invalidate({ phone });
 
-  const linkM = trpc.conversationCrm.link.useMutation({ onSuccess: () => { invalidate(); toast({ title: "Conversation linked" }); }, onError: (e) => toast({ title: "Link failed", description: e.message, variant: "destructive" }) });
+  const linkM = trpc.conversationCrm.link.useMutation({ onSuccess: () => { setDup(null); invalidate(); toast({ title: "Conversation linked" }); }, onError: (e) => toast({ title: "Link failed", description: e.message, variant: "destructive" }) });
   const unlinkM = trpc.conversationCrm.unlink.useMutation({ onSuccess: () => { invalidate(); toast({ title: "Link removed" }); } });
-  const selPropM = trpc.conversationCrm.selectProperty.useMutation({ onSuccess: invalidate });
-  const createLeadM = trpc.conversationCrm.quickCreateLead.useMutation({ onSuccess: () => { invalidate(); toast({ title: "Lead created & linked" }); } });
-  const createCustM = trpc.conversationCrm.quickCreateCustomer.useMutation({ onSuccess: () => { invalidate(); toast({ title: "Customer created & linked" }); } });
+  const selPropM = trpc.conversationCrm.selectProperty.useMutation({ onSuccess: invalidate, onError: (e) => toast({ title: "Can't select property", description: e.message, variant: "destructive" }) });
+  const createLeadM = trpc.conversationCrm.quickCreateLead.useMutation({
+    onSuccess: (d) => { if ("duplicate" in d && d.duplicate) { setDup({ kind: "lead", candidates: d.candidates }); } else { setDup(null); invalidate(); toast({ title: "Lead created & linked" }); } },
+  });
+  const createCustM = trpc.conversationCrm.quickCreateCustomer.useMutation({
+    onSuccess: (d) => { if ("duplicate" in d && d.duplicate) { setDup({ kind: "customer", candidates: d.candidates }); } else { setDup(null); invalidate(); toast({ title: "Customer created & linked" }); } },
+  });
   const busy = linkM.isPending || createLeadM.isPending || createCustM.isPending;
 
   if (isLoading || !ctx) {
@@ -84,19 +92,41 @@ export default function ConversationCrmPanel({ phone }: { phone: string }) {
     );
   }
 
-  // No match — offer quick-create.
+  // No match — offer quick-create (with a duplicate-warning step).
   if (ctx.status === "unlinked") {
     return (
-      <div className="px-4 py-2 border-b bg-gray-50 flex items-center justify-between gap-2 flex-wrap">
-        <span className="text-xs text-gray-500 italic">Not linked to any CRM record.</span>
-        <div className="flex gap-1.5">
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={busy} onClick={() => createLeadM.mutate({ phone })}>
-            <UserPlus className="h-3 w-3" /> Create Lead
-          </Button>
-          <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={busy} onClick={() => createCustM.mutate({ phone })}>
-            <UserPlus className="h-3 w-3" /> Create Customer
-          </Button>
-        </div>
+      <div className="px-4 py-2 border-b bg-gray-50 space-y-1.5">
+        {ctx.staleLink && <div className="text-[11px] text-red-600">The previously linked record no longer exists.</div>}
+        {dup ? (
+          <div className="rounded bg-amber-50 border border-amber-200 px-2 py-1.5 space-y-1">
+            <div className="text-[11px] text-amber-800">Possible duplicate {dup.kind} found — link it instead, or create a new one:</div>
+            <div className="flex flex-wrap gap-1.5 items-center">
+              {dup.candidates.map((c) => (
+                <Button key={c.id} size="sm" variant="outline" className="h-7 text-xs" disabled={busy}
+                  onClick={() => linkM.mutate({ phone, target: dup.kind, id: c.id })}>
+                  Link {c.name || `#${c.id}`}
+                </Button>
+              ))}
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-amber-700" disabled={busy}
+                onClick={() => dup.kind === "lead" ? createLeadM.mutate({ phone, force: true }) : createCustM.mutate({ phone, force: true })}>
+                Create anyway
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-500" onClick={() => setDup(null)}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <span className="text-xs text-gray-500 italic">Not linked to any CRM record.</span>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={busy} onClick={() => createLeadM.mutate({ phone })}>
+                <UserPlus className="h-3 w-3" /> Create Lead
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" disabled={busy} onClick={() => createCustM.mutate({ phone })}>
+                <UserPlus className="h-3 w-3" /> Create Customer
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -126,8 +156,8 @@ export default function ConversationCrmPanel({ phone }: { phone: string }) {
         <Field label="Property" value={ctx.selectedProperty?.address} onOpen={custHref} />
         <Field label="Appointment" value={apptVal} onOpen={ctx.appointment ? () => navigate("/calendar") : undefined} />
         <Field label="Job" value={ctx.job ? [ctx.job.jobNumber, ctx.job.status, ctx.job.priority].filter(Boolean).join(" · ") : null} onOpen={ctx.job ? () => navigate(`/jobs/${ctx.job!.id}`) : undefined} />
-        <Field label="Open Estimate" value={ctx.estimate ? `$${ctx.estimate.amount ?? "0"} · ${ctx.estimate.status ?? ""}` : null} onOpen={custHref} />
-        <Field label="Invoice Balance" value={ctx.invoice ? `$${ctx.invoice.balance ?? "0"} · ${ctx.invoice.status ?? ""}` : null} onOpen={custHref} />
+        <Field label="Open Estimate" value={ctx.estimate ? `$${ctx.estimate.amount ?? "0"} · ${ctx.estimate.status ?? ""}${ctx.estimatesOpenCount > 1 ? ` (+${ctx.estimatesOpenCount - 1} more)` : ""}` : null} onOpen={custHref} />
+        <Field label="Invoice Balance" value={ctx.invoice ? `$${ctx.invoice.balance ?? "0"} · ${ctx.invoice.status ?? ""}${ctx.invoicesOpenCount > 1 ? ` (+${ctx.invoicesOpenCount - 1} more)` : ""}` : null} onOpen={custHref} />
         <Field label="Phone" value={ctx.phone} />
       </div>
 

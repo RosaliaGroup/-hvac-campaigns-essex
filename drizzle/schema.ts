@@ -599,16 +599,26 @@ export type InsertSmsInboxMessage = typeof smsInboxMessages.$inferInsert;
  */
 export const smsConversationLinks = mysqlTable("smsConversationLinks", {
   id: int("id").autoincrement().primaryKey(),
-  phoneLast10: varchar("phoneLast10", { length: 10 }).notNull(), // conversation identity
+  // Stable conversation identity. phoneLast10 identifies the conversation but is
+  // NEVER the CRM foreign key — the linked CRM record is stored by its stable id.
+  phoneLast10: varchar("phoneLast10", { length: 10 }).notNull(),
   customerId: int("customerId"),        // → customers.id (the primary "who")
   leadId: int("leadId"),                // → leads.id
   leadCaptureId: int("leadCaptureId"),  // → leadCaptures.id (richer web lead)
   propertyId: int("propertyId"),        // → properties.id (remembered selection)
-  linkedByName: varchar("linkedByName", { length: 255 }), // who confirmed the link
+  // Audit: who first created the link and who last changed it. No DB-level FKs
+  // (repo convention) — a deleted CRM record leaves a dangling id, handled at
+  // read time; conversation history in smsInboxMessages is never cascaded.
+  createdBy: varchar("createdBy", { length: 255 }),
+  updatedBy: varchar("updatedBy", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
   phoneLast10Idx: uniqueIndex("smsConversationLinks_phoneLast10_uq").on(table.phoneLast10),
+  customerIdx: index("smsConversationLinks_customerId_idx").on(table.customerId),
+  leadIdx: index("smsConversationLinks_leadId_idx").on(table.leadId),
+  leadCaptureIdx: index("smsConversationLinks_leadCaptureId_idx").on(table.leadCaptureId),
+  propertyIdx: index("smsConversationLinks_propertyId_idx").on(table.propertyId),
 }));
 export type SmsConversationLink = typeof smsConversationLinks.$inferSelect;
 export type InsertSmsConversationLink = typeof smsConversationLinks.$inferInsert;

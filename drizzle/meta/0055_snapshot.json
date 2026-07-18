@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "6090e09b-5e48-41cd-a874-c44491757a95",
+  "id": "01c1917a-920b-4af5-820f-8b0ad5d10d7d",
   "prevId": "809404a2-6528-43f4-85c4-702f9d5648dd",
   "tables": {
     "aiScripts": {
@@ -8652,8 +8652,15 @@
           "notNull": false,
           "autoincrement": false
         },
-        "linkedByName": {
-          "name": "linkedByName",
+        "createdBy": {
+          "name": "createdBy",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updatedBy": {
+          "name": "updatedBy",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false,
@@ -8684,6 +8691,34 @@
             "phoneLast10"
           ],
           "isUnique": true
+        },
+        "smsConversationLinks_customerId_idx": {
+          "name": "smsConversationLinks_customerId_idx",
+          "columns": [
+            "customerId"
+          ],
+          "isUnique": false
+        },
+        "smsConversationLinks_leadId_idx": {
+          "name": "smsConversationLinks_leadId_idx",
+          "columns": [
+            "leadId"
+          ],
+          "isUnique": false
+        },
+        "smsConversationLinks_leadCaptureId_idx": {
+          "name": "smsConversationLinks_leadCaptureId_idx",
+          "columns": [
+            "leadCaptureId"
+          ],
+          "isUnique": false
+        },
+        "smsConversationLinks_propertyId_idx": {
+          "name": "smsConversationLinks_propertyId_idx",
+          "columns": [
+            "propertyId"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
