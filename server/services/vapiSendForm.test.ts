@@ -241,6 +241,14 @@ describe("sendForm — explicit sent/skipped/failed status (incident regression)
     expect(vapiResult(r)).toMatchObject({ status: "sent", providerMessageId: "telnyx_abc" });
   });
 
+  it("never reports 'sent' on a 2xx-without-id (unverifiable) Telnyx response", async () => {
+    const deps = makeDeps({ send: vi.fn(async () => ({ success: true, messageId: undefined })) });
+    const r = await sendMechanicalFormLink(CONSENTED, deps);
+    expect(r).toMatchObject({ status: "failed", reason: "send_failed", success: false, smsSent: false });
+    expect(r.status).not.toBe("sent");
+    expect(vapiResult(r)).not.toHaveProperty("providerMessageId");
+  });
+
   it("SKIPS (already_sent) on a duplicate retry without a second send", async () => {
     const deps = makeDeps({ alreadySent: vi.fn(async () => true) });
     const r = await sendMechanicalFormLink(CONSENTED, deps);

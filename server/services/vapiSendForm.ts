@@ -250,11 +250,13 @@ export async function sendMechanicalFormLink(
       return { success: true, smsSent: true, formUrl, deduplicated: true, status: "skipped", reason: "already_sent", message: "Form link already sent" };
     }
 
-    // 5) Send via the active Telnyx service (only messaging dependency).
+    // 5) Send via the active Telnyx service (only messaging dependency). A send is
+    //    "sent" ONLY when Telnyx accepted it AND returned a provider message id; a
+    //    2xx-without-id is anomalous/unverifiable and must never be claimed as sent.
     const result = await deps.send(to, message);
-    if (!result.success) {
+    if (!result.success || !result.messageId) {
       // Log a masked phone + provider error server-side; return a SAFE message.
-      console.warn(`[VapiSendForm] Telnyx send failed for ${maskPhone(to)}: ${result.error ?? "unknown"}`);
+      console.warn(`[VapiSendForm] Telnyx send not confirmed for ${maskPhone(to)}: ${result.error ?? (result.success ? "no provider message id" : "unknown")}`);
       return { success: false, smsSent: false, formUrl, status: "failed", reason: "send_failed", error: "Message could not be sent right now" };
     }
 
