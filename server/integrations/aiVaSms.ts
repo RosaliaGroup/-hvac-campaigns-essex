@@ -13,6 +13,28 @@
  */
 
 import * as db from "../db";
+import { sendAndRecordSms, AI_VA_OUTBOUND } from "../services/smsOutbound";
+
+/**
+ * Send an AI Assistant SMS via Telnyx AND log it as an outbound Inbox row
+ * labeled "AI Assistant" (source `ai_va`). Opt-out is enforced before sending
+ * and the Telnyx message id + delivery status are recorded exactly like any
+ * other outbound, so AI messages are distinguishable from human/dispatcher and
+ * campaign sends in the dashboard.
+ *
+ * This is the send-and-log path any AI outbound should call. It is NOT wired to
+ * the AI VA's dormant auto-acknowledgement (`generateSmsResponse`), which
+ * remains disabled — enabling automated AI replies is out of scope here.
+ */
+export async function sendAiVaSms(
+  phone: string,
+  message: string,
+  links: { contactId?: number | null; customerId?: number | null; leadId?: number | null } = {},
+) {
+  const database = await db.getDb();
+  if (!database) return { success: false as const, error: "Database not available" };
+  return sendAndRecordSms(database, { phone, message, ...AI_VA_OUTBOUND, ...links });
+}
 
 /** Telnyx inbound webhook envelope (only the fields this handler reads). */
 export interface TelnyxInboundWebhook {

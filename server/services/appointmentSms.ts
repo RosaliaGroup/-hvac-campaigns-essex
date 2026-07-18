@@ -8,6 +8,7 @@ import { eq, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { smsContacts, type Appointment } from "../../drizzle/schema";
 import { sendTelnyxSms } from "./telnyxSms";
+import { logOutboundBestEffort, mechanicalSmsFrom } from "./smsOutbound";
 export { sendTelnyxSms, toE164 } from "./telnyxSms"; // re-export for existing importers
 
 /** True if this number has opted out via the SMS contacts list. */
@@ -77,6 +78,22 @@ export async function sendAppointmentConfirmationSms(
     ].join("\n");
 
     const result = await sendTelnyxSms(appt.phone, message);
+
+    // Record the confirmation in the 2-Way Inbox thread (best-effort; never
+    // fails the booking). Unknown numbers stay unlinked (contactId null).
+    const db = await getDb();
+    if (db) {
+      await logOutboundBestEffort(db, {
+        phone: appt.phone,
+        message,
+        fromNumber: mechanicalSmsFrom(),
+        telnyxMessageId: result.messageId ?? null,
+        deliveryStatus: result.success ? "accepted" : "failed",
+        source: "appointment",
+        sentByName: "Appointment",
+      });
+    }
+
     return { sent: result.success, reason: result.error };
   } catch (err) {
     console.error("[AppointmentSms] Unexpected error:", err);

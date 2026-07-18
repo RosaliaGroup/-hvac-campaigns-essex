@@ -551,18 +551,41 @@ export const smsInboxMessages = mysqlTable("smsInboxMessages", {
   // contacts are ever created from a reply — see services/smsWebhook.ts).
   customerId: int("customerId"), // FK to customers (null if not matched)
   leadId: int("leadId"), // FK to leads (null if not matched)
-  phone: varchar("phone", { length: 50 }).notNull(), // E.164 format
+  phone: varchar("phone", { length: 50 }).notNull(), // external party number, E.164 (conversation identity)
+  // Stored last-10 digits, maintained at write time. Indexed conversation key
+  // that replaces repeated RIGHT(REGEXP_REPLACE(...)) scans. Nullable only for
+  // pre-backfill legacy rows — queries keep a REGEXP fallback for those.
+  phoneLast10: varchar("phoneLast10", { length: 10 }),
   direction: mysqlEnum("direction", ["inbound", "outbound"]).notNull(),
   message: text("message").notNull(),
   isOptOut: boolean("isOptOut").default(false).notNull(),
   isRead: boolean("isRead").default(false).notNull(),
   // For outbound replies sent from the dashboard
   sentByName: varchar("sentByName", { length: 255 }), // team member who replied
-  textBeltId: varchar("textBeltId", { length: 255 }), // legacy name; stores Telnyx message id
-  // Telnyx inbound message id — traceability + a secondary idempotency signal.
+  textBeltId: varchar("textBeltId", { length: 255 }), // legacy name; stores Telnyx message id (webhook match key)
+  // Telnyx message id — traceability + a secondary idempotency signal. Set for
+  // both inbound (received id) and outbound (sent id).
   providerMessageId: varchar("providerMessageId", { length: 255 }),
+  // ── Outbound-message tracking (SMS Inbox outbound logging) ─────────────────
+  // Populated so the Inbox shows the messages Mechanical sent, from/to which
+  // number, via which provider, and their delivery outcome.
+  fromNumber: varchar("fromNumber", { length: 50 }), // sender: Mechanical for outbound, customer for inbound
+  toNumber: varchar("toNumber", { length: 50 }),     // recipient: customer for outbound, Mechanical for inbound
+  provider: varchar("provider", { length: 30 }),     // "telnyx"
+  source: varchar("source", { length: 50 }),         // inbox_reply|campaign|scheduled|appointment|rebate|other
+  // API-acceptance → final carrier outcome, updated by the Telnyx delivery
+  // webhook. NULL = inbound row or pre-feature outbound row.
+  deliveryStatus: mysqlEnum("deliveryStatus", [
+    "queued", "accepted", "sent", "delivered", "delivery_failed", "rejected", "carrier_filtered", "failed",
+  ]),
+  deliveryErrorCode: varchar("deliveryErrorCode", { length: 16 }),
+  sentAt: timestamp("sentAt"), // when Telnyx accepted the outbound send
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  phoneLast10Idx: index("smsInboxMessages_phoneLast10_idx").on(table.phoneLast10),
+  phoneIdx: index("smsInboxMessages_phone_idx").on(table.phone),
+  textBeltIdx: index("smsInboxMessages_textBeltId_idx").on(table.textBeltId),
+}));
 export type SmsInboxMessage = typeof smsInboxMessages.$inferSelect;
 export type InsertSmsInboxMessage = typeof smsInboxMessages.$inferInsert;
 

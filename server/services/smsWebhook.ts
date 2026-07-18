@@ -32,6 +32,7 @@ import {
   leads,
 } from "../../drizzle/schema";
 import { parseTelnyxStatusEvent, type ParsedStatusEvent } from "./telnyxDeliveryStatus";
+import { applyDeliveryStatusToInbox, phoneLast10Of, mechanicalSmsFrom } from "./smsOutbound";
 import { classifyInbound } from "./smsReplyKeywords";
 import { toE164 } from "./telnyxSms";
 import { authorizeTelnyxWebhook, resolveWebhookAuthMode } from "./telnyxSignature";
@@ -153,11 +154,15 @@ async function saveInboxMessage(
       customerId: args.match.customerId,
       leadId: args.match.leadId,
       phone: args.phone,
+      phoneLast10: phoneLast10Of(args.phone), // indexed conversation key
       direction: "inbound",
       message: args.message,
       isOptOut: args.isOptOut,
       isRead: false,
       providerMessageId: args.providerMessageId,
+      fromNumber: args.phone,          // inbound: the customer is the sender
+      toNumber: mechanicalSmsFrom(),   // inbound: Mechanical is the recipient
+      provider: "telnyx",
     });
   } catch (err) {
     console.error("[SMSWebhook] Failed to save inbox message:", err);
@@ -338,6 +343,17 @@ export function registerSmsWebhookRoutes(app: Express): void {
           }
         } catch (err) {
           console.error("[SMSWebhook] Failed to persist delivery status:", err);
+        }
+        // Also update the matching outbound row in the 2-Way Inbox thread so
+        // staff see pending → sent → delivered/failed on messages we sent.
+        try {
+          await applyDeliveryStatusToInbox(db, {
+            telnyxMessageId: statusEvent.telnyxMessageId,
+            deliveryStatus: statusEvent.deliveryStatus,
+            errorCode: statusEvent.errorCode,
+          });
+        } catch (err) {
+          console.error("[SMSWebhook] Failed to update inbox delivery status:", err);
         }
         return res.status(200).json({ success: true });
       }

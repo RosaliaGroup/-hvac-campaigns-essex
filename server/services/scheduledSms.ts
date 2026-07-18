@@ -4,6 +4,7 @@
  * (TextBelt is LEGACY — retired July 2026.)
  */
 import { sendTelnyxSms, telnyxConfigured } from "./telnyxSms";
+import { logOutboundBestEffort, mechanicalSmsFrom } from "./smsOutbound";
 import { getDb } from "../db";
 import { scheduledSends, smsContacts, smsSends } from "../../drizzle/schema";
 import { eq, lte, and } from "drizzle-orm";
@@ -89,6 +90,18 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
           smsSendId: (sendResult as { insertId: number }).insertId,
         })
         .where(eq(scheduledSends.id, item.id));
+
+      // Mirror the scheduled send into the 2-Way Inbox thread (best-effort).
+      await logOutboundBestEffort(db, {
+        phone: contact.phone,
+        message: personalizedMsg,
+        fromNumber: mechanicalSmsFrom(),
+        telnyxMessageId: result.messageId ?? null,
+        deliveryStatus: result.success ? "accepted" : "failed",
+        source: "scheduled",
+        contactId: item.contactId,
+        sentByName: "Campaign",
+      });
 
       if (result.success) {
         sent++;
