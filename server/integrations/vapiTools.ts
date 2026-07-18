@@ -1,6 +1,6 @@
 /**
  * Vapi Tool Call Handlers for Jessica (Mechanical Enterprise AI Assistant)
- * Handles: bookAppointment, rescheduleAppointment, getCallerInfo
+ * Handles: bookAppointment, rescheduleAppointment, getCallerInfo, sendReferralLink
  */
 import * as db from "../db";
 import { parsePreferredDateTime } from "../services/appointmentTime";
@@ -9,6 +9,7 @@ import { resolveAppointmentContext, matchPropertyByFreeText } from "../services/
 import { formatPropertyAddress } from "@shared/address";
 import { notifyOwner } from "../_core/notification";
 import { lookupCallerInfo } from "./callerInfo";
+import { sendCustomerReferralLink } from "../services/referralSms";
 
 export interface VapiToolCallPayload {
   message: {
@@ -55,6 +56,8 @@ export async function handleVapiToolCalls(payload: VapiToolCallPayload): Promise
         result = await handleRescheduleAppointment(args);
       } else if (toolName === "getCallerInfo") {
         result = await handleGetCallerInfo(args);
+      } else if (toolName === "sendReferralLink") {
+        result = await handleSendReferralLink(args);
       } else {
         result = JSON.stringify({ success: false, error: `Unknown tool: ${toolName}` });
       }
@@ -218,6 +221,51 @@ async function handleRescheduleAppointment(args: Record<string, string>): Promis
     success: true,
     message: `Appointment rescheduled to ${new_date} at ${new_time}. Confirmation will be sent shortly.`,
   });
+}
+
+async function handleSendReferralLink(args: Record<string, string>): Promise<string> {
+  const phone = args.phone;
+  // Vapi may pass the caller's name under a few key shapes; all optional.
+  const firstName = args.first_name || args.firstName || args.full_name || args.name || undefined;
+
+  if (!phone) {
+    return JSON.stringify({ success: false, error: "Missing required field: phone" });
+  }
+
+  const outcome = await sendCustomerReferralLink({ phone, firstName });
+
+  switch (outcome.status) {
+    case "sent":
+      return JSON.stringify({
+        success: true,
+        message:
+          "I've just texted you our referral link. Share it with anyone who needs HVAC work — you earn $500 when they book.",
+      });
+    case "duplicate":
+      // Idempotent: a link was already sent for this call / retry. Report success
+      // without sending again so the caller never gets a duplicate text.
+      return JSON.stringify({
+        success: true,
+        message: "I already sent the referral link to your phone — please check your messages.",
+      });
+    case "opted_out":
+      return JSON.stringify({
+        success: false,
+        error: "That number has opted out of our text messages, so I can't text the link.",
+      });
+    case "invalid_number":
+      return JSON.stringify({
+        success: false,
+        error: "That phone number doesn't look valid, so I couldn't send the text.",
+      });
+    case "send_failed":
+    default:
+      // Never expose provider errors or credentials — generic, caller-safe copy.
+      return JSON.stringify({
+        success: false,
+        error: "I wasn't able to send the text right now. Please try again in a moment.",
+      });
+  }
 }
 
 /**
