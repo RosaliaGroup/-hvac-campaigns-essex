@@ -63,3 +63,35 @@ export function validateJobCompletion(
   }
   return { ok: true };
 }
+
+/**
+ * The single decision Complete Job makes before it writes anything. It folds the
+ * idempotency check IN FRONT OF validation, so the outcome is one of three:
+ *
+ *   - `already_completed` — a completion snapshot already exists. This is the
+ *     AUTHORITATIVE "is this job finished?" signal (the `jobCompletions` row),
+ *     NOT the `technicianWorkStatus` enum — because the status can be moved
+ *     independently of the snapshot (e.g. an admin remediation set it back to
+ *     `working` while the snapshot stayed). Treating the snapshot as the source
+ *     of truth makes Complete Job idempotent: a repeat call (double-tap, retry,
+ *     or status/snapshot mismatch) is a controlled no-op, never a duplicate
+ *     insert and never a raw DB duplicate-key error.
+ *   - `blocked` — no snapshot yet, but the completion preconditions aren't met.
+ *   - `proceed` — no snapshot yet and preconditions met; write the completion.
+ *
+ * Pure and exhaustively testable; the server acts on the returned action and
+ * additionally guards the race (two concurrent proceeds) at the DB layer.
+ */
+export type CompletionPlan =
+  | { action: "already_completed" }
+  | { action: "blocked"; reason: CompletionBlockReason }
+  | { action: "proceed" };
+
+export function planJobCompletion(
+  input: CompletionInputs & { hasCompletionRecord: boolean },
+): CompletionPlan {
+  if (input.hasCompletionRecord) return { action: "already_completed" };
+  const v = validateJobCompletion(input);
+  if (!v.ok) return { action: "blocked", reason: v.reason };
+  return { action: "proceed" };
+}

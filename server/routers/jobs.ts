@@ -61,9 +61,27 @@ import {
 } from "../../shared/jobTime";
 import {
   canMutateField,
-  validateJobCompletion,
+  planJobCompletion,
   COMPLETION_BLOCK_MESSAGE,
 } from "../../shared/jobCompletion";
+
+/**
+ * True when an error is a MySQL duplicate-key violation (ER_DUP_ENTRY / errno
+ * 1062). drizzle re-throws the underlying mysql2 error (sometimes wrapped in
+ * `.cause`), so we check both. Used by Complete Job to convert a lost
+ * completion race into an idempotent success instead of a raw 500.
+ */
+export function isDuplicateKeyError(err: unknown): boolean {
+  const seen = new Set<unknown>();
+  let e: any = err;
+  while (e && typeof e === "object" && !seen.has(e)) {
+    seen.add(e);
+    if (e.code === "ER_DUP_ENTRY" || e.errno === 1062) return true;
+    if (typeof e.message === "string" && /duplicate entry/i.test(e.message)) return true;
+    e = e.cause;
+  }
+  return false;
+}
 
 /** Append a job status-history row. Best-effort audit trail; never blocks the write it follows. */
 async function recordStatusChange(
@@ -803,39 +821,68 @@ export const jobsRouter = router({
     .input(z.object({ jobId: z.number().int(), noCompletionNote: z.boolean().default(false) }))
     .mutation(async ({ input, ctx }) => {
       const db = await requireDb();
-      const { job, memberId, isAdmin } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
+      const { job, memberId } = await resolveFieldJobAccess(db, input.jobId, ctx.user);
       const current = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) as TechnicianWorkStatus;
-      if (current === "completed") return { success: true, alreadyCompleted: true };
 
+      // Gather completion inputs, incl. the AUTHORITATIVE "already finished?"
+      // signal: the presence of a jobCompletions snapshot (not the status enum).
+      const [existing] = await db.select({ id: jobCompletions.id, completedAt: jobCompletions.completedAt })
+        .from(jobCompletions).where(eq(jobCompletions.jobId, input.jobId)).limit(1);
       const [custNote] = await db.select({ id: jobNotes.id }).from(jobNotes)
         .where(and(eq(jobNotes.jobId, input.jobId), eq(jobNotes.visibility, "customer"))).limit(1);
       const [sig] = await db.select({ id: jobSignatures.id }).from(jobSignatures).where(eq(jobSignatures.jobId, input.jobId)).limit(1);
       const settings = (await db.select().from(companySettings).where(eq(companySettings.id, 1)).limit(1))[0];
       const requireSignature = settings?.requireCompletionSignature ?? false;
 
-      const v = validateJobCompletion({
+      const plan = planJobCompletion({
         currentWorkStatus: current,
         hasCustomerNote: !!custNote,
         noCompletionNote: input.noCompletionNote,
         requireSignature,
         hasSignature: !!sig,
+        hasCompletionRecord: !!existing,
       });
-      if (!v.ok) throw new TRPCError({ code: "BAD_REQUEST", message: COMPLETION_BLOCK_MESSAGE[v.reason] });
+      // Idempotent: a snapshot already exists → controlled no-op, never a
+      // duplicate insert, never a raw DB error, never a partial state.
+      if (plan.action === "already_completed") {
+        return { success: true, alreadyCompleted: true, completedAt: existing?.completedAt ?? null };
+      }
+      if (plan.action === "blocked") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: COMPLETION_BLOCK_MESSAGE[plan.reason] });
+      }
 
       const events = await db.select({ eventType: jobTimeEvents.eventType, occurredAt: jobTimeEvents.occurredAt }).from(jobTimeEvents).where(eq(jobTimeEvents.jobId, input.jobId)).orderBy(asc(jobTimeEvents.occurredAt));
       const summary = computeTimeSummary(events as any, new Date());
       const now = new Date();
-
-      // Finalize status (preserve status history), stamp actuals, snapshot completion.
-      await db.update(jobs).set({ technicianWorkStatus: "completed", completedAt: now, actualCompletionAt: now }).where(eq(jobs.id, input.jobId));
       let changedByName: string | null = ctx.user?.name ?? null;
       if (memberId != null) { const mm = (await db.select({ name: teamMembers.name }).from(teamMembers).where(eq(teamMembers.id, memberId)).limit(1))[0]; changedByName = mm?.name ?? changedByName; }
-      await db.insert(jobWorkStatusEvents).values({ jobId: input.jobId, fromStatus: current, toStatus: "completed", changedById: memberId ?? null, changedByName });
-      await db.insert(jobCompletions).values({
-        jobId: input.jobId, completedById: memberId ?? null, completedAt: now,
-        noteMode: custNote ? "note" : "no_note", hadSignature: !!sig,
-        travelMs: summary.travelMs, laborMs: summary.laborMs, pauseMs: summary.pauseMs, elapsedMs: summary.elapsedMs,
-      });
+
+      // ATOMIC finalize: status + actuals + status-history event + completion
+      // snapshot all commit together, or roll back together. Nothing else on the
+      // job (notes, photos, parts, signature, time, prior audit) is touched. If a
+      // concurrent completion won the race it trips the jobCompletions
+      // UNIQUE(jobId) constraint here; we roll back our partial writes and return
+      // the same idempotent success — the technician never sees a raw duplicate
+      // key error or a half-completed work order.
+      try {
+        await db.transaction(async (tx) => {
+          await tx.update(jobs).set({ technicianWorkStatus: "completed", completedAt: now, actualCompletionAt: now }).where(eq(jobs.id, input.jobId));
+          await tx.insert(jobWorkStatusEvents).values({ jobId: input.jobId, fromStatus: current, toStatus: "completed", changedById: memberId ?? null, changedByName });
+          await tx.insert(jobCompletions).values({
+            jobId: input.jobId, completedById: memberId ?? null, completedAt: now,
+            noteMode: custNote ? "note" : "no_note", hadSignature: !!sig,
+            travelMs: summary.travelMs, laborMs: summary.laborMs, pauseMs: summary.pauseMs, elapsedMs: summary.elapsedMs,
+          });
+        });
+      } catch (err) {
+        if (isDuplicateKeyError(err)) {
+          const [done] = await db.select({ completedAt: jobCompletions.completedAt }).from(jobCompletions).where(eq(jobCompletions.jobId, input.jobId)).limit(1);
+          return { success: true, alreadyCompleted: true, completedAt: done?.completedAt ?? null };
+        }
+        // The transaction rolled back — the work order is unchanged. Surface a
+        // controlled error instead of leaking a raw DB failure to the field.
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Completing the job failed and no changes were saved. Please try again." });
+      }
       return { success: true, completedAt: now };
     }),
 
