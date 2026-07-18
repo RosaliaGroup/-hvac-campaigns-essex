@@ -64,6 +64,14 @@ export interface SendFormInput {
   phone?: string | null;
   type?: string | null; // "booking" | "reschedule" (default booking)
   name?: string | null; // optional; Jessica usually omits it
+  /**
+   * Verified inbound caller number from the Vapi call context
+   * (`message.call.customer.number`). PREFERRED over `phone` when valid, so a
+   * misheard/mis-transcribed spoken number never beats the number the caller is
+   * actually on. Never merged, inferred, or repaired — validated by toE164 like
+   * any other number.
+   */
+  callerNumber?: string | null;
 }
 
 export interface SendFormResult {
@@ -113,6 +121,15 @@ export function buildMessage(type: SendFormType, url: string, name?: string | nu
 function maskPhone(phone: string): string {
   const d = phone.replace(/\D/g, "");
   return d.length >= 4 ? `***${d.slice(-4)}` : "***";
+}
+
+/**
+ * PII-safe server log for a non-send outcome. Logs only the machine reason and a
+ * masked (last-4) phone — never the full number, secrets, provider payloads, or
+ * message content.
+ */
+function logNotSent(reason: string, phoneForMask: string): void {
+  console.warn(`[VapiSendForm] not sent: reason=${reason} to=${maskPhone(phoneForMask)}`);
 }
 
 const last10 = (phone: string): string => phone.replace(/\D/g, "").slice(-10);
@@ -223,15 +240,23 @@ export async function sendMechanicalFormLink(
   deps: SendFormDeps = defaultDeps,
 ): Promise<SendFormResult> {
   try {
-    // 1) Missing number.
-    if (!input.phone || !String(input.phone).trim()) {
+    // 1) Choose the destination. PREFER the verified inbound caller number
+    //    (`call.customer.number`) over the spoken/typed one: a misheard spoken
+    //    number must never beat the number the caller is actually on. Both go
+    //    through toE164 — a number is NEVER guessed, merged, inferred, or
+    //    repaired, and the spoken number is never used to overwrite CRM data.
+    const rawCaller = input.callerNumber != null ? String(input.callerNumber).trim() : "";
+    const rawSpoken = input.phone != null ? String(input.phone).trim() : "";
+    if (!rawCaller && !rawSpoken) {
+      logNotSent("missing_phone", "");
       return { success: false, smsSent: false, status: "failed", reason: "missing_phone", error: "Phone number required" };
     }
 
-    // 2) Normalize + validate (E.164 US). Invalid/ambiguous numbers never send
-    //    and are never guessed — they fail explicitly.
-    const to = toE164(String(input.phone));
+    // 2) Normalize + validate (E.164 US). Verified caller number wins when valid;
+    //    otherwise fall back to the spoken number. Invalid → fail explicitly.
+    const to = toE164(rawCaller) ?? toE164(rawSpoken);
     if (!to) {
+      logNotSent("invalid_phone", rawCaller || rawSpoken);
       return { success: false, smsSent: false, status: "failed", reason: "invalid_phone", error: "Invalid phone number" };
     }
 
@@ -242,11 +267,13 @@ export async function sendMechanicalFormLink(
     // 3) Consent / suppression gate + contact linkage.
     const { contactId, optedOut } = await deps.lookupContact(to);
     if (optedOut) {
+      logNotSent("opted_out", to);
       return { success: false, smsSent: false, formUrl, status: "skipped", reason: "opted_out", error: "Recipient has opted out of SMS" };
     }
 
     // 4) DB idempotency — skip a duplicate Vapi retry (no second send).
     if (await deps.alreadySent(to, message)) {
+      logNotSent("already_sent", to);
       return { success: true, smsSent: true, formUrl, deduplicated: true, status: "skipped", reason: "already_sent", message: "Form link already sent" };
     }
 
@@ -255,8 +282,8 @@ export async function sendMechanicalFormLink(
     //    2xx-without-id is anomalous/unverifiable and must never be claimed as sent.
     const result = await deps.send(to, message);
     if (!result.success || !result.messageId) {
-      // Log a masked phone + provider error server-side; return a SAFE message.
-      console.warn(`[VapiSendForm] Telnyx send not confirmed for ${maskPhone(to)}: ${result.error ?? (result.success ? "no provider message id" : "unknown")}`);
+      // Masked, reason-only server log — never echo the provider payload/error.
+      logNotSent("send_failed", to);
       return { success: false, smsSent: false, formUrl, status: "failed", reason: "send_failed", error: "Message could not be sent right now" };
     }
 
@@ -307,12 +334,21 @@ export function extractSendFormCall(
   body: unknown,
 ): { toolCallId: string; callId: string; input: SendFormInput } | null {
   const b = body as {
-    message?: { toolCallList?: unknown[]; toolCalls?: unknown[]; call?: { id?: string } };
+    message?: {
+      toolCallList?: unknown[];
+      toolCalls?: unknown[];
+      // The Vapi call context. For inbound calls, `customer.number` is the
+      // verified caller ID — already present in the tool-calls webhook, so no
+      // Vapi tool-definition change is required to consume it.
+      call?: { id?: string; customer?: { number?: string } };
+    };
     toolCallList?: unknown[];
   };
   const list = b?.message?.toolCallList ?? b?.message?.toolCalls ?? b?.toolCallList;
   if (!Array.isArray(list)) return null;
   const callId = String(b?.message?.call?.id ?? "");
+  const callerNumber =
+    b?.message?.call?.customer?.number != null ? String(b.message.call.customer.number) : undefined;
   for (const raw of list) {
     const c = raw as { id?: string; toolCallId?: string; function?: { name?: string; arguments?: unknown } };
     const fn = c.function ?? (raw as { name?: string; arguments?: unknown });
@@ -329,6 +365,7 @@ export function extractSendFormCall(
         phone: parsed.phone != null ? String(parsed.phone) : undefined,
         type: parsed.type != null ? String(parsed.type) : undefined,
         name: parsed.name != null ? String(parsed.name) : undefined,
+        callerNumber,
       },
     };
   }
