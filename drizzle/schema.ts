@@ -1362,6 +1362,109 @@ export type JobAttachmentBlob = typeof jobAttachmentBlobs.$inferSelect;
 export type InsertJobAttachmentBlob = typeof jobAttachmentBlobs.$inferInsert;
 
 /**
+ * Technician time tracking (PR #41) — append-only log of clock events on a job.
+ * Totals (travel/labor/pause/elapsed) are derived from these via
+ * shared/jobTime.ts; kept separate from jobWorkStatusEvents (the status lifecycle).
+ */
+export const jobTimeEvents = mysqlTable(
+  "jobTimeEvents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    eventType: mysqlEnum("eventType", ["travel_start", "arrived", "work_start", "pause", "resume", "work_finish"]).notNull(),
+    occurredAt: timestamp("occurredAt").defaultNow().notNull(),
+    /** teamMembers.id who triggered it. */
+    createdById: int("createdById"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({ jobIdx: index("jobTimeEvents_jobId_idx").on(table.jobId) }),
+);
+export type JobTimeEvent = typeof jobTimeEvents.$inferSelect;
+export type InsertJobTimeEvent = typeof jobTimeEvents.$inferInsert;
+
+/**
+ * Parts/materials a technician records as used on a job (PR #41). Field-only —
+ * NO cost/price/QuickBooks (distinct from the office jobPartsItems). Editable
+ * until completion; admins may override after.
+ */
+export const jobFieldParts = mysqlTable(
+  "jobFieldParts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    partNumber: varchar("partNumber", { length: 120 }),
+    description: varchar("description", { length: 500 }).notNull(),
+    quantity: decimal("quantity", { precision: 10, scale: 2 }).default("1").notNull(),
+    unit: varchar("unit", { length: 32 }),
+    notes: varchar("notes", { length: 500 }),
+    createdById: int("createdById"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({ jobIdx: index("jobFieldParts_jobId_idx").on(table.jobId) }),
+);
+export type JobFieldPart = typeof jobFieldParts.$inferSelect;
+export type InsertJobFieldPart = typeof jobFieldParts.$inferInsert;
+
+/**
+ * Customer signature captured on completion (PR #41). One per job. Stored as a
+ * base64 PNG data payload; read-only after completion; admins may view.
+ */
+export const jobSignatures = mysqlTable(
+  "jobSignatures",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull().unique(),
+    /** Base64 (no data: prefix) of the signature PNG. */
+    data: mediumtext("data").notNull(),
+    /** teamMembers.id of the technician who captured it. */
+    technicianId: int("technicianId"),
+    signedAt: timestamp("signedAt").defaultNow().notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({ jobIdx: index("jobSignatures_jobId_idx").on(table.jobId) }),
+);
+export type JobSignature = typeof jobSignatures.$inferSelect;
+export type InsertJobSignature = typeof jobSignatures.$inferInsert;
+
+/**
+ * Structured completion snapshot (PR #41). One per job — stamped when a job is
+ * completed, with the computed time totals and which requirements were met.
+ * The full completion summary is assembled by joining the child tables at read.
+ */
+export const jobCompletions = mysqlTable(
+  "jobCompletions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull().unique(),
+    completedById: int("completedById"),
+    completedAt: timestamp("completedAt").defaultNow().notNull(),
+    noteMode: mysqlEnum("noteMode", ["note", "no_note"]).default("note").notNull(),
+    hadSignature: boolean("hadSignature").default(false).notNull(),
+    travelMs: int("travelMs").default(0).notNull(),
+    laborMs: int("laborMs").default(0).notNull(),
+    pauseMs: int("pauseMs").default(0).notNull(),
+    elapsedMs: int("elapsedMs").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({ jobIdx: index("jobCompletions_jobId_idx").on(table.jobId) }),
+);
+export type JobCompletion = typeof jobCompletions.$inferSelect;
+export type InsertJobCompletion = typeof jobCompletions.$inferInsert;
+
+/**
+ * Company-wide settings (PR #41). Single-row (id=1). Currently just whether a
+ * customer signature is required to complete a job. Additive/extensible.
+ */
+export const companySettings = mysqlTable("companySettings", {
+  id: int("id").autoincrement().primaryKey(),
+  requireCompletionSignature: boolean("requireCompletionSignature").default(false).notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type CompanySettings = typeof companySettings.$inferSelect;
+export type InsertCompanySettings = typeof companySettings.$inferInsert;
+
+/**
  * Job status history — one row per status transition, for the audit trail on
  * the job detail. Written whenever the job status changes.
  */

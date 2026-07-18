@@ -24,6 +24,10 @@ import {
 } from "@shared/workStatus";
 import { WorkOrderNotes } from "@/components/field/WorkOrderNotes";
 import { WorkOrderPhotos } from "@/components/field/WorkOrderPhotos";
+import { WorkOrderTime } from "@/components/field/WorkOrderTime";
+import { WorkOrderParts } from "@/components/field/WorkOrderParts";
+import { WorkOrderSignature } from "@/components/field/WorkOrderSignature";
+import { WorkOrderCompletion } from "@/components/field/WorkOrderCompletion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -160,7 +164,7 @@ export default function FieldWorkOrder() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-xl space-y-4 px-3 py-4 pb-28">
+      <main className="mx-auto max-w-xl space-y-4 px-3 py-4 pb-40">
         {isLoading ? (
           <div className="flex flex-col items-center gap-3 py-20 text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-[#ff6b35]" />
@@ -337,6 +341,12 @@ export default function FieldWorkOrder() {
 
             {/* Photos (PR #40) — capture/upload + category gallery */}
             <WorkOrderPhotos jobId={jobId} />
+
+            {/* Job completion workflow (PR #41) */}
+            <WorkOrderTime jobId={jobId} locked={current === "completed"} />
+            <WorkOrderParts jobId={jobId} />
+            <WorkOrderSignature jobId={jobId} locked={current === "completed"} />
+            <WorkOrderCompletion jobId={jobId} workStatus={current} onCompleted={() => refetch()} />
           </>
         ) : null}
       </main>
