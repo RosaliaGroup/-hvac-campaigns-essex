@@ -13,6 +13,7 @@ import { startSalesDocPoller } from "../services/salesDocPoller";
 import { registerSmsWebhookRoutes, assertWebhookSecurityOrExit } from "../services/smsWebhook";
 import { attachBodyParsers } from "./bodyParser";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
+import { registerVapiToolRoutes } from "../services/vapiSendForm";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
 import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
@@ -55,6 +56,9 @@ async function startServer() {
   registerSmsWebhookRoutes(app);
   // Meta Lead Gen webhook (Instant Form submissions)
   registerMetaLeadWebhookRoutes(app);
+  // Vapi tool webhook — Jessica's sendForm (Mechanical booking link via Telnyx).
+  // Authenticated by VAPI_TOOL_SECRET; separate from the tRPC vapiTools webhook.
+  registerVapiToolRoutes(app);
   // QuickBooks OAuth callback (/api/integrations/quickbooks/callback)
   registerQuickbooksRoutes(app);
   // Google Calendar OAuth callback (/api/integrations/google-calendar/callback)

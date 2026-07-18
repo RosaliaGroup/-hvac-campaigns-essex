@@ -315,9 +315,12 @@ Parameters:
   - phone (string, required): caller's phone number
   - type (string, required): "booking" or "reschedule"
 
-Action: Sends SMS with link to:
-  - booking: https://mechanicalenterprise.com/lp/heat-pump-rebates
-  - reschedule: https://mechanicalenterprise.com/lp/heat-pump-rebates?reschedule=true
+Server endpoint (Mechanical-owned, authenticated):
+  POST https://mechanicalenterprise.com/api/webhooks/vapi/send-form
+  Header: x-vapi-secret: <VAPI_TOOL_SECRET>
+Action: Texts (via Telnyx) the Mechanical booking form; the server picks the URL —
+  - booking + reschedule both link to: https://mechanicalenterprise.com/qualify
+  - reschedule differs only in the SMS wording, not the URL
 
 ════════════════════════════════════════════
 TOOL 3: bookAppointment
