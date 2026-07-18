@@ -17,6 +17,7 @@ import { googleAdsRouter } from "./routers/googleAds";
 import { metaAdsRouter } from "./routers/metaAds";
 import { teamAuthRouter } from "./routers/teamAuth";
 import { smsCampaignsRouter } from "./routers/smsCampaigns";
+import { conversationCrmRouter } from "./routers/conversationCrm";
 import { rebateCalculatorRouter } from "./routers/rebateCalculator";
 import { heygenRouter } from "./routers/heygen";
 import { coursesRouter } from "./courses-router";
@@ -73,6 +74,7 @@ export const appRouter = router({
   metaAds: metaAdsRouter,
   teamAuth: teamAuthRouter,
   smsCampaigns: smsCampaignsRouter,
+  conversationCrm: conversationCrmRouter,
   rebateCalculator: rebateCalculatorRouter,
   heygen: heygenRouter,
   courses: coursesRouter,

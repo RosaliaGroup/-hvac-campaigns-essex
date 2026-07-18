@@ -53,7 +53,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
 import { outboundSenderBadge } from "@/lib/smsSenderBadge";
-import { ConversationCrmPanel } from "./sms/ConversationCrmPanel";
+import ConversationCrmPanel from "@/components/ConversationCrmPanel";
 
 // Pre-loaded contacts from the Excel file
 const EXCEL_CONTACTS_A = [
@@ -1319,10 +1319,8 @@ function SmsInboxTab() {
                   )}
                 </div>
 
-                {/* Phase 2A: CRM context — its own async query; never blocks the thread/replies. */}
-                <div className="px-4 pt-3">
-                  <ConversationCrmPanel phone={selectedConv.phone} contactName={selectedConv.contactName} />
-                </div>
+                {/* CRM workspace (Phase 2) — lazy-loaded, does not block the thread */}
+                <ConversationCrmPanel phone={selectedConv.phone} />
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
