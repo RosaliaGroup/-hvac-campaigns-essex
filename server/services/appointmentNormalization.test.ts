@@ -37,15 +37,36 @@ describe("normalizeAppointmentFields", () => {
     });
   });
 
-  it("never overwrites explicitly-entered user values", () => {
+  it("never overwrites explicitly-entered contact values (name/phone/email)", () => {
     const out = normalizeAppointmentFields(
-      { customerId: 7, propertyId: 20, fullName: "Different Name", phone: "973-000-0000", email: "other@x.com", propertyAddress: "Custom addr" },
+      { customerId: 7, propertyId: 20, fullName: "Different Name", phone: "973-000-0000", email: "other@x.com" },
       { customer, property },
     );
     expect(out.fullName).toBe("Different Name");
     expect(out.phone).toBe("973-000-0000");
     expect(out.email).toBe("other@x.com");
-    expect(out.propertyAddress).toBe("Custom addr");
+  });
+
+  it("property address is AUTHORITATIVE — typed partial text is IGNORED when a property is linked", () => {
+    const out = normalizeAppointmentFields(
+      { customerId: 7, propertyId: 20, propertyAddress: "61 1/2 Merchant St" }, // partial typed
+      { customer, property },
+    );
+    expect(out.propertyAddress).toBe("500 Main St, Suite 200, Newark, NJ 07102"); // from the property, not typed
+  });
+
+  it("a linked property with a Unit includes the unit in the resolved address", () => {
+    const out = normalizeAppointmentFields({ customerId: 7, propertyId: 20 }, { customer, property });
+    expect(out.propertyAddress).toBe("500 Main St, Suite 200, Newark, NJ 07102");
+  });
+
+  it("a manual appointment WITHOUT a property keeps the typed address", () => {
+    const out = normalizeAppointmentFields(
+      { fullName: "New Person", phone: "551-555-1234", propertyAddress: "1 New Rd, Newark, NJ 07105" },
+      {},
+    );
+    expect(out.propertyId).toBeNull();
+    expect(out.propertyAddress).toBe("1 New Rd, Newark, NJ 07105");
   });
 
   it("REJECTS a property that does not belong to the customer (CONFLICT)", () => {
@@ -68,9 +89,10 @@ describe("normalizeAppointmentFields", () => {
     expect(out.fullName).toBe("Jane Doe");
   });
 
-  it("update-merge: changing only propertyId preserves existing contact fields (omitted stay unchanged)", () => {
-    // Simulates the router merge (patch.X ?? existing.X): only propertyId changes;
-    // fullName/phone/email come from the existing row and must be preserved.
+  it("update-merge: preserves existing CONTACT fields but takes the property's authoritative address", () => {
+    // Simulates the router merge (patch.X ?? existing.X): only propertyId changes.
+    // fullName/phone/email come from the existing row and must be preserved, while the
+    // service address is always the linked property's (never a stale/typed value).
     const out = normalizeAppointmentFields(
       { customerId: 7, propertyId: 20, fullName: "Existing Name", phone: "862-555-0100", email: "existing@x.com", propertyAddress: "Existing addr" },
       { customer, property },
@@ -80,7 +102,7 @@ describe("normalizeAppointmentFields", () => {
     expect(out.fullName).toBe("Existing Name");
     expect(out.phone).toBe("862-555-0100");
     expect(out.email).toBe("existing@x.com");
-    expect(out.propertyAddress).toBe("Existing addr"); // typed/existing value not overwritten
+    expect(out.propertyAddress).toBe("500 Main St, Suite 200, Newark, NJ 07102"); // authoritative property address
   });
 
   it("update-merge: backfills location from newly linked property when address was blank", () => {

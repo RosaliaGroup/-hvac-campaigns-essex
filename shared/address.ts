@@ -21,3 +21,22 @@ export function formatPropertyAddress(p?: AddressParts | null): string {
     .filter(Boolean)
     .join(", ");
 }
+
+/** Address parts required for a COMPLETE service address (Unit/line2 is optional). */
+export const REQUIRED_ADDRESS_FIELDS = ["Street", "City", "State", "ZIP"] as const;
+
+/** Labels of the required address parts that are missing/blank, in display order. */
+export function missingAddressParts(p?: AddressParts | null): string[] {
+  const blank = (v?: string | null) => !v || !v.trim();
+  const missing: string[] = [];
+  if (blank(p?.addressLine1)) missing.push("Street");
+  if (blank(p?.city)) missing.push("City");
+  if (blank(p?.state)) missing.push("State");
+  if (blank(p?.zip)) missing.push("ZIP");
+  return missing;
+}
+
+/** True when Street + City + State + ZIP are all present. */
+export function isCompleteAddress(p?: AddressParts | null): boolean {
+  return missingAddressParts(p).length === 0;
+}

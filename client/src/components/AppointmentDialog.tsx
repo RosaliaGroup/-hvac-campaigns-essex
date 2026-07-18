@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import ContactCombobox, { type SchedulingContact } from "@/components/ContactCombobox";
 import AddContactModal, { type CreatedContact } from "@/components/AddContactModal";
 import { pickAppointmentProperty } from "@/lib/appointmentDefaults";
+import { missingAddressParts } from "@shared/address";
 import { X } from "lucide-react";
 import {
   APPOINTMENT_TYPES,
@@ -136,6 +137,11 @@ export default function AppointmentDialog({
     { enabled: open && linkedCustomerId != null },
   );
   const linkedProperties = propData?.properties ?? [];
+  // The property currently linked to this appointment (drives the read-only,
+  // authoritative Service Address + completeness validation).
+  const selectedProperty = selectedPropertyId != null ? linkedProperties.find(p => p.id === selectedPropertyId) : undefined;
+  const propertyAddressLocked = selectedPropertyId != null;
+  const missingProp = selectedProperty ? missingAddressParts(selectedProperty) : [];
 
   // Attendee/invite state (Task 8)
   const [inviteTeamIds, setInviteTeamIds] = useState<number[]>([]);
@@ -350,6 +356,15 @@ export default function AppointmentDialog({
       toast({ title: "Pick a date and time", variant: "destructive" });
       return;
     }
+    // A property-linked appointment cannot be saved with an incomplete service address.
+    if (selectedPropertyId != null && missingProp.length > 0) {
+      toast({
+        title: "Property address is incomplete",
+        description: `The linked property is missing ${missingProp.join(", ")}. Update the property before scheduling.`,
+        variant: "destructive",
+      });
+      return;
+    }
     const iso = new Date(form.scheduledAt).toISOString();
     // Build the attendee list: selected coworkers + external guest emails.
     // (The customer is added server-side from the email field when includeCustomer is on.)
@@ -457,8 +472,19 @@ export default function AppointmentDialog({
             <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
           </div>
           <div className="col-span-2">
-            <Label>Property address</Label>
-            <Input value={form.propertyAddress} onChange={e => setForm(f => ({ ...f, propertyAddress: e.target.value }))} />
+            <Label>Service address{propertyAddressLocked ? " (from linked property)" : ""}</Label>
+            <Input
+              value={form.propertyAddress}
+              readOnly={propertyAddressLocked}
+              className={propertyAddressLocked ? "bg-muted text-muted-foreground cursor-not-allowed" : undefined}
+              onChange={e => { if (!propertyAddressLocked) setForm(f => ({ ...f, propertyAddress: e.target.value })); }}
+            />
+            {propertyAddressLocked && missingProp.length === 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">Authoritative address from the linked property. To change it, edit the property.</p>
+            )}
+            {propertyAddressLocked && missingProp.length > 0 && (
+              <p className="mt-1 text-xs text-red-600">This property is missing {missingProp.join(", ")}. Update the property before scheduling.</p>
+            )}
           </div>
           <div>
             <Label>Property type</Label>
@@ -652,7 +678,7 @@ export default function AppointmentDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button className="bg-[#1e3a5f] hover:bg-[#16304f]" onClick={handleSave} disabled={saving}>
+          <Button className="bg-[#1e3a5f] hover:bg-[#16304f]" onClick={handleSave} disabled={saving || (selectedPropertyId != null && missingProp.length > 0)}>
             {saving ? "Saving…" : isEdit ? "Save Changes" : "Book Appointment"}
           </Button>
         </DialogFooter>
