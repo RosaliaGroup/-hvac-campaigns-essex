@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
+import AddContactModal from "@/components/AddContactModal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,42 +47,6 @@ export default function Customers() {
     limit: 100,
     offset: 0,
   });
-
-  // Create form state
-  const [form, setForm] = useState({
-    type: "residential" as "residential" | "commercial",
-    firstName: "",
-    lastName: "",
-    companyName: "",
-    email: "",
-    phone: "",
-  });
-
-  const createCustomer = trpc.customers.create.useMutation({
-    onSuccess: res => {
-      toast({ title: "Customer created" });
-      setCreateOpen(false);
-      setForm({ type: "residential", firstName: "", lastName: "", companyName: "", email: "", phone: "" });
-      refetch();
-      navigate(`/customers/${res.id}`);
-    },
-    onError: err => toast({ title: "Could not create customer", description: err.message, variant: "destructive" }),
-  });
-
-  const handleCreate = () => {
-    if (!form.firstName && !form.lastName && !form.companyName && !form.email && !form.phone) {
-      toast({ title: "Add at least a name, email, or phone", variant: "destructive" });
-      return;
-    }
-    createCustomer.mutate({
-      type: form.type,
-      firstName: form.firstName || null,
-      lastName: form.lastName || null,
-      companyName: form.companyName || null,
-      email: form.email || null,
-      phone: form.phone || null,
-    });
-  };
 
   const items = data?.items ?? [];
 
@@ -225,52 +190,12 @@ export default function Customers() {
         </Card>
       </div>
 
-      {/* Create dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Add Contact</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <Label>Type</Label>
-              <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v as typeof form.type }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="residential">Residential</SelectItem>
-                  <SelectItem value="commercial">Commercial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>First name</Label>
-              <Input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Last name</Label>
-              <Input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
-            </div>
-            {form.type === "commercial" && (
-              <div className="col-span-2">
-                <Label>Company name</Label>
-                <Input value={form.companyName} onChange={e => setForm(f => ({ ...f, companyName: e.target.value }))} />
-              </div>
-            )}
-            <div>
-              <Label>Phone</Label>
-              <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-            </div>
-            <div>
-              <Label>Email</Label>
-              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={createCustomer.isPending} className="bg-[#1e3a5f] hover:bg-[#16304f]">
-              {createCustomer.isPending ? "Creating…" : "Create Customer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Add Contact — creates customer + first property in one transaction */}
+      <AddContactModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={c => { refetch(); navigate(`/customers/${c.customerId}`); }}
+      />
     </DashboardLayout>
   );
 }

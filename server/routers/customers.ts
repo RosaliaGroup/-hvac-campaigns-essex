@@ -17,6 +17,7 @@ import {
   type InsertCustomer,
 } from "../../drizzle/schema";
 import { and, desc, eq, inArray, isNull, like, or, sql } from "drizzle-orm";
+import { formatPropertyAddress } from "@shared/address";
 import { deriveContactRelationship, type Relationship } from "@shared/leadPipeline";
 import { assembleCustomerRelations } from "./customerRelations";
 
@@ -277,6 +278,23 @@ export async function computeRelationships(
 // Router
 // ─────────────────────────────────────────────────────────────
 
+export interface SchedulingResult {
+  kind: "customer" | "lead";
+  /** Stable key for the combobox, e.g. "customer:12" / "lead:7". */
+  key: string;
+  /** The linked customer id (a customer, or a CONVERTED lead); null for unconverted leads. */
+  customerId: number | null;
+  /** The underlying row id (customers.id or leadCaptures.id). */
+  refId: number;
+  displayName: string;
+  companyName: string | null;
+  phone: string | null;
+  email: string | null;
+  propertyType: "residential" | "commercial";
+  /** Primary/first property address (customers only); "" for leads. */
+  address: string;
+}
+
 export const customersRouter = router({
   /** Paginated, searchable customer list. */
   list: protectedProcedure
@@ -335,6 +353,181 @@ export const customersRouter = router({
       })));
       const items = rows.map(r => ({ ...r, relationship: relationships.get(r.id) ?? "lead" as Relationship }));
       return { items, total: Number(totalRows[0]?.count ?? 0) };
+    }),
+
+  /**
+   * Unified scheduler search: matches CUSTOMERS and lead captures (LEADS) by name,
+   * company, phone, email, and address (incl. a customer's property addresses).
+   * Converted leads carry their customerId so selecting them links the appointment.
+   */
+  searchForScheduling: protectedProcedure
+    .input(z.object({ q: z.string().max(255), limit: z.number().int().min(1).max(25).default(10) }).default({ q: "", limit: 10 }))
+    .query(async ({ input }): Promise<{ results: SchedulingResult[] }> => {
+      const db = await getDb();
+      if (!db) return { results: [] };
+      const q = input.q.trim();
+      if (q.length < 2) return { results: [] };
+      const lk = `%${q}%`;
+      const digits = q.replace(/\D/g, "");
+      const phoneCond = digits.length >= 3 ? [sql`REGEXP_REPLACE(${customers.phone}, '[^0-9]', '') LIKE ${"%" + digits + "%"}`] : [];
+
+      const custRows = await db
+        .select({ id: customers.id, displayName: customers.displayName, companyName: customers.companyName, email: customers.email, phone: customers.phone, type: customers.type })
+        .from(customers)
+        .where(and(
+          sql`${customers.status} != 'archived'`,
+          or(
+            like(customers.displayName, lk), like(customers.companyName, lk), like(customers.email, lk),
+            like(customers.phone, lk), like(customers.billingLine1, lk), like(customers.billingCity, lk), like(customers.billingZip, lk),
+            ...phoneCond,
+          ),
+        ))
+        .limit(input.limit);
+
+      // Customers matched by a property address.
+      const propHits = await db
+        .select({ customerId: properties.customerId })
+        .from(properties)
+        .where(or(like(properties.addressLine1, lk), like(properties.city, lk), like(properties.zip, lk)))
+        .limit(input.limit);
+      const haveIds = new Set(custRows.map(c => c.id));
+      const extraIds = Array.from(new Set(propHits.map(p => p.customerId).filter((id): id is number => id != null && !haveIds.has(id))));
+      const extraCust = extraIds.length
+        ? await db.select({ id: customers.id, displayName: customers.displayName, companyName: customers.companyName, email: customers.email, phone: customers.phone, type: customers.type })
+            .from(customers).where(and(inArray(customers.id, extraIds), sql`${customers.status} != 'archived'`))
+        : [];
+      const allCust = [...custRows, ...extraCust];
+
+      // Primary/first property address per matched customer.
+      const custIds = allCust.map(c => c.id);
+      const addrByCustomer = new Map<number, string>();
+      if (custIds.length) {
+        const props = await db
+          .select({ customerId: properties.customerId, addressLine1: properties.addressLine1, addressLine2: properties.addressLine2, city: properties.city, state: properties.state, zip: properties.zip, isPrimary: properties.isPrimary })
+          .from(properties).where(inArray(properties.customerId, custIds)).orderBy(desc(properties.isPrimary), desc(properties.createdAt));
+        for (const p of props) {
+          if (p.customerId == null || addrByCustomer.has(p.customerId)) continue;
+          addrByCustomer.set(p.customerId, formatPropertyAddress(p));
+        }
+      }
+
+      const capRows = await db
+        .select({ id: leadCaptures.id, name: leadCaptures.name, firstName: leadCaptures.firstName, lastName: leadCaptures.lastName, email: leadCaptures.email, phone: leadCaptures.phone, customerId: leadCaptures.customerId })
+        .from(leadCaptures)
+        .where(or(like(leadCaptures.name, lk), like(leadCaptures.firstName, lk), like(leadCaptures.lastName, lk), like(leadCaptures.email, lk), like(leadCaptures.phone, lk)))
+        .limit(input.limit);
+
+      const linkedIds = new Set(allCust.map(c => c.id));
+      const results: SchedulingResult[] = [
+        ...allCust.map((c): SchedulingResult => ({
+          kind: "customer", key: `customer:${c.id}`, customerId: c.id, refId: c.id,
+          displayName: c.displayName, companyName: c.companyName ?? null, phone: c.phone ?? null, email: c.email ?? null,
+          propertyType: c.type, address: addrByCustomer.get(c.id) ?? "",
+        })),
+        ...capRows
+          .filter(c => !(c.customerId != null && linkedIds.has(c.customerId)))
+          .map((c): SchedulingResult => ({
+            kind: "lead", key: `lead:${c.id}`, customerId: c.customerId ?? null, refId: c.id,
+            displayName: c.name || [c.firstName, c.lastName].filter(Boolean).join(" ") || c.email || c.phone || "Lead",
+            companyName: null, phone: c.phone ?? null, email: c.email ?? null, propertyType: "residential", address: "",
+          })),
+      ].slice(0, input.limit);
+
+      return { results };
+    }),
+
+  /** Properties for a single customer, with formatted address — powers the dialog property picker. */
+  listProperties: protectedProcedure
+    .input(z.object({ customerId: z.number().int() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { properties: [] };
+      const rows = await db.select().from(properties).where(eq(properties.customerId, input.customerId)).orderBy(desc(properties.isPrimary), desc(properties.createdAt));
+      return {
+        properties: rows.map(p => ({
+          id: p.id, label: p.label, isPrimary: p.isPrimary, propertyType: p.propertyType,
+          addressLine1: p.addressLine1, addressLine2: p.addressLine2, city: p.city, state: p.state, zip: p.zip,
+          address: formatPropertyAddress(p),
+        })),
+      };
+    }),
+
+  /**
+   * Create-or-match a customer + first property in one transaction, with dedupe by
+   * normalized phone/email (customer) and addressLine1 (property). Surfaces a match
+   * instead of creating a silent duplicate. Returns ids + normalized data for prefill.
+   */
+  createWithProperty: protectedProcedure
+    .input(z.object({
+      type: z.enum(["residential", "commercial"]).default("residential"),
+      firstName: z.string().max(255).optional().nullable(),
+      lastName: z.string().max(255).optional().nullable(),
+      companyName: z.string().max(255).optional().nullable(),
+      email: z.string().email().max(320).optional().nullable().or(z.literal("").transform(() => null)),
+      phone: z.string().max(50).optional().nullable(),
+      addressLine1: z.string().max(255).optional().nullable(),
+      addressLine2: z.string().max(255).optional().nullable(),
+      city: z.string().max(120).optional().nullable(),
+      state: z.string().max(10).optional().nullable(),
+      zip: z.string().max(20).optional().nullable(),
+      propertyType: z.enum(["residential", "commercial"]).optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const existing = await findExistingCustomer(db, input.phone, input.email);
+      const firstName = input.firstName ?? null;
+      const lastName = input.lastName ?? null;
+      const displayName = buildDisplayName({ firstName, lastName, companyName: input.companyName, email: input.email, phone: input.phone });
+      const hasAddress = Boolean(input.addressLine1?.trim());
+
+      const result = await db.transaction(async (tx) => {
+        let customerId: number;
+        let mergedCustomer = false;
+        if (existing) {
+          customerId = existing.id;
+          mergedCustomer = true;
+        } else {
+          const values: InsertCustomer = {
+            type: input.type, firstName, lastName, companyName: input.companyName ?? null,
+            displayName, email: input.email ?? null, phone: input.phone ?? null,
+          };
+          const ins = await tx.insert(customers).values(values);
+          customerId = Number((ins as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+        }
+
+        let propertyId: number | null = null;
+        let mergedProperty = false;
+        if (hasAddress) {
+          const key = input.addressLine1!.trim().toLowerCase();
+          const props = await tx.select({ id: properties.id, addressLine1: properties.addressLine1 }).from(properties).where(eq(properties.customerId, customerId));
+          const match = props.find(p => (p.addressLine1 ?? "").trim().toLowerCase() === key);
+          if (match) {
+            propertyId = match.id;
+            mergedProperty = true;
+          } else {
+            const isPrimary = props.length === 0;
+            const pins = await tx.insert(properties).values({
+              customerId, addressLine1: input.addressLine1!.trim(), addressLine2: input.addressLine2 ?? null,
+              city: input.city ?? null, state: input.state ?? null, zip: input.zip ?? null,
+              propertyType: input.propertyType ?? (input.type as "residential" | "commercial"), isPrimary,
+            });
+            propertyId = Number((pins as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+          }
+        }
+        return { customerId, propertyId, mergedCustomer, mergedProperty };
+      });
+
+      const custRow = (await db.select({ id: customers.id, displayName: customers.displayName, phone: customers.phone, email: customers.email, type: customers.type }).from(customers).where(eq(customers.id, result.customerId)).limit(1))[0];
+      const propRow = result.propertyId
+        ? (await db.select().from(properties).where(eq(properties.id, result.propertyId)).limit(1))[0]
+        : null;
+      return {
+        ...result,
+        customer: custRow ? { id: custRow.id, displayName: custRow.displayName, phone: custRow.phone, email: custRow.email, type: custRow.type } : null,
+        property: propRow ? { id: propRow.id, propertyType: propRow.propertyType, address: formatPropertyAddress(propRow) } : null,
+      };
     }),
 
   /** 360° view: customer + properties + related records. */

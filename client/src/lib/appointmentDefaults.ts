@@ -3,6 +3,9 @@
  * their properties. Kept framework-free so the prefill logic is unit-testable
  * without rendering CustomerDetail.
  */
+import { formatPropertyAddress } from "@shared/address";
+
+export { formatPropertyAddress };
 
 export interface PropertyLike {
   id: number;
@@ -30,18 +33,6 @@ export interface AppointmentDefaults {
   propertyType: "residential" | "commercial";
   propertyId?: number;
   propertyAddress: string;
-}
-
-/** Compose a single-line, full street address from a property record. */
-export function formatPropertyAddress(p?: PropertyLike | null): string {
-  if (!p) return "";
-  const cityStateZip = [[p.city, p.state].map(s => s?.trim()).filter(Boolean).join(", "), p.zip?.trim()]
-    .filter(Boolean)
-    .join(" ");
-  return [p.addressLine1, p.addressLine2, cityStateZip]
-    .map(s => (s ?? "").trim())
-    .filter(Boolean)
-    .join(", ");
 }
 
 /**
