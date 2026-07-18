@@ -38,6 +38,8 @@ import { findCustomerIdByPhone } from "../routers/customers";
 import { parsePreferredDateTime } from "../services/appointmentTime";
 import { notifyOwner } from "../_core/notification";
 import { normalizeAttendees, replaceAttendees, syncAppointmentInvites } from "../services/appointmentInvites";
+import { resolveAppointmentContext, matchPropertyByFreeText } from "../services/appointmentNormalization";
+import { formatPropertyAddress } from "@shared/address";
 import type { InsertAppointment } from "../../drizzle/schema";
 
 const LOG = "[VapiBookHVAC]";
@@ -251,6 +253,53 @@ export async function handleBookHVAC(rawArgs: BookHvacArgs, vapiCallId?: string)
     /* unlinked lead is fine */
   }
 
+  // ── Resolve customer/property context via the shared server normalization
+  //    (parity with staff/calendar booking): backfill name/phone/email/address
+  //    from the matched customer, resolve & validate a linked property, and — for
+  //    a spoken free-text address — match it to one of THIS customer's own
+  //    properties. Never creates customers or properties; never overwrites a value
+  //    the caller actually spoke; enforces the property↔customer relationship.
+  //    Best-effort — a resolution failure must never block Jessica's booking. ──
+  let propertyId: number | undefined;
+  let resolvedFullName = booking.fullName;
+  let resolvedPhone = booking.phone;
+  let resolvedEmail = booking.email;
+  let resolvedPropertyType = booking.propertyType;
+  let resolvedAddress = booking.propertyAddress;
+  try {
+    const dbi = await db.getDb();
+    if (dbi) {
+      const ctx = await resolveAppointmentContext(dbi, {
+        customerId: customerId ?? null,
+        propertyId: null,
+        fullName: booking.fullName,
+        phone: booking.phone,
+        email: booking.email ?? null,
+        propertyAddress: booking.propertyAddress ?? null,
+        propertyType: booking.propertyType,
+      });
+      customerId = ctx.customerId ?? customerId;
+      propertyId = ctx.propertyId ?? undefined;
+      resolvedFullName = ctx.fullName ?? booking.fullName;
+      resolvedPhone = ctx.phone ?? booking.phone;
+      resolvedEmail = ctx.email ?? booking.email;
+      resolvedPropertyType = ctx.propertyType ?? booking.propertyType;
+      resolvedAddress = ctx.propertyAddress ?? booking.propertyAddress;
+      // Free-text address + (possibly multiple) properties: match the spoken
+      // address to one of the customer's properties. An ambiguous or unmatched
+      // address returns null → keep the free text and DON'T guess a property.
+      if (customerId && !propertyId && booking.propertyAddress?.trim()) {
+        const matched = await matchPropertyByFreeText(dbi, customerId, booking.propertyAddress);
+        if (matched) {
+          propertyId = matched.id;
+          resolvedAddress = formatPropertyAddress(matched);
+        }
+      }
+    }
+  } catch {
+    /* resolution is best-effort; fall back to the spoken values */
+  }
+
   // ── Best-effort parse into a real datetime for calendar placement. The shared
   //    parser (and the calendar's IANA America/New_York zone) handle DST; no
   //    fixed UTC offset is used here. Unparseable → surfaces in the backlog. ──
@@ -262,12 +311,12 @@ export async function handleBookHVAC(rawArgs: BookHvacArgs, vapiCallId?: string)
   }
 
   const insert: InsertAppointment = {
-    fullName: booking.fullName,
+    fullName: resolvedFullName,
     // Store the phone as spoken; phone matching/dedupe normalizes internally.
-    phone: booking.phone,
-    email: booking.email,
-    propertyAddress: booking.propertyAddress,
-    propertyType: booking.propertyType,
+    phone: resolvedPhone,
+    email: resolvedEmail,
+    propertyAddress: resolvedAddress,
+    propertyType: resolvedPropertyType,
     appointmentType: booking.appointmentType,
     serviceType: booking.serviceType,
     preferredDate: booking.preferredDate,
@@ -280,6 +329,9 @@ export async function handleBookHVAC(rawArgs: BookHvacArgs, vapiCallId?: string)
     bookedBy: "vapi",
     vapiCallId: vapiCallId || undefined,
     customerId,
+    // Linked property when the caller's customer + address resolved to one of
+    // their existing properties (DB-driven; free-text kept otherwise).
+    propertyId,
   };
 
   // ── Create the appointment. A DB failure here is the only fatal path; it is
