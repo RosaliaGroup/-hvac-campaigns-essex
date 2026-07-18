@@ -51,12 +51,22 @@ describe("workStatus — transitions", () => {
     expect(nextWorkStatuses("arrived")).toEqual(["working"]);
   });
 
-  it("lets working toggle to waiting_parts or complete", () => {
-    expect(nextWorkStatuses("working").sort()).toEqual(["completed", "waiting_parts"]);
+  it("lets working toggle to waiting_parts, but NOT complete via the status control", () => {
+    // `completed` is reached only via jobs.completeJob (atomic). The generic
+    // status control must not offer it — see fix/technician-field-defects (#3).
+    expect(nextWorkStatuses("working")).toEqual(["waiting_parts"]);
+    expect(nextWorkStatuses("working")).not.toContain("completed");
   });
 
-  it("lets waiting_parts resume work or complete", () => {
-    expect(nextWorkStatuses("waiting_parts").sort()).toEqual(["completed", "working"]);
+  it("lets waiting_parts resume work, but NOT complete via the status control", () => {
+    expect(nextWorkStatuses("waiting_parts")).toEqual(["working"]);
+    expect(nextWorkStatuses("waiting_parts")).not.toContain("completed");
+  });
+
+  it("completed is never a target of the generic status control (only completeJob sets it)", () => {
+    for (const from of ["assigned", "accepted", "en_route", "arrived", "working", "waiting_parts", "completed"] as TechnicianWorkStatus[]) {
+      expect(canTransitionWorkStatus(from, "completed")).toBe(false);
+    }
   });
 
   it("treats completed as terminal", () => {
@@ -67,7 +77,8 @@ describe("workStatus — transitions", () => {
 
   it("canTransitionWorkStatus permits only single-step moves", () => {
     expect(canTransitionWorkStatus("assigned", "accepted")).toBe(true);
-    expect(canTransitionWorkStatus("working", "completed")).toBe(true);
+    expect(canTransitionWorkStatus("working", "waiting_parts")).toBe(true);
+    expect(canTransitionWorkStatus("working", "completed")).toBe(false); // completion is via completeJob only
     expect(canTransitionWorkStatus("waiting_parts", "working")).toBe(true);
     // illegal jumps rejected
     expect(canTransitionWorkStatus("assigned", "completed")).toBe(false);

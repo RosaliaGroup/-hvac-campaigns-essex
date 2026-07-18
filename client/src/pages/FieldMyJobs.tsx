@@ -211,15 +211,18 @@ export default function FieldMyJobs() {
             </div>
           </div>
 
-          {/* Admin-only technician filter */}
+          {/* Admin-only technician preview */}
           {isAdmin ? (
             <div className="mt-3 flex items-center gap-2">
               <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <label htmlFor="preview-technician" className="shrink-0 text-sm font-medium text-muted-foreground">
+                Preview technician:
+              </label>
               <Select
                 value={previewTechId ? String(previewTechId) : "me"}
                 onValueChange={v => setPreviewTechId(v === "me" ? undefined : Number(v))}
               >
-                <SelectTrigger className="h-9" aria-label="Preview technician">
+                <SelectTrigger id="preview-technician" className="h-9" aria-label="Preview technician">
                   <SelectValue placeholder="My jobs" />
                 </SelectTrigger>
                 <SelectContent>

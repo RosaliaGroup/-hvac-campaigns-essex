@@ -21,6 +21,23 @@ export const NOTE_TYPE_BADGE: Record<NoteType, string> = {
   customer: "bg-sky-100 text-sky-700 border-sky-200",
 };
 
+/** True only for notes that are safe to show a customer. */
+export function isCustomerVisibleNote(note: { visibility: string }): boolean {
+  return note.visibility === "customer";
+}
+
+/**
+ * Filter notes to ONLY the customer-safe ones. Internal notes are STAFF-ONLY and
+ * must never reach any customer-facing surface (portal / SMS / email / invoice /
+ * appointment confirmation / export / AI context). Any code that shows or sends
+ * notes to a customer MUST route them through this filter. The leak-guard test
+ * (server/internalNotes.leak.test.ts) additionally enforces that no
+ * customer-facing module reads `jobNotes` at all.
+ */
+export function filterCustomerVisibleNotes<T extends { visibility: string }>(notes: T[]): T[] {
+  return notes.filter(isCustomerVisibleNote);
+}
+
 // ── Photo categories ─────────────────────────────────────────────────────────
 
 export const PHOTO_CATEGORIES = ["before", "during", "after", "general"] as const;

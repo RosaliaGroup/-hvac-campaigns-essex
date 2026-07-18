@@ -98,7 +98,8 @@ describe("FieldWorkOrder — empty history states", () => {
     wo.data = makeData({ history: { visits: [], notes: [], photos: [] } });
     const html = render();
     expect(html).toContain("No prior visits.");
-    expect(html).toContain("No notes yet."); // Notes section (PR #40) empty state
+    expect(html).toContain("No internal notes yet"); // Internal Notes section empty state
+    expect(html).toContain("No customer notes yet"); // Customer Notes section empty state
     expect(html).toContain("No photos yet"); // Photos section (PR #40) empty state
   });
 });

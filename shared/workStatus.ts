@@ -72,18 +72,24 @@ export function workStatusStep(status: TechnicianWorkStatus): number {
 }
 
 /**
- * Allowed forward transitions. Guided and mostly linear; `working` and
- * `waiting_parts` can toggle, and either can complete. `completed` is terminal.
- * The server enforces this map, so an unauthorized/illegal jump is rejected even
- * if a client sends it.
+ * Allowed forward transitions for the GENERIC status control. Guided and mostly
+ * linear; `working` and `waiting_parts` can toggle. `completed` is a legitimate
+ * terminal status but is DELIBERATELY NOT a target here: completing a work order
+ * must go through the dedicated Complete Job action (`jobs.completeJob`), which
+ * finalizes atomically — it stamps `completedAt`/actuals, writes the
+ * `jobCompletions` snapshot, and enforces note/signature rules. Allowing the
+ * generic status control to set `completed` produced a partial-completion glitch
+ * (status flipped with no completion record); see fix/technician-field-defects.
+ * The server enforces this map, so an illegal jump is rejected even if a client
+ * sends it. `completeJob` sets `completed` directly (it does not consult this map).
  */
 const TRANSITIONS: Record<TechnicianWorkStatus, TechnicianWorkStatus[]> = {
   assigned: ["accepted"],
   accepted: ["en_route"],
   en_route: ["arrived"],
   arrived: ["working"],
-  working: ["waiting_parts", "completed"],
-  waiting_parts: ["working", "completed"],
+  working: ["waiting_parts"],
+  waiting_parts: ["working"],
   completed: [],
 };
 

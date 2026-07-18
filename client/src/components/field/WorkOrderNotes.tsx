@@ -1,22 +1,29 @@
 /**
- * WorkOrderNotes — technician notes on the work order. Two types: Internal
- * (staff-only) and Customer (goes on the service report). Notes render newest-
- * first with the author's photo/name, timestamp, a type badge, an "Edited" badge,
- * and any attached photo. A technician may edit only their own notes; after the
- * job is completed the server locks editing (internal → admin-only, customer →
- * read-only). Editability is decided server-side and returned per note (canEdit).
+ * WorkOrderNotes — technician notes on the work order, split into TWO clearly
+ * separated, distinctly-labeled sections so staff can never confuse them:
+ *
+ *   • Internal Notes — 🔒 Staff Only. NEVER visible to customers. Server-enforced
+ *     staff-only: no customer-facing endpoint (portal / SMS / email / invoice /
+ *     appointment confirmation / export / AI) reads jobNotes at all — see the
+ *     leak-guard test server/internalNotes.leak.test.ts.
+ *   • Customer Notes — 👁 Customer Visible. May appear in customer
+ *     communications / on the service report.
+ *
+ * Each section has its own composer and its own timeline (no shared toggle, so a
+ * technician can never pick the wrong visibility). A technician edits only their
+ * own notes; after completion the server locks editing (canEdit is per note).
  */
 import { useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { formatDisplayName } from "@shared/nameFormat";
-import { NOTE_TYPES, NOTE_TYPE_LABEL, NOTE_TYPE_BADGE, type NoteType } from "@shared/jobMedia";
+import type { NoteType } from "@shared/jobMedia";
 import { PhotoThumb } from "@/components/field/PhotoThumb";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { StickyNote, Loader2, Pencil, Lock, UserRound } from "lucide-react";
+import { Loader2, Pencil, Lock, UserRound, Eye } from "lucide-react";
 
 function timeLabel(d: Date | string | null | undefined): string {
   if (!d) return "";
@@ -35,27 +42,62 @@ function Avatar({ name, photo }: { name: string | null; photo: string | null }) 
   );
 }
 
-export function WorkOrderNotes({ jobId }: { jobId: number }) {
-  const utils = trpc.useUtils();
-  const { data, isLoading } = trpc.jobs.fieldListNotes.useQuery({ jobId }, { enabled: jobId > 0 });
+type FieldNote = {
+  id: number; body: string; visibility: string;
+  authorName: string | null; authorPhoto: string | null;
+  edited: boolean; canEdit: boolean;
+  createdAt: Date | string; attachmentId: number | null;
+};
+
+/** Per-section presentation. Deliberately distinct styling + copy per type. */
+const SECTION = {
+  internal: {
+    title: "Internal Notes",
+    Icon: Lock,
+    tagText: "Staff Only",
+    caption: "Never visible to customers.",
+    accent: "text-slate-700",
+    tagClass: "border-slate-300 bg-slate-100 text-slate-700",
+    cardClass: "border-slate-200",
+    addLabel: "Add Internal Note",
+    placeholder: "Internal note — staff only. Not shown to the customer…",
+    empty: "No internal notes yet.",
+  },
+  customer: {
+    title: "Customer Notes",
+    Icon: Eye,
+    tagText: "Customer Visible",
+    caption: "May appear in customer communications.",
+    accent: "text-blue-700",
+    tagClass: "border-blue-300 bg-blue-50 text-blue-700",
+    cardClass: "border-blue-200",
+    addLabel: "Add Customer Note",
+    placeholder: "Customer-visible note — may appear on the service report…",
+    empty: "No customer notes yet.",
+  },
+} as const;
+
+function NotesSection({
+  jobId, type, notes, isLoading, onChanged,
+}: {
+  jobId: number; type: NoteType; notes: FieldNote[]; isLoading: boolean; onChanged: () => void;
+}) {
+  const cfg = SECTION[type];
+  const Icon = cfg.Icon;
   const addNote = trpc.jobs.fieldAddNote.useMutation();
   const updateNote = trpc.jobs.fieldUpdateNote.useMutation();
-
-  const [visibility, setVisibility] = useState<NoteType>("internal");
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editDraft, setEditDraft] = useState("");
-
-  const notes = data?.notes ?? [];
 
   const submit = async () => {
     const body = draft.trim();
     if (!body) return;
     try {
-      await addNote.mutateAsync({ jobId, body, visibility });
+      await addNote.mutateAsync({ jobId, body, visibility: type });
       setDraft("");
-      utils.jobs.fieldListNotes.invalidate({ jobId });
-      toast.success("Note added");
+      onChanged();
+      toast.success(`${cfg.title.replace(/s$/, "")} added`);
     } catch (e: any) { toast.error(e?.message || "Could not add note"); }
   };
   const saveEdit = async (id: number) => {
@@ -64,53 +106,43 @@ export function WorkOrderNotes({ jobId }: { jobId: number }) {
     try {
       await updateNote.mutateAsync({ id, body });
       setEditingId(null);
-      utils.jobs.fieldListNotes.invalidate({ jobId });
+      onChanged();
       toast.success("Note updated");
     } catch (e: any) { toast.error(e?.message || "Could not update note"); }
   };
 
   return (
-    <Card className="rounded-2xl shadow-sm">
-      <CardContent className="space-y-4 p-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
-          <StickyNote className="h-4 w-4" />
-          <span className="uppercase tracking-wide">Notes</span>
+    <Card className={`rounded-2xl shadow-sm ${cfg.cardClass}`}>
+      <CardContent className="space-y-3 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Icon className={`h-4 w-4 ${cfg.accent}`} />
+          <span className={`text-sm font-bold ${cfg.accent}`}>{cfg.title}</span>
+          <Badge variant="outline" className={`border text-[11px] ${cfg.tagClass}`}>{cfg.tagText}</Badge>
           <Badge variant="secondary" className="ml-auto">{notes.length}</Badge>
         </div>
+        <p className="text-xs text-muted-foreground">{cfg.caption}</p>
 
-        {/* Composer */}
+        {/* Composer — fixed visibility for this section (no toggle) */}
         <div className="space-y-2 rounded-xl border p-3">
-          <div className="grid grid-cols-2 gap-2">
-            {NOTE_TYPES.map(t => (
-              <Button
-                key={t}
-                type="button"
-                variant={visibility === t ? "default" : "outline"}
-                className="h-10"
-                onClick={() => setVisibility(t)}
-              >
-                {NOTE_TYPE_LABEL[t]}
-              </Button>
-            ))}
-          </div>
           <Textarea
             value={draft}
             onChange={e => setDraft(e.target.value)}
             rows={3}
-            placeholder={visibility === "customer" ? "Work performed (shown on the service report)…" : "Internal note (staff only)…"}
+            placeholder={cfg.placeholder}
             className="text-base"
+            aria-label={cfg.addLabel}
           />
           <Button className="h-11 w-full" disabled={addNote.isPending || !draft.trim()} onClick={submit}>
             {addNote.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Add {NOTE_TYPE_LABEL[visibility]} Note
+            {cfg.addLabel}
           </Button>
         </div>
 
         {/* Timeline (newest first) */}
         {isLoading ? (
-          <div className="flex justify-center py-4"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center py-3"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : notes.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No notes yet.</p>
+          <p className="text-sm text-muted-foreground">{cfg.empty}</p>
         ) : (
           <div className="space-y-3">
             {notes.map(n => (
@@ -119,9 +151,6 @@ export function WorkOrderNotes({ jobId }: { jobId: number }) {
                 <div className="min-w-0 flex-1 rounded-lg bg-muted/50 p-2.5">
                   <div className="flex flex-wrap items-center gap-1.5 text-xs">
                     <span className="font-semibold">{n.authorName ? formatDisplayName(n.authorName) : "Office"}</span>
-                    <Badge variant="outline" className={`border ${NOTE_TYPE_BADGE[n.visibility as NoteType]}`}>
-                      {NOTE_TYPE_LABEL[n.visibility as NoteType]}
-                    </Badge>
                     {n.edited ? <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">Edited</Badge> : null}
                     <span className="text-muted-foreground">{timeLabel(n.createdAt)}</span>
                     <span className="ml-auto">
@@ -164,6 +193,22 @@ export function WorkOrderNotes({ jobId }: { jobId: number }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+export function WorkOrderNotes({ jobId }: { jobId: number }) {
+  const utils = trpc.useUtils();
+  const { data, isLoading } = trpc.jobs.fieldListNotes.useQuery({ jobId }, { enabled: jobId > 0 });
+  const notes = (data?.notes ?? []) as FieldNote[];
+  const internal = notes.filter(n => n.visibility === "internal");
+  const customer = notes.filter(n => n.visibility === "customer");
+  const onChanged = () => utils.jobs.fieldListNotes.invalidate({ jobId });
+
+  return (
+    <div className="space-y-4">
+      <NotesSection jobId={jobId} type="internal" notes={internal} isLoading={isLoading} onChanged={onChanged} />
+      <NotesSection jobId={jobId} type="customer" notes={customer} isLoading={isLoading} onChanged={onChanged} />
+    </div>
   );
 }
 
