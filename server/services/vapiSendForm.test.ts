@@ -349,6 +349,98 @@ describe("sendForm — verified caller-number fallback (misheard spoken number)"
   });
 });
 
+describe("sendForm — flat callerPhone field ({{customer.number}}) priority", () => {
+  const CALLER = "9735181815";        // → +19735181815
+  const CALLER_E164 = "+19735181815";
+  const OTHER_VALID = "8624191763";   // → +18624191763
+  const INVALID_11 = "364-622-69189"; // 11 digits, no leading 1 → invalid
+  const UNSUBSTITUTED = "{{customer.number}}"; // Vapi didn't fill it → no digits → invalid
+
+  it("1. valid callerPhone + malformed spoken → uses callerPhone", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ callerPhone: CALLER, phone: INVALID_11, type: "booking" }, deps);
+    expect(r).toMatchObject({ status: "sent", success: true, smsSent: true });
+    expect(send(deps).mock.calls[0][0]).toBe(CALLER_E164);
+  });
+
+  it("2. valid callerPhone + valid different spoken → callerPhone wins", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ callerPhone: CALLER, phone: OTHER_VALID, type: "booking" }, deps);
+    expect(r.status).toBe("sent");
+    expect(send(deps).mock.calls[0][0]).toBe(CALLER_E164);
+  });
+
+  it("3. missing callerPhone + valid spoken → spoken used", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ phone: OTHER_VALID, type: "booking" }, deps);
+    expect(r.status).toBe("sent");
+    expect(send(deps).mock.calls[0][0]).toBe("+18624191763");
+  });
+
+  it("4. invalid/unsubstituted callerPhone + valid spoken → falls through to spoken", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ callerPhone: UNSUBSTITUTED, phone: OTHER_VALID, type: "booking" }, deps);
+    expect(r.status).toBe("sent");
+    expect(send(deps).mock.calls[0][0]).toBe("+18624191763"); // never guessed from the template
+  });
+
+  it("5. both invalid → failed/invalid_phone (never guessed)", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ callerPhone: UNSUBSTITUTED, phone: INVALID_11 }, deps);
+    expect(r).toMatchObject({ status: "failed", reason: "invalid_phone", success: false, smsSent: false });
+    expect(send(deps)).not.toHaveBeenCalled();
+  });
+
+  it("6. opted-out callerPhone → skipped/opted_out", async () => {
+    const deps = makeDeps({ lookupContact: vi.fn(async () => ({ contactId: 3, optedOut: true })) });
+    const r = await sendMechanicalFormLink({ callerPhone: CALLER, phone: INVALID_11 }, deps);
+    expect(r).toMatchObject({ status: "skipped", reason: "opted_out", success: false, smsSent: false });
+    expect(deps.lookupContact).toHaveBeenCalledWith(CALLER_E164);
+    expect(send(deps)).not.toHaveBeenCalled();
+  });
+
+  it("7. duplicate retry → no second send", async () => {
+    const deps = makeDeps({ alreadySent: vi.fn(async () => true) });
+    const r = await sendMechanicalFormLink({ callerPhone: CALLER }, deps);
+    expect(r).toMatchObject({ status: "skipped", reason: "already_sent" });
+    expect(send(deps)).not.toHaveBeenCalled();
+  });
+
+  it("8. Telnyx missing message id → failed/send_failed", async () => {
+    const deps = makeDeps({ send: vi.fn(async () => ({ success: true, messageId: undefined })) });
+    const r = await sendMechanicalFormLink({ callerPhone: CALLER }, deps);
+    expect(r).toMatchObject({ status: "failed", reason: "send_failed", success: false, smsSent: false });
+  });
+
+  it("9. context log masks the phone (no full number, correct source)", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await sendMechanicalFormLink({ callerPhone: CALLER, phone: OTHER_VALID }, makeDeps());
+      const logged = warn.mock.calls.map((c) => String(c[0])).join(" | ");
+      expect(logged).toContain("callerPresent=true");
+      expect(logged).toContain("spokenPresent=true");
+      expect(logged).toContain("selectedSource=caller");
+      expect(logged).toContain("***1815"); // masked last-4 of the caller number
+      expect(logged).not.toContain("9735181815"); // never the full number
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("extractSendFormCall pulls callerPhone from the flat tool arguments", () => {
+    const body = {
+      message: {
+        type: "tool-calls",
+        call: { id: "call_9" },
+        toolCallList: [{ id: "tc_9", function: { name: "sendForm", arguments: JSON.stringify({ phone: "364-622-69189", type: "booking", property: "12 Oak", callerPhone: "+19735181815" }) } }],
+      },
+    };
+    const call = extractSendFormCall(body);
+    expect(call?.input.callerPhone).toBe("+19735181815");
+    expect(call?.input.phone).toBe("364-622-69189");
+  });
+});
+
 describe("registerVapiToolRoutes — endpoint auth guards", () => {
   function captureHandler() {
     let handler: ((req: unknown, res: unknown) => unknown) | undefined;

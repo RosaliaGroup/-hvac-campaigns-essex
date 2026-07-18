@@ -65,11 +65,18 @@ export interface SendFormInput {
   type?: string | null; // "booking" | "reschedule" (default booking)
   name?: string | null; // optional; Jessica usually omits it
   /**
-   * Verified inbound caller number from the Vapi call context
-   * (`message.call.customer.number`). PREFERRED over `phone` when valid, so a
-   * misheard/mis-transcribed spoken number never beats the number the caller is
-   * actually on. Never merged, inferred, or repaired — validated by toE164 like
-   * any other number.
+   * Verified caller number supplied as a FLAT request field by the Mechanical
+   * API-Request tool, populated from Vapi's static variable `{{customer.number}}`
+   * (inbound caller number, or the destination number on outbound). PREFERRED
+   * over `phone` when valid so a misheard/mis-transcribed spoken number never
+   * beats the number the caller is actually on. Never merged, inferred, or
+   * repaired — validated by toE164 like any other number.
+   */
+  callerPhone?: string | null;
+  /**
+   * Legacy: verified caller number from the tool-calls envelope
+   * (`message.call.customer.number`). Not sent by the flat API-Request tool;
+   * retained as a fallback for any call shape that still includes it.
    */
   callerNumber?: string | null;
 }
@@ -240,21 +247,33 @@ export async function sendMechanicalFormLink(
   deps: SendFormDeps = defaultDeps,
 ): Promise<SendFormResult> {
   try {
-    // 1) Choose the destination. PREFER the verified inbound caller number
-    //    (`call.customer.number`) over the spoken/typed one: a misheard spoken
-    //    number must never beat the number the caller is actually on. Both go
+    // 1) Choose the destination. PREFER the verified caller number (flat
+    //    `callerPhone` = Vapi {{customer.number}}, then the legacy envelope
+    //    `callerNumber`) over the spoken/typed one: a misheard spoken number must
+    //    never beat the number the caller is actually on. Every candidate goes
     //    through toE164 — a number is NEVER guessed, merged, inferred, or
     //    repaired, and the spoken number is never used to overwrite CRM data.
-    const rawCaller = input.callerNumber != null ? String(input.callerNumber).trim() : "";
+    const rawCaller =
+      (input.callerPhone != null ? String(input.callerPhone).trim() : "") ||
+      (input.callerNumber != null ? String(input.callerNumber).trim() : "");
     const rawSpoken = input.phone != null ? String(input.phone).trim() : "";
+
+    // 2) Normalize + validate (E.164 US). Verified caller wins when valid;
+    //    otherwise fall back to the spoken number.
+    const callerE164 = toE164(rawCaller);
+    const spokenE164 = toE164(rawSpoken);
+    const to = callerE164 ?? spokenE164;
+    const selectedSource: "caller" | "spoken" | "none" = callerE164 ? "caller" : spokenE164 ? "spoken" : "none";
+    // Masked context log — machine fields + last-4 only; never a full number.
+    console.warn(
+      `[VapiSendForm] ctx: callerPresent=${Boolean(rawCaller)} spokenPresent=${Boolean(rawSpoken)} ` +
+        `selectedSource=${selectedSource} to=${to ? maskPhone(to) : "none"}`,
+    );
+
     if (!rawCaller && !rawSpoken) {
       logNotSent("missing_phone", "");
       return { success: false, smsSent: false, status: "failed", reason: "missing_phone", error: "Phone number required" };
     }
-
-    // 2) Normalize + validate (E.164 US). Verified caller number wins when valid;
-    //    otherwise fall back to the spoken number. Invalid → fail explicitly.
-    const to = toE164(rawCaller) ?? toE164(rawSpoken);
     if (!to) {
       logNotSent("invalid_phone", rawCaller || rawSpoken);
       return { success: false, smsSent: false, status: "failed", reason: "invalid_phone", error: "Invalid phone number" };
@@ -365,6 +384,8 @@ export function extractSendFormCall(
         phone: parsed.phone != null ? String(parsed.phone) : undefined,
         type: parsed.type != null ? String(parsed.type) : undefined,
         name: parsed.name != null ? String(parsed.name) : undefined,
+        // Flat verified caller field from the Mechanical tool ({{customer.number}}).
+        callerPhone: parsed.callerPhone != null ? String(parsed.callerPhone) : undefined,
         callerNumber,
       },
     };
