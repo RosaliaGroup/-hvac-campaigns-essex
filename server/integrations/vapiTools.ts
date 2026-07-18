@@ -8,6 +8,7 @@ import { findCustomerIdByPhone } from "../routers/customers";
 import { resolveAppointmentContext, matchPropertyByFreeText } from "../services/appointmentNormalization";
 import { formatPropertyAddress } from "@shared/address";
 import { notifyOwner } from "../_core/notification";
+import { lookupCallerInfo } from "./callerInfo";
 
 export interface VapiToolCallPayload {
   message: {
@@ -219,6 +220,14 @@ async function handleRescheduleAppointment(args: Record<string, string>): Promis
   });
 }
 
+/**
+ * getCallerInfo — Mechanical Enterprise ONLY caller lookup.
+ *
+ * All caller resolution, customer isolation, shared-number handling, and privacy
+ * filtering live in ./callerInfo. This handler only preserves the Vapi tool
+ * contract: it validates input and serializes the minimal result. There is no
+ * Rosalia lookup and no cross-project call anywhere in this path.
+ */
 async function handleGetCallerInfo(args: Record<string, string>): Promise<string> {
   const { phone } = args;
 
@@ -226,38 +235,6 @@ async function handleGetCallerInfo(args: Record<string, string>): Promise<string
     return JSON.stringify({ found: false, error: "Phone number required" });
   }
 
-  // Look up existing appointment
-  const appointment = await db.getAppointmentByPhone(phone);
-  
-  // Also look up lead captures
-  const leadCaptures = await db.getAllLeadCaptures({ limit: 5 });
-  const matchingLead = leadCaptures.find(lc => lc.phone === phone || lc.phone?.replace(/\D/g, "") === phone.replace(/\D/g, ""));
-
-  if (appointment) {
-    return JSON.stringify({
-      found: true,
-      name: appointment.fullName,
-      phone: appointment.phone,
-      email: appointment.email || "",
-      hasExistingAppointment: true,
-      lastAppointmentDate: appointment.preferredDate,
-      lastAppointmentTime: appointment.preferredTime,
-      lastAppointmentStatus: appointment.status,
-      appointmentType: appointment.appointmentType,
-    });
-  }
-
-  if (matchingLead) {
-    const name = matchingLead.name || [matchingLead.firstName, matchingLead.lastName].filter(Boolean).join(" ") || "";
-    return JSON.stringify({
-      found: true,
-      name,
-      phone: matchingLead.phone || phone,
-      email: matchingLead.email || "",
-      hasExistingAppointment: false,
-      source: matchingLead.captureType,
-    });
-  }
-
-  return JSON.stringify({ found: false });
+  const info = await lookupCallerInfo(phone);
+  return JSON.stringify(info);
 }
