@@ -35,6 +35,11 @@ vi.mock("../services/appointmentInvites", () => ({
   replaceAttendees: (...a: unknown[]) => replaceAttendeesMock(...a),
   syncAppointmentInvites: (...a: unknown[]) => syncAppointmentInvitesMock(...a),
 }));
+// Confirmation SMS is exercised in vapiBookHvac.confirmation.test.ts; here it is
+// mocked to a no-op so these routing/idempotency tests stay deterministic.
+vi.mock("../services/appointmentSms", () => ({
+  sendAppointmentConfirmationSms: vi.fn(async () => ({ sent: false, reason: "test-noop" })),
+}));
 
 import { handleBookHVAC, parseBookHvacArgs } from "./vapiBookHvac";
 

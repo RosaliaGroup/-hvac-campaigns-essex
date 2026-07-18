@@ -38,6 +38,7 @@ import { findCustomerIdByPhone } from "../routers/customers";
 import { parsePreferredDateTime } from "../services/appointmentTime";
 import { notifyOwner } from "../_core/notification";
 import { normalizeAttendees, replaceAttendees, syncAppointmentInvites } from "../services/appointmentInvites";
+import { sendAppointmentConfirmationSms } from "../services/appointmentSms";
 import { resolveAppointmentContext, matchPropertyByFreeText } from "../services/appointmentNormalization";
 import { formatPropertyAddress, isCompleteAddress } from "@shared/address";
 import type { InsertAppointment } from "../../drizzle/schema";
@@ -170,12 +171,38 @@ export function parseBookHvacArgs(args: BookHvacArgs): { ok: true; value: Parsed
   };
 }
 
-/** Safe structured success payload returned to Vapi (JSON-stringified by the caller). */
-function successPayload(booking: ParsedBooking, appointmentId: number) {
+/** Outcome of the customer confirmation SMS, surfaced honestly to the assistant. */
+type ConfirmationOutcome =
+  | { kind: "sent" }
+  | { kind: "not_sent"; reason?: string }
+  | { kind: "duplicate" }; // idempotent retry — original booking already handled the text
+
+/**
+ * Safe structured success payload returned to Vapi (JSON-stringified by the caller).
+ * The booking is already saved (success:true), but the message + `confirmationSms`
+ * field reflect whether a confirmation text actually sent, so the assistant NEVER
+ * claims a text is on the way when none was sent (e.g. invalid/opted-out number).
+ */
+function successPayload(booking: ParsedBooking, appointmentId: number, confirmation: ConfirmationOutcome) {
+  const base = `Appointment booked for ${booking.fullName} on ${booking.preferredDate} at ${booking.preferredTime}.`;
+  let smsPart: string;
+  let confirmationSms: "sent" | "not_sent" | "duplicate";
+  if (confirmation.kind === "sent") {
+    smsPart = " A confirmation text is on the way.";
+    confirmationSms = "sent";
+  } else if (confirmation.kind === "duplicate") {
+    smsPart = " You're already booked — no need to rebook.";
+    confirmationSms = "duplicate";
+  } else {
+    smsPart = " I couldn't send a confirmation text to that number — please double-check the phone.";
+    confirmationSms = "not_sent";
+  }
   return {
     success: true,
-    message: `Appointment booked for ${booking.fullName} on ${booking.preferredDate} at ${booking.preferredTime}. Confirmation will be sent shortly.`,
+    message: base + smsPart,
     appointmentId: `ME-${appointmentId}`,
+    confirmationSms,
+    ...(confirmation.kind === "not_sent" && confirmation.reason ? { confirmationReason: confirmation.reason } : {}),
   };
 }
 
@@ -238,7 +265,8 @@ export async function handleBookHVAC(rawArgs: BookHvacArgs, vapiCallId?: string)
         });
     if (existing) {
       console.log(`${LOG} duplicate booking ignored (idempotent) for ${tag} → appointment ${existing.id}`);
-      return JSON.stringify(successPayload(booking, existing.id));
+      // Idempotent retry: do NOT re-send a confirmation (no duplicate SMS).
+      return JSON.stringify(successPayload(booking, existing.id, { kind: "duplicate" }));
     }
   } catch (e) {
     // A failed dedupe lookup must not block a booking; log and continue.
@@ -383,5 +411,28 @@ export async function handleBookHVAC(rawArgs: BookHvacArgs, vapiCallId?: string)
     console.warn(`${LOG} owner notification failed for appointment ${appointmentId}: ${(e as Error).message}`);
   }
 
-  return JSON.stringify(successPayload(booking, appointmentId));
+  // ── Customer confirmation SMS via the EXISTING Telnyx confirmation service
+  //    (opt-out aware; never throws; invalid/ambiguous numbers fail safe via
+  //    toE164 and are never guessed). The appointment is already saved, so an SMS
+  //    failure does NOT fail the booking — but its outcome is surfaced so the
+  //    assistant never claims a text that didn't send. Telnyx-only. ──
+  const confirmation = await sendAppointmentConfirmationSms(
+    {
+      fullName: resolvedFullName,
+      phone: resolvedPhone,
+      appointmentType: booking.appointmentType,
+      scheduledAt: scheduledAt ?? null,
+      preferredDate: booking.preferredDate,
+      preferredTime: booking.preferredTime,
+    },
+    {},
+  );
+
+  return JSON.stringify(
+    successPayload(
+      booking,
+      appointmentId,
+      confirmation.sent ? { kind: "sent" } : { kind: "not_sent", reason: confirmation.reason },
+    ),
+  );
 }

@@ -79,6 +79,15 @@ export interface SendFormResult {
   error?: string;
   /** True when a matching send already existed and we skipped re-sending. */
   deduplicated?: boolean;
+  /**
+   * Explicit outcome so the assistant NEVER claims a text was sent unless one
+   * truly left: "sent" (or already-sent), "skipped" (gated), "failed".
+   */
+  status: "sent" | "skipped" | "failed";
+  /** Machine-readable reason (invalid_phone, opted_out, already_sent, send_failed, …). */
+  reason?: string;
+  /** Telnyx provider message id — present only when a new message actually sent. */
+  providerMessageId?: string;
 }
 
 function normalizeType(type: string | null | undefined): SendFormType {
@@ -216,13 +225,14 @@ export async function sendMechanicalFormLink(
   try {
     // 1) Missing number.
     if (!input.phone || !String(input.phone).trim()) {
-      return { success: false, smsSent: false, error: "Phone number required" };
+      return { success: false, smsSent: false, status: "failed", reason: "missing_phone", error: "Phone number required" };
     }
 
-    // 2) Normalize + validate (E.164 US). Invalid numbers never send.
+    // 2) Normalize + validate (E.164 US). Invalid/ambiguous numbers never send
+    //    and are never guessed — they fail explicitly.
     const to = toE164(String(input.phone));
     if (!to) {
-      return { success: false, smsSent: false, error: "Invalid phone number" };
+      return { success: false, smsSent: false, status: "failed", reason: "invalid_phone", error: "Invalid phone number" };
     }
 
     const type = normalizeType(input.type);
@@ -232,12 +242,12 @@ export async function sendMechanicalFormLink(
     // 3) Consent / suppression gate + contact linkage.
     const { contactId, optedOut } = await deps.lookupContact(to);
     if (optedOut) {
-      return { success: false, smsSent: false, formUrl, error: "Recipient has opted out of SMS" };
+      return { success: false, smsSent: false, formUrl, status: "skipped", reason: "opted_out", error: "Recipient has opted out of SMS" };
     }
 
-    // 4) DB idempotency — skip a duplicate Vapi retry.
+    // 4) DB idempotency — skip a duplicate Vapi retry (no second send).
     if (await deps.alreadySent(to, message)) {
-      return { success: true, smsSent: true, formUrl, deduplicated: true, message: "Form link already sent" };
+      return { success: true, smsSent: true, formUrl, deduplicated: true, status: "skipped", reason: "already_sent", message: "Form link already sent" };
     }
 
     // 5) Send via the active Telnyx service (only messaging dependency).
@@ -245,7 +255,7 @@ export async function sendMechanicalFormLink(
     if (!result.success) {
       // Log a masked phone + provider error server-side; return a SAFE message.
       console.warn(`[VapiSendForm] Telnyx send failed for ${maskPhone(to)}: ${result.error ?? "unknown"}`);
-      return { success: false, smsSent: false, formUrl, error: "Message could not be sent right now" };
+      return { success: false, smsSent: false, formUrl, status: "failed", reason: "send_failed", error: "Message could not be sent right now" };
     }
 
     // 6) Record in shared message history (non-fatal — the SMS already left, so a
@@ -256,11 +266,11 @@ export async function sendMechanicalFormLink(
       console.error("[VapiSendForm] message-history write failed (send already succeeded):", (err as Error).message);
     }
 
-    return { success: true, smsSent: true, formUrl, message: "Form link sent" };
+    return { success: true, smsSent: true, formUrl, status: "sent", providerMessageId: result.messageId, message: "Form link sent" };
   } catch (err) {
     // Absolute backstop — never break the voice call, never leak detail.
     console.error("[VapiSendForm] Unexpected error:", (err as Error).message);
-    return { success: false, smsSent: false, error: "Message could not be sent right now" };
+    return { success: false, smsSent: false, status: "failed", reason: "internal_error", error: "Message could not be sent right now" };
   }
 }
 
@@ -323,9 +333,23 @@ export function extractSendFormCall(
   return null;
 }
 
-/** Minimal, PII-free result surface returned to Vapi/Jessica. */
-export function vapiResult(r: SendFormResult): { success: boolean; smsSent: boolean; formUrl?: string } {
-  return { success: r.success, smsSent: r.smsSent, ...(r.formUrl ? { formUrl: r.formUrl } : {}) };
+/**
+ * Minimal, PII-free result surface returned to Vapi/Jessica. Leads with an
+ * explicit `status` (sent | skipped | failed) so the assistant can never claim a
+ * text is on the way unless one actually sent. `providerMessageId` is present
+ * only for a real send; `reason` carries the machine-readable skip/fail cause.
+ */
+export function vapiResult(
+  r: SendFormResult,
+): { status: "sent" | "skipped" | "failed"; success: boolean; smsSent: boolean; reason?: string; providerMessageId?: string; formUrl?: string } {
+  return {
+    status: r.status,
+    success: r.success,
+    smsSent: r.smsSent,
+    ...(r.reason ? { reason: r.reason } : {}),
+    ...(r.status === "sent" && r.providerMessageId ? { providerMessageId: r.providerMessageId } : {}),
+    ...(r.formUrl ? { formUrl: r.formUrl } : {}),
+  };
 }
 
 function safeEqual(provided: string | undefined, expected: string): boolean {
