@@ -18,6 +18,7 @@ import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
 import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
+import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -64,6 +65,8 @@ async function startServer() {
   registerGa4SyncRoutes(app);
   // Local SEO — Google Business Profile sync (POST /api/gbp/sync)
   registerGbpSyncRoutes(app);
+  // Vapi (Jessica) end-of-call recap — persist to Mechanical CRM + notify (POST /api/vapi/call-recap)
+  registerVapiRecapRoute(app);
   // tRPC API
   app.use(
     "/api/trpc",

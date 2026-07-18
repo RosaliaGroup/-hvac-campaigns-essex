@@ -9,6 +9,8 @@ import { resolveAppointmentContext, matchPropertyByFreeText } from "../services/
 import { formatPropertyAddress } from "@shared/address";
 import { notifyOwner } from "../_core/notification";
 import { lookupCallerInfo } from "./callerInfo";
+import { buildRecapRecord, persistCallRecap, type CallRecapInput } from "./callRecap";
+import { productionRecapDeps } from "./vapiRecapRoute";
 
 export interface VapiToolCallPayload {
   message: {
@@ -55,6 +57,8 @@ export async function handleVapiToolCalls(payload: VapiToolCallPayload): Promise
         result = await handleRescheduleAppointment(args);
       } else if (toolName === "getCallerInfo") {
         result = await handleGetCallerInfo(args);
+      } else if (toolName === "sendCallRecap") {
+        result = await handleSendCallRecap(args, payload.message.call?.id);
       } else {
         result = JSON.stringify({ success: false, error: `Unknown tool: ${toolName}` });
       }
@@ -237,4 +241,25 @@ async function handleGetCallerInfo(args: Record<string, string>): Promise<string
 
   const info = await lookupCallerInfo(phone);
   return JSON.stringify(info);
+}
+
+/**
+ * sendCallRecap — persist the end-of-call recap to Mechanical Enterprise and
+ * notify the office. All logic lives in ./callRecap (Mechanical-only: Resend
+ * email, Telnyx SMS, CRM persistence, idempotency). No Rosalia dependency.
+ *
+ * The Vapi call id (from the tool-call envelope) is the idempotency key so a
+ * retried tool call never creates a duplicate recap/email/SMS.
+ */
+async function handleSendCallRecap(args: Record<string, string>, vapiCallId?: string): Promise<string> {
+  const input = { ...(args as unknown as CallRecapInput) };
+  if (vapiCallId && !input.call_id && !input.vapiCallId) input.call_id = vapiCallId;
+
+  const record = buildRecapRecord(input);
+  if (record.callerName === "Unknown caller" || !record.rawPhone) {
+    return JSON.stringify({ success: false, error: "Name and phone are required" });
+  }
+
+  const result = await persistCallRecap(record, productionRecapDeps());
+  return JSON.stringify(result);
 }
