@@ -11,7 +11,6 @@ import {
   mechanicalSmsFrom,
   inboxPhoneMatch,
 } from "../services/smsOutbound";
-import { resolveConversationCrm } from "../services/smsCrmContext";
 import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
@@ -647,23 +646,6 @@ export const smsCampaignsRouter = router({
         .limit(1);
       const optedOut = await isPhoneOptedOut(db, input.phone);
       return { optedOut, isContact: !!contact, contactId: contact?.id ?? null, fromNumber };
-    }),
-
-  // Phase 2A: CRM context for a conversation — lead/customer/properties/upcoming
-  // appointment/open job resolved by normalized phone. Read-only; loaded async by
-  // the inbox AFTER the thread opens so it never delays messages or replies.
-  conversationCrmContext: protectedProcedure
-    .input(z.object({
-      phone: z.string(),
-      customerId: z.number().nullable().optional(),
-      propertyId: z.number().nullable().optional(),
-    }))
-    .query(async ({ input }) => {
-      const db = await requireDb();
-      return resolveConversationCrm(db, input.phone, {
-        customerId: input.customerId ?? undefined,
-        propertyId: input.propertyId ?? undefined,
-      });
     }),
 
   getConversations: protectedProcedure.query(async () => {
