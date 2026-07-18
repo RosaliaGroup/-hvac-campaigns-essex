@@ -1387,7 +1387,7 @@ export const appRouter = router({
         return { success: true };
       }),
 
-    // Vapi tool-calls webhook (Jessica's bookAppointment / rescheduleAppointment / getCallerInfo)
+    // Vapi tool-calls webhook (Jessica's canonical tools: bookHVAC / rescheduleHVAC / getCallerInfo / sendReferralLink)
     vapiTools: publicProcedure
       .input(z.any())
       .mutation(async ({ input }) => {

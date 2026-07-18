@@ -6,12 +6,6 @@
  * the Mechanical Vapi assistant (see canonical dispatcher below). sendForm and
  * sendCallRecap are served by their own authenticated routes, not this dispatcher.
  */
-import * as db from "../db";
-import { parsePreferredDateTime } from "../services/appointmentTime";
-import { findCustomerIdByPhone } from "../routers/customers";
-import { resolveAppointmentContext, matchPropertyByFreeText } from "../services/appointmentNormalization";
-import { formatPropertyAddress } from "@shared/address";
-import { notifyOwner } from "../_core/notification";
 import { lookupCallerInfo } from "./callerInfo";
 import { sendCustomerReferralLink } from "../services/referralSms";
 import { rescheduleForVapi, type RescheduleRequest } from "../services/rescheduleAppointment";
@@ -56,12 +50,13 @@ export async function handleVapiToolCalls(payload: VapiToolCallPayload): Promise
     let result = "";
 
     try {
-      if (toolName === "bookAppointment") {
-        result = await handleBookAppointment(args, payload.message.call?.id);
-      } else if (toolName === "bookHVAC") {
+      // Canonical Mechanical Vapi tools ONLY. Legacy bookAppointment /
+      // rescheduleAppointment are intentionally NOT dispatched here so they can
+      // never be reached by the assistant — bookHVAC / rescheduleHVAC replace them.
+      if (toolName === "bookHVAC") {
         // Mechanical-only HVAC booking (Rosalia-isolated). See ./vapiBookHvac.
         result = await handleBookHVAC(args, payload.message.call?.id);
-      } else if (toolName === "rescheduleAppointment") {
+      } else if (toolName === "rescheduleHVAC") {
         result = await handleRescheduleAppointment(args, payload.message.call?.id);
       } else if (toolName === "getCallerInfo") {
         result = await handleGetCallerInfo(args);
@@ -79,126 +74,6 @@ export async function handleVapiToolCalls(payload: VapiToolCallPayload): Promise
   }
 
   return { results };
-}
-
-async function handleBookAppointment(args: Record<string, string>, vapiCallId?: string): Promise<string> {
-  const {
-    full_name,
-    phone,
-    email,
-    property_address,
-    property_type,
-    appointment_type,
-    preferred_date,
-    preferred_time,
-    issue_description,
-  } = args;
-
-  // Validate required fields
-  if (!full_name || !phone || !appointment_type || !preferred_date || !preferred_time) {
-    return JSON.stringify({
-      success: false,
-      error: "Missing required fields: full_name, phone, appointment_type, preferred_date, preferred_time",
-    });
-  }
-
-  // Validate appointment type
-  const validTypes = ["free_consultation", "technician_dispatch", "maintenance_plan", "commercial_assessment"] as const;
-  const apptType = appointment_type as typeof validTypes[number];
-  if (!validTypes.includes(apptType)) {
-    return JSON.stringify({ success: false, error: `Invalid appointment_type: ${appointment_type}` });
-  }
-
-  // Phase 1 upgrade: best-effort parse into a real datetime + auto-link customer.
-  // Both are non-fatal — Jessica's booking must never fail because of them.
-  let scheduledAt: Date | undefined;
-  let customerId: number | undefined;
-  try {
-    scheduledAt = parsePreferredDateTime(preferred_date, preferred_time) ?? undefined;
-  } catch { /* leave unscheduled — surfaces in calendar backlog */ }
-  try {
-    customerId = (await findCustomerIdByPhone(phone)) ?? undefined;
-  } catch { /* unlinked is fine */ }
-
-  // Route through the shared normalization: resolve an existing customer/property,
-  // persist customerId + propertyId when matched, and keep the free-text address as
-  // a fallback when no CRM record matches. Never creates customers/properties.
-  // Non-fatal — Jessica's booking must never fail because of resolution.
-  let resolvedFullName = full_name;
-  let resolvedPhone = phone;
-  let resolvedEmail: string | undefined = email || undefined;
-  let resolvedPropertyType: "residential" | "commercial" = property_type === "commercial" ? "commercial" : "residential";
-  let resolvedAddress: string | undefined = property_address || undefined;
-  let propertyId: number | undefined;
-  try {
-    const dbi = await db.getDb();
-    if (dbi) {
-      const ctx = await resolveAppointmentContext(dbi, {
-        customerId: customerId ?? null,
-        propertyId: null,
-        fullName: full_name,
-        phone,
-        email: email || null,
-        propertyAddress: property_address || null,
-        propertyType: resolvedPropertyType,
-      });
-      customerId = ctx.customerId ?? customerId;
-      propertyId = ctx.propertyId ?? undefined;
-      resolvedFullName = ctx.fullName ?? full_name;
-      resolvedPhone = ctx.phone ?? phone;
-      resolvedEmail = ctx.email ?? resolvedEmail;
-      resolvedPropertyType = ctx.propertyType ?? resolvedPropertyType;
-      resolvedAddress = ctx.propertyAddress ?? resolvedAddress;
-      // If a free-text address was given and no structured property resolved yet,
-      // try to match one of the customer's properties by that address text.
-      if (customerId && !propertyId && property_address?.trim()) {
-        const matched = await matchPropertyByFreeText(dbi, customerId, property_address);
-        if (matched) {
-          propertyId = matched.id;
-          resolvedAddress = formatPropertyAddress(matched);
-        }
-      }
-    }
-  } catch { /* resolution is best-effort; fall back to free-text */ }
-
-  // Save to database
-  await db.createAppointment({
-    fullName: resolvedFullName,
-    phone: resolvedPhone,
-    email: resolvedEmail,
-    propertyAddress: resolvedAddress,
-    propertyType: resolvedPropertyType,
-    appointmentType: apptType,
-    preferredDate: preferred_date,
-    preferredTime: preferred_time,
-    scheduledAt,
-    customerId,
-    propertyId,
-    issueDescription: issue_description || undefined,
-    status: "pending",
-    bookedBy: "jessica",
-    source: "phone",
-    vapiCallId: vapiCallId || undefined,
-  });
-
-  // Notify owner
-  const typeLabels: Record<string, string> = {
-    free_consultation: "Free Consultation",
-    technician_dispatch: "Technician Dispatch",
-    maintenance_plan: "Maintenance Plan",
-    commercial_assessment: "Commercial Assessment",
-  };
-
-  await notifyOwner({
-    title: `📅 New Appointment Booked by Jessica — ${typeLabels[appointment_type] || appointment_type}`,
-    content: `Jessica (AI assistant) just booked a new appointment:\n\nName: ${full_name}\nPhone: ${phone}\nEmail: ${email || "Not provided"}\nAddress: ${property_address || "Not provided"}\nProperty Type: ${property_type || "residential"}\nAppointment Type: ${typeLabels[appointment_type] || appointment_type}\nDate: ${preferred_date}\nTime: ${preferred_time}\nIssue: ${issue_description || "Not specified"}\n\nLog in to your dashboard to confirm and prepare.`,
-  });
-
-  return JSON.stringify({
-    success: true,
-    message: `Appointment booked for ${full_name} on ${preferred_date} at ${preferred_time}. Confirmation will be sent shortly.`,
-    appointmentId: `ME-${Date.now()}`,
-  });
 }
 
 /**
