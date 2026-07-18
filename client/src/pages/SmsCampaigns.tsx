@@ -1105,10 +1105,12 @@ function SmsInboxTab() {
   // Find selected conversation
   const selectedConv = conversations.find((c) => c.key === selectedConvKey);
 
-  // Get messages for selected conversation
+  // Get messages for the selected conversation. Key on the phone number, not the
+  // contactId — a thread must load even when the number is not a saved contact
+  // (contactId null). Enabled for ANY selected conversation.
   const { data: messages = [], isLoading: msgsLoading, refetch: refetchMsgs } = trpc.smsCampaigns.listInboxMessages.useQuery(
-    { contactId: selectedConv?.contactId ?? undefined, limit: 100 },
-    { enabled: !!selectedConv?.contactId }
+    { phone: selectedConv?.phone, contactId: selectedConv?.contactId ?? undefined, limit: 100 },
+    { enabled: !!selectedConv }
   );
 
   // Sort messages ascending for conversation view
@@ -1153,8 +1155,12 @@ function SmsInboxTab() {
   function selectConversation(key: string) {
     setSelectedConvKey(key);
     const conv = conversations.find((c) => c.key === key);
-    if (conv?.contactId && conv.unreadCount > 0) {
-      markReadMutation.mutate({ contactId: conv.contactId });
+    if (conv && conv.unreadCount > 0) {
+      // Mark read by PHONE (the conversation identity). A contact-linked thread
+      // can still contain unread rows with contactId null (arrived before the
+      // number was linked); marking by contactId would leave those unread, so we
+      // always scope by phone to clear the whole number's history.
+      markReadMutation.mutate({ phone: conv.phone });
     }
   }
 
