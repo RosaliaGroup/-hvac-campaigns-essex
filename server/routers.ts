@@ -7,8 +7,10 @@ import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_
 import { enforceRateLimit, getClientIp, HOUR_MS } from "./_core/rateLimit";
 import { z } from "zod";
 import * as db from "./db";
+import { TRPCError } from "@trpc/server";
 import { handleVapiWebhook } from "./integrations/vapi";
 import { handleVapiToolCalls } from "./integrations/vapiTools";
+import { authenticateVapiToolCall } from "./integrations/vapiToolAuth";
 import { handleIncomingSms } from "./integrations/aiVaSms";
 import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
@@ -1388,7 +1390,23 @@ export const appRouter = router({
       }),
 
     // Vapi tool-calls webhook (Jessica's canonical tools: bookHVAC / rescheduleHVAC / getCallerInfo / sendReferralLink)
+    // AuthN runs as middleware — BEFORE input parsing or any tool execution — so an
+    // unauthenticated caller can never reach the dispatcher. Reuses VAPI_WEBHOOK_SECRET
+    // via `Authorization: Bearer <secret>` (constant-time; fail-closed if unset).
     vapiTools: publicProcedure
+      .use(async ({ ctx, next }) => {
+        const auth = authenticateVapiToolCall(ctx.req?.headers?.authorization);
+        if (!auth.ok) {
+          if (auth.reason === "not_configured") {
+            console.error(
+              "[VapiTools] VAPI_WEBHOOK_SECRET not configured — refusing tool-calls webhook (fail-closed)",
+            );
+          }
+          // Never reveal whether the failure was config vs. bad credential.
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+        }
+        return next();
+      })
       .input(z.any())
       .mutation(async ({ input }) => {
         const result = await handleVapiToolCalls(input);
