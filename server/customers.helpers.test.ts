@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { appointmentMatchesLead, buildDisplayName, normalizePhone, relationshipForEntity, splitName } from "./routers/customers";
+import {
+  appointmentMatchesLead,
+  appointmentQualifiesForRelink,
+  buildDisplayName,
+  normalizePhone,
+  relationshipForEntity,
+  splitName,
+} from "./routers/customers";
 
 describe("customers helpers — normalizePhone", () => {
   it("strips formatting and keeps last 10 digits", () => {
@@ -62,6 +69,29 @@ describe("customers helpers — appointmentMatchesLead (appointment appears unde
   });
   it("does not cross-link two different people who both lack contact keys", () => {
     expect(appointmentMatchesLead({ customerId: null, phone: null, email: null }, { customerId: null, phone: null, email: null })).toBe(false);
+  });
+});
+
+describe("customers helpers — appointmentQualifiesForRelink (lead conversion relinking)", () => {
+  const target = { phone: "(862) 419-1763", email: "Hector@Example.com" };
+
+  it("relinks an unlinked appointment that matches on phone", () => {
+    expect(appointmentQualifiesForRelink({ customerId: null, phone: "+1 862-419-1763", email: null }, target)).toBe(true);
+  });
+  it("relinks an unlinked appointment that matches on email (case-insensitive)", () => {
+    expect(appointmentQualifiesForRelink({ customerId: null, phone: null, email: "hector@example.com" }, target)).toBe(true);
+  });
+  it("does NOT touch an appointment already linked to a customer, even if it matches", () => {
+    expect(appointmentQualifiesForRelink({ customerId: 99, phone: "862-419-1763", email: null }, target)).toBe(false);
+  });
+  it("does NOT touch a nonmatching unlinked appointment", () => {
+    expect(appointmentQualifiesForRelink({ customerId: null, phone: "973-000-0000", email: "someone@else.com" }, target)).toBe(false);
+  });
+  it("does not relink when the appointment has no contact keys", () => {
+    expect(appointmentQualifiesForRelink({ customerId: null, phone: null, email: null }, target)).toBe(false);
+  });
+  it("does not relink when the target lead has no contact keys", () => {
+    expect(appointmentQualifiesForRelink({ customerId: null, phone: "862-419-1763", email: "x@y.com" }, { phone: null, email: null })).toBe(false);
   });
 });
 

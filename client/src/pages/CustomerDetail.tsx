@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
+import { customerAppointmentDefaults } from "@/lib/appointmentDefaults";
 import { JOB_STATUS_META, formatMoney } from "@/lib/jobPresentation";
 import { resolveCustomerIdentity } from "@/lib/customerIdentity";
 import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
@@ -108,6 +109,8 @@ export default function CustomerDetail() {
   const [propForm, setPropForm] = useState({ ...EMPTY_PROPERTY });
   const [apptOpen, setApptOpen] = useState(false);
   const [editingAppt, setEditingAppt] = useState<EditableAppointment | null>(null);
+  // Property explicitly chosen for a new appointment (null → prefill the primary property).
+  const [apptPropertyId, setApptPropertyId] = useState<number | null>(null);
 
   const updateCustomer = trpc.customers.update.useMutation({
     onSuccess: () => { toast({ title: "Customer updated" }); setEditOpen(false); refetch(); },
@@ -322,6 +325,7 @@ export default function CustomerDetail() {
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0">
+                    <Button size="sm" variant="outline" onClick={() => { setEditingAppt(null); setApptPropertyId(p.id); setApptOpen(true); }}><Calendar className="h-4 w-4 mr-1" /> Schedule</Button>
                     <Button size="icon" variant="ghost" onClick={() => openEditProperty(p)}><Pencil className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" onClick={() => deleteProperty.mutate({ id: p.id })}><Trash2 className="h-4 w-4 text-red-500" /></Button>
                   </div>
@@ -378,7 +382,7 @@ export default function CustomerDetail() {
               captures={captures}
               callLogs={callLogs}
               rebates={rebateCalculations}
-              onNewAppointment={() => { setEditingAppt(null); setApptOpen(true); }}
+              onNewAppointment={() => { setEditingAppt(null); setApptPropertyId(null); setApptOpen(true); }}
               onEditAppointment={a => { setEditingAppt(a as unknown as EditableAppointment); setApptOpen(true); }}
             />
           </TabsContent>
@@ -537,15 +541,11 @@ export default function CustomerDetail() {
         onClose={() => setApptOpen(false)}
         onSaved={() => refetch()}
         appointment={editingAppt}
-        defaults={{
-          customerId,
-          fullName: customer.displayName,
-          phone: customer.phone || "",
-          email: customer.email || "",
-          propertyType: customer.type,
-          propertyAddress: properties.find(p => p.isPrimary)?.addressLine1 || properties[0]?.addressLine1 || "",
-          propertyId: properties.find(p => p.isPrimary)?.id ?? properties[0]?.id,
-        }}
+        defaults={customerAppointmentDefaults(
+          { id: customerId, displayName: customer.displayName, phone: customer.phone, email: customer.email, type: customer.type },
+          properties,
+          apptPropertyId,
+        )}
       />
     </DashboardLayout>
   );

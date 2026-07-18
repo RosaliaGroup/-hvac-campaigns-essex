@@ -5,6 +5,8 @@ import {
   appointmentSummary,
   appointmentDescription,
 } from "./appointmentInvites";
+import { buildIcs } from "./ics";
+import { mapToGoogleEvent } from "../integrations/google/calendar";
 
 describe("isValidEmail", () => {
   it("accepts real addresses and rejects junk", () => {
@@ -82,5 +84,67 @@ describe("appointment summary/description", () => {
     expect(desc).toContain("Assigned Technician\nMike R.");
     expect(desc).toContain("Additional Technicians\nSam T.");
     expect(desc.endsWith("Booked via Mechanical Enterprise CRM")).toBe(true);
+  });
+
+  it("includes the appointment's job description (issueDescription) in the body", () => {
+    const desc = appointmentDescription({
+      fullName: "Jane Doe",
+      phone: "862-555-0100",
+      email: "jane@example.com",
+      propertyAddress: "500 Main St",
+      appointmentType: "service_call",
+      serviceType: null,
+      issueDescription: "No heat on second floor; furnace short-cycling",
+      notes: "Gate code 4432",
+    });
+    expect(desc).toContain("Job Description\nNo heat on second floor; furnace short-cycling");
+    // Job description is distinct from internal notes; both appear.
+    expect(desc).toContain("Notes\nGate code 4432");
+  });
+
+  it("carries the job description into both the Google Calendar event and the ICS invite", () => {
+    const appt = {
+      fullName: "Jane Doe",
+      phone: "862-555-0100",
+      email: "jane@example.com",
+      propertyAddress: "500 Main St",
+      appointmentType: "service_call" as const,
+      serviceType: null,
+      issueDescription: "No heat on second floor",
+      notes: null,
+    };
+    const description = appointmentDescription(appt);
+    const start = new Date("2026-07-08T19:53:00.000Z");
+    const end = new Date("2026-07-08T20:53:00.000Z");
+
+    // Google Calendar path (mapToGoogleEvent receives the same description string).
+    const event = mapToGoogleEvent({
+      summary: appointmentSummary(appt),
+      description,
+      location: appt.propertyAddress,
+      scheduledAt: start,
+      durationMinutes: 60,
+      attendees: [{ email: "jane@example.com" }],
+    });
+    expect(event.description).toContain("Job Description\nNo heat on second floor");
+
+    // ICS fallback path.
+    const ics = buildIcs({
+      uid: "appointment-1@mechanicalenterprise.com",
+      sequence: 0,
+      method: "REQUEST",
+      start,
+      end,
+      summary: appointmentSummary(appt),
+      description,
+      location: appt.propertyAddress,
+      organizer: { email: "ops@mechanicalenterprise.com", name: "Mechanical Enterprise" },
+      attendees: [{ email: "jane@example.com" }],
+      dtstamp: new Date("2026-07-07T12:00:00.000Z"),
+    });
+    // Unfold RFC5545 continuation lines before asserting on the logical DESCRIPTION value.
+    const unfolded = ics.replace(/\r\n /g, "");
+    expect(unfolded).toContain("Job Description");
+    expect(unfolded).toContain("No heat on second floor");
   });
 });

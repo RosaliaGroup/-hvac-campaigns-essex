@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { LEAD_CHANNELS, filterLeadsByChannel, type LeadChannel } from "@/lib/leadChannels";
 import DashboardLayout from "@/components/DashboardLayout";
 import AppointmentDialog from "@/components/AppointmentDialog";
+import { leadAppointmentDefaults } from "@/lib/appointmentDefaults";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -470,11 +471,15 @@ function LeadDetailModal({
             open={scheduleOpen}
             onClose={() => setScheduleOpen(false)}
             onSaved={() => { onStatusUpdate(lead.id, "assessment_scheduled"); setScheduleOpen(false); }}
-            defaults={{
+            defaults={leadAppointmentDefaults({
               fullName: getLeadName(lead),
-              phone: lead.phone || "",
-              email: lead.email || "",
-            }}
+              phone: lead.phone,
+              email: lead.email,
+              // Only carry an actual requested-service message into the job description;
+              // don't leak the channel-label fallback (e.g. "Phone Call") into invites.
+              requestedService: lead.message?.trim() || "",
+              customerId: lead.customerId,
+            })}
           />
         )}
       </DialogContent>
