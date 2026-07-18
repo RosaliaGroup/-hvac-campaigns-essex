@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatPropertyAddress } from "./address";
+import { formatPropertyAddress, missingAddressParts, isCompleteAddress } from "./address";
 
 describe("formatPropertyAddress (shared)", () => {
   it("composes a full single-line address", () => {
@@ -13,5 +13,39 @@ describe("formatPropertyAddress (shared)", () => {
   it("returns empty string for missing input", () => {
     expect(formatPropertyAddress(null)).toBe("");
     expect(formatPropertyAddress(undefined)).toBe("");
+  });
+});
+
+const complete = { addressLine1: "61 1/2 Merchant St", city: "Newark", state: "NJ", zip: "07105" };
+
+describe("missingAddressParts / isCompleteAddress", () => {
+  it("a complete property address has no missing parts", () => {
+    expect(missingAddressParts(complete)).toEqual([]);
+    expect(isCompleteAddress(complete)).toBe(true);
+  });
+  it("a property with a Unit is complete and formats the unit", () => {
+    const withUnit = { ...complete, addressLine2: "Apt 3B" };
+    expect(isCompleteAddress(withUnit)).toBe(true);
+    expect(formatPropertyAddress(withUnit)).toBe("61 1/2 Merchant St, Apt 3B, Newark, NJ 07105");
+  });
+  it("detects missing Street", () => {
+    expect(missingAddressParts({ city: "Newark", state: "NJ", zip: "07105" })).toEqual(["Street"]);
+  });
+  it("detects missing City", () => {
+    expect(missingAddressParts({ ...complete, city: null })).toEqual(["City"]);
+  });
+  it("detects missing State", () => {
+    expect(missingAddressParts({ ...complete, state: "  " })).toEqual(["State"]);
+  });
+  it("detects missing ZIP", () => {
+    expect(missingAddressParts({ ...complete, zip: "" })).toEqual(["ZIP"]);
+  });
+  it("lists multiple missing parts in display order", () => {
+    expect(missingAddressParts({ addressLine1: "61 1/2 Merchant St" })).toEqual(["City", "State", "ZIP"]);
+    expect(isCompleteAddress({ addressLine1: "61 1/2 Merchant St" })).toBe(false);
+  });
+  it("the reported partial address (street only) is flagged incomplete", () => {
+    expect(missingAddressParts({ addressLine1: "61 1/2 Merchant St" })).toContain("City");
+    expect(missingAddressParts({ addressLine1: "61 1/2 Merchant St" })).toContain("ZIP");
   });
 });

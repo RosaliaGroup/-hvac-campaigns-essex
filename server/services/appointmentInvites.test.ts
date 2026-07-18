@@ -7,6 +7,31 @@ import {
 } from "./appointmentInvites";
 import { buildIcs } from "./ics";
 import { mapToGoogleEvent } from "../integrations/google/calendar";
+import { normalizeAppointmentFields } from "./appointmentNormalization";
+
+describe("calendar/ICS location comes from the normalized property address", () => {
+  const customer = { id: 7, displayName: "Jane", phone: "862-555-0100", email: "jane@x.com", type: "residential" as const };
+  const property = { id: 20, customerId: 7, addressLine1: "61 1/2 Merchant St", addressLine2: "Apt 3B", city: "Newark", state: "NJ", zip: "07105", propertyType: "residential" as const };
+
+  it("Google + ICS location use the full property address (incl. Unit), never a partial street", () => {
+    // A partial address is typed, but a property is linked → normalization makes it authoritative.
+    const ctx = normalizeAppointmentFields({ customerId: 7, propertyId: 20, propertyAddress: "61 1/2 Merchant St" }, { customer, property });
+    const FULL = "61 1/2 Merchant St, Apt 3B, Newark, NJ 07105";
+    expect(ctx.propertyAddress).toBe(FULL);
+
+    const appt = { fullName: "Jane", phone: "862-555-0100", email: "jane@x.com", propertyAddress: ctx.propertyAddress, appointmentType: "service_call", serviceType: null, issueDescription: "No heat", notes: null };
+    const desc = appointmentDescription(appt as any);
+    const start = new Date("2026-09-20T18:00:00Z");
+    const ev = mapToGoogleEvent({ summary: appointmentSummary(appt as any), description: desc, location: appt.propertyAddress, scheduledAt: start, durationMinutes: 60, attendees: [] });
+    expect(ev.location).toBe(FULL);
+    expect(String(ev.location)).not.toBe("61 1/2 Merchant St"); // never a partial street
+
+    const ics = buildIcs({ uid: "x@y", sequence: 0, method: "REQUEST", start, end: new Date("2026-09-20T19:00:00Z"), summary: "S", description: desc, location: appt.propertyAddress!, organizer: { email: "o@x.com", name: "M" }, attendees: [], dtstamp: new Date("2026-09-01T00:00:00Z") });
+    const unf = ics.replace(/\r\n /g, "");
+    // ICS escapes commas per RFC5545 (\,); assert the escaped full location is present.
+    expect(unf).toContain("LOCATION:61 1/2 Merchant St\\, Apt 3B\\, Newark\\, NJ 07105");
+  });
+});
 
 describe("isValidEmail", () => {
   it("accepts real addresses and rejects junk", () => {

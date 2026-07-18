@@ -39,7 +39,7 @@ import { parsePreferredDateTime } from "../services/appointmentTime";
 import { notifyOwner } from "../_core/notification";
 import { normalizeAttendees, replaceAttendees, syncAppointmentInvites } from "../services/appointmentInvites";
 import { resolveAppointmentContext, matchPropertyByFreeText } from "../services/appointmentNormalization";
-import { formatPropertyAddress } from "@shared/address";
+import { formatPropertyAddress, isCompleteAddress } from "@shared/address";
 import type { InsertAppointment } from "../../drizzle/schema";
 
 const LOG = "[VapiBookHVAC]";
@@ -290,7 +290,9 @@ export async function handleBookHVAC(rawArgs: BookHvacArgs, vapiCallId?: string)
       // address returns null → keep the free text and DON'T guess a property.
       if (customerId && !propertyId && booking.propertyAddress?.trim()) {
         const matched = await matchPropertyByFreeText(dbi, customerId, booking.propertyAddress);
-        if (matched) {
+        // Only link a matched property when its address is complete; otherwise keep the
+        // caller's free text rather than persist a partial property link.
+        if (matched && isCompleteAddress(matched)) {
           propertyId = matched.id;
           resolvedAddress = formatPropertyAddress(matched);
         }

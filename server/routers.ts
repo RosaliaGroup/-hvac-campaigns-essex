@@ -1086,7 +1086,10 @@ export const appRouter = router({
           });
           patch.customerId = resolved.customerId ?? null;
           patch.propertyId = resolved.propertyId ?? null;
-          if (patch.propertyAddress === undefined && resolved.propertyAddress) patch.propertyAddress = resolved.propertyAddress;
+          // When a property is linked, its authoritative address ALWAYS wins — even over a
+          // typed value in this patch. Otherwise only backfill a blank address.
+          if (resolved.propertyId != null) patch.propertyAddress = resolved.propertyAddress ?? null;
+          else if (patch.propertyAddress === undefined && resolved.propertyAddress) patch.propertyAddress = resolved.propertyAddress;
           if (resolved.propertyType) patch.propertyType = resolved.propertyType;
         }
 

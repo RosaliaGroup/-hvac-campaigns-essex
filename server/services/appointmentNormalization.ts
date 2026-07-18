@@ -12,7 +12,7 @@
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { customers, properties, type Customer, type Property } from "../../drizzle/schema";
-import { formatPropertyAddress } from "@shared/address";
+import { formatPropertyAddress, isCompleteAddress, missingAddressParts } from "@shared/address";
 import type { getDb } from "../db";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -78,9 +78,11 @@ export function normalizeAppointmentFields(
     fullName: fillBlank(input.fullName, customer?.displayName),
     phone: fillBlank(input.phone, customer?.phone),
     email: blank(input.email) ? (customer?.email ?? null) : input.email!.trim(),
-    propertyAddress: blank(input.propertyAddress)
-      ? (property ? formatPropertyAddress(property) : (input.propertyAddress ?? null))
-      : input.propertyAddress!.trim(),
+    // When a property is linked, its formatted address is AUTHORITATIVE — typed text
+    // never overrides it. Without a property, use the (trimmed) manual entry.
+    propertyAddress: property
+      ? formatPropertyAddress(property)
+      : (blank(input.propertyAddress) ? (input.propertyAddress ?? null) : input.propertyAddress!.trim()),
     propertyType: (property?.propertyType as "residential" | "commercial" | undefined) ?? input.propertyType ?? undefined,
   };
 }
@@ -104,14 +106,26 @@ export async function resolveAppointmentContext(db: Db, input: AppointmentContex
   if (input.propertyId != null) {
     property = (await db.select().from(properties).where(eq(properties.id, input.propertyId)).limit(1))[0] ?? null;
     if (!property) throw new TRPCError({ code: "NOT_FOUND", message: `Property ${input.propertyId} not found.` });
+    // An explicitly-linked property MUST have a complete service address, otherwise the
+    // appointment (and its calendar/ICS location) would carry a partial address. Reject
+    // the save and name the missing fields so the property can be completed first.
+    const missing = missingAddressParts(property);
+    if (missing.length) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `This property's service address is incomplete — missing ${missing.join(", ")}. Update the property before scheduling.`,
+      });
+    }
   } else if (customer && blank(input.propertyAddress)) {
-    // Resolve existing linked property (primary → first) to backfill location.
-    property = (await db
+    // Auto-resolve the customer's primary → first property to backfill the location,
+    // but ONLY link it when its address is complete (never auto-link a partial address).
+    const primary = (await db
       .select()
       .from(properties)
       .where(eq(properties.customerId, customer.id))
       .orderBy(desc(properties.isPrimary), desc(properties.createdAt))
       .limit(1))[0] ?? null;
+    if (primary && isCompleteAddress(primary)) property = primary;
   }
 
   return normalizeAppointmentFields(input, { customer, property });
