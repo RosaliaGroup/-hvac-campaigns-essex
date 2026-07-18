@@ -393,6 +393,13 @@
       "when": 1784400415947,
       "tag": "0055_conversation_crm_links",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "5",
+      "when": 1784411635742,
+      "tag": "0056_job_lifecycle",
+      "breakpoints": true
     }
   ]
 }

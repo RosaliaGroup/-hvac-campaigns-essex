@@ -1208,6 +1208,16 @@ export const jobs = mysqlTable(
       .notNull(),
     quickbooksSyncedAt: timestamp("quickbooksSyncedAt"),
     quickbooksSyncError: text("quickbooksSyncError"),
+    // ── Canonical job lifecycle (0055, ADDITIVE / shadow mode) ──
+    // Derived from status + technicianWorkStatus + appointments by the single
+    // reducer in shared/jobLifecycle.ts. Nullable until backfilled; NOTHING reads
+    // this yet (legacy status fields remain authoritative). Audit in jobLifecycleEvents.
+    lifecycleState: mysqlEnum("lifecycleState", [
+      "new", "scheduled", "dispatched", "in_progress", "on_hold",
+      "work_complete", "invoiced", "paid", "closed", "cancelled",
+    ]),
+    lifecycleReason: varchar("lifecycleReason", { length: 255 }),
+    lifecycleUpdatedAt: timestamp("lifecycleUpdatedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
@@ -1569,6 +1579,38 @@ export const jobWorkStatusEvents = mysqlTable(
     jobIdx: index("jobWorkStatusEvents_jobId_idx").on(table.jobId),
   }),
 );
+
+/**
+ * Canonical job-lifecycle audit trail (0055). One row per real transition of
+ * `jobs.lifecycleState`. `idempotencyKey` is UNIQUE so duplicate webhooks / retries
+ * collapse to a single row. Unifies (going forward) what jobStatusHistory +
+ * jobWorkStatusEvents record separately; both legacy tables are retained read-only.
+ */
+export const jobLifecycleEvents = mysqlTable(
+  "jobLifecycleEvents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId").notNull(),
+    /** Prior canonical state; null for the first (backfill/initial) entry. */
+    fromState: varchar("fromState", { length: 32 }),
+    toState: varchar("toState", { length: 32 }).notNull(),
+    /** What drove the recompute: office | field | completion | appointment | qbo | portal | backfill | manual. */
+    source: varchar("source", { length: 32 }).notNull(),
+    /** Actor identity (nullable for system/backfill). */
+    actorId: int("actorId"),
+    actorRole: varchar("actorRole", { length: 32 }),
+    actorName: varchar("actorName", { length: 255 }),
+    reason: varchar("reason", { length: 255 }),
+    /** Dedup token; UNIQUE. sha1(jobId|from|to|source|eventKey). */
+    idempotencyKey: varchar("idempotencyKey", { length: 191 }).notNull().unique(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    jobIdx: index("jobLifecycleEvents_jobId_idx").on(table.jobId),
+  }),
+);
+export type JobLifecycleEvent = typeof jobLifecycleEvents.$inferSelect;
+export type InsertJobLifecycleEvent = typeof jobLifecycleEvents.$inferInsert;
 export type JobWorkStatusEvent = typeof jobWorkStatusEvents.$inferSelect;
 export type InsertJobWorkStatusEvent = typeof jobWorkStatusEvents.$inferInsert;
 
