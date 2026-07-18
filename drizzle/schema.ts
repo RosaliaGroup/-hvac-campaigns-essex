@@ -590,6 +590,30 @@ export type SmsInboxMessage = typeof smsInboxMessages.$inferSelect;
 export type InsertSmsInboxMessage = typeof smsInboxMessages.$inferInsert;
 
 /**
+ * SMS Conversation ↔ CRM links (Phase 2). One row per phone conversation
+ * (keyed by phoneLast10), storing the CONFIRMED CRM entity a conversation is
+ * linked to plus a remembered property selection. Links are only written on
+ * explicit user action — ambiguous matches are never auto-linked and existing
+ * links are never overwritten without confirmation. Appointment/job/estimate/
+ * invoice are derived from the linked customer at read time (not stored here).
+ */
+export const smsConversationLinks = mysqlTable("smsConversationLinks", {
+  id: int("id").autoincrement().primaryKey(),
+  phoneLast10: varchar("phoneLast10", { length: 10 }).notNull(), // conversation identity
+  customerId: int("customerId"),        // → customers.id (the primary "who")
+  leadId: int("leadId"),                // → leads.id
+  leadCaptureId: int("leadCaptureId"),  // → leadCaptures.id (richer web lead)
+  propertyId: int("propertyId"),        // → properties.id (remembered selection)
+  linkedByName: varchar("linkedByName", { length: 255 }), // who confirmed the link
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  phoneLast10Idx: uniqueIndex("smsConversationLinks_phoneLast10_uq").on(table.phoneLast10),
+}));
+export type SmsConversationLink = typeof smsConversationLinks.$inferSelect;
+export type InsertSmsConversationLink = typeof smsConversationLinks.$inferInsert;
+
+/**
  * SMS Webhook Events — idempotency ledger for inbound + delivery-status
  * webhooks. Telnyx stamps each delivery with a unique top-level `data.id`;
  * Telnyx (and carriers) can redeliver the same event. We record the event id
