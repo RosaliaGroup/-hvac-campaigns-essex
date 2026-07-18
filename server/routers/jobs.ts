@@ -488,6 +488,13 @@ export const jobsRouter = router({
       const { job, memberId } = await resolveFieldJobAccess(db, input.id, ctx.user);
       const current = (job.technicianWorkStatus ?? DEFAULT_WORK_STATUS) as TechnicianWorkStatus;
       if (input.status === current) return { success: true, status: current, unchanged: true };
+      // Completion is atomic and only via jobs.completeJob (stamps actuals +
+      // writes the jobCompletions snapshot + enforces note/signature). The generic
+      // status control must never set `completed` (that produced a partial-
+      // completion glitch). Defense-in-depth even though TRANSITIONS excludes it.
+      if (input.status === "completed") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Finish a work order with the Complete Job action, not the status control." });
+      }
       if (!canTransitionWorkStatus(current, input.status)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: `Cannot move from ${current} to ${input.status}.` });
       }

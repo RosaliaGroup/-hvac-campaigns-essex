@@ -3,8 +3,32 @@ import {
   NOTE_TYPES, PHOTO_CATEGORIES, PHOTO_CATEGORY_LABEL, isPhotoCategory,
   SUPPORTED_IMAGE_MIME, isSupportedImageType, base64ByteLength,
   parseImageDataUrl, validatePhotoUpload, canEditNote, MAX_STORED_PHOTO_BYTES,
+  filterCustomerVisibleNotes, isCustomerVisibleNote,
   type NoteType,
 } from "./jobMedia";
+
+describe("internal notes are staff-only (customer-visible filter)", () => {
+  const notes = [
+    { id: 1, visibility: "internal", body: "SECRET staff-only note" },
+    { id: 2, visibility: "customer", body: "Replaced the capacitor" },
+    { id: 3, visibility: "internal", body: "customer was rude" },
+  ];
+  it("filterCustomerVisibleNotes returns ONLY customer notes", () => {
+    const visible = filterCustomerVisibleNotes(notes);
+    expect(visible.map(n => n.id)).toEqual([2]);
+    // No internal content survives.
+    expect(JSON.stringify(visible)).not.toContain("SECRET");
+    expect(JSON.stringify(visible)).not.toContain("rude");
+    expect(visible.every(n => n.visibility === "customer")).toBe(true);
+  });
+  it("isCustomerVisibleNote is true only for customer notes", () => {
+    expect(isCustomerVisibleNote({ visibility: "customer" })).toBe(true);
+    expect(isCustomerVisibleNote({ visibility: "internal" })).toBe(false);
+    // Unknown/legacy visibilities are treated as NOT customer-visible (fail safe).
+    expect(isCustomerVisibleNote({ visibility: "" })).toBe(false);
+    expect(isCustomerVisibleNote({ visibility: "private" })).toBe(false);
+  });
+});
 
 // Small valid base64 (a few bytes) as a JPEG data URL.
 const TINY = "/9j/4AAQSkZJRg=="; // arbitrary valid base64

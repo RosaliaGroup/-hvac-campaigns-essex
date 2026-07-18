@@ -69,17 +69,22 @@ describe("WorkOrderNotes — timeline with type / edited badges", () => {
       ],
     };
     const html = render(createElement(WorkOrderNotes, { jobId: 1 }));
-    expect(html).toContain("Customer");
-    expect(html).toContain("Internal");
+    // Two clearly-separated, labeled sections (not adjacent tabs).
+    expect(html).toContain("Internal Notes");
+    expect(html).toContain("Staff Only");
+    expect(html).toContain("Customer Notes");
+    expect(html).toContain("Customer Visible");
     expect(html).toContain("Edited");
-    expect(html).toContain("Replaced capacitor.");
+    expect(html).toContain("Replaced capacitor."); // customer note in the Customer section
+    expect(html).toContain("Gate code 4417.");      // internal note in the Internal section
     expect(html).toContain("Tech Alpha");
     expect(html).toContain("Edit"); // editable note shows an Edit control
   });
 
-  it("shows the empty state when there are no notes", () => {
+  it("shows a per-section empty state when there are no notes", () => {
     fixtures["jobs.fieldListNotes"] = { jobCompleted: false, notes: [] };
     const html = render(createElement(WorkOrderNotes, { jobId: 1 }));
-    expect(html).toContain("No notes yet");
+    expect(html).toContain("No internal notes yet");
+    expect(html).toContain("No customer notes yet");
   });
 });
