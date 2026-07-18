@@ -536,7 +536,7 @@ export default function JobDetail() {
           <CardContent className="space-y-3">
             {attachments.map(a => (
               <div key={a.id} className="flex items-center justify-between gap-2 border rounded-lg p-2 text-sm">
-                <a href={a.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[#1e3a5f] hover:underline">
+                <a href={a.url ?? undefined} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[#1e3a5f] hover:underline">
                   <Paperclip className="h-3.5 w-3.5" /> {a.fileName} <Badge variant="secondary">{a.kind}</Badge>
                 </a>
                 <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteAttachment.mutate({ id: a.id })}><Trash2 className="h-3.5 w-3.5 text-red-500" /></Button>

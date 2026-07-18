@@ -1288,7 +1288,12 @@ export const jobNotes = mysqlTable(
     visibility: mysqlEnum("visibility", ["internal", "customer"]).default("internal").notNull(),
     /** teamMembers.id who wrote the note. Nullable for system notes. */
     authorId: int("authorId"),
+    /** Optional single photo attached to this note (jobAttachments.id). */
+    attachmentId: int("attachmentId"),
+    /** True once the note has been edited after creation (drives the "Edited" badge). */
+    edited: boolean("edited").default(false).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
   table => ({
     jobIdx: index("jobNotes_jobId_idx").on(table.jobId),
@@ -1307,13 +1312,21 @@ export const jobAttachments = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     jobId: int("jobId").notNull(),
     kind: mysqlEnum("kind", ["photo", "document", "other"]).default("photo").notNull(),
+    /** Job-photo category (PR #40). Only meaningful for kind = "photo". */
+    category: mysqlEnum("category", ["before", "during", "after", "general"]).default("general").notNull(),
     fileName: varchar("fileName", { length: 255 }).notNull(),
-    /** URL or storage path/key to the file. */
-    url: varchar("url", { length: 1024 }).notNull(),
+    /**
+     * External URL/storage path when the binary lives outside the DB (legacy /
+     * office attachments). NULL for field photos, whose bytes live in
+     * jobAttachmentBlobs and are served only through the authorized endpoint.
+     */
+    url: varchar("url", { length: 1024 }),
     mimeType: varchar("mimeType", { length: 128 }),
     sizeBytes: int("sizeBytes"),
     /** teamMembers.id who uploaded. Nullable. */
     uploadedById: int("uploadedById"),
+    /** Optional link to the note this photo is attached to (jobNotes.id). */
+    noteId: int("noteId"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => ({
@@ -1322,6 +1335,31 @@ export const jobAttachments = mysqlTable(
 );
 export type JobAttachment = typeof jobAttachments.$inferSelect;
 export type InsertJobAttachment = typeof jobAttachments.$inferInsert;
+
+/**
+ * Binary store for field-uploaded job photos, kept in a SEPARATE table from the
+ * jobAttachments metadata so list/gallery queries never pull image bytes (avoids
+ * bloating the hot path). One row per attachment; the compressed image is stored
+ * as a base64 data payload and served only via the access-controlled endpoint
+ * (jobs.fieldGetPhoto), never by a guessable public URL. This blob column is the
+ * seam where object storage (server/storage.ts) would slot in at scale — the
+ * metadata table and the authorized retrieval API stay identical.
+ */
+export const jobAttachmentBlobs = mysqlTable(
+  "jobAttachmentBlobs",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    attachmentId: int("attachmentId").notNull().unique(),
+    /** Base64 (no data: prefix) of the compressed image. */
+    data: mediumtext("data").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    attachmentIdx: index("jobAttachmentBlobs_attachmentId_idx").on(table.attachmentId),
+  }),
+);
+export type JobAttachmentBlob = typeof jobAttachmentBlobs.$inferSelect;
+export type InsertJobAttachmentBlob = typeof jobAttachmentBlobs.$inferInsert;
 
 /**
  * Job status history — one row per status transition, for the audit trail on

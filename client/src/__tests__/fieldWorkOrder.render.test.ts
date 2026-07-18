@@ -12,18 +12,30 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 const { wo } = vi.hoisted(() => ({ wo: { data: null as unknown } }));
 
-vi.mock("@/lib/trpc", () => ({
-  trpc: {
-    jobs: {
-      fieldWorkOrder: {
-        useQuery: () => ({ data: wo.data, isLoading: false, isError: false, error: null, refetch() {} }),
-      },
-      setTechnicianWorkStatus: {
-        useMutation: () => ({ mutate() {}, isPending: false, variables: undefined }),
-      },
+vi.mock("@/lib/trpc", () => {
+  // FieldWorkOrder now embeds the Notes + Photos sections, which call several
+  // procedures + useUtils. A proxy handles them all; the work-order query reads
+  // `wo.data`, and the embedded sections default to empty.
+  const q = (key: string) => {
+    if (key === "jobs.fieldWorkOrder") return { data: wo.data, isLoading: false, isError: false, error: null, refetch() {} };
+    if (key === "jobs.fieldListNotes") return { data: { jobCompleted: false, notes: [] }, isLoading: false, isError: false, error: null, refetch() {} };
+    if (key === "jobs.fieldListPhotos") return { data: { photos: [] }, isLoading: false, isError: false, error: null, refetch() {} };
+    return { data: undefined, isLoading: false, isError: false, error: null, refetch() {} };
+  };
+  const proc = (key: string) => ({
+    useQuery: () => q(key),
+    useMutation: () => ({ mutate() {}, mutateAsync: async () => ({}), isPending: false, variables: undefined, reset() {} }),
+  });
+  const deep = (): unknown => new Proxy(() => {}, { get: () => deep(), apply: () => Promise.resolve() });
+  const trpc = new Proxy({}, {
+    get: (_t, ns) => {
+      const s = String(ns);
+      if (s === "useUtils" || s === "useContext") return () => deep();
+      return new Proxy({}, { get: (_t2, p) => proc(`${s}.${String(p)}`) });
     },
-  },
-}));
+  });
+  return { trpc };
+});
 vi.mock("wouter", () => ({
   useParams: () => ({ id: "1" }),
   useLocation: () => ["/field/jobs/1", () => {}],
@@ -86,8 +98,8 @@ describe("FieldWorkOrder — empty history states", () => {
     wo.data = makeData({ history: { visits: [], notes: [], photos: [] } });
     const html = render();
     expect(html).toContain("No prior visits.");
-    expect(html).toContain("No notes yet.");
-    expect(html).toContain("No photos.");
+    expect(html).toContain("No notes yet."); // Notes section (PR #40) empty state
+    expect(html).toContain("No photos yet"); // Photos section (PR #40) empty state
   });
 });
 
