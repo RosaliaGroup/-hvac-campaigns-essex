@@ -187,11 +187,73 @@ describe("extractSendFormCall — Vapi envelope parsing", () => {
   });
 });
 
-describe("vapiResult — minimal PII-free surface", () => {
-  it("returns only success/smsSent/formUrl (no error, message, phone, or email)", () => {
-    const out = vapiResult({ success: false, smsSent: false, formUrl: "https://mechanicalenterprise.com/qualify", error: "Recipient has opted out of SMS", message: "x" });
-    expect(out).toEqual({ success: false, smsSent: false, formUrl: "https://mechanicalenterprise.com/qualify" });
+describe("vapiResult — explicit status, PII-free surface", () => {
+  it("surfaces status + machine reason but never error text, message, phone, or email", () => {
+    const out = vapiResult({ success: false, smsSent: false, status: "skipped", reason: "opted_out", formUrl: "https://mechanicalenterprise.com/qualify", error: "Recipient has opted out of SMS", message: "x" });
+    expect(out).toEqual({ status: "skipped", success: false, smsSent: false, reason: "opted_out", formUrl: "https://mechanicalenterprise.com/qualify" });
     expect(JSON.stringify(out)).not.toMatch(/opted out/i);
+  });
+
+  it("includes providerMessageId only on a real send", () => {
+    const sent = vapiResult({ success: true, smsSent: true, status: "sent", providerMessageId: "telnyx_9", formUrl: "u" });
+    expect(sent).toMatchObject({ status: "sent", providerMessageId: "telnyx_9" });
+    const failed = vapiResult({ success: false, smsSent: false, status: "failed", reason: "invalid_phone" });
+    expect(failed).not.toHaveProperty("providerMessageId");
+  });
+});
+
+describe("sendForm — explicit sent/skipped/failed status (incident regression)", () => {
+  // 11 digits, does NOT start with 1 → not a usable US/E.164 number.
+  const INVALID_11 = { phone: "364-622-69189", type: "booking" };
+
+  it("FAILS (invalid_phone) on an 11-digit non-E.164 number and never sends or guesses", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink(INVALID_11, deps);
+    expect(r).toMatchObject({ status: "failed", reason: "invalid_phone", success: false, smsSent: false });
+    expect(send(deps)).not.toHaveBeenCalled(); // never attempted — no guessed destination
+  });
+
+  it("does NOT report a false success when the SMS did not send", async () => {
+    const r = await sendMechanicalFormLink(INVALID_11, makeDeps());
+    expect(r.success).toBe(false);
+    expect(r.smsSent).toBe(false);
+    expect(vapiResult(r).status).toBe("failed");
+  });
+
+  it("SKIPS (opted_out) when consent is missing, without sending", async () => {
+    const deps = makeDeps({ lookupContact: vi.fn(async () => ({ contactId: 1, optedOut: true })) });
+    const r = await sendMechanicalFormLink(CONSENTED, deps);
+    expect(r).toMatchObject({ status: "skipped", reason: "opted_out", success: false, smsSent: false });
+    expect(send(deps)).not.toHaveBeenCalled();
+  });
+
+  it("FAILS (send_failed) on a Telnyx rejection, leaking no provider detail", async () => {
+    const deps = makeDeps({ send: vi.fn(async () => ({ success: false, error: "Telnyx 400: bad number" })) });
+    const r = await sendMechanicalFormLink(CONSENTED, deps);
+    expect(r).toMatchObject({ status: "failed", reason: "send_failed", success: false, smsSent: false });
+    expect(JSON.stringify(vapiResult(r))).not.toMatch(/telnyx|400/i);
+  });
+
+  it("SENDS with providerMessageId on a Telnyx-accepted response", async () => {
+    const deps = makeDeps({ send: vi.fn(async () => ({ success: true, messageId: "telnyx_abc" })) });
+    const r = await sendMechanicalFormLink(CONSENTED, deps);
+    expect(r).toMatchObject({ status: "sent", success: true, smsSent: true, providerMessageId: "telnyx_abc" });
+    expect(vapiResult(r)).toMatchObject({ status: "sent", providerMessageId: "telnyx_abc" });
+  });
+
+  it("never reports 'sent' on a 2xx-without-id (unverifiable) Telnyx response", async () => {
+    const deps = makeDeps({ send: vi.fn(async () => ({ success: true, messageId: undefined })) });
+    const r = await sendMechanicalFormLink(CONSENTED, deps);
+    expect(r).toMatchObject({ status: "failed", reason: "send_failed", success: false, smsSent: false });
+    expect(r.status).not.toBe("sent");
+    expect(vapiResult(r)).not.toHaveProperty("providerMessageId");
+  });
+
+  it("SKIPS (already_sent) on a duplicate retry without a second send", async () => {
+    const deps = makeDeps({ alreadySent: vi.fn(async () => true) });
+    const r = await sendMechanicalFormLink(CONSENTED, deps);
+    expect(r).toMatchObject({ status: "skipped", reason: "already_sent" });
+    expect(send(deps)).not.toHaveBeenCalled(); // no duplicate SMS
   });
 });
 
