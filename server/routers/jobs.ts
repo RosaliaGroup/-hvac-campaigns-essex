@@ -38,6 +38,7 @@ import {
   canAccessWorkOrder,
 } from "./jobsLogic";
 import { toPatch } from "../_core/zodPatch";
+import { recordJobLifecycleSafe, backfillAllJobLifecycles, buildReconciliationReport } from "../services/jobLifecycle";
 import { resolveTeamMemberId } from "../../shared/fieldApp";
 import {
   TECHNICIAN_WORK_STATUSES,
@@ -527,6 +528,8 @@ export const jobsRouter = router({
         jobId: job.id, fromStatus: current, toStatus: input.status,
         changedById: memberId ?? null, changedByName,
       });
+      // Shadow: keep the canonical lifecycle fresh (best-effort; never blocks).
+      await recordJobLifecycleSafe(job.id, { source: "field", eventKey: `field:${job.id}:${current}->${input.status}`, actorId: memberId ?? null, actorName: changedByName ?? null });
       return { success: true, status: input.status };
     }),
 
@@ -883,6 +886,9 @@ export const jobsRouter = router({
         // controlled error instead of leaking a raw DB failure to the field.
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Completing the job failed and no changes were saved. Please try again." });
       }
+      // Shadow: keep the canonical lifecycle fresh (best-effort; never blocks). OUTSIDE
+      // the atomic transaction so it can never affect completion.
+      await recordJobLifecycleSafe(input.jobId, { source: "completion", eventKey: `completion:${input.jobId}`, actorId: memberId ?? null, actorName: changedByName ?? null });
       return { success: true, completedAt: now };
     }),
 
@@ -1036,6 +1042,8 @@ export const jobsRouter = router({
       const patch: Record<string, unknown> = { status: input.status, ...statusTransitionStamps(input.status, existing, new Date()) };
       await db.update(jobs).set(patch).where(eq(jobs.id, input.id));
       await recordStatusChange(db, input.id, existing.status, input.status, ctx.user?.id ?? null, input.note);
+      // Shadow: keep the canonical lifecycle fresh (best-effort; never blocks).
+      await recordJobLifecycleSafe(input.id, { source: "office", eventKey: `office:${input.id}:${existing.status}->${input.status}`, actorId: ctx.user?.id ?? null, actorName: ctx.user?.name ?? null });
       return { success: true };
     }),
 
@@ -1286,4 +1294,17 @@ export const jobsRouter = router({
       await db.delete(jobTechnicians).where(eq(jobTechnicians.id, input.id));
       return { success: true };
     }),
+
+  // ── Canonical lifecycle ops (0055, shadow mode; admin only) ──
+  /** Backfill a canonical lifecycleState onto EVERY job. Idempotent; safe to re-run. */
+  backfillLifecycle: adminProcedure.mutation(async () => {
+    const db = await requireDb();
+    return await backfillAllJobLifecycles(db);
+  }),
+
+  /** Reconciliation report over 100% of jobs — flags legacy conflicts, never repairs. */
+  lifecycleReconciliation: adminProcedure.query(async () => {
+    const db = await requireDb();
+    return await buildReconciliationReport(db);
+  }),
 });
