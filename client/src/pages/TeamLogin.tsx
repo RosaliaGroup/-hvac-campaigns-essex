@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Lock, Mail, Wrench, Eye, EyeOff } from "lucide-react";
 import { Link } from "wouter";
+import { sanitizeReturnPath } from "@/const";
 
 export default function TeamLogin() {
   const [, setLocation] = useLocation();
@@ -18,8 +19,12 @@ export default function TeamLogin() {
   const [resetSent, setResetSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
+  // A `?return=` path is honored after login, but SANITIZED to a safe same-origin
+  // relative path (blocks open-redirects like `?return=//evil.com`). Absent → the
+  // dashboard home.
   const params = new URLSearchParams(useSearch());
-  const returnPath = params.get("return") ? decodeURIComponent(params.get("return")!) : "/command-center";
+  const rawReturn = params.get("return");
+  const returnPath = rawReturn ? sanitizeReturnPath(decodeURIComponent(rawReturn)) : "/command-center";
 
   const loginMutation = trpc.teamAuth.login.useMutation({
     onSuccess: () => {
