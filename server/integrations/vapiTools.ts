@@ -5,6 +5,8 @@
 import * as db from "../db";
 import { parsePreferredDateTime } from "../services/appointmentTime";
 import { findCustomerIdByPhone } from "../routers/customers";
+import { resolveAppointmentContext, matchPropertyByFreeText } from "../services/appointmentNormalization";
+import { formatPropertyAddress } from "@shared/address";
 import { notifyOwner } from "../_core/notification";
 
 export interface VapiToolCallPayload {
@@ -105,18 +107,60 @@ async function handleBookAppointment(args: Record<string, string>, vapiCallId?: 
     customerId = (await findCustomerIdByPhone(phone)) ?? undefined;
   } catch { /* unlinked is fine */ }
 
+  // Route through the shared normalization: resolve an existing customer/property,
+  // persist customerId + propertyId when matched, and keep the free-text address as
+  // a fallback when no CRM record matches. Never creates customers/properties.
+  // Non-fatal — Jessica's booking must never fail because of resolution.
+  let resolvedFullName = full_name;
+  let resolvedPhone = phone;
+  let resolvedEmail: string | undefined = email || undefined;
+  let resolvedPropertyType: "residential" | "commercial" = property_type === "commercial" ? "commercial" : "residential";
+  let resolvedAddress: string | undefined = property_address || undefined;
+  let propertyId: number | undefined;
+  try {
+    const dbi = await db.getDb();
+    if (dbi) {
+      const ctx = await resolveAppointmentContext(dbi, {
+        customerId: customerId ?? null,
+        propertyId: null,
+        fullName: full_name,
+        phone,
+        email: email || null,
+        propertyAddress: property_address || null,
+        propertyType: resolvedPropertyType,
+      });
+      customerId = ctx.customerId ?? customerId;
+      propertyId = ctx.propertyId ?? undefined;
+      resolvedFullName = ctx.fullName ?? full_name;
+      resolvedPhone = ctx.phone ?? phone;
+      resolvedEmail = ctx.email ?? resolvedEmail;
+      resolvedPropertyType = ctx.propertyType ?? resolvedPropertyType;
+      resolvedAddress = ctx.propertyAddress ?? resolvedAddress;
+      // If a free-text address was given and no structured property resolved yet,
+      // try to match one of the customer's properties by that address text.
+      if (customerId && !propertyId && property_address?.trim()) {
+        const matched = await matchPropertyByFreeText(dbi, customerId, property_address);
+        if (matched) {
+          propertyId = matched.id;
+          resolvedAddress = formatPropertyAddress(matched);
+        }
+      }
+    }
+  } catch { /* resolution is best-effort; fall back to free-text */ }
+
   // Save to database
   await db.createAppointment({
-    fullName: full_name,
-    phone,
-    email: email || undefined,
-    propertyAddress: property_address || undefined,
-    propertyType: (property_type === "commercial" ? "commercial" : "residential"),
+    fullName: resolvedFullName,
+    phone: resolvedPhone,
+    email: resolvedEmail,
+    propertyAddress: resolvedAddress,
+    propertyType: resolvedPropertyType,
     appointmentType: apptType,
     preferredDate: preferred_date,
     preferredTime: preferred_time,
     scheduledAt,
     customerId,
+    propertyId,
     issueDescription: issue_description || undefined,
     status: "pending",
     bookedBy: "jessica",

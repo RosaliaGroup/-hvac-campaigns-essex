@@ -52,6 +52,7 @@ import {
   syncAppointmentInvites,
   type AttendeeInput,
 } from "./services/appointmentInvites";
+import { resolveAppointmentContext } from "./services/appointmentNormalization";
 import { APPOINTMENT_TYPE_ENUM } from "../shared/appointmentTypes";
 import { and as dAnd, eq as dEq, or as dOr, sql as dSql, gte as dGte, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
 
@@ -938,13 +939,28 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const scheduled = new Date(input.scheduledAt);
-        const customerId = input.customerId ?? (await findCustomerIdByPhone(input.phone));
-        const values = {
+        const dbi = await db.getDb();
+        if (!dbi) throw new Error("Database not available");
+        // Server-side normalization: resolve authoritative customer/property, validate
+        // the propertyId↔customerId relationship, and backfill blank contact/address
+        // fields. Phone auto-link runs first so phone-matched customers also resolve.
+        const autoCustomerId = input.customerId ?? (await findCustomerIdByPhone(input.phone));
+        const resolved = await resolveAppointmentContext(dbi, {
+          customerId: autoCustomerId,
+          propertyId: input.propertyId,
           fullName: input.fullName,
           phone: input.phone,
-          email: input.email ?? undefined,
-          propertyAddress: input.propertyAddress ?? undefined,
+          email: input.email,
+          propertyAddress: input.propertyAddress,
           propertyType: input.propertyType,
+        });
+        const customerId = resolved.customerId;
+        const values = {
+          fullName: resolved.fullName ?? input.fullName,
+          phone: resolved.phone ?? input.phone,
+          email: resolved.email ?? undefined,
+          propertyAddress: resolved.propertyAddress ?? undefined,
+          propertyType: resolved.propertyType ?? input.propertyType,
           appointmentType: input.appointmentType,
           serviceType: input.serviceType ?? undefined,
           reminderMinutes: input.reminderMinutes ?? undefined,
@@ -958,8 +974,8 @@ export const appRouter = router({
           priority: input.priority,
           source: input.source ?? undefined,
           assignedToId: input.assignedToId ?? undefined,
-          customerId: customerId ?? undefined,
-          propertyId: input.propertyId ?? undefined,
+          customerId: resolved.customerId ?? undefined,
+          propertyId: resolved.propertyId ?? undefined,
           jobId: input.jobId ?? undefined,
           issueDescription: input.issueDescription ?? undefined,
           notes: input.notes ?? undefined,
@@ -1049,6 +1065,27 @@ export const appRouter = router({
         if (patch.phone && input.customerId === undefined && !existing.customerId) {
           const linked = await findCustomerIdByPhone(patch.phone as string);
           if (linked) patch.customerId = linked;
+        }
+
+        // When a customer/property linkage is being set, validate the
+        // propertyId↔customerId relationship (reject mismatches) and backfill the
+        // location from the linked property if the user didn't type one.
+        if (input.propertyId !== undefined || input.customerId !== undefined) {
+          const effCustomerId = input.customerId !== undefined ? input.customerId : ((patch.customerId as number | undefined) ?? existing.customerId ?? null);
+          const effPropertyId = input.propertyId !== undefined ? input.propertyId : (existing.propertyId ?? null);
+          const resolved = await resolveAppointmentContext(dbi, {
+            customerId: effCustomerId,
+            propertyId: effPropertyId,
+            fullName: (patch.fullName as string) ?? existing.fullName,
+            phone: (patch.phone as string) ?? existing.phone,
+            email: (patch.email as string | null) ?? existing.email,
+            propertyAddress: (patch.propertyAddress as string | null) ?? existing.propertyAddress,
+            propertyType: (patch.propertyType as "residential" | "commercial") ?? existing.propertyType,
+          });
+          patch.customerId = resolved.customerId ?? null;
+          patch.propertyId = resolved.propertyId ?? null;
+          if (patch.propertyAddress === undefined && resolved.propertyAddress) patch.propertyAddress = resolved.propertyAddress;
+          if (resolved.propertyType) patch.propertyType = resolved.propertyType;
         }
 
         if (Object.keys(patch).length > 0) {

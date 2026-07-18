@@ -11,6 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import ContactCombobox, { type SchedulingContact } from "@/components/ContactCombobox";
+import AddContactModal, { type CreatedContact } from "@/components/AddContactModal";
+import { pickAppointmentProperty } from "@/lib/appointmentDefaults";
+import { X } from "lucide-react";
 import {
   APPOINTMENT_TYPES,
   SERVICE_TYPES,
@@ -119,6 +123,20 @@ export default function AppointmentDialog({
     { enabled: open && Boolean(appointment?.id) },
   );
 
+  // ── Customer/Lead + property linkage (searchable selection) ──────────────────
+  const [linkedCustomerId, setLinkedCustomerId] = useState<number | null>(null);
+  const [linkedLabel, setLinkedLabel] = useState<string>("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+  // True once the operator actively links via combobox/property/new-contact, so an
+  // edit only re-writes linkage the user deliberately changed.
+  const [linkTouched, setLinkTouched] = useState(false);
+  const [addContactOpen, setAddContactOpen] = useState(false);
+  const { data: propData } = trpc.customers.listProperties.useQuery(
+    { customerId: linkedCustomerId ?? 0 },
+    { enabled: open && linkedCustomerId != null },
+  );
+  const linkedProperties = propData?.properties ?? [];
+
   // Attendee/invite state (Task 8)
   const [inviteTeamIds, setInviteTeamIds] = useState<number[]>([]);
   const [externalEmails, setExternalEmails] = useState("");
@@ -193,8 +211,36 @@ export default function AppointmentDialog({
         sendConfirmation: true,
       }));
     }
+    // Initialize linkage. Create mode seeds from `defaults` (customer/property cards);
+    // edit mode starts unlinked (server preserves the appointment's existing linkage
+    // unless the operator picks a new contact/property here).
+    if (appointment) {
+      setLinkedCustomerId(null);
+      setLinkedLabel("");
+      setSelectedPropertyId(null);
+      setLinkTouched(false);
+    } else {
+      setLinkedCustomerId(defaults?.customerId ?? null);
+      setLinkedLabel(defaults?.customerId ? (defaults?.fullName || "Linked customer") : "");
+      setSelectedPropertyId(defaults?.propertyId ?? null);
+      setLinkTouched(false);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, appointment?.id]);
+
+  // Auto-select the primary (then first) property once a linked customer's
+  // properties load — unless a specific property was already chosen (defaults or override).
+  useEffect(() => {
+    if (!open || linkedCustomerId == null || linkedProperties.length === 0) return;
+    if (selectedPropertyId != null && linkedProperties.some(p => p.id === selectedPropertyId)) return;
+    const chosenId = pickAppointmentProperty(linkedProperties, selectedPropertyId)?.id;
+    const chosen = linkedProperties.find(p => p.id === chosenId);
+    if (chosen) {
+      setSelectedPropertyId(chosen.id);
+      setForm(f => ({ ...f, propertyAddress: chosen.address, propertyType: chosen.propertyType }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, linkedCustomerId, linkedProperties.length]);
 
   // Prefill attendee controls (create → empty; edit → from stored attendees).
   useEffect(() => {
@@ -247,6 +293,54 @@ export default function AppointmentDialog({
 
   const saving = create.isPending || update.isPending;
 
+  // ── Selection handlers ───────────────────────────────────────────────────────
+  const applyContact = (c: SchedulingContact) => {
+    setLinkTouched(true);
+    setForm(f => ({ ...f, fullName: c.displayName || f.fullName, phone: c.phone || "", email: c.email || "", propertyType: c.propertyType }));
+    if (c.customerId != null) {
+      // Customer, or a CONVERTED lead → link + load properties (primary auto-selected).
+      setLinkedCustomerId(c.customerId);
+      setLinkedLabel(c.displayName);
+      setSelectedPropertyId(null);
+      if (c.address) setForm(f => ({ ...f, propertyAddress: c.address }));
+    } else {
+      // Unconverted lead → contact fields only; keep customerId unset so the server
+      // preserves its existing phone/email auto-link behavior.
+      setLinkedCustomerId(null);
+      setLinkedLabel(`${c.displayName} · lead`);
+      setSelectedPropertyId(null);
+    }
+  };
+
+  const applyProperty = (propId: string) => {
+    const p = linkedProperties.find(x => String(x.id) === propId);
+    setLinkTouched(true);
+    setSelectedPropertyId(p ? p.id : null);
+    if (p) setForm(f => ({ ...f, propertyAddress: p.address, propertyType: p.propertyType }));
+  };
+
+  const clearLink = () => {
+    setLinkTouched(true);
+    setLinkedCustomerId(null);
+    setLinkedLabel("");
+    setSelectedPropertyId(null);
+  };
+
+  const onContactCreated = (c: CreatedContact) => {
+    setLinkTouched(true);
+    setLinkedCustomerId(c.customerId);
+    setLinkedLabel(c.customer?.displayName || "New contact");
+    setSelectedPropertyId(c.propertyId ?? null);
+    setForm(f => ({
+      ...f,
+      fullName: c.customer?.displayName || f.fullName,
+      phone: c.customer?.phone || f.phone,
+      email: c.customer?.email || f.email,
+      propertyType: (c.property?.propertyType || c.customer?.type || f.propertyType) as "residential" | "commercial",
+      propertyAddress: c.property?.address || f.propertyAddress,
+    }));
+  };
+
   const handleSave = () => {
     if (!form.fullName.trim() || !form.phone.trim()) {
       toast({ title: "Name and phone are required", variant: "destructive" });
@@ -295,18 +389,60 @@ export default function AppointmentDialog({
       sendInvites,
     };
     if (isEdit && appointment) {
-      update.mutate({ id: appointment.id, ...shared });
+      // Only re-write linkage the operator deliberately changed this session.
+      update.mutate({
+        id: appointment.id,
+        ...shared,
+        ...(linkTouched ? { customerId: linkedCustomerId, propertyId: selectedPropertyId } : {}),
+      });
     } else {
-      create.mutate({ ...shared, customerId: defaults?.customerId ?? null, propertyId: defaults?.propertyId ?? null, jobId: defaults?.jobId ?? null });
+      create.mutate({ ...shared, customerId: linkedCustomerId ?? null, propertyId: selectedPropertyId ?? null, jobId: defaults?.jobId ?? null });
     }
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit Appointment" : "New Appointment"}</DialogTitle>
         </DialogHeader>
+
+        {/* Link to an existing customer/lead (searchable) or create a new contact. */}
+        <div className="space-y-2 rounded-md border p-3">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs text-muted-foreground">Customer / Lead</Label>
+            {linkedCustomerId != null && (
+              <button type="button" onClick={clearLink} className="flex items-center gap-1 text-xs text-muted-foreground hover:underline">
+                <X className="h-3 w-3" /> Unlink
+              </button>
+            )}
+          </div>
+          {linkedCustomerId != null ? (
+            <div className="text-sm font-medium truncate">{linkedLabel || "Linked customer"}</div>
+          ) : (
+            <ContactCombobox triggerLabel={linkedLabel || undefined} onSelect={applyContact} onNewContact={() => setAddContactOpen(true)} />
+          )}
+          {linkedCustomerId != null && linkedProperties.length > 0 && (
+            <div>
+              <Label className="text-xs text-muted-foreground">Property</Label>
+              <Select value={selectedPropertyId != null ? String(selectedPropertyId) : ""} onValueChange={applyProperty}>
+                <SelectTrigger><SelectValue placeholder="Select a property" /></SelectTrigger>
+                <SelectContent>
+                  {linkedProperties.map(p => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {(p.label ? p.label + " — " : "") + (p.address || "Property")}{p.isPrimary ? " (primary)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {linkedCustomerId == null && (
+            <p className="text-xs text-muted-foreground">Or enter a new contact's details manually below.</p>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label>Customer name *</Label>
@@ -522,5 +658,12 @@ export default function AppointmentDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    <AddContactModal
+      open={addContactOpen}
+      onClose={() => setAddContactOpen(false)}
+      onCreated={onContactCreated}
+      initialType={form.propertyType}
+    />
+    </>
   );
 }
