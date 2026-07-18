@@ -20,6 +20,12 @@ export interface FieldAppointmentLike {
   assignedToId?: number | null;
   /** Real datetime for the visit. Rows without one are the unscheduled backlog. */
   scheduledAt?: Date | string | null;
+  /**
+   * Appointment lifecycle status (pending/confirmed/arrived/rescheduled/
+   * completed/cancelled). Optional so existing callers that only need the
+   * "today" filter keep working; the My Jobs categorizer relies on it.
+   */
+  status?: string | null;
 }
 
 // ── Google Maps directions ───────────────────────────────────────────────────
@@ -207,4 +213,82 @@ export function resolveTeamMemberId(
   }
   if (typeof user.id === "number" && user.id < 0) return -user.id;
   return null;
+}
+
+// ── "My Jobs" dashboard sectioning ───────────────────────────────────────────
+
+/** Statuses that represent a live, still-actionable visit. */
+export const FIELD_ACTIVE_STATUSES = ["pending", "confirmed", "arrived", "rescheduled"] as const;
+
+/** The four buckets the technician "My Jobs" dashboard renders. */
+export interface FieldJobSections<T> {
+  /** Active visits scheduled before today's local day — past-due, not finished. */
+  overdue: T[];
+  /** Active visits scheduled within today's local day. */
+  today: T[];
+  /** Active visits scheduled after today's local day. */
+  upcoming: T[];
+  /** Visits completed and scheduled within today's local day. */
+  completedToday: T[];
+}
+
+/**
+ * Split a technician's appointments into the My Jobs dashboard sections, using
+ * the same timezone-aware calendar-day window as the rest of the field app.
+ *
+ * Rules (see plan): `cancelled` is dropped from every section; rows with no
+ * `scheduledAt` are the unscheduled backlog and are not surfaced here.
+ *   - completed + scheduled today        → completedToday
+ *   - completed + any other day          → omitted (history)
+ *   - active   + scheduled today         → today
+ *   - active   + scheduled before today  → overdue
+ *   - active   + scheduled after today   → upcoming
+ * "active" = any non-completed, non-cancelled status.
+ *
+ * Pure and deterministic (given `now`): the caller passes the wall-clock instant
+ * so tests can pin it. Overdue is returned most-recent-first (the freshest
+ * misses float to the top); the other sections are chronological.
+ */
+export function categorizeFieldJobs<T extends FieldAppointmentLike>(
+  appointments: T[],
+  now: Date,
+  timeZone: string = FIELD_TIME_ZONE,
+): FieldJobSections<T> {
+  const { start, endExclusive } = dayRangeInTimeZone(now, timeZone);
+  const startMs = start.getTime();
+  const endMs = endExclusive.getTime();
+
+  const overdue: T[] = [];
+  const today: T[] = [];
+  const upcoming: T[] = [];
+  const completedToday: T[] = [];
+
+  for (const appt of appointments) {
+    const when = toDate(appt.scheduledAt);
+    if (!when) continue; // unscheduled backlog — not part of the dated sections
+    const status = (appt.status ?? "").toLowerCase();
+    if (status === "cancelled") continue; // a cancelled visit is not a job
+
+    const t = when.getTime();
+    const isToday = t >= startMs && t < endMs;
+
+    if (status === "completed") {
+      if (isToday) completedToday.push(appt);
+      continue; // completed on another day is history, not shown here
+    }
+
+    if (isToday) today.push(appt);
+    else if (t < startMs) overdue.push(appt);
+    else upcoming.push(appt);
+  }
+
+  const timeOf = (a: T) => toDate(a.scheduledAt)?.getTime() ?? 0;
+  const asc = (a: T, b: T) => timeOf(a) - timeOf(b);
+
+  overdue.sort((a, b) => timeOf(b) - timeOf(a)); // most-recent overdue first
+  today.sort(asc);
+  upcoming.sort(asc);
+  completedToday.sort(asc);
+
+  return { overdue, today, upcoming, completedToday };
 }

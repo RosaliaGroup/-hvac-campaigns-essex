@@ -45,7 +45,7 @@ import {
   customers as customersTable,
   leadCaptures as leadCapturesTable,
 } from "../drizzle/schema";
-import { resolveTeamMemberId, dayRangeInTimeZone } from "../shared/fieldApp";
+import { resolveTeamMemberId, dayRangeInTimeZone, categorizeFieldJobs } from "../shared/fieldApp";
 import {
   normalizeAttendees,
   replaceAttendees,
@@ -1159,6 +1159,125 @@ export const appRouter = router({
           .orderBy(dAsc(appointmentsTable.scheduledAt));
 
         return { memberId, appointments: rows };
+      }),
+
+    /**
+     * Field App (mobile) "My Jobs" dashboard feed — a technician's appointments
+     * split into Overdue / Today / Upcoming / Completed Today (see
+     * shared/fieldApp.ts → categorizeFieldJobs). Read-only; never touches
+     * QuickBooks, Google Calendar, SMS, or the core CRM schema.
+     *
+     * Scoping & permissions:
+     *   - A technician always sees only their own assigned work
+     *     (resolveTeamMemberId(ctx.user)).
+     *   - An admin (ctx.user.role === "admin") may preview another technician by
+     *     passing `technicianId`. For non-admins `technicianId` is ignored, so a
+     *     technician can never read another's board — enforced here on the server.
+     *
+     * Query is bounded to [today − 60d, today + 90d] so it stays a small,
+     * index-friendly window; categorizeFieldJobs drops cancelled/unscheduled rows.
+     */
+    fieldJobs: protectedProcedure
+      .input(
+        z
+          .object({
+            now: z.string().datetime().optional(),
+            technicianId: z.number().int().positive().optional(),
+          })
+          .optional(),
+      )
+      .query(async ({ input, ctx }) => {
+        const callerMemberId = resolveTeamMemberId(ctx.user);
+        const isAdmin = ctx.user?.role === "admin";
+
+        // Admins may preview a chosen technician; everyone else is pinned to self.
+        const viewingMemberId =
+          isAdmin && input?.technicianId ? input.technicianId : callerMemberId;
+
+        const emptySections = { overdue: [], today: [], upcoming: [], completedToday: [] } as const;
+
+        // OAuth/admin with no team profile and no selection → nothing to show yet
+        // (the client surfaces the technician picker for admins).
+        if (viewingMemberId == null) {
+          return {
+            memberId: callerMemberId,
+            viewingMemberId: null,
+            isAdmin,
+            technicianName: null,
+            sections: emptySections,
+          };
+        }
+
+        const dbi = await db.getDb();
+        if (!dbi) {
+          return {
+            memberId: callerMemberId,
+            viewingMemberId,
+            isAdmin,
+            technicianName: null,
+            sections: emptySections,
+          };
+        }
+
+        const now = input?.now ? new Date(input.now) : new Date();
+        const { start, endExclusive } = dayRangeInTimeZone(now);
+        const DAY = 24 * 60 * 60 * 1000;
+        const windowStart = new Date(start.getTime() - 60 * DAY); // overdue lookback
+        const windowEnd = new Date(endExclusive.getTime() + 90 * DAY); // upcoming lookahead
+
+        const rows = await dbi
+          .select({
+            id: appointmentsTable.id,
+            scheduledAt: appointmentsTable.scheduledAt,
+            durationMinutes: appointmentsTable.durationMinutes,
+            appointmentType: appointmentsTable.appointmentType,
+            serviceType: appointmentsTable.serviceType,
+            status: appointmentsTable.status,
+            priority: appointmentsTable.priority,
+            fullName: appointmentsTable.fullName,
+            phone: appointmentsTable.phone,
+            propertyAddress: appointmentsTable.propertyAddress,
+            notes: appointmentsTable.notes,
+            issueDescription: appointmentsTable.issueDescription,
+            customerId: appointmentsTable.customerId,
+            jobId: appointmentsTable.jobId,
+            assignedToId: appointmentsTable.assignedToId,
+            companyName: customersTable.companyName,
+            customerDisplayName: customersTable.displayName,
+            technicianName: teamMembersTable.name,
+          })
+          .from(appointmentsTable)
+          .leftJoin(customersTable, dEq(appointmentsTable.customerId, customersTable.id))
+          .leftJoin(teamMembersTable, dEq(appointmentsTable.assignedToId, teamMembersTable.id))
+          .where(
+            dAnd(
+              dEq(appointmentsTable.assignedToId, viewingMemberId),
+              dGte(appointmentsTable.scheduledAt, windowStart),
+              dLt(appointmentsTable.scheduledAt, windowEnd),
+            ),
+          )
+          .orderBy(dAsc(appointmentsTable.scheduledAt));
+
+        // Resolve the viewed technician's name even when they have zero jobs
+        // (so the admin preview banner can name them).
+        const technicianName =
+          rows.find(r => r.technicianName)?.technicianName ??
+          (
+            await dbi
+              .select({ name: teamMembersTable.name })
+              .from(teamMembersTable)
+              .where(dEq(teamMembersTable.id, viewingMemberId))
+              .limit(1)
+          )[0]?.name ??
+          null;
+
+        return {
+          memberId: callerMemberId,
+          viewingMemberId,
+          isAdmin,
+          technicianName,
+          sections: categorizeFieldJobs(rows, now),
+        };
       }),
   }),
 
