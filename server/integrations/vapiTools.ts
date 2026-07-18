@@ -1,6 +1,10 @@
 /**
  * Vapi Tool Call Handlers for Jessica (Mechanical Enterprise AI Assistant)
- * Handles: bookAppointment, rescheduleAppointment, getCallerInfo, sendReferralLink
+ *
+ * Canonical Vapi dispatcher tools: getCallerInfo, sendReferralLink, bookHVAC,
+ * rescheduleHVAC. Legacy bookAppointment/rescheduleAppointment are NOT exposed to
+ * the Mechanical Vapi assistant (see canonical dispatcher below). sendForm and
+ * sendCallRecap are served by their own authenticated routes, not this dispatcher.
  */
 import * as db from "../db";
 import { parsePreferredDateTime } from "../services/appointmentTime";
@@ -11,6 +15,7 @@ import { notifyOwner } from "../_core/notification";
 import { lookupCallerInfo } from "./callerInfo";
 import { sendCustomerReferralLink } from "../services/referralSms";
 import { rescheduleForVapi, type RescheduleRequest } from "../services/rescheduleAppointment";
+import { handleBookHVAC } from "./vapiBookHvac";
 
 export interface VapiToolCallPayload {
   message: {
@@ -53,6 +58,9 @@ export async function handleVapiToolCalls(payload: VapiToolCallPayload): Promise
     try {
       if (toolName === "bookAppointment") {
         result = await handleBookAppointment(args, payload.message.call?.id);
+      } else if (toolName === "bookHVAC") {
+        // Mechanical-only HVAC booking (Rosalia-isolated). See ./vapiBookHvac.
+        result = await handleBookHVAC(args, payload.message.call?.id);
       } else if (toolName === "rescheduleAppointment") {
         result = await handleRescheduleAppointment(args, payload.message.call?.id);
       } else if (toolName === "getCallerInfo") {

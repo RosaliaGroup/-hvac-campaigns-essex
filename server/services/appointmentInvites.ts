@@ -234,6 +234,21 @@ function rollupInviteStatus(perAttendee: boolean[]): "none" | "sent" | "partial"
 }
 
 /**
+ * Resolve WHICH Google Calendar an appointment's event belongs to, entirely
+ * from the database: the appointment's own `googleCalendarId` when set (e.g. a
+ * record already pinned to a specific calendar), otherwise the connected
+ * account's stored `googleCalendarId`. Returns null when neither exists, so
+ * callers fail safely instead of falling back to an unrelated calendar. Pure —
+ * exported for tests.
+ */
+export function resolveCalendarId(
+  appt: { googleCalendarId?: string | null },
+  conn: { googleCalendarId?: string | null } | null | undefined,
+): string | null {
+  return appt.googleCalendarId ?? conn?.googleCalendarId ?? null;
+}
+
+/**
  * Sync one appointment's calendar event + invites. Loads the appointment and
  * its attendees, mirrors to Google (if connected) or emails ICS invites, then
  * persists sync/invite status. Never throws.
@@ -314,7 +329,7 @@ export async function syncAppointmentInvites(params: {
       try {
         const payload = mapToGoogleEvent(eventInput);
         let eventId = appt.googleCalendarEventId ?? null;
-        let calendarId = appt.googleCalendarId ?? conn!.googleCalendarId;
+        let calendarId = resolveCalendarId(appt, conn)!;
         let meetUrl: string | null = appt.googleMeetUrl ?? null;
         if (eventId) {
           const upd = await googleCalendarProvider.updateEvent(eventId, payload);
