@@ -257,6 +257,98 @@ describe("sendForm — explicit sent/skipped/failed status (incident regression)
   });
 });
 
+describe("sendForm — verified caller-number fallback (misheard spoken number)", () => {
+  const VERIFIED = "9735181815";        // → +19735181815
+  const VERIFIED_E164 = "+19735181815";
+  const OTHER_VALID = "8624191763";     // → +18624191763 (valid, different)
+  const INVALID_11 = "364-622-69189";   // 11 digits, no leading 1 → invalid
+
+  it("1. verified caller valid + spoken invalid → sends to the verified caller number", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ callerNumber: VERIFIED, phone: INVALID_11, type: "booking" }, deps);
+    expect(r).toMatchObject({ status: "sent", success: true, smsSent: true });
+    expect(send(deps)).toHaveBeenCalledTimes(1);
+    expect(send(deps).mock.calls[0][0]).toBe(VERIFIED_E164); // the caller's line, not the misheard number
+  });
+
+  it("2. verified valid + spoken valid but different → uses the verified caller number", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ callerNumber: VERIFIED, phone: OTHER_VALID, type: "booking" }, deps);
+    expect(r.status).toBe("sent");
+    expect(send(deps).mock.calls[0][0]).toBe(VERIFIED_E164); // verified wins over a different spoken number
+  });
+
+  it("3. no verified caller number + supplied valid number → sends to the supplied number", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ phone: OTHER_VALID, type: "booking" }, deps);
+    expect(r.status).toBe("sent");
+    expect(send(deps).mock.calls[0][0]).toBe("+18624191763");
+  });
+
+  it("4. no verified + supplied invalid → failed/invalid_phone (never guessed)", async () => {
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink({ phone: INVALID_11, type: "booking" }, deps);
+    expect(r).toMatchObject({ status: "failed", reason: "invalid_phone", success: false, smsSent: false });
+    expect(send(deps)).not.toHaveBeenCalled();
+  });
+
+  it("5. verified caller opted out → skipped/opted_out (consent checked on the verified number)", async () => {
+    const deps = makeDeps({ lookupContact: vi.fn(async () => ({ contactId: 7, optedOut: true })) });
+    const r = await sendMechanicalFormLink({ callerNumber: VERIFIED, phone: INVALID_11, type: "booking" }, deps);
+    expect(r).toMatchObject({ status: "skipped", reason: "opted_out", success: false, smsSent: false });
+    expect(deps.lookupContact).toHaveBeenCalledWith(VERIFIED_E164);
+    expect(send(deps)).not.toHaveBeenCalled();
+  });
+
+  it("6. duplicate retry → no resend (already_sent, keyed on the verified destination)", async () => {
+    const deps = makeDeps({ alreadySent: vi.fn(async () => true) });
+    const r = await sendMechanicalFormLink({ callerNumber: VERIFIED, phone: OTHER_VALID }, deps);
+    expect(r).toMatchObject({ status: "skipped", reason: "already_sent" });
+    expect(deps.alreadySent).toHaveBeenCalledWith(VERIFIED_E164, expect.any(String));
+    expect(send(deps)).not.toHaveBeenCalled();
+  });
+
+  it("7. Telnyx failure → failed/send_failed", async () => {
+    const deps = makeDeps({ send: vi.fn(async () => ({ success: false, error: "Telnyx 400: bad" })) });
+    const r = await sendMechanicalFormLink({ callerNumber: VERIFIED }, deps);
+    expect(r).toMatchObject({ status: "failed", reason: "send_failed", success: false, smsSent: false });
+  });
+
+  it("8. success requires a provider message id", async () => {
+    const withId = makeDeps({ send: vi.fn(async () => ({ success: true, messageId: "telnyx_z" })) });
+    expect(await sendMechanicalFormLink({ callerNumber: VERIFIED }, withId)).toMatchObject({ status: "sent", providerMessageId: "telnyx_z" });
+    const noId = makeDeps({ send: vi.fn(async () => ({ success: true, messageId: undefined })) });
+    expect(await sendMechanicalFormLink({ callerNumber: VERIFIED }, noId)).toMatchObject({ status: "failed", reason: "send_failed" });
+  });
+
+  it("9. non-send logging is masked — never the full phone number", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      await sendMechanicalFormLink({ phone: INVALID_11, type: "booking" }, makeDeps()); // invalid_phone → logs
+      const logged = warn.mock.calls.map((c) => String(c[0])).join(" | ");
+      expect(logged).toContain("reason=invalid_phone");
+      expect(logged).toContain("***9189");          // masked last-4 only
+      expect(logged).not.toContain("36462269189");  // never the full digits
+      expect(logged).not.toContain("6226");         // never interior digits
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("extractSendFormCall pulls the verified caller number from message.call.customer.number", () => {
+    const body = {
+      message: {
+        type: "tool-calls",
+        call: { id: "call_1", customer: { number: "+19735181815" } },
+        toolCallList: [{ id: "tc_1", function: { name: "sendForm", arguments: JSON.stringify({ phone: "364-622-69189", type: "booking" }) } }],
+      },
+    };
+    const call = extractSendFormCall(body);
+    expect(call?.input.callerNumber).toBe("+19735181815");
+    expect(call?.input.phone).toBe("364-622-69189");
+  });
+});
+
 describe("registerVapiToolRoutes — endpoint auth guards", () => {
   function captureHandler() {
     let handler: ((req: unknown, res: unknown) => unknown) | undefined;
