@@ -785,20 +785,11 @@ export async function updateAppointmentStatus(id: number, status: "pending" | "c
   await db.update(appointments).set({ status }).where(eq(appointments.id, id));
 }
 
-export async function rescheduleAppointment(phone: string, newDate: string, newTime: string) {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-  // Find most recent pending appointment for this phone
-  const [appt] = await db.select().from(appointments)
-    .where(and(eq(appointments.phone, phone), eq(appointments.status, "pending")))
-    .orderBy(desc(appointments.createdAt))
-    .limit(1);
-  if (!appt) return null;
-  await db.update(appointments)
-    .set({ preferredDate: newDate, preferredTime: newTime, status: "rescheduled" })
-    .where(eq(appointments.id, appt.id));
-  return appt;
-}
+// NOTE: The legacy `rescheduleAppointment(phone, newDate, newTime)` helper was
+// removed. Rescheduling now goes through server/services/rescheduleAppointment.ts,
+// which enforces customer isolation, disambiguation, state guards, a future-time
+// check, Google Calendar mirroring and idempotency (the old helper matched by
+// phone only, skipped the calendar, and could touch the wrong appointment).
 
 export async function getAppointmentStats() {
   const db = await getDb();

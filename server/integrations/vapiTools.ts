@@ -10,6 +10,7 @@ import { formatPropertyAddress } from "@shared/address";
 import { notifyOwner } from "../_core/notification";
 import { lookupCallerInfo } from "./callerInfo";
 import { sendCustomerReferralLink } from "../services/referralSms";
+import { rescheduleForVapi, type RescheduleRequest } from "../services/rescheduleAppointment";
 
 export interface VapiToolCallPayload {
   message: {
@@ -53,7 +54,7 @@ export async function handleVapiToolCalls(payload: VapiToolCallPayload): Promise
       if (toolName === "bookAppointment") {
         result = await handleBookAppointment(args, payload.message.call?.id);
       } else if (toolName === "rescheduleAppointment") {
-        result = await handleRescheduleAppointment(args);
+        result = await handleRescheduleAppointment(args, payload.message.call?.id);
       } else if (toolName === "getCallerInfo") {
         result = await handleGetCallerInfo(args);
       } else if (toolName === "sendReferralLink") {
@@ -192,7 +193,16 @@ async function handleBookAppointment(args: Record<string, string>, vapiCallId?: 
   });
 }
 
-async function handleRescheduleAppointment(args: Record<string, string>): Promise<string> {
+/**
+ * Reschedule an existing Mechanical Enterprise appointment. Same Vapi contract as
+ * before — required args `phone`, `new_date`, `new_time` (plus an optional
+ * `appointment_id` to disambiguate) — but the safety, customer-isolation,
+ * calendar-mirroring and idempotency logic lives in the rescheduleAppointment
+ * service. The result is still a JSON string Jessica reads back to the caller:
+ * `success` + `message` on success, `success:false` + `error` otherwise (with
+ * `options` when the caller must choose between multiple upcoming appointments).
+ */
+async function handleRescheduleAppointment(args: Record<string, string>, vapiCallId?: string): Promise<string> {
   const { phone, new_date, new_time } = args;
 
   if (!phone || !new_date || !new_time) {
@@ -202,24 +212,36 @@ async function handleRescheduleAppointment(args: Record<string, string>): Promis
     });
   }
 
-  const updated = await db.rescheduleAppointment(phone, new_date, new_time);
+  const rawId = args.appointment_id ?? args.appointmentId;
+  const parsedId = rawId != null && /^\d+$/.test(String(rawId).trim()) ? Number(rawId) : null;
 
-  if (!updated) {
-    // No existing appointment found — create a new one as a reschedule note
+  const req: RescheduleRequest = {
+    phone,
+    appointmentId: parsedId,
+    newDate: new_date,
+    newTime: new_time,
+    vapiCallId: vapiCallId || null,
+  };
+
+  const result = await rescheduleForVapi(req);
+
+  if (result.success) {
     return JSON.stringify({
       success: true,
-      message: `Appointment rescheduled to ${new_date} at ${new_time}. Confirmation will be sent shortly.`,
+      message: result.message,
+      appointmentId: result.appointmentId,
+      newDate: result.newDate,
+      newTime: result.newTime,
+      calendar: result.calendar,
+      ...(result.warning ? { warning: result.warning } : {}),
     });
   }
 
-  await notifyOwner({
-    title: `🔄 Appointment Rescheduled by Jessica`,
-    content: `Jessica rescheduled an appointment:\n\nName: ${updated.fullName}\nPhone: ${phone}\nNew Date: ${new_date}\nNew Time: ${new_time}\nOriginal Date: ${updated.preferredDate} at ${updated.preferredTime}\n\nLog in to your dashboard to confirm.`,
-  });
-
   return JSON.stringify({
-    success: true,
-    message: `Appointment rescheduled to ${new_date} at ${new_time}. Confirmation will be sent shortly.`,
+    success: false,
+    reason: result.reason,
+    error: result.message,
+    ...(result.options ? { options: result.options } : {}),
   });
 }
 
