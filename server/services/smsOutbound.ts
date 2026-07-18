@@ -21,13 +21,18 @@ type AnyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 /** Which Mechanical send path produced an outbound row. */
 export type OutboundSource =
-  | "inbox_reply"
+  | "inbox_reply"   // human dashboard reply
+  | "ai_va"         // AI Virtual Assistant
   | "campaign"
   | "scheduled"
   | "appointment"
   | "rebate"
   | "vapi_booking"
   | "other";
+
+/** Canonical AI-VA logging attributes — use these when an AI path sends SMS so
+ *  the message is labeled "AI Assistant" in the dashboard. */
+export const AI_VA_OUTBOUND = { source: "ai_va" as const, sentByName: "AI Assistant" };
 
 /** Initial delivery status stored at send time (webhook refines it later). */
 export type OutboundDeliveryStatus =

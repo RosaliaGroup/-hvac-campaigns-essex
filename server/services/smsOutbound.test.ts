@@ -37,6 +37,7 @@ import {
   applyDeliveryStatusToInbox,
   phoneLast10Of,
   inboxPhoneMatch,
+  AI_VA_OUTBOUND,
 } from "./smsOutbound";
 
 const dialect = new MySqlDialect();
@@ -177,6 +178,19 @@ describe("sendAndRecordSms", () => {
     const res = await sendAndRecordSms(db, { phone: "+17189383793", message: "hi", source: "inbox_reply" });
     expect(res.success).toBe(false);
     expect(db.inserts[0].values.deliveryStatus).toBe("failed");
+  });
+
+  it("labels an AI-VA send as source 'ai_va' / 'AI Assistant', recording the Telnyx id + status", async () => {
+    expect(AI_VA_OUTBOUND).toEqual({ source: "ai_va", sentByName: "AI Assistant" });
+    sendTelnyxSmsMock.mockResolvedValue({ success: true, messageId: "tx_ai" });
+    const db = makeFakeDb([[], [], []]);
+    const res = await sendAndRecordSms(db, { phone: "+17189383793", message: "AI reply", ...AI_VA_OUTBOUND });
+    expect(res.success).toBe(true);
+    const v = db.inserts[0].values;
+    expect(v.source).toBe("ai_va");
+    expect(v.sentByName).toBe("AI Assistant");
+    expect(v.providerMessageId).toBe("tx_ai"); // Telnyx id still recorded
+    expect(v.deliveryStatus).toBe("accepted");  // delivery status still recorded
   });
 });
 

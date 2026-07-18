@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
+import { outboundSenderBadge } from "@/lib/smsSenderBadge";
 
 // Pre-loaded contacts from the Excel file
 const EXCEL_CONTACTS_A = [
@@ -1122,8 +1123,13 @@ function SmsInboxTab() {
   const [pending, setPending] = useState<PendingReply[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: conversations = [], isLoading: convsLoading, refetch: refetchConvs } = trpc.smsCampaigns.getConversations.useQuery();
-  const { data: unreadData } = trpc.smsCampaigns.getUnreadCount.useQuery();
+  // Live updates: poll ~every 15s so inbound replies surface without a manual
+  // refresh (the Refresh button remains as a fallback). No websocket/backend
+  // redesign — plain react-query polling.
+  const POLL_MS = 15_000;
+  const { data: conversations = [], isLoading: convsLoading, refetch: refetchConvs } =
+    trpc.smsCampaigns.getConversations.useQuery(undefined, { refetchInterval: POLL_MS });
+  const { data: unreadData } = trpc.smsCampaigns.getUnreadCount.useQuery(undefined, { refetchInterval: POLL_MS });
 
   // Find selected conversation
   const selectedConv = conversations.find((c) => c.key === selectedConvKey);
@@ -1133,7 +1139,7 @@ function SmsInboxTab() {
   // (contactId null). Enabled for ANY selected conversation.
   const { data: messages = [], isLoading: msgsLoading, refetch: refetchMsgs } = trpc.smsCampaigns.listInboxMessages.useQuery(
     { phone: selectedConv?.phone, contactId: selectedConv?.contactId ?? undefined, limit: 100 },
-    { enabled: !!selectedConv }
+    { enabled: !!selectedConv, refetchInterval: POLL_MS }, // live thread updates (~15s)
   );
 
   // Sort messages ascending for conversation view
@@ -1338,12 +1344,19 @@ function SmsInboxTab() {
                                 : "bg-gray-100 text-gray-800 rounded-bl-sm"
                             }`}
                           >
+                            {msg.direction === "outbound" && (() => {
+                              const badge = outboundSenderBadge(msg.source, msg.sentByName);
+                              return (
+                                <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.5 rounded-full mb-1 ${badge.cls}`}>
+                                  {badge.label}
+                                </span>
+                              );
+                            })()}
                             <p className="leading-relaxed">{msg.message}</p>
                             <div className={`text-xs mt-1 ${
                               msg.direction === "outbound" && !failed ? "text-blue-200" : "text-gray-400"
                             }`}>
                               {new Date(msg.createdAt).toLocaleString()}
-                              {msg.direction === "outbound" && msg.sentByName && ` · ${msg.sentByName}`}
                               {msg.direction === "outbound" && msg.fromNumber && ` · from ${msg.fromNumber}`}
                               {msg.direction === "outbound" && ` · ${outboundDeliveryLabel(msg.deliveryStatus)}`}
                               {msg.isOptOut && " · STOP"}
