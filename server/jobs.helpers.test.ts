@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeLineTotal, makeJobNumber, JOB_STATUSES } from "./routers/jobs";
+import { computeLineTotal, makeJobNumber, JOB_STATUSES, isDuplicateKeyError } from "./routers/jobs";
 
 describe("jobs — makeJobNumber", () => {
   it("formats ME-YYYY-NNNN with zero padding", () => {
@@ -37,5 +37,33 @@ describe("jobs — status pipeline definition", () => {
       "new", "scheduled", "in_progress", "waiting_parts", "estimate_sent",
       "approved", "completed", "invoice_sent", "paid", "closed", "cancelled",
     ]);
+  });
+});
+
+describe("jobs — isDuplicateKeyError (Complete Job race recovery)", () => {
+  it("detects a mysql2 duplicate-entry by code", () => {
+    expect(isDuplicateKeyError({ code: "ER_DUP_ENTRY", errno: 1062, message: "Duplicate entry '4' for key 'jobCompletions_jobId_unique'" })).toBe(true);
+  });
+  it("detects by errno alone", () => {
+    expect(isDuplicateKeyError({ errno: 1062 })).toBe(true);
+  });
+  it("detects by message when code/errno are absent", () => {
+    expect(isDuplicateKeyError(new Error("Duplicate entry '4' for key 'jobCompletions_jobId_unique'"))).toBe(true);
+  });
+  it("unwraps a drizzle-wrapped cause", () => {
+    const wrapped: any = new Error("Failed query: insert into `jobCompletions` ...");
+    wrapped.cause = { code: "ER_DUP_ENTRY", errno: 1062 };
+    expect(isDuplicateKeyError(wrapped)).toBe(true);
+  });
+  it("does NOT match unrelated errors (so they surface as controlled 500s, not fake successes)", () => {
+    expect(isDuplicateKeyError(new Error("connection lost"))).toBe(false);
+    expect(isDuplicateKeyError({ code: "ER_NO_SUCH_TABLE", errno: 1146 })).toBe(false);
+    expect(isDuplicateKeyError(null)).toBe(false);
+    expect(isDuplicateKeyError(undefined)).toBe(false);
+    expect(isDuplicateKeyError("nope")).toBe(false);
+  });
+  it("terminates on a self-referential cause chain (no infinite loop)", () => {
+    const a: any = new Error("x"); a.cause = a;
+    expect(isDuplicateKeyError(a)).toBe(false);
   });
 });
