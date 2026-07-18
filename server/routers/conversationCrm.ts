@@ -16,6 +16,7 @@
  *    silently create a second record), then auto-link the result.
  */
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
@@ -37,7 +38,7 @@ function phoneMatch(column: unknown, l10: string) {
 }
 function requireL10(phone: string): string {
   const l10 = normalizePhone(phone);
-  if (!l10) throw new Error("A valid phone number is required");
+  if (!l10) throw new TRPCError({ code: "BAD_REQUEST", message: "A valid phone number is required" });
   return l10;
 }
 // Actor name for audit — always from the authenticated context, never the client.
@@ -84,7 +85,7 @@ export const conversationCrmRouter = router({
       // Server-side existence validation of the target id.
       const table = input.target === "customer" ? customers : input.target === "lead" ? leads : leadCaptures;
       const [exists] = await db.select({ id: table.id }).from(table).where(eq(table.id, input.id)).limit(1);
-      if (!exists) throw new Error(`${input.target} #${input.id} not found`);
+      if (!exists) throw new TRPCError({ code: "NOT_FOUND", message: `${input.target} #${input.id} not found` });
 
       const col = input.target === "customer" ? "customerId" : input.target === "lead" ? "leadId" : "leadCaptureId";
       const patch: Record<string, unknown> = { [col]: input.id };
@@ -120,9 +121,9 @@ export const conversationCrmRouter = router({
       const l10 = requireL10(input.phone);
       const db = await requireDb();
       const link = await currentLink(db, l10);
-      if (!link?.customerId) throw new Error("Link a customer before selecting a property");
+      if (!link?.customerId) throw new TRPCError({ code: "BAD_REQUEST", message: "Link a customer before selecting a property" });
       if (!(await propertyBelongsTo(db, input.propertyId, link.customerId))) {
-        throw new Error("That property does not belong to the linked customer");
+        throw new TRPCError({ code: "BAD_REQUEST", message: "That property does not belong to the linked customer" });
       }
       await upsertLink(db, l10, { propertyId: input.propertyId }, actor(ctx));
       return { success: true };
@@ -187,7 +188,7 @@ export const conversationCrmRouter = router({
       // The customer comes from the confirmed link — not the client — so a property
       // can never be attached to a customer the conversation isn't linked to.
       const link = await currentLink(db, l10);
-      if (!link?.customerId) throw new Error("Link a customer before adding a property");
+      if (!link?.customerId) throw new TRPCError({ code: "BAD_REQUEST", message: "Link a customer before adding a property" });
       const [pr] = await db.insert(properties).values({
         customerId: link.customerId, addressLine1: input.addressLine1.trim(),
         city: input.city ?? null, state: input.state ?? "NJ", zip: input.zip ?? null,

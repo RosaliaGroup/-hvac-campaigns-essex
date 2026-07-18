@@ -9,7 +9,7 @@
  * It loads on its own query (enabled per selected phone) so it never blocks the
  * Phase-1 thread render — the thread appears first, the CRM strip fills in.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,13 @@ export default function ConversationCrmPanel({ phone }: { phone: string }) {
   // Duplicate-warning prompt shown before creating a likely-duplicate record.
   const [dup, setDup] = useState<{ kind: "lead" | "customer"; candidates: { id: number; name: string }[] } | null>(null);
 
-  const { data: ctx, isLoading } = trpc.conversationCrm.context.useQuery({ phone }, { enabled: !!phone });
+  // Defer the CRM query one tick so it never shares a tRPC batch with the SMS
+  // thread query — the thread loads first/independently, and a slow or failing
+  // CRM request can never delay messages or the reply composer.
+  const [crmReady, setCrmReady] = useState(false);
+  useEffect(() => { setCrmReady(false); const t = setTimeout(() => setCrmReady(true), 60); return () => clearTimeout(t); }, [phone]);
+
+  const { data: ctx, isLoading } = trpc.conversationCrm.context.useQuery({ phone }, { enabled: !!phone && crmReady });
   const invalidate = () => utils.conversationCrm.context.invalidate({ phone });
 
   const linkM = trpc.conversationCrm.link.useMutation({ onSuccess: () => { setDup(null); invalidate(); toast({ title: "Conversation linked" }); }, onError: (e) => toast({ title: "Link failed", description: e.message, variant: "destructive" }) });
