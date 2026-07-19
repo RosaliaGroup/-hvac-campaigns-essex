@@ -69,6 +69,7 @@ import AcceptInvite from "./pages/AcceptInvite";
 import ResetPassword from "./pages/ResetPassword";
 import TeamManagement from "./pages/TeamManagement";
 import DispatchReconciliation from "./pages/DispatchReconciliation";
+import DispatcherWorkspace from "./pages/DispatcherWorkspace";
 import NotFound from "./pages/NotFound";
 import AssessmentSubmissions from "./pages/AssessmentSubmissions";
 import Courses from "./pages/Courses";
@@ -322,6 +323,7 @@ function Router() {
       {/* ── Protected internal routes (login required) ────────────── */}
       <Route path={"/command-center"} component={protect(CommandCenter)} />
       <Route path={"/dispatch/reconciliation"} component={protect(DispatchReconciliation)} />
+      <Route path={"/dispatch"} component={protect(DispatcherWorkspace)} />
       <Route path={"/marketing-autopilot"} component={protect(MarketingAutopilot)} />
       <Route path={"/marketing-dashboard"} component={protect(MarketingDashboard)} />
       <Route path={"/seo-intelligence"} component={protect(SeoIntelligence)} />

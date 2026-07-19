@@ -31,6 +31,7 @@ import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelationships } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
 import { dispatchAuditRouter } from "./routers/dispatchAudit";
+import { dispatchRouter } from "./routers/dispatch";
 import { quickbooksRouter } from "./routers/quickbooks";
 import { opportunitiesRouter } from "./routers/opportunities";
 import { seoRouter } from "./routers/seo";
@@ -84,6 +85,7 @@ export const appRouter = router({
   customers: customersRouter,
   jobs: jobsRouter,
   dispatchAudit: dispatchAuditRouter,
+  dispatch: dispatchRouter,
   quickbooks: quickbooksRouter,
   opportunities: opportunitiesRouter,
   seo: seoRouter,
