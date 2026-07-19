@@ -364,7 +364,27 @@ export function extractSendFormCall(
     toolCallList?: unknown[];
   };
   const list = b?.message?.toolCallList ?? b?.message?.toolCalls ?? b?.toolCallList;
-  if (!Array.isArray(list)) return null;
+  if (!Array.isArray(list)) {
+    // ── Flat API-Request tool body (no tool-calls envelope) ─────────────────
+    // The Mechanical `MechanicalSendFormTelnyx` tool POSTs a plain JSON body:
+    //   { name, phone, property, type, callerPhone }
+    // This endpoint IS the sendForm tool, so a flat body here is a sendForm call.
+    // Map the recognized fields directly; require at least one so an empty/other
+    // body is still rejected. Parsing only — no behavior change downstream.
+    const flat = (body ?? {}) as Record<string, unknown>;
+    const hasField = ["phone", "callerPhone", "type", "name", "property"].some((k) => flat[k] != null);
+    if (!hasField) return null;
+    return {
+      toolCallId: flat.toolCallId != null ? String(flat.toolCallId) : "",
+      callId: flat.callId != null ? String(flat.callId) : "",
+      input: {
+        phone: flat.phone != null ? String(flat.phone) : undefined,
+        type: flat.type != null ? String(flat.type) : undefined,
+        name: flat.name != null ? String(flat.name) : undefined,
+        callerPhone: flat.callerPhone != null ? String(flat.callerPhone) : undefined,
+      },
+    };
+  }
   const callId = String(b?.message?.call?.id ?? "");
   const callerNumber =
     b?.message?.call?.customer?.number != null ? String(b.message.call.customer.number) : undefined;
