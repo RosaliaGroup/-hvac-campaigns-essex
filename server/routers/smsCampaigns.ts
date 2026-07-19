@@ -656,7 +656,10 @@ export const smsCampaignsRouter = router({
       try {
         const crm = await resolveConversationContext(db, input.phone);
         hasLinkedCustomer = !!crm.customer;
-        hasLinkedLead = !!crm.lead;
+        // "Lead" here means either lead entity: the marketing-capture record
+        // (leadCaptures — the primary Lead the Lead card shows) or a legacy
+        // `leads` row. Either association makes a separate SMS contact redundant.
+        hasLinkedLead = !!crm.lead || !!crm.leadCapture;
       } catch {
         /* keep flags false — degrade to showing the add-contact prompt */
       }
