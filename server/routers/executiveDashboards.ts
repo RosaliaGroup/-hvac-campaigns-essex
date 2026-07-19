@@ -31,6 +31,12 @@ import {
   teamMembers,
   customers,
 } from "../../drizzle/schema";
+import {
+  reportingMode,
+  isReportingLifecycleEnabled,
+  terminalJobCondition,
+  buildReportingComparison,
+} from "../services/reportingLifecycle";
 
 // ── shared types ──────────────────────────────────────────────────────────
 /** A KPI that has no system of record yet. Rendered as a "Coming Soon" tile. */
@@ -45,7 +51,6 @@ const num = (v: unknown): number => {
 
 const OPEN_STAGES = ["new", "proposal_sent", "pending"] as const;
 const CLOSED_STAGES = ["won", "lost"] as const;
-const TERMINAL_JOB_STATUSES = ["completed", "invoice_sent", "paid", "closed"] as const;
 
 /**
  * Weighted pipeline value: explicit per-row probability, else the stage default.
@@ -379,7 +384,10 @@ export const executiveDashboardsRouter = router({
     };
     if (!db) return empty;
 
-    const jobWhere = [inArray(jobs.status, [...TERMINAL_JOB_STATUSES])];
+    // Job-state / revenue-phase reporting: flag-gated switch between the legacy
+    // office-status set and the canonical lifecycle set (see reportingLifecycle).
+    const mode = reportingMode();
+    const jobWhere = [terminalJobCondition(mode)];
     if (input?.customerId) jobWhere.push(eq(jobs.customerId, input.customerId));
     if (input?.technicianId) jobWhere.push(eq(jobs.assignedToId, input.technicianId));
     if (input?.dateFrom) jobWhere.push(gte(jobs.completedAt, input.dateFrom));
@@ -414,7 +422,7 @@ export const executiveDashboardsRouter = router({
       .from(jobs)
       .where(
         and(
-          inArray(jobs.status, [...TERMINAL_JOB_STATUSES]),
+          terminalJobCondition(mode),
           input?.customerId ? eq(jobs.customerId, input.customerId) : undefined,
           input?.technicianId ? eq(jobs.assignedToId, input.technicianId) : undefined,
         ),
@@ -550,7 +558,7 @@ export const executiveDashboardsRouter = router({
           { key: "completedAt", label: "Completed", type: "date" },
         ];
         if (!db) return emptyResult(columns);
-        const conds = [inArray(jobs.status, [...TERMINAL_JOB_STATUSES])];
+        const conds = [terminalJobCondition(reportingMode())];
         if (f.customerId) conds.push(eq(jobs.customerId, f.customerId));
         if (f.technicianId) conds.push(eq(jobs.assignedToId, f.technicianId));
         if (f.dateFrom) conds.push(gte(jobs.completedAt, f.dateFrom));
@@ -582,5 +590,32 @@ export const executiveDashboardsRouter = router({
       default:
         return emptyResult([]);
     }
+  }),
+
+  /**
+   * Admin-only, read-only comparison of legacy (jobs.status) vs canonical
+   * (jobs.lifecycleState) membership for every job-state / revenue-phase metric.
+   * Available REGARDLESS of the feature flag so it can validate a cutover before
+   * enabling it. Returns per-metric counts, deltas, affected job-ID sets,
+   * null-lifecycle jobs, and reconciliation classifiers. Executes only SELECTs —
+   * it never mutates a job. No customer PII (names/phones/addresses) is returned.
+   */
+  reportingComparison: adminProcedure.input(filtersInput).query(async ({ input }) => {
+    const db = await getDb();
+    if (!db) {
+      return {
+        mode: reportingMode(),
+        flagEnabled: isReportingLifecycleEnabled(),
+        filters: {},
+        totalJobsConsidered: 0,
+        metrics: [],
+      };
+    }
+    return buildReportingComparison(db, {
+      customerId: input?.customerId,
+      technicianId: input?.technicianId,
+      dateFrom: input?.dateFrom,
+      dateTo: input?.dateTo,
+    });
   }),
 });

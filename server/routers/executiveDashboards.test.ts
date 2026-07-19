@@ -87,6 +87,27 @@ describe("executiveDashboards — authorization (admin-only)", () => {
     expect(await code(() => asAdmin().executiveDashboards.drilldown({ metric: "estimates" }))).toBe("NO_ERROR");
     expect(passedAuthz("NO_ERROR")).toBe(true);
   });
+
+  it("reportingComparison is admin-only (anon/viewer/member → FORBIDDEN)", async () => {
+    expect(await code(() => asAnon().executiveDashboards.reportingComparison())).toBe("FORBIDDEN");
+    expect(await code(() => asViewer().executiveDashboards.reportingComparison())).toBe("FORBIDDEN");
+    expect(await code(() => asMember().executiveDashboards.reportingComparison())).toBe("FORBIDDEN");
+  });
+
+  it("reportingComparison is available to admins regardless of flag state", async () => {
+    const saved = process.env.REPORTING_LIFECYCLE_ENABLED;
+    try {
+      for (const v of [undefined, "false", "true"] as const) {
+        if (v === undefined) delete process.env.REPORTING_LIFECYCLE_ENABLED;
+        else process.env.REPORTING_LIFECYCLE_ENABLED = v;
+        // No DB in test env → returns the empty shape, but must NOT be forbidden.
+        expect(await code(() => asAdmin().executiveDashboards.reportingComparison())).toBe("NO_ERROR");
+      }
+    } finally {
+      if (saved === undefined) delete process.env.REPORTING_LIFECYCLE_ENABLED;
+      else process.env.REPORTING_LIFECYCLE_ENABLED = saved;
+    }
+  });
 });
 
 describe("executiveDashboards — Estimates Outstanding tile/drill-down reconciliation", () => {
