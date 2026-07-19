@@ -185,6 +185,24 @@ describe("extractSendFormCall — Vapi envelope parsing", () => {
     const body = { message: { toolCallList: [{ id: "tc_2", function: { name: "bookAppointment", arguments: "{}" } }] } };
     expect(extractSendFormCall(body)).toBeNull();
   });
+
+  it("accepts a FLAT API-Request tool body (no envelope) and it reaches vapiSendForm", async () => {
+    // MechanicalSendFormTelnyx POSTs a flat body — no message.toolCallList/call.
+    const flat = { name: "Maria", phone: "364-622-69189", property: "12 Oak Ave", type: "booking", callerPhone: "9735181815" };
+    const call = extractSendFormCall(flat);
+    expect(call).not.toBeNull(); // previously rejected → 400 bad_request
+    expect(call?.input).toMatchObject({ phone: "364-622-69189", type: "booking", name: "Maria", callerPhone: "9735181815" });
+    // Prove the parsed input reaches the send path and drives the destination.
+    const deps = makeDeps();
+    const r = await sendMechanicalFormLink(call!.input, deps);
+    expect(r.status).toBe("sent");
+    expect(send(deps).mock.calls[0][0]).toBe("+19735181815"); // callerPhone from the flat body
+  });
+
+  it("still rejects an empty/foreign flat body (no recognized fields)", () => {
+    expect(extractSendFormCall({ foo: "bar" })).toBeNull();
+    expect(extractSendFormCall({})).toBeNull();
+  });
 });
 
 describe("vapiResult — explicit status, PII-free surface", () => {
