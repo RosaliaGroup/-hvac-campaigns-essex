@@ -920,7 +920,16 @@ function QuickBooksCard({
     onError: e => toast({ title: "Push failed", description: e.message, variant: "destructive" }),
   });
   const pull = trpc.quickbooks.pullCustomer.useMutation({
-    onSuccess: () => { toast({ title: "Synced from QuickBooks" }); onChange(); },
+    onSuccess: res => {
+      const inv = res.invoices;
+      let description: string | undefined;
+      if (inv) {
+        if (inv.error) description = `Invoices: ${inv.error}`;
+        else description = `Invoices — created ${inv.created}, updated ${inv.updated}, unchanged ${inv.skipped}${inv.unmatched ? `, unmatched ${inv.unmatched}` : ""}`;
+      }
+      toast({ title: "Synced from QuickBooks", description });
+      onChange();
+    },
     onError: e => toast({ title: "Sync failed", description: e.message, variant: "destructive" }),
   });
   const resolve = trpc.quickbooks.resolveConflict.useMutation({

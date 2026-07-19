@@ -22,6 +22,7 @@ import {
 } from "@shared/appointmentTypes";
 import { buildDirectionsUrl, hasServiceAddress } from "@shared/fieldApp";
 import { formatDisplayName, formatAddress } from "@shared/nameFormat";
+import { ClickableRecordName } from "@/components/ClickableRecordName";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -295,7 +296,11 @@ function AppointmentCard({
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-base font-semibold">
             <UserRound className="h-4 w-4 text-muted-foreground" />
-            {formatDisplayName(customerName)}
+            <ClickableRecordName
+              customerId={appt.customerId}
+              name={formatDisplayName(customerName)}
+              className="text-left p-0 m-0 bg-transparent border-0 cursor-pointer text-[#1e3a5f] hover:underline font-semibold text-base"
+            />
           </div>
           {showCompany ? (
             <div className="flex items-center gap-2 pl-6 text-sm text-muted-foreground">
