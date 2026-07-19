@@ -11,6 +11,7 @@ import {
   mechanicalSmsFrom,
   inboxPhoneMatch,
 } from "../services/smsOutbound";
+import { resolveConversationContext } from "../services/conversationCrm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { getDb } from "../db";
@@ -637,7 +638,7 @@ export const smsCampaignsRouter = router({
       const db = await requireDb();
       const fromNumber = mechanicalSmsFrom();
       if (!hasFullPhone(input.phone)) {
-        return { optedOut: false, isContact: false, contactId: null as number | null, fromNumber };
+        return { optedOut: false, isContact: false, contactId: null as number | null, fromNumber, hasLinkedCustomer: false, hasLinkedLead: false };
       }
       const [contact] = await db
         .select({ id: smsContacts.id })
@@ -645,7 +646,21 @@ export const smsCampaignsRouter = router({
         .where(last10Match(smsContacts.phone, input.phone))
         .limit(1);
       const optedOut = await isPhoneOptedOut(db, input.phone);
-      return { optedOut, isContact: !!contact, contactId: contact?.id ?? null, fromNumber };
+
+      // Whether this conversation already resolves to a CRM Customer or Lead
+      // (confirmed link or unambiguous match) — used to hide the redundant
+      // "Add to SMS Contacts" prompt. Best-effort: on any failure we fall back
+      // to the pre-existing behavior (prompt shown when not a saved contact).
+      let hasLinkedCustomer = false;
+      let hasLinkedLead = false;
+      try {
+        const crm = await resolveConversationContext(db, input.phone);
+        hasLinkedCustomer = !!crm.customer;
+        hasLinkedLead = !!crm.lead;
+      } catch {
+        /* keep flags false — degrade to showing the add-contact prompt */
+      }
+      return { optedOut, isContact: !!contact, contactId: contact?.id ?? null, fromNumber, hasLinkedCustomer, hasLinkedLead };
     }),
 
   getConversations: protectedProcedure.query(async () => {
