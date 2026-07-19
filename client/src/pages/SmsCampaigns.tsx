@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
 import { evaluateBulkSend } from "@/lib/smsSendGate";
+import { phoneLast10, resolveConversationTarget } from "@/lib/internalSms";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -365,6 +366,12 @@ export default function SmsCampaigns() {
     return null;
   }
 
+  // Deep-link: the Lead/Customer card "Text" action opens this page as
+  // /sms-campaigns?phone=<number> so the internal thread opens directly (no OS
+  // messaging app). When a phone is present, land on the Inbox tab.
+  const deepLinkPhone =
+    typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("phone") : null;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <InternalNav />
@@ -398,7 +405,7 @@ export default function SmsCampaigns() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <Tabs defaultValue="contacts">
+        <Tabs defaultValue={deepLinkPhone ? "inbox" : "contacts"}>
           <TabsList className="mb-6 bg-white border">
             <TabsTrigger value="contacts" className="gap-2"><Users className="h-4 w-4" /> Contacts ({filteredContacts.length})</TabsTrigger>
             <TabsTrigger value="compose" className="gap-2"><MessageSquare className="h-4 w-4" /> Compose & Send</TabsTrigger>
@@ -724,7 +731,7 @@ export default function SmsCampaigns() {
 
           {/* ── INBOX TAB ── */}
           <TabsContent value="inbox">
-            <SmsInboxTab />
+            <SmsInboxTab initialPhone={deepLinkPhone} />
           </TabsContent>
 
           {/* ── SCHEDULED TAB ── */}
@@ -1116,13 +1123,29 @@ function outboundDeliveryLabel(s?: string | null): string {
   }
 }
 
-function SmsInboxTab() {
+/** A conversation row as rendered by the inbox — either a real thread from
+ *  getConversations or a synthesized draft for a deep-linked number with no
+ *  history yet (so the composer opens against a valid phone). */
+type InboxConversation = {
+  key: string;
+  contactId: number | null;
+  phone: string;
+  latestMessage: string;
+  latestAt: Date;
+  unreadCount: number;
+  totalCount: number;
+  contactName: string | null;
+};
+
+function SmsInboxTab({ initialPhone }: { initialPhone?: string | null }) {
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const [selectedConvKey, setSelectedConvKey] = useState<string | null>(null);
+  const [draftConv, setDraftConv] = useState<InboxConversation | null>(null);
   const [replyText, setReplyText] = useState("");
   const [pending, setPending] = useState<PendingReply[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const didDeepLink = useRef(false);
 
   // Live updates: poll ~every 15s so inbound replies surface without a manual
   // refresh (the Refresh button remains as a fallback). No websocket/backend
@@ -1132,8 +1155,11 @@ function SmsInboxTab() {
     trpc.smsCampaigns.getConversations.useQuery(undefined, { refetchInterval: POLL_MS });
   const { data: unreadData } = trpc.smsCampaigns.getUnreadCount.useQuery(undefined, { refetchInterval: POLL_MS });
 
-  // Find selected conversation
-  const selectedConv = conversations.find((c) => c.key === selectedConvKey);
+  // Find selected conversation — a real thread, or the synthesized draft for a
+  // deep-linked number that has no history yet.
+  const selectedConv: InboxConversation | undefined =
+    conversations.find((c) => c.key === selectedConvKey) ??
+    (draftConv && draftConv.key === selectedConvKey ? draftConv : undefined);
 
   // Get messages for the selected conversation. Key on the phone number, not the
   // contactId — a thread must load even when the number is not a saved contact
@@ -1209,6 +1235,46 @@ function SmsInboxTab() {
       markReadMutation.mutate({ phone: conv.phone });
     }
   }
+
+  // Deep link from a Lead/Customer card ("Text" → /sms-campaigns?phone=…): open
+  // the existing internal thread for that number, or synthesize a draft thread
+  // (composer ready) when it has no history yet. Runs once, after the list loads
+  // — never an OS messaging app; sends still go over Telnyx via replyToConversation.
+  useEffect(() => {
+    if (didDeepLink.current) return;
+    if (!initialPhone || convsLoading) return;
+    const target = resolveConversationTarget(conversations, initialPhone);
+    if (!target) return;
+    didDeepLink.current = true;
+    if (target.kind === "existing") {
+      selectConversation(target.key);
+    } else {
+      const draft: InboxConversation = {
+        key: `draft:${target.phoneLast10}`,
+        contactId: null,
+        phone: initialPhone,
+        latestMessage: "",
+        latestAt: new Date(),
+        unreadCount: 0,
+        totalCount: 0,
+        contactName: null,
+      };
+      setDraftConv(draft);
+      setSelectedConvKey(draft.key);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPhone, convsLoading, conversations]);
+
+  // Once the draft's first message lands, a real conversation appears for the
+  // same number — promote to it and drop the draft so state is never duplicated.
+  useEffect(() => {
+    if (!draftConv) return;
+    const real = conversations.find((c) => phoneLast10(c.phone) === phoneLast10(draftConv.phone));
+    if (real) {
+      setSelectedConvKey((k) => (k === draftConv.key ? real.key : k));
+      setDraftConv(null);
+    }
+  }, [conversations, draftConv]);
 
   function handleSendReply() {
     const text = replyText.trim();

@@ -19,9 +19,11 @@ import { JOB_STATUS_META, formatMoney } from "@/lib/jobPresentation";
 import { resolveCustomerIdentity } from "@/lib/customerIdentity";
 import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
 import { jobRoute, opportunityRoute } from "@/lib/customerNavigation";
+import ConversationPreview from "@/components/sms/ConversationPreview";
+import { internalSmsConversationPath } from "@/lib/internalSms";
 import { Briefcase } from "lucide-react";
 import {
-  ArrowLeft, Building2, Calendar, Home, Mail, MapPin, Pencil, Phone, PhoneCall,
+  ArrowLeft, Building2, Calendar, Home, Mail, MapPin, MessageSquare, Pencil, Phone, PhoneCall,
   Plus, Star, Trash2, UserRound, Zap, RefreshCw, CheckCircle2, XCircle, Plug, Link2, Loader2,
   Target, FileText, Receipt, Hash, Tag, DollarSign, Wallet, Clock,
 } from "lucide-react";
@@ -282,6 +284,17 @@ export default function CustomerDetail() {
                   <Phone className="h-4 w-4 text-[#1e3a5f]" />
                   {customer.phone ? <a href={`tel:${customer.phone}`} className="hover:underline">{customer.phone}</a> : <span className="text-muted-foreground">No phone</span>}
                   {customer.altPhone && <span className="text-muted-foreground">· alt {customer.altPhone}</span>}
+                  {customer.phone && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => navigate(internalSmsConversationPath(customer.phone))}
+                      title="Text via Mechanical Enterprise (Telnyx)"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5 mr-1" /> Text
+                    </Button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="h-4 w-4 text-[#1e3a5f]" />
@@ -295,6 +308,9 @@ export default function CustomerDetail() {
                 )}
               </CardContent>
             </Card>
+
+            {/* SMS Conversation — recent internal thread (only shown if history exists) */}
+            <ConversationPreview phone={customer.phone} />
           </TabsContent>
 
           <TabsContent value="properties">
