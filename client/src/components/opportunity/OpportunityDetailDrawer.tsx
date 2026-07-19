@@ -20,6 +20,7 @@ import {
   Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
 } from "lucide-react";
 import { ConvertToJobControl } from "./ConvertToJobControl";
+import { internalSmsConversationPath } from "@/lib/internalSms";
 import { STAGE_META, DOC_STATUS_BADGE, RELATIONSHIP_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate } from "./shared";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -118,7 +119,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
             {/* Quick actions */}
             <div className="grid grid-cols-4 gap-2 border-b p-3 sm:grid-cols-6">
               <ActionButton href={c?.phone ? `tel:${c.phone}` : undefined} disabled={!c?.phone} icon={Phone} label="Call" />
-              <ActionButton href={c?.phone ? `sms:${c.phone}` : undefined} disabled={!c?.phone} icon={MessageSquare} label="Text" />
+              <ActionButton onClick={() => c?.phone && navigate(internalSmsConversationPath(c.phone))} disabled={!c?.phone} icon={MessageSquare} label="Text" />
               <ActionButton href={c?.email ? `mailto:${c.email}` : undefined} disabled={!c?.email} icon={Mail} label="Email" />
               <ActionButton
                 href={data?.salesDocuments.find(d => d.id === data.primaryDocumentId)?.documentLink ?? undefined}

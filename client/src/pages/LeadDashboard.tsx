@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import ConversationPreview from "@/components/sms/ConversationPreview";
+import { internalSmsConversationPath } from "@/lib/internalSms";
 import { LEAD_CHANNELS, filterLeadsByChannel, type LeadChannel } from "@/lib/leadChannels";
 import DashboardLayout from "@/components/DashboardLayout";
 import AppointmentDialog from "@/components/AppointmentDialog";
@@ -191,6 +194,7 @@ function LeadDetailModal({
   onNoteUpdate: (id: number, notes: string) => void;
   onSaved: (patch: Partial<LeadCapture>) => void;
 }) {
+  const [, navigate] = useLocation();
   const [notes, setNotes] = useState(lead.notes || "");
   const [saving, setSaving] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
@@ -384,8 +388,13 @@ function LeadDetailModal({
               <Button asChild size="sm" variant="outline" disabled={!lead.phone}>
                 <a href={lead.phone ? `tel:${lead.phone}` : undefined}><Phone className="h-3.5 w-3.5 mr-1" /> Call</a>
               </Button>
-              <Button asChild size="sm" variant="outline" disabled={!lead.phone}>
-                <a href={lead.phone ? `sms:${lead.phone}` : undefined}><MessageSquare className="h-3.5 w-3.5 mr-1" /> Text</a>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!lead.phone}
+                onClick={() => lead.phone && navigate(internalSmsConversationPath(lead.phone))}
+              >
+                <MessageSquare className="h-3.5 w-3.5 mr-1" /> Text
               </Button>
               <Button size="sm" variant="outline" onClick={() => setScheduleOpen(true)}>
                 <CalendarPlus className="h-3.5 w-3.5 mr-1" /> Schedule Assessment
@@ -395,6 +404,9 @@ function LeadDetailModal({
               </Button>
             </div>
           </div>
+
+          {/* SMS Conversation — recent internal thread (only shown if history exists) */}
+          <ConversationPreview phone={lead.phone} />
 
           {/* Appointments */}
           <div className="space-y-2">
