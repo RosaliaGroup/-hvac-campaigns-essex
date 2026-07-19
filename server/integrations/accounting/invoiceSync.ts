@@ -199,8 +199,11 @@ const lockConnectionFactory = () =>
  * (distinct from the estimate lock, so the two syncs don't block each other).
  * No QBO calls happen until the lock is held. Refuses when disabled.
  */
-export async function syncInvoices(opts: { mode?: "incremental" | "backfill"; sinceDays?: number; now?: Date; lockConnectionFactory?: () => Promise<LockConnection> } = {}): Promise<InvoiceSyncResult> {
-  if (!isInvoiceSyncEnabled()) {
+export async function syncInvoices(opts: { mode?: "incremental" | "backfill"; sinceDays?: number; now?: Date; force?: boolean; lockConnectionFactory?: () => Promise<LockConnection> } = {}): Promise<InvoiceSyncResult> {
+  // `force` = an explicit, user-triggered per-customer reconciliation (e.g. the
+  // "Sync from QuickBooks" button). It runs regardless of the QBO_INVOICE_SYNC_ENABLED
+  // flag, which only gates the AUTOMATIC/scheduled poller to control background load.
+  if (!opts.force && !isInvoiceSyncEnabled()) {
     return { ...emptyInvoiceResult(), error: "invoice sync disabled (set QBO_INVOICE_SYNC_ENABLED=true to enable)" };
   }
   const now = opts.now ?? new Date();

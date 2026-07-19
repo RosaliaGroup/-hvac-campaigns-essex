@@ -9,6 +9,7 @@ import type { ComponentProps } from "react";
 import type { DayButton } from "react-day-picker";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { ClickableRecordName } from "@/components/ClickableRecordName";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
@@ -246,7 +247,7 @@ export default function AppointmentCalendar() {
                   filteredBacklog.map(a => (
                     <div key={a.id} className="flex items-center justify-between border rounded-lg p-3 text-sm">
                       <div>
-                        <div className="font-medium">{a.fullName} <span className="text-muted-foreground font-normal">· {appointmentTypeLabel(a.appointmentType)}</span></div>
+                        <div className="font-medium"><ClickableRecordName customerId={a.customerId} name={a.fullName} /> <span className="text-muted-foreground font-normal">· {appointmentTypeLabel(a.appointmentType)}</span></div>
                         <div className="text-muted-foreground">Wanted: {a.preferredDate} · {a.preferredTime}</div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -288,7 +289,7 @@ export default function AppointmentCalendar() {
                       </Button>
                     </div>
                   </div>
-                  <div className="font-medium">{a.fullName}</div>
+                  <div className="font-medium"><ClickableRecordName customerId={a.customerId} name={a.fullName} /></div>
                   <div className="text-muted-foreground">
                     {appointmentTypeLabel(a.appointmentType)}
                     {serviceTypeLabel(a.serviceType) ? ` · ${serviceTypeLabel(a.serviceType)}` : ""}

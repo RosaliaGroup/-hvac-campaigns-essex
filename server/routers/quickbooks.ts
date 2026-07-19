@@ -178,7 +178,16 @@ export const quickbooksRouter = router({
         qbId: result.qbId,
         errorMessage: result.active ? null : "Inactive/deleted in QuickBooks",
       });
-      return result;
+
+      // "Sync from QuickBooks" = QBO → ME. Beyond refreshing the customer, also
+      // reconcile this account's invoices (QBO → local). Forced so the manual
+      // per-customer action runs regardless of the automatic-sync flag; the
+      // underlying upsert is idempotent, so re-syncing never duplicates.
+      let invoices: Awaited<ReturnType<typeof syncInvoices>> | null = null;
+      if (result.active) {
+        invoices = await syncInvoices({ mode: "backfill", sinceDays: 365, force: true });
+      }
+      return { ...result, invoices };
     }),
 
   /** Admin: push every active, not-yet-linked customer with merge protection. */
