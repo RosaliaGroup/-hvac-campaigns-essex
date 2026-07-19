@@ -3,6 +3,7 @@ import InternalNav from "@/components/InternalNav";
 import { trpc } from "@/lib/trpc";
 import { evaluateBulkSend } from "@/lib/smsSendGate";
 import { phoneLast10, resolveConversationTarget } from "@/lib/internalSms";
+import { shouldOfferAddToSmsContacts } from "@/lib/smsContactPrompt";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -1452,7 +1453,10 @@ function SmsInboxTab({ initialPhone }: { initialPhone?: string | null }) {
 
                 {/* Reply Box — enabled for ANY number (incl. non-contacts); blocked only on opt-out */}
                 <div className="p-4 border-t bg-gray-50 space-y-2">
-                  {!sendState?.isContact && (
+                  {/* Offer "Add to SMS Contacts" ONLY when the number isn't already
+                      tied to a CRM Customer/Lead and isn't a saved SMS contact —
+                      otherwise a separate SMS contact is redundant. */}
+                  {shouldOfferAddToSmsContacts(sendState) && (
                     <div className="flex items-start justify-between gap-2 rounded-md bg-yellow-50 border border-yellow-200 px-3 py-2">
                       <p className="text-xs text-yellow-700">
                         This number is not in SMS Contacts. You can still reply — add them to save the contact.
