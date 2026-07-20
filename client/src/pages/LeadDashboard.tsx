@@ -6,6 +6,7 @@ import { internalSmsConversationPath } from "@/lib/internalSms";
 import { LEAD_CHANNELS, filterLeadsByChannel, type LeadChannel } from "@/lib/leadChannels";
 import DashboardLayout from "@/components/DashboardLayout";
 import AppointmentDialog from "@/components/AppointmentDialog";
+import PropertyLinkSection from "@/components/PropertyLinkSection";
 import { leadAppointmentDefaults } from "@/lib/appointmentDefaults";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -216,7 +217,7 @@ function LeadDetailModal({
   const rel = leadRelationship(lead);
   const requestedService = (lead.message && lead.message.trim()) || sourceInfo.label;
 
-  const { data: appointments = [] } = trpc.leadCaptures.appointments.useQuery({ id: lead.id });
+  const { data: appointments = [], refetch: refetchAppts } = trpc.leadCaptures.appointments.useQuery({ id: lead.id });
   const updateLead = trpc.leadCaptures.update.useMutation({
     onSuccess: () => {
       toast({ title: "Lead updated", description: "Lead details saved." });
@@ -373,6 +374,24 @@ function LeadDetailModal({
               {infoRow("Lead Age", leadAgeLabel(lead.createdAt, new Date()))}
             </div>
           </div>
+          )}
+
+          {/* Property — linkage state for the lead's matched appointment(s) */}
+          {appointments.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Property</h3>
+              <div className="space-y-3">
+                {appointments.map(a => (
+                  <PropertyLinkSection
+                    key={a.id}
+                    appointment={a}
+                    customerId={lead.customerId}
+                    onChanged={() => refetchAppts()}
+                    hideHeading
+                  />
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Pipeline Stage */}
