@@ -79,9 +79,18 @@ export const equipmentRouter = router({
         warrantiesByEquipment.set(w.equipmentId, list);
       }
 
-      // Active before retired, keeping the installedAt ordering within each group.
+      // Warranties per unit: active first, then latest-expiring first (nulls last).
+      const asTime = (d: Date | string | null) => (d ? new Date(d).getTime() : -Infinity);
+      const sortWarranties = (ws: (typeof warranties)[number][]) =>
+        [...ws].sort((a, b) => {
+          const aActive = a.status === "active", bActive = b.status === "active";
+          if (aActive !== bActive) return aActive ? -1 : 1;
+          return asTime(b.expiresAt) - asTime(a.expiresAt);
+        });
+
+      // Active units before retired, keeping the installedAt ordering within each group.
       const items = units
-        .map(u => ({ ...u, warranties: warrantiesByEquipment.get(u.id) ?? [] }))
+        .map(u => ({ ...u, warranties: sortWarranties(warrantiesByEquipment.get(u.id) ?? []) }))
         .sort((a, b) => (a.status === b.status ? 0 : a.status === "active" ? -1 : 1));
 
       return { items, total: items.length };

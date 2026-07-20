@@ -119,9 +119,23 @@ describe("equipment.listByCustomer — warranty attachment + active-first orderi
     });
     const res = await caller().equipment.listByCustomer({ customerId: 42 });
     expect(res.total).toBe(2);
-    expect(res.items[0].status).toBe("active"); // active sorts first
+    expect(res.items[0].status).toBe("active"); // active unit sorts first
     expect(res.items.find(i => i.id === 2)?.warranties).toHaveLength(1);
     expect(res.items.find(i => i.id === 1)?.warranties).toHaveLength(0);
+  });
+
+  it("sorts a unit's warranties active-first, then latest-expiring", async () => {
+    currentDb = makeDb({
+      customerEquipment: [{ id: 5, customerId: 42, status: "active", installedAt: null }],
+      equipmentWarranties: [
+        { id: 20, customerId: 42, equipmentId: 5, type: "labor", status: "expired", expiresAt: "2030-01-01" },
+        { id: 21, customerId: 42, equipmentId: 5, type: "manufacturer", status: "active", expiresAt: "2027-01-01" },
+        { id: 22, customerId: 42, equipmentId: 5, type: "extended", status: "active", expiresAt: "2029-01-01" },
+      ],
+    });
+    const res = await caller().equipment.listByCustomer({ customerId: 42 });
+    const ws = res.items.find(i => i.id === 5)!.warranties;
+    expect(ws.map(w => w.id)).toEqual([22, 21, 20]); // active(latest-exp) → active → expired last
   });
 });
 
