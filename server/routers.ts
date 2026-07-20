@@ -60,7 +60,7 @@ import {
 } from "./services/appointmentInvites";
 import {
   resolveAppointmentContext,
-  matchExistingPropertyForBooking,
+  forwardFillPropertyForBooking,
   decidePropertyLink,
   findPropertyByAddress,
 } from "./services/appointmentNormalization";
@@ -1003,22 +1003,24 @@ export const appRouter = router({
           bookedBy: ctx.user?.name || ctx.user?.email || "staff",
         };
 
-        // Forward-fill (NEW booking only), MATCH-ONLY: when the booking resolved to
-        // a customer and carries a service address but no explicit property, link an
-        // EXISTING same-customer property that matches — address-deduped, idempotent,
-        // never cross-customer. It never CREATES a property (an unverified single-line
-        // booking address is not auto-promoted); an unmatched booking stays unlinked
-        // for staff to reconcile via appointments.linkProperty. Runs INSIDE the insert
-        // transaction; a match query failure aborts the booking rather than silently
-        // dropping the link. Touches no other/historical appointment (no bulk backfill).
+        // Forward-fill (NEW booking only): when the booking resolved to a customer
+        // and carries a service address but no explicit property, REUSE a matching
+        // same-customer property, or CREATE one ONLY when the typed address is
+        // complete (Street+City+State+ZIP). An incomplete free-text line is NOT
+        // auto-promoted — the appointment stays valid with a null propertyId for
+        // staff to reconcile via appointments.linkProperty. Address-deduped,
+        // idempotent, never cross-customer. Runs INSIDE the insert transaction; a
+        // failure aborts the booking rather than silently dropping the link. Touches
+        // no other/historical appointment (no bulk backfill).
         const { id, propertyId } = await dbi.transaction(async (tx) => {
           const linkedPropertyId =
             resolved.propertyId ??
             (customerId != null
-              ? await matchExistingPropertyForBooking(
+              ? await forwardFillPropertyForBooking(
                   tx,
                   customerId,
                   resolved.propertyAddress ?? input.propertyAddress,
+                  resolved.propertyType ?? input.propertyType,
                 )
               : null);
           const insertResult = await tx

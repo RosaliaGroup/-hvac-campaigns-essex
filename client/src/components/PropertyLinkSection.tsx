@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Home, Building2, Plus, Link2, ExternalLink } from "lucide-react";
+import { MapPin, Home, Building2, Plus, Link2, ExternalLink, AlertTriangle } from "lucide-react";
+import { parseFreeTextAddress, isCompleteAddress } from "@shared/address";
 
 /**
  * Shared Property section for an appointment, used identically on the Lead card,
@@ -39,29 +40,6 @@ interface PropertyLinkSectionProps {
   className?: string;
 }
 
-/** Best-effort split of a one-line address for prefilling the create form (user-editable). */
-function parseAddress(text?: string | null) {
-  const raw = (text ?? "").trim();
-  const res = { addressLine1: "", addressLine2: "", city: "", state: "", zip: "" };
-  if (!raw) return res;
-  const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
-  res.addressLine1 = parts[0] ?? raw;
-  const zipM = raw.match(/\b(\d{5}(?:-\d{4})?)\b/);
-  if (zipM) res.zip = zipM[1];
-  const stateM = raw.match(/\b([A-Za-z]{2})\b(?=\s+\d{5})/);
-  if (stateM) res.state = stateM[1].toUpperCase();
-  if (parts.length >= 2) {
-    const tail = parts[parts.length - 1];
-    const cityFromTail = tail
-      .replace(/\b[A-Za-z]{2}\b\s+\d{5}(?:-\d{4})?\s*$/, "")
-      .replace(/\b\d{5}(?:-\d{4})?\s*$/, "")
-      .trim();
-    res.city = cityFromTail || parts[parts.length - 2] || "";
-    if (parts.length > 2 && cityFromTail) res.addressLine2 = parts.slice(1, parts.length - 1).join(", ");
-  }
-  return res;
-}
-
 export default function PropertyLinkSection({
   appointment,
   customerId,
@@ -73,10 +51,15 @@ export default function PropertyLinkSection({
   const { toast } = useToast();
   const ownerId = customerId ?? appointment.customerId ?? null;
   const isLinked = appointment.propertyId != null;
+  // An unlinked appointment whose free-text address can't be parsed into a
+  // complete (Street+City+State+ZIP) address — i.e. the booking flow could not
+  // safely auto-create a Property, so it awaits explicit reconciliation.
+  const hasAddress = Boolean(appointment.propertyAddress?.trim());
+  const addressIncomplete = hasAddress && !isCompleteAddress(parseFreeTextAddress(appointment.propertyAddress));
 
   const [mode, setMode] = useState<null | "link" | "create">(null);
   const [pickPropertyId, setPickPropertyId] = useState<string>("");
-  const [form, setForm] = useState(() => parseAddress(appointment.propertyAddress));
+  const [form, setForm] = useState(() => parseFreeTextAddress(appointment.propertyAddress));
 
   const utils = trpc.useUtils();
   const existing = trpc.customers.listProperties.useQuery(
@@ -144,12 +127,23 @@ export default function PropertyLinkSection({
     <div className={`space-y-2 ${className ?? ""}`}>
       {heading}
       <div className="rounded-lg border border-dashed p-3 space-y-3">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <MapPin className="h-4 w-4" /> No Property Linked
+          {addressIncomplete && (
+            <Badge variant="outline" className="border-amber-500 text-amber-600 gap-1">
+              <AlertTriangle className="h-3 w-3" /> Incomplete address
+            </Badge>
+          )}
           {appointment.propertyAddress && (
             <span className="text-xs">· appointment address: <span className="break-words">{appointment.propertyAddress}</span></span>
           )}
         </div>
+        {addressIncomplete && ownerId != null && (
+          <p className="text-xs text-muted-foreground">
+            This appointment’s address is missing City, State, or ZIP, so no property was created automatically.
+            Complete it below to create &amp; link a property.
+          </p>
+        )}
 
         {ownerId == null ? (
           <p className="text-xs text-muted-foreground">
@@ -163,7 +157,7 @@ export default function PropertyLinkSection({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => { setForm(parseAddress(appointment.propertyAddress)); setMode("create"); }}
+              onClick={() => { setForm(parseFreeTextAddress(appointment.propertyAddress)); setMode("create"); }}
             >
               <Plus className="h-3.5 w-3.5 mr-1" /> Create Property from Appointment Address
             </Button>
