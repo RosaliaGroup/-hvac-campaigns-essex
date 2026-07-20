@@ -15,7 +15,9 @@ import { customers, properties, type Customer, type Property } from "../../drizz
 import { formatPropertyAddress, isCompleteAddress, missingAddressParts } from "@shared/address";
 import type { getDb } from "../db";
 
-type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+type FullDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+/** A live DB handle OR a transaction handle — these helpers run in either. */
+type Db = FullDb | Parameters<Parameters<FullDb["transaction"]>[0]>[0];
 
 export interface AppointmentContextInput {
   customerId?: number | null;
@@ -131,6 +133,56 @@ export async function resolveAppointmentContext(db: Db, input: AppointmentContex
   return normalizeAppointmentFields(input, { customer, property });
 }
 
+// ─────────────────────────────────────────────────────────────
+// Property ↔ appointment linking (user-driven; never silent)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * PURE decision for linking a property to an appointment. Mirrors the
+ * normalizeAppointmentFields pattern: the router loads the rows, this function
+ * validates ownership + decides between reuse and create so the logic is
+ * unit-tested without a database. Enforces the data-integrity rules:
+ *  - a property must belong to the appointment's (resolved) customer — never
+ *    link across customers,
+ *  - an existing address match is REUSED, never duplicated (dedupe/idempotency),
+ *  - a linkable customer must exist.
+ */
+export interface PropertyLinkDecisionInput {
+  /** Customer that will own the property, after phone-resolution in the router. */
+  resolvedCustomerId: number | null;
+  mode: "existing" | "create";
+  /** Mode "existing": the loaded property row (null when the id was not found). */
+  existingProperty?: { id: number; customerId: number } | null;
+  /** Mode "create": id of a property whose addressLine1 already matches (dedupe hit), or null. */
+  dedupeMatchId?: number | null;
+}
+
+export type PropertyLinkDecision =
+  | { action: "link"; propertyId: number }
+  | { action: "create" };
+
+export function decidePropertyLink(input: PropertyLinkDecisionInput): PropertyLinkDecision {
+  if (input.resolvedCustomerId == null) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "This appointment isn't linked to a customer yet. Link it to a customer before adding a property.",
+    });
+  }
+
+  if (input.mode === "existing") {
+    const prop = input.existingProperty ?? null;
+    if (!prop) throw new TRPCError({ code: "NOT_FOUND", message: "Property not found." });
+    if (prop.customerId !== input.resolvedCustomerId) {
+      throw new TRPCError({ code: "CONFLICT", message: "That property belongs to a different customer." });
+    }
+    return { action: "link", propertyId: prop.id };
+  }
+
+  // mode === "create": reuse an address-matched property (dedupe), else create.
+  if (input.dedupeMatchId != null) return { action: "link", propertyId: input.dedupeMatchId };
+  return { action: "create" };
+}
+
 /** Resolve a customer's primary (then first) property id, or null. Never throws. */
 export async function findPrimaryPropertyId(db: Db, customerId: number): Promise<number | null> {
   try {
@@ -183,4 +235,51 @@ export async function matchPropertyByFreeText(
   } catch {
     return null;
   }
+}
+
+/**
+ * FORWARD-FILL for NEW bookings only, MATCH-ONLY. Given the booking's resolved
+ * customer and service address, return an EXISTING same-customer property id to
+ * link, or null when none matches. Rules enforced:
+ *  - same-customer only (the read is scoped to `customerId`),
+ *  - deduplicated / idempotent (the same address always resolves to the same
+ *    property — free-text match, then case-insensitive addressLine1 equality),
+ *  - never links across customers.
+ *
+ * It deliberately does NOT create a property. The booking form captures a single
+ * free-text service line with no verified City/State/ZIP; an unverified partial
+ * address must not be promoted to a standalone `properties` row automatically
+ * (see shared/address.ts completeness rules). Unmatched bookings are left with a
+ * null propertyId and reconciled by staff through the explicit
+ * `appointments.linkProperty` action, which captures a structured address.
+ *
+ * Ownership/validation/DB errors are NOT suppressed — the query runs on the
+ * booking transaction and any failure propagates so the booking fails loudly
+ * rather than silently dropping the property link. Returns null only for a
+ * blank/unusable address or a genuine no-match.
+ */
+export async function matchExistingPropertyForBooking(
+  db: Db,
+  customerId: number,
+  freeTextAddress: string | null | undefined,
+): Promise<number | null> {
+  const text = freeTextAddress?.trim().toLowerCase();
+  if (!text) return null;
+  const capped = text.slice(0, 255);
+  // Single same-customer read; matched in JS. Errors propagate (no try/catch).
+  const rows = await db.select().from(properties).where(eq(properties.customerId, customerId));
+  for (const p of rows) {
+    const line1 = (p.addressLine1 ?? "").trim().toLowerCase();
+    if (!line1) continue;
+    const full = formatPropertyAddress(p).toLowerCase();
+    if (
+      line1 === capped ||
+      text.includes(line1) ||
+      full === text ||
+      (full && text.includes(full))
+    ) {
+      return p.id;
+    }
+  }
+  return null;
 }
