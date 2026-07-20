@@ -12,7 +12,7 @@
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { customers, properties, type Customer, type Property } from "../../drizzle/schema";
-import { formatPropertyAddress, isCompleteAddress, missingAddressParts } from "@shared/address";
+import { formatPropertyAddress, isCompleteAddress, missingAddressParts, parseFreeTextAddress } from "@shared/address";
 import type { getDb } from "../db";
 
 type FullDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -238,48 +238,73 @@ export async function matchPropertyByFreeText(
 }
 
 /**
- * FORWARD-FILL for NEW bookings only, MATCH-ONLY. Given the booking's resolved
- * customer and service address, return an EXISTING same-customer property id to
- * link, or null when none matches. Rules enforced:
- *  - same-customer only (the read is scoped to `customerId`),
- *  - deduplicated / idempotent (the same address always resolves to the same
- *    property — free-text match, then case-insensitive addressLine1 equality),
+ * FORWARD-FILL for NEW bookings only. Given the booking's resolved customer and
+ * typed service address, return a property id to link, or null to leave the
+ * appointment unlinked. Two tiers:
+ *
+ *  1. REUSE  — if the address matches one of the customer's existing properties
+ *              (free-text street match, or exact addressLine1), link that one.
+ *  2. CREATE — only when NO match exists AND the typed line parses to a COMPLETE
+ *              service address (Street + City + State + ZIP): insert a structured
+ *              property and link it.
+ *  otherwise → return null. An INCOMPLETE free-text line (missing City/State/ZIP)
+ *  is never auto-promoted to a Property; the appointment keeps its free-text
+ *  address, propertyId stays null, and staff reconcile it explicitly via
+ *  `appointments.linkProperty` (which can complete City/State/ZIP first).
+ *
+ * Guarantees:
+ *  - same-customer only (every read/insert is scoped to `customerId`),
+ *  - deduplicated / idempotent (same address → same property; a create re-checks
+ *    the exact-addressLine1 dedupe before inserting),
  *  - never links across customers.
  *
- * It deliberately does NOT create a property. The booking form captures a single
- * free-text service line with no verified City/State/ZIP; an unverified partial
- * address must not be promoted to a standalone `properties` row automatically
- * (see shared/address.ts completeness rules). Unmatched bookings are left with a
- * null propertyId and reconciled by staff through the explicit
- * `appointments.linkProperty` action, which captures a structured address.
- *
- * Ownership/validation/DB errors are NOT suppressed — the query runs on the
- * booking transaction and any failure propagates so the booking fails loudly
- * rather than silently dropping the property link. Returns null only for a
- * blank/unusable address or a genuine no-match.
+ * MUST run inside the booking's insert transaction (pass the tx as `db`) so the
+ * property and appointment commit atomically. Ownership/validation/DB errors are
+ * NOT suppressed — any failure propagates and aborts the booking rather than
+ * silently dropping the link. Returns null on a blank address or a genuine
+ * no-match-and-incomplete case.
  */
-export async function matchExistingPropertyForBooking(
+export async function forwardFillPropertyForBooking(
   db: Db,
   customerId: number,
   freeTextAddress: string | null | undefined,
+  propertyType?: "residential" | "commercial" | null,
 ): Promise<number | null> {
-  const text = freeTextAddress?.trim().toLowerCase();
+  const text = freeTextAddress?.trim();
   if (!text) return null;
-  const capped = text.slice(0, 255);
-  // Single same-customer read; matched in JS. Errors propagate (no try/catch).
+
+  // Tier 1 — reuse an existing same-customer match. One read; matched in JS.
+  const lower = text.toLowerCase();
+  const capped = lower.slice(0, 255);
   const rows = await db.select().from(properties).where(eq(properties.customerId, customerId));
   for (const p of rows) {
     const line1 = (p.addressLine1 ?? "").trim().toLowerCase();
     if (!line1) continue;
     const full = formatPropertyAddress(p).toLowerCase();
-    if (
-      line1 === capped ||
-      text.includes(line1) ||
-      full === text ||
-      (full && text.includes(full))
-    ) {
+    if (line1 === capped || lower.includes(line1) || full === lower || (full && lower.includes(full))) {
       return p.id;
     }
   }
-  return null;
+
+  // Tier 2 — create ONLY when the typed line parses to a complete address.
+  const parsed = parseFreeTextAddress(text);
+  if (!isCompleteAddress(parsed)) return null;
+
+  // Exact-addressLine1 dedupe (idempotency) against the already-loaded rows.
+  const wantLine1 = (parsed.addressLine1 ?? "").trim().toLowerCase();
+  const dupe = rows.find(p => (p.addressLine1 ?? "").trim().toLowerCase() === wantLine1);
+  if (dupe) return dupe.id;
+
+  const ins = await db.insert(properties).values({
+    customerId,
+    addressLine1: (parsed.addressLine1 ?? "").trim().slice(0, 255),
+    addressLine2: parsed.addressLine2?.trim() || null,
+    city: parsed.city?.trim() || null,
+    state: parsed.state?.trim() || null,
+    zip: parsed.zip?.trim() || null,
+    propertyType: propertyType ?? "residential",
+    isPrimary: rows.length === 0,
+  });
+  const id = Number((ins as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+  return id > 0 ? id : null;
 }
