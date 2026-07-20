@@ -15,7 +15,9 @@ import { customers, properties, type Customer, type Property } from "../../drizz
 import { formatPropertyAddress, isCompleteAddress, missingAddressParts } from "@shared/address";
 import type { getDb } from "../db";
 
-type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+type FullDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+/** A live DB handle OR a transaction handle — these helpers run in either. */
+type Db = FullDb | Parameters<Parameters<FullDb["transaction"]>[0]>[0];
 
 export interface AppointmentContextInput {
   customerId?: number | null;
@@ -131,6 +133,56 @@ export async function resolveAppointmentContext(db: Db, input: AppointmentContex
   return normalizeAppointmentFields(input, { customer, property });
 }
 
+// ─────────────────────────────────────────────────────────────
+// Property ↔ appointment linking (user-driven; never silent)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * PURE decision for linking a property to an appointment. Mirrors the
+ * normalizeAppointmentFields pattern: the router loads the rows, this function
+ * validates ownership + decides between reuse and create so the logic is
+ * unit-tested without a database. Enforces the data-integrity rules:
+ *  - a property must belong to the appointment's (resolved) customer — never
+ *    link across customers,
+ *  - an existing address match is REUSED, never duplicated (dedupe/idempotency),
+ *  - a linkable customer must exist.
+ */
+export interface PropertyLinkDecisionInput {
+  /** Customer that will own the property, after phone-resolution in the router. */
+  resolvedCustomerId: number | null;
+  mode: "existing" | "create";
+  /** Mode "existing": the loaded property row (null when the id was not found). */
+  existingProperty?: { id: number; customerId: number } | null;
+  /** Mode "create": id of a property whose addressLine1 already matches (dedupe hit), or null. */
+  dedupeMatchId?: number | null;
+}
+
+export type PropertyLinkDecision =
+  | { action: "link"; propertyId: number }
+  | { action: "create" };
+
+export function decidePropertyLink(input: PropertyLinkDecisionInput): PropertyLinkDecision {
+  if (input.resolvedCustomerId == null) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "This appointment isn't linked to a customer yet. Link it to a customer before adding a property.",
+    });
+  }
+
+  if (input.mode === "existing") {
+    const prop = input.existingProperty ?? null;
+    if (!prop) throw new TRPCError({ code: "NOT_FOUND", message: "Property not found." });
+    if (prop.customerId !== input.resolvedCustomerId) {
+      throw new TRPCError({ code: "CONFLICT", message: "That property belongs to a different customer." });
+    }
+    return { action: "link", propertyId: prop.id };
+  }
+
+  // mode === "create": reuse an address-matched property (dedupe), else create.
+  if (input.dedupeMatchId != null) return { action: "link", propertyId: input.dedupeMatchId };
+  return { action: "create" };
+}
+
 /** Resolve a customer's primary (then first) property id, or null. Never throws. */
 export async function findPrimaryPropertyId(db: Db, customerId: number): Promise<number | null> {
   try {
@@ -180,6 +232,52 @@ export async function matchPropertyByFreeText(
       }
     }
     return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * FORWARD-FILL for NEW bookings only. Given the booking's resolved customer and
+ * service address, return a property id to link — reusing an existing one when a
+ * match is safe, otherwise creating and returning a new property. Rules enforced:
+ *  - same-customer only (all reads/inserts are scoped to `customerId`),
+ *  - deduplicated (free-text match, then case-insensitive addressLine1 match),
+ *  - idempotent (the same address always resolves to the same property),
+ *  - never links across customers.
+ *
+ * MUST be called from inside the booking's insert transaction (pass the tx as
+ * `db`) so the property and appointment commit atomically. This is NOT a
+ * historical backfill: it acts only on the single current booking's address and
+ * never scans or mutates other appointments. Returns null on blank address; best
+ * effort on unexpected DB errors (booking proceeds with a null property).
+ */
+export async function ensurePropertyForBooking(
+  db: Db,
+  customerId: number,
+  freeTextAddress: string | null | undefined,
+  propertyType?: "residential" | "commercial" | null,
+): Promise<number | null> {
+  const text = freeTextAddress?.trim();
+  if (!text) return null;
+  try {
+    const matched = await matchPropertyByFreeText(db, customerId, text);
+    if (matched) return matched.id;
+    // addressLine1 is varchar(255); cap the free-text line and dedupe on the capped value.
+    const line1 = text.slice(0, 255);
+    const existing = await findPropertyByAddress(db, customerId, line1);
+    if (existing) return existing;
+    const hasAny = (
+      await db.select({ id: properties.id }).from(properties).where(eq(properties.customerId, customerId)).limit(1)
+    ).length > 0;
+    const ins = await db.insert(properties).values({
+      customerId,
+      addressLine1: line1,
+      propertyType: propertyType ?? "residential",
+      isPrimary: !hasAny,
+    });
+    const id = Number((ins as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+    return id > 0 ? id : null;
   } catch {
     return null;
   }
