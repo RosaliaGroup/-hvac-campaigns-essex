@@ -14,6 +14,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
 import AppointmentAttendees from "@/components/AppointmentAttendees";
+import PropertyLinkSection from "@/components/PropertyLinkSection";
 import { APPOINTMENT_TYPES, appointmentTypeLabel, serviceTypeLabel } from "@shared/appointmentTypes";
 import { dayKey, appointmentMatchesFilters, bucketAppointmentsByDay } from "@/lib/appointmentCalendar";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
@@ -303,6 +304,9 @@ export default function AppointmentCalendar() {
                   <div className="flex items-center gap-3 text-muted-foreground">
                     <span className="flex items-center gap-1"><Phone className="h-3 w-3" /><a href={`tel:${a.phone}`} className="hover:underline">{a.phone}</a></span>
                     <span className="flex items-center gap-1"><UserRound className="h-3 w-3" />{assigneeName(a.assignedToId)}</span>
+                  </div>
+                  <div className="pt-1.5 border-t mt-1.5">
+                    <PropertyLinkSection appointment={a} onChanged={refetchAll} />
                   </div>
                   <div className="pt-1.5 border-t mt-1.5">
                     <AppointmentAttendees
