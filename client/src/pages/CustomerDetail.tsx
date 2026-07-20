@@ -20,6 +20,7 @@ import { resolveCustomerIdentity } from "@/lib/customerIdentity";
 import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
 import { jobRoute, opportunityRoute } from "@/lib/customerNavigation";
 import ConversationPreview from "@/components/sms/ConversationPreview";
+import CustomerEquipmentTab from "@/components/CustomerEquipmentTab";
 import { internalSmsConversationPath } from "@/lib/internalSms";
 import { Briefcase } from "lucide-react";
 import {
@@ -270,6 +271,7 @@ export default function CustomerDetail() {
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="properties">Properties ({counts.properties})</TabsTrigger>
             <TabsTrigger value="jobs">Jobs ({counts.jobs})</TabsTrigger>
+            <TabsTrigger value="equipment">Equipment</TabsTrigger>
             <TabsTrigger value="opportunities">Opportunities ({counts.opportunities})</TabsTrigger>
             <TabsTrigger value="estimates">Estimates / Proposals ({counts.estimates})</TabsTrigger>
             <TabsTrigger value="invoices">Invoices ({counts.invoices})</TabsTrigger>
@@ -354,6 +356,10 @@ export default function CustomerDetail() {
 
           <TabsContent value="jobs">
             <CustomerJobsTab customerId={customerId} properties={properties} />
+          </TabsContent>
+
+          <TabsContent value="equipment">
+            <CustomerEquipmentTab customerId={customerId} properties={properties} />
           </TabsContent>
 
           <TabsContent value="opportunities">

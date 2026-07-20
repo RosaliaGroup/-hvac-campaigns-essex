@@ -30,6 +30,7 @@ import { redactCredentials } from "./services/credentialSafety";
 import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelationships } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
+import { equipmentRouter } from "./routers/equipment";
 import { dispatchAuditRouter } from "./routers/dispatchAudit";
 import { dispatchRouter } from "./routers/dispatch";
 import { quickbooksRouter } from "./routers/quickbooks";
@@ -84,6 +85,7 @@ export const appRouter = router({
   takeoffs: takeoffsRouter,
   customers: customersRouter,
   jobs: jobsRouter,
+  equipment: equipmentRouter,
   dispatchAudit: dispatchAuditRouter,
   dispatch: dispatchRouter,
   quickbooks: quickbooksRouter,
