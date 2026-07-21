@@ -16,3 +16,15 @@ export function canAccessDispatch(user: DispatchAccessUser | null | undefined): 
   if (!user) return false;
   return user.role === "admin";
 }
+
+/**
+ * Who may ASSIGN / reassign / unassign appointments on the Dispatch Board (M2).
+ * Admin ONLY for now — identical to view access, using the existing admin model.
+ * Technicians never self-assign; customers never touch dispatch. When a dedicated
+ * Dispatcher role is added later, widen this one function and the server gate
+ * follows; the mutation mechanics do not change.
+ */
+export function canAssignDispatch(user: DispatchAccessUser | null | undefined): boolean {
+  if (!user) return false;
+  return user.role === "admin";
+}

@@ -1,16 +1,17 @@
 /**
- * Dispatch Board (M1) — admin-only, READ-ONLY, single-day.
+ * Dispatch Board (M1 read + M2 assign) — admin-only, single-day.
  *
  * Two panels: a Technician Workload Board (one lane per active technician + an
- * Unassigned lane) for one selected day, and the Unscheduled queue. View-only —
- * assignment, rescheduling, and drag-and-drop arrive in a later milestone.
- * Server enforcement is authoritative (adminProcedure); this page also gates on
- * `canAccessDispatch` as defense-in-depth.
+ * Unassigned lane) for one selected day, and the Unscheduled queue. Admins can
+ * assign / reassign / unassign each visit via the per-card AssigneePicker;
+ * rescheduling and drag-and-drop arrive in a later milestone. Server enforcement
+ * is authoritative (adminProcedure); this page also gates on `canAccessDispatch`
+ * / `canAssignDispatch` as defense-in-depth.
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { canAccessDispatch } from "@shared/dispatchPermissions";
+import { canAccessDispatch, canAssignDispatch } from "@shared/dispatchPermissions";
 import { todayInTimeZone, shiftDay } from "@shared/dispatchBoard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,11 +31,14 @@ function prettyDate(day: string): string {
 export default function DispatcherWorkspace() {
   const { user } = useAuth();
   const allowed = canAccessDispatch(user);
+  const canAssign = canAssignDispatch(user);
   const [day, setDay] = useState(() => todayInTimeZone(new Date(), BROWSER_TZ));
   const today = todayInTimeZone(new Date(), BROWSER_TZ);
 
   const board = trpc.dispatch.board.useQuery({ day, timeZone: BROWSER_TZ }, { enabled: allowed, refetchOnWindowFocus: false });
   const unscheduled = trpc.dispatch.unscheduled.useQuery({ limit: 50 }, { enabled: allowed, refetchOnWindowFocus: false });
+  const roster = trpc.dispatch.roster.useQuery(undefined, { enabled: allowed, refetchOnWindowFocus: false });
+  const technicians = roster.data?.technicians ?? [];
 
   if (!allowed) {
     return (
@@ -50,7 +54,7 @@ export default function DispatcherWorkspace() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dispatch</h1>
-          <p className="text-sm text-muted-foreground">Single-day technician workload — read-only.</p>
+          <p className="text-sm text-muted-foreground">Single-day technician workload.</p>
         </div>
         {/* Date bar */}
         <div className="flex items-center gap-2">
@@ -71,7 +75,9 @@ export default function DispatcherWorkspace() {
 
       <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
         <Info className="h-3.5 w-3.5 shrink-0" />
-        Read-only view — assigning and rescheduling arrive in a later update. Live status reflects the technician’s work status.
+        {canAssign
+          ? "Assign a technician from any visit card. Rescheduling and drag-and-drop arrive in a later update; live status reflects the technician’s work status."
+          : "Read-only view. Live status reflects the technician’s work status."}
       </div>
 
       {/* Workload board */}
@@ -96,7 +102,7 @@ export default function DispatcherWorkspace() {
                 <div className="flex flex-col gap-2 p-2">
                   {lane.visits.length === 0
                     ? <p className="px-1 py-3 text-center text-xs text-muted-foreground">No visits</p>
-                    : lane.visits.map(v => <VisitCard key={v.appointmentId} visit={v} />)}
+                    : lane.visits.map(v => <VisitCard key={v.appointmentId} visit={v} technicians={technicians} canAssign={canAssign} />)}
                 </div>
               </div>
             ))}
@@ -119,7 +125,7 @@ export default function DispatcherWorkspace() {
           <ErrorBox message="Couldn’t load unscheduled appointments." onRetry={() => unscheduled.refetch()} />
         ) : unscheduled.data && unscheduled.data.visits.length > 0 ? (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {unscheduled.data.visits.map(v => <VisitCard key={v.appointmentId} visit={v} />)}
+            {unscheduled.data.visits.map(v => <VisitCard key={v.appointmentId} visit={v} technicians={technicians} canAssign={canAssign} />)}
           </div>
         ) : (
           <EmptyBox message="No unscheduled appointments." />

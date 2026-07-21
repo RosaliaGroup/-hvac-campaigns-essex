@@ -1,12 +1,13 @@
 /**
- * Dispatch board (M1) — authorization boundary + read-only safety guard.
+ * Dispatch (M1 read + M2 assignment) — authorization boundary + BOUNDED-WRITE guard.
  *
- *  1. Admin-only: anon / member / viewer are rejected on every dispatch query;
- *     an admin passes the boundary into the handler.
- *  2. Static guard: the router is structurally read-only — queries only (no
- *     mutation), no write statements, and no side-effecting service imports.
- *     Fails the build if anyone later adds an assign/reschedule mutation or an
- *     SMS/email/calendar/QBO/AI/notification import.
+ *  1. Admin-only: anon / member / viewer are rejected on every query AND on the
+ *     assign / unassign mutations; an admin passes the boundary into the handler.
+ *  2. Static bounded-write guard: the router may now write, but ONLY (a) UPDATE
+ *     appointments and (b) INSERT appointmentAssignmentEvents — nothing else, no
+ *     DELETE, no raw DML, and still no side-effecting service import. Fails the
+ *     build if anyone widens the write surface or adds an SMS/email/calendar/
+ *     QBO/AI/notification import. The concurrency row-lock must remain.
  */
 import "./testEnvSetup";
 import { readFileSync } from "node:fs";
@@ -15,6 +16,7 @@ import { TRPCError } from "@trpc/server";
 import { appRouter } from "./routers";
 import { createCallerFactory } from "./_core/trpc";
 import type { TrpcContext, AuthenticatedUser } from "./_core/context";
+import { canAssignDispatch } from "../shared/dispatchPermissions";
 
 const createCaller = createCallerFactory(appRouter);
 function makeUser(o: Partial<AuthenticatedUser>): AuthenticatedUser {
@@ -30,24 +32,32 @@ const asAdmin = () => createCaller(makeCtx(makeUser({ teamRole: "admin", role: "
 async function code(fn: () => Promise<unknown>): Promise<string> {
   try { await fn(); return "NO_ERROR"; } catch (e) { return e instanceof TRPCError ? e.code : `NON_TRPC:${String(e)}`; }
 }
+// Valid inputs so the ONLY reason a non-admin is rejected is authorization.
+const ASSIGN = { appointmentId: 1, technicianId: 2, expectedAssignedToId: null } as const;
+const UNASSIGN = { appointmentId: 1, expectedAssignedToId: null } as const;
 
-describe("dispatch (M1) — admin-only authorization", () => {
-  it("rejects anon / member / viewer on every query", async () => {
+describe("dispatch — admin-only authorization (queries + mutations)", () => {
+  it("rejects anon / member / viewer on every query and mutation", async () => {
     for (const call of [
       () => asAnon().dispatch.roster(),
       () => asAnon().dispatch.board({}),
       () => asAnon().dispatch.unscheduled({}),
-      () => asMember().dispatch.roster(),
+      () => asAnon().dispatch.assign(ASSIGN),
+      () => asAnon().dispatch.unassign(UNASSIGN),
       () => asMember().dispatch.board({}),
-      () => asMember().dispatch.unscheduled({}),
-      () => asViewer().dispatch.board({}),
+      () => asMember().dispatch.assign(ASSIGN),
+      () => asMember().dispatch.unassign(UNASSIGN),
+      () => asViewer().dispatch.assign(ASSIGN),
+      () => asViewer().dispatch.unassign(UNASSIGN),
     ]) expect(await code(call)).toBe("FORBIDDEN");
   });
-  it("an admin passes the authz boundary into the handler", async () => {
+  it("an admin passes the authz boundary into every handler", async () => {
     for (const call of [
       () => asAdmin().dispatch.roster(),
       () => asAdmin().dispatch.board({}),
       () => asAdmin().dispatch.unscheduled({}),
+      () => asAdmin().dispatch.assign(ASSIGN),
+      () => asAdmin().dispatch.unassign(UNASSIGN),
     ]) {
       const c = await code(call);
       expect(c).not.toBe("FORBIDDEN");
@@ -56,28 +66,56 @@ describe("dispatch (M1) — admin-only authorization", () => {
   });
 });
 
-describe("dispatch (M1) — static read-only safety guard", () => {
+describe("dispatch — canAssignDispatch (M2 = admin only)", () => {
+  it("only admins may assign; no new roles", () => {
+    expect(canAssignDispatch({ role: "admin" })).toBe(true);
+    expect(canAssignDispatch({ role: "admin", teamRole: "admin" })).toBe(true);
+    expect(canAssignDispatch({ role: "user", teamRole: "member" })).toBe(false);
+    expect(canAssignDispatch({ role: "user", teamRole: "viewer" })).toBe(false);
+    expect(canAssignDispatch(null)).toBe(false);
+    expect(canAssignDispatch(undefined)).toBe(false);
+  });
+});
+
+describe("dispatch — static BOUNDED-WRITE safety guard", () => {
   const src = readFileSync("server/routers/dispatch.ts", "utf8");
   // Strip comments so guards inspect executable code, not prose (the header names
-  // the very services it must never import).
-  const code = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  // the very services + verbs it must never use).
+  const codeStr = src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
 
-  it("exposes queries only, never a mutation", () => {
-    expect(code).toContain(".query(");
-    expect(code).not.toContain(".mutation(");
+  it("exposes exactly two mutations: assign and unassign", () => {
+    expect(codeStr).toContain(".query(");
+    const mutationCount = (codeStr.match(/\.mutation\(/g) ?? []).length;
+    expect(mutationCount).toBe(2);
+    expect(codeStr).toMatch(/\bassign:\s*adminProcedure/);
+    expect(codeStr).toMatch(/\bunassign:\s*adminProcedure/);
   });
-  it("contains no write statements", () => {
-    expect(code).not.toMatch(/\.(insert|update|delete)\s*\(/);
-    expect(code).not.toMatch(/\b(INSERT|UPDATE|DELETE)\s+(INTO|FROM|`)/i);
+
+  it("writes ONLY appointments (update) and appointmentAssignmentEvents (insert)", () => {
+    const updates = [...codeStr.matchAll(/\.update\((\w+)\)/g)].map(m => m[1]);
+    const inserts = [...codeStr.matchAll(/\.insert\((\w+)\)/g)].map(m => m[1]);
+    expect(new Set(updates)).toEqual(new Set(["appointments"]));
+    expect(new Set(inserts)).toEqual(new Set(["appointmentAssignmentEvents"]));
   });
+
+  it("performs no deletes and no raw DML", () => {
+    expect(codeStr).not.toMatch(/\.delete\s*\(/);
+    expect(codeStr).not.toMatch(/\b(INSERT|UPDATE|DELETE)\s+(INTO|FROM|`)/i);
+  });
+
+  it("locks the appointment row for update (concurrency guard stays)", () => {
+    expect(codeStr).toContain('.for("update")');
+  });
+
   it("imports no side-effecting service (SMS / email / calendar / QBO / AI / notification)", () => {
-    const importLines = code.split("\n").filter(l => /^\s*import\b/.test(l)).join("\n");
+    const importLines = codeStr.split("\n").filter(l => /^\s*import\b/.test(l)).join("\n");
     for (const re of [/telnyx/i, /appointmentSms/i, /emailService/i, /sendEmail/i, /appointmentInvites/i, /googleCalendar/i, /quickbooks/i, /accounting/i, /anthropic/i, /_core\/llm/i, /notification/i, /notifyOwner/i]) {
       expect(importLines).not.toMatch(re);
     }
   });
+
   it("reads only the expected tables", () => {
-    const froms = [...code.matchAll(/\.(from|leftJoin)\((\w+)/g)].map(m => m[2]);
+    const froms = [...codeStr.matchAll(/\.(from|leftJoin)\((\w+)/g)].map(m => m[2]);
     expect(new Set(froms)).toEqual(new Set(["appointments", "customers", "jobs", "teamMembers"]));
   });
 });
