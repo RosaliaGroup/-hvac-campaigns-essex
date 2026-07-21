@@ -1,13 +1,15 @@
 /**
- * Dispatch VisitCard (M1) — READ-ONLY. Renders one visit on the board or in the
- * unscheduled queue. No mutating controls (assignment / drag / reschedule arrive
- * in a later milestone). Live status reflects technicianWorkStatus when a job is
- * linked, otherwise the appointment status.
+ * Dispatch VisitCard (M1 read + M2 assign). Renders one visit on the board or in
+ * the unscheduled queue. When `canAssign` is set and a technician list is passed,
+ * it shows the admin-only AssigneePicker (assign / reassign / unassign); otherwise
+ * it is read-only. Live status reflects technicianWorkStatus when a job is linked,
+ * otherwise the appointment status. No drag / reschedule (later milestones).
  */
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Phone, MapPin, Clock } from "lucide-react";
 import type { BoardVisit, Priority } from "@shared/dispatchBoard";
+import AssigneePicker, { type PickerTechnician } from "@/components/dispatch/AssigneePicker";
 
 const PRIORITY_STYLE: Record<Priority, string> = {
   normal: "bg-slate-100 text-slate-600 border-slate-200",
@@ -34,7 +36,10 @@ function formatTime(iso: string | null): string {
   } catch { return "—"; }
 }
 
-export default function VisitCard({ visit }: { visit: BoardVisit }) {
+export default function VisitCard(
+  { visit, technicians, canAssign }: { visit: BoardVisit; technicians?: PickerTechnician[]; canAssign?: boolean },
+) {
+  const showPicker = !!canAssign && Array.isArray(technicians);
   return (
     <div className="rounded-lg border bg-card p-3 text-sm shadow-sm">
       <div className="flex items-center justify-between gap-2">
@@ -60,6 +65,12 @@ export default function VisitCard({ visit }: { visit: BoardVisit }) {
         <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
         <span>{visit.propertyAddress ?? "No service address"}</span>
       </div>
+
+      {showPicker && (
+        <div className="mt-2">
+          <AssigneePicker visit={visit} technicians={technicians!} />
+        </div>
+      )}
 
       <div className="mt-2 flex items-center justify-between gap-2">
         {visit.jobNumber && visit.jobId != null ? (

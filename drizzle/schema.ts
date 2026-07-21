@@ -384,6 +384,38 @@ export type AppointmentAttendee = typeof appointmentAttendees.$inferSelect;
 export type InsertAppointmentAttendee = typeof appointmentAttendees.$inferInsert;
 
 /**
+ * Appointment assignment audit trail (Dispatch M2) — append-only. One row per
+ * REAL change of `appointments.assignedToId` made through the Dispatch Board.
+ * Mirrors `jobWorkStatusEvents`. No DB foreign key (app-level relations, matching
+ * every other *Id column). A same-assignee / already-unassigned no-op writes NO
+ * row. `appointments.assignedToId` remains the authoritative current assignee;
+ * this table is history only and is never read to compute the board.
+ */
+export const appointmentAssignmentEvents = mysqlTable(
+  "appointmentAssignmentEvents",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    appointmentId: int("appointmentId").notNull(),
+    /** Previous assignee (teamMembers.id); null when it was unassigned. */
+    fromAssigneeId: int("fromAssigneeId"),
+    /** New assignee (teamMembers.id); null for an unassign. */
+    toAssigneeId: int("toAssigneeId"),
+    /** assign (none→tech), reassign (tech→tech), unassign (tech→none). */
+    action: mysqlEnum("action", ["assign", "reassign", "unassign"]).notNull(),
+    /** teamMembers.id who made the change; null for a Manus-admin / system session. */
+    changedById: int("changedById"),
+    /** Denormalized display name of who changed it, for the timeline. */
+    changedByName: varchar("changedByName", { length: 255 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    appointmentIdx: index("appointmentAssignmentEvents_appointmentId_idx").on(table.appointmentId),
+  }),
+);
+export type AppointmentAssignmentEvent = typeof appointmentAssignmentEvents.$inferSelect;
+export type InsertAppointmentAssignmentEvent = typeof appointmentAssignmentEvents.$inferInsert;
+
+/**
  * Google Calendar OAuth connection (Task 8). Mirrors quickbooksConnections:
  * a single active connection; access/refresh tokens AES-256-GCM encrypted at
  * rest, NEVER logged or returned to the client.
