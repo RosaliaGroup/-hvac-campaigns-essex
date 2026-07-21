@@ -675,6 +675,19 @@ export class QuickBooksProvider implements AccountingProvider {
   // ── Sales documents (Estimates) — read-only mirror ──────────────────────────
 
   /**
+   * Run an arbitrary QBO query and return the raw QueryResponse. The QBO `/query`
+   * endpoint only supports SELECT statements, so this primitive is read-only by
+   * construction — it can never mutate QuickBooks. Intended for read-only
+   * diagnostic tooling; the sync path uses the typed fetchEstimates/fetchInvoices
+   * wrappers instead. Returns an empty QueryResponse on a non-2xx response.
+   */
+  async runReadOnlyQuery(query: string): Promise<{ QueryResponse?: Record<string, unknown> }> {
+    const res = await this.qboFetch(`/query?query=${encodeURIComponent(query)}`);
+    if (!res.ok) return { QueryResponse: {} };
+    return (await res.json()) as { QueryResponse?: Record<string, unknown> };
+  }
+
+  /**
    * Fetch one page of Estimates for the given QBO query string. Returns [] on a
    * non-OK response so a transient error skips the page rather than throwing
    * mid-sync (the orchestrator logs the run outcome).

@@ -13,7 +13,7 @@ import { getDb, createDedicatedConnection } from "../db";
 import { customers, properties, quickbooksSyncLogs, type Customer, type Property } from "../../drizzle/schema";
 import { getAccountingProvider } from "../integrations/accounting";
 import { quickbooksProvider, buildAuthorizeUrl, getQboConfig, signState, writeSyncLog } from "../integrations/accounting/quickbooks";
-import { syncSalesDocuments } from "../integrations/accounting/salesDocSync";
+import { syncSalesDocuments, syncSalesDocumentsForCustomer } from "../integrations/accounting/salesDocSync";
 import { syncInvoices } from "../integrations/accounting/invoiceSync";
 import { runAdvisoryLockSelfTest, type DbLockLogEntry, type LockConnection } from "../integrations/accounting/dbSyncLock";
 import type { AccountingCustomerInput, ConflictResolution, PushCustomerResult } from "../integrations/accounting/types";
@@ -232,6 +232,30 @@ export const quickbooksRouter = router({
     .input(z.object({ sinceDays: z.number().int().min(1).max(365).default(60) }).optional())
     .mutation(async ({ input }) => {
       const result = await syncSalesDocuments({ mode: "backfill", sinceDays: input?.sinceDays ?? 60 });
+      if (!result.ok && result.error) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
+      }
+      return result;
+    }),
+
+  /**
+   * Admin: "Resync this customer from QuickBooks" — customer-scoped estimate
+   * resync for ONE linked customer. Fetches every Estimate for the customer's
+   * QBO id (regardless of the incremental cursor) and runs each through the same
+   * canonical pipeline as the scheduled sync. Idempotent (no duplicates), holds
+   * the same advisory lock as the full sync, and never reads/advances/writes the
+   * global cursor. Requires an explicit `confirm: true` so it can't fire by
+   * accident. Admin-only; viewers/technicians are rejected by adminProcedure.
+   */
+  resyncCustomerFromQuickBooks: adminProcedure
+    .input(z.object({ customerId: z.number().int().positive(), confirm: z.literal(true) }))
+    .mutation(async ({ input }) => {
+      const { customer } = await loadCustomerWithPrimary(input.customerId);
+      const qbId = customer.quickbooksCustomerId?.trim();
+      if (!qbId) {
+        throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Customer is not linked to QuickBooks" });
+      }
+      const result = await syncSalesDocumentsForCustomer(qbId, { crmCustomerId: input.customerId });
       if (!result.ok && result.error) {
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: result.error });
       }

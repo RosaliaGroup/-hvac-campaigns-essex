@@ -53,6 +53,9 @@ vi.mock("wouter", async () => {
   };
 });
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast: () => {} }), toast: () => {} }));
+// useAuth touches localStorage in a useMemo — stub it for static SSR rendering
+// (CustomerDetail's QuickBooks card reads the current user to gate an admin action).
+vi.mock("@/_core/hooks/useAuth", () => ({ useAuth: () => ({ user: null, loading: false, isAuthenticated: false }) }));
 vi.mock("@/components/DashboardLayout", async () => {
   const { createElement } = await import("react");
   return { default: (p: { children?: unknown }) => createElement("div", null, p.children) };

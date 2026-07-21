@@ -27,6 +27,7 @@ import type { WorkCategory } from "../../../shared/opportunityCategory";
 import { quickbooksProvider, writeSyncLog } from "./quickbooks";
 import {
   buildContactFromEstimate,
+  buildCustomerEstimateQuery,
   buildEstimateQuery,
   mapDocStatusToStage,
   mapEstimateToSalesDoc,
@@ -58,12 +59,16 @@ export interface SyncResult {
   created: number;
   updated: number;
   skipped: number;
+  /** Per-estimate failures that did NOT abort the run (customer resync only). */
+  failed: number;
   contactsCreated: number;
   opportunitiesCreated: number;
   followupsTriggered: number;
   durationMs: number;
   cursorAdvancedTo: string | null;
   error?: string;
+  /** Bounded, sanitized per-estimate error detail (customer resync only). */
+  errors?: Array<{ quickbooksId: string; message: string }>;
 }
 
 function emptyResult(): SyncResult {
@@ -73,6 +78,7 @@ function emptyResult(): SyncResult {
     created: 0,
     updated: 0,
     skipped: 0,
+    failed: 0,
     contactsCreated: 0,
     opportunitiesCreated: 0,
     followupsTriggered: 0,
@@ -777,5 +783,168 @@ async function runSalesDocSync(opts: SyncOptions, now: Date, assertLockHeld?: ()
       : (result.error ?? "unknown error").slice(0, 1000),
   });
   console.log(JSON.stringify({ tag: "[QboSalesDocSync]", ...result }));
+  return result;
+}
+
+// ── Customer-scoped resync ──────────────────────────────────────────────────
+
+/** ≤ this many estimate pages for one customer (2000 docs) — a generous bound. */
+const CUSTOMER_MAX_PAGES = 20;
+
+export interface CustomerSyncOptions {
+  now?: Date;
+  /**
+   * The CRM customer id, recorded on the audit-log row (entityId) only. It never
+   * affects which estimates are processed — scoping is by the QBO customer id.
+   */
+  crmCustomerId?: number;
+  /** Test seam: override the dedicated-connection factory for the advisory lock. */
+  lockConnectionFactory?: () => Promise<LockConnection>;
+}
+
+/**
+ * Resync every Estimate for a SINGLE QuickBooks customer, using the exact same
+ * canonical pipeline as the scheduled sync (`processEstimate`) and the SAME
+ * advisory lock, so it is mutually exclusive with the full sync and can never
+ * race it. Unlike the full sync it is NOT cursor-driven: it fetches all of the
+ * customer's estimates by CustomerRef regardless of LastUpdatedTime — which is
+ * how it recovers an estimate whose last update predates the global cursor.
+ *
+ * Guarantees (verified by tests):
+ *   - The global sales-doc cursor is never read, advanced, reset, or written.
+ *   - Only the requested QBO customer's estimates are processed (a defensive
+ *     CustomerRef check skips anything else QBO might return).
+ *   - Idempotent: re-running creates no duplicate doc / opportunity / contact
+ *     (identity is (realmId, docType, quickbooksId); processEstimate upserts).
+ *   - Per-estimate failures are isolated and reported; a lost advisory lock is a
+ *     hard abort, never swallowed as a per-estimate failure.
+ */
+export async function syncSalesDocumentsForCustomer(
+  quickbooksCustomerId: string,
+  opts: CustomerSyncOptions = {},
+): Promise<SyncResult> {
+  const now = opts.now ?? new Date();
+  const qbId = String(quickbooksCustomerId ?? "").trim();
+  if (!qbId) {
+    return recordRefusal(emptyResult(), "quickbooksCustomerId is required", "invalid_input");
+  }
+  const owner = `customer-${qbId}-${now.getTime()}`;
+  const requestId = owner;
+
+  // Layer 1: fast in-process pre-check — shared with the full sync, so a customer
+  // resync and a full sync can never run at the same time in this process.
+  if (!salesDocSyncLock.tryAcquire(owner)) {
+    return recordRefusal(
+      emptyResult(),
+      "another QuickBooks sync is already running in this process; skipped to avoid concurrent writes",
+      "in_process_busy",
+    );
+  }
+
+  try {
+    // Layer 2: authoritative cross-instance advisory lock (same name as the full
+    // sync). QBO calls happen ONLY inside `run`, strictly after the lock is held.
+    const connect = opts.lockConnectionFactory ?? lockConnectionFactory;
+    return await withDbLock(
+      connect,
+      SALESDOC_LOCK_NAME,
+      handle => runCustomerSync(qbId, opts, now, () => handle.assertHeld()),
+      (reason, error) =>
+        recordRefusal(
+          emptyResult(),
+          reason === "busy"
+            ? "another QuickBooks sync holds the advisory lock (another instance); skipped to avoid concurrent writes"
+            : `advisory lock unavailable (database error): ${error?.message ?? "unknown"}; resync aborted safely`,
+          reason === "busy" ? "advisory_busy" : "advisory_db_error",
+        ),
+      { requestId, log: logDbLock },
+    );
+  } finally {
+    salesDocSyncLock.release(owner);
+  }
+}
+
+async function runCustomerSync(
+  qbCustomerId: string,
+  opts: CustomerSyncOptions,
+  now: Date,
+  assertLockHeld?: () => void,
+): Promise<SyncResult> {
+  const result = emptyResult();
+  result.errors = [];
+  const started = Date.now();
+
+  const db = await getDb();
+  if (!db) {
+    result.error = "Database unavailable";
+    return result;
+  }
+  const conn = await quickbooksProvider.getConnection();
+  if (!conn || conn.status !== "connected") {
+    result.error = "QuickBooks is not connected";
+    return result;
+  }
+
+  try {
+    for (let page = 0; page < CUSTOMER_MAX_PAGES; page++) {
+      // Re-check the advisory lock before every QBO page (see runSalesDocSync).
+      assertLockHeld?.();
+      const query = buildCustomerEstimateQuery({
+        quickbooksCustomerId: qbCustomerId,
+        startPosition: page * PAGE_SIZE + 1,
+        pageSize: PAGE_SIZE,
+      });
+      const estimates = await quickbooksProvider.fetchEstimates(query);
+      for (const e of estimates) {
+        assertLockHeld?.(); // re-check the lock before processing each estimate
+        // Defensive scope guard: only ever process the requested customer's
+        // estimates, even if QBO's filter returned something unexpected.
+        if ((e.CustomerRef?.value ?? null) !== qbCustomerId) {
+          result.skipped++;
+          continue;
+        }
+        try {
+          await processEstimate(db, conn, e, now, result, assertLockHeld);
+        } catch (err) {
+          const message = (err as Error).message ?? "unknown error";
+          // A lost advisory lock must abort the whole run — never treat it as an
+          // isolated per-estimate failure (that would keep writing after the lock
+          // auto-released and could race another instance).
+          if (/advisory lock connection/i.test(message)) throw err;
+          result.failed++;
+          if (result.errors!.length < 25) {
+            result.errors!.push({ quickbooksId: String(e.Id), message: message.slice(0, 200) });
+          }
+        }
+      }
+      if (estimates.length < PAGE_SIZE) break;
+      await new Promise(r => setTimeout(r, PAGE_THROTTLE_MS));
+    }
+
+    // The global sales-doc cursor is DELIBERATELY untouched here — a customer
+    // resync must not read, advance, reset, or write the company-wide watermark.
+    result.ok = result.failed === 0;
+    if (result.failed > 0) result.error = `${result.failed} estimate(s) failed to import`;
+  } catch (e) {
+    result.error = (e as Error).message;
+    result.ok = false;
+  }
+
+  result.durationMs = Date.now() - started;
+  // Audit log: counters + the scoped customer id only. No credentials, no QBO
+  // access tokens, and no full estimate payloads are ever recorded.
+  await writeSyncLog({
+    entityType: "estimate",
+    entityId: opts.crmCustomerId ?? null,
+    direction: "pull",
+    realmId: conn.realmId,
+    success: result.ok,
+    durationMs: result.durationMs,
+    errorMessage: (result.ok
+      ? `customer-resync qbCustomer=${qbCustomerId} pulled=${result.pulled} created=${result.created} updated=${result.updated} skipped=${result.skipped} failed=${result.failed} contacts+=${result.contactsCreated} opps+=${result.opportunitiesCreated}`
+      : `customer-resync qbCustomer=${qbCustomerId} FAILED: ${(result.error ?? "unknown error")} (pulled=${result.pulled} created=${result.created} updated=${result.updated} failed=${result.failed})`
+    ).slice(0, 1000),
+  });
+  console.log(JSON.stringify({ tag: "[QboCustomerResync]", qbCustomer: qbCustomerId, ...result }));
   return result;
 }

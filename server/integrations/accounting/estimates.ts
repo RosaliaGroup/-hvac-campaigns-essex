@@ -367,6 +367,32 @@ export function buildEstimateQuery(opts: EstimateQueryOptions = {}): string {
   return `SELECT * FROM Estimate ${where} ORDERBY MetaData.LastUpdatedTime STARTPOSITION ${startPosition} MAXRESULTS ${pageSize}`;
 }
 
+export interface CustomerEstimateQueryOptions {
+  /** The QBO Customer id whose estimates to fetch (CustomerRef.value). */
+  quickbooksCustomerId: string;
+  startPosition?: number;
+  pageSize?: number;
+}
+
+/**
+ * Build the QBO query for one page of a SINGLE customer's Estimates.
+ *
+ * Unlike buildEstimateQuery this is intentionally NOT time-bounded: it filters
+ * only by CustomerRef and returns every estimate for that customer regardless of
+ * TxnDate or LastUpdatedTime. That is what lets a customer-scoped resync recover
+ * an estimate whose LastUpdatedTime predates the global incremental cursor — a
+ * blind spot the cursor-based sync can never reach on its own. It reads the same
+ * Estimate entity and orders by LastUpdatedTime like the main query, but never
+ * touches or depends on the cursor.
+ */
+export function buildCustomerEstimateQuery(opts: CustomerEstimateQueryOptions): string {
+  const { quickbooksCustomerId, startPosition = 1, pageSize = 100 } = opts;
+  // QBO query-literal escaping (single quotes doubled). Customer ids are numeric
+  // in practice, but we escape defensively so the query can never be broken.
+  const id = String(quickbooksCustomerId).replace(/'/g, "''");
+  return `SELECT * FROM Estimate WHERE CustomerRef = '${id}' ORDERBY MetaData.LastUpdatedTime STARTPOSITION ${startPosition} MAXRESULTS ${pageSize}`;
+}
+
 /**
  * Idempotency guard: skip re-processing an already-mirrored document when our
  * stored copy is as new as (or newer than) the incoming one. Only skips when

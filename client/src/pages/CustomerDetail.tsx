@@ -25,8 +25,10 @@ import { Briefcase } from "lucide-react";
 import {
   ArrowLeft, Building2, Calendar, Home, Mail, MapPin, MessageSquare, Pencil, Phone, PhoneCall,
   Plus, Star, Trash2, UserRound, Zap, RefreshCw, CheckCircle2, XCircle, Plug, Link2, Loader2,
-  Target, FileText, Receipt, Hash, Tag, DollarSign, Wallet, Clock,
+  Target, FileText, Receipt, Hash, Tag, DollarSign, Wallet, Clock, DownloadCloud,
 } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { resolveNavRole } from "@/lib/navigation";
 
 function formatDate(date: Date | string | null | undefined) {
   if (!date) return "—";
@@ -937,9 +939,30 @@ function QuickBooksCard({
     onError: e => toast({ title: "Resolve failed", description: e.message, variant: "destructive" }),
   });
 
+  // Admin-only customer-scoped estimate resync. Recovers estimates for THIS
+  // customer that the incremental cursor never pulled (e.g. an older estimate
+  // for a newly-linked customer). Refreshes the customer detail AND the
+  // Opportunity Center on success so the new estimate/opportunity appears.
+  const { user } = useAuth();
+  const isAdmin = resolveNavRole(user) === "admin";
+  const utils = trpc.useUtils();
+  const resync = trpc.quickbooks.resyncCustomerFromQuickBooks.useMutation({
+    onSuccess: res => {
+      toast({
+        title: "Resynced from QuickBooks",
+        description: `Estimates — new ${res.created}, updated ${res.updated}, unchanged ${res.skipped}${res.failed ? `, failed ${res.failed}` : ""}`,
+      });
+      onChange(); // refetch customer detail (Estimates / Open Opportunities counts)
+      utils.opportunities.list.invalidate();
+      utils.opportunities.stats.invalidate();
+      utils.opportunities.overview.invalidate();
+    },
+    onError: e => toast({ title: "Resync failed", description: e.message, variant: "destructive" }),
+  });
+
   const connected = statusQ.data?.connected;
   const linked = Boolean(customer.quickbooksCustomerId);
-  const busy = push.isPending || pull.isPending || resolve.isPending;
+  const busy = push.isPending || pull.isPending || resolve.isPending || resync.isPending;
 
   if (!connected) {
     return (
@@ -1003,6 +1026,24 @@ function QuickBooksCard({
             {linked && (
               <Button size="sm" variant="outline" onClick={() => pull.mutate({ customerId })} disabled={busy}>
                 {pull.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null} Sync from QuickBooks
+              </Button>
+            )}
+            {linked && isAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Resync this customer's estimates from QuickBooks?\n\nThis imports any estimates for THIS customer only (including ones the automatic sync may have missed). It won't change other customers or the global sync, and re-running it never creates duplicates.",
+                    )
+                  ) {
+                    resync.mutate({ customerId, confirm: true });
+                  }
+                }}
+              >
+                {resync.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <DownloadCloud className="h-4 w-4 mr-1" />} Resync this customer
               </Button>
             )}
           </div>
