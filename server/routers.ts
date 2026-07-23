@@ -11,6 +11,7 @@ import { TRPCError } from "@trpc/server";
 import { handleVapiWebhook } from "./integrations/vapi";
 import { handleVapiToolCalls } from "./integrations/vapiTools";
 import { authenticateVapiToolCall } from "./integrations/vapiToolAuth";
+import { evaluateVapiWebhookAuth, logVapiWebhookAuth } from "./integrations/vapiWebhookAuth";
 import { handleIncomingSms } from "./integrations/aiVaSms";
 import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
@@ -1561,8 +1562,23 @@ export const appRouter = router({
   // hold a session. Payload validation is the auth boundary here.
   webhooks: router({
 
-    // Vapi voice AI webhook
+    // Vapi voice AI webhook (raw call events → callLogs).
+    // COMPATIBILITY-STAGE auth: a Bearer <VAPI_WEBHOOK_SECRET> guard runs as
+    // middleware BEFORE input parsing. During the Vapi-dashboard transition
+    // (VAPI_WEBHOOK_AUTH_ENFORCED not set) a MISSING header is temporarily
+    // accepted-and-logged so live call logging is not dropped, but an explicitly
+    // wrong/malformed credential is always rejected. Once the dashboard sends the
+    // header and VAPI_WEBHOOK_AUTH_ENFORCED=true is set, this fails closed.
+    // See integrations/vapiWebhookAuth.ts — remove that module once enforced.
     vapi: publicProcedure
+      .use(async ({ ctx, next }) => {
+        const decision = evaluateVapiWebhookAuth(ctx.req?.headers?.authorization);
+        logVapiWebhookAuth(decision);
+        if (decision.outcome === "reject") {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+        }
+        return next();
+      })
       .input(z.any())
       .mutation(async ({ input }) => {
         await handleVapiWebhook(input);
