@@ -1,3 +1,4 @@
+import "./testEnvSetup"; // MUST be first — stripe-service needs a key at import
 import { describe, expect, it } from "vitest";
 import { appRouter } from "./routers";
 import { COOKIE_NAME } from "../shared/const";
@@ -51,10 +52,13 @@ describe("auth.logout", () => {
     expect(result).toEqual({ success: true });
     expect(clearedCookies).toHaveLength(1);
     expect(clearedCookies[0]?.name).toBe(COOKIE_NAME);
+    // Production cookie policy is SameSite=Lax (host-only, httpOnly, Secure).
+    // The earlier "none" expectation was stale; there is no cross-site cookie
+    // requirement, and Lax is the safer CSRF posture. See server/_core/cookies.ts.
     expect(clearedCookies[0]?.options).toMatchObject({
       maxAge: -1,
       secure: true,
-      sameSite: "none",
+      sameSite: "lax",
       httpOnly: true,
       path: "/",
     });

@@ -72,6 +72,22 @@ describe("remember-device duration", () => {
   });
 });
 
+describe("legacy cookie handling", () => {
+  it("refuses a pre-hardening cookie that has no absolute cap (forces re-login)", async () => {
+    // sdk.signSession is the LEGACY signer (no absExp claim), same as old prod.
+    const legacy = await sdk.signSession(
+      { openId: "team:1", appId: "team", name: "X" },
+      { expiresInMs: 60_000 }, // signature valid & unexpired
+    );
+    // Rejection happens on the missing absExp BEFORE any DB lookup.
+    const res = await sdk.authenticateRequest({
+      headers: { cookie: `${COOKIE_NAME}=${legacy}` },
+    } as never);
+    expect(res.user).toBeNull();
+    expect(res.refreshedToken).toBeUndefined();
+  });
+});
+
 describe("auth.logout hardening", () => {
   it("clears the session cookie AND sets no-store cache headers", async () => {
     const { ctx, clearedCookies, headers } = makeLogoutCtx();

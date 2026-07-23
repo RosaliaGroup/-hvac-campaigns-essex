@@ -10,6 +10,17 @@ import { sdk } from "../_core/sdk";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
 import { logAuthEventFromReq } from "../_core/authLog";
+import {
+  getTrustedClientIp,
+  countRateLimitHits,
+  recordRateLimitHit,
+  clearRateLimit,
+} from "../_core/rateLimit";
+
+/** Login lockout: at most 5 failed attempts per (account, trusted-IP) per 15 min. */
+const LOGIN_FAIL_BUCKET = "team_login_fail";
+const LOGIN_MAX_FAILURES = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 import { notifyOwner } from "../_core/notification";
 import { sendPasswordResetEmail, sendTeamInviteEmail } from "../services/emailService";
 
@@ -276,8 +287,26 @@ export const teamAuthRouter = router({
       rememberDevice: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Rate-limit key = account (email) + TRUSTED client IP (rightmost XFF hop,
+      // not the spoofable leftmost). Keying on the combination bounds brute force
+      // per source without letting one attacker lock a victim out globally.
+      const emailKey = input.email.trim().toLowerCase();
+      const trustedIp = getTrustedClientIp({ req: ctx.req });
+      const limiterKey = `${emailKey}|${trustedIp}`;
+
+      // Lockout pre-check — PEEK only (no increment). Generic response regardless
+      // of whether the email exists, so it never reveals account existence.
+      if (countRateLimitHits(LOGIN_FAIL_BUCKET, limiterKey, LOGIN_WINDOW_MS) >= LOGIN_MAX_FAILURES) {
+        logAuthEventFromReq(ctx.req, { event: "login", outcome: "failure", reason: "rate_limited", email: input.email });
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many login attempts. Please wait 15 minutes and try again.",
+        });
+      }
+
       const member = await db.getTeamMemberByEmail(input.email);
       if (!member || !member.passwordHash) {
+        recordRateLimitHit(LOGIN_FAIL_BUCKET, limiterKey, LOGIN_WINDOW_MS);
         logAuthEventFromReq(ctx.req, { event: "login", outcome: "failure", reason: "unknown_or_unset", email: input.email });
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
       }
@@ -292,10 +321,13 @@ export const teamAuthRouter = router({
 
       const valid = await bcrypt.compare(input.password, member.passwordHash);
       if (!valid) {
+        recordRateLimitHit(LOGIN_FAIL_BUCKET, limiterKey, LOGIN_WINDOW_MS);
         logAuthEventFromReq(ctx.req, { event: "login", outcome: "failure", userId: member.id, reason: "bad_password" });
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
       }
 
+      // Successful auth clears the failure counter for this account/IP.
+      clearRateLimit(LOGIN_FAIL_BUCKET, limiterKey);
       await db.updateTeamMemberLastSignedIn(member.id);
 
       const { token, ttlMs } = await createTeamSession(member.id, member.name, input.rememberDevice);
