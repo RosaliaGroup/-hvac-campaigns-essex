@@ -1,6 +1,5 @@
 import { AXIOS_TIMEOUT_MS, COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import {
-  SESSION_TTL_MS,
   sessionTtlMs,
   signSessionToken,
   verifySessionToken,
@@ -330,9 +329,17 @@ class SDKServer {
 
     const claims = verified.claims;
     const now = Date.now();
-    // Legacy pre-hardening cookies carry no absExp — migrate them onto a fresh
-    // 8h cap so idle + absolute enforcement begins from the next request.
-    const absExp = claims.absExp > 0 ? claims.absExp : now + SESSION_TTL_MS;
+    // Pre-hardening cookies carry NO absolute cap (and no iat), so we cannot bound
+    // them. Rather than grant a fresh — and therefore slideable — window on every
+    // request, we refuse them outright and force a fresh login. Effect: a one-time
+    // re-login for everyone after deploy; no session can slide past its cap.
+    if (claims.absExp <= 0) {
+      logAuthEventFromReq(req, { event: "session_expired", outcome: "failure", reason: "legacy_no_abs_cap" });
+      return { user: null };
+    }
+    // The absolute cap is taken from the signed claim and NEVER recomputed, so it
+    // cannot be extended by activity. Concurrent refreshes therefore agree on it.
+    const absExp = claims.absExp;
     if (now >= absExp) {
       logAuthEventFromReq(req, { event: "session_expired", outcome: "failure", reason: "absolute_cap" });
       return { user: null };
