@@ -20,8 +20,6 @@ import { smsCampaignsRouter } from "./routers/smsCampaigns";
 import { conversationCrmRouter } from "./routers/conversationCrm";
 import { rebateCalculatorRouter } from "./routers/rebateCalculator";
 import { heygenRouter } from "./routers/heygen";
-import { coursesRouter } from "./courses-router";
-import { paymentRouter } from "./payment-router";
 import { runCampaignAnalysis } from "./services/campaignEngine";
 import { generateSocialPost } from "./integrations/ai-content-generator";
 import { publishSocialPost, retrySocialPost, PublishError } from "./services/socialPublisher";
@@ -86,8 +84,6 @@ export const appRouter = router({
   conversationCrm: conversationCrmRouter,
   rebateCalculator: rebateCalculatorRouter,
   heygen: heygenRouter,
-  courses: coursesRouter,
-  payment: paymentRouter,
   takeoffs: takeoffsRouter,
   customers: customersRouter,
   jobs: jobsRouter,
