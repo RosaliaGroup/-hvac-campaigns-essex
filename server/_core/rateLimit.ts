@@ -99,48 +99,48 @@ export function resetRateLimits(): void {
 /**
  * Trusted client IP for SECURITY decisions (login rate limiting).
  *
- * `X-Forwarded-For` is `client, proxy1, proxy2, ...` — appended left-to-right as
- * the request traverses proxies. A client can PREPEND arbitrary fake entries,
- * so the LEFTMOST values are attacker-controllable. Each trusted proxy appends
- * the real peer it saw, so the RIGHTMOST entries are trustworthy. With exactly
- * one trusted hop (Railway's edge — the default), the real client IP is the last
- * XFF entry. This mirrors Express `trust proxy = <n>`: trust `hops` entries from
- * the right and ignore everything to their left.
+ * VERIFIED against Railway's edge (2026-07-24, echo deploy on an isolated temp
+ * env). Railway is a REWRITING proxy — it does NOT append to client-supplied
+ * headers, it REPLACES them:
+ *   - `X-Real-IP` is set to the true client IP and OVERWRITES any client-supplied
+ *     value (an injected `X-Real-IP: 9.9.9.9` came through as the real IP).
+ *   - `X-Forwarded-For` is rewritten as "<real-client>, <railway-edge-hop>";
+ *     client-injected XFF entries (single or multi-hop) are DISCARDED. So the
+ *     real client is the LEFTMOST entry, and the RIGHTMOST is Railway's own
+ *     internal edge IP (152.233.x.x) — the same for everyone. Keying on the
+ *     rightmost would bucket ALL users together (global-lockout DoS).
+ *   - `Forwarded` is passed through UNSANITIZED and must never be trusted.
  *
- * NOTE: increase `TRUSTED_PROXY_HOPS` only if you add another trusted proxy in
- * front of Railway (e.g. Cloudflare) — otherwise a client could spoof the extra
- * hop. Never key security limits on `getClientIp` (leftmost, spoofable).
+ * We therefore trust `X-Real-IP` first (Railway-managed, spoof-proof), then the
+ * LEFTMOST `X-Forwarded-For` entry, then the socket peer. Because Railway
+ * overwrites both `X-Real-IP` and `X-Forwarded-For`, a client cannot forge the
+ * value we key on in production. Never key security limits on `getClientIp`.
  */
-/** Upper bound on trusted proxy hops — a client could spoof beyond a real chain. */
-export const MAX_TRUSTED_PROXY_HOPS = 4;
+function firstHeaderValue(v: string | string[] | undefined): string | null {
+  if (Array.isArray(v)) v = v[0];
+  if (typeof v !== "string") return null;
+  const t = v.split(",")[0]!.trim();
+  return t.length > 0 ? t : null;
+}
 
-export function getTrustedClientIp(ctx: Pick<TrpcContext, "req">, hops?: number): string {
+export function getTrustedClientIp(ctx: Pick<TrpcContext, "req">): string {
   const req = ctx.req as {
     headers?: Record<string, string | string[] | undefined>;
     ip?: string;
     socket?: { remoteAddress?: string };
   };
-  // Trusted hops is a small bounded integer in [1, MAX_TRUSTED_PROXY_HOPS];
-  // out-of-range / invalid values fall back to 1 (Railway's single edge hop).
-  const parsedHops = Number.isInteger(hops)
-    ? (hops as number)
-    : parseInt(process.env.TRUSTED_PROXY_HOPS ?? "1", 10);
-  const trustedHops =
-    Number.isInteger(parsedHops) && parsedHops >= 1 && parsedHops <= MAX_TRUSTED_PROXY_HOPS
-      ? parsedHops
-      : 1;
 
+  // 1) X-Real-IP — Railway sets this to the true client and overwrites spoofs.
+  const xRealIp = firstHeaderValue(req?.headers?.["x-real-ip"]);
+  if (xRealIp) return xRealIp;
+
+  // 2) Leftmost X-Forwarded-For — the real client after Railway's rewrite.
   const fwd = req?.headers?.["x-forwarded-for"];
   const raw = Array.isArray(fwd) ? fwd.join(",") : (fwd ?? "");
   const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+  if (parts.length > 0) return parts[0]!;
 
-  if (parts.length > 0) {
-    // The entry `trustedHops` from the right is the deepest hop we still trust.
-    const idx = Math.max(0, parts.length - trustedHops);
-    const candidate = parts[idx];
-    if (candidate) return candidate;
-  }
-  // No usable XFF → fall back to the direct socket peer.
+  // 3) Direct socket peer (no proxy in front).
   return req?.socket?.remoteAddress || req?.ip || "unknown-ip";
 }
 
