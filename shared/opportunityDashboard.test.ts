@@ -7,6 +7,7 @@ import {
   filterOpportunities,
   filteredTotals,
   isFollowUpDue,
+  isFollowUpOverdue,
   matchesFilters,
   matchesSearch,
   relationshipForOpportunity,
@@ -127,6 +128,18 @@ describe("combined filters (requirement 4)", () => {
     expect(isFollowUpDue(future, NOW)).toBe(false);
     expect(isFollowUpDue(closed, NOW)).toBe(false);
     expect(filterOpportunities([due, future, closed], { followUpDue: true }, NOW).map(r => r.id)).toEqual([10]);
+  });
+  it("overdue = open + due strictly before today; due-today is not overdue", () => {
+    const overdue = row({ stage: "pending", nextActionDueAt: new Date(2026, 6, 9, 8) }); // yesterday
+    const today = row({ stage: "pending", nextActionDueAt: new Date(2026, 6, 10, 8) }); // due today
+    const future = row({ stage: "pending", nextActionDueAt: new Date(2026, 6, 20) });
+    const none = row({ stage: "pending", nextActionDueAt: null });
+    const closed = row({ stage: "won", nextActionDueAt: new Date(2026, 6, 1) });
+    expect(isFollowUpOverdue(overdue, NOW)).toBe(true);
+    expect(isFollowUpOverdue(today, NOW)).toBe(false);
+    expect(isFollowUpOverdue(future, NOW)).toBe(false);
+    expect(isFollowUpOverdue(none, NOW)).toBe(false);
+    expect(isFollowUpOverdue(closed, NOW)).toBe(false);
   });
 });
 

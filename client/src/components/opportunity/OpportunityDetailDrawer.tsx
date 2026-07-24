@@ -288,6 +288,23 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                 )) : <p className="text-sm text-muted-foreground">No appointments.</p>}
               </Section>
 
+              {/* Jobs converted from this opportunity */}
+              <Section title="Jobs">
+                {data && data.linkedJobs.length > 0 ? data.linkedJobs.map(j => (
+                  <button
+                    key={j.id}
+                    onClick={() => navigate(`/jobs/${j.id}`)}
+                    className="flex w-full items-center justify-between rounded border p-2 text-left text-sm hover:bg-muted"
+                  >
+                    <div>
+                      <span className="font-mono font-medium">{j.jobNumber || `Job #${j.id}`}</span>
+                      {j.title ? <span className="ml-2 text-muted-foreground">{j.title}</span> : null}
+                    </div>
+                    <Badge variant="outline" className="text-[10px]">{j.status}</Badge>
+                  </button>
+                )) : <p className="text-sm text-muted-foreground">No jobs yet. Use “Convert to Job” to create one.</p>}
+              </Section>
+
               {/* Reasons */}
               {o.closeReason || o.lossReason ? (
                 <Section title={o.stage === "won" ? "Close reason" : "Loss reason"}>

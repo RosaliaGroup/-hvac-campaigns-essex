@@ -11,10 +11,10 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { MoreVertical, GripVertical } from "lucide-react";
+import { MoreVertical, GripVertical, AlertTriangle } from "lucide-react";
 import { STAGE_META, WorkCategoryBadge, fmtMoney, type OppRow } from "./shared";
 import { formatDisplayName } from "@shared/nameFormat";
-import type { OpportunityStage } from "@shared/opportunityDashboard";
+import { isFollowUpOverdue, type OpportunityStage } from "@shared/opportunityDashboard";
 
 function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
   row: OppRow;
@@ -24,13 +24,14 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
   onDragStart: (id: number) => void;
   onDragEnd: () => void;
 }) {
+  const overdue = isFollowUpOverdue(row);
   return (
     <div
       draggable
       onDragStart={e => { e.dataTransfer.setData("text/plain", String(row.id)); e.dataTransfer.effectAllowed = "move"; onDragStart(row.id); }}
       onDragEnd={onDragEnd}
       onClick={() => onOpen(row.id)}
-      className={`group cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition hover:shadow-md ${dragging ? "opacity-50" : ""}`}
+      className={`group cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition hover:shadow-md ${dragging ? "opacity-50" : ""} ${overdue ? "border-red-300 ring-1 ring-red-200" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -59,9 +60,13 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
         <span className="text-sm font-bold tabular-nums">{fmtMoney(row.amount)}</span>
         {row.docStatus ? <Badge variant="secondary" className="text-[10px]">{row.docStatus}</Badge> : null}
       </div>
-      <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{row.daysPending != null ? `${row.daysPending}d pending` : "—"}</span>
-        <span className="truncate">{row.nextAction ?? ""}</span>
+      <div className="mt-1 flex items-center justify-between gap-1 text-[11px] text-muted-foreground">
+        <span className="shrink-0">{row.daysPending != null ? `${row.daysPending}d pending` : "—"}</span>
+        {overdue ? (
+          <span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-red-100 px-1 py-0.5 font-medium text-red-700"><AlertTriangle className="h-3 w-3" /> Overdue</span>
+        ) : (
+          <span className="truncate">{row.nextAction ?? ""}</span>
+        )}
       </div>
     </div>
   );

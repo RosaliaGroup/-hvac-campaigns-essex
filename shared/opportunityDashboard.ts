@@ -256,6 +256,21 @@ export function isFollowUpDue(row: OpportunityRow, now: Date = new Date()): bool
   return row.nextActionDueAt.getTime() <= endOfDay(now).getTime();
 }
 
+/**
+ * A follow-up is "overdue" when the opportunity is open and its next action fell
+ * strictly before the start of today — i.e. due yesterday or earlier. Due *today*
+ * counts as due (isFollowUpDue) but not yet overdue.
+ */
+export function isFollowUpOverdue(
+  row: Pick<OpportunityRow, "stage" | "nextActionDueAt">,
+  now: Date = new Date(),
+): boolean {
+  if (!isOpenStage(row.stage)) return false;
+  if (!row.nextActionDueAt) return false;
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+  return row.nextActionDueAt.getTime() < startOfToday;
+}
+
 export function filterOpportunities(
   rows: OpportunityRow[],
   filters: OpportunityFilters,
