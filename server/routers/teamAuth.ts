@@ -16,17 +16,18 @@ import {
   recordRateLimitHit,
   clearRateLimit,
 } from "../_core/rateLimit";
-import { envPositiveInt } from "../_core/envInt";
+import { envBoundedInt } from "../_core/envInt";
 
 /**
  * Login lockout: at most 5 failed attempts per (account, trusted-IP) per 15 min.
- * Both are overridable via env (STAGING only, to test recovery in minutes):
- *   LOGIN_RATELIMIT_MAX          default 5
- *   LOGIN_RATELIMIT_WINDOW_MS    default 15m
+ * Both are overridable via env (STAGING only, to test recovery in minutes) with
+ * safe maximums so the window can never become effectively unbounded:
+ *   LOGIN_RATELIMIT_MAX          default 5      (max 1000 attempts)
+ *   LOGIN_RATELIMIT_WINDOW_MS    default 15m    (max 24h)
  */
 const LOGIN_FAIL_BUCKET = "team_login_fail";
-const LOGIN_MAX_FAILURES = envPositiveInt("LOGIN_RATELIMIT_MAX", 5);
-const LOGIN_WINDOW_MS = envPositiveInt("LOGIN_RATELIMIT_WINDOW_MS", 15 * 60 * 1000);
+const LOGIN_MAX_FAILURES = envBoundedInt("LOGIN_RATELIMIT_MAX", 5, 1000);
+const LOGIN_WINDOW_MS = envBoundedInt("LOGIN_RATELIMIT_WINDOW_MS", 15 * 60 * 1000, 24 * 60 * 60 * 1000);
 import { notifyOwner } from "../_core/notification";
 import { sendPasswordResetEmail, sendTeamInviteEmail } from "../services/emailService";
 

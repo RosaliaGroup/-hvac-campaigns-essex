@@ -46,6 +46,19 @@ describe("getTrustedClientIp — proxy spoofing resistance", () => {
     expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "spoof, 203.0.113.9, cdn-edge" }), 2)).toBe("203.0.113.9");
   });
 
+  it("bounds TRUSTED_PROXY_HOPS to [1,4], falling back to 1 when out of range/invalid", () => {
+    const xff = { "x-forwarded-for": "attacker, p3, p2, p1, 203.0.113.9" };
+    process.env.TRUSTED_PROXY_HOPS = "99"; // absurd → fall back to 1 (rightmost)
+    expect(getTrustedClientIp(reqWith(xff))).toBe("203.0.113.9");
+    process.env.TRUSTED_PROXY_HOPS = "0"; // invalid → fall back to 1
+    expect(getTrustedClientIp(reqWith(xff))).toBe("203.0.113.9");
+    process.env.TRUSTED_PROXY_HOPS = "abc"; // non-numeric → fall back to 1
+    expect(getTrustedClientIp(reqWith(xff))).toBe("203.0.113.9");
+    process.env.TRUSTED_PROXY_HOPS = "2"; // valid in-range → 2nd from right
+    expect(getTrustedClientIp(reqWith(xff))).toBe("p1");
+    delete process.env.TRUSTED_PROXY_HOPS;
+  });
+
   it("falls back to the socket peer when no XFF is present", () => {
     expect(getTrustedClientIp(reqWith({}, "198.51.100.2"))).toBe("198.51.100.2");
     expect(getTrustedClientIp(reqWith({}))).toBe("unknown-ip");

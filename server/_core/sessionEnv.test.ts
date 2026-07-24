@@ -5,13 +5,13 @@
  * vi.resetModules + dynamic import so each case re-reads process.env at load.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { envPositiveInt } from "./envInt";
+import { envPositiveInt, envBoundedInt } from "./envInt";
 
 const DUR_VARS = [
   "SESSION_TTL_MS",
   "REMEMBER_ME_TTL_MS",
   "IDLE_TIMEOUT_MS",
-  "SESSION_CLOCK_TOLERANCE_SEC",
+  "JWT_CLOCK_SKEW_SECONDS",
 ];
 
 afterEach(() => {
@@ -39,13 +39,47 @@ describe("envPositiveInt", () => {
   });
 });
 
+describe("envBoundedInt — safe maximums", () => {
+  it("clamps values above the max and keeps in-range values", () => {
+    process.env.__B = "999";
+    expect(envBoundedInt("__B", 10, 100)).toBe(100); // clamp to max
+    process.env.__B = "50";
+    expect(envBoundedInt("__B", 10, 100)).toBe(50); // in range
+    process.env.__B = "100";
+    expect(envBoundedInt("__B", 10, 100)).toBe(100); // exactly max
+    process.env.__B = "0";
+    expect(envBoundedInt("__B", 10, 100)).toBe(10); // non-positive → default
+    process.env.__B = "nope";
+    expect(envBoundedInt("__B", 10, 100)).toBe(10); // invalid → default
+    delete process.env.__B;
+    expect(envBoundedInt("__B", 10, 100)).toBe(10); // unset → default
+  });
+});
+
+describe("auth durations enforce safe maximums (no permanent sessions)", () => {
+  it("clamps an absurd SESSION_TTL_MS to 24h and idle to the session lifetime", async () => {
+    vi.resetModules();
+    process.env.SESSION_TTL_MS = String(365 * 24 * 60 * 60 * 1000); // 1 year
+    process.env.IDLE_TIMEOUT_MS = String(999 * 24 * 60 * 60 * 1000); // absurd
+    process.env.JWT_CLOCK_SKEW_SECONDS = String(99999); // absurd
+    process.env.REMEMBER_ME_TTL_MS = String(999 * 24 * 60 * 60 * 1000); // > 30d
+
+    const mod = await import("./session");
+    expect(mod.SESSION_TTL_MS).toBe(mod.MAX_SESSION_TTL_MS); // 24h ceiling
+    expect(mod.SESSION_TTL_MS).toBe(24 * 60 * 60 * 1000);
+    expect(mod.IDLE_TIMEOUT_MS).toBe(mod.SESSION_TTL_MS); // idle ≤ absolute lifetime
+    expect(mod.CLOCK_TOLERANCE_SEC).toBe(mod.MAX_CLOCK_SKEW_SEC); // 120s ceiling
+    expect(mod.REMEMBER_ME_TTL_MS).toBe(mod.MAX_REMEMBER_ME_TTL_MS); // 30d ceiling
+  });
+});
+
 describe("session durations honor staging env overrides", () => {
   it("applies shortened durations when the env vars are set", async () => {
     vi.resetModules();
     process.env.SESSION_TTL_MS = String(5 * 60 * 1000); // 5 min
     process.env.REMEMBER_ME_TTL_MS = String(10 * 60 * 1000); // 10 min
     process.env.IDLE_TIMEOUT_MS = String(2 * 60 * 1000); // 2 min
-    process.env.SESSION_CLOCK_TOLERANCE_SEC = String(5);
+    process.env.JWT_CLOCK_SKEW_SECONDS = String(5);
 
     const mod = await import("./session");
     expect(mod.SESSION_TTL_MS).toBe(5 * 60 * 1000);
