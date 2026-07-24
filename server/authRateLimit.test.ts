@@ -50,6 +50,21 @@ describe("getTrustedClientIp — proxy spoofing resistance", () => {
     expect(getTrustedClientIp(reqWith({}, "198.51.100.2"))).toBe("198.51.100.2");
     expect(getTrustedClientIp(reqWith({}))).toBe("unknown-ip");
   });
+
+  it("is robust to adversarial XFF shapes (whitespace, IPv6, empty segments, deep spoof)", () => {
+    // Railway always appends the real peer last; everything left of it is noise.
+    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "  1.2.3.4 , 203.0.113.9 " }))).toBe("203.0.113.9");
+    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "1.2.3.4,,203.0.113.9" }))).toBe("203.0.113.9");
+    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "::1, 2001:db8::1" }))).toBe("2001:db8::1");
+    // Attacker crams many fake hops on the left; rightmost (Railway) still wins.
+    expect(
+      getTrustedClientIp(reqWith({ "x-forwarded-for": "a, b, c, d, e, f, 203.0.113.9" })),
+    ).toBe("203.0.113.9");
+    // Duplicate header delivered as an array is concatenated in order → rightmost real.
+    expect(
+      getTrustedClientIp(reqWith({ "x-forwarded-for": ["9.9.9.9, 8.8.8.8", "203.0.113.9"] })),
+    ).toBe("203.0.113.9");
+  });
 });
 
 describe("rate-limit counter semantics", () => {
