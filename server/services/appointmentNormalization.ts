@@ -12,10 +12,12 @@
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { customers, properties, type Customer, type Property } from "../../drizzle/schema";
-import { formatPropertyAddress, isCompleteAddress, missingAddressParts } from "@shared/address";
+import { formatPropertyAddress, isCompleteAddress, missingAddressParts, parseFreeTextAddress } from "@shared/address";
 import type { getDb } from "../db";
 
-type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+type FullDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+/** A live DB handle OR a transaction handle — these helpers run in either. */
+type Db = FullDb | Parameters<Parameters<FullDb["transaction"]>[0]>[0];
 
 export interface AppointmentContextInput {
   customerId?: number | null;
@@ -131,6 +133,56 @@ export async function resolveAppointmentContext(db: Db, input: AppointmentContex
   return normalizeAppointmentFields(input, { customer, property });
 }
 
+// ─────────────────────────────────────────────────────────────
+// Property ↔ appointment linking (user-driven; never silent)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * PURE decision for linking a property to an appointment. Mirrors the
+ * normalizeAppointmentFields pattern: the router loads the rows, this function
+ * validates ownership + decides between reuse and create so the logic is
+ * unit-tested without a database. Enforces the data-integrity rules:
+ *  - a property must belong to the appointment's (resolved) customer — never
+ *    link across customers,
+ *  - an existing address match is REUSED, never duplicated (dedupe/idempotency),
+ *  - a linkable customer must exist.
+ */
+export interface PropertyLinkDecisionInput {
+  /** Customer that will own the property, after phone-resolution in the router. */
+  resolvedCustomerId: number | null;
+  mode: "existing" | "create";
+  /** Mode "existing": the loaded property row (null when the id was not found). */
+  existingProperty?: { id: number; customerId: number } | null;
+  /** Mode "create": id of a property whose addressLine1 already matches (dedupe hit), or null. */
+  dedupeMatchId?: number | null;
+}
+
+export type PropertyLinkDecision =
+  | { action: "link"; propertyId: number }
+  | { action: "create" };
+
+export function decidePropertyLink(input: PropertyLinkDecisionInput): PropertyLinkDecision {
+  if (input.resolvedCustomerId == null) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "This appointment isn't linked to a customer yet. Link it to a customer before adding a property.",
+    });
+  }
+
+  if (input.mode === "existing") {
+    const prop = input.existingProperty ?? null;
+    if (!prop) throw new TRPCError({ code: "NOT_FOUND", message: "Property not found." });
+    if (prop.customerId !== input.resolvedCustomerId) {
+      throw new TRPCError({ code: "CONFLICT", message: "That property belongs to a different customer." });
+    }
+    return { action: "link", propertyId: prop.id };
+  }
+
+  // mode === "create": reuse an address-matched property (dedupe), else create.
+  if (input.dedupeMatchId != null) return { action: "link", propertyId: input.dedupeMatchId };
+  return { action: "create" };
+}
+
 /** Resolve a customer's primary (then first) property id, or null. Never throws. */
 export async function findPrimaryPropertyId(db: Db, customerId: number): Promise<number | null> {
   try {
@@ -183,4 +235,76 @@ export async function matchPropertyByFreeText(
   } catch {
     return null;
   }
+}
+
+/**
+ * FORWARD-FILL for NEW bookings only. Given the booking's resolved customer and
+ * typed service address, return a property id to link, or null to leave the
+ * appointment unlinked. Two tiers:
+ *
+ *  1. REUSE  — if the address matches one of the customer's existing properties
+ *              (free-text street match, or exact addressLine1), link that one.
+ *  2. CREATE — only when NO match exists AND the typed line parses to a COMPLETE
+ *              service address (Street + City + State + ZIP): insert a structured
+ *              property and link it.
+ *  otherwise → return null. An INCOMPLETE free-text line (missing City/State/ZIP)
+ *  is never auto-promoted to a Property; the appointment keeps its free-text
+ *  address, propertyId stays null, and staff reconcile it explicitly via
+ *  `appointments.linkProperty` (which can complete City/State/ZIP first).
+ *
+ * Guarantees:
+ *  - same-customer only (every read/insert is scoped to `customerId`),
+ *  - deduplicated / idempotent (same address → same property; a create re-checks
+ *    the exact-addressLine1 dedupe before inserting),
+ *  - never links across customers.
+ *
+ * MUST run inside the booking's insert transaction (pass the tx as `db`) so the
+ * property and appointment commit atomically. Ownership/validation/DB errors are
+ * NOT suppressed — any failure propagates and aborts the booking rather than
+ * silently dropping the link. Returns null on a blank address or a genuine
+ * no-match-and-incomplete case.
+ */
+export async function forwardFillPropertyForBooking(
+  db: Db,
+  customerId: number,
+  freeTextAddress: string | null | undefined,
+  propertyType?: "residential" | "commercial" | null,
+): Promise<number | null> {
+  const text = freeTextAddress?.trim();
+  if (!text) return null;
+
+  // Tier 1 — reuse an existing same-customer match. One read; matched in JS.
+  const lower = text.toLowerCase();
+  const capped = lower.slice(0, 255);
+  const rows = await db.select().from(properties).where(eq(properties.customerId, customerId));
+  for (const p of rows) {
+    const line1 = (p.addressLine1 ?? "").trim().toLowerCase();
+    if (!line1) continue;
+    const full = formatPropertyAddress(p).toLowerCase();
+    if (line1 === capped || lower.includes(line1) || full === lower || (full && lower.includes(full))) {
+      return p.id;
+    }
+  }
+
+  // Tier 2 — create ONLY when the typed line parses to a complete address.
+  const parsed = parseFreeTextAddress(text);
+  if (!isCompleteAddress(parsed)) return null;
+
+  // Exact-addressLine1 dedupe (idempotency) against the already-loaded rows.
+  const wantLine1 = (parsed.addressLine1 ?? "").trim().toLowerCase();
+  const dupe = rows.find(p => (p.addressLine1 ?? "").trim().toLowerCase() === wantLine1);
+  if (dupe) return dupe.id;
+
+  const ins = await db.insert(properties).values({
+    customerId,
+    addressLine1: (parsed.addressLine1 ?? "").trim().slice(0, 255),
+    addressLine2: parsed.addressLine2?.trim() || null,
+    city: parsed.city?.trim() || null,
+    state: parsed.state?.trim() || null,
+    zip: parsed.zip?.trim() || null,
+    propertyType: propertyType ?? "residential",
+    isPrimary: rows.length === 0,
+  });
+  const id = Number((ins as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+  return id > 0 ? id : null;
 }

@@ -1,3 +1,6 @@
+// ⚠️ PRODUCTION MIGRATIONS ARE MANUAL-ONLY — never run `db:push` / `drizzle-kit migrate`
+// against production (tracker is hand-reconciled; head 0054 while journal is 0056).
+// See ./drizzle/README.md before touching the database.
 import { defineConfig } from "drizzle-kit";
 
 const connectionString = process.env.DATABASE_URL;

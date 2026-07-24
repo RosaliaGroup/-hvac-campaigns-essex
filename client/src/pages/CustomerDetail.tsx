@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import AppointmentDialog, { type EditableAppointment } from "@/components/AppointmentDialog";
+import PropertyLinkSection from "@/components/PropertyLinkSection";
 import { customerAppointmentDefaults } from "@/lib/appointmentDefaults";
 import { JOB_STATUS_META, formatMoney } from "@/lib/jobPresentation";
 import { resolveCustomerIdentity } from "@/lib/customerIdentity";
@@ -323,7 +324,30 @@ export default function CustomerDetail() {
               </CardHeader>
           <CardContent className="space-y-3">
             {properties.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No properties on file yet.</p>
+              (() => {
+                const unlinked = appointments.filter(a => a.propertyId == null && (a.propertyAddress ?? "").trim());
+                return unlinked.length > 0 ? (
+                  <div className="space-y-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
+                    <p className="text-sm font-medium text-amber-900">
+                      This customer has appointments with an address but no linked Property.
+                    </p>
+                    <p className="text-xs text-amber-800">
+                      Reconcile each below — link an existing property or create one from the appointment address. Nothing is created automatically.
+                    </p>
+                    {unlinked.map(a => (
+                      <PropertyLinkSection
+                        key={a.id}
+                        appointment={a}
+                        customerId={customerId}
+                        onChanged={() => refetch()}
+                        hideHeading
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No properties on file yet.</p>
+                );
+              })()
             ) : (
               properties.map(p => (
                 <div key={p.id} className="flex items-start justify-between gap-3 border rounded-lg p-3">

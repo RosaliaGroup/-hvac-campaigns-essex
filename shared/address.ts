@@ -40,3 +40,48 @@ export function missingAddressParts(p?: AddressParts | null): string[] {
 export function isCompleteAddress(p?: AddressParts | null): boolean {
   return missingAddressParts(p).length === 0;
 }
+
+/**
+ * Best-effort parse of a one-line free-text service address into structured
+ * parts. Shared by the client (reconciliation prefill) and the server (booking
+ * forward-fill completeness gate) so both judge "usable/complete" identically.
+ *
+ * Conservative on purpose: only what it can confidently extract is filled, so an
+ * ambiguous line yields blank city/state/ZIP → `isCompleteAddress` is false →
+ * callers treat it as INCOMPLETE (never auto-promoted to a Property).
+ */
+export interface ParsedAddress {
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zip: string;
+}
+
+export function parseFreeTextAddress(text?: string | null): ParsedAddress {
+  const raw = (text ?? "").trim();
+  const res: ParsedAddress = {
+    addressLine1: "",
+    addressLine2: "",
+    city: "",
+    state: "",
+    zip: "",
+  };
+  if (!raw) return res;
+  const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+  res.addressLine1 = parts[0] ?? raw;
+  const zipM = raw.match(/\b(\d{5}(?:-\d{4})?)\b/);
+  if (zipM) res.zip = zipM[1];
+  const stateM = raw.match(/\b([A-Za-z]{2})\b(?=\s+\d{5})/);
+  if (stateM) res.state = stateM[1].toUpperCase();
+  if (parts.length >= 2) {
+    const tail = parts[parts.length - 1];
+    const cityFromTail = tail
+      .replace(/\b[A-Za-z]{2}\b\s+\d{5}(?:-\d{4})?\s*$/, "")
+      .replace(/\b\d{5}(?:-\d{4})?\s*$/, "")
+      .trim();
+    res.city = cityFromTail || parts[parts.length - 2] || "";
+    if (parts.length > 2 && cityFromTail) res.addressLine2 = parts.slice(1, parts.length - 1).join(", ");
+  }
+  return res;
+}

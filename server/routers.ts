@@ -11,6 +11,7 @@ import { TRPCError } from "@trpc/server";
 import { handleVapiWebhook } from "./integrations/vapi";
 import { handleVapiToolCalls } from "./integrations/vapiTools";
 import { authenticateVapiToolCall } from "./integrations/vapiToolAuth";
+import { evaluateVapiWebhookAuth, logVapiWebhookAuth } from "./integrations/vapiWebhookAuth";
 import { handleIncomingSms } from "./integrations/aiVaSms";
 import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
@@ -20,8 +21,6 @@ import { smsCampaignsRouter } from "./routers/smsCampaigns";
 import { conversationCrmRouter } from "./routers/conversationCrm";
 import { rebateCalculatorRouter } from "./routers/rebateCalculator";
 import { heygenRouter } from "./routers/heygen";
-import { coursesRouter } from "./courses-router";
-import { paymentRouter } from "./payment-router";
 import { runCampaignAnalysis } from "./services/campaignEngine";
 import { generateSocialPost } from "./integrations/ai-content-generator";
 import { publishSocialPost, retrySocialPost, PublishError } from "./services/socialPublisher";
@@ -49,6 +48,7 @@ import {
   appointmentAttendees as appointmentAttendeesTable,
   customers as customersTable,
   leadCaptures as leadCapturesTable,
+  properties as propertiesTable,
 } from "../drizzle/schema";
 import { resolveTeamMemberId, dayRangeInTimeZone, categorizeFieldJobs } from "../shared/fieldApp";
 import {
@@ -57,7 +57,13 @@ import {
   syncAppointmentInvites,
   type AttendeeInput,
 } from "./services/appointmentInvites";
-import { resolveAppointmentContext } from "./services/appointmentNormalization";
+import {
+  resolveAppointmentContext,
+  forwardFillPropertyForBooking,
+  decidePropertyLink,
+  findPropertyByAddress,
+} from "./services/appointmentNormalization";
+import { formatPropertyAddress } from "@shared/address";
 import { APPOINTMENT_TYPE_ENUM } from "../shared/appointmentTypes";
 import { and as dAnd, eq as dEq, or as dOr, sql as dSql, gte as dGte, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
 
@@ -79,8 +85,6 @@ export const appRouter = router({
   conversationCrm: conversationCrmRouter,
   rebateCalculator: rebateCalculatorRouter,
   heygen: heygenRouter,
-  courses: coursesRouter,
-  payment: paymentRouter,
   takeoffs: takeoffsRouter,
   customers: customersRouter,
   jobs: jobsRouter,
@@ -506,6 +510,12 @@ export const appRouter = router({
             assignedToId: appointmentsTable.assignedToId,
             assigneeName: teamMembersTable.name,
             googleCalendarEventId: appointmentsTable.googleCalendarEventId,
+            // Property linkage — powers the Lead card's Property section.
+            customerId: appointmentsTable.customerId,
+            propertyId: appointmentsTable.propertyId,
+            propertyAddress: appointmentsTable.propertyAddress,
+            propertyType: appointmentsTable.propertyType,
+            phone: appointmentsTable.phone,
           })
           .from(appointmentsTable)
           .leftJoin(teamMembersTable, dEq(teamMembersTable.id, appointmentsTable.assignedToId))
@@ -963,7 +973,7 @@ export const appRouter = router({
           propertyType: input.propertyType,
         });
         const customerId = resolved.customerId;
-        const values = {
+        const baseValues = {
           fullName: resolved.fullName ?? input.fullName,
           phone: resolved.phone ?? input.phone,
           email: resolved.email ?? undefined,
@@ -983,15 +993,41 @@ export const appRouter = router({
           source: input.source ?? undefined,
           assignedToId: input.assignedToId ?? undefined,
           customerId: resolved.customerId ?? undefined,
-          propertyId: resolved.propertyId ?? undefined,
           jobId: input.jobId ?? undefined,
           issueDescription: input.issueDescription ?? undefined,
           notes: input.notes ?? undefined,
           status: "confirmed" as const,
           bookedBy: ctx.user?.name || ctx.user?.email || "staff",
         };
-        const result = await db.createAppointment(values);
-        const id = Number((result as unknown as { insertId?: number })?.insertId ?? 0);
+
+        // Forward-fill (NEW booking only): when the booking resolved to a customer
+        // and carries a service address but no explicit property, REUSE a matching
+        // same-customer property, or CREATE one ONLY when the typed address is
+        // complete (Street+City+State+ZIP). An incomplete free-text line is NOT
+        // auto-promoted — the appointment stays valid with a null propertyId for
+        // staff to reconcile via appointments.linkProperty. Address-deduped,
+        // idempotent, never cross-customer. Runs INSIDE the insert transaction; a
+        // failure aborts the booking rather than silently dropping the link. Touches
+        // no other/historical appointment (no bulk backfill).
+        const { id, propertyId } = await dbi.transaction(async (tx) => {
+          const linkedPropertyId =
+            resolved.propertyId ??
+            (customerId != null
+              ? await forwardFillPropertyForBooking(
+                  tx,
+                  customerId,
+                  resolved.propertyAddress ?? input.propertyAddress,
+                  resolved.propertyType ?? input.propertyType,
+                )
+              : null);
+          const insertResult = await tx
+            .insert(appointmentsTable)
+            .values({ ...baseValues, propertyId: linkedPropertyId ?? undefined });
+          const insertId = Number((insertResult as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+          return { id: insertId, propertyId: linkedPropertyId };
+        });
+        // Values snapshot for the SMS/invite helpers below (they read address/type).
+        const values = { ...baseValues, propertyId: propertyId ?? undefined };
 
         let smsSent = false;
         if (input.sendConfirmation) {
@@ -1012,7 +1048,143 @@ export const appRouter = router({
             invitesSent = true;
           }
         }
-        return { id, customerId, smsSent, invitesSent };
+        return { id, customerId, propertyId: propertyId ?? null, smsSent, invitesSent };
+      }),
+
+    /**
+     * User-driven reconciliation for an existing appointment: link a property to
+     * it, either by choosing an EXISTING same-customer property (`propertyId`) or
+     * CREATING one from an explicit address (`create`). This is the ONLY path that
+     * links/creates a property for a historical appointment, and it runs only on an
+     * explicit request — never as a side effect, never in bulk.
+     *
+     * Guarantees (server-validated, inside one transaction):
+     *  - same-customer only — the property must belong to the appointment's customer
+     *    (CONFLICT otherwise); never links across customers,
+     *  - deduped — a create whose addressLine1 already exists for the customer reuses
+     *    that property instead of duplicating,
+     *  - idempotent — re-linking the same target rewrites the same propertyId,
+     *  - an appointment with no customer is resolved by phone to a single existing
+     *    customer (reported via `linkedCustomer`), else rejected — no ambiguous guesses.
+     */
+    linkProperty: protectedProcedure
+      .input(
+        z
+          .object({
+            appointmentId: z.number().int().positive(),
+            propertyId: z.number().int().positive().optional(),
+            create: z
+              .object({
+                addressLine1: z.string().min(1).max(255),
+                addressLine2: z.string().max(255).optional().nullable(),
+                city: z.string().max(120).optional().nullable(),
+                state: z.string().max(10).optional().nullable(),
+                zip: z.string().max(20).optional().nullable(),
+                label: z.string().max(255).optional().nullable(),
+                propertyType: z.enum(["residential", "commercial"]).optional(),
+              })
+              .optional(),
+          })
+          .refine(v => (v.propertyId == null) !== (v.create == null), {
+            message: "Provide exactly one of propertyId or create.",
+          }),
+      )
+      .mutation(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+        const appt = (
+          await dbi.select().from(appointmentsTable).where(dEq(appointmentsTable.id, input.appointmentId)).limit(1)
+        )[0];
+        if (!appt) throw new TRPCError({ code: "NOT_FOUND", message: "Appointment not found." });
+
+        // Resolve the owning customer. A phone-only-matched appointment (customerId
+        // NULL) is attached to that single customer as part of THIS explicit action;
+        // reported via `linkedCustomer`. No match → reject rather than guess.
+        let resolvedCustomerId: number;
+        let linkedCustomer = false;
+        if (appt.customerId != null) {
+          resolvedCustomerId = appt.customerId;
+        } else {
+          const matched = await findCustomerIdByPhone(appt.phone);
+          if (matched == null) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: "This appointment isn't linked to a customer yet. Link it to a customer before adding a property.",
+            });
+          }
+          resolvedCustomerId = matched;
+          linkedCustomer = true;
+        }
+
+        const result = await dbi.transaction(async (tx) => {
+          let decision;
+          if (input.propertyId != null) {
+            const prop =
+              (
+                await tx
+                  .select({ id: propertiesTable.id, customerId: propertiesTable.customerId })
+                  .from(propertiesTable)
+                  .where(dEq(propertiesTable.id, input.propertyId))
+                  .limit(1)
+              )[0] ?? null;
+            decision = decidePropertyLink({ resolvedCustomerId, mode: "existing", existingProperty: prop });
+          } else {
+            const c = input.create!;
+            const dedupeMatchId = await findPropertyByAddress(tx, resolvedCustomerId, c.addressLine1);
+            decision = decidePropertyLink({ resolvedCustomerId, mode: "create", dedupeMatchId });
+          }
+
+          let propertyId: number;
+          let createdProperty = false;
+          if (decision.action === "link") {
+            propertyId = decision.propertyId;
+          } else {
+            const c = input.create!;
+            const hasAny =
+              (
+                await tx
+                  .select({ id: propertiesTable.id })
+                  .from(propertiesTable)
+                  .where(dEq(propertiesTable.customerId, resolvedCustomerId))
+                  .limit(1)
+              ).length > 0;
+            const ins = await tx.insert(propertiesTable).values({
+              customerId: resolvedCustomerId,
+              label: c.label ?? null,
+              addressLine1: c.addressLine1.trim(),
+              addressLine2: c.addressLine2 ?? null,
+              city: c.city ?? null,
+              state: c.state ?? null,
+              zip: c.zip ?? null,
+              propertyType:
+                c.propertyType ?? (appt.propertyType as "residential" | "commercial" | null) ?? "residential",
+              isPrimary: !hasAny,
+            });
+            propertyId = Number((ins as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+            createdProperty = true;
+          }
+
+          // Write the link (+ the resolved customer if it was NULL). Idempotent; the
+          // linked property's address becomes the authoritative propertyAddress.
+          const propRow = (
+            await tx.select().from(propertiesTable).where(dEq(propertiesTable.id, propertyId)).limit(1)
+          )[0];
+          await tx
+            .update(appointmentsTable)
+            .set({ customerId: resolvedCustomerId, propertyId, propertyAddress: formatPropertyAddress(propRow) })
+            .where(dEq(appointmentsTable.id, appt.id));
+
+          return { propertyId, createdProperty };
+        });
+
+        return {
+          appointmentId: appt.id,
+          customerId: resolvedCustomerId,
+          propertyId: result.propertyId,
+          createdProperty: result.createdProperty,
+          linkedCustomer,
+        };
       }),
 
     /** Staff edit — any field. Sends reschedule SMS when scheduledAt changes. */
@@ -1390,8 +1562,23 @@ export const appRouter = router({
   // hold a session. Payload validation is the auth boundary here.
   webhooks: router({
 
-    // Vapi voice AI webhook
+    // Vapi voice AI webhook (raw call events → callLogs).
+    // COMPATIBILITY-STAGE auth: a Bearer <VAPI_WEBHOOK_SECRET> guard runs as
+    // middleware BEFORE input parsing. During the Vapi-dashboard transition
+    // (VAPI_WEBHOOK_AUTH_ENFORCED not set) a MISSING header is temporarily
+    // accepted-and-logged so live call logging is not dropped, but an explicitly
+    // wrong/malformed credential is always rejected. Once the dashboard sends the
+    // header and VAPI_WEBHOOK_AUTH_ENFORCED=true is set, this fails closed.
+    // See integrations/vapiWebhookAuth.ts — remove that module once enforced.
     vapi: publicProcedure
+      .use(async ({ ctx, next }) => {
+        const decision = evaluateVapiWebhookAuth(ctx.req?.headers?.authorization);
+        logVapiWebhookAuth(decision);
+        if (decision.outcome === "reject") {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Unauthorized" });
+        }
+        return next();
+      })
       .input(z.any())
       .mutation(async ({ input }) => {
         await handleVapiWebhook(input);
