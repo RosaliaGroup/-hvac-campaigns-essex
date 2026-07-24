@@ -28,55 +28,40 @@ function reqWith(headers: Record<string, string | string[] | undefined>, socketI
   return { req: { headers, socket: { remoteAddress: socketIp } } as never } as Pick<TrpcContext, "req">;
 }
 
-describe("getTrustedClientIp — proxy spoofing resistance", () => {
-  it("uses the RIGHTMOST XFF hop (Railway edge), ignoring a spoofed leftmost", () => {
-    // Attacker prepends a fake IP; Railway appends the real peer on the right.
-    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "1.2.3.4, 203.0.113.9" }))).toBe("203.0.113.9");
-    // Attacker cannot change the rightmost by spoofing the left.
-    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "9.9.9.9, 8.8.8.8, 203.0.113.9" }))).toBe("203.0.113.9");
+describe("getTrustedClientIp — Railway-verified proxy model", () => {
+  // Railway REWRITES forwarding headers (verified live 2026-07-24): X-Real-IP =
+  // true client (overwrites spoofs); X-Forwarded-For = "<real-client>, <railway-hop>".
+  it("prefers X-Real-IP (Railway sets it to the true client, overwriting spoofs)", () => {
+    // Even if XFF carries other junk, X-Real-IP wins.
+    expect(getTrustedClientIp(reqWith({ "x-real-ip": "24.185.130.70", "x-forwarded-for": "1.2.3.4, 152.233.30.104" }))).toBe("24.185.130.70");
+    // Array-form header.
+    expect(getTrustedClientIp(reqWith({ "x-real-ip": ["24.185.130.70"] }))).toBe("24.185.130.70");
   });
 
-  it("handles a single client IP and array-form headers", () => {
-    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "203.0.113.9" }))).toBe("203.0.113.9");
-    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": ["1.1.1.1", "203.0.113.9"] }))).toBe("203.0.113.9");
+  it("uses the LEFTMOST XFF entry (real client) when X-Real-IP is absent", () => {
+    // Railway's rewrite puts the real client first and its own edge hop last.
+    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "24.185.130.70, 152.233.30.104" }))).toBe("24.185.130.70");
+    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": " 24.185.130.70 , 152.233.30.104 " }))).toBe("24.185.130.70");
+    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": ["24.185.130.70", "152.233.30.104"] }))).toBe("24.185.130.70");
   });
 
-  it("honors a configurable trusted-hop count (extra proxy in front)", () => {
-    // With 2 trusted hops, the client is the 2nd entry from the right.
-    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "spoof, 203.0.113.9, cdn-edge" }), 2)).toBe("203.0.113.9");
+  it("is spoof-proof in production: a client cannot forge the keyed value", () => {
+    // On Railway the app only ever SEES Railway's rewritten headers. Modeling that:
+    // whatever the client attempts, X-Real-IP is what Railway wrote (the real client),
+    // so the derived IP is stable regardless of injected XFF chains.
+    const railwayWrote = { "x-real-ip": "24.185.130.70" };
+    expect(getTrustedClientIp(reqWith({ ...railwayWrote, "x-forwarded-for": "attacker1, attacker2" }))).toBe("24.185.130.70");
+    expect(getTrustedClientIp(reqWith({ ...railwayWrote, "x-forwarded-for": "9.9.9.9" }))).toBe("24.185.130.70");
   });
 
-  it("bounds TRUSTED_PROXY_HOPS to [1,4], falling back to 1 when out of range/invalid", () => {
-    const xff = { "x-forwarded-for": "attacker, p3, p2, p1, 203.0.113.9" };
-    process.env.TRUSTED_PROXY_HOPS = "99"; // absurd → fall back to 1 (rightmost)
-    expect(getTrustedClientIp(reqWith(xff))).toBe("203.0.113.9");
-    process.env.TRUSTED_PROXY_HOPS = "0"; // invalid → fall back to 1
-    expect(getTrustedClientIp(reqWith(xff))).toBe("203.0.113.9");
-    process.env.TRUSTED_PROXY_HOPS = "abc"; // non-numeric → fall back to 1
-    expect(getTrustedClientIp(reqWith(xff))).toBe("203.0.113.9");
-    process.env.TRUSTED_PROXY_HOPS = "2"; // valid in-range → 2nd from right
-    expect(getTrustedClientIp(reqWith(xff))).toBe("p1");
-    delete process.env.TRUSTED_PROXY_HOPS;
+  it("does NOT trust the client-controllable Forwarded header", () => {
+    // Forwarded is passed through unsanitized by Railway; we never read it.
+    expect(getTrustedClientIp(reqWith({ "x-real-ip": "24.185.130.70", forwarded: "for=6.6.6.6" }))).toBe("24.185.130.70");
   });
 
-  it("falls back to the socket peer when no XFF is present", () => {
+  it("falls back to the socket peer when no forwarding headers are present", () => {
     expect(getTrustedClientIp(reqWith({}, "198.51.100.2"))).toBe("198.51.100.2");
     expect(getTrustedClientIp(reqWith({}))).toBe("unknown-ip");
-  });
-
-  it("is robust to adversarial XFF shapes (whitespace, IPv6, empty segments, deep spoof)", () => {
-    // Railway always appends the real peer last; everything left of it is noise.
-    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "  1.2.3.4 , 203.0.113.9 " }))).toBe("203.0.113.9");
-    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "1.2.3.4,,203.0.113.9" }))).toBe("203.0.113.9");
-    expect(getTrustedClientIp(reqWith({ "x-forwarded-for": "::1, 2001:db8::1" }))).toBe("2001:db8::1");
-    // Attacker crams many fake hops on the left; rightmost (Railway) still wins.
-    expect(
-      getTrustedClientIp(reqWith({ "x-forwarded-for": "a, b, c, d, e, f, 203.0.113.9" })),
-    ).toBe("203.0.113.9");
-    // Duplicate header delivered as an array is concatenated in order → rightmost real.
-    expect(
-      getTrustedClientIp(reqWith({ "x-forwarded-for": ["9.9.9.9, 8.8.8.8", "203.0.113.9"] })),
-    ).toBe("203.0.113.9");
   });
 });
 
@@ -147,15 +132,17 @@ describe("teamAuth.login lockout (DB-free short-circuit)", () => {
     }
   });
 
-  it("a spoofed leftmost XFF cannot dodge the limit (same rightmost IP → same bucket)", async () => {
-    const realIp = "203.0.113.77";
+  it("a client cannot dodge the limit by injecting XFF — Railway's X-Real-IP is authoritative", async () => {
+    const realIp = "24.185.130.70"; // the value Railway's edge writes as X-Real-IP
     const email = "victim@example.com";
     for (let i = 0; i < 5; i++) recordRateLimitHit("team_login_fail", `${email}|${realIp}`, WINDOW);
 
-    // Attacker rotates the spoofable leftmost value but the trusted rightmost is unchanged.
+    // The attacker crams junk into X-Forwarded-For, but on Railway the edge sets
+    // X-Real-IP to the real client and overwrites client-supplied values, so the
+    // limiter keys on the true IP and the lockout holds.
     const spoofCtx: TrpcContext = {
       user: null,
-      req: { headers: { "x-forwarded-for": `1.1.1.1, ${realIp}`, "user-agent": "vitest" } } as TrpcContext["req"],
+      req: { headers: { "x-real-ip": realIp, "x-forwarded-for": "1.1.1.1, 2.2.2.2", "user-agent": "vitest" } } as TrpcContext["req"],
       res: { cookie: () => {}, clearCookie: () => {}, setHeader: () => {} } as unknown as TrpcContext["res"],
     };
     const caller = appRouter.createCaller(spoofCtx);

@@ -16,7 +16,8 @@ defaults — setting them is a staging-only convenience.
 | `JWT_CLOCK_SKEW_SECONDS` | `30` | `120` | Allowed signer/verifier clock skew | `30` |
 | `LOGIN_RATELIMIT_MAX` | `5` | `1000` | Failed logins allowed per (account, trusted-IP) | `3` |
 | `LOGIN_RATELIMIT_WINDOW_MS` | `900000` (15m) | `86400000` (24h) | Lockout window for the above | `120000` (2 min) |
-| `TRUSTED_PROXY_HOPS` | `1` | `4` | Trusted proxy hops from the right of `X-Forwarded-For` | `1` (Railway) |
+
+(There is **no** `TRUSTED_PROXY_HOPS` variable — the client IP is derived from Railway's `X-Real-IP`, see below.)
 
 Rules (fail-safe, never blocks startup):
 - unset / empty / non-numeric / zero / negative → the built-in **default**;
@@ -37,35 +38,40 @@ IDLE_TIMEOUT_MS=120000           # 2 min idle
 JWT_CLOCK_SKEW_SECONDS=30
 LOGIN_RATELIMIT_MAX=3
 LOGIN_RATELIMIT_WINDOW_MS=120000 # 2 min lockout window
-TRUSTED_PROXY_HOPS=1
 ```
 
-## Proxy / client-IP model (why spoofing is defeated)
+## Proxy / client-IP model (VERIFIED on Railway, 2026-07-24)
 
-`X-Forwarded-For` is built left→right as a request crosses proxies: a client can
-**prepend** arbitrary fake entries, so the **leftmost** values are attacker
-controlled. Each trusted proxy **appends** the real peer it saw, so the
-**rightmost** entries are trustworthy. Railway's edge is one trusted hop, so the
-real client IP is the **last** XFF entry. Login rate limiting keys on
-`getTrustedClientIp`, which reads the entry `TRUSTED_PROXY_HOPS` from the right
-(default 1) and ignores everything to its left — mirroring Express
-`trust proxy = 1`.
+Railway's edge is a **rewriting** proxy, not an appending one. Verified live via
+an echo service on an isolated temp environment (real client `24.185.130.70`):
 
-- Increase `TRUSTED_PROXY_HOPS` only if you place another trusted proxy in front
-  of Railway (e.g. Cloudflare); otherwise a client could spoof the extra hop.
-- Never key a security decision on the generic `getClientIp` (leftmost hop).
+| Injected by client | What the app received |
+|---|---|
+| _(nothing)_ | `X-Forwarded-For: 24.185.130.70, 152.233.30.104` · `X-Real-IP: 24.185.130.70` |
+| `X-Forwarded-For: 1.2.3.4` | `X-Forwarded-For: 24.185.130.70, 152.233.40.2` (spoof **dropped**) |
+| `X-Forwarded-For: 1.1.1.1, 2.2.2.2, 3.3.3.3` | `X-Forwarded-For: 24.185.130.70, …` (all spoofs **dropped**) |
+| `X-Real-IP: 9.9.9.9` | `X-Real-IP: 24.185.130.70` (spoof **overwritten**) |
+| `Forwarded: for=6.6.6.6` | passed through **unsanitized** |
 
-### Confirming Railway's hop count on staging (one time)
+Conclusions baked into `getTrustedClientIp`:
+- The real client is **`X-Real-IP`** (Railway sets it and overwrites spoofs) — used first.
+- In XFF, the real client is the **LEFTMOST** entry; the **rightmost** is Railway's
+  own edge hop (`152.233.x.x`, shared across users). Keying on the rightmost would
+  bucket everyone together — a global-lockout DoS. Used as the fallback: leftmost XFF.
+- `Forwarded` is client-controllable and is **never** trusted.
 
-After the branch is on staging, verify the real client IP lands where expected:
+Because Railway overwrites both `X-Real-IP` and `X-Forwarded-For`, a client cannot
+forge the value the limiter keys on in production. (Locally / off-Railway there is
+no trusted edge, so these headers are not trustworthy — the limiter is a
+production control.)
+
+### Re-confirming on staging (one time)
 
 ```bash
-# From a machine with a known public IP, send a spoofed leftmost XFF and a
-# garbage session cookie to a PROTECTED endpoint (safe: returns 401, no data):
-curl -s -H 'X-Forwarded-For: 1.2.3.4' \
+# Send a garbage cookie + spoofed headers to a PROTECTED endpoint (safe: 401, no data):
+curl -s -H 'X-Real-IP: 9.9.9.9' -H 'X-Forwarded-For: 1.2.3.4' \
      -H 'Cookie: app_session_id=garbage' \
      'https://<staging-host>/api/trpc/customers.list?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%7D%7D'
-# Then read staging logs and find the [Auth] invalid_token line; its "ip" must be
-# YOUR real public IP, NOT 1.2.3.4. If it shows 1.2.3.4, the spoof won — raise
-# TRUSTED_PROXY_HOPS or fix the derivation before production.
+# Read staging logs, find the [Auth] invalid_token line; its "ip" must be YOUR real
+# public IP, NOT 9.9.9.9 / 1.2.3.4. If it shows a spoof, do not ship.
 ```
