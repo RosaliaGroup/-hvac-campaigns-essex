@@ -8,28 +8,33 @@ defaults — setting them is a staging-only convenience.
 
 ## Overridable variables
 
-| Env var | Default (prod) | What it controls | Suggested staging value |
-|---|---|---|---|
-| `SESSION_TTL_MS` | `28800000` (8h) | Absolute cap for a standard (unchecked) login | `300000` (5 min) |
-| `REMEMBER_ME_TTL_MS` | `2592000000` (30d) | Absolute cap when "Remember this device" is checked | `600000` (10 min) |
-| `IDLE_TIMEOUT_MS` | `1800000` (30m) | Inactivity window (sliding; reset by each authenticated request) | `120000` (2 min) |
-| `SESSION_CLOCK_TOLERANCE_SEC` | `30` | Allowed signer/verifier clock skew | `5` |
-| `LOGIN_RATELIMIT_MAX` | `5` | Failed logins allowed per (account, trusted-IP) | `3` |
-| `LOGIN_RATELIMIT_WINDOW_MS` | `900000` (15m) | Lockout window for the above | `120000` (2 min) |
-| `TRUSTED_PROXY_HOPS` | `1` | Trusted proxy hops from the right of `X-Forwarded-For` | `1` (Railway) |
+| Env var | Default (prod) | Safe maximum | What it controls | Suggested staging value |
+|---|---|---|---|---|
+| `SESSION_TTL_MS` | `28800000` (8h) | `86400000` (24h) | Absolute cap for a standard (unchecked) login | `300000` (5 min) |
+| `REMEMBER_ME_TTL_MS` | `2592000000` (30d) | `2592000000` (30d) | Absolute cap when "Remember this device" is checked | `600000` (10 min) |
+| `IDLE_TIMEOUT_MS` | `1800000` (30m) | `SESSION_TTL_MS` | Inactivity window (sliding; reset by each authenticated request) | `120000` (2 min) |
+| `JWT_CLOCK_SKEW_SECONDS` | `30` | `120` | Allowed signer/verifier clock skew | `30` |
+| `LOGIN_RATELIMIT_MAX` | `5` | `1000` | Failed logins allowed per (account, trusted-IP) | `3` |
+| `LOGIN_RATELIMIT_WINDOW_MS` | `900000` (15m) | `86400000` (24h) | Lockout window for the above | `120000` (2 min) |
+| `TRUSTED_PROXY_HOPS` | `1` | `4` | Trusted proxy hops from the right of `X-Forwarded-For` | `1` (Railway) |
 
-Rules: an unset, empty, non-numeric, zero, or negative value falls back to the
-default. Values are read **once at process start** — set them before the service
-boots (redeploy/restart to apply). They must be set **only** on the staging
-environment, never on production.
+Rules (fail-safe, never blocks startup):
+- unset / empty / non-numeric / zero / negative → the built-in **default**;
+- a value **above the safe maximum** → **clamped down** to the maximum, with a
+  `[Auth][config]` warning (naming only the variable and the bound — no values);
+- `IDLE_TIMEOUT_MS` is additionally capped at the standard absolute session
+  lifetime, so an idle window can never outlast the session it belongs to.
+
+Values are read **once at process start** — set them before the service boots
+(redeploy/restart to apply). Set them **only** on staging, never on production.
 
 ## Example: shorten everything on staging
 
 ```
 SESSION_TTL_MS=300000            # 5 min standard session
-REMEMBER_ME_TTL_MS=600000        # 10 min remember-me
+REMEMBER_ME_TTL_MS=1200000       # 20 min remember-me
 IDLE_TIMEOUT_MS=120000           # 2 min idle
-SESSION_CLOCK_TOLERANCE_SEC=5
+JWT_CLOCK_SKEW_SECONDS=30
 LOGIN_RATELIMIT_MAX=3
 LOGIN_RATELIMIT_WINDOW_MS=120000 # 2 min lockout window
 TRUSTED_PROXY_HOPS=1

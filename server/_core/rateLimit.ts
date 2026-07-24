@@ -111,15 +111,24 @@ export function resetRateLimits(): void {
  * front of Railway (e.g. Cloudflare) — otherwise a client could spoof the extra
  * hop. Never key security limits on `getClientIp` (leftmost, spoofable).
  */
+/** Upper bound on trusted proxy hops — a client could spoof beyond a real chain. */
+export const MAX_TRUSTED_PROXY_HOPS = 4;
+
 export function getTrustedClientIp(ctx: Pick<TrpcContext, "req">, hops?: number): string {
   const req = ctx.req as {
     headers?: Record<string, string | string[] | undefined>;
     ip?: string;
     socket?: { remoteAddress?: string };
   };
-  const trustedHops = Number.isInteger(hops)
+  // Trusted hops is a small bounded integer in [1, MAX_TRUSTED_PROXY_HOPS];
+  // out-of-range / invalid values fall back to 1 (Railway's single edge hop).
+  const parsedHops = Number.isInteger(hops)
     ? (hops as number)
-    : parseInt(process.env.TRUSTED_PROXY_HOPS ?? "1", 10) || 1;
+    : parseInt(process.env.TRUSTED_PROXY_HOPS ?? "1", 10);
+  const trustedHops =
+    Number.isInteger(parsedHops) && parsedHops >= 1 && parsedHops <= MAX_TRUSTED_PROXY_HOPS
+      ? parsedHops
+      : 1;
 
   const fwd = req?.headers?.["x-forwarded-for"];
   const raw = Array.isArray(fwd) ? fwd.join(",") : (fwd ?? "");

@@ -21,27 +21,36 @@
  * place for the separate customer-portal realm and are NOT touched here.
  */
 import { SignJWT, jwtVerify, errors as joseErrors } from "jose";
-import { envPositiveInt } from "./envInt";
+import { envBoundedInt } from "./envInt";
 
 /**
  * Durations below are the PRODUCTION defaults. Each may be overridden by an env
  * var — intended for STAGING only, so expiry behavior can be exercised in
  * minutes. Production leaves these unset and gets the defaults. An unset,
- * empty, or invalid value always falls back to the default.
- *   SESSION_TTL_MS               default 8h
- *   REMEMBER_ME_TTL_MS           default 30d
- *   IDLE_TIMEOUT_MS              default 30m
- *   SESSION_CLOCK_TOLERANCE_SEC  default 30s
+ * empty, or invalid value falls back to the default; a value above the safe
+ * maximum is clamped down (never blocks startup) so misconfiguration cannot
+ * create an effectively permanent session/idle/skew window.
+ *
+ *   env var                  default   safe maximum
+ *   SESSION_TTL_MS           8h        24h
+ *   REMEMBER_ME_TTL_MS       30d       30d
+ *   IDLE_TIMEOUT_MS          30m       SESSION_TTL_MS (the standard absolute lifetime)
+ *   JWT_CLOCK_SKEW_SECONDS   30s       120s
  */
 
-/** Default (non-remembered) absolute session lifetime: 8 hours. */
-export const SESSION_TTL_MS = envPositiveInt("SESSION_TTL_MS", 8 * 60 * 60 * 1000);
-/** "Remember this device" absolute session lifetime: 30 days. */
-export const REMEMBER_ME_TTL_MS = envPositiveInt("REMEMBER_ME_TTL_MS", 30 * 24 * 60 * 60 * 1000);
-/** Inactivity window — a session with no authenticated request for this long lapses. */
-export const IDLE_TIMEOUT_MS = envPositiveInt("IDLE_TIMEOUT_MS", 30 * 60 * 1000);
-/** Allowed clock skew between signer/verifier (seconds) — tolerates minor drift. */
-export const CLOCK_TOLERANCE_SEC = envPositiveInt("SESSION_CLOCK_TOLERANCE_SEC", 30);
+/** Hard ceilings — a value above these is clamped down with a warning. */
+export const MAX_SESSION_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+export const MAX_REMEMBER_ME_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30d
+export const MAX_CLOCK_SKEW_SEC = 120; // 2 min
+
+/** Default (non-remembered) absolute session lifetime: 8 hours (max 24h). */
+export const SESSION_TTL_MS = envBoundedInt("SESSION_TTL_MS", 8 * 60 * 60 * 1000, MAX_SESSION_TTL_MS);
+/** "Remember this device" absolute session lifetime: 30 days (max 30d). */
+export const REMEMBER_ME_TTL_MS = envBoundedInt("REMEMBER_ME_TTL_MS", 30 * 24 * 60 * 60 * 1000, MAX_REMEMBER_ME_TTL_MS);
+/** Inactivity window (max = the standard absolute session lifetime; idle must never exceed the cap). */
+export const IDLE_TIMEOUT_MS = envBoundedInt("IDLE_TIMEOUT_MS", 30 * 60 * 1000, SESSION_TTL_MS);
+/** Allowed clock skew between signer/verifier (seconds; max 120s). */
+export const CLOCK_TOLERANCE_SEC = envBoundedInt("JWT_CLOCK_SKEW_SECONDS", 30, MAX_CLOCK_SKEW_SEC);
 
 export type StaffSessionClaims = {
   openId: string;
