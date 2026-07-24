@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -49,6 +50,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
   const utils = trpc.useUtils();
   const [, navigate] = useLocation();
   const { data, isLoading } = trpc.opportunities.get.useQuery({ id: id! }, { enabled: open && id != null });
+  const { data: salespeople } = trpc.opportunities.salespeople.useQuery(undefined, { enabled: open });
 
   const [valueDraft, setValueDraft] = useState("");
   const [probDraft, setProbDraft] = useState("");
@@ -81,6 +83,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
   const createTask = trpc.opportunities.createTask.useMutation({ onSuccess: r => { toast({ title: r.gated ? "Task created (SMS gated)" : "Task created" }); invalidate(); }, onError: onErr });
   const completeTask = trpc.opportunities.completeTask.useMutation({ onSuccess: () => invalidate(), onError: onErr });
   const resolveConflict = trpc.opportunities.resolveCustomerConflict.useMutation({ onSuccess: () => { toast({ title: "Conflict resolved" }); invalidate(); }, onError: onErr });
+  const assign = trpc.opportunities.assignSalesperson.useMutation({ onSuccess: () => { toast({ title: "Assignment updated" }); invalidate(); }, onError: onErr });
 
   const o = data?.opportunity;
   const c = data?.customer;
@@ -153,6 +156,22 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
               <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => { setReasonDraft(""); setOutcome("lost"); }}><XCircle className="h-4 w-4" /> Lost</Button>
               <Button variant="outline" size="sm" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
               <ConvertToJobControl opportunityId={id} primaryJob={primaryJob} onConverted={invalidate} />
+              <div className="flex items-center gap-1.5">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <Select
+                  value={o.assignedToId != null ? String(o.assignedToId) : "unassigned"}
+                  onValueChange={v => id != null && !assign.isPending && assign.mutate({ id, assignedToId: v === "unassigned" ? null : Number(v) })}
+                  disabled={assign.isPending}
+                >
+                  <SelectTrigger className="h-8 w-[150px] text-xs"><SelectValue placeholder="Assign owner" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {(salespeople ?? []).map(s => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-5 p-4">
