@@ -71,6 +71,15 @@ async function startServer() {
   registerGbpSyncRoutes(app);
   // Vapi (Jessica) end-of-call recap — persist to Mechanical CRM + notify (POST /api/vapi/call-recap)
   registerVapiRecapRoute(app);
+  // API responses (incl. auth.me and every session-scoped read) must never be
+  // cached or restored from the back button / bfcache — always re-fetched and
+  // re-authorized. Applied before the tRPC handler so it covers all responses.
+  app.use("/api/trpc", (_req, res, next) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    next();
+  });
   // tRPC API
   app.use(
     "/api/trpc",

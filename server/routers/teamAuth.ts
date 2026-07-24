@@ -7,8 +7,27 @@ import * as db from "../db";
 import type { TeamMemberContactFields } from "../db";
 import { formatUsPhone } from "@shared/validation";
 import { sdk } from "../_core/sdk";
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "../_core/cookies";
+import { logAuthEventFromReq } from "../_core/authLog";
+import {
+  getTrustedClientIp,
+  countRateLimitHits,
+  recordRateLimitHit,
+  clearRateLimit,
+} from "../_core/rateLimit";
+import { envBoundedInt } from "../_core/envInt";
+
+/**
+ * Login lockout: at most 5 failed attempts per (account, trusted-IP) per 15 min.
+ * Both are overridable via env (STAGING only, to test recovery in minutes) with
+ * safe maximums so the window can never become effectively unbounded:
+ *   LOGIN_RATELIMIT_MAX          default 5      (max 1000 attempts)
+ *   LOGIN_RATELIMIT_WINDOW_MS    default 15m    (max 24h)
+ */
+const LOGIN_FAIL_BUCKET = "team_login_fail";
+const LOGIN_MAX_FAILURES = envBoundedInt("LOGIN_RATELIMIT_MAX", 5, 1000);
+const LOGIN_WINDOW_MS = envBoundedInt("LOGIN_RATELIMIT_WINDOW_MS", 15 * 60 * 1000, 24 * 60 * 60 * 1000);
 import { notifyOwner } from "../_core/notification";
 import { sendPasswordResetEmail, sendTeamInviteEmail } from "../services/emailService";
 
@@ -19,14 +38,21 @@ function generateToken(bytes = 32): string {
 }
 
 /**
- * Creates a JWT session token for a team member.
- * Uses a special openId prefix "team:<id>" so the existing SDK can sign/verify it.
+ * Creates a hardened JWT session for a team member. Uses the "team:<id>" openId
+ * prefix so the SDK can sign/verify it. `rememberDevice` selects the absolute
+ * lifetime (8h default, 30d when remembered); a 30-minute idle window applies
+ * either way. Returns the token plus the cookie `maxAge` (ms) to set.
  */
-async function createTeamSession(memberId: number, name: string): Promise<string> {
-  return sdk.signSession(
+async function createTeamSession(
+  memberId: number,
+  name: string,
+  rememberDevice = false
+): Promise<{ token: string; ttlMs: number }> {
+  const { token, ttlMs } = await sdk.issueSession(
     { openId: `${TEAM_SESSION_PREFIX}${memberId}`, appId: "team", name },
-    { expiresInMs: ONE_YEAR_MS }
+    { rememberDevice }
   );
+  return { token, ttlMs };
 }
 
 /** Resolve the logged-in team member's id from a "team:<id>" session, else null. */
@@ -248,10 +274,11 @@ export const teamAuthRouter = router({
       const passwordHash = await bcrypt.hash(input.password, 12);
       await db.activateTeamMember(member.id, passwordHash);
 
-      // Auto-login after accepting invite
-      const sessionToken = await createTeamSession(member.id, member.name);
+      // Auto-login after accepting invite (standard 8h session — no remember prompt here).
+      const { token, ttlMs } = await createTeamSession(member.id, member.name);
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ttlMs });
+      logAuthEventFromReq(ctx.req, { event: "login", outcome: "success", userId: member.id, reason: "accept_invite" });
 
       return { success: true, name: member.name, role: member.role };
     }),
@@ -263,29 +290,63 @@ export const teamAuthRouter = router({
     .input(z.object({
       email: z.string().email(),
       password: z.string().min(1),
+      // "Remember this device": unchecked (default) → 8h session; checked → 30d.
+      rememberDevice: z.boolean().optional().default(false),
     }))
     .mutation(async ({ input, ctx }) => {
+      // Rate-limit key = account (email) + TRUSTED client IP (rightmost XFF hop,
+      // not the spoofable leftmost). Keying on the combination bounds brute force
+      // per source without letting one attacker lock a victim out globally.
+      const emailKey = input.email.trim().toLowerCase();
+      const trustedIp = getTrustedClientIp({ req: ctx.req });
+      const limiterKey = `${emailKey}|${trustedIp}`;
+
+      // Lockout pre-check — PEEK only (no increment). Generic response regardless
+      // of whether the email exists, so it never reveals account existence.
+      if (countRateLimitHits(LOGIN_FAIL_BUCKET, limiterKey, LOGIN_WINDOW_MS) >= LOGIN_MAX_FAILURES) {
+        logAuthEventFromReq(ctx.req, { event: "login", outcome: "failure", reason: "rate_limited", email: input.email });
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Too many login attempts. Please wait 15 minutes and try again.",
+        });
+      }
+
       const member = await db.getTeamMemberByEmail(input.email);
       if (!member || !member.passwordHash) {
+        recordRateLimitHit(LOGIN_FAIL_BUCKET, limiterKey, LOGIN_WINDOW_MS);
+        logAuthEventFromReq(ctx.req, { event: "login", outcome: "failure", reason: "unknown_or_unset", email: input.email });
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
       }
       if (member.status === "invited") {
+        logAuthEventFromReq(ctx.req, { event: "login", outcome: "failure", userId: member.id, reason: "not_yet_activated" });
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Please accept your invite first by clicking the link in your invitation email." });
       }
       if (member.status === "suspended") {
+        logAuthEventFromReq(ctx.req, { event: "login", outcome: "failure", userId: member.id, reason: "suspended" });
         throw new TRPCError({ code: "FORBIDDEN", message: "Your account has been suspended. Contact the owner." });
       }
 
       const valid = await bcrypt.compare(input.password, member.passwordHash);
       if (!valid) {
+        recordRateLimitHit(LOGIN_FAIL_BUCKET, limiterKey, LOGIN_WINDOW_MS);
+        logAuthEventFromReq(ctx.req, { event: "login", outcome: "failure", userId: member.id, reason: "bad_password" });
         throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
       }
 
+      // Successful auth clears the failure counter for this account/IP.
+      clearRateLimit(LOGIN_FAIL_BUCKET, limiterKey);
       await db.updateTeamMemberLastSignedIn(member.id);
 
-      const sessionToken = await createTeamSession(member.id, member.name);
+      const { token, ttlMs } = await createTeamSession(member.id, member.name, input.rememberDevice);
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ttlMs });
+
+      logAuthEventFromReq(ctx.req, {
+        event: "login",
+        outcome: "success",
+        userId: member.id,
+        reason: input.rememberDevice ? "remember_device" : "standard",
+      });
 
       return { success: true, name: member.name, role: member.role };
     }),
@@ -349,10 +410,11 @@ export const teamAuthRouter = router({
       const passwordHash = await bcrypt.hash(input.password, 12);
       await db.resetTeamMemberPassword(member.id, passwordHash);
 
-      // Auto-login after reset
-      const sessionToken = await createTeamSession(member.id, member.name);
+      // Auto-login after reset (standard 8h session).
+      const { token, ttlMs } = await createTeamSession(member.id, member.name);
       const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ttlMs });
+      logAuthEventFromReq(ctx.req, { event: "login", outcome: "success", userId: member.id, reason: "password_reset" });
 
       return { success: true, name: member.name };
     }),

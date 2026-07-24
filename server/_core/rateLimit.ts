@@ -52,10 +52,96 @@ export function checkRateLimit(
   return { allowed: true, remaining: max - hits.length };
 }
 
+/**
+ * Peek the number of live hits for `key` WITHOUT recording a new one. Used by
+ * login rate limiting to check the lockout threshold before deciding whether to
+ * even attempt authentication.
+ */
+export function countRateLimitHits(
+  bucket: string,
+  key: string,
+  windowMs: number,
+  nowFn: () => number = Date.now,
+): number {
+  const now = nowFn();
+  const storeKey = `${bucket}:${key}`;
+  const hits = (store.get(storeKey) ?? []).filter(t => now - t < windowMs);
+  store.set(storeKey, hits);
+  return hits.length;
+}
+
+/** Record one hit for `key` (e.g. a failed login). Returns the new live count. */
+export function recordRateLimitHit(
+  bucket: string,
+  key: string,
+  windowMs: number,
+  nowFn: () => number = Date.now,
+): number {
+  const now = nowFn();
+  const storeKey = `${bucket}:${key}`;
+  const hits = (store.get(storeKey) ?? []).filter(t => now - t < windowMs);
+  hits.push(now);
+  store.set(storeKey, hits);
+  return hits.length;
+}
+
+/** Clear the counter for `key` (e.g. after a successful login). */
+export function clearRateLimit(bucket: string, key: string): void {
+  store.delete(`${bucket}:${key}`);
+}
+
 /** Test helper: clear all limiter state. */
 export function resetRateLimits(): void {
   store.clear();
   lastSweep = 0;
+}
+
+/**
+ * Trusted client IP for SECURITY decisions (login rate limiting).
+ *
+ * `X-Forwarded-For` is `client, proxy1, proxy2, ...` — appended left-to-right as
+ * the request traverses proxies. A client can PREPEND arbitrary fake entries,
+ * so the LEFTMOST values are attacker-controllable. Each trusted proxy appends
+ * the real peer it saw, so the RIGHTMOST entries are trustworthy. With exactly
+ * one trusted hop (Railway's edge — the default), the real client IP is the last
+ * XFF entry. This mirrors Express `trust proxy = <n>`: trust `hops` entries from
+ * the right and ignore everything to their left.
+ *
+ * NOTE: increase `TRUSTED_PROXY_HOPS` only if you add another trusted proxy in
+ * front of Railway (e.g. Cloudflare) — otherwise a client could spoof the extra
+ * hop. Never key security limits on `getClientIp` (leftmost, spoofable).
+ */
+/** Upper bound on trusted proxy hops — a client could spoof beyond a real chain. */
+export const MAX_TRUSTED_PROXY_HOPS = 4;
+
+export function getTrustedClientIp(ctx: Pick<TrpcContext, "req">, hops?: number): string {
+  const req = ctx.req as {
+    headers?: Record<string, string | string[] | undefined>;
+    ip?: string;
+    socket?: { remoteAddress?: string };
+  };
+  // Trusted hops is a small bounded integer in [1, MAX_TRUSTED_PROXY_HOPS];
+  // out-of-range / invalid values fall back to 1 (Railway's single edge hop).
+  const parsedHops = Number.isInteger(hops)
+    ? (hops as number)
+    : parseInt(process.env.TRUSTED_PROXY_HOPS ?? "1", 10);
+  const trustedHops =
+    Number.isInteger(parsedHops) && parsedHops >= 1 && parsedHops <= MAX_TRUSTED_PROXY_HOPS
+      ? parsedHops
+      : 1;
+
+  const fwd = req?.headers?.["x-forwarded-for"];
+  const raw = Array.isArray(fwd) ? fwd.join(",") : (fwd ?? "");
+  const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+
+  if (parts.length > 0) {
+    // The entry `trustedHops` from the right is the deepest hop we still trust.
+    const idx = Math.max(0, parts.length - trustedHops);
+    const candidate = parts[idx];
+    if (candidate) return candidate;
+  }
+  // No usable XFF → fall back to the direct socket peer.
+  return req?.socket?.remoteAddress || req?.ip || "unknown-ip";
 }
 
 /** Best-effort client IP behind Netlify/any proxy. */
