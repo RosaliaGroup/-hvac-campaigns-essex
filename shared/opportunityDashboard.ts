@@ -256,6 +256,42 @@ export function isFollowUpDue(row: OpportunityRow, now: Date = new Date()): bool
   return row.nextActionDueAt.getTime() <= endOfDay(now).getTime();
 }
 
+/**
+ * A follow-up is "overdue" when the opportunity is open and its next action fell
+ * strictly before the start of today — i.e. due yesterday or earlier. Due *today*
+ * counts as due (isFollowUpDue) but not yet overdue.
+ */
+export function isFollowUpOverdue(
+  row: Pick<OpportunityRow, "stage" | "nextActionDueAt">,
+  now: Date = new Date(),
+): boolean {
+  if (!isOpenStage(row.stage)) return false;
+  if (!row.nextActionDueAt) return false;
+  return row.nextActionDueAt.getTime() < startOfDay(now).getTime();
+}
+
+/**
+ * Client-facing follow-up urgency, derived purely from the next-action date:
+ *   - "overdue"   → open and due before today
+ *   - "due_today" → open and due at some point today
+ *   - null        → not open, no date, an invalid date, or a future date
+ * A missing or invalid date yields null (NaN comparisons are false), so callers
+ * can render an indicator only when one is actually warranted.
+ */
+export type FollowUpUrgency = "overdue" | "due_today";
+
+export function followUpUrgency(
+  row: Pick<OpportunityRow, "stage" | "nextActionDueAt">,
+  now: Date = new Date(),
+): FollowUpUrgency | null {
+  if (!isOpenStage(row.stage) || !row.nextActionDueAt) return null;
+  const t = row.nextActionDueAt.getTime();
+  if (Number.isNaN(t)) return null;
+  if (t < startOfDay(now).getTime()) return "overdue";
+  if (t <= endOfDay(now).getTime()) return "due_today";
+  return null;
+}
+
 export function filterOpportunities(
   rows: OpportunityRow[],
   filters: OpportunityFilters,
@@ -378,6 +414,9 @@ export interface OverviewMetrics {
 
 function startOfMonth(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+}
+function startOfDay(now: Date): Date {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
 }
 function endOfDay(now: Date): Date {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
