@@ -11,6 +11,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -50,6 +52,10 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   const [valueDraft, setValueDraft] = useState("");
   const [probDraft, setProbDraft] = useState("");
+  // Won/Lost capture a reason before closing the deal (backend stores
+  // closeReason/lossReason). null = dialog closed.
+  const [outcome, setOutcome] = useState<"won" | "lost" | null>(null);
+  const [reasonDraft, setReasonDraft] = useState("");
 
   useEffect(() => {
     if (data?.opportunity) {
@@ -68,8 +74,9 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   const updateValue = trpc.opportunities.updateValue.useMutation({ onSuccess: () => { toast({ title: "Saved" }); invalidate(); }, onError: onErr });
   const setStage = trpc.opportunities.setStage.useMutation({ onSuccess: () => { toast({ title: "Stage updated" }); invalidate(); }, onError: onErr });
-  const markWon = trpc.opportunities.markWon.useMutation({ onSuccess: () => { toast({ title: "Marked Won" }); invalidate(); }, onError: onErr });
-  const markLost = trpc.opportunities.markLost.useMutation({ onSuccess: () => { toast({ title: "Marked Lost" }); invalidate(); }, onError: onErr });
+  const closeOutcome = () => { setOutcome(null); setReasonDraft(""); };
+  const markWon = trpc.opportunities.markWon.useMutation({ onSuccess: () => { toast({ title: "Marked Won" }); closeOutcome(); invalidate(); }, onError: onErr });
+  const markLost = trpc.opportunities.markLost.useMutation({ onSuccess: () => { toast({ title: "Marked Lost" }); closeOutcome(); invalidate(); }, onError: onErr });
   const followUpLater = trpc.opportunities.followUpLater.useMutation({ onSuccess: () => { toast({ title: "Follow-up scheduled" }); invalidate(); }, onError: onErr });
   const createTask = trpc.opportunities.createTask.useMutation({ onSuccess: r => { toast({ title: r.gated ? "Task created (SMS gated)" : "Task created" }); invalidate(); }, onError: onErr });
   const completeTask = trpc.opportunities.completeTask.useMutation({ onSuccess: () => invalidate(), onError: onErr });
@@ -142,8 +149,8 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => id != null && markWon.mutate({ id })}><Trophy className="h-4 w-4" /> Won</Button>
-              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => id != null && markLost.mutate({ id })}><XCircle className="h-4 w-4" /> Lost</Button>
+              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => { setReasonDraft(""); setOutcome("won"); }}><Trophy className="h-4 w-4" /> Won</Button>
+              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => { setReasonDraft(""); setOutcome("lost"); }}><XCircle className="h-4 w-4" /> Lost</Button>
               <Button variant="outline" size="sm" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
               <ConvertToJobControl opportunityId={id} primaryJob={primaryJob} onConverted={invalidate} />
             </div>
@@ -285,6 +292,44 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           </div>
         )}
       </SheetContent>
+
+      {/* Won/Lost reason capture. Reason is optional for Won, encouraged for Lost;
+          either way it goes to the backend closeReason/lossReason field. */}
+      <Dialog open={outcome != null} onOpenChange={v => { if (!v) closeOutcome(); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{outcome === "won" ? "Mark opportunity Won" : "Mark opportunity Lost"}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {outcome === "won"
+              ? "Optionally record why this deal was won."
+              : "Record why this deal was lost (helps close-rate analysis)."}
+          </p>
+          <Textarea
+            autoFocus
+            value={reasonDraft}
+            onChange={e => setReasonDraft(e.target.value)}
+            placeholder={outcome === "won" ? "e.g. Best price, existing relationship…" : "e.g. Price, went with competitor, no budget…"}
+            maxLength={1000}
+            rows={3}
+          />
+          <DialogFooter>
+            <Button variant="ghost" onClick={closeOutcome} disabled={markWon.isPending || markLost.isPending}>Cancel</Button>
+            <Button
+              className={outcome === "won" ? "bg-green-700 hover:bg-green-700/90" : "bg-red-700 hover:bg-red-700/90"}
+              disabled={id == null || markWon.isPending || markLost.isPending}
+              onClick={() => {
+                if (id == null) return;
+                const reason = reasonDraft.trim() || undefined;
+                if (outcome === "won") markWon.mutate({ id, closeReason: reason });
+                else markLost.mutate({ id, lossReason: reason });
+              }}
+            >
+              {markWon.isPending || markLost.isPending ? "Saving…" : outcome === "won" ? "Confirm Won" : "Confirm Lost"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
