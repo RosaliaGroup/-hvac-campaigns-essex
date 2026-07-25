@@ -4,7 +4,9 @@
  * mirror the opportunities router output.
  */
 import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Clock } from "lucide-react";
 import { workCategoryLabel, type WorkCategory } from "@shared/opportunityCategory";
+import { followUpUrgency } from "@shared/opportunityDashboard";
 import type { OpportunityStage, SalesDocStatus, AgingBucket } from "@shared/opportunityDashboard";
 
 export const STAGE_META: { value: OpportunityStage; label: string; badge: string; column: string }[] = [
@@ -66,6 +68,28 @@ export function WorkCategoryBadge({ category }: { category: WorkCategory | null 
     <Badge variant="outline" className={`text-xs font-semibold ${WORK_CATEGORY_BADGE[category]}`}>
       {workCategoryLabel(category)}
     </Badge>
+  );
+}
+
+/**
+ * Follow-up urgency chip for a pipeline/list row. Renders a red "Overdue" or
+ * amber "Due today" badge (and nothing otherwise), derived client-side by the
+ * unit-tested followUpUrgency helper from the opportunity's next-action date.
+ */
+export function FollowUpIndicator({ row }: { row: Pick<OppRow, "stage" | "nextActionDueAt"> }) {
+  const urgency = followUpUrgency(row);
+  if (!urgency) return null;
+  if (urgency === "overdue") {
+    return (
+      <span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-red-100 px-1 py-0.5 text-[11px] font-medium text-red-700">
+        <AlertTriangle className="h-3 w-3" /> Overdue
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex shrink-0 items-center gap-0.5 rounded bg-amber-100 px-1 py-0.5 text-[11px] font-medium text-amber-700">
+      <Clock className="h-3 w-3" /> Due today
+    </span>
   );
 }
 

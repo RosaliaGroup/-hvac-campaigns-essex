@@ -15,7 +15,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useToast } from "@/hooks/use-toast";
 import { Search, SlidersHorizontal, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import {
-  STAGE_META, DOC_STATUS_BADGE, AGING_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate, type OppRow,
+  STAGE_META, DOC_STATUS_BADGE, AGING_BADGE, WorkCategoryBadge, StageBadge, FollowUpIndicator, fmtMoney, fmtDate, type OppRow,
 } from "./shared";
 import { AGING_BUCKETS, type SortKey } from "@shared/opportunityDashboard";
 import { workCategoryLabel, type WorkCategory } from "@shared/opportunityCategory";
@@ -251,7 +251,9 @@ export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) =
                     <TableCell className="text-right">
                       {r.daysPending != null ? <span className={`rounded px-1.5 py-0.5 text-xs ${r.agingBucket ? AGING_BADGE[r.agingBucket] : ""}`}>{r.daysPending}</span> : "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{fmtDate(r.nextActionDueAt)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">{fmtDate(r.nextActionDueAt)}<FollowUpIndicator row={r} /></span>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -273,6 +275,7 @@ export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) =
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <WorkCategoryBadge category={r.workCategory} />
                 <StageBadge stage={r.stage} />
+                <FollowUpIndicator row={r} />
               </div>
               <p className="mt-1 truncate text-xs text-muted-foreground">{r.nextAction ?? (r.docNumber ? `${r.docTypeLabel} #${r.docNumber}` : "")}</p>
             </div>

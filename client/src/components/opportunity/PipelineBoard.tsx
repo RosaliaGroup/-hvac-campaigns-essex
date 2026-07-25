@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { MoreVertical, GripVertical } from "lucide-react";
-import { STAGE_META, WorkCategoryBadge, fmtMoney, type OppRow } from "./shared";
+import { STAGE_META, WorkCategoryBadge, FollowUpIndicator, fmtMoney, type OppRow } from "./shared";
 import { formatDisplayName } from "@shared/nameFormat";
-import type { OpportunityStage } from "@shared/opportunityDashboard";
+import { followUpUrgency, type OpportunityStage } from "@shared/opportunityDashboard";
 
 function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
   row: OppRow;
@@ -24,13 +24,14 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
   onDragStart: (id: number) => void;
   onDragEnd: () => void;
 }) {
+  const overdue = followUpUrgency(row) === "overdue";
   return (
     <div
       draggable
       onDragStart={e => { e.dataTransfer.setData("text/plain", String(row.id)); e.dataTransfer.effectAllowed = "move"; onDragStart(row.id); }}
       onDragEnd={onDragEnd}
       onClick={() => onOpen(row.id)}
-      className={`group cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition hover:shadow-md ${dragging ? "opacity-50" : ""}`}
+      className={`group cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition hover:shadow-md ${dragging ? "opacity-50" : ""} ${overdue ? "border-red-300 ring-1 ring-red-200" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -59,9 +60,10 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
         <span className="text-sm font-bold tabular-nums">{fmtMoney(row.amount)}</span>
         {row.docStatus ? <Badge variant="secondary" className="text-[10px]">{row.docStatus}</Badge> : null}
       </div>
-      <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>{row.daysPending != null ? `${row.daysPending}d pending` : "—"}</span>
-        <span className="truncate">{row.nextAction ?? ""}</span>
+      <div className="mt-1 flex items-center justify-between gap-1 text-[11px] text-muted-foreground">
+        <span className="shrink-0">{row.daysPending != null ? `${row.daysPending}d pending` : "—"}</span>
+        <FollowUpIndicator row={row} />
+        {followUpUrgency(row) == null ? <span className="truncate">{row.nextAction ?? ""}</span> : null}
       </div>
     </div>
   );
