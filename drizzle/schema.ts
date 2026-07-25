@@ -1752,6 +1752,30 @@ export const opportunities = mysqlTable(
      */
     sourceLeadCaptureId: int("sourceLeadCaptureId"),
     assignedToId: int("assignedToId"),
+    /**
+     * Sales urgency, independent of stage/probability. Null = unset (UI may treat
+     * as "medium"). Manual field; the QBO sync never sets or clears it. (0057)
+     */
+    priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]),
+    /**
+     * Forecast/target close date the salesperson commits to — distinct from
+     * `closedAt` (the ACTUAL won/lost stamp). Null until set. (0057)
+     */
+    expectedCloseAt: timestamp("expectedCloseAt"),
+    /**
+     * Manual ordering rank WITHIN a stage column for the Kanban board (lower =
+     * higher up). Defaults to 0 so pre-0057 rows fall back to the createdAt
+     * tiebreak; a reorder assigns a dense 0..N-1 sequence per stage. Not a global
+     * order — only meaningful relative to same-stage cards. (0057)
+     */
+    sortOrder: int("sortOrder").default(0).notNull(),
+    /**
+     * Optional link to the specific service property this deal concerns
+     * (properties.id). App-enforced to belong to `customerId`; the UI never
+     * overwrites the property row, only references it. Null = customer-level /
+     * unspecified (the historical behaviour). No DB-level FK, per repo convention. (0057)
+     */
+    propertyId: int("propertyId"),
     closedAt: timestamp("closedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1760,6 +1784,8 @@ export const opportunities = mysqlTable(
     customerIdx: index("opportunities_customerId_idx").on(table.customerId),
     stageIdx: index("opportunities_stage_idx").on(table.stage),
     projectRefIdx: index("opportunities_projectReference_idx").on(table.projectReference),
+    // Board reads: cards grouped by stage, ordered by intra-stage rank. (0057)
+    stageSortIdx: index("opportunities_stage_sortOrder_idx").on(table.stage, table.sortOrder),
   }),
 );
 export type Opportunity = typeof opportunities.$inferSelect;
@@ -1858,6 +1884,12 @@ export const opportunityEvents = mysqlTable(
     type: varchar("type", { length: 64 }).notNull(),
     message: text("message"),
     metadata: json("metadata"),
+    /**
+     * The staff user who performed the action (users.id / teamMembers.id — same
+     * id space as `ctx.user.id`). Null for system/sync-originated events (e.g.
+     * QuickBooks-driven stage changes) and for pre-0057 rows. (0057)
+     */
+    actorId: int("actorId"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => ({

@@ -400,6 +400,13 @@
       "when": 1784411635742,
       "tag": "0056_job_lifecycle",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "5",
+      "when": 1784928443297,
+      "tag": "0057_opportunity_board_fields",
+      "breakpoints": true
     }
   ]
 }

@@ -15,6 +15,10 @@ import type { WorkCategory } from "./opportunityCategory";
 import { deriveRelationship, type Relationship } from "./leadPipeline";
 
 export type OpportunityStage = "new" | "proposal_sent" | "pending" | "won" | "lost";
+/** Canonical stage list (pipeline order). Single source of truth for enums/validation. */
+export const OPPORTUNITY_STAGES: readonly OpportunityStage[] = [
+  "new", "proposal_sent", "pending", "won", "lost",
+];
 export type SalesDocStatus =
   | "pending" | "accepted" | "closed" | "rejected" | "expired"
   // Invoice statuses (documents can be invoices too); estimate-oriented logic

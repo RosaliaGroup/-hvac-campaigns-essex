@@ -13,6 +13,16 @@ import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
+  OPPORTUNITY_PRIORITIES,
+  appendSortOrder,
+  planReorder,
+  decideStageMove,
+  resolvePropertyLink,
+  buildCreateValues,
+  isClosedStage,
+  type BoardCard,
+} from "./opportunityBoard";
+import {
   opportunities,
   opportunityEvents,
   opportunityTasks,
@@ -50,11 +60,13 @@ const STAGE_ENUM = ["new", "proposal_sent", "pending", "won", "lost"] as const;
 const OPEN_STAGES = ["new", "proposal_sent", "pending"] as const;
 const DOC_STATUS_ENUM = ["pending", "accepted", "closed", "rejected", "expired"] as const;
 const WORK_CATEGORY_ENUM = ["residential", "commercial", "change_order"] as const;
+const PRIORITY_ENUM = OPPORTUNITY_PRIORITIES;
 const AGING_ENUM = ["0-3", "4-7", "8-14", "15+"] as const;
 const WON_LOST_OPEN_ENUM = ["won", "lost", "open"] as const;
 const SORT_ENUM = [
   "customer", "amount", "stage", "sentAt", "createdAt",
   "daysPending", "nextFollowUp", "assignedTo", "docStatus", "workCategory",
+  "priority", "expectedCloseAt", "sortOrder",
 ] as const;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -78,6 +90,7 @@ const listInput = z
     stages: z.array(z.enum(STAGE_ENUM)).optional(),
     docStatus: z.array(z.enum(DOC_STATUS_ENUM)).optional(),
     workCategory: z.array(z.enum(WORK_CATEGORY_ENUM)).optional(),
+    priority: z.array(z.enum(PRIORITY_ENUM)).optional(),
     docTypeLabel: z.array(z.enum(["estimate", "proposal"])).optional(),
     assignedToId: z.array(z.number().int()).optional(),
     wonLostOpen: z.array(z.enum(WON_LOST_OPEN_ENUM)).optional(),
@@ -123,6 +136,7 @@ function buildConditions(input: z.infer<typeof listInput>, now: Date) {
   if (stages?.length) conditions.push(inArray(opportunities.stage, stages));
   if (input.docStatus?.length) conditions.push(inArray(quickbooksSalesDocuments.status, input.docStatus));
   if (input.workCategory?.length) conditions.push(inArray(opportunities.workCategory, input.workCategory));
+  if (input.priority?.length) conditions.push(inArray(opportunities.priority, input.priority));
   if (input.assignedToId?.length) conditions.push(inArray(opportunities.assignedToId, input.assignedToId));
 
   if (input.wonLostOpen?.length) {
@@ -195,6 +209,14 @@ function orderExpression(sortBy: (typeof SORT_ENUM)[number]) {
       return quickbooksSalesDocuments.status;
     case "workCategory":
       return opportunities.workCategory;
+    case "priority":
+      // Rank urgent→low so `desc` puts the most urgent first; unset sorts lowest.
+      return sql`CASE ${opportunities.priority} WHEN 'urgent' THEN 4 WHEN 'high' THEN 3 WHEN 'medium' THEN 2 WHEN 'low' THEN 1 ELSE 0 END`;
+    case "expectedCloseAt":
+      return opportunities.expectedCloseAt;
+    case "sortOrder":
+      // Board order: intra-stage rank. Pair with a stage filter for a single column.
+      return opportunities.sortOrder;
   }
 }
 
@@ -207,6 +229,10 @@ const projection = {
   amountOverridden: opportunities.amountOverridden,
   stageOverridden: opportunities.stageOverridden,
   workCategory: opportunities.workCategory,
+  priority: opportunities.priority,
+  expectedCloseAt: opportunities.expectedCloseAt,
+  sortOrder: opportunities.sortOrder,
+  propertyId: opportunities.propertyId,
   title: opportunities.title,
   nextAction: opportunities.nextAction,
   nextActionDueAt: opportunities.nextActionDueAt,
@@ -280,6 +306,10 @@ function toListItem(r: Record<string, unknown>) {
     quickbooksAmount: rowForMath.quickbooksAmount,
     valueDiffersFromQuickbooks: valueDiffersFromQuickbooks(rowForMath),
     workCategory: rowForMath.workCategory,
+    priority: (r.priority as string) ?? null,
+    expectedCloseAt: (r.expectedCloseAt as Date) ?? null,
+    sortOrder: Number(r.sortOrder ?? 0),
+    propertyId: r.propertyId == null ? null : Number(r.propertyId),
     docTypeLabel: rowForMath.docTypeLabel,
     title: rowForMath.title,
     nextAction: (r.nextAction as string) ?? null,
@@ -310,13 +340,101 @@ function toListItem(r: Record<string, unknown>) {
 const OVERVIEW_CAP = 10000;
 
 async function insertEvent(
-  db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
+  db: { insert: NonNullable<Awaited<ReturnType<typeof getDb>>>["insert"] },
   opportunityId: number,
   type: string,
   message: string,
   metadata?: Record<string, unknown>,
+  actorId?: number | null,
 ) {
-  await db.insert(opportunityEvents).values({ opportunityId, type, message, metadata: metadata ?? null });
+  await db.insert(opportunityEvents).values({ opportunityId, type, message, metadata: metadata ?? null, actorId: actorId ?? null });
+}
+
+type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+/**
+ * Atomic, auditable pipeline-stage move — the single transactional path used by
+ * setStage / markWon / markLost. Mirrors completeJob's commit-or-rollback and
+ * persistReschedule's optimistic guard:
+ *  - reads current stage INSIDE the transaction,
+ *  - honours an optional `expectedStage` (client's last-seen value) → CONFLICT if stale,
+ *  - re-guards the UPDATE with `WHERE id = ? AND stage = fromStage` so a race that
+ *    slips between our read and write also becomes a CONFLICT (never a lost update),
+ *  - writes the `status_changed` audit event (actor + from/to) in the SAME tx.
+ * Follow-up cancellation is a downstream side effect and runs OUTSIDE the tx.
+ */
+async function performStageMove(
+  db: Db,
+  params: {
+    id: number;
+    toStage: (typeof STAGE_ENUM)[number];
+    expectedStage?: (typeof STAGE_ENUM)[number] | null;
+    toSortOrder?: number;
+    closeReason?: string | null;
+    lossReason?: string | null;
+    /** markWon/markLost re-apply reason + close stamp even when already in that stage. */
+    allowSameStage?: boolean;
+    actorId: number;
+  },
+): Promise<{ moved: boolean; closing: boolean; fromStage: (typeof STAGE_ENUM)[number] }> {
+  const now = new Date();
+  const CONFLICT = new TRPCError({ code: "CONFLICT", message: "That opportunity was just updated somewhere else. Refresh and try again." });
+
+  const applyReasons = (set: Record<string, unknown>) => {
+    if (params.closeReason !== undefined) set.closeReason = params.closeReason ?? null;
+    if (params.lossReason !== undefined) set.lossReason = params.lossReason ?? null;
+  };
+
+  return db.transaction(async tx => {
+    const current = (await tx
+      .select({ stage: opportunities.stage, closedAt: opportunities.closedAt })
+      .from(opportunities)
+      .where(eq(opportunities.id, params.id))
+      .limit(1))[0] ?? null;
+
+    // Placement rank in the target column (bottom-append unless explicitly given).
+    let placement = params.toSortOrder;
+    if (placement == null) {
+      const [{ maxOrder = null } = { maxOrder: null }] = await tx
+        .select({ maxOrder: sql<number | null>`MAX(${opportunities.sortOrder})` })
+        .from(opportunities)
+        .where(eq(opportunities.stage, params.toStage));
+      placement = appendSortOrder(maxOrder == null ? [] : [Number(maxOrder)]);
+    }
+
+    const decision = decideStageMove(current, {
+      toStage: params.toStage,
+      expectedStage: params.expectedStage ?? null,
+      placementSortOrder: placement,
+      now,
+    });
+
+    if (decision.kind === "not_found") throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
+    if (decision.kind === "stale") throw new TRPCError({ code: "CONFLICT", message: decision.reason });
+
+    if (decision.kind === "noop") {
+      if (!params.allowSameStage) return { moved: false, closing: false, fromStage: decision.stage };
+      // markWon/markLost on a deal already in that stage: refresh close stamp + reason.
+      const closing = isClosedStage(params.toStage);
+      const set: Record<string, unknown> = { stageOverridden: true, closedAt: closing ? now : null };
+      applyReasons(set);
+      const upd = await tx.update(opportunities).set(set).where(and(eq(opportunities.id, params.id), eq(opportunities.stage, params.toStage)));
+      if (Number((upd as unknown as [{ affectedRows?: number }])[0]?.affectedRows ?? 0) === 0) throw CONFLICT;
+      await insertEvent(tx, params.id, "status_changed", `Stage confirmed ${params.toStage} (manual).`, { fromStage: decision.stage, toStage: params.toStage }, params.actorId);
+      return { moved: true, closing, fromStage: decision.stage };
+    }
+
+    const set: Record<string, unknown> = { ...decision.set };
+    applyReasons(set);
+    const upd = await tx
+      .update(opportunities)
+      .set(set)
+      .where(and(eq(opportunities.id, params.id), eq(opportunities.stage, decision.fromStage)));
+    if (Number((upd as unknown as [{ affectedRows?: number }])[0]?.affectedRows ?? 0) === 0) throw CONFLICT;
+
+    await insertEvent(tx, params.id, "status_changed", `Stage → ${params.toStage} (manual).`, { fromStage: decision.fromStage, toStage: decision.toStage }, params.actorId);
+    return { moved: true, closing: decision.closing, fromStage: decision.fromStage };
+  });
 }
 
 export const opportunitiesRouter = router({
@@ -506,7 +624,7 @@ export const opportunitiesRouter = router({
         probability: z.number().int().min(0).max(100).nullable().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const set: Record<string, unknown> = {};
@@ -520,55 +638,244 @@ export const opportunitiesRouter = router({
       await insertEvent(db, input.id, "value_updated", "CRM opportunity value/probability updated.", {
         opportunityValue: input.opportunityValue,
         probability: input.probability,
-      });
+      }, ctx.user.id);
       return { ok: true };
     }),
 
-  /** Move the pipeline stage manually. Sets the stage override so sync respects it. */
-  setStage: protectedProcedure
-    .input(z.object({ id: z.number().int().positive(), stage: z.enum(STAGE_ENUM) }))
-    .mutation(async ({ input }) => {
+  /**
+   * Create a MANUAL opportunity (walk-in / phone / commercial deal not sourced
+   * from a QuickBooks estimate). Never touches QuickBooks; never creates or edits
+   * the customer or property — it only references an existing customer (required)
+   * and, optionally, one of that customer's existing properties. The card is
+   * appended to the bottom of its stage column.
+   */
+  create: protectedProcedure
+    .input(
+      z.object({
+        customerId: z.number().int().positive(),
+        title: z.string().min(1).max(255),
+        stage: z.enum(STAGE_ENUM).optional(),
+        opportunityValue: z.number().min(0).optional(),
+        probability: z.number().int().min(0).max(100).nullable().optional(),
+        priority: z.enum(PRIORITY_ENUM).nullable().optional(),
+        assignedToId: z.number().int().nullable().optional(),
+        expectedCloseAt: z.date().nullable().optional(),
+        nextAction: z.string().max(255).nullable().optional(),
+        nextActionDueAt: z.date().nullable().optional(),
+        propertyId: z.number().int().positive().nullable().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // Customer must exist — we never conjure a contact from an opportunity.
+      const customer = (await db.select({ id: customers.id }).from(customers).where(eq(customers.id, input.customerId)).limit(1))[0];
+      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+
+      // A property reference, if given, must belong to this customer.
+      const custProps = await db.select({ id: properties.id }).from(properties).where(eq(properties.customerId, input.customerId));
+      const link = resolvePropertyLink(input.propertyId ?? null, custProps.map(p => p.id));
+      if (link.kind === "invalid") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Selected property does not belong to this customer" });
+      }
+
+      const stage = input.stage ?? "new";
       const now = new Date();
-      const isClosed = input.stage === "won" || input.stage === "lost";
-      await db
-        .update(opportunities)
-        .set({ stage: input.stage, stageOverridden: true, closedAt: isClosed ? now : null })
-        .where(eq(opportunities.id, input.id));
-      if (isClosed) await cancelOpenFollowups(input.id, `stage set to ${input.stage}`, db);
-      await insertEvent(db, input.id, "status_changed", `Stage → ${input.stage} (manual).`);
-      return { ok: true };
+      const id = await db.transaction(async tx => {
+        // Append rank = max(sortOrder)+1 within the target stage (bottom of column).
+        const [{ maxOrder = null } = { maxOrder: null }] = await tx
+          .select({ maxOrder: sql<number | null>`MAX(${opportunities.sortOrder})` })
+          .from(opportunities)
+          .where(eq(opportunities.stage, stage));
+        const sortOrder = appendSortOrder(maxOrder == null ? [] : [Number(maxOrder)]);
+
+        const values = buildCreateValues(
+          {
+            customerId: input.customerId,
+            title: input.title,
+            stage,
+            amount: input.opportunityValue,
+            probability: input.probability,
+            priority: input.priority,
+            assignedToId: input.assignedToId,
+            expectedCloseAt: input.expectedCloseAt,
+            nextAction: input.nextAction,
+            nextActionDueAt: input.nextActionDueAt,
+            propertyId: input.propertyId,
+          },
+          { sortOrder, propertyId: link.propertyId },
+          now,
+        );
+        const [inserted] = await tx.insert(opportunities).values(values);
+        const newId = Number((inserted as { insertId?: number }).insertId);
+        await insertEvent(tx, newId, "created", "Opportunity created manually.", { source: "manual" }, ctx.user.id);
+        return newId;
+      });
+
+      return { ok: true, id };
     }),
 
-  /** Mark Won with an optional close reason. */
+  /**
+   * Edit the manually-owned card fields NOT covered by the dedicated mutations
+   * (updateValue = amount/probability, assignSalesperson = owner, setStage/
+   * markWon/markLost = stage). Partial: only provided keys are written. A
+   * `propertyId` is validated to belong to the opportunity's customer.
+   */
+  update: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        title: z.string().min(1).max(255).optional(),
+        priority: z.enum(PRIORITY_ENUM).nullable().optional(),
+        expectedCloseAt: z.date().nullable().optional(),
+        nextAction: z.string().max(255).nullable().optional(),
+        nextActionDueAt: z.date().nullable().optional(),
+        propertyId: z.number().int().positive().nullable().optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const opp = (await db.select({ customerId: opportunities.customerId }).from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
+      if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
+
+      const set: Record<string, unknown> = {};
+      const changed: string[] = [];
+      if (input.title !== undefined) { set.title = input.title.trim(); changed.push("title"); }
+      if (input.priority !== undefined) { set.priority = input.priority; changed.push("priority"); }
+      if (input.expectedCloseAt !== undefined) { set.expectedCloseAt = input.expectedCloseAt; changed.push("expectedCloseAt"); }
+      if (input.nextAction !== undefined) { set.nextAction = input.nextAction; changed.push("nextAction"); }
+      if (input.nextActionDueAt !== undefined) { set.nextActionDueAt = input.nextActionDueAt; changed.push("nextActionDueAt"); }
+      if (input.propertyId !== undefined) {
+        if (input.propertyId === null) {
+          set.propertyId = null;
+        } else {
+          const custProps = await db.select({ id: properties.id }).from(properties).where(eq(properties.customerId, opp.customerId));
+          const link = resolvePropertyLink(input.propertyId, custProps.map(p => p.id));
+          if (link.kind === "invalid") throw new TRPCError({ code: "BAD_REQUEST", message: "Selected property does not belong to this customer" });
+          set.propertyId = link.propertyId;
+        }
+        changed.push("propertyId");
+      }
+      if (!changed.length) return { ok: true, changed: [] as string[] };
+
+      await db.update(opportunities).set(set).where(eq(opportunities.id, input.id));
+      await insertEvent(db, input.id, "updated", `Updated: ${changed.join(", ")}.`, { fields: changed }, ctx.user.id);
+      return { ok: true, changed };
+    }),
+
+  /**
+   * Move the pipeline stage manually (Kanban drag). Transactional + auditable.
+   * Sets the stage override so the QBO sync respects the human decision. Optional
+   * `expectedStage` enables optimistic-concurrency: if the card already moved,
+   * the mutation returns CONFLICT instead of stomping the other edit. Optional
+   * `toSortOrder` places the card at a row in the destination column (default:
+   * appended to the bottom). Dragging onto the same column is a no-op — use
+   * `reorder` to re-rank within a column.
+   */
+  setStage: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        stage: z.enum(STAGE_ENUM),
+        expectedStage: z.enum(STAGE_ENUM).optional(),
+        toSortOrder: z.number().int().min(0).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const result = await performStageMove(db, {
+        id: input.id,
+        toStage: input.stage,
+        expectedStage: input.expectedStage,
+        toSortOrder: input.toSortOrder,
+        actorId: ctx.user.id,
+      });
+      // Follow-up cancellation is a downstream side effect — OUTSIDE the atomic tx.
+      if (result.moved && result.closing) await cancelOpenFollowups(input.id, `stage set to ${input.stage}`, db);
+      return { ok: true, moved: result.moved };
+    }),
+
+  /** Mark Won with an optional close reason. Transactional + auditable; idempotent. */
   markWon: protectedProcedure
     .input(z.object({ id: z.number().int().positive(), closeReason: z.string().max(1000).optional() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      await db
-        .update(opportunities)
-        .set({ stage: "won", stageOverridden: true, closedAt: new Date(), closeReason: input.closeReason ?? null })
-        .where(eq(opportunities.id, input.id));
+      await performStageMove(db, {
+        id: input.id,
+        toStage: "won",
+        closeReason: input.closeReason ?? null,
+        allowSameStage: true,
+        actorId: ctx.user.id,
+      });
       await cancelOpenFollowups(input.id, "marked won", db);
-      await insertEvent(db, input.id, "status_changed", "Marked Won (manual).", { closeReason: input.closeReason });
       return { ok: true };
     }),
 
-  /** Mark Lost with an optional loss reason. */
+  /** Mark Lost with an optional loss reason. Transactional + auditable; idempotent. */
   markLost: protectedProcedure
     .input(z.object({ id: z.number().int().positive(), lossReason: z.string().max(1000).optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      await performStageMove(db, {
+        id: input.id,
+        toStage: "lost",
+        lossReason: input.lossReason ?? null,
+        allowSameStage: true,
+        actorId: ctx.user.id,
+      });
+      await cancelOpenFollowups(input.id, "marked lost", db);
+      return { ok: true };
+    }),
+
+  /**
+   * Re-rank the cards within ONE stage column after a drag-reorder. The client
+   * sends the full top-to-bottom order of that column; we densely renumber
+   * `sortOrder` 0..N-1 in a single transaction, writing only the rows whose rank
+   * actually changed (bounded). If the column changed since the client loaded it
+   * (a card entered/left/was removed), the whole operation returns CONFLICT and
+   * writes nothing — the client refetches. Pure cosmetic ordering, so no audit
+   * event is emitted (it is not a material change to any deal).
+   */
+  reorder: protectedProcedure
+    .input(
+      z.object({
+        stage: z.enum(STAGE_ENUM),
+        orderedIds: z.array(z.number().int().positive()).min(1).max(500),
+      }),
+    )
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
-      await db
-        .update(opportunities)
-        .set({ stage: "lost", stageOverridden: true, closedAt: new Date(), lossReason: input.lossReason ?? null })
-        .where(eq(opportunities.id, input.id));
-      await cancelOpenFollowups(input.id, "marked lost", db);
-      await insertEvent(db, input.id, "status_changed", "Marked Lost (manual).", { lossReason: input.lossReason });
-      return { ok: true };
+
+      const updated = await db.transaction(async tx => {
+        const cards: BoardCard[] = (await tx
+          .select({ id: opportunities.id, stage: opportunities.stage, sortOrder: opportunities.sortOrder })
+          .from(opportunities)
+          .where(eq(opportunities.stage, input.stage))) as BoardCard[];
+
+        const plan = planReorder(input.orderedIds, cards);
+        if (plan.kind === "invalid") throw new TRPCError({ code: "BAD_REQUEST", message: plan.reason });
+        if (plan.kind === "stale") throw new TRPCError({ code: "CONFLICT", message: plan.reason });
+
+        for (const u of plan.updates) {
+          // Guard on stage so a card that slipped out of this column mid-tx is not renumbered.
+          const upd = await tx
+            .update(opportunities)
+            .set({ sortOrder: u.sortOrder })
+            .where(and(eq(opportunities.id, u.id), eq(opportunities.stage, input.stage)));
+          if (Number((upd as unknown as [{ affectedRows?: number }])[0]?.affectedRows ?? 0) === 0) {
+            throw new TRPCError({ code: "CONFLICT", message: "The board changed while reordering. Refresh and try again." });
+          }
+        }
+        return plan.updates.length;
+      });
+
+      return { ok: true, updated };
     }),
 
   /**
@@ -627,7 +934,7 @@ export const opportunitiesRouter = router({
           return { id, jobNumber };
         },
         recordEvent: async (opportunityId, jobId, userId) => {
-          await insertEvent(db, opportunityId, "converted_to_job", `Converted to Job #${jobId}.`, { jobId, convertedByUserId: userId });
+          await insertEvent(db, opportunityId, "converted_to_job", `Converted to Job #${jobId}.`, { jobId, convertedByUserId: userId }, userId);
         },
       };
 
@@ -642,18 +949,18 @@ export const opportunitiesRouter = router({
   /** Assign a salesperson (teamMembers.id) or clear the assignment. */
   assignSalesperson: protectedProcedure
     .input(z.object({ id: z.number().int().positive(), assignedToId: z.number().int().nullable() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       await db.update(opportunities).set({ assignedToId: input.assignedToId }).where(eq(opportunities.id, input.id));
-      await insertEvent(db, input.id, "assigned", "Salesperson assignment updated.", { assignedToId: input.assignedToId });
+      await insertEvent(db, input.id, "assigned", "Salesperson assignment updated.", { assignedToId: input.assignedToId }, ctx.user.id);
       return { ok: true };
     }),
 
   /** Push the opportunity's next action out by N days (Follow Up Later). */
   followUpLater: protectedProcedure
     .input(z.object({ id: z.number().int().positive(), days: z.number().int().min(1).max(90).default(3) }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const dueAt = new Date(Date.now() + input.days * DAY_MS);
@@ -661,7 +968,7 @@ export const opportunitiesRouter = router({
         .update(opportunities)
         .set({ nextAction: `Follow up (${input.days}d)`, nextActionDueAt: dueAt })
         .where(eq(opportunities.id, input.id));
-      await insertEvent(db, input.id, "follow_up_later", `Follow-up scheduled for ${dueAt.toDateString()}.`);
+      await insertEvent(db, input.id, "follow_up_later", `Follow-up scheduled for ${dueAt.toDateString()}.`, undefined, ctx.user.id);
       return { ok: true, dueAt };
     }),
 
@@ -680,7 +987,7 @@ export const opportunitiesRouter = router({
         assignedToId: z.number().int().nullable().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const opp = (await db.select({ customerId: opportunities.customerId }).from(opportunities).where(eq(opportunities.id, input.opportunityId)).limit(1))[0];
@@ -696,7 +1003,7 @@ export const opportunitiesRouter = router({
         status,
         assignedToId: input.assignedToId ?? null,
       });
-      await insertEvent(db, input.opportunityId, "task_created", `Task created: ${input.title}`, { type: input.type, status });
+      await insertEvent(db, input.opportunityId, "task_created", `Task created: ${input.title}`, { type: input.type, status }, ctx.user.id);
       return { ok: true, id: Number((inserted as { insertId?: number }).insertId), gated: status === "gated" };
     }),
 
