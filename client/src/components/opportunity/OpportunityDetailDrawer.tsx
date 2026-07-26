@@ -20,6 +20,7 @@ import {
   Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
 } from "lucide-react";
 import { ConvertToJobControl } from "./ConvertToJobControl";
+import { CloseOutcomeDialog } from "./CloseOutcomeDialog";
 import { internalSmsConversationPath } from "@/lib/internalSms";
 import { STAGE_META, DOC_STATUS_BADGE, RELATIONSHIP_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate } from "./shared";
 
@@ -50,6 +51,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   const [valueDraft, setValueDraft] = useState("");
   const [probDraft, setProbDraft] = useState("");
+  const [closeOutcome, setCloseOutcome] = useState<"won" | "lost" | null>(null);
 
   useEffect(() => {
     if (data?.opportunity) {
@@ -57,6 +59,16 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
       setProbDraft(data.opportunity.probability != null ? String(data.opportunity.probability) : "");
     }
   }, [data?.opportunity?.id]);
+
+  // Guard against silently discarding an unsaved CRM value / probability edit
+  // when the drawer is dismissed.
+  const savedValue = data?.opportunity ? String(data.opportunity.opportunityValue ?? "") : "";
+  const savedProb = data?.opportunity?.probability != null ? String(data.opportunity.probability) : "";
+  const valueDirty = valueDraft !== savedValue || probDraft !== savedProb;
+  const requestClose = () => {
+    if (valueDirty && !window.confirm("Discard unsaved Opportunity Value changes?")) return;
+    onClose();
+  };
 
   const invalidate = () => {
     if (id != null) utils.opportunities.get.invalidate({ id });
@@ -68,8 +80,8 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   const updateValue = trpc.opportunities.updateValue.useMutation({ onSuccess: () => { toast({ title: "Saved" }); invalidate(); }, onError: onErr });
   const setStage = trpc.opportunities.setStage.useMutation({ onSuccess: () => { toast({ title: "Stage updated" }); invalidate(); }, onError: onErr });
-  const markWon = trpc.opportunities.markWon.useMutation({ onSuccess: () => { toast({ title: "Marked Won" }); invalidate(); }, onError: onErr });
-  const markLost = trpc.opportunities.markLost.useMutation({ onSuccess: () => { toast({ title: "Marked Lost" }); invalidate(); }, onError: onErr });
+  const markWon = trpc.opportunities.markWon.useMutation({ onSuccess: () => { toast({ title: "Marked Won" }); setCloseOutcome(null); invalidate(); }, onError: onErr });
+  const markLost = trpc.opportunities.markLost.useMutation({ onSuccess: () => { toast({ title: "Marked Lost" }); setCloseOutcome(null); invalidate(); }, onError: onErr });
   const followUpLater = trpc.opportunities.followUpLater.useMutation({ onSuccess: () => { toast({ title: "Follow-up scheduled" }); invalidate(); }, onError: onErr });
   const createTask = trpc.opportunities.createTask.useMutation({ onSuccess: r => { toast({ title: r.gated ? "Task created (SMS gated)" : "Task created" }); invalidate(); }, onError: onErr });
   const completeTask = trpc.opportunities.completeTask.useMutation({ onSuccess: () => invalidate(), onError: onErr });
@@ -96,7 +108,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
   };
 
   return (
-    <Sheet open={open} onOpenChange={v => !v && onClose()}>
+    <Sheet open={open} onOpenChange={v => !v && requestClose()}>
       <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-xl">
         {isLoading || !o ? (
           <div className="p-6 text-sm text-muted-foreground">Loading…</div>
@@ -142,8 +154,8 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => id != null && markWon.mutate({ id })}><Trophy className="h-4 w-4" /> Won</Button>
-              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => id != null && markLost.mutate({ id })}><XCircle className="h-4 w-4" /> Lost</Button>
+              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => setCloseOutcome("won")}><Trophy className="h-4 w-4" /> Won</Button>
+              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => setCloseOutcome("lost")}><XCircle className="h-4 w-4" /> Lost</Button>
               <Button variant="outline" size="sm" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
               <ConvertToJobControl opportunityId={id} primaryJob={primaryJob} onConverted={invalidate} />
             </div>
@@ -173,8 +185,9 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Weighted value</p>
                   <p className="h-8 text-lg font-bold tabular-nums">{fmtMoney(o.weightedValue)}</p>
                 </div>
-                <Button size="sm" className="bg-[#1e3a5f]" onClick={saveValue} disabled={updateValue.isPending}>Save</Button>
+                <Button size="sm" className="bg-[#1e3a5f]" onClick={saveValue} disabled={updateValue.isPending || !valueDirty}>Save</Button>
               </div>
+              {valueDirty ? <p className="-mt-3 text-[10px] text-amber-600">Unsaved changes — click Save to keep them.</p> : null}
 
               {/* Contact */}
               <Section title="Contact">
@@ -285,6 +298,17 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           </div>
         )}
       </SheetContent>
+      <CloseOutcomeDialog
+        outcome={closeOutcome}
+        open={closeOutcome != null}
+        onOpenChange={v => { if (!v) setCloseOutcome(null); }}
+        pending={markWon.isPending || markLost.isPending}
+        onConfirm={reason => {
+          if (id == null) return;
+          if (closeOutcome === "won") markWon.mutate({ id, closeReason: reason || undefined });
+          else if (closeOutcome === "lost") markLost.mutate({ id, lossReason: reason });
+        }}
+      />
     </Sheet>
   );
 }

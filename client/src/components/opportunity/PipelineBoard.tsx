@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { MoreVertical, GripVertical } from "lucide-react";
-import { STAGE_META, WorkCategoryBadge, fmtMoney, type OppRow } from "./shared";
+import { STAGE_META, WorkCategoryBadge, ViewStateMessage, fmtMoney, type OppRow } from "./shared";
+import { viewState } from "./viewState";
+import { parseDropId, shouldApplyMove } from "./pipelineMove";
 import { formatDisplayName } from "@shared/nameFormat";
 import type { OpportunityStage } from "@shared/opportunityDashboard";
 
@@ -27,10 +29,14 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
   return (
     <div
       draggable
+      role="button"
+      tabIndex={0}
+      aria-label={`Open opportunity for ${formatDisplayName(row.customerCompany || row.customerName)}, ${fmtMoney(row.amount)}`}
       onDragStart={e => { e.dataTransfer.setData("text/plain", String(row.id)); e.dataTransfer.effectAllowed = "move"; onDragStart(row.id); }}
       onDragEnd={onDragEnd}
       onClick={() => onOpen(row.id)}
-      className={`group cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition hover:shadow-md ${dragging ? "opacity-50" : ""}`}
+      onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(row.id); } }}
+      className={`group cursor-pointer rounded-lg border bg-card p-3 shadow-sm transition hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1e3a5f] ${dragging ? "opacity-50" : ""}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -41,7 +47,7 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
           <GripVertical className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
-              <button className="rounded p-0.5 hover:bg-muted"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
+              <button aria-label="Move to another stage" className="rounded p-0.5 hover:bg-muted"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
               {STAGE_META.filter(s => s.value !== row.stage).map(s => (
@@ -70,12 +76,15 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
 export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void }) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
-  const { data, isLoading } = trpc.opportunities.list.useQuery({ limit: 200, offset: 0, sortBy: "createdAt", sortDir: "desc" });
+  const { data, isLoading, isError, error, refetch } = trpc.opportunities.list.useQuery({ limit: 200, offset: 0, sortBy: "createdAt", sortDir: "desc" });
   const [dragId, setDragId] = useState<number | null>(null);
   const [overStage, setOverStage] = useState<string | null>(null);
 
   const setStage = trpc.opportunities.setStage.useMutation({
-    onSuccess: () => {
+    // Confirm the move only once the server accepts it — an optimistic toast
+    // here would show "Moved" even when the mutation later fails.
+    onSuccess: (_res, vars) => {
+      toast({ title: `Moved to ${STAGE_META.find(s => s.value === vars.stage)?.label}` });
       utils.opportunities.list.invalidate();
       utils.opportunities.overview.invalidate();
       utils.opportunities.stats.invalidate();
@@ -84,14 +93,20 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
   });
 
   const move = (id: number, stage: OpportunityStage, from?: string) => {
-    if (from === stage || setStage.isPending) return; // ignore no-op moves and re-fires while a move is in flight
+    if (!shouldApplyMove({ from, to: stage, pending: setStage.isPending })) return;
     setStage.mutate({ id, stage });
-    toast({ title: `Moved to ${STAGE_META.find(s => s.value === stage)?.label}` });
   };
 
   const rows = (data?.items ?? []) as unknown as OppRow[];
 
-  if (isLoading) return <p className="py-10 text-center text-sm text-muted-foreground">Loading pipeline…</p>;
+  // Loading / error short-circuit. Empty is intentionally NOT short-circuited:
+  // the board still renders its columns (each shows its own "Drop here"), which
+  // is more useful than a single "no data" line — but a *failed* load must never
+  // fall through and look like an empty pipeline.
+  const state = viewState({ isLoading, isError, isEmpty: false });
+  if (state !== "ready") {
+    return <ViewStateMessage state={state} error={error} onRetry={() => refetch()} />;
+  }
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-4">
@@ -105,10 +120,10 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
             onDragLeave={() => setOverStage(s => (s === col.value ? null : s))}
             onDrop={e => {
               e.preventDefault();
-              const id = Number(e.dataTransfer.getData("text/plain"));
+              const id = parseDropId(e.dataTransfer.getData("text/plain"));
               const from = rows.find(r => r.id === id)?.stage;
               setOverStage(null); setDragId(null);
-              if (id) move(id, col.value, from);
+              if (id != null) move(id, col.value, from);
             }}
             className={`flex w-72 shrink-0 flex-col rounded-xl border-t-4 bg-muted/30 ${col.column} ${overStage === col.value ? "ring-2 ring-[#1e3a5f]/40" : ""}`}
           >

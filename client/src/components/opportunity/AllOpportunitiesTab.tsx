@@ -15,8 +15,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { useToast } from "@/hooks/use-toast";
 import { Search, SlidersHorizontal, ChevronUp, ChevronDown, ChevronRight } from "lucide-react";
 import {
-  STAGE_META, DOC_STATUS_BADGE, AGING_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate, type OppRow,
+  STAGE_META, DOC_STATUS_BADGE, AGING_BADGE, WorkCategoryBadge, StageBadge, ViewStateMessage, fmtMoney, fmtDate, type OppRow,
 } from "./shared";
+import { viewState } from "./viewState";
 import { AGING_BUCKETS, type SortKey } from "@shared/opportunityDashboard";
 import { workCategoryLabel, type WorkCategory } from "@shared/opportunityCategory";
 
@@ -82,7 +83,7 @@ export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) =
   const { data: salespeople } = trpc.opportunities.salespeople.useQuery();
   const spName = useMemo(() => Object.fromEntries((salespeople ?? []).map(s => [s.id, s.name])), [salespeople]);
 
-  const { data, isLoading } = trpc.opportunities.list.useQuery({
+  const { data, isLoading, isError, error, refetch } = trpc.opportunities.list.useQuery({
     search: search || undefined,
     stages: filters.stages.length ? filters.stages : undefined,
     docStatus: filters.docStatus.length ? filters.docStatus : undefined,
@@ -107,6 +108,8 @@ export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) =
     filters.wonLostOpen.length + filters.agingBucket.length + filters.assignedToId.length +
     (filters.amountMin != null ? 1 : 0) + (filters.amountMax != null ? 1 : 0) +
     (filters.dateFrom ? 1 : 0) + (filters.dateTo ? 1 : 0) + (filters.followUpDue ? 1 : 0);
+
+  const listState = viewState({ isLoading, isError, isEmpty: rows.length === 0 });
 
   const changeSort = (key: SortKey) => {
     if (sortBy === key) setSortDir(d => (d === "asc" ? "desc" : "asc"));
@@ -215,10 +218,13 @@ export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) =
       {/* Desktop table */}
       <Card className="hidden md:block">
         <CardContent className="pt-6">
-          {isLoading ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
-          ) : rows.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No opportunities match these filters.</p>
+          {listState !== "ready" ? (
+            <ViewStateMessage
+              state={listState}
+              error={error}
+              empty={activeFilterCount > 0 || search ? "No opportunities match these filters." : "No opportunities yet."}
+              onRetry={() => refetch()}
+            />
           ) : (
             <Table>
               <TableHeader>
@@ -262,10 +268,13 @@ export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) =
 
       {/* Mobile cards */}
       <div className="space-y-2 md:hidden">
-        {isLoading ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Loading…</p>
-        ) : rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">No opportunities match these filters.</p>
+        {listState !== "ready" ? (
+          <ViewStateMessage
+            state={listState}
+            error={error}
+            empty={activeFilterCount > 0 || search ? "No opportunities match these filters." : "No opportunities yet."}
+            onRetry={() => refetch()}
+          />
         ) : rows.map(r => (
           <button key={r.id} onClick={() => onOpen(r.id)} className="flex w-full items-center gap-3 rounded-lg border bg-card p-3 text-left">
             <div className="min-w-0 flex-1">

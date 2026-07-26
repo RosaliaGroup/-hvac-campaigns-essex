@@ -4,6 +4,8 @@
  * mirror the opportunities router output.
  */
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle } from "lucide-react";
 import { workCategoryLabel, type WorkCategory } from "@shared/opportunityCategory";
 import type { OpportunityStage, SalesDocStatus, AgingBucket } from "@shared/opportunityDashboard";
 
@@ -58,6 +60,35 @@ export function stageMeta(stage: string) {
 export function StageBadge({ stage }: { stage: string }) {
   const m = stageMeta(stage);
   return <Badge variant="outline" className={m?.badge ?? ""}>{m?.label ?? stage}</Badge>;
+}
+
+/**
+ * Loading / error / empty message shared by every Opportunity view. Errors are
+ * visually distinct from empty results (an empty board must never be mistaken
+ * for a failed load) and offer a retry when a refetch handler is supplied.
+ */
+export function ViewStateMessage({
+  state, error, empty, onRetry,
+}: {
+  state: "loading" | "error" | "empty";
+  error?: { message?: string } | null;
+  empty?: React.ReactNode;
+  onRetry?: () => void;
+}) {
+  if (state === "loading") {
+    return <p role="status" className="py-10 text-center text-sm text-muted-foreground">Loading…</p>;
+  }
+  if (state === "error") {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-2 py-10 text-center">
+        <AlertTriangle className="h-5 w-5 text-red-600" />
+        <p className="text-sm font-medium">Couldn’t load opportunities</p>
+        <p className="max-w-sm text-xs text-muted-foreground">{error?.message || "Something went wrong. Check your connection and try again."}</p>
+        {onRetry ? <Button variant="outline" size="sm" onClick={onRetry}>Retry</Button> : null}
+      </div>
+    );
+  }
+  return <p className="py-10 text-center text-sm text-muted-foreground">{empty ?? "Nothing to show."}</p>;
 }
 
 export function WorkCategoryBadge({ category }: { category: WorkCategory | null | undefined }) {

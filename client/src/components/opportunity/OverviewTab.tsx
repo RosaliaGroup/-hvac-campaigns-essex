@@ -1,7 +1,8 @@
 /** Overview view — headline KPIs, pipeline-by-stage, category totals, aging. */
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { trpc } from "@/lib/trpc";
-import { fmtMoney, STAGE_META, AGING_BADGE } from "./shared";
+import { fmtMoney, STAGE_META, AGING_BADGE, ViewStateMessage } from "./shared";
+import { viewState } from "./viewState";
 import { AGING_BUCKETS, type AgingBucket } from "@shared/opportunityDashboard";
 import { workCategoryLabel, type WorkCategory } from "@shared/opportunityCategory";
 import { DollarSign, Scale, Send, CalendarClock, Trophy, XCircle, Percent, Receipt, Timer } from "lucide-react";
@@ -37,10 +38,11 @@ function Bar({ label, amount, max, className }: { label: string; amount: number;
 }
 
 export default function OverviewTab() {
-  const { data: m, isLoading } = trpc.opportunities.overview.useQuery();
+  const { data: m, isLoading, isError, error, refetch } = trpc.opportunities.overview.useQuery();
 
-  if (isLoading || !m) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">Loading overview…</p>;
+  const state = viewState({ isLoading, isError, isEmpty: false });
+  if (state !== "ready" || !m) {
+    return <ViewStateMessage state={state === "ready" ? "loading" : state} error={error} onRetry={() => refetch()} />;
   }
 
   const stageMax = Math.max(1, ...STAGE_META.map(s => (m.pipelineByStage as Record<string, number>)[s.value] ?? 0));
