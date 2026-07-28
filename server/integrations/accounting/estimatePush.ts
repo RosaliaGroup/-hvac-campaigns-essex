@@ -10,10 +10,32 @@
  */
 import { eq } from "drizzle-orm";
 import { getDb } from "../../db";
-import { estimates, opportunities, customers } from "../../../drizzle/schema";
+import { estimates, opportunities, customers, type Customer } from "../../../drizzle/schema";
 import { quickbooksProvider, writeSyncLog } from "./quickbooks";
 import { snapshotToPushLines, type ApprovedSnapshot } from "./estimateMath";
-import type { PushEstimateResult } from "./types";
+import type { AccountingCustomerInput, PushEstimateResult } from "./types";
+
+/**
+ * Normalized push input from a customer row — mirrors routers/quickbooks
+ * `buildCustomerInput` identity fields. The service address is omitted (the
+ * estimate flow doesn't load a property; pushCustomer's dedup keys off
+ * name/email/phone), so this stays in the integrations layer with no router import.
+ */
+function toCustomerInput(c: Customer): AccountingCustomerInput {
+  return {
+    localId: c.id,
+    existingRemoteId: c.quickbooksCustomerId,
+    type: c.type,
+    displayName: c.displayName,
+    firstName: c.firstName,
+    lastName: c.lastName,
+    companyName: c.companyName,
+    email: c.email,
+    phone: c.phone,
+    notes: c.notes,
+    address: null,
+  };
+}
 
 export interface PushOutcome {
   ok: boolean;
@@ -61,9 +83,28 @@ export async function pushApprovedEstimate(estimateId: number): Promise<PushOutc
   const opp = (await db.select().from(opportunities).where(eq(opportunities.id, est.opportunityId)).limit(1))[0];
   if (!opp) return fail("Opportunity not found for estimate");
   const customer = (await db.select().from(customers).where(eq(customers.id, opp.customerId)).limit(1))[0];
-  const customerRef = customer?.quickbooksCustomerId ?? null;
+  if (!customer) return fail("Customer not found for opportunity");
+
+  let customerRef = customer.quickbooksCustomerId ?? null;
   if (!customerRef) {
-    return fail("Customer is not synced to QuickBooks — push the customer to QuickBooks first, then Retry Push.");
+    // Auto-sync the customer first via Task 7's pushCustomer (keeps its merge/dedupe
+    // protection). If that push conflicts (likely duplicate needing manual resolution)
+    // or fails, fall back to the guard — the local approval still stands.
+    try {
+      const pushed = await quickbooksProvider.pushCustomer(toCustomerInput(customer));
+      if (pushed.outcome === "conflict") {
+        return fail("Customer isn't synced to QuickBooks and auto-sync found a possible duplicate — resolve it on the Integrations/Customer page, then Retry Push.");
+      }
+      customerRef = pushed.qbId || null;
+      if (!customerRef) return fail("Customer auto-sync to QuickBooks did not return an id — sync the customer, then Retry Push.");
+      // Persist the new link so future pushes skip this step.
+      await db
+        .update(customers)
+        .set({ quickbooksCustomerId: customerRef, quickbooksSyncStatus: "synced", quickbooksSyncedAt: new Date() })
+        .where(eq(customers.id, customer.id));
+    } catch (e) {
+      return fail(`Customer isn't synced to QuickBooks and auto-sync failed: ${(e as Error).message}. Sync the customer, then Retry Push.`);
+    }
   }
 
   try {

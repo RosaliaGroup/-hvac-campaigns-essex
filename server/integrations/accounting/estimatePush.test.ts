@@ -5,7 +5,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const { providerMock, getDbMock, writeSyncLogMock } = vi.hoisted(() => ({
-  providerMock: { getConnection: vi.fn(), pushEstimate: vi.fn() },
+  providerMock: { getConnection: vi.fn(), pushEstimate: vi.fn(), pushCustomer: vi.fn() },
   getDbMock: vi.fn(),
   writeSyncLogMock: vi.fn(async () => {}),
 }));
@@ -63,12 +63,13 @@ const SNAPSHOT: ApprovedSnapshot = {
 function seedApproved(db: ReturnType<typeof createFakeDb>, customerQbId: string | null = "QB-42") {
   db._seed("estimates", [{ id: 1, opportunityId: 7, estimateNumber: "ME-EST-2026-0001", status: "approved", approvedSnapshot: SNAPSHOT, quickbooksEstimateId: null }]);
   db._seed("opportunities", [{ id: 7, customerId: 42, title: "Furnace replacement" }]);
-  db._seed("customers", [{ id: 42, quickbooksCustomerId: customerQbId }]);
+  db._seed("customers", [{ id: 42, quickbooksCustomerId: customerQbId, type: "residential", displayName: "Jane Doe", firstName: "Jane", lastName: "Doe", companyName: null, email: "jane@example.com", phone: "5551234567", notes: null }]);
 }
 
 beforeEach(() => {
   providerMock.getConnection.mockReset();
   providerMock.pushEstimate.mockReset();
+  providerMock.pushCustomer.mockReset();
   getDbMock.mockReset();
   writeSyncLogMock.mockClear();
   providerMock.getConnection.mockResolvedValue({ realmId: "R1" });
@@ -121,14 +122,48 @@ describe("pushApprovedEstimate", () => {
     expect(last(db.upd("estimates"))).toMatchObject({ qbSyncStatus: "pushed", quickbooksEstimateId: "EST-77" });
   });
 
-  it("fails clearly (no provider call) when the customer is not synced to QuickBooks", async () => {
+  it("auto-syncs an unsynced customer via pushCustomer, persists the id, then pushes the estimate", async () => {
+    const db = createFakeDb();
+    seedApproved(db, null); // customer has no QBO id yet
+    getDbMock.mockResolvedValue(db);
+    providerMock.pushCustomer.mockResolvedValue({ outcome: "created", qbId: "QB-NEW" });
+    providerMock.pushEstimate.mockResolvedValue({ qbId: "EST-1", docNumber: "1003", totalAmount: 700 });
+
+    const out = await pushApprovedEstimate(1);
+    expect(out.ok).toBe(true);
+
+    // Customer pushed via Task 7 pushCustomer (no resolution arg → dedup protection active).
+    expect(providerMock.pushCustomer).toHaveBeenCalledWith(expect.objectContaining({ localId: 42, displayName: "Jane Doe" }));
+    expect(providerMock.pushCustomer.mock.calls[0]).toHaveLength(1);
+    // New QBO id persisted back onto the customer.
+    expect(last(db.upd("customers"))).toMatchObject({ quickbooksCustomerId: "QB-NEW", quickbooksSyncStatus: "synced" });
+    // Estimate push used the freshly-synced ref.
+    expect(providerMock.pushEstimate.mock.calls[0][0].customerRef).toBe("QB-NEW");
+    expect(last(db.upd("estimates"))).toMatchObject({ qbSyncStatus: "pushed", quickbooksEstimateId: "EST-1" });
+  });
+
+  it("falls back to a failed sync (no estimate push) when auto-sync hits a duplicate conflict", async () => {
     const db = createFakeDb();
     seedApproved(db, null);
     getDbMock.mockResolvedValue(db);
+    providerMock.pushCustomer.mockResolvedValue({ outcome: "conflict", matchedBy: "name", candidate: { qbId: "QB-DUP", displayName: "Jane Doe" } });
 
     const out = await pushApprovedEstimate(1);
     expect(out.ok).toBe(false);
-    expect(out.error).toContain("not synced to QuickBooks");
+    expect(out.error).toContain("possible duplicate");
+    expect(providerMock.pushEstimate).not.toHaveBeenCalled();
+    expect(last(db.upd("estimates"))).toMatchObject({ qbSyncStatus: "failed" });
+  });
+
+  it("falls back to a failed sync when the customer auto-push itself throws", async () => {
+    const db = createFakeDb();
+    seedApproved(db, null);
+    getDbMock.mockResolvedValue(db);
+    providerMock.pushCustomer.mockRejectedValueOnce(new Error("QuickBooks create failed: 503"));
+
+    const out = await pushApprovedEstimate(1);
+    expect(out.ok).toBe(false);
+    expect(out.error).toContain("auto-sync failed");
     expect(providerMock.pushEstimate).not.toHaveBeenCalled();
     expect(last(db.upd("estimates"))).toMatchObject({ qbSyncStatus: "failed" });
   });
