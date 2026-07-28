@@ -97,6 +97,43 @@ export interface PullCustomerResult {
   active: boolean;
 }
 
+/** One priced line on an estimate push. */
+export interface AccountingEstimateLineInput {
+  name: string;
+  description?: string | null;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+}
+
+/**
+ * Input to pushEstimate — the APPROVED option only, already resolved to a QBO
+ * customer by the caller. Unapproved options never reach the provider.
+ */
+export interface AccountingEstimateInput {
+  /** QBO Customer.Id (CustomerRef.value). Caller ensures the customer is synced. */
+  customerRef: string;
+  /** Our estimate number → QBO DocNumber (best-effort; QBO may ignore it). */
+  docNumber?: string | null;
+  /** Note referencing the opportunity → QBO PrivateNote. */
+  privateNote?: string | null;
+  /** Issue date (yyyy-mm-dd) → QBO TxnDate; defaults to today when omitted. */
+  txnDate?: string | null;
+  lines: AccountingEstimateLineInput[];
+}
+
+/** Result of a successful estimate push. */
+export interface PushEstimateResult {
+  /** QBO Estimate.Id. */
+  qbId: string;
+  /** QBO DocNumber it was filed under (QBO may assign its own). */
+  docNumber: string | null;
+  /** QBO-computed TotalAmt. */
+  totalAmount: number;
+  /** Raw QBO Estimate payload for audit. */
+  raw?: unknown;
+}
+
 export interface AccountingProvider {
   readonly name: string;
   /** Complete an OAuth connect (exchange code, persist encrypted tokens, fetch company). */
@@ -113,7 +150,8 @@ export interface AccountingProvider {
   pushCustomer(customer: AccountingCustomerInput, resolution?: ConflictResolution): Promise<PushCustomerResult>;
   /** Fetch the current provider record for an already-linked customer. */
   pullCustomer(qbId: string): Promise<PullCustomerResult>;
-  /** Not built in Task 7 — typed for the interface, throws NotImplementedError. */
-  pushEstimate(...args: unknown[]): Promise<never>;
+  /** Push the approved estimate option as a single QBO Estimate (Task 8A). */
+  pushEstimate(input: AccountingEstimateInput): Promise<PushEstimateResult>;
+  /** Not built yet — typed for the interface, throws NotImplementedError. */
   pushInvoice(...args: unknown[]): Promise<never>;
 }

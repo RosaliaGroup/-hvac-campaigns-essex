@@ -33,6 +33,7 @@ import { dispatchAuditRouter } from "./routers/dispatchAudit";
 import { dispatchRouter } from "./routers/dispatch";
 import { quickbooksRouter } from "./routers/quickbooks";
 import { opportunitiesRouter } from "./routers/opportunities";
+import { estimatesRouter } from "./routers/estimates";
 import { seoRouter } from "./routers/seo";
 import { attributionRouter } from "./routers/attribution";
 import { analyticsRouter } from "./routers/analytics";
@@ -92,6 +93,7 @@ export const appRouter = router({
   dispatch: dispatchRouter,
   quickbooks: quickbooksRouter,
   opportunities: opportunitiesRouter,
+  estimates: estimatesRouter,
   seo: seoRouter,
   attribution: attributionRouter,
   analytics: analyticsRouter,

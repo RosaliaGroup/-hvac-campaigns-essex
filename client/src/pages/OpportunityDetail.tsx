@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConvertToJobControl } from "@/components/opportunity/ConvertToJobControl";
+import { EstimatesSection } from "@/components/opportunity/EstimatesSection";
 import { formatMoney } from "@/lib/jobPresentation";
 import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
 import { ArrowLeft, Target, FileText, Hash, Tag, UserRound, MapPin, Calendar } from "lucide-react";
@@ -117,6 +118,9 @@ export default function OpportunityDetail() {
               ))}
           </CardContent>
         </Card>
+
+        {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval. */}
+        <EstimatesSection opportunityId={id} />
       </div>
     </DashboardLayout>
   );
