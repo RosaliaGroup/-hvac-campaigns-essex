@@ -55,6 +55,7 @@ import Qualify from "./pages/Qualify";
 import RebateCalculator from "./pages/RebateCalculator";
 import CommandCenter from "./pages/CommandCenter";
 import LeadDashboard from "./pages/LeadDashboard";
+import LeadDetail from "./pages/LeadDetail";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
@@ -331,6 +332,7 @@ function Router() {
       <Route path={"/marketing/analytics"} component={protect(MarketingAnalytics)} />
       <Route path={"/local-seo"} component={protect(LocalSeo)} />
       <Route path={"/leads"} component={protect(LeadTracker)} />
+      <Route path={"/leads/:id"} component={protect(LeadDetail)} />
       <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
       <Route path={"/customers"} component={protect(Customers)} />
       <Route path={"/contacts"} component={protect(Customers)} />

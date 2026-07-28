@@ -434,6 +434,20 @@ export const appRouter = router({
         return leads.map((l: any) => ({ ...l, relationship: relationships.get(l.id) ?? deriveContactRelationship({ leadStages: [l.status] }) }));
       }),
 
+    /** Single lead capture for the full-page Lead detail (Task 8B). */
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) return null;
+        const cap = (await dbi.select().from(leadCapturesTable).where(dEq(leadCapturesTable.id, input.id)).limit(1))[0];
+        if (!cap) return null;
+        const rel = await computeRelationships(dbi, [
+          { id: cap.id, customerId: cap.customerId, phone: cap.phone, email: cap.email, leadStages: [cap.status] },
+        ]);
+        return { ...cap, relationship: rel.get(cap.id) ?? deriveContactRelationship({ leadStages: [cap.status] }) };
+      }),
+
     updateStatus: protectedProcedure
       .input(
         z.object({

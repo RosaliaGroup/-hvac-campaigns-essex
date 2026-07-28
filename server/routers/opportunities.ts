@@ -778,6 +778,65 @@ export const opportunitiesRouter = router({
       if (!remaining[0]) await db.update(customers).set({ hasQboConflicts: false }).where(eq(customers.id, conflict.customerId));
       return { ok: true };
     }),
+
+  /**
+   * Manually create an opportunity (Task 8B estimate entry points). Used when a
+   * customer or lead has no open opportunity to attach a tiered estimate to.
+   * source="crm" and there is no quickbooksSalesDocumentId, so the QBO sync
+   * (which matches on the QBO document id) never touches this row; stageOverridden
+   * is set so a later sync can't reclassify it. `sourceLeadCaptureId` records the
+   * originating web lead when the estimate was started from a lead.
+   */
+  create: protectedProcedure
+    .input(
+      z.object({
+        customerId: z.number().int().positive(),
+        title: z.string().min(1).max(255).optional(),
+        workCategory: z.enum(WORK_CATEGORY_ENUM).optional(),
+        sourceLeadCaptureId: z.number().int().positive().nullish(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const customer = (await db.select().from(customers).where(eq(customers.id, input.customerId)).limit(1))[0];
+      if (!customer) throw new TRPCError({ code: "NOT_FOUND", message: "Customer not found" });
+      const title = input.title?.trim() || `Estimate for ${customer.displayName ?? "customer"}`;
+      const inserted = await db.insert(opportunities).values({
+        customerId: input.customerId,
+        title,
+        source: "crm",
+        stage: "new",
+        stageOverridden: true,
+        workCategory: input.workCategory ?? null,
+        sourceLeadCaptureId: input.sourceLeadCaptureId ?? null,
+        amount: "0",
+      });
+      const id = Number((inserted as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+      await insertEvent(db, id, "created", `Opportunity created manually${input.sourceLeadCaptureId ? " from a lead" : ""}.`, {
+        sourceLeadCaptureId: input.sourceLeadCaptureId ?? null,
+      });
+      return { id, title };
+    }),
+
+  /** Lightweight list of a customer's OPEN opportunities — powers the estimate-entry picker. */
+  openForCustomer: protectedProcedure
+    .input(z.object({ customerId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return [];
+      return await db
+        .select({
+          id: opportunities.id,
+          title: opportunities.title,
+          stage: opportunities.stage,
+          amount: opportunities.amount,
+          createdAt: opportunities.createdAt,
+        })
+        .from(opportunities)
+        .where(and(eq(opportunities.customerId, input.customerId), inArray(opportunities.stage, [...OPEN_STAGES])))
+        .orderBy(desc(opportunities.createdAt));
+    }),
 });
 
 export type OpportunityListItem = ReturnType<typeof toListItem>;
