@@ -6,7 +6,7 @@
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { asc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import {
@@ -15,7 +15,9 @@ import {
   estimateLineItems,
   opportunities,
   opportunityEvents,
+  leadCaptures,
 } from "../../drizzle/schema";
+import { shouldAdvanceToProposalSent } from "@shared/leadPipeline";
 import {
   buildApprovedSnapshot,
   computeLineAmount,
@@ -83,6 +85,39 @@ export const estimatesRouter = router({
         if (f) full.push(f);
       }
       return full;
+    }),
+
+  /**
+   * Compact list of tiered estimates across ALL of a customer's opportunities
+   * (Task 8B — the customer 360 Estimates tab). Returns just enough to render a
+   * summary row (number, status, approved tier/total, QB sync) and a link back to
+   * the owning opportunity's builder. Not the full nested options payload.
+   */
+  listByCustomer: protectedProcedure
+    .input(z.object({ customerId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await requireDb();
+      const rows = await db
+        .select({ estimate: estimates, opportunityTitle: opportunities.title })
+        .from(estimates)
+        .innerJoin(opportunities, eq(estimates.opportunityId, opportunities.id))
+        .where(eq(opportunities.customerId, input.customerId))
+        .orderBy(desc(estimates.id));
+      return rows.map(({ estimate: e, opportunityTitle }) => {
+        const snap = (e.approvedSnapshot ?? null) as { tier?: string; total?: number } | null;
+        return {
+          id: e.id,
+          opportunityId: e.opportunityId,
+          opportunityTitle,
+          estimateNumber: e.estimateNumber,
+          status: e.status,
+          qbSyncStatus: e.qbSyncStatus,
+          quickbooksEstimateId: e.quickbooksEstimateId,
+          approvedTier: snap?.tier ?? null,
+          approvedTotal: snap?.total ?? null,
+          createdAt: e.createdAt,
+        };
+      });
     }),
 
   get: protectedProcedure
@@ -211,6 +246,21 @@ export const estimatesRouter = router({
       const opts = await db.select().from(estimateOptions).where(eq(estimateOptions.estimateId, input.id));
       if (opts.length === 0) throw new TRPCError({ code: "BAD_REQUEST", message: "Add at least one option before sending" });
       await db.update(estimates).set({ status: "sent" }).where(eq(estimates.id, input.id));
+
+      // Task 8B: if this estimate's opportunity originated from a web lead, advance
+      // that lead to "Proposal Sent" now (never on draft — only on send). Best-effort:
+      // a lead-stage failure must never block marking the estimate sent, and we never
+      // regress a further-along or closed lead (see shouldAdvanceToProposalSent).
+      try {
+        const opp = (await db.select().from(opportunities).where(eq(opportunities.id, est.opportunityId)).limit(1))[0];
+        if (opp?.sourceLeadCaptureId) {
+          const cap = (await db.select().from(leadCaptures).where(eq(leadCaptures.id, opp.sourceLeadCaptureId)).limit(1))[0];
+          if (cap && shouldAdvanceToProposalSent(cap.status)) {
+            await db.update(leadCaptures).set({ status: "proposal_sent" }).where(eq(leadCaptures.id, cap.id));
+          }
+        }
+      } catch { /* lead-stage sync is best-effort */ }
+
       return { ok: true };
     }),
 

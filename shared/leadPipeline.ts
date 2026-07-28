@@ -70,6 +70,20 @@ export function stageIndex(value?: string | null): number {
   return PIPELINE_ORDER.indexOf(normalizeStage(value));
 }
 
+/**
+ * Should a lead capture at `status` be advanced to "proposal_sent" when an
+ * estimate is marked sent (Task 8B)? Advance ONLY when the lead is still earlier
+ * than proposal_sent in the pipeline — never regress a further-along lead
+ * (follow_up) and never touch a closed one (won/lost) or one already at
+ * proposal_sent. Pure so it can be unit-tested and shared by client + server.
+ */
+export function shouldAdvanceToProposalSent(status?: string | null): boolean {
+  if (isWon(status) || isLost(status)) return false;
+  const proposalIdx = PIPELINE_ORDER.indexOf("proposal_sent");
+  const cur = stageIndex(status);
+  return cur >= 0 && cur < proposalIdx;
+}
+
 // ── Relationship (Lead → Prospect → Customer), derived — no stored column ──
 export type Relationship = "lead" | "prospect" | "customer";
 

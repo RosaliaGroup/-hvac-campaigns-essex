@@ -4,7 +4,25 @@ import {
   normalizeStage, stageLabel, stageIndex, isWon, isLost, isOpen,
   deriveRelationship, relationshipLabel, leadAgeLabel,
   deriveContactRelationship, furthestStage, isWonJobStatus, buildLeadCapturePatch,
+  shouldAdvanceToProposalSent,
 } from "./leadPipeline";
+
+describe("shouldAdvanceToProposalSent (Task 8B — advance lead on estimate sent)", () => {
+  it("advances leads earlier than proposal_sent", () => {
+    for (const s of ["new", "contacted", "assessment_scheduled", "assessment_completed"]) {
+      expect(shouldAdvanceToProposalSent(s)).toBe(true);
+    }
+    // legacy values normalize to earlier stages → still advance
+    expect(shouldAdvanceToProposalSent("qualified")).toBe(true); // → contacted
+    expect(shouldAdvanceToProposalSent("booked")).toBe(true);    // → assessment_scheduled
+    expect(shouldAdvanceToProposalSent(null)).toBe(true);        // → new
+  });
+  it("never regresses a further-along or closed lead", () => {
+    for (const s of ["proposal_sent", "follow_up", "won", "lost"]) {
+      expect(shouldAdvanceToProposalSent(s)).toBe(false);
+    }
+  });
+});
 
 describe("lead stages", () => {
   it("defines the 8 stages without 'Booked'", () => {

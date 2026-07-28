@@ -21,6 +21,7 @@ import { resolveCustomerIdentity } from "@/lib/customerIdentity";
 import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
 import { jobRoute, opportunityRoute } from "@/lib/customerNavigation";
 import ConversationPreview from "@/components/sms/ConversationPreview";
+import { StartEstimateButton, TieredEstimateList, EstimatesIcon } from "@/components/estimates/estimateEntry";
 import { internalSmsConversationPath } from "@/lib/internalSms";
 import { Briefcase } from "lucide-react";
 import {
@@ -409,7 +410,18 @@ export default function CustomerDetail() {
             </CardContent></Card>
           </TabsContent>
 
-          <TabsContent value="estimates">
+          <TabsContent value="estimates" className="space-y-4">
+            {/* Task 8B — CRM-authored tiered estimates + entry point to the builder. */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><EstimatesIcon className="h-4 w-4 text-[#1e3a5f]" /> Tiered Estimates</CardTitle>
+                <StartEstimateButton customerId={customerId} defaultTitle={`Estimate for ${formatDisplayName(identity.name)}`} />
+              </CardHeader>
+              <CardContent>
+                <TieredEstimateList customerId={customerId} onOpen={id => navigate(opportunityRoute({ id }))} />
+              </CardContent>
+            </Card>
+            {/* QuickBooks-synced estimates/proposals (read-only mirror). */}
             <SalesDocList docs={estimates} kind="estimate" primaryAddress={primaryAddress} onOpenOpportunity={id => navigate(opportunityRoute({ id }))} />
           </TabsContent>
 
