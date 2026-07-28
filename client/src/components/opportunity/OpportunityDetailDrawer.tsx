@@ -20,6 +20,7 @@ import {
   Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
 } from "lucide-react";
 import { ConvertToJobControl } from "./ConvertToJobControl";
+import { EstimatesSection } from "./EstimatesSection";
 import { internalSmsConversationPath } from "@/lib/internalSms";
 import { STAGE_META, DOC_STATUS_BADGE, RELATIONSHIP_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate } from "./shared";
 
@@ -216,6 +217,9 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   </div>
                 )) : <p className="text-sm text-muted-foreground">No QuickBooks document (manual opportunity).</p>}
               </Section>
+
+              {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval. */}
+              {id != null ? <EstimatesSection opportunityId={id} /> : null}
 
               {/* Conflicts */}
               {data && data.conflicts.length > 0 ? (
