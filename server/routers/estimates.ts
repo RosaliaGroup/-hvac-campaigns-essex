@@ -25,6 +25,7 @@ import {
   makeEstimateNumber,
 } from "../integrations/accounting/estimateMath";
 import { pushApprovedEstimate } from "../integrations/accounting/estimatePush";
+import { cancelOpenFollowups } from "../integrations/accounting/followups";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -317,6 +318,10 @@ export const estimatesRouter = router({
         });
       });
 
+      // Approving closes the deal locally — stop the estimate close loop (email +
+      // text + call) on this opportunity and log it. Best-effort; never blocks approval.
+      await cancelOpenFollowups(est.opportunityId, `Estimate ${est.estimateNumber} approved`, db).catch(() => {});
+
       const push = await pushApprovedEstimate(input.estimateId);
       const estimate = await loadFull(db, input.estimateId);
       return { estimate, push };
@@ -336,6 +341,8 @@ export const estimatesRouter = router({
         message: `Estimate ${est.estimateNumber} declined.`,
         metadata: { estimateId: est.id, reason: input.reason },
       });
+      // Declining kills the deal — stop the estimate close loop (email + text + call).
+      await cancelOpenFollowups(est.opportunityId, `Estimate ${est.estimateNumber} declined`, db).catch(() => {});
       return { ok: true };
     }),
 
