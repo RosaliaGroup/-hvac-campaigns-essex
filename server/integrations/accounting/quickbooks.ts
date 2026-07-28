@@ -26,6 +26,8 @@ import {
   NotImplementedError,
   type AccountingProvider,
   type AccountingCustomerInput,
+  type AccountingEstimateInput,
+  type PushEstimateResult,
   type ConnectInput,
   type ConflictResolution,
   type ProviderEnvironment,
@@ -339,6 +341,36 @@ export function toSummary(q: QboCustomer): RemoteCustomerSummary {
 /** QBO query-literal escaping (single quotes doubled). */
 export function escapeQboLiteral(v: string): string {
   return v.replace(/'/g, "''");
+}
+
+/**
+ * Build the QBO Estimate request body from an approved-option push input. Pure
+ * (no network) so it is unit-tested directly. Every line becomes a
+ * SalesItemLineDetail pointing at the single generic service item; rebates are
+ * NOT emitted (display-only in v1).
+ */
+export function buildQboEstimateBody(
+  input: AccountingEstimateInput,
+  itemRef: { value: string; name: string },
+): Record<string, unknown> {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const body: Record<string, unknown> = {
+    CustomerRef: { value: input.customerRef },
+    Line: input.lines.map(l => ({
+      DetailType: "SalesItemLineDetail",
+      Amount: round2(l.amount),
+      Description: (l.description ? `${l.name} — ${l.description}` : l.name).slice(0, 4000),
+      SalesItemLineDetail: {
+        ItemRef: { value: itemRef.value, name: itemRef.name },
+        Qty: l.quantity,
+        UnitPrice: round2(l.unitPrice),
+      },
+    })),
+  };
+  if (input.docNumber) body.DocNumber = input.docNumber.slice(0, 21); // QBO DocNumber max length
+  if (input.privateNote) body.PrivateNote = input.privateNote.slice(0, 4000);
+  if (input.txnDate) body.TxnDate = input.txnDate;
+  return body;
 }
 
 // ── Sync-log writer (unit-tested) ───────────────────────────────────────────
@@ -733,10 +765,69 @@ export class QuickBooksProvider implements AccountingProvider {
     return json.Customer ?? null;
   }
 
-  // ── Not implemented in Task 7 (interface stubs) ──
-  async pushEstimate(): Promise<never> {
-    throw new NotImplementedError("QuickBooks estimate push");
+  // ── Estimate push (Task 8A) ──
+  /** Cached QBO ItemRef for the single generic service item used on every line (v1). */
+  private defaultItemRef: { value: string; name: string } | null = null;
+
+  /**
+   * Resolve the generic "HVAC Services" QBO service item used for all estimate
+   * lines in v1 (item-level catalog mapping is a v2 improvement). Prefers an
+   * explicit QUICKBOOKS_DEFAULT_ITEM_ID; otherwise looks the item up by name.
+   * Throws a clear, actionable error if neither is available so the caller records
+   * a failed sync (and the UI shows Retry Push).
+   */
+  private async resolveDefaultItemRef(): Promise<{ value: string; name: string }> {
+    if (this.defaultItemRef) return this.defaultItemRef;
+    const name = (process.env.QUICKBOOKS_DEFAULT_ITEM_NAME || "HVAC Services").trim();
+    const configuredId = process.env.QUICKBOOKS_DEFAULT_ITEM_ID?.trim();
+    if (configuredId) return (this.defaultItemRef = { value: configuredId, name });
+    const res = await this.qboFetch(
+      `/query?query=${encodeURIComponent(`SELECT Id, Name FROM Item WHERE Name = '${escapeQboLiteral(name)}'`)}`,
+    );
+    const json = res.ok
+      ? ((await res.json().catch(() => ({}))) as { QueryResponse?: { Item?: Array<{ Id?: string; Name?: string }> } })
+      : {};
+    const item = json.QueryResponse?.Item?.[0];
+    if (!item?.Id) {
+      throw new Error(
+        `QuickBooks item "${name}" not found — create a Service item with that name in QuickBooks (or set QUICKBOOKS_DEFAULT_ITEM_ID), then retry the push.`,
+      );
+    }
+    return (this.defaultItemRef = { value: item.Id, name: item.Name ?? name });
   }
+
+  /**
+   * Push the approved estimate option as a SINGLE QBO Estimate. Only the approved
+   * option's lines are ever sent; unapproved options never reach QBO. Rebates are
+   * display-only and are NOT emitted as a line in v1.
+   */
+  async pushEstimate(input: AccountingEstimateInput): Promise<PushEstimateResult> {
+    if (!input.customerRef) {
+      throw new Error("QuickBooks estimate push requires a CustomerRef — the customer is not synced to QuickBooks.");
+    }
+    if (!input.lines?.length) {
+      throw new Error("QuickBooks estimate push requires at least one line item.");
+    }
+    const itemRef = await this.resolveDefaultItemRef();
+    const body = buildQboEstimateBody(input, itemRef);
+
+    const res = await this.qboFetch(`/estimate`, { method: "POST", body: JSON.stringify(body) });
+    const json = (await res.json().catch(() => ({}))) as {
+      Estimate?: { Id?: string; DocNumber?: string; TotalAmt?: number };
+      Fault?: { Error?: Array<{ code?: string; Message?: string; Detail?: string }> };
+    };
+    if (!res.ok || json.Fault || !json.Estimate?.Id) {
+      const err = json.Fault?.Error?.[0];
+      throw new Error(`QuickBooks estimate push failed: ${err?.Message ?? err?.Detail ?? `HTTP ${res.status}`}`);
+    }
+    return {
+      qbId: json.Estimate.Id,
+      docNumber: json.Estimate.DocNumber ?? null,
+      totalAmount: Number(json.Estimate.TotalAmt ?? 0),
+      raw: json.Estimate,
+    };
+  }
+
   async pushInvoice(): Promise<never> {
     throw new NotImplementedError("QuickBooks invoice push");
   }

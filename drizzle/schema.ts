@@ -2676,3 +2676,106 @@ export const gbpSyncHistory = mysqlTable(
 );
 export type GbpSyncHistoryRow = typeof gbpSyncHistory.$inferSelect;
 export type InsertGbpSyncHistory = typeof gbpSyncHistory.$inferInsert;
+
+/**
+ * CRM-authored tiered estimates (Task 8A). Distinct from `quickbooksSalesDocuments`,
+ * which is a READ-ONLY mirror of documents that already live in QuickBooks. An
+ * estimate is authored HERE (1–3 Good/Better/Best options), approved internally,
+ * and only the APPROVED option is pushed to QBO as a single QBO Estimate. This
+ * feature never writes to the mirror table; if QBO later mirrors the pushed
+ * estimate in, the two are linked by `quickbooksEstimateId` = the mirror's
+ * `quickbooksId`. No DB-level FKs (repo convention).
+ */
+export const estimates = mysqlTable(
+  "estimates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** opportunities.id this estimate backs. */
+    opportunityId: int("opportunityId").notNull(),
+    /** Human, id-derived number, e.g. "ME-EST-2026-0001". Unique. */
+    estimateNumber: varchar("estimateNumber", { length: 32 }).notNull(),
+    status: mysqlEnum("status", ["draft", "sent", "viewed", "approved", "declined"]).default("draft").notNull(),
+    /** estimateOptions.id of the approved option; null until approved. */
+    approvedOptionId: int("approvedOptionId"),
+    approvedAt: timestamp("approvedAt"),
+    /**
+     * Immutable snapshot of the approved option (label, tier, totals, and a copy
+     * of its line items) captured at approval time. Later edits to the estimate/
+     * option never change what was approved or what gets (re)pushed to QBO.
+     */
+    approvedSnapshot: json("approvedSnapshot"),
+    declineReason: text("declineReason"),
+    /** QBO Estimate.Id once a push succeeds; null until then. */
+    quickbooksEstimateId: varchar("quickbooksEstimateId", { length: 64 }),
+    qbSyncStatus: mysqlEnum("qbSyncStatus", ["not_pushed", "pushed", "failed"]).default("not_pushed").notNull(),
+    qbSyncError: text("qbSyncError"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("estimates_opportunityId_idx").on(table.opportunityId),
+    estimateNumberUq: uniqueIndex("estimates_estimateNumber_uq").on(table.estimateNumber),
+    statusIdx: index("estimates_status_idx").on(table.status),
+  }),
+);
+export type Estimate = typeof estimates.$inferSelect;
+export type InsertEstimate = typeof estimates.$inferInsert;
+
+/**
+ * A pricing OPTION (tier) within an estimate. An estimate has 1–3 of these
+ * (good/better/best). Totals are maintained server-side from the option's line
+ * items. `rebateAmount` is display-only — it is NOT a QBO line in v1.
+ */
+export const estimateOptions = mysqlTable(
+  "estimateOptions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    estimateId: int("estimateId").notNull(),
+    tier: mysqlEnum("tier", ["good", "better", "best"]).notNull(),
+    label: varchar("label", { length: 255 }).notNull(),
+    description: text("description"),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    subtotal: decimal("subtotal", { precision: 12, scale: 2 }).default("0").notNull(),
+    total: decimal("total", { precision: 12, scale: 2 }).default("0").notNull(),
+    /** Display-only rebate figure shown to the customer; never pushed to QBO in v1. */
+    rebateAmount: decimal("rebateAmount", { precision: 12, scale: 2 }).default("0").notNull(),
+    warrantyTerms: text("warrantyTerms"),
+    maintenancePlan: text("maintenancePlan"),
+    /** True on the single option that was approved (mirrors estimates.approvedOptionId). */
+    isApproved: boolean("isApproved").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    estimateIdx: index("estimateOptions_estimateId_idx").on(table.estimateId),
+  }),
+);
+export type EstimateOption = typeof estimateOptions.$inferSelect;
+export type InsertEstimateOption = typeof estimateOptions.$inferInsert;
+
+/**
+ * A line item within an estimate option. `itemType` reuses the `jobLineItems`
+ * vocabulary for consistency (and a future "build estimate from job line items").
+ * `amount` = quantity × unitPrice, maintained on every write.
+ */
+export const estimateLineItems = mysqlTable(
+  "estimateLineItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    optionId: int("optionId").notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    itemType: mysqlEnum("itemType", ["labor", "part", "service", "equipment", "other"]).default("service").notNull(),
+    quantity: decimal("quantity", { precision: 10, scale: 2 }).default("1").notNull(),
+    unitPrice: decimal("unitPrice", { precision: 10, scale: 2 }).default("0").notNull(),
+    amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    optionIdx: index("estimateLineItems_optionId_idx").on(table.optionId),
+  }),
+);
+export type EstimateLineItem = typeof estimateLineItems.$inferSelect;
+export type InsertEstimateLineItem = typeof estimateLineItems.$inferInsert;
