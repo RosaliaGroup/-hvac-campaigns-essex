@@ -19,6 +19,7 @@ import {
   customerSyncConflicts,
   properties,
   quickbooksConnections,
+  estimates,
   type QuickbooksConnection,
 } from "../../../drizzle/schema";
 import { buildDisplayName, normalizePhone, splitName } from "../../routers/customers";
@@ -46,6 +47,28 @@ import { isCustomerNameEnrichEnabled, planCustomerEnrichment } from "./enrichmen
 import { cancelOpenFollowups, ensureFollowupsForOpportunity } from "./followups";
 import { SyncLock } from "./syncLock";
 import { withDbLock, type DbLockLogEntry, type LockConnection } from "./dbSyncLock";
+
+/**
+ * Which CRM opportunity should an ingested QBO estimate attach to? Prefer the
+ * one the sales-doc row already points at; otherwise, if this QBO estimate was
+ * PUSHED by us from a CRM tiered estimate (Task 8A), reuse that estimate's
+ * opportunity instead of spawning a duplicate. Null → create a fresh opportunity.
+ */
+export function resolveSyncOpportunityId(
+  existingOpportunityId: number | null,
+  crmPushedOpportunityId: number | null,
+): number | null {
+  return existingOpportunityId ?? crmPushedOpportunityId ?? null;
+}
+
+/**
+ * Open the QBO close-loop only for a genuinely QBO-originated pending estimate.
+ * A CRM-authored estimate we pushed drives its own lifecycle (approve/decline),
+ * so the sync must NOT open a nudge loop for it (Task 8B defect fix).
+ */
+export function shouldOpenCloseLoop(status: string | null | undefined, isCrmPushedEstimate: boolean): boolean {
+  return status === "pending" && !isCrmPushedEstimate;
+}
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -581,8 +604,18 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
     { type: cust?.type ?? null, companyName: cust?.companyName ?? null, displayName: cust?.displayName ?? null },
   );
 
+  // Was this QBO estimate pushed by us from a CRM tiered estimate (Task 8A)? If so,
+  // attach to that estimate's opportunity rather than creating a duplicate + loop.
+  const crmPushed = mapped.quickbooksId
+    ? (await db
+        .select({ opportunityId: estimates.opportunityId })
+        .from(estimates)
+        .where(eq(estimates.quickbooksEstimateId, mapped.quickbooksId))
+        .limit(1))[0]
+    : undefined;
+
   const opp = await upsertOpportunity(db, {
-    existingOpportunityId: existing?.opportunityId ?? null,
+    existingOpportunityId: resolveSyncOpportunityId(existing?.opportunityId ?? null, crmPushed?.opportunityId ?? null),
     customerId,
     displayName,
     docNumber: mapped.docNumber ?? null,
@@ -623,7 +656,8 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
     .where(and(eq(opportunities.id, opp.id), sql`${opportunities.quickbooksSalesDocumentId} IS NULL`));
 
   // Follow-up loop: open it for Sent/Pending docs; cancel it once the deal closes.
-  if (mapped.status === "pending") {
+  // Skip opening for a CRM-pushed estimate — it drives its own approve/decline lifecycle.
+  if (shouldOpenCloseLoop(mapped.status, !!crmPushed)) {
     const n = await ensureFollowupsForOpportunity({
       db,
       opportunityId: opp.id,
