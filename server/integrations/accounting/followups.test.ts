@@ -28,7 +28,7 @@ describe("buildFollowupPlan", () => {
     expect(day3.dueAt.toISOString()).toBe("2026-07-10T12:00:00.000Z");
   });
 
-  it("GATES every text task when SMS is not enabled (10DLC), emails stay open", () => {
+  it("GATES every text task when SMS_FOLLOWUPS_ENABLED is off, emails stay open", () => {
     const plan = buildFollowupPlan(10, 5, ctx, NOW, false);
     const texts = plan.filter(t => t.type === "text");
     expect(texts).toHaveLength(3);

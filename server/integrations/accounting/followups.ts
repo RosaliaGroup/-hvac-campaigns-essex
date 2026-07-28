@@ -6,8 +6,9 @@
  *   - EMAIL + TEXT touches at day 0, day 1, and day 3.
  *
  * SAFETY: text (SMS) touches are created with status "gated" and are NEVER
- * dispatched until 10DLC is approved — i.e. until SMS_FOLLOWUPS_ENABLED=true.
- * Email touches and the human call task are unaffected by the gate.
+ * dispatched unless SMS_FOLLOWUPS_ENABLED=true (10DLC is registered; this flag
+ * is the manual on/off switch). Email touches and the human call task are
+ * unaffected by the gate.
  */
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
 import { getDb } from "../../db";
@@ -25,7 +26,7 @@ type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Text-message follow-ups stay gated until 10DLC registration is approved. */
+/** Text-message follow-ups stay gated unless SMS_FOLLOWUPS_ENABLED=true. */
 export function smsFollowupsEnabled(): boolean {
   return process.env.SMS_FOLLOWUPS_ENABLED === "true";
 }
@@ -138,10 +139,13 @@ export async function ensureFollowupsForOpportunity(args: {
     .where(eq(opportunities.id, args.opportunityId));
 
   const gated = plan.filter(t => t.type === "text" && t.status === "gated").length;
+  const message = gated > 0
+    ? `Opened close loop: ${plan.length} tasks (${gated} SMS follow-ups gated — SMS_FOLLOWUPS_ENABLED is off).`
+    : `Opened close loop: ${plan.length} tasks.`;
   await db.insert(opportunityEvents).values({
     opportunityId: args.opportunityId,
     type: "followup_queued",
-    message: `Opened close loop: ${plan.length} tasks (${gated} SMS gated pending 10DLC).`,
+    message,
     metadata: { total: plan.length, gatedSms: gated },
   });
   return plan.length;
