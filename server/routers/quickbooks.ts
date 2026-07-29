@@ -81,8 +81,13 @@ async function recordError(customerId: number, message: string) {
     .where(eq(customers.id, customerId));
 }
 
-/** Run a push for one customer, record customer state + a sync log, return the result. */
-async function pushOne(customerId: number, resolution?: ConflictResolution): Promise<PushCustomerResult> {
+/**
+ * Run a push for one customer, record customer state + a sync log, return the result.
+ * Exported for reuse by the lead→QBO auto-sync job
+ * (server/services/leadCustomerAutoSync.ts), which calls it with resolution="link"
+ * to auto-link on any QBO match instead of creating a duplicate.
+ */
+export async function pushOne(customerId: number, resolution?: ConflictResolution): Promise<PushCustomerResult> {
   const { customer, primary } = await loadCustomerWithPrimary(customerId);
   const input = buildCustomerInput(customer, primary);
   const started = Date.now();

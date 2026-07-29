@@ -83,9 +83,10 @@ export function buildDisplayName(c: {
 
 /**
  * Find an existing customer by phone (last-10-digit match) or email
- * (case-insensitive). Used to dedupe on conversion.
+ * (case-insensitive). Used to dedupe on conversion and by the lead→QBO
+ * auto-sync job (server/services/leadCustomerAutoSync.ts).
  */
-async function findExistingCustomer(
+export async function findExistingCustomer(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   phone: string | null | undefined,
   email: string | null | undefined,

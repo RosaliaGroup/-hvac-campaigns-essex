@@ -22,6 +22,7 @@ import { conversationCrmRouter } from "./routers/conversationCrm";
 import { rebateCalculatorRouter } from "./routers/rebateCalculator";
 import { heygenRouter } from "./routers/heygen";
 import { runCampaignAnalysis } from "./services/campaignEngine";
+import { enqueueLeadCustomerSync } from "./services/leadCustomerAutoSync";
 import { generateSocialPost } from "./integrations/ai-content-generator";
 import { publishSocialPost, retrySocialPost, PublishError } from "./services/socialPublisher";
 import * as marketingCanary from "./services/marketingCanary";
@@ -140,7 +141,18 @@ export const appRouter = router({
       )
       .mutation(async ({ input }) => {
         await db.createLead(input);
-        
+
+        // Policy: every new lead becomes a QuickBooks customer. Fire-and-forget —
+        // never blocks or fails lead creation (a `leads` row has exactly one of
+        // phone/email, in `contact`, keyed by `contactType`).
+        enqueueLeadCustomerSync({
+          name: input.name,
+          email: input.contactType === "email" ? input.contact : null,
+          phone: input.contactType === "phone" ? input.contact : null,
+          source: `lead:${input.source}`,
+          origin: `lead.create:${input.source}`,
+        });
+
         // Send email notification to owner
         await notifyOwner({
           title: `New Lead: ${input.name}`,
@@ -204,7 +216,20 @@ export const appRouter = router({
         const { referrer: _referrer, ...captureInput } = input;
 
         await db.createLeadCapture({ ...captureInput, ...attribution });
-        
+
+        // Policy: every new lead becomes a QuickBooks customer. Fire-and-forget —
+        // never blocks or fails the public form submission. Guaranteed to have at
+        // least one of email/phone by the check above.
+        enqueueLeadCustomerSync({
+          name: input.name ?? null,
+          firstName: input.firstName ?? null,
+          lastName: input.lastName ?? null,
+          email: input.email ?? null,
+          phone: input.phone ?? null,
+          source: `web:${input.captureType}`,
+          origin: `leadCapture:${input.captureType}`,
+        });
+
         // Send email notification to owner
         const contactInfo = [];
         if (input.firstName || input.lastName) {
