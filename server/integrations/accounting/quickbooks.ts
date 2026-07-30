@@ -373,6 +373,25 @@ export function buildQboEstimateBody(
   return body;
 }
 
+/**
+ * Pure: the next estimate DocNumber for a Custom-Transaction-Numbers company —
+ * max(existing strictly-numeric DocNumber, floor) + 1, as a string. Non-numeric /
+ * formatted DocNumbers (e.g. "2026-0001", "EST-7") are ignored so they can't inflate
+ * the max. `floor` defaults to 1000 → first assigned number is "1001" (QBO's usual
+ * estimate start) when there are no numeric estimates yet. Unit-tested.
+ */
+export function nextDocNumberFrom(docNumbers: Array<string | null | undefined>, floor = 1000): string {
+  let max = floor;
+  for (const d of docNumbers) {
+    const raw = String(d ?? "").trim();
+    if (/^\d+$/.test(raw)) {
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+  }
+  return String(max + 1);
+}
+
 // ── Sync-log writer (unit-tested) ───────────────────────────────────────────
 export async function writeSyncLog(entry: InsertQuickbooksSyncLog): Promise<void> {
   const db = await getDb();
@@ -765,6 +784,18 @@ export class QuickBooksProvider implements AccountingProvider {
     return json.Customer ?? null;
   }
 
+  /**
+   * Read-only: the DocNumber QuickBooks currently has for one Estimate id, or null
+   * if the estimate is absent / has no number. Used by the estimate-number
+   * reconciliation report to compare CRM display numbers against the QBO authority.
+   */
+  async fetchEstimateDocNumber(qbId: string): Promise<string | null> {
+    const res = await this.qboFetch(`/estimate/${qbId}`);
+    if (!res.ok) return null;
+    const json = (await res.json().catch(() => ({}))) as { Estimate?: { DocNumber?: string } };
+    return json.Estimate?.DocNumber ?? null;
+  }
+
   // ── Estimate push (Task 8A) ──
   /** Cached QBO ItemRef for the single generic service item used on every line (v1). */
   private defaultItemRef: { value: string; name: string } | null = null;
@@ -794,6 +825,43 @@ export class QuickBooksProvider implements AccountingProvider {
       );
     }
     return (this.defaultItemRef = { value: item.Id, name: item.Name ?? name });
+  }
+
+  /**
+   * Whether the connected QBO company has "Custom Transaction Numbers" enabled. When
+   * TRUE, QuickBooks does NOT auto-assign estimate DocNumbers — the client must
+   * supply one (see nextEstimateDocNumber). When FALSE (the default), omitting
+   * DocNumber lets QBO atomically assign its next sequence number, which is race-safe
+   * versus querying "next number" first. Read-only; defaults to false on any error.
+   */
+  async usesCustomTxnNumbers(): Promise<boolean> {
+    const res = await this.qboFetch(`/preferences`);
+    if (!res.ok) return false;
+    const json = (await res.json().catch(() => ({}))) as {
+      Preferences?: { SalesFormsPrefs?: { CustomTxnNumbers?: boolean } };
+    };
+    return json.Preferences?.SalesFormsPrefs?.CustomTxnNumbers === true;
+  }
+
+  /**
+   * Next estimate DocNumber for a Custom-Transaction-Numbers company: max existing
+   * PURELY-NUMERIC DocNumber + 1. QBO can't MAX() a string DocNumber, so we scan a
+   * bounded page (same approach as findMatches) and take the highest parseable value.
+   * Only strictly-numeric DocNumbers are considered so a formatted number like
+   * "2026-0001" can't inflate the max. Falls back to "1001" (QBO's usual start) when
+   * no numeric estimates exist. Best-effort: pushApprovedEstimate retries once on a
+   * duplicate-number rejection, which is the real guard against a concurrent estimate.
+   */
+  async nextEstimateDocNumber(): Promise<string> {
+    const res = await this.qboFetch(
+      `/query?query=${encodeURIComponent("SELECT * FROM Estimate MAXRESULTS 1000")}`,
+    );
+    let docNumbers: Array<string | undefined> = [];
+    if (res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { QueryResponse?: { Estimate?: Array<{ DocNumber?: string }> } };
+      docNumbers = (json.QueryResponse?.Estimate ?? []).map(e => e.DocNumber);
+    }
+    return nextDocNumberFrom(docNumbers);
   }
 
   /**

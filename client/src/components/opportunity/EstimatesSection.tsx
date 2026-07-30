@@ -9,6 +9,7 @@
 import { useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
+import { formatEstimateNumber } from "@shared/estimateNumber";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -113,7 +114,7 @@ function EstimateCard({ estimate, opportunityId }: { estimate: EstimateFull; opp
       {/* Header / status */}
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold flex items-center gap-1"><FileText className="h-4 w-4 text-[#1e3a5f]" /> {estimate.estimateNumber || `Estimate #${estimate.id}`}</span>
+          <span className="font-semibold flex items-center gap-1"><FileText className="h-4 w-4 text-[#1e3a5f]" /> {formatEstimateNumber(estimate.estimateNumber, { short: true })}</span>
           <Badge variant="secondary" className={ESTIMATE_STATUS[estimate.status] ?? ""}>{estimate.status}</Badge>
           {approvedOption && <Badge variant="secondary" className="bg-green-100 text-green-700">Approved: {approvedOption.tier}</Badge>}
           {estimate.status === "approved" && (
@@ -341,7 +342,7 @@ function ApproveDialog({ estimate, onClose, onDone }: { estimate: EstimateFull; 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Approve estimate {estimate.estimateNumber}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Approve estimate {formatEstimateNumber(estimate.estimateNumber, { short: true })}</DialogTitle></DialogHeader>
         {!pushResult ? (
           <>
             <p className="text-sm text-muted-foreground">Select exactly one option to approve. Only the approved option is pushed to QuickBooks.</p>

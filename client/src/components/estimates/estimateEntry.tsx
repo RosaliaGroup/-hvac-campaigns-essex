@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../../server/routers";
+import { formatEstimateNumber } from "@shared/estimateNumber";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -207,7 +208,7 @@ export function TieredEstimateList({ customerId, onOpen }: { customerId: number;
           <div className="min-w-0">
             <div className="font-medium flex items-center gap-2">
               <FileText className="h-3.5 w-3.5 text-[#1e3a5f] shrink-0" />
-              <span className="truncate">{e.estimateNumber || `Estimate #${e.id}`}</span>
+              <span className="truncate">{formatEstimateNumber(e.estimateNumber, { short: true })}</span>
               {e.opportunityTitle && <span className="text-muted-foreground truncate hidden sm:inline">· {e.opportunityTitle}</span>}
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">

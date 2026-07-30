@@ -1,0 +1,22 @@
+-- Estimate numbering unification: QuickBooks is the sole numbering authority.
+-- CRM-authored estimates NO LONGER get a locally-generated "ME-EST-YYYY-NNNN"
+-- number at create time. A draft carries NO number ("pending — assigned by
+-- QuickBooks on push"); the QBO DocNumber from the push response becomes the
+-- number. So `estimateNumber` must be NULLABLE (many concurrent pending drafts).
+--
+-- The unique index `estimates_estimateNumber_uq` is retained: MySQL treats NULLs
+-- as distinct, so any number of pending drafts (NULL) coexist while every assigned
+-- QuickBooks number stays unique.
+--
+-- SAFE / NON-DESTRUCTIVE: widens the column (drops NOT NULL only). Existing rows —
+-- including any legacy local "ME-EST-*" values — are left untouched; the read-only
+-- reconciliation report (scripts/reconcile-estimate-numbers.ts) proposes their fix
+-- separately, and nothing is renumbered without owner approval.
+--
+-- NUMBERING: 0057–0059 remain RESERVED for in-flight branches (0057 = dispatch-m2 /
+--   opportunity-backend, both unmerged & colliding; 0058–0059 opportunities follow-up);
+--   0060 = tiered estimates. This is the next free number, 0061.
+-- APPLY BY HAND per drizzle/README.md — do NOT run db:push / drizzle-kit migrate
+-- against production (prod ledger is applied manually; journal/snapshots intentionally
+-- not fabricated here, matching the 0060 precedent).
+ALTER TABLE `estimates` MODIFY COLUMN `estimateNumber` varchar(32);

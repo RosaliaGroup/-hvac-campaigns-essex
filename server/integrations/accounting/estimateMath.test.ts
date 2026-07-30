@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   computeLineAmount,
   computeOptionTotals,
-  makeEstimateNumber,
   buildApprovedSnapshot,
 } from "./estimateMath";
 import { buildQboEstimateBody } from "./quickbooks";
@@ -20,10 +19,6 @@ describe("estimate math", () => {
     expect(total).toBe(700);
   });
 
-  it("makeEstimateNumber is id-derived and zero-padded", () => {
-    expect(makeEstimateNumber(1, 2026)).toBe("ME-EST-2026-0001");
-    expect(makeEstimateNumber(1234, 2026)).toBe("ME-EST-2026-1234");
-  });
 });
 
 describe("approval snapshot immutability", () => {

@@ -5,7 +5,13 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 const { providerMock, getDbMock, writeSyncLogMock } = vi.hoisted(() => ({
-  providerMock: { getConnection: vi.fn(), pushEstimate: vi.fn(), pushCustomer: vi.fn() },
+  providerMock: {
+    getConnection: vi.fn(),
+    pushEstimate: vi.fn(),
+    pushCustomer: vi.fn(),
+    usesCustomTxnNumbers: vi.fn(),
+    nextEstimateDocNumber: vi.fn(),
+  },
   getDbMock: vi.fn(),
   writeSyncLogMock: vi.fn(async () => {}),
 }));
@@ -70,9 +76,13 @@ beforeEach(() => {
   providerMock.getConnection.mockReset();
   providerMock.pushEstimate.mockReset();
   providerMock.pushCustomer.mockReset();
+  providerMock.usesCustomTxnNumbers.mockReset();
+  providerMock.nextEstimateDocNumber.mockReset();
   getDbMock.mockReset();
   writeSyncLogMock.mockClear();
   providerMock.getConnection.mockResolvedValue({ realmId: "R1" });
+  // Default: company auto-assigns estimate numbers (QBO owns the DocNumber).
+  providerMock.usesCustomTxnNumbers.mockResolvedValue(false);
 });
 
 describe("pushApprovedEstimate", () => {
@@ -88,12 +98,14 @@ describe("pushApprovedEstimate", () => {
 
     const input = providerMock.pushEstimate.mock.calls[0][0];
     expect(input.customerRef).toBe("QB-42");
-    expect(input.docNumber).toBe("ME-EST-2026-0001");
+    // Auto-assign mode: we OMIT DocNumber so QuickBooks assigns its next number.
+    expect(input.docNumber).toBeUndefined();
     expect(input.privateNote).toContain("Opportunity #7");
     expect(input.lines).toHaveLength(2);
     expect(input.lines[0]).toMatchObject({ name: "Furnace", quantity: 1, unitPrice: 600, amount: 600 });
 
-    expect(last(db.upd("estimates"))).toMatchObject({ quickbooksEstimateId: "EST-99", qbSyncStatus: "pushed", qbSyncError: null });
+    // The QBO-assigned DocNumber from the response is stored as THE estimate number.
+    expect(last(db.upd("estimates"))).toMatchObject({ quickbooksEstimateId: "EST-99", estimateNumber: "1001", qbSyncStatus: "pushed", qbSyncError: null });
     expect(writeSyncLogMock).toHaveBeenCalledWith(
       expect.objectContaining({ entityType: "estimate", direction: "push", success: true, qbId: "EST-99" }),
     );
@@ -140,6 +152,39 @@ describe("pushApprovedEstimate", () => {
     // Estimate push used the freshly-synced ref.
     expect(providerMock.pushEstimate.mock.calls[0][0].customerRef).toBe("QB-NEW");
     expect(last(db.upd("estimates"))).toMatchObject({ qbSyncStatus: "pushed", quickbooksEstimateId: "EST-1" });
+  });
+
+  it("custom-transaction-numbers mode: sends max+1 DocNumber and stores it verbatim", async () => {
+    const db = createFakeDb();
+    seedApproved(db);
+    getDbMock.mockResolvedValue(db);
+    providerMock.usesCustomTxnNumbers.mockResolvedValue(true);
+    providerMock.nextEstimateDocNumber.mockResolvedValue("1050");
+    providerMock.pushEstimate.mockResolvedValue({ qbId: "EST-CT", docNumber: "1050", totalAmount: 700 });
+
+    const out = await pushApprovedEstimate(1);
+    expect(out.ok).toBe(true);
+    // We supply the computed number because QBO won't auto-assign in this mode.
+    expect(providerMock.pushEstimate.mock.calls[0][0].docNumber).toBe("1050");
+    expect(last(db.upd("estimates"))).toMatchObject({ quickbooksEstimateId: "EST-CT", estimateNumber: "1050", qbSyncStatus: "pushed" });
+  });
+
+  it("custom-transaction-numbers mode: retries ONCE with a refreshed number on a duplicate-DocNumber reject", async () => {
+    const db = createFakeDb();
+    seedApproved(db);
+    getDbMock.mockResolvedValue(db);
+    providerMock.usesCustomTxnNumbers.mockResolvedValue(true);
+    providerMock.nextEstimateDocNumber.mockResolvedValueOnce("1050").mockResolvedValueOnce("1051");
+    providerMock.pushEstimate
+      .mockRejectedValueOnce(new Error("QuickBooks estimate push failed: Duplicate Document Number Error : you must specify a different number"))
+      .mockResolvedValueOnce({ qbId: "EST-RT", docNumber: "1051", totalAmount: 700 });
+
+    const out = await pushApprovedEstimate(1);
+    expect(out.ok).toBe(true);
+    expect(providerMock.pushEstimate).toHaveBeenCalledTimes(2);
+    expect(providerMock.pushEstimate.mock.calls[0][0].docNumber).toBe("1050");
+    expect(providerMock.pushEstimate.mock.calls[1][0].docNumber).toBe("1051");
+    expect(last(db.upd("estimates"))).toMatchObject({ quickbooksEstimateId: "EST-RT", estimateNumber: "1051", qbSyncStatus: "pushed" });
   });
 
   it("falls back to a failed sync (no estimate push) when auto-sync hits a duplicate conflict", async () => {

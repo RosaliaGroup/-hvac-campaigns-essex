@@ -22,7 +22,6 @@ import {
   buildApprovedSnapshot,
   computeLineAmount,
   computeOptionTotals,
-  makeEstimateNumber,
 } from "../integrations/accounting/estimateMath";
 import { pushApprovedEstimate } from "../integrations/accounting/estimatePush";
 import { cancelOpenFollowups } from "../integrations/accounting/followups";
@@ -136,10 +135,10 @@ export const estimatesRouter = router({
       const db = await requireDb();
       const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.opportunityId)).limit(1))[0];
       if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Opportunity not found" });
-      // Insert first to get the id, then stamp the id-derived estimate number.
-      const inserted = await db.insert(estimates).values({ opportunityId: input.opportunityId, estimateNumber: "" });
+      // No local number: QuickBooks is the numbering authority. The draft stays
+      // "pending" (estimateNumber NULL) until the QBO push assigns its DocNumber.
+      const inserted = await db.insert(estimates).values({ opportunityId: input.opportunityId });
       const id = insertId(inserted);
-      await db.update(estimates).set({ estimateNumber: makeEstimateNumber(id) }).where(eq(estimates.id, id));
       const full = await loadFull(db, id);
       if (!full) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Estimate create failed" });
       return full;
@@ -288,6 +287,9 @@ export const estimatesRouter = router({
 
       const approvedAt = new Date();
       const snapshot = buildApprovedSnapshot(option, lines, approvedAt);
+      // The QBO number isn't assigned until the push below; reference the estimate
+      // by #id in activity messages while it is still pending a QuickBooks number.
+      const estLabel = est.estimateNumber ?? `#${est.id}`;
 
       // Local approval stands regardless of the QBO push outcome.
       await db.transaction(async (tx) => {
@@ -313,14 +315,14 @@ export const estimatesRouter = router({
         await tx.insert(opportunityEvents).values({
           opportunityId: est.opportunityId,
           type: "estimate_approved",
-          message: `Estimate ${est.estimateNumber} approved — ${option.tier} option ($${snapshot.total.toFixed(2)}).`,
+          message: `Estimate ${estLabel} approved — ${option.tier} option ($${snapshot.total.toFixed(2)}).`,
           metadata: { estimateId: est.id, optionId: option.id, tier: option.tier, total: snapshot.total },
         });
       });
 
       // Approving closes the deal locally — stop the estimate close loop (email +
       // text + call) on this opportunity and log it. Best-effort; never blocks approval.
-      await cancelOpenFollowups(est.opportunityId, `Estimate ${est.estimateNumber} approved`, db).catch(() => {});
+      await cancelOpenFollowups(est.opportunityId, `Estimate ${estLabel} approved`, db).catch(() => {});
 
       const push = await pushApprovedEstimate(input.estimateId);
       const estimate = await loadFull(db, input.estimateId);
@@ -334,15 +336,16 @@ export const estimatesRouter = router({
       const est = (await db.select().from(estimates).where(eq(estimates.id, input.estimateId)).limit(1))[0];
       if (!est) throw new TRPCError({ code: "NOT_FOUND", message: "Estimate not found" });
       if (est.status === "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Estimate already approved" });
+      const estLabel = est.estimateNumber ?? `#${est.id}`;
       await db.update(estimates).set({ status: "declined", declineReason: input.reason }).where(eq(estimates.id, input.estimateId));
       await db.insert(opportunityEvents).values({
         opportunityId: est.opportunityId,
         type: "estimate_declined",
-        message: `Estimate ${est.estimateNumber} declined.`,
+        message: `Estimate ${estLabel} declined.`,
         metadata: { estimateId: est.id, reason: input.reason },
       });
       // Declining kills the deal — stop the estimate close loop (email + text + call).
-      await cancelOpenFollowups(est.opportunityId, `Estimate ${est.estimateNumber} declined`, db).catch(() => {});
+      await cancelOpenFollowups(est.opportunityId, `Estimate ${estLabel} declined`, db).catch(() => {});
       return { ok: true };
     }),
 

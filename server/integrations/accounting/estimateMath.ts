@@ -28,11 +28,6 @@ export function computeOptionTotals(lines: LineForTotals[]): { subtotal: number;
   return { subtotal, total: subtotal };
 }
 
-/** Id-derived human estimate number, e.g. "ME-EST-2026-0001". Race-free, sortable. */
-export function makeEstimateNumber(id: number, year = new Date().getFullYear()): string {
-  return `ME-EST-${year}-${String(id).padStart(4, "0")}`;
-}
-
 export interface SnapshotLineItem {
   name: string;
   description: string | null;

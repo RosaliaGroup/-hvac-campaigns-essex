@@ -107,16 +107,48 @@ export async function pushApprovedEstimate(estimateId: number): Promise<PushOutc
     }
   }
 
+  const privateNote = `Opportunity #${opp.id}${opp.title ? ` — ${opp.title}` : ""}`;
+  const lines = snapshotToPushLines(snapshot);
+
   try {
-    const result = await quickbooksProvider.pushEstimate({
-      customerRef,
-      docNumber: est.estimateNumber,
-      privateNote: `Opportunity #${opp.id}${opp.title ? ` — ${opp.title}` : ""}`,
-      lines: snapshotToPushLines(snapshot),
-    });
+    // QuickBooks is the numbering authority — we never send a locally-generated
+    // number. Default (auto-assign) companies: OMIT DocNumber so QBO assigns its
+    // next sequence number atomically (race-safe vs. querying "next number" first).
+    // Custom-Transaction-Numbers companies: QBO requires the client to supply a
+    // DocNumber, so send max+1 and retry EXACTLY ONCE on a duplicate-number reject.
+    const customNumbers = await quickbooksProvider.usesCustomTxnNumbers().catch(() => false);
+    let result: PushEstimateResult;
+    if (!customNumbers) {
+      console.log(`[estimateNumber] mode=auto-assign — omitting DocNumber for estimate #${estimateId}`);
+      result = await quickbooksProvider.pushEstimate({ customerRef, privateNote, lines });
+    } else {
+      let candidate = await quickbooksProvider.nextEstimateDocNumber();
+      console.log(`[estimateNumber] mode=custom-txn-numbers — sending DocNumber ${candidate} for estimate #${estimateId}`);
+      try {
+        result = await quickbooksProvider.pushEstimate({ customerRef, docNumber: candidate, privateNote, lines });
+      } catch (e) {
+        if (!isDuplicateDocNumber(e)) throw e;
+        candidate = await quickbooksProvider.nextEstimateDocNumber();
+        console.log(`[estimateNumber] duplicate DocNumber — retrying once with ${candidate} for estimate #${estimateId}`);
+        result = await quickbooksProvider.pushEstimate({ customerRef, docNumber: candidate, privateNote, lines });
+      }
+    }
+
+    // Read the QuickBooks-assigned DocNumber back from the push response and store it
+    // as THE estimate number, verbatim. If QBO somehow returns none, leave the row's
+    // prior value (NULL/pending) rather than inventing one.
+    const assignedNumber = result.docNumber?.trim() || null;
+    if (!assignedNumber) {
+      console.warn(`[estimateNumber] QBO returned no DocNumber for estimate #${estimateId} (qbId ${result.qbId}) — left pending`);
+    }
     await db
       .update(estimates)
-      .set({ quickbooksEstimateId: result.qbId, qbSyncStatus: "pushed", qbSyncError: null })
+      .set({
+        quickbooksEstimateId: result.qbId,
+        estimateNumber: assignedNumber ?? est.estimateNumber ?? null,
+        qbSyncStatus: "pushed",
+        qbSyncError: null,
+      })
       .where(eq(estimates.id, estimateId));
     await writeSyncLog({
       entityType: "estimate",
@@ -133,4 +165,10 @@ export async function pushApprovedEstimate(estimateId: number): Promise<PushOutc
   } catch (e) {
     return fail((e as Error).message || "QuickBooks estimate push failed");
   }
+}
+
+/** QBO error 6140 = "Duplicate Document Number Error" (Custom Transaction Numbers). */
+export function isDuplicateDocNumber(e: unknown): boolean {
+  const msg = (e as Error)?.message ?? "";
+  return /duplicate document number|(?:^|\D)6140(?:\D|$)/i.test(msg);
 }

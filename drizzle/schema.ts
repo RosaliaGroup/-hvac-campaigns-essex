@@ -2692,8 +2692,15 @@ export const estimates = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     /** opportunities.id this estimate backs. */
     opportunityId: int("opportunityId").notNull(),
-    /** Human, id-derived number, e.g. "ME-EST-2026-0001". Unique. */
-    estimateNumber: varchar("estimateNumber", { length: 32 }).notNull(),
+    /**
+     * The QuickBooks-assigned estimate number (QBO DocNumber), verbatim. QuickBooks
+     * is the sole numbering authority: this is NULL while a CRM-authored estimate is
+     * a draft ("pending — assigned by QuickBooks on push") and is filled from the QBO
+     * push response once QuickBooks assigns the number. Never a locally-generated
+     * value. Unique index still applies; MySQL permits multiple NULLs (many pending
+     * drafts). Migration 0061 dropped the old NOT NULL + local "ME-EST-YYYY-NNNN".
+     */
+    estimateNumber: varchar("estimateNumber", { length: 32 }),
     status: mysqlEnum("status", ["draft", "sent", "viewed", "approved", "declined"]).default("draft").notNull(),
     /** estimateOptions.id of the approved option; null until approved. */
     approvedOptionId: int("approvedOptionId"),
