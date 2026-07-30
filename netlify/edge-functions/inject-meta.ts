@@ -414,6 +414,13 @@ export default async function handler(request: Request, context: any) {
     return;
   }
 
+  // Terms pages are versioned, standalone static HTML that must render
+  // identically forever — never rewrite their <head>. (/terms itself is a
+  // 302 redirect handled by netlify.toml; skipping it here is harmless.)
+  if (url.pathname === "/terms" || url.pathname.startsWith("/terms/")) {
+    return;
+  }
+
   // Skip non-HTML requests (assets, API, etc.)
   if (
     url.pathname.startsWith("/api/") ||
