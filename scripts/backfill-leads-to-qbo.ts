@@ -33,6 +33,7 @@ import { findExistingCustomer, buildDisplayName, splitName } from "../server/rou
 import { buildCustomerInput } from "../server/routers/quickbooks";
 import { quickbooksProvider, pickMergeMatch } from "../server/integrations/accounting/quickbooks";
 import { runLeadCustomerSync } from "../server/services/leadCustomerAutoSync";
+import { isLeadPushable } from "../shared/leadQuality";
 import type { AccountingCustomerInput } from "../server/integrations/accounting/types";
 
 const argv = process.argv.slice(2);
@@ -133,12 +134,24 @@ async function main() {
   const candidates = await collectCandidates(db);
 
   const seen = new Set<string>();
-  const tally = { total: candidates.length, noContact: 0, alreadySynced: 0, dedupe: 0, convert: 0, pushExisting: 0, link: 0, createInQbo: 0, executed: 0, execErrors: 0 };
+  const tally = { total: candidates.length, skippedQuality: 0, alreadySynced: 0, dedupe: 0, convert: 0, pushExisting: 0, link: 0, createInQbo: 0, executed: 0, execErrors: 0 };
+  const skippedByRule: Record<string, number> = {};
+  const skippedList: Array<{ origin: string; rule: string; reason: string; name: string | null }> = [];
 
   for (const c of candidates) {
     const phone = c.phone?.trim() || null;
     const email = c.email?.trim() || null;
-    if (!phone && !email) { tally.noContact++; console.log(`SKIP  ${c.origin} — no phone/email`); continue; }
+
+    // Quality gate — the SAME isLeadPushable used by the live auto-push path, so this
+    // dry-run predicts exactly what the live path will (and won't) push.
+    const gate = isLeadPushable({ name: c.name, firstName: c.firstName, lastName: c.lastName, email, phone });
+    if (!gate.pushable) {
+      tally.skippedQuality++;
+      skippedByRule[gate.rule!] = (skippedByRule[gate.rule!] ?? 0) + 1;
+      skippedList.push({ origin: c.origin, rule: gate.rule!, reason: gate.reason ?? "", name: c.name });
+      console.log(`SKIPQ ${c.origin} [${gate.rule}] "${c.name ?? "(no name)"}" — ${gate.reason}`);
+      continue;
+    }
 
     const key = last10(phone) || `e:${email!.toLowerCase()}`;
     if (seen.has(key)) { tally.dedupe++; console.log(`DEDUPE ${c.origin} — same contact as an earlier lead (${key})`); continue; }
@@ -182,7 +195,12 @@ async function main() {
     }
   }
 
-  console.log(JSON.stringify({ step: "summary", ...tally }, null, 2));
+  console.log("\n=== SKIPPED (quality gate) — these will NOT auto-push either ===");
+  if (!skippedList.length) console.log("  (none)");
+  for (const s of skippedList) console.log(`  ${s.origin} [${s.rule}] "${s.name ?? "(no name)"}" — ${s.reason}`);
+  console.log("  by rule: " + JSON.stringify(skippedByRule));
+
+  console.log("\n" + JSON.stringify({ step: "summary", ...tally }, null, 2));
   if (!EXECUTE) console.log("Dry-run only — nothing written. Re-run with --execute --yes-write-live-qbo to apply.");
 }
 

@@ -24,7 +24,8 @@ import { getDb } from "../db";
 import { customers, type InsertCustomer } from "../../drizzle/schema";
 import { findExistingCustomer, buildDisplayName, splitName } from "../routers/customers";
 import { pushOne } from "../routers/quickbooks";
-import { quickbooksProvider } from "../integrations/accounting/quickbooks";
+import { quickbooksProvider, writeSyncLog } from "../integrations/accounting/quickbooks";
+import { isLeadPushable } from "@shared/leadQuality";
 
 export interface LeadCustomerSyncInput {
   /** Free-text full name (used when firstName/lastName are absent). */
@@ -46,8 +47,27 @@ export interface LeadCustomerSyncInput {
 export async function runLeadCustomerSync(input: LeadCustomerSyncInput): Promise<void> {
   const phone = input.phone?.trim() || null;
   const email = input.email?.trim() || null;
-  // Policy guard: nothing to resolve a customer from → skip (never an error).
-  if (!phone && !email) return;
+
+  // Quality gate (shared with the backfill): require a real name AND a working
+  // contact; skip test artifacts; flag-don't-push B2B/competitor emails. Junk must
+  // never become a QuickBooks customer. A skip is logged to quickbooksSyncLogs as
+  // skipped_quality:<rule> (visible in sync logs) — never silently dropped.
+  const gate = isLeadPushable({ name: input.name, firstName: input.firstName, lastName: input.lastName, email, phone });
+  if (!gate.pushable) {
+    console.log(`[leadQbo] skipped_quality:${gate.rule} (${input.origin}) — ${gate.reason}`);
+    await writeSyncLog({
+      entityType: "customer",
+      entityId: null,
+      direction: "push",
+      realmId: null,
+      success: false,
+      durationMs: 0,
+      qbId: null,
+      errorCode: `skipped_quality:${gate.rule}`.slice(0, 64),
+      errorMessage: `${gate.reason ?? ""} [${input.origin}]`.slice(0, 1000),
+    }).catch(() => {});
+    return;
+  }
 
   const db = await getDb();
   if (!db) return;
