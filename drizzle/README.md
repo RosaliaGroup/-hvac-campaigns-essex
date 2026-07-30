@@ -61,16 +61,38 @@ without a safe default may ship without **all** of:
 
 ## Current exceptional state (⚠️ read before planning any migration)
 
-- **Repository journal head:** `0056_job_lifecycle` (`drizzle/meta/_journal.json`).
+- **Repository journal head:** `0061_estimate_number_nullable` (`drizzle/meta/_journal.json`).
+  Reconciled here from a stale `0056_job_lifecycle` head — see the `0060`/`0061` note below.
 - **Production `__drizzle_migrations` recorded head:** `0054`
   (55 tracker rows = migrations `0000`–`0054`; drizzle's row `id` is 1-based, so
   the highest `id` 55 corresponds to tag `0054`).
-- **`0055` and `0056` are already physically applied to production**
-  (verified: table `smsConversationLinks` and column `jobs.lifecycleState` exist),
-  but were **applied manually and are NOT recorded** in `__drizzle_migrations`.
-- **No tool may attempt to apply `0055` or `0056` again.** A fresh
-  `drizzle-kit migrate` would read the tracker, believe `0055`/`0056` are
-  unapplied, and re-run their `CREATE TABLE` → failure / partial application / damage.
+- **`0055`, `0056`, `0060`, and `0061` are already physically applied to production**
+  (verified: `smsConversationLinks`, `jobs.lifecycleState`, the estimate tables
+  `estimates`/`estimateOptions`/`estimateLineItems`, and `estimates.estimateNumber`
+  being NULLable all exist), but were **applied manually and are NOT recorded** in
+  `__drizzle_migrations`.
+- **`0057`–`0059` are permanent numbering gaps — they will never exist.** `0060`
+  claimed its number to dodge in-flight branches (`0057` = PR #71
+  `feature/dispatch-assign-m2`; `0058`–`0059` were reserved for opportunity work)
+  that never merged those numbers. Do **not** "backfill" them — the sequence is
+  intentionally non-contiguous. `drizzle-kit generate` numbers the next migration
+  off the journal's **max idx** (`0061` → next `0062`), so the gaps are skipped
+  automatically; never pre-allocate a number, let the merge assign it.
+- **`0060`/`0061` journal + snapshot reconciliation (this change):** both
+  `0060_tiered_estimates.sql` (estimate tables) and `0061_estimate_number_nullable.sql`
+  (`estimateNumber` → NULLable) were committed hand-authored with **no** `_journal.json`
+  entries and **no** meta snapshots, leaving `meta/0056_snapshot.json` as the latest.
+  Consequence: `drizzle-kit generate` re-emitted the estimate tables + the column
+  change as spurious DDL and mis-numbered the next migration `0057`. Fixed by adding
+  the `0060` and `0061` journal entries (`when` = each migration's authoring commit)
+  and regenerated `meta/0060_snapshot.json` + `meta/0061_snapshot.json` (schema
+  metadata only — **no production DB touch**). Verified offline: the regenerated
+  `0061` delta is byte-identical to `0061_estimate_number_nullable.sql`,
+  `drizzle-kit generate` reports "No schema changes", and the next migration numbers
+  `0062`.
+- **No tool may attempt to apply `0055`, `0056`, `0060`, or `0061` again.** A fresh
+  `drizzle-kit migrate` would read the tracker, believe they are unapplied, and
+  re-run their DDL → failure / partial application / damage.
 - **Production must be treated as hand-reconciled.**
 - **Live schema inspection is mandatory before planning any future migration.**
 
