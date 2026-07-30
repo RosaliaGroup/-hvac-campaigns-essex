@@ -195,7 +195,12 @@ async function main() {
     }
   }
 
-  console.log(JSON.stringify({ step: "summary", ...tally }, null, 2));
+  console.log("\n=== SKIPPED (quality gate) — these will NOT auto-push either ===");
+  if (!skippedList.length) console.log("  (none)");
+  for (const s of skippedList) console.log(`  ${s.origin} [${s.rule}] "${s.name ?? "(no name)"}" — ${s.reason}`);
+  console.log("  by rule: " + JSON.stringify(skippedByRule));
+
+  console.log("\n" + JSON.stringify({ step: "summary", ...tally }, null, 2));
   if (!EXECUTE) console.log("Dry-run only — nothing written. Re-run with --execute --yes-write-live-qbo to apply.");
 }
 
