@@ -40,6 +40,14 @@
   status = 200
   force = true
 
+# ── Terms of service: bare /terms always points at the newest version.
+# 302 (not 301) because the target moves when a new version publishes. ──
+[[redirects]]
+  from = "/terms"
+  to = "/terms/v1.0"
+  status = 302
+  force = true
+
 # ── 301 Redirects for old/renamed URLs (GSC redirect validation fixes) ──
 [[redirects]]
   from = "/blog/how-to-apply-pseg-rebate-nj"
