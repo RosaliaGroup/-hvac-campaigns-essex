@@ -16,6 +16,7 @@ import type { Express, Request, Response } from "express";
 import { getDb } from "../db";
 import { leadCaptures } from "../../drizzle/schema";
 import { notifyOwner } from "../_core/notification";
+import { enqueueLeadCustomerSync } from "./leadCustomerAutoSync";
 
 const META_API_VERSION = "v25.0";
 const META_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
@@ -165,6 +166,18 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
                 status: "new",
               });
               console.log(`[MetaLeadWebhook] Saved lead: ${fullName} (${email}, ${phone})`);
+
+              // Policy: every new lead becomes a QuickBooks customer. Fire-and-forget —
+              // never blocks or fails webhook processing (QBO errors are swallowed).
+              enqueueLeadCustomerSync({
+                name: fullName || null,
+                firstName: firstName ?? null,
+                lastName: lastName ?? null,
+                email: email ?? null,
+                phone: phone ?? null,
+                source: "web:meta_lead_ad",
+                origin: `meta_lead_ad:${leadgen_id}`,
+              });
             }
 
             // Notify owner about new lead

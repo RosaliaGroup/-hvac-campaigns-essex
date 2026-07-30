@@ -25,6 +25,7 @@ import {
 } from "../../drizzle/schema";
 import { normalizePhone, splitName, buildDisplayName, findCustomerIdByPhone } from "./customers";
 import { resolveConversationContext, matchByPhone } from "../services/conversationCrm";
+import { enqueueLeadCustomerSync } from "../services/leadCustomerAutoSync";
 
 async function requireDb() {
   const db = await getDb();
@@ -146,6 +147,16 @@ export const conversationCrmRouter = router({
       });
       const leadId = (res as { insertId: number }).insertId;
       await upsertLink(db, l10, { leadId }, actor(ctx));
+
+      // Policy: every new lead becomes a QuickBooks customer. Fire-and-forget —
+      // never blocks or fails Create-Lead (SMS leads always carry a phone).
+      enqueueLeadCustomerSync({
+        name: input.name?.trim() || null,
+        phone: input.phone,
+        source: "sms",
+        origin: "conversationCrm.quickCreateLead",
+      });
+
       return { success: true as const, leadId };
     }),
 
