@@ -1098,6 +1098,38 @@ function OptOutSetupTab() {
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Info className="h-5 w-5 text-[#1e3a5f]" />
+            Opt-out / opt-in confirmation replies
+          </CardTitle>
+          <CardDescription>
+            The one-time text a customer receives right after they opt out (STOP) or opt back in (START / UNSTOP). Per 10DLC, these keyword auto-responses are sent by Telnyx at the messaging-profile level — the app deliberately does NOT send them, so there is never a duplicate text.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+            <div className="flex items-center gap-2 font-semibold mb-1"><AlertTriangle className="h-4 w-4" /> Currently NOT configured (customers get no confirmation)</div>
+            <p>A live STOP → START test on 2026-07-30 produced <strong>no confirmation text</strong> in either direction, so the messaging profile's auto-responses appear unset. Until they are set, a customer who texts STOP or START receives <strong>silence</strong> (the opt-out is still honored — they simply get no acknowledgement). Sending an opt-out confirmation is a 10DLC best practice, so configure the two replies below.</p>
+          </div>
+          <div className="space-y-3">
+            <h3 className="font-semibold text-gray-800">Set these in Telnyx (portal.telnyx.com → Messaging → your Messaging Profile → Inbound settings / auto-response):</h3>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-700">Opt-out (STOP / UNSUBSCRIBE / QUIT / CANCEL / END) auto-reply:</p>
+              <code className="text-sm bg-white border rounded px-3 py-2 block text-gray-800 break-words">{"You've been unsubscribed. No more messages will be sent. Reply START to resubscribe."}</code>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-gray-700">Opt-in (START / UNSTOP) auto-reply:</p>
+              <code className="text-sm bg-white border rounded px-3 py-2 block text-gray-800 break-words">{"You're resubscribed to Mechanical Enterprise texts. Msg&data rates may apply. Reply STOP to opt out."}</code>
+            </div>
+          </div>
+          <div className="bg-blue-50 rounded-lg p-4 text-sm text-blue-700">
+            <p>Telnyx sends these automatically on the matching keyword — no code change or app deploy is needed once they are saved in the profile.</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
