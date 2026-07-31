@@ -18,7 +18,7 @@ import { eq, desc } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
 import { randomUUID } from "crypto";
 import { toE164, telnyxConfigured, sendTelnyxSms } from "../services/telnyxSms";
-import { isPhoneOptedOut } from "../services/smsOutbound";
+import { gateSmsRecipient, type SmsBlockedReason } from "../services/smsCompliance";
 
 async function requireDb() {
   const db = await getDb();
@@ -26,42 +26,33 @@ async function requireDb() {
   return db;
 }
 
-type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
-
 export type SmsGateResult =
   | { ok: true; to: string }
   | { ok: false; error: string };
 
+/** User-facing message for each blocked reason on the synchronous rebate endpoints. */
+const REBATE_BLOCK_MESSAGE: Record<SmsBlockedReason, string> = {
+  invalid_phone: "Invalid phone number",
+  opted_out: "This number has opted out of SMS (STOP).",
+  db_error: "SMS temporarily unavailable",
+};
+
 /**
- * SMS compliance gate for outbound rebate texts. Enforced in order:
- *   1. Strict E.164 validation (toE164): accept exactly 10 digits, or 11 digits
- *      starting with 1. Anything else is REJECTED outright — never cleaned,
- *      never padded.
- *   2. Opt-out suppression (isPhoneOptedOut): honors smsContacts.optedOut AND
- *      inbound STOP history. FAILS CLOSED — a null db or a lookup error is
- *      treated as "cannot verify" and blocks the send.
- *
- * Reuses the shared toE164 + isPhoneOptedOut so every SMS path behaves the same.
- * `isOptedOut` is injectable for testing; production callers omit it.
+ * Rebate-endpoint adapter over the shared SMS compliance gate. The policy
+ * (strict E.164 → opt-out, fail closed) lives in services/smsCompliance.ts; this
+ * only maps the blocked-reason discriminator back to the `{ ok, error }` shape
+ * the synchronous rebate callers return to the client. `isOptedOut` is
+ * injectable for testing.
  */
 export async function gateRebateSms(
   phone: string,
-  db: Db | null,
-  isOptedOut: (db: Db, phone: string) => Promise<boolean> = isPhoneOptedOut,
+  db: Parameters<typeof gateSmsRecipient>[1],
+  isOptedOut?: Parameters<typeof gateSmsRecipient>[2],
 ): Promise<SmsGateResult> {
-  const to = toE164(phone);
-  if (!to) return { ok: false, error: "Invalid phone number" };
-  // Fail closed: without a DB we cannot check opt-out status, so do not send.
-  if (!db) return { ok: false, error: "SMS temporarily unavailable" };
-  try {
-    if (await isOptedOut(db, to)) {
-      return { ok: false, error: "This number has opted out of SMS (STOP)." };
-    }
-  } catch {
-    // A failed opt-out lookup must NOT result in a send.
-    return { ok: false, error: "SMS temporarily unavailable" };
-  }
-  return { ok: true, to };
+  const res = isOptedOut
+    ? await gateSmsRecipient(phone, db, isOptedOut)
+    : await gateSmsRecipient(phone, db);
+  return res.ok ? { ok: true, to: res.to } : { ok: false, error: REBATE_BLOCK_MESSAGE[res.blocked] };
 }
 
 /**
