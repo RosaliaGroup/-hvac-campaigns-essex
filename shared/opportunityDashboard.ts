@@ -43,12 +43,20 @@ export const STAGE_DEFAULT_PROBABILITY: Record<OpportunityStage, number> = {
   pending: 50,
   won: 100,
   lost: 0,
-  // provisional (0062) — tune in A2:
+  // Provisional (0062) — these are BUSINESS inputs, not engineering ones. They feed
+  // weightedValue / forecast KPIs, they are inert today (nothing may write the new
+  // stages until A2), and provisional numbers become permanent by default. A2 MUST
+  // confirm them against ACTUAL close rates BEFORE surfacing any weightedValue /
+  // forecast figure to a user — otherwise we ship invented precision that reads as
+  // authoritative.
+  // Forward ramp (increasing likelihood of close):
   qualified: 15,
   assessment_scheduled: 25,
   assessment_completed: 35,
   sales_document_created: 40,
   negotiating: 60,
+  // Parking stage — NOT forward progress. A deal parked here is less likely to close
+  // than a freshly qualified one, so it sits at/below `qualified`, off the ramp.
   follow_up_later: 10,
 };
 
