@@ -14,7 +14,12 @@
 import type { WorkCategory } from "./opportunityCategory";
 import { deriveRelationship, type Relationship } from "./leadPipeline";
 
-export type OpportunityStage = "new" | "proposal_sent" | "pending" | "won" | "lost";
+// Mirrors the `opportunities.stage` DB enum (0062 appended the last 6). The
+// original 5 are unchanged; board column order lives in the UI, not here.
+export type OpportunityStage =
+  | "new" | "proposal_sent" | "pending" | "won" | "lost"
+  | "qualified" | "assessment_scheduled" | "assessment_completed"
+  | "sales_document_created" | "negotiating" | "follow_up_later";
 export type SalesDocStatus =
   | "pending" | "accepted" | "closed" | "rejected" | "expired"
   // Invoice statuses (documents can be invoices too); estimate-oriented logic
@@ -26,13 +31,33 @@ export type AgingBucket = "0-3" | "4-7" | "8-14" | "15+";
 export const OPEN_STAGES: OpportunityStage[] = ["new", "proposal_sent", "pending"];
 export const AGING_BUCKETS: AgingBucket[] = ["0-3", "4-7", "8-14", "15+"];
 
-/** Default win probability (%) per stage, used when a row has no explicit probability. */
+/**
+ * Default win probability (%) per stage, used when a row has no explicit probability.
+ * The original 5 are unchanged. The 6 values added in 0062 are PROVISIONAL funnel
+ * defaults — no opportunity can occupy a new stage until A2/B wires stage moves, so
+ * these are inert today; A2 should confirm/tune them before deals start landing there.
+ */
 export const STAGE_DEFAULT_PROBABILITY: Record<OpportunityStage, number> = {
   new: 10,
   proposal_sent: 30,
   pending: 50,
   won: 100,
   lost: 0,
+  // Provisional (0062) — these are BUSINESS inputs, not engineering ones. They feed
+  // weightedValue / forecast KPIs, they are inert today (nothing may write the new
+  // stages until A2), and provisional numbers become permanent by default. A2 MUST
+  // confirm them against ACTUAL close rates BEFORE surfacing any weightedValue /
+  // forecast figure to a user — otherwise we ship invented precision that reads as
+  // authoritative.
+  // Forward ramp (increasing likelihood of close):
+  qualified: 15,
+  assessment_scheduled: 25,
+  assessment_completed: 35,
+  sales_document_created: 40,
+  negotiating: 60,
+  // Parking stage — NOT forward progress. A deal parked here is less likely to close
+  // than a freshly qualified one, so it sits at/below `qualified`, off the ramp.
+  follow_up_later: 10,
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -281,12 +306,20 @@ export type SortKey =
   | "workCategory";
 export type SortDir = "asc" | "desc";
 
+// Sort key for "sort by stage". 0062 slots the 6 new stages into funnel position;
+// the original 5 keep their relative order (new < proposal_sent < pending < won < lost).
 const STAGE_ORDER: Record<OpportunityStage, number> = {
   new: 0,
-  proposal_sent: 1,
-  pending: 2,
-  won: 3,
-  lost: 4,
+  qualified: 1,
+  assessment_scheduled: 2,
+  assessment_completed: 3,
+  sales_document_created: 4,
+  proposal_sent: 5,
+  pending: 6,
+  negotiating: 7,
+  won: 8,
+  lost: 9,
+  follow_up_later: 10,
 };
 
 function sortValue(row: OpportunityRow, key: SortKey): number | string {
@@ -391,6 +424,12 @@ export function computeOverview(rows: OpportunityRow[], now: Date = new Date()):
     pending: 0,
     won: 0,
     lost: 0,
+    qualified: 0,
+    assessment_scheduled: 0,
+    assessment_completed: 0,
+    sales_document_created: 0,
+    negotiating: 0,
+    follow_up_later: 0,
   };
   const categoryTotals: Record<WorkCategory, number> = { residential: 0, commercial: 0, change_order: 0 };
   const agingBuckets: Record<AgingBucket, { count: number; amount: number }> = {
