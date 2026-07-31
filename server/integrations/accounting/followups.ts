@@ -21,6 +21,7 @@ import {
 } from "../../../drizzle/schema";
 import { sendEmail } from "../../services/emailService";
 import { sendTelnyxSms } from "../../services/telnyxSms";
+import { gateSmsRecipient, isTerminalBlock } from "../../services/smsCompliance";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -187,6 +188,9 @@ export interface DispatchResult {
   emailsSent: number;
   textsSent: number;
   textsSkippedGated: number;
+  /** Text tasks cancelled at dispatch because the recipient opted out or had no
+   *  valid number — terminal, never retried. */
+  textsSuppressed: number;
   failed: number;
 }
 
@@ -197,7 +201,7 @@ export interface DispatchResult {
  */
 export async function processDueFollowups(args: { now?: Date; db?: Db } = {}): Promise<DispatchResult> {
   const db = args.db ?? (await getDb());
-  const result: DispatchResult = { processed: 0, emailsSent: 0, textsSent: 0, textsSkippedGated: 0, failed: 0 };
+  const result: DispatchResult = { processed: 0, emailsSent: 0, textsSent: 0, textsSkippedGated: 0, textsSuppressed: 0, failed: 0 };
   if (!db) return result;
   const now = args.now ?? new Date();
   const smsEnabled = smsFollowupsEnabled();
@@ -205,6 +209,7 @@ export async function processDueFollowups(args: { now?: Date; db?: Db } = {}): P
   const due = await db
     .select({
       id: opportunityTasks.id,
+      opportunityId: opportunityTasks.opportunityId,
       type: opportunityTasks.type,
       title: opportunityTasks.title,
       body: opportunityTasks.body,
@@ -234,8 +239,36 @@ export async function processDueFollowups(args: { now?: Date; db?: Db } = {}): P
           await db.update(opportunityTasks).set({ status: "gated" }).where(eq(opportunityTasks.id, task.id));
           continue;
         }
-        if (!task.phone) throw new Error("No phone on customer");
-        const r = await sendTelnyxSms(task.phone, task.body ?? task.title);
+        // Opt-out gate at DISPATCH time — a STOP that arrives AFTER the task was
+        // queued is exactly the case that matters. Fails closed either way.
+        const gate = await gateSmsRecipient(task.phone ?? "", db);
+        if (!gate.ok) {
+          if (isTerminalBlock(gate.blocked)) {
+            // Terminal (opted out / invalid number): cancel so the task is NEVER
+            // retried, and record why. Without this, a suppressed recipient would
+            // be re-selected on every poll indefinitely.
+            await db
+              .update(opportunityTasks)
+              .set({ status: "cancelled", lastError: `SMS suppressed: ${gate.blocked}` })
+              .where(eq(opportunityTasks.id, task.id));
+            await db.insert(opportunityEvents).values({
+              opportunityId: task.opportunityId,
+              type: "followup_suppressed",
+              message:
+                gate.blocked === "opted_out"
+                  ? "Text follow-up cancelled — recipient has opted out of SMS (STOP)."
+                  : "Text follow-up cancelled — recipient has no valid phone number.",
+              metadata: { taskId: task.id, reason: gate.blocked },
+            });
+            result.textsSuppressed++;
+            continue;
+          }
+          // Transient (db_error): opt-out status could not be read. Leave the task
+          // "open" and surface it through the existing retry path (the catch
+          // below records lastError and the next poll retries).
+          throw new Error(`SMS opt-out check unavailable (${gate.blocked})`);
+        }
+        const r = await sendTelnyxSms(gate.to, task.body ?? task.title);
         if (!r.success) throw new Error(r.error ?? "SMS send failed");
         result.textsSent++;
       } else {
