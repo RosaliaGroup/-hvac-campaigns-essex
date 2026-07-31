@@ -15,7 +15,8 @@
 import { getDb } from "../db";
 import { smsContacts, smsInboxMessages } from "../../drizzle/schema";
 import { sendTelnyxSms, toE164 } from "./telnyxSms";
-import { and, eq, sql } from "drizzle-orm";
+import { classifyInbound } from "./smsReplyKeywords";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 type AnyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -66,9 +67,16 @@ export function inboxPhoneMatch(raw: string) {
 }
 
 /**
- * A number is opted out if a matching SMS contact is opted out OR the number
- * has sent an inbound STOP (isOptOut) — this honors STOP even from numbers that
- * were never saved as contacts, so we never text someone who opted out.
+ * A number's current opt-out state, honoring a STOP→START round-trip:
+ *
+ *  - If the number maps to a saved SMS contact, that contact's CURRENT `optedOut`
+ *    flag is AUTHORITATIVE — used exclusively. A later START clears the flag (via
+ *    the inbound webhook), so a leftover historical STOP row must NOT override it
+ *    (that was the bug behind the stuck "opted out" Inbox banner).
+ *  - Otherwise (no contact record) derive from the LAST opt-out-relevant inbound
+ *    message in thread order: the most recent STOP → opted out; a more recent
+ *    START → opted in. This still honors STOP from numbers never saved as contacts,
+ *    while respecting a subsequent opt-in.
  */
 export async function isPhoneOptedOut(db: AnyDb, phone: string): Promise<boolean> {
   if (last10(phone).length < 10) return false;
@@ -77,18 +85,23 @@ export async function isPhoneOptedOut(db: AnyDb, phone: string): Promise<boolean
     .from(smsContacts)
     .where(last10Sql(smsContacts.phone, phone))
     .limit(1);
-  if (contact[0]?.optedOut === true) return true;
+  // Saved contact is the single source of truth for opt-out — do NOT fall through
+  // to historical STOP rows, or a STOP→START re-subscribe would never take effect.
+  if (contact.length > 0) return contact[0].optedOut === true;
 
-  const stop = await db
-    .select({ id: smsInboxMessages.id })
+  // No contact: walk inbound messages newest-first; the first STOP/START wins.
+  const rows = await db
+    .select({ message: smsInboxMessages.message, isOptOut: smsInboxMessages.isOptOut })
     .from(smsInboxMessages)
-    .where(and(
-      eq(smsInboxMessages.direction, "inbound"),
-      eq(smsInboxMessages.isOptOut, true),
-      inboxPhoneMatch(phone),
-    ))
-    .limit(1);
-  return stop.length > 0;
+    .where(and(eq(smsInboxMessages.direction, "inbound"), inboxPhoneMatch(phone)))
+    .orderBy(desc(smsInboxMessages.createdAt), desc(smsInboxMessages.id))
+    .limit(50);
+  for (const r of rows) {
+    const intent = r.isOptOut ? "stop" : classifyInbound(r.message as string);
+    if (intent === "stop") return true;
+    if (intent === "start") return false;
+  }
+  return false;
 }
 
 export interface RecordOutboundArgs {

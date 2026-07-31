@@ -141,11 +141,27 @@ describe("isPhoneOptedOut", () => {
     const db = makeFakeDb([[{ optedOut: true }]]);
     expect(await isPhoneOptedOut(db, "+17189383793")).toBe(true);
   });
-  it("true when the number sent an inbound STOP (even if not a contact)", async () => {
-    const db = makeFakeDb([[], [{ id: 1 }]]); // no contact, but a STOP row exists
+  it("a saved contact is authoritative: optedOut=false → NOT opted out, even with a historical STOP row (STOP→START re-subscribe)", async () => {
+    // The bug: banner stayed 'opted out' after STOP→START because a leftover STOP
+    // row overrode the contact flag. Now the contact's current flag wins outright —
+    // we don't even query inbox history when a contact exists.
+    const db = makeFakeDb([[{ optedOut: false }]]);
+    expect(await isPhoneOptedOut(db, "+17189383793")).toBe(false);
+  });
+  it("no contact, latest inbound is STOP → opted out", async () => {
+    const db = makeFakeDb([[], [{ isOptOut: true, message: "Stop" }]]); // no contact; a STOP, no later START
     expect(await isPhoneOptedOut(db, "+17189383793")).toBe(true);
   });
-  it("false when neither a contact opt-out nor a STOP exists", async () => {
+  it("no contact, STOP then START (START most recent) → opted IN", async () => {
+    // rows returned newest-first: START is newer than STOP → re-subscribed.
+    const db = makeFakeDb([[], [{ isOptOut: false, message: "Start" }, { isOptOut: true, message: "Stop" }]]);
+    expect(await isPhoneOptedOut(db, "+17189383793")).toBe(false);
+  });
+  it("no contact, START then STOP (STOP most recent) → opted out", async () => {
+    const db = makeFakeDb([[], [{ isOptOut: true, message: "Stop" }, { isOptOut: false, message: "Start" }]]);
+    expect(await isPhoneOptedOut(db, "+17189383793")).toBe(true);
+  });
+  it("false when neither a contact nor any STOP/START exists", async () => {
     const db = makeFakeDb([[], []]);
     expect(await isPhoneOptedOut(db, "+17189383793")).toBe(false);
   });
