@@ -1,232 +1,118 @@
 /**
- * Unit tests for the sendResultsSms procedure in the Rebate Calculator router.
+ * SMS compliance tests for the Rebate Calculator router.
  *
- * Tests cover phone number normalization, message formatting, and the
- * Telnyx API call behavior (mocked to avoid real network requests).
+ * These exercise the REAL gate (`gateRebateSms`) and the REAL opt-out lookup
+ * (`isPhoneOptedOut`) — not local mirrors — so they stay honest if the server
+ * logic changes. The gate is the single choke point both `sendResultsSms` and
+ * `register` route their Telnyx sends through.
+ *
+ * Guarantees under test:
+ *   • Strict E.164: malformed lengths (7, 9, 12 digits) are rejected — never
+ *     cleaned or padded — and no opt-out query is even attempted.
+ *   • A number with smsContacts.optedOut = true is not sent to.
+ *   • A number with an inbound STOP (isOptOut) is not sent to.
+ *   • A DB error (or a null DB) fails CLOSED: no send.
+ *   • A valid, un-opted-out number passes and yields the E.164 recipient.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import "./testEnvSetup"; // MUST be first
+import { describe, it, expect } from "vitest";
+import { MySqlDialect } from "drizzle-orm/mysql-core";
+import type { SQL } from "drizzle-orm";
 
-// ─── Phone number normalization (mirrors server logic) ─────────────────────────
+import { gateRebateSms } from "./routers/rebateCalculator";
+import { isPhoneOptedOut } from "./services/smsOutbound";
 
-function normalizePhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  return digits.startsWith("1") ? `+${digits}` : `+1${digits}`;
+// ─── Lightweight fake Drizzle db (mirrors services/smsOutbound.test.ts) ──────
+// isPhoneOptedOut runs up to two selects: (1) smsContacts opt-out, (2) inbound
+// STOP. Each `.limit()` resolves the next queued result set.
+const dialect = new MySqlDialect();
+function makeFakeDb(selects: unknown[][] = []) {
+  const queue = [...selects];
+  const cap = (w: SQL) => { try { dialect.sqlToQuery(w); } catch { /* non-SQL */ } };
+  const db = {
+    select() {
+      const chain = {
+        from: () => chain,
+        where: (w: SQL) => { cap(w); return chain; },
+        orderBy: () => chain,
+        limit: () => Promise.resolve(queue.shift() ?? []),
+      };
+      return chain;
+    },
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return db as any;
 }
 
-// ─── SMS message builder (mirrors server logic) ────────────────────────────────
-
-function buildSmsMessage(params: {
-  firstName: string;
-  selectedOption: "high_efficiency" | "standard";
-  totalRebates: number;
-  outOfPocket: number;
-}): string {
-  const { firstName, selectedOption, totalRebates, outOfPocket } = params;
-  const optionLabel = selectedOption === "high_efficiency" ? "High-Efficiency" : "Standard";
-  const rebateFormatted = `$${totalRebates.toLocaleString()}`;
-  const oopFormatted =
-    outOfPocket === 0 ? "$0 out of pocket" : `$${outOfPocket.toLocaleString()} out of pocket`;
-
-  return [
-    `Hi ${firstName}! Here are your NJ Clean Heat rebate results from Mechanical Enterprise:`,
-    ``,
-    `✅ ${optionLabel} Heat Pump`,
-    `💰 Total Rebates: ${rebateFormatted}`,
-    `🏠 Your Cost: ${oopFormatted}`,
-    ``,
-    `Ready to lock in your rebate? Book your FREE assessment:`,
-    `https://mechanicalenterprise.com`,
-    ``,
-    `Questions? Call us: (862) 423-9396`,
-    `Reply STOP to opt out.`,
-  ].join("\n");
+// A db that throws the moment it is queried — proves fail-closed on DB error,
+// and (for malformed numbers) proves the opt-out query is never reached.
+function throwingDb() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { select() { throw new Error("db down"); } } as any;
 }
 
-// ─── Tests ─────────────────────────────────────────────────────────────────────
+const VALID_10 = "8624239396"; // → +18624239396
 
-describe("sendResultsSms — phone number normalization", () => {
-  it("normalizes a 10-digit number to E.164", () => {
-    expect(normalizePhone("8624239396")).toBe("+18624239396");
+describe("gateRebateSms — strict E.164 validation", () => {
+  it("rejects a 7-digit number without cleaning or padding", async () => {
+    const res = await gateRebateSms("1234567", throwingDb());
+    expect(res).toEqual({ ok: false, error: "Invalid phone number" });
   });
 
-  it("normalizes a formatted number (dashes) to E.164", () => {
-    expect(normalizePhone("862-423-9396")).toBe("+18624239396");
+  it("rejects a 9-digit number", async () => {
+    const res = await gateRebateSms("123456789", throwingDb());
+    expect(res).toEqual({ ok: false, error: "Invalid phone number" });
   });
 
-  it("normalizes a formatted number (parens + spaces) to E.164", () => {
-    expect(normalizePhone("(862) 423-9396")).toBe("+18624239396");
+  it("rejects a 12-digit number", async () => {
+    const res = await gateRebateSms("123456789012", throwingDb());
+    expect(res).toEqual({ ok: false, error: "Invalid phone number" });
   });
 
-  it("does not double-prefix a number that already starts with 1", () => {
-    expect(normalizePhone("18624239396")).toBe("+18624239396");
+  it("rejects an 11-digit number that does not start with 1", async () => {
+    const res = await gateRebateSms("28624239396", throwingDb());
+    expect(res).toEqual({ ok: false, error: "Invalid phone number" });
   });
 
-  it("does not double-prefix a number in E.164 format", () => {
-    // strip the + before passing to normalizePhone (as the server does with replace(/\D/g,''))
-    expect(normalizePhone("+18624239396".replace(/\D/g, ""))).toBe("+18624239396");
-  });
-});
-
-describe("sendResultsSms — message content", () => {
-  it("includes homeowner first name", () => {
-    const msg = buildSmsMessage({
-      firstName: "Maria",
-      selectedOption: "high_efficiency",
-      totalRebates: 16000,
-      outOfPocket: 0,
-    });
-    expect(msg).toContain("Hi Maria!");
-  });
-
-  it("shows High-Efficiency label for high_efficiency option", () => {
-    const msg = buildSmsMessage({
-      firstName: "John",
-      selectedOption: "high_efficiency",
-      totalRebates: 14000,
-      outOfPocket: 0,
-    });
-    expect(msg).toContain("High-Efficiency Heat Pump");
-  });
-
-  it("shows Standard label for standard option", () => {
-    const msg = buildSmsMessage({
-      firstName: "John",
-      selectedOption: "standard",
-      totalRebates: 0,
-      outOfPocket: 8500,
-    });
-    expect(msg).toContain("Standard Heat Pump");
-  });
-
-  it("formats total rebates as currency", () => {
-    const msg = buildSmsMessage({
-      firstName: "Ana",
-      selectedOption: "high_efficiency",
-      totalRebates: 16000,
-      outOfPocket: 0,
-    });
-    expect(msg).toContain("$16,000");
-  });
-
-  it("shows $0 out of pocket when outOfPocket is 0", () => {
-    const msg = buildSmsMessage({
-      firstName: "Ana",
-      selectedOption: "high_efficiency",
-      totalRebates: 16000,
-      outOfPocket: 0,
-    });
-    expect(msg).toContain("$0 out of pocket");
-  });
-
-  it("shows dollar amount when outOfPocket > 0", () => {
-    const msg = buildSmsMessage({
-      firstName: "Bob",
-      selectedOption: "standard",
-      totalRebates: 0,
-      outOfPocket: 8500,
-    });
-    expect(msg).toContain("$8,500 out of pocket");
-  });
-
-  it("includes the booking URL", () => {
-    const msg = buildSmsMessage({
-      firstName: "Ana",
-      selectedOption: "high_efficiency",
-      totalRebates: 16000,
-      outOfPocket: 0,
-    });
-    expect(msg).toContain("https://mechanicalenterprise.com");
-  });
-
-  it("includes the opt-out instruction", () => {
-    const msg = buildSmsMessage({
-      firstName: "Ana",
-      selectedOption: "high_efficiency",
-      totalRebates: 16000,
-      outOfPocket: 0,
-    });
-    expect(msg).toContain("Reply STOP to opt out.");
-  });
-
-  it("includes the company phone number", () => {
-    const msg = buildSmsMessage({
-      firstName: "Ana",
-      selectedOption: "high_efficiency",
-      totalRebates: 16000,
-      outOfPocket: 0,
-    });
-    expect(msg).toContain("(862) 423-9396");
-  });
-});
-
-describe("sendResultsSms — Telnyx API call (mocked)", () => {
-  const originalFetch = global.fetch;
-
-  beforeEach(() => {
-    process.env.TELNYX_API_KEY = "KEY_test_mock";
-    process.env.TELNYX_FROM_NUMBER = "+18621234567";
-  });
-
-  afterEach(() => {
-    global.fetch = originalFetch;
-    delete process.env.TELNYX_API_KEY;
-    delete process.env.TELNYX_FROM_NUMBER;
-  });
-
-  it("calls Telnyx API with correct payload", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ data: { id: "msg_123" } }),
-    });
-    global.fetch = mockFetch as unknown as typeof fetch;
-
-    const phone = "8624239396";
-    const toNumber = normalizePhone(phone);
-    const message = buildSmsMessage({
-      firstName: "Ana",
-      selectedOption: "high_efficiency",
-      totalRebates: 16000,
-      outOfPocket: 0,
-    });
-
-    await fetch("https://api.telnyx.com/v2/messages", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: process.env.TELNYX_FROM_NUMBER,
-        to: toNumber,
-        text: message,
-      }),
-    });
-
-    expect(mockFetch).toHaveBeenCalledOnce();
-    const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toBe("https://api.telnyx.com/v2/messages");
-    expect(options.method).toBe("POST");
-
-    const body = JSON.parse(options.body);
-    expect(body.to).toBe("+18624239396");
-    expect(body.from).toBe("+18621234567");
-    expect(body.text).toContain("Ana");
-    expect(body.text).toContain("$16,000");
-  });
-
-  it("returns success: false when API returns non-200", async () => {
-    const mockFetch = vi.fn().mockResolvedValue({
+  it("does not consult the DB for a malformed number (validation is first)", async () => {
+    // throwingDb() would throw if queried; getting the invalid-phone error
+    // instead of a thrown error proves toE164 gates before any opt-out lookup.
+    await expect(gateRebateSms("1234567", throwingDb())).resolves.toEqual({
       ok: false,
-      text: async () => "Unauthorized",
+      error: "Invalid phone number",
     });
-    global.fetch = mockFetch as unknown as typeof fetch;
+  });
+});
 
-    const response = await fetch("https://api.telnyx.com/v2/messages", {
-      method: "POST",
-      headers: { Authorization: "Bearer bad_key", "Content-Type": "application/json" },
-      body: JSON.stringify({ from: "+1000", to: "+1111", text: "test" }),
-    });
+describe("gateRebateSms — opt-out suppression (real isPhoneOptedOut)", () => {
+  it("does not send to a number with smsContacts.optedOut = true", async () => {
+    const db = makeFakeDb([[{ optedOut: true }]]);
+    const res = await gateRebateSms(VALID_10, db, isPhoneOptedOut);
+    expect(res).toEqual({ ok: false, error: "This number has opted out of SMS (STOP)." });
+  });
 
-    expect(response.ok).toBe(false);
+  it("does not send to a number with an inbound STOP", async () => {
+    // contacts lookup empty → STOP lookup returns a row.
+    const db = makeFakeDb([[], [{ id: 1 }]]);
+    const res = await gateRebateSms(VALID_10, db, isPhoneOptedOut);
+    expect(res).toEqual({ ok: false, error: "This number has opted out of SMS (STOP)." });
+  });
+
+  it("passes a valid, un-opted-out number and returns the E.164 recipient", async () => {
+    const db = makeFakeDb([[], []]); // not a contact, no STOP
+    const res = await gateRebateSms(VALID_10, db, isPhoneOptedOut);
+    expect(res).toEqual({ ok: true, to: "+18624239396" });
+  });
+});
+
+describe("gateRebateSms — fail closed", () => {
+  it("does not send when the opt-out lookup throws (DB error)", async () => {
+    const res = await gateRebateSms(VALID_10, throwingDb(), isPhoneOptedOut);
+    expect(res).toEqual({ ok: false, error: "SMS temporarily unavailable" });
+  });
+
+  it("does not send when the DB is unavailable (null)", async () => {
+    const res = await gateRebateSms(VALID_10, null);
+    expect(res).toEqual({ ok: false, error: "SMS temporarily unavailable" });
   });
 });
