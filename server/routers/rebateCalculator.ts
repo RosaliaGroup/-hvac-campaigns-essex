@@ -17,11 +17,51 @@ import { rebateCalculations, calculatorRegistrations } from "../../drizzle/schem
 import { eq, desc } from "drizzle-orm";
 import { notifyOwner } from "../_core/notification";
 import { randomUUID } from "crypto";
+import { toE164, telnyxConfigured, sendTelnyxSms } from "../services/telnyxSms";
+import { isPhoneOptedOut } from "../services/smsOutbound";
 
 async function requireDb() {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
   return db;
+}
+
+type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
+
+export type SmsGateResult =
+  | { ok: true; to: string }
+  | { ok: false; error: string };
+
+/**
+ * SMS compliance gate for outbound rebate texts. Enforced in order:
+ *   1. Strict E.164 validation (toE164): accept exactly 10 digits, or 11 digits
+ *      starting with 1. Anything else is REJECTED outright — never cleaned,
+ *      never padded.
+ *   2. Opt-out suppression (isPhoneOptedOut): honors smsContacts.optedOut AND
+ *      inbound STOP history. FAILS CLOSED — a null db or a lookup error is
+ *      treated as "cannot verify" and blocks the send.
+ *
+ * Reuses the shared toE164 + isPhoneOptedOut so every SMS path behaves the same.
+ * `isOptedOut` is injectable for testing; production callers omit it.
+ */
+export async function gateRebateSms(
+  phone: string,
+  db: Db | null,
+  isOptedOut: (db: Db, phone: string) => Promise<boolean> = isPhoneOptedOut,
+): Promise<SmsGateResult> {
+  const to = toE164(phone);
+  if (!to) return { ok: false, error: "Invalid phone number" };
+  // Fail closed: without a DB we cannot check opt-out status, so do not send.
+  if (!db) return { ok: false, error: "SMS temporarily unavailable" };
+  try {
+    if (await isOptedOut(db, to)) {
+      return { ok: false, error: "This number has opted out of SMS (STOP)." };
+    }
+  } catch {
+    // A failed opt-out lookup must NOT result in a send.
+    return { ok: false, error: "SMS temporarily unavailable" };
+  }
+  return { ok: true, to };
 }
 
 /**
@@ -573,17 +613,18 @@ export const rebateCalculatorRouter = router({
         { bucket: "rebate.sms.phone", key: phoneKey(input.phone), max: SMS_LIMIT_PER_PHONE_HOUR, windowMs: HOUR_MS },
         { bucket: "rebate.sms.ip", key: getClientIp(ctx), max: SMS_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
       ]);
-      const telnyxApiKey = process.env.TELNYX_API_KEY;
-      const fromNumber = process.env.TELNYX_FROM_NUMBER;
-
-      if (!telnyxApiKey || !fromNumber) {
+      if (!telnyxConfigured()) {
         console.error("Telnyx credentials not configured");
         return { success: false, error: "SMS service not configured" };
       }
 
-      // Normalize phone: strip non-digits, ensure E.164 format
-      const digits = input.phone.replace(/\D/g, "");
-      const toNumber = digits.startsWith("1") ? `+${digits}` : `+1${digits}`;
+      // Strict E.164 validation + opt-out gate (fails closed). A malformed
+      // number is rejected here and nothing is sent.
+      const gate = await gateRebateSms(input.phone, await getDb());
+      if (!gate.ok) {
+        return { success: false, error: gate.error };
+      }
+      const toNumber = gate.to;
 
       const optionLabel = input.selectedOption === "high_efficiency" ? "High-Efficiency" : "Standard";
       const rebateFormatted = `$${input.totalRebates.toLocaleString()}`;
@@ -603,31 +644,12 @@ export const rebateCalculatorRouter = router({
         `Reply STOP to opt out.`,
       ].join("\n");
 
-      try {
-        const response = await fetch("https://api.telnyx.com/v2/messages", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${telnyxApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromNumber,
-            to: toNumber,
-            text: message,
-          }),
-        });
-
-        if (!response.ok) {
-          const err = await response.text();
-          console.error("Telnyx SMS error:", err);
-          return { success: false, error: "Failed to send SMS" };
-        }
-
-        return { success: true };
-      } catch (err) {
-        console.error("Telnyx fetch error:", err);
-        return { success: false, error: "Network error sending SMS" };
+      const result = await sendTelnyxSms(toNumber, message);
+      if (!result.success) {
+        console.error("Telnyx SMS error:", result.error);
+        return { success: false, error: "Failed to send SMS" };
       }
+      return { success: true };
     }),
 
   /**
@@ -655,9 +677,11 @@ export const rebateCalculatorRouter = router({
       ]);
       const db = await requireDb();
 
-      // Normalize phone to E.164
-      const digits = input.phone.replace(/\D/g, "");
-      const phone = digits.startsWith("1") ? `+${digits}` : `+1${digits}`;
+      // Strict E.164 (no cleaning/padding). Store the validated form when the
+      // number is usable; otherwise store the raw input rather than fabricating
+      // a "+1" prefix. An unusable number simply receives no SMS (gated below).
+      const e164Phone = toE164(input.phone);
+      const phone = e164Phone ?? input.phone;
 
       // Generate a unique token valid for 30 days
       const token = randomUUID().replace(/-/g, "");
@@ -686,11 +710,12 @@ export const rebateCalculatorRouter = router({
       let smsSent = false;
       let emailSent = false;
 
-      // Send SMS via Telnyx
-      const telnyxApiKey = process.env.TELNYX_API_KEY;
-      const fromNumber = process.env.TELNYX_FROM_NUMBER;
-      if (telnyxApiKey && fromNumber) {
-        try {
+      // Send SMS via Telnyx — E.164-validated + opt-out-gated (fails closed).
+      // Registration + email still proceed if the number is unusable/opted out;
+      // only the SMS is suppressed.
+      if (telnyxConfigured()) {
+        const gate = await gateRebateSms(input.phone, db);
+        if (gate.ok) {
           const smsBody = [
             `Hi ${input.firstName}! Your NJ Clean Heat Rebate Calculator is ready.`,
             ``,
@@ -701,17 +726,10 @@ export const rebateCalculatorRouter = router({
             `Reply STOP to opt out.`,
           ].join("\n");
 
-          const smsRes = await fetch("https://api.telnyx.com/v2/messages", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${telnyxApiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ from: fromNumber, to: phone, text: smsBody }),
-          });
-          smsSent = smsRes.ok;
-        } catch (e) {
-          console.error("Registration SMS error:", e);
+          const result = await sendTelnyxSms(gate.to, smsBody);
+          smsSent = result.success;
+        } else {
+          console.warn(`[rebate.register] SMS skipped: ${gate.error}`);
         }
       }
 
