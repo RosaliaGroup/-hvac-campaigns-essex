@@ -1,4 +1,4 @@
-import { boolean, decimal, index, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, index, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1708,7 +1708,18 @@ export const opportunities = mysqlTable(
     title: varchar("title", { length: 255 }).notNull(),
     /** Where the opportunity originated, e.g. "quickbooks". */
     source: varchar("source", { length: 64 }).default("quickbooks").notNull(),
-    stage: mysqlEnum("stage", ["new", "proposal_sent", "pending", "won", "lost"]).default("new").notNull(),
+    /**
+     * Pipeline stage. The original 5 values are UNCHANGED and in place; the 6
+     * appended values (0062) extend the board to the 11-stage rescope model.
+     * APPEND-ONLY on purpose — reordering an enum forces a full-table rebuild,
+     * whereas appending is an in-place ALTER. Board column display order lives in
+     * the UI (PipelineBoard), not in this value order.
+     */
+    stage: mysqlEnum("stage", [
+      "new", "proposal_sent", "pending", "won", "lost",
+      "qualified", "assessment_scheduled", "assessment_completed",
+      "sales_document_created", "negotiating", "follow_up_later",
+    ]).default("new").notNull(),
     /**
      * CRM Opportunity Value (editable). Defaults to the backing QBO document's
      * totalAmount via sync, but is the field a salesperson may override.
@@ -1752,6 +1763,44 @@ export const opportunities = mysqlTable(
      */
     sourceLeadCaptureId: int("sourceLeadCaptureId"),
     assignedToId: int("assignedToId"),
+    /**
+     * Sales urgency, independent of stage/probability. Null = unset (UI may treat
+     * as "medium"). Manual field; the QBO sync never sets or clears it. (0062)
+     */
+    priority: mysqlEnum("priority", ["low", "medium", "high", "urgent"]),
+    /**
+     * Forecast/target close date the salesperson commits to — distinct from
+     * `closedAt` (the ACTUAL won/lost stamp). Stored as DATE (no time / no
+     * timezone) so a committed close date renders identically in every zone;
+     * a `timestamp` would TZ-shift on read. Null until set. (0062)
+     */
+    expectedCloseAt: date("expectedCloseAt"),
+    /**
+     * Forecast deal value for pipeline reporting — distinct from `amount`, which
+     * mirrors the backing QBO document total. Manual field; QBO sync never writes
+     * it. Null until set. (0062)
+     */
+    expectedRevenue: decimal("expectedRevenue", { precision: 12, scale: 2 }),
+    /**
+     * The technician expected to perform the work (teamMembers.id). Distinct from
+     * `assignedToId`, which is the salesperson who owns the deal. Null until
+     * assigned. No DB-level FK, per repo convention. (0062)
+     */
+    assignedTechnicianId: int("assignedTechnicianId"),
+    /**
+     * Manual ordering rank WITHIN a stage column for the Kanban board (lower =
+     * higher up). Defaults to 0 so pre-0062 rows fall back to the createdAt
+     * tiebreak; a reorder assigns a dense 0..N-1 sequence per stage. Not a global
+     * order — only meaningful relative to same-stage cards. (0062)
+     */
+    sortOrder: int("sortOrder").default(0).notNull(),
+    /**
+     * Optional link to the specific service property this deal concerns
+     * (properties.id). App-enforced to belong to `customerId`; the UI never
+     * overwrites the property row, only references it. Null = customer-level /
+     * unspecified (the historical behaviour). No DB-level FK, per repo convention. (0062)
+     */
+    propertyId: int("propertyId"),
     closedAt: timestamp("closedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1760,6 +1809,8 @@ export const opportunities = mysqlTable(
     customerIdx: index("opportunities_customerId_idx").on(table.customerId),
     stageIdx: index("opportunities_stage_idx").on(table.stage),
     projectRefIdx: index("opportunities_projectReference_idx").on(table.projectReference),
+    // Board reads: cards grouped by stage, ordered by intra-stage rank. (0062)
+    stageSortIdx: index("opportunities_stage_sortOrder_idx").on(table.stage, table.sortOrder),
   }),
 );
 export type Opportunity = typeof opportunities.$inferSelect;
@@ -1858,6 +1909,12 @@ export const opportunityEvents = mysqlTable(
     type: varchar("type", { length: 64 }).notNull(),
     message: text("message"),
     metadata: json("metadata"),
+    /**
+     * The staff user who performed the action (users.id / teamMembers.id — same
+     * id space as `ctx.user.id`). Null for system/sync-originated events (e.g.
+     * QuickBooks-driven stage changes) and for pre-0062 rows. (0062)
+     */
+    actorId: int("actorId"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => ({

@@ -46,7 +46,15 @@ import {
   type OpportunityRow,
 } from "@shared/opportunityDashboard";
 
-const STAGE_ENUM = ["new", "proposal_sent", "pending", "won", "lost"] as const;
+// Mirrors the `opportunities.stage` DB enum (0062 appended the last 6). Drives the
+// list-filter and setStage Zod validators; the tRPC client stage types infer from here.
+const STAGE_ENUM = [
+  "new", "proposal_sent", "pending", "won", "lost",
+  "qualified", "assessment_scheduled", "assessment_completed",
+  "sales_document_created", "negotiating", "follow_up_later",
+] as const;
+// NOTE: which of the 6 new stages count as "open" is A2 board-logic — deliberately
+// left as the original 3 here; no opportunity can occupy a new stage until A2/B.
 const OPEN_STAGES = ["new", "proposal_sent", "pending"] as const;
 const DOC_STATUS_ENUM = ["pending", "accepted", "closed", "rejected", "expired"] as const;
 const WORK_CATEGORY_ENUM = ["residential", "commercial", "change_order"] as const;
