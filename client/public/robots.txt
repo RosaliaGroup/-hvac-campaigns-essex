@@ -38,5 +38,6 @@ Disallow: /analytics
 Disallow: /takeoff-ai
 Disallow: /presentation-2026
 Disallow: /.netlify/
+Disallow: /terms/
 
 Sitemap: https://mechanicalenterprise.com/sitemap.xml

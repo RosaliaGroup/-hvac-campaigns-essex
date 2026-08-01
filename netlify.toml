@@ -48,6 +48,14 @@
   status = 302
   force = true
 
+# The terms page is UNLISTED: publicly reachable via a direct proposal link,
+# but kept out of search indexes. Belt-and-suspenders with the page's noindex
+# meta tag, robots.txt Disallow: /terms/, and its absence from sitemap.xml.
+[[headers]]
+  for = "/terms/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
 # ── 301 Redirects for old/renamed URLs (GSC redirect validation fixes) ──
 [[redirects]]
   from = "/blog/how-to-apply-pseg-rebate-nj"
