@@ -3,7 +3,7 @@ import { LEAD_STAGE_ENUM, buildLeadCapturePatch, deriveContactRelationship } fro
 import { extractAttribution } from "@shared/attribution";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router, mergeRouters } from "./_core/trpc";
 import { enforceRateLimit, getClientIp, HOUR_MS } from "./_core/rateLimit";
 import { z } from "zod";
 import * as db from "./db";
@@ -34,6 +34,7 @@ import { dispatchAuditRouter } from "./routers/dispatchAudit";
 import { dispatchRouter } from "./routers/dispatch";
 import { quickbooksRouter } from "./routers/quickbooks";
 import { opportunitiesRouter } from "./routers/opportunities";
+import { commercialOpportunitiesRouter } from "./routers/commercialOpportunities";
 import { estimatesRouter } from "./routers/estimates";
 import { seoRouter } from "./routers/seo";
 import { attributionRouter } from "./routers/attribution";
@@ -93,7 +94,8 @@ export const appRouter = router({
   dispatchAudit: dispatchAuditRouter,
   dispatch: dispatchRouter,
   quickbooks: quickbooksRouter,
-  opportunities: opportunitiesRouter,
+  // Commercial Opportunities (P2) extend the same system, nested under `commercial`.
+  opportunities: mergeRouters(opportunitiesRouter, router({ commercial: commercialOpportunitiesRouter })),
   estimates: estimatesRouter,
   seo: seoRouter,
   attribution: attributionRouter,

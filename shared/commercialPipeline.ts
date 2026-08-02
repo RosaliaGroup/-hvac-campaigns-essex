@@ -14,7 +14,10 @@
  * `opportunityStages`, legacy QBO records keep using `stage`.
  */
 
-export type StageClassification = "open" | "won" | "lost";
+// Includes "parked" so the type matches opportunityStages.classification (aligned
+// to A2's stageMeta, where follow_up_later = parked). Commercial stages use only
+// open/won/lost; statusForClassification maps parked → open.
+export type StageClassification = "open" | "won" | "lost" | "parked";
 
 export interface PipelineStageSeed {
   /** Stable internal key — the behavioral identity of the stage. */

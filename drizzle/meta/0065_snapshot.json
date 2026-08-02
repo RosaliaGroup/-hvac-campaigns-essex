@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "d4f6639c-9a1f-4a38-b0a6-1370899411f3",
+  "id": "c25ccb88-e70a-4765-9a31-2796fcd9c50a",
   "prevId": "eb61c87c-0f94-4ae7-8792-017be6141234",
   "tables": {
     "aiScripts": {
@@ -6263,6 +6263,13 @@
         "stageId": {
           "name": "stageId",
           "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false

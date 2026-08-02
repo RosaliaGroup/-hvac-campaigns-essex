@@ -1843,6 +1843,8 @@ export const opportunities = mysqlTable(
      * Backfilled non-null for every existing row by 0065. No DB-level FK, per repo convention.
      */
     stageId: int("stageId"),
+    /** Long-form description / scope notes. Added by P2 (main had none). */
+    description: text("description"),
     /**
      * Which module/pipeline owns the record — the isolation discriminator the
      * commercial router filters every query by (assertCommercial). Existing rows

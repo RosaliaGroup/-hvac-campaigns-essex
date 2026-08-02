@@ -100,6 +100,7 @@ CREATE TABLE `opportunityStages` (
 );
 --> statement-breakpoint
 ALTER TABLE `opportunities` ADD `stageId` int;--> statement-breakpoint
+ALTER TABLE `opportunities` ADD `description` text;--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `recordType` enum('qbo_residential','commercial','residential','maintenance','service_contract') DEFAULT 'qbo_residential' NOT NULL;--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `status` enum('open','awarded','lost','on_hold','cancelled');--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `opportunityType` enum('commercial','residential','public_work','decarbonization','direct_replacement','new_construction','service_contract','preventive_maintenance','other');--> statement-breakpoint
