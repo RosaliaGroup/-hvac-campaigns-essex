@@ -26,6 +26,7 @@ import { buildDisplayName, normalizePhone, splitName } from "../../routers/custo
 import { deriveWorkCategory, extractSalesDocSignals } from "../../../shared/opportunityCategory";
 import type { WorkCategory } from "../../../shared/opportunityCategory";
 import { quickbooksProvider, writeSyncLog } from "./quickbooks";
+import { isClosedStage } from "@shared/opportunityDashboard";
 import {
   buildContactFromEstimate,
   buildCustomerEstimateQuery,
@@ -484,7 +485,7 @@ async function upsertOpportunity(
   },
 ): Promise<{ id: number; created: boolean; stageChanged: boolean }> {
   const stage = mapDocStatusToStage(args.status, args.sentAt);
-  const isClosed = stage === "won" || stage === "lost";
+  const isClosed = isClosedStage(stage);
 
   if (args.existingOpportunityId) {
     const prev = (

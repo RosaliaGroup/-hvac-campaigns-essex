@@ -7,11 +7,10 @@ import {
   ErrorBanner, DashboardSkeleton,
   fmtMoney, fmtPct, monthShort, type ExecFilters, type DrillTarget,
 } from "./execShared";
+import { OPEN_STAGES, STAGE_META, type OpportunityStage } from "@shared/opportunityDashboard";
 
-const STAGE_LABEL: Record<string, string> = {
-  new: "New", proposal_sent: "Proposal sent", pending: "Pending", won: "Won", lost: "Lost",
-};
-const OPEN_ORDER = ["new", "proposal_sent", "pending"];
+// Labels + open-funnel order come from the single source of truth (STAGE_META /
+// OPEN_STAGES), so the A1-added open stages show in the sales funnel.
 
 export default function SalesDashboard({
   filters, openDrill,
@@ -22,10 +21,10 @@ export default function SalesDashboard({
   const d = q.data;
   const trend = d.revenueTrend.map(r => r.revenue);
 
-  const funnelRows = OPEN_ORDER
+  const funnelRows = OPEN_STAGES
     .map(stage => d?.pipelineByStage.find(s => s.stage === stage))
     .filter((s): s is NonNullable<typeof s> => !!s)
-    .map(s => ({ label: STAGE_LABEL[s.stage] ?? s.stage, value: s.value, hint: `· ${s.count}` }));
+    .map(s => ({ label: STAGE_META[s.stage as OpportunityStage]?.label ?? s.stage, value: s.value, hint: `· ${s.count}` }));
 
   return (
     <div className="space-y-4">

@@ -138,7 +138,10 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   <Button variant="outline" size="sm" className="gap-1" disabled={stageMutating}><GitBranch className="h-4 w-4" /> Change stage</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  {STAGE_META.filter(s => s.value !== o.stage).map(s => (
+                  {/* Won/Lost are reached only via the dedicated close buttons below
+                      (markWon/markLost — they set stageOverridden/closedAt + reason), so
+                      the Change-stage menu offers open + parked stages only. */}
+                  {STAGE_META.filter(s => s.value !== o.stage && s.classification !== "won" && s.classification !== "lost").map(s => (
                     <DropdownMenuItem key={s.value} disabled={stageMutating} onSelect={() => id != null && !stageMutating && setStage.mutate({ id, stage: s.value })}>{s.label}</DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>

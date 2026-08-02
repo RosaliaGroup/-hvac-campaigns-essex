@@ -9,6 +9,7 @@
 import { useEffect, useState } from "react";
 import { useSearch } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { OPEN_STAGES } from "@shared/opportunityDashboard";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function Opportunities() {
   });
 
   const total = stats?.total ?? 0;
-  const open = (stats?.byStage?.new ?? 0) + (stats?.byStage?.proposal_sent ?? 0) + (stats?.byStage?.pending ?? 0);
+  const open = OPEN_STAGES.reduce((sum, s) => sum + (stats?.byStage?.[s] ?? 0), 0);
 
   return (
     <DashboardLayout>

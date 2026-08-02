@@ -37,6 +37,8 @@ import {
   terminalJobCondition,
   buildReportingComparison,
 } from "../services/reportingLifecycle";
+import { OPEN_STAGES, CLOSED_STAGES } from "@shared/opportunityDashboard";
+import { stageDefaultProbabilityCase } from "../lib/opportunityStageSql";
 
 // ── shared types ──────────────────────────────────────────────────────────
 /** A KPI that has no system of record yet. Rendered as a "Coming Soon" tile. */
@@ -49,15 +51,16 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-const OPEN_STAGES = ["new", "proposal_sent", "pending"] as const;
-const CLOSED_STAGES = ["won", "lost"] as const;
+// OPEN_STAGES / CLOSED_STAGES are imported from the single source of truth
+// (shared/stageMeta via opportunityDashboard) — derived from STAGE_META, so the
+// A1-added open stages are included in open-pipeline dashboard math.
 
 /**
- * Weighted pipeline value: explicit per-row probability, else the stage default.
- * Mirrors the canonical weighting in opportunities.ts (kept in sync deliberately;
- * there is no shared pipeline-config table — the defaults live in code).
+ * Weighted pipeline value: explicit per-row probability, else the stage default —
+ * from the single source of truth (STAGE_DEFAULT_PROBABILITY), so every stage incl.
+ * the A1-added ones is weighted (not zero-weighted by a hardcoded CASE).
  */
-const weightedExpr = sql<string>`${opportunities.amount} * (COALESCE(${opportunities.probability}, CASE ${opportunities.stage} WHEN 'new' THEN 10 WHEN 'proposal_sent' THEN 30 WHEN 'pending' THEN 50 WHEN 'won' THEN 100 ELSE 0 END)) / 100`;
+const weightedExpr = sql<string>`${opportunities.amount} * (COALESCE(${opportunities.probability}, ${stageDefaultProbabilityCase(opportunities.stage)})) / 100`;
 
 /** Billable revenue on a job = sum of its line-item totals (the source of truth). */
 const jobRevenueSubquery = sql<string>`COALESCE((SELECT SUM(${jobLineItems.total}) FROM ${jobLineItems} WHERE ${jobLineItems.jobId} = ${jobs.id}), 0)`;

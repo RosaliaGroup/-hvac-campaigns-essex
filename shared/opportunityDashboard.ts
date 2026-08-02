@@ -13,13 +13,22 @@
  */
 import type { WorkCategory } from "./opportunityCategory";
 import { deriveRelationship, type Relationship } from "./leadPipeline";
+import {
+  OPEN_STAGES, WON_STAGES, LOST_STAGES, PARKED_STAGES, CLOSED_STAGES,
+  isOpenStage, isWonStage, isLostStage, isParkedStage, isClosedStage,
+  STAGE_META, STAGE_ORDER, classificationOf,
+  type OpportunityStage, type StageClassification,
+} from "./stageMeta";
+// Stage classification is the single source of truth in ./stageMeta. Re-export the
+// members historically imported from here so existing consumers keep working — now
+// ALL derived from STAGE_META, with no hardcoded stage lists.
+export {
+  OPEN_STAGES, WON_STAGES, LOST_STAGES, PARKED_STAGES, CLOSED_STAGES,
+  isOpenStage, isWonStage, isLostStage, isParkedStage, isClosedStage,
+  STAGE_META, STAGE_ORDER, classificationOf,
+};
+export type { OpportunityStage, StageClassification };
 
-// Mirrors the `opportunities.stage` DB enum (0062 appended the last 6). The
-// original 5 are unchanged; board column order lives in the UI, not here.
-export type OpportunityStage =
-  | "new" | "proposal_sent" | "pending" | "won" | "lost"
-  | "qualified" | "assessment_scheduled" | "assessment_completed"
-  | "sales_document_created" | "negotiating" | "follow_up_later";
 export type SalesDocStatus =
   | "pending" | "accepted" | "closed" | "rejected" | "expired"
   // Invoice statuses (documents can be invoices too); estimate-oriented logic
@@ -28,7 +37,6 @@ export type SalesDocStatus =
 export type WonLostOpen = "won" | "lost" | "open";
 export type AgingBucket = "0-3" | "4-7" | "8-14" | "15+";
 
-export const OPEN_STAGES: OpportunityStage[] = ["new", "proposal_sent", "pending"];
 export const AGING_BUCKETS: AgingBucket[] = ["0-3", "4-7", "8-14", "15+"];
 
 /**
@@ -96,15 +104,8 @@ export interface OpportunityRow {
   closedAt: Date | null;
 }
 
-export function isOpenStage(stage: OpportunityStage): boolean {
-  return stage === "new" || stage === "proposal_sent" || stage === "pending";
-}
-export function isWonStage(stage: OpportunityStage): boolean {
-  return stage === "won";
-}
-export function isLostStage(stage: OpportunityStage): boolean {
-  return stage === "lost";
-}
+// isOpenStage / isWonStage / isLostStage (+ isParkedStage / isClosedStage) are imported
+// from ./stageMeta and re-exported above — derived from STAGE_META, not hardcoded here.
 
 /** The probability actually used for weighting: explicit value, else the stage default. Clamped 0–100. */
 export function effectiveProbability(row: Pick<OpportunityRow, "stage" | "probability">): number {
@@ -306,22 +307,8 @@ export type SortKey =
   | "workCategory";
 export type SortDir = "asc" | "desc";
 
-// Sort key for "sort by stage". 0062 slots the 6 new stages into funnel position;
-// the original 5 keep their relative order (new < proposal_sent < pending < won < lost).
-const STAGE_ORDER: Record<OpportunityStage, number> = {
-  new: 0,
-  qualified: 1,
-  assessment_scheduled: 2,
-  assessment_completed: 3,
-  sales_document_created: 4,
-  proposal_sent: 5,
-  pending: 6,
-  negotiating: 7,
-  won: 8,
-  lost: 9,
-  follow_up_later: 10,
-};
-
+// Sort-by-stage uses the funnel position from the single source of truth
+// (STAGE_META[stage].sortOrder); no separate stage-order map is kept here.
 function sortValue(row: OpportunityRow, key: SortKey): number | string {
   switch (key) {
     case "customer":
@@ -329,7 +316,7 @@ function sortValue(row: OpportunityRow, key: SortKey): number | string {
     case "amount":
       return row.amount;
     case "stage":
-      return STAGE_ORDER[row.stage];
+      return STAGE_META[row.stage].sortOrder;
     case "sentAt":
       return row.sentAt ? row.sentAt.getTime() : -Infinity;
     case "createdAt":
@@ -418,19 +405,9 @@ function endOfDay(now: Date): Date {
 
 export function computeOverview(rows: OpportunityRow[], now: Date = new Date()): OverviewMetrics {
   const monthStart = startOfMonth(now).getTime();
-  const pipelineByStage: Record<OpportunityStage, number> = {
-    new: 0,
-    proposal_sent: 0,
-    pending: 0,
-    won: 0,
-    lost: 0,
-    qualified: 0,
-    assessment_scheduled: 0,
-    assessment_completed: 0,
-    sales_document_created: 0,
-    negotiating: 0,
-    follow_up_later: 0,
-  };
+  // Every stage → 0, derived from the single source of truth so a newly-added stage
+  // is always initialized (never NaN on +=).
+  const pipelineByStage = Object.fromEntries(STAGE_ORDER.map(s => [s, 0])) as Record<OpportunityStage, number>;
   const categoryTotals: Record<WorkCategory, number> = { residential: 0, commercial: 0, change_order: 0 };
   const agingBuckets: Record<AgingBucket, { count: number; amount: number }> = {
     "0-3": { count: 0, amount: 0 },
