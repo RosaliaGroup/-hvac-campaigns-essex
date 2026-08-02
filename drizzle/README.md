@@ -90,6 +90,27 @@ without a safe default may ship without **all** of:
   `0061` delta is byte-identical to `0061_estimate_number_nullable.sql`,
   `drizzle-kit generate` reports "No schema changes", and the next migration numbers
   `0062`.
+- **`0062` is a PERMANENT GAP — never reuse the number.** The Opportunity Center P1
+  foundation was first hand-applied to production **as `0062`** during an interrupted
+  deploy (2026-07-31), then that branch was **superseded by `0064`** before any
+  `0062_*.sql` merged (`0063` = `appointment_assignment_events` / Dispatch M2 shipped
+  first; `0064` = `0064_opportunity_center_p1`, the merged P1). Consequences that live
+  on in production and are **not** captured by any committed migration or `schema.ts`:
+  - Production retains **two `0062` columns** that `0064` does not use and no app code
+    reads (verified zero references on `origin/main` — both DB-only):
+    - `opportunities.priorityScore` (`tinyint unsigned`) — **intentionally retained.**
+      The commercial-bid workflow scores priority `10/7/5/3/1` plus two strategic flags,
+      which `0064`'s `priority enum('low','medium','high','urgent')` cannot hold. **Do
+      not drop it.**
+    - `opportunities.expectedCloseDate` (`timestamp`) — retained **pending a spec
+      decision.** The commercial-bid work may repurpose it as a bid-submission deadline
+      distinct from `0064`'s `expectedCloseAt` (`date`). Decide when specifying; **do
+      not drop it yet.**
+  - The two orphan **indexes** from the `0062` apply
+    (`opportunities_propertyId_idx`, `opportunities_assignedTechnicianId_idx`) were
+    **dropped from production 2026-08-01**, realigning prod's index set with `0064`.
+    The `propertyId` / `assignedTechnicianId` **columns** are legitimate (both `0062`
+    and `0064` add them) and were kept.
 - **No tool may attempt to apply `0055`, `0056`, `0060`, or `0061` again.** A fresh
   `drizzle-kit migrate` would read the tracker, believe they are unapplied, and
   re-run their DDL → failure / partial application / damage.
