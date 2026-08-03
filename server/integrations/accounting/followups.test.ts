@@ -10,15 +10,17 @@ const ctx: FollowupDocContext = {
 };
 
 describe("buildFollowupPlan", () => {
-  it("opens a call task + email/text touches on a 0/1/3-day loop", () => {
+  it("opens a same-day call + email/text touches on a 0/1/3-day loop + a day-3 decision task", () => {
     const plan = buildFollowupPlan(10, 5, ctx, NOW, true);
-    // 1 call + (email+text) × 3 steps = 7 tasks
-    expect(plan).toHaveLength(7);
+    // same-day call + (email+text) × 3 steps + day-3 decision call = 8 tasks
+    expect(plan).toHaveLength(8);
 
-    const call = plan.filter(t => t.type === "call");
-    expect(call).toHaveLength(1);
+    // Two call tasks: the same-day human call (loopStep 0) and the day-3 decision (loopStep 3).
+    const calls = plan.filter(t => t.type === "call");
+    expect(calls).toHaveLength(2);
+    const sameDay = calls.find(t => t.loopStep === 0)!;
     // Same-day call due end of day.
-    expect(call[0].dueAt.toISOString()).toBe("2026-07-07T23:59:00.000Z");
+    expect(sameDay.dueAt.toISOString()).toBe("2026-07-07T23:59:00.000Z");
 
     const steps = plan.filter(t => t.type === "email").map(t => t.loopStep).sort();
     expect(steps).toEqual([0, 1, 3]);
@@ -26,6 +28,22 @@ describe("buildFollowupPlan", () => {
     // Day-3 email due exactly 3 days out.
     const day3 = plan.find(t => t.type === "email" && t.loopStep === 3)!;
     expect(day3.dueAt.toISOString()).toBe("2026-07-10T12:00:00.000Z");
+  });
+
+  it("queues a day-3 forced-decision CALL task (open, never gated), due when the loop expires", () => {
+    // Present regardless of the SMS gate — the decision prompt is not an SMS.
+    for (const sms of [true, false]) {
+      const decision = buildFollowupPlan(10, 5, ctx, NOW, sms).find(t => t.type === "call" && t.loopStep === 3)!;
+      expect(decision).toBeDefined();
+      expect(decision.status).toBe("open");
+      expect(decision.dueAt.toISOString()).toBe("2026-07-10T12:00:00.000Z");
+      expect(decision.title).toMatch(/Won, Lost, or Follow-up later/);
+    }
+  });
+
+  it("appends the STOP opt-out footer to the SMS body (10DLC hygiene)", () => {
+    const text = buildFollowupPlan(10, 5, ctx, NOW, true).find(t => t.type === "text")!;
+    expect(text.body).toContain("Reply STOP to opt out.");
   });
 
   it("GATES every text task when SMS_FOLLOWUPS_ENABLED is off, emails stay open", () => {

@@ -33,6 +33,7 @@ import {
 } from "./opportunityToJob";
 import { computeDaysPending } from "../integrations/accounting/estimates";
 import { cancelOpenFollowups, smsFollowupsEnabled } from "../integrations/accounting/followups";
+import { DECISION_TASK_LOOP_STEP } from "@shared/followupLoop";
 import { extractSalesDocSignals, deriveDocTypeLabel, deriveWorkCategory } from "@shared/opportunityCategory";
 import {
   AGING_BUCKETS,
@@ -668,6 +669,19 @@ export const opportunitiesRouter = router({
         .update(opportunities)
         .set({ nextAction: `Follow up (${input.days}d)`, nextActionDueAt: dueAt })
         .where(eq(opportunities.id, input.id));
+      // Defer the open day-3 decision task too, so the "decision needed" banner
+      // clears now and re-surfaces when the deferral lapses (it stays "open").
+      await db
+        .update(opportunityTasks)
+        .set({ dueAt })
+        .where(
+          and(
+            eq(opportunityTasks.opportunityId, input.id),
+            eq(opportunityTasks.type, "call"),
+            eq(opportunityTasks.loopStep, DECISION_TASK_LOOP_STEP),
+            eq(opportunityTasks.status, "open"),
+          ),
+        );
       await insertEvent(db, input.id, "follow_up_later", `Follow-up scheduled for ${dueAt.toDateString()}.`);
       return { ok: true, dueAt };
     }),

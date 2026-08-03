@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameFormat";
+import { isOpenStage } from "@shared/stageMeta";
+import { isDecisionTask } from "@shared/followupLoop";
 import {
   Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
 } from "lucide-react";
@@ -82,6 +84,15 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
   // Disable every stage/outcome control while any stage mutation is in flight,
   // so rapid clicks can't fire duplicate markWon/markLost/setStage calls.
   const stageMutating = setStage.isPending || markWon.isPending || markLost.isPending || followUpLater.isPending;
+
+  // Day-3 forced decision: prompt when the deal is still OPEN but its follow-up
+  // loop has expired — i.e. the day-3 decision task is open and now due.
+  const decisionPending =
+    !!o &&
+    isOpenStage(o.stage) &&
+    (data?.tasks ?? []).some(
+      t => isDecisionTask(t) && t.status === "open" && new Date(t.dueAt).getTime() <= Date.now(),
+    );
 
   const saveValue = () => {
     if (id == null) return;
@@ -153,6 +164,21 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
             </div>
 
             <div className="space-y-5 p-4">
+              {/* Day-3 forced decision — the loop expired and this deal is still open. */}
+              {decisionPending ? (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-800">
+                    <AlertTriangle className="h-4 w-4" /> Decision needed — the 3-day follow-up loop has ended
+                  </p>
+                  <p className="mt-1 text-xs text-amber-700">This deal is still open after its follow-up touches. Choose an outcome so it doesn't stall.</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" disabled={stageMutating} className="gap-1 text-green-700" onClick={() => id != null && markWon.mutate({ id })}><Trophy className="h-4 w-4" /> Won</Button>
+                    <Button size="sm" variant="outline" disabled={stageMutating} className="gap-1 text-red-700" onClick={() => id != null && markLost.mutate({ id })}><XCircle className="h-4 w-4" /> Lost</Button>
+                    <Button size="sm" variant="outline" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
+                  </div>
+                </div>
+              ) : null}
+
               {/* Money */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border p-3">
