@@ -113,8 +113,15 @@ export function effectiveProbability(row: Pick<OpportunityRow, "stage" | "probab
   return Math.max(0, Math.min(100, p));
 }
 
-/** weightedValue = amount × effectiveProbability / 100. */
+/**
+ * weightedValue = amount × effectiveProbability / 100.
+ *
+ * PARKED stages (follow_up_later) are excluded ENTIRELY — a parked deal is neither open
+ * pipeline nor forecastable, so it contributes ZERO regardless of an explicit or default
+ * probability. Mirrors the parked omission in the SQL path (stageDefaultProbabilityCase).
+ */
 export function weightedValue(row: Pick<OpportunityRow, "stage" | "amount" | "probability">): number {
+  if (isParkedStage(row.stage)) return 0;
   return round2(row.amount * (effectiveProbability(row) / 100));
 }
 

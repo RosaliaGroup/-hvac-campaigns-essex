@@ -60,6 +60,12 @@ describe("weighted value + probability", () => {
     expect(effectiveProbability(row({ probability: 250 }))).toBe(100);
     expect(effectiveProbability(row({ probability: -5 }))).toBe(0);
   });
+  it("excludes parked (follow_up_later) from weighted value entirely", () => {
+    // Falls through the stage default (would have been 10%) → 0.
+    expect(weightedValue(row({ amount: 5000, probability: null, stage: "follow_up_later" }))).toBe(0);
+    // And even an explicit probability on a parked deal contributes nothing.
+    expect(weightedValue(row({ amount: 5000, probability: 80, stage: "follow_up_later" }))).toBe(0);
+  });
 });
 
 describe("CRM value vs QuickBooks amount", () => {
