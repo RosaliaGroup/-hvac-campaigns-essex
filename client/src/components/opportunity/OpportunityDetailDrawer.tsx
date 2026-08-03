@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { ConvertToJobControl } from "./ConvertToJobControl";
 import { EstimatesSection } from "./EstimatesSection";
+import CommercialSections from "./commercial/CommercialSections"; // P2: self-gating; renders only for commercial records
 import { internalSmsConversationPath } from "@/lib/internalSms";
 import { STAGE_META, DOC_STATUS_BADGE, RELATIONSHIP_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate } from "./shared";
 
@@ -314,6 +315,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   ))}
                 </div>
               </Section>
+              {id != null && <CommercialSections opportunityId={id} />}
             </div>
           </div>
         )}

@@ -1,0 +1,47 @@
+import { trpc } from "@/lib/trpc";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import ChecklistSection from "./ChecklistSection";
+import CommentsSection from "./CommentsSection";
+import DocumentsSection from "./DocumentsSection";
+import MembersSection from "./MembersSection";
+
+/**
+ * P2 commercial detail sections (Checklist / Members / Documents / Comments) rendered
+ * inside the SHARED OpportunityDetailDrawer for commercial records only. Self-contained:
+ * it fetches its own commercial detail (opportunities.commercial.get, which runs the
+ * server-side assertCommercial guard), so the drawer needs only a one-line conditional
+ * render — keeping that A2-shared file's diff tiny for a clean rebase.
+ */
+export default function CommercialSections({ opportunityId }: { opportunityId: number }) {
+  const q = trpc.opportunities.commercial.get.useQuery({ id: opportunityId }, { retry: false });
+  const d = q.data;
+  // Render nothing until commercial detail loads; non-commercial records resolve to
+  // NOT_FOUND (assertCommercial) → q.data stays undefined → this stays invisible.
+  if (!d) return null;
+
+  return (
+    <div className="mt-4 border-t pt-4">
+      <h3 className="mb-2 text-sm font-semibold">Commercial</h3>
+      <Tabs defaultValue="checklist">
+        <TabsList>
+          <TabsTrigger value="checklist">Checklist{d.checklist.length ? ` (${d.checklist.length})` : ""}</TabsTrigger>
+          <TabsTrigger value="members">Members{d.members.length ? ` (${d.members.length})` : ""}</TabsTrigger>
+          <TabsTrigger value="documents">Documents{d.documents.length ? ` (${d.documents.length})` : ""}</TabsTrigger>
+          <TabsTrigger value="comments">Comments{d.comments.length ? ` (${d.comments.length})` : ""}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="checklist" className="mt-3">
+          <ChecklistSection opportunityId={opportunityId} items={d.checklist} />
+        </TabsContent>
+        <TabsContent value="members" className="mt-3">
+          <MembersSection opportunityId={opportunityId} members={d.members} />
+        </TabsContent>
+        <TabsContent value="documents" className="mt-3">
+          <DocumentsSection opportunityId={opportunityId} documents={d.documents} />
+        </TabsContent>
+        <TabsContent value="comments" className="mt-3">
+          <CommentsSection opportunityId={opportunityId} comments={d.comments} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
