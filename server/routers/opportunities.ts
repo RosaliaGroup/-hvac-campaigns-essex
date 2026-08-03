@@ -12,6 +12,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { deriveResidentialStageId } from "../services/opportunityStages";
 import {
   opportunities,
   opportunityEvents,
@@ -828,6 +829,9 @@ export const opportunitiesRouter = router({
         title,
         source: "crm",
         stage: "new",
+        // Coexistence: keep stageId in lockstep with the enum so manual CRM rows
+        // never land NULL. Best-effort (null pre-0065). (P2)
+        stageId: await deriveResidentialStageId(db, "new"),
         stageOverridden: true,
         workCategory: input.workCategory ?? null,
         sourceLeadCaptureId: input.sourceLeadCaptureId ?? null,

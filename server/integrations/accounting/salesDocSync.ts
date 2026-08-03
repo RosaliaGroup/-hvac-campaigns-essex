@@ -11,6 +11,7 @@
  */
 import { and, eq, sql } from "drizzle-orm";
 import { getDb, createDedicatedConnection } from "../../db";
+import { deriveResidentialStageId } from "../../services/opportunityStages";
 import {
   quickbooksSalesDocuments,
   opportunities,
@@ -529,6 +530,9 @@ async function upsertOpportunity(
     title,
     source: "quickbooks",
     stage,
+    // Keep stageId in lockstep with the enum (coexistence) so QBO-synced rows
+    // never land NULL. Falls back to null pre-0065 (helper is best-effort).
+    stageId: await deriveResidentialStageId(db, stage),
     amount: args.totalAmount,
     workCategory: args.workCategory,
     closedAt: isClosed ? args.now : null,
