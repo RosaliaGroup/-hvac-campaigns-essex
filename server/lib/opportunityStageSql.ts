@@ -5,7 +5,7 @@
  * zero-weighted in the DB path.
  */
 import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
-import { STAGE_DEFAULT_PROBABILITY, STAGE_ORDER, isParkedStage } from "@shared/opportunityDashboard";
+import { STAGE_DEFAULT_PROBABILITY, STAGE_ORDER, isParkedStage, PARKED_STAGES } from "@shared/opportunityDashboard";
 
 /**
  * `CASE <stageCol> WHEN 'stage' THEN <default probability> ... ELSE 0 END` for every
@@ -26,4 +26,18 @@ export function stageDefaultProbabilityCase(stageCol: SQLWrapper): SQL {
 /** `FIELD(<stageCol>, ...)` in board/funnel order — for ORDER BY stage. */
 export function stageFieldOrder(stageCol: SQLWrapper): SQL {
   return sql`FIELD(${stageCol}, ${sql.join(STAGE_ORDER.map(s => sql`${s}`), sql`, `)})`;
+}
+
+/**
+ * Weighted pipeline value in SQL: `amount × COALESCE(explicit probability, stage default) / 100`,
+ * but ZERO for parked stages (follow_up_later) regardless of an explicit probability — so the SQL
+ * path agrees EXACTLY with weightedValue() on the JS side (both exclude parked entirely). The inner
+ * stageDefaultProbabilityCase already omits parked from the default; this guard also neutralizes a
+ * parked row that carries an explicit probability.
+ */
+export function weightedValueSql(amountCol: SQLWrapper, probCol: SQLWrapper, stageCol: SQLWrapper): SQL<string> {
+  const base = sql<string>`${amountCol} * (COALESCE(${probCol}, ${stageDefaultProbabilityCase(stageCol)})) / 100`;
+  if (PARKED_STAGES.length === 0) return base;
+  const parkedList = sql.join(PARKED_STAGES.map(s => sql`${s}`), sql`, `);
+  return sql<string>`CASE WHEN ${stageCol} IN (${parkedList}) THEN 0 ELSE ${base} END`;
 }

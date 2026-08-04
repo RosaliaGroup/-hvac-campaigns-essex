@@ -38,7 +38,7 @@ import {
   buildReportingComparison,
 } from "../services/reportingLifecycle";
 import { OPEN_STAGES, CLOSED_STAGES } from "@shared/opportunityDashboard";
-import { stageDefaultProbabilityCase } from "../lib/opportunityStageSql";
+import { weightedValueSql } from "../lib/opportunityStageSql";
 
 // ── shared types ──────────────────────────────────────────────────────────
 /** A KPI that has no system of record yet. Rendered as a "Coming Soon" tile. */
@@ -60,7 +60,7 @@ const num = (v: unknown): number => {
  * from the single source of truth (STAGE_DEFAULT_PROBABILITY), so every stage incl.
  * the A1-added ones is weighted (not zero-weighted by a hardcoded CASE).
  */
-const weightedExpr = sql<string>`${opportunities.amount} * (COALESCE(${opportunities.probability}, ${stageDefaultProbabilityCase(opportunities.stage)})) / 100`;
+const weightedExpr = weightedValueSql(opportunities.amount, opportunities.probability, opportunities.stage);
 
 /** Billable revenue on a job = sum of its line-item totals (the source of truth). */
 const jobRevenueSubquery = sql<string>`COALESCE((SELECT SUM(${jobLineItems.total}) FROM ${jobLineItems} WHERE ${jobLineItems.jobId} = ${jobs.id}), 0)`;

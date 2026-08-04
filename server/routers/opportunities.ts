@@ -50,7 +50,7 @@ import {
   type OpportunityRow,
   type OpportunityStage,
 } from "@shared/opportunityDashboard";
-import { stageDefaultProbabilityCase, stageFieldOrder } from "../lib/opportunityStageSql";
+import { weightedValueSql, stageFieldOrder } from "../lib/opportunityStageSql";
 
 // The `opportunities.stage` enum for the list-filter / setStage Zod validators, derived
 // from the single source of truth (STAGE_ORDER ← STAGE_META). z.enum needs a non-empty
@@ -67,8 +67,8 @@ const SORT_ENUM = [
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** SQL: weighted value using explicit probability or the stage default. */
-const weightedSql = sql<string>`${opportunities.amount} * (COALESCE(${opportunities.probability}, ${stageDefaultProbabilityCase(opportunities.stage)})) / 100`;
+/** SQL: weighted value using explicit probability or the stage default; parked → 0 (matches JS weightedValue). */
+const weightedSql = weightedValueSql(opportunities.amount, opportunities.probability, opportunities.stage);
 /** SQL: whole days pending, anchored on sent (else issue) date, per the DB clock. */
 const daysPendingSql = sql<number>`DATEDIFF(CURDATE(), COALESCE(${quickbooksSalesDocuments.sentAt}, ${quickbooksSalesDocuments.txnDate}))`;
 /** SQL: the anchor date used by date-range + aging filters. */
