@@ -24,6 +24,7 @@ import {
 import { sendEmail } from "../../services/emailService";
 import { sendTelnyxSms } from "../../services/telnyxSms";
 import { gateSmsRecipient, isTerminalBlock } from "../../services/smsCompliance";
+import { logOutboundBestEffort, mechanicalSmsFrom } from "../../services/smsOutbound";
 import { DECISION_TASK_LOOP_STEP } from "../../../shared/followupLoop";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -288,6 +289,21 @@ export async function processDueFollowups(args: { now?: Date; db?: Db } = {}): P
         }
         const r = await sendTelnyxSms(gate.to, task.body ?? task.title);
         if (!r.success) throw new Error(r.error ?? "SMS send failed");
+        // Persist the send like every other outbound path, so the Telnyx
+        // delivery webhook can stamp delivered/failed onto it
+        // (smsInboxMessages.textBeltId == telnyxMessageId). Without this the
+        // follow-up loop was the one channel with zero delivery visibility.
+        // Best-effort: a logging failure must never fail an accepted send.
+        await logOutboundBestEffort(db, {
+          phone: gate.to,
+          message: task.body ?? task.title,
+          fromNumber: mechanicalSmsFrom(),
+          telnyxMessageId: r.messageId ?? null,
+          deliveryStatus: "accepted",
+          source: "followup",
+          customerId: task.customerId ?? null,
+          sentByName: "Follow-up",
+        });
         result.textsSent++;
       } else {
         if (!task.email) throw new Error("No email on customer");
