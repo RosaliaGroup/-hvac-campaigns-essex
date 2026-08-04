@@ -174,15 +174,20 @@ INSERT INTO `opportunityStages` (`pipelineKey`,`stageKey`,`name`,`sortOrder`,`is
  ('residential','lost','Lost',100,true,NULL,'lost',true),
  ('residential','follow_up_later','Follow Up Later',110,true,NULL,'parked',true)
 ON DUPLICATE KEY UPDATE `name`=VALUES(`name`),`sortOrder`=VALUES(`sortOrder`),`classification`=VALUES(`classification`),`isSystem`=VALUES(`isSystem`);--> statement-breakpoint
--- Backfill stageId: every existing row → residential stage matching its enum. NULL-only (idempotent).
+-- Backfill stageId: every existing NON-COMMERCIAL row → residential stage matching
+-- its enum. NULL-only + recordType guard so a re-run can NEVER overwrite a commercial
+-- row's directly-owned stageId (commercial rows set stageId from their own pipeline).
 UPDATE `opportunities` o
 JOIN `opportunityStages` s ON s.`pipelineKey`='residential' AND s.`stageKey`=o.`stage`
 SET o.`stageId`=s.`id`
-WHERE o.`stageId` IS NULL;--> statement-breakpoint
--- Backfill status from the stage's classification (won→awarded, lost→lost, else open). NULL-only.
+WHERE o.`stageId` IS NULL AND o.`recordType` <> 'commercial';--> statement-breakpoint
+-- Backfill status from the stage's classification (won→awarded, lost→lost, else open).
+-- NULL-only + recordType guard (commercial rows own their status). NOTE: the ELSE
+-- mapping is pending review of the real prod `stage` distribution (parked/dead states
+-- must NOT become 'open'); this statement is provisional.
 UPDATE `opportunities`
 SET `status` = CASE WHEN `stage`='won' THEN 'awarded' WHEN `stage`='lost' THEN 'lost' ELSE 'open' END
-WHERE `status` IS NULL;--> statement-breakpoint
+WHERE `status` IS NULL AND `recordType` <> 'commercial';--> statement-breakpoint
 -- HARD ASSERTION: abort the migration if any opportunity is left with a NULL stageId.
 DROP PROCEDURE IF EXISTS `_assert_0065_stage_backfill`;--> statement-breakpoint
 CREATE PROCEDURE `_assert_0065_stage_backfill`()
