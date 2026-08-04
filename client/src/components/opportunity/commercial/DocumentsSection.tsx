@@ -76,7 +76,7 @@ export default function DocumentsSection({ opportunityId, documents }: { opportu
           {documents.map(d => (
             <li key={d.id} className="flex items-center gap-2 p-2.5">
               <Badge variant="secondary" className="shrink-0 text-[10px]">{documentCategoryLabel(d.category)}</Badge>
-              <a href={d.url} target="_blank" rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-1 text-sm text-[#1e3a5f] hover:underline">
+              <a href={d.url ?? undefined} target="_blank" rel="noreferrer" className="flex min-w-0 flex-1 items-center gap-1 text-sm text-[#1e3a5f] hover:underline">
                 <span className="truncate">{d.fileName || d.url}</span>
                 <ExternalLink className="h-3 w-3 shrink-0" />
               </a>

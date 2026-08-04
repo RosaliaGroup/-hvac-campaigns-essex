@@ -1,4 +1,4 @@
-import { boolean, date, decimal, index, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, index, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, tinyint, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1855,7 +1855,7 @@ export const opportunities = mysqlTable(
       "qbo_residential", "commercial", "residential", "maintenance", "service_contract",
     ]).default("qbo_residential").notNull(),
     /** Denormalized from the current stage's classification (open/awarded/lost/on_hold/cancelled). */
-    status: mysqlEnum("status", ["open", "awarded", "lost", "on_hold", "cancelled"]),
+    status: mysqlEnum("status", ["open", "awarded", "lost", "on_hold", "cancelled", "declined"]),
     /** Commercial project subtype (distinct from recordType and workCategory). */
     opportunityType: mysqlEnum("opportunityType", [
       "commercial", "residential", "public_work", "decarbonization", "direct_replacement",
@@ -1884,6 +1884,24 @@ export const opportunities = mysqlTable(
     lostAt: timestamp("lostAt"),
     communicationPlatform: varchar("communicationPlatform", { length: 64 }),
     externalReference: varchar("externalReference", { length: 128 }),
+    // ── Commercial-bid additions (folded into 0065) ──
+    /**
+     * True when this commercial opportunity is a BID (drawings-in → review →
+     * bid/decline). Only bids draw ME-BID- numbers; change orders and service
+     * work are commercial but not bids and keep OPP- numbers. (0065)
+     */
+    isBid: boolean("isBid").default(false).notNull(),
+    /**
+     * Commercial evaluation score (the real values in use: 10, 7, 5, 3, 1) — a
+     * 3-word enum can't hold these. `tinyint unsigned` (0–255) with headroom.
+     * ALREADY PRESENT IN PROD (0062 apply); the 0065 ALTER is guarded. Distinct
+     * from the dormant `priority` enum (0064), which is left untouched. (0065)
+     */
+    priorityScore: tinyint("priorityScore", { unsigned: true }),
+    /** Commercial evaluation flag — strategic LEAD. Manual; sync never writes it. (0065) */
+    isStrategicLead: boolean("isStrategicLead").default(false).notNull(),
+    /** Commercial evaluation flag — strategic PROJECT. Manual; sync never writes it. (0065) */
+    isStrategicProject: boolean("isStrategicProject").default(false).notNull(),
     closedAt: timestamp("closedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1897,7 +1915,8 @@ export const opportunities = mysqlTable(
     // ── P2 (0065) ──
     recordTypeIdx: index("opportunities_recordType_idx").on(table.recordType),
     stageIdIdx: index("opportunities_stageId_idx").on(table.stageId),
-    opportunityNumberIdx: index("opportunities_opportunityNumber_idx").on(table.opportunityNumber),
+    // Unique so a bid/opportunity number can never be duplicated (numbering relies on it). (0065)
+    opportunityNumberUq: uniqueIndex("opportunities_opportunityNumber_uq").on(table.opportunityNumber),
     // Commercial board reads: cards grouped by stageId within a pipeline, ordered by rank.
     recordTypeStageSortIdx: index("opportunities_recordType_stageId_sortOrder_idx").on(
       table.recordType, table.stageId, table.sortOrder,
@@ -2071,7 +2090,7 @@ export const opportunityStages = mysqlTable(
     sortOrder: int("sortOrder").default(0).notNull(),
     isActive: boolean("isActive").default(true).notNull(),
     defaultProbability: int("defaultProbability"),
-    classification: mysqlEnum("classification", ["open", "won", "lost", "parked"]).default("open").notNull(),
+    classification: mysqlEnum("classification", ["open", "won", "lost", "parked", "declined"]).default("open").notNull(),
     /** System stages are seeded and cannot be deleted (only deactivated). */
     isSystem: boolean("isSystem").default(false).notNull(),
     color: varchar("color", { length: 24 }),
@@ -2213,7 +2232,15 @@ export const opportunityDocuments = mysqlTable(
     ]).default("miscellaneous").notNull(),
     kind: mysqlEnum("kind", ["file", "link"]).default("file").notNull(),
     fileName: varchar("fileName", { length: 255 }),
-    url: varchar("url", { length: 1024 }).notNull(),
+    /**
+     * External URL for kind='link', OR the current download URL for kind='file'.
+     * Nullable so an uploaded file can be stored by `storageKey` alone (the
+     * download URL is minted on demand via storageGet). Ships link-only today;
+     * this nullability means the upload path needs no second migration. (0065)
+     */
+    url: varchar("url", { length: 1024 }),
+    /** Object-storage key (server/storage.ts) for kind='file' uploads. Null for links. (0065) */
+    storageKey: varchar("storageKey", { length: 512 }),
     mimeType: varchar("mimeType", { length: 128 }),
     sizeBytes: int("sizeBytes"),
     uploadedById: int("uploadedById"),
@@ -2226,6 +2253,20 @@ export const opportunityDocuments = mysqlTable(
 );
 export type OpportunityDocument = typeof opportunityDocuments.$inferSelect;
 export type InsertOpportunityDocument = typeof opportunityDocuments.$inferInsert;
+
+/**
+ * Monotonic number sequences, allocated race-safely via the atomic
+ * `UPDATE … SET nextValue = LAST_INSERT_ID(nextValue+1)` idiom (never a MAX()
+ * scan). `key='commercial_bid'` drives ME-BID-<n>, seeded at 2158 = the known
+ * Trello max (2157) + 1; the Trello import reconciles it to the actual max+1. (0065)
+ */
+export const numberSequences = mysqlTable("numberSequences", {
+  key: varchar("key", { length: 48 }).primaryKey(),
+  nextValue: int("nextValue").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type NumberSequence = typeof numberSequences.$inferSelect;
+export type InsertNumberSequence = typeof numberSequences.$inferInsert;
 
 /**
  * Customer sync conflicts — append-only, human-reviewable log of how each

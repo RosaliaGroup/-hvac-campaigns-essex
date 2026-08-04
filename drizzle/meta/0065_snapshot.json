@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "c25ccb88-e70a-4765-9a31-2796fcd9c50a",
+  "id": "6be12501-052b-438f-bf9c-08233347aadc",
   "prevId": "eb61c87c-0f94-4ae7-8792-017be6141234",
   "tables": {
     "aiScripts": {
@@ -6083,6 +6083,46 @@
       "uniqueConstraints": {},
       "checkConstraint": {}
     },
+    "numberSequences": {
+      "name": "numberSequences",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "varchar(48)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nextValue": {
+          "name": "nextValue",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updatedAt": {
+          "name": "updatedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "onUpdate": true,
+          "default": "(now())"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "numberSequences_key": {
+          "name": "numberSequences_key",
+          "columns": [
+            "key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
     "opportunities": {
       "name": "opportunities",
       "columns": {
@@ -6284,7 +6324,7 @@
         },
         "status": {
           "name": "status",
-          "type": "enum('open','awarded','lost','on_hold','cancelled')",
+          "type": "enum('open','awarded','lost','on_hold','cancelled','declined')",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -6408,6 +6448,37 @@
           "notNull": false,
           "autoincrement": false
         },
+        "isBid": {
+          "name": "isBid",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "priorityScore": {
+          "name": "priorityScore",
+          "type": "tinyint unsigned",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "isStrategicLead": {
+          "name": "isStrategicLead",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "isStrategicProject": {
+          "name": "isStrategicProject",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "closedAt": {
           "name": "closedAt",
           "type": "timestamp",
@@ -6477,12 +6548,12 @@
           ],
           "isUnique": false
         },
-        "opportunities_opportunityNumber_idx": {
-          "name": "opportunities_opportunityNumber_idx",
+        "opportunities_opportunityNumber_uq": {
+          "name": "opportunities_opportunityNumber_uq",
           "columns": [
             "opportunityNumber"
           ],
-          "isUnique": false
+          "isUnique": true
         },
         "opportunities_recordType_stageId_sortOrder_idx": {
           "name": "opportunities_recordType_stageId_sortOrder_idx",
@@ -6895,7 +6966,14 @@
           "name": "url",
           "type": "varchar(1024)",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "storageKey": {
+          "name": "storageKey",
+          "type": "varchar(512)",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "mimeType": {
@@ -7222,7 +7300,7 @@
         },
         "classification": {
           "name": "classification",
-          "type": "enum('open','won','lost','parked')",
+          "type": "enum('open','won','lost','parked','declined')",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,

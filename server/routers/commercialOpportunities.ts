@@ -29,6 +29,7 @@ import {
   opportunityComments,
   opportunityDocuments,
   opportunityTasks,
+  numberSequences,
   quickbooksSalesDocuments,
   customers,
   properties,
@@ -46,7 +47,11 @@ import {
   isDocumentCategory,
   isProjectCategory,
   isOpportunityType,
+  isPriorityScore,
   makeOpportunityNumber,
+  makeBidNumber,
+  BID_NUMBER_SEQ_KEY,
+  BID_NUMBER_SEED,
 } from "@shared/commercialPipeline";
 import {
   marginView,
@@ -249,6 +254,30 @@ async function resolveStage(db: Db, stageId: number | null): Promise<StageLike |
   return { id: s.id, stageKey: s.stageKey, name: s.name, classification: s.classification, isActive: !!s.isActive };
 }
 
+/**
+ * Allocate the next bid number atomically — race-safe, never a MAX() scan.
+ * Uses the LAST_INSERT_ID(expr) session idiom inside a transaction so the UPDATE
+ * and the SELECT LAST_INSERT_ID() run on one connection. Idempotently seeds the
+ * sequence at BID_NUMBER_SEED on first use. Returns the allocated value (the row
+ * is left pointing at value+1). The unique index on opportunityNumber is the
+ * backstop against any duplicate.
+ */
+async function allocateBidNumber(db: Db): Promise<number> {
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`INSERT INTO \`numberSequences\` (\`key\`, \`nextValue\`) VALUES (${BID_NUMBER_SEQ_KEY}, ${BID_NUMBER_SEED})
+          ON DUPLICATE KEY UPDATE \`key\` = \`key\``,
+    );
+    // Sets the session LAST_INSERT_ID to the CURRENT nextValue, and stores value+1.
+    await tx.execute(
+      sql`UPDATE \`numberSequences\` SET \`nextValue\` = LAST_INSERT_ID(\`nextValue\`) + 1 WHERE \`key\` = ${BID_NUMBER_SEQ_KEY}`,
+    );
+    const result = await tx.execute(sql`SELECT LAST_INSERT_ID() AS n`);
+    const rows = (result as unknown as [Array<{ n: number | string }>])[0];
+    return Number(rows?.[0]?.n ?? 0);
+  });
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Zod input shapes
 // ─────────────────────────────────────────────────────────────────────────────
@@ -268,6 +297,13 @@ const createInput = z.object({
   opportunityType: opportunityTypeSchema.optional(),
   projectCategories: z.array(projectCategory).max(16).optional(),
   priority: z.enum(OPPORTUNITY_PRIORITIES).optional(),
+  // ── Commercial-bid additions ──
+  /** True = this is a BID (drawings-in → review → bid/decline) → draws a ME-BID- number. */
+  isBid: z.boolean().optional(),
+  /** Commercial evaluation score: 10/7/5/3/1 (0 = unscored). */
+  priorityScore: z.number().int().refine(v => v === 0 || isPriorityScore(v), "priorityScore must be 0 or one of 10/7/5/3/1").optional(),
+  isStrategicLead: z.boolean().optional(),
+  isStrategicProject: z.boolean().optional(),
   source: z.string().max(64).optional(),
   assignedToId: optionalId, // sales owner
   estimatorId: optionalId,
@@ -791,10 +827,18 @@ export const commercialOpportunitiesRouter = router({
       expectedCloseAt: input.expectedCloseAt ?? null,
       communicationPlatform: input.communicationPlatform ?? null,
       externalReference: input.externalReference ?? null,
+      isBid: input.isBid ?? false,
+      priorityScore: input.priorityScore != null && isPriorityScore(input.priorityScore) ? input.priorityScore : null,
+      isStrategicLead: input.isStrategicLead ?? false,
+      isStrategicProject: input.isStrategicProject ?? false,
       createdBy: me,
     });
     const id = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
-    const opportunityNumber = makeOpportunityNumber(id, new Date().getFullYear());
+    // Numbering: BIDS draw a ME-BID-<n> from the atomic sequence (continues the
+    // Trello series); non-bid commercial records keep OPP-<year>-<id>.
+    const opportunityNumber = input.isBid
+      ? makeBidNumber(await allocateBidNumber(db))
+      : makeOpportunityNumber(id, new Date().getFullYear());
     await db.update(opportunities).set({ opportunityNumber }).where(eq(opportunities.id, id));
 
     // Categories (multi-select), members, and checklist instantiation.
@@ -1055,6 +1099,9 @@ export const commercialOpportunitiesRouter = router({
         expectedCloseAt: z.date().nullable().optional(),
         communicationPlatform: z.string().max(64).nullable().optional(),
         externalReference: z.string().max(128).nullable().optional(),
+        priorityScore: z.number().int().refine(v => v === 0 || isPriorityScore(v), "priorityScore must be 0 or one of 10/7/5/3/1").nullable().optional(),
+        isStrategicLead: z.boolean().optional(),
+        isStrategicProject: z.boolean().optional(),
       }),
     )
     .mutation(async ({ input, ctx }) => {

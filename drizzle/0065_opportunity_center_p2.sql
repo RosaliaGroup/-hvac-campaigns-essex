@@ -54,7 +54,8 @@ CREATE TABLE `opportunityDocuments` (
 	`category` enum('photos','drone_photos','videos','drawings','plans','scope','proposal','estimate','contract','permit','equipment','specifications','submittals','rfis','change_orders','closeout','warranty','miscellaneous') NOT NULL DEFAULT 'miscellaneous',
 	`kind` enum('file','link') NOT NULL DEFAULT 'file',
 	`fileName` varchar(255),
-	`url` varchar(1024) NOT NULL,
+	`url` varchar(1024),
+	`storageKey` varchar(512),
 	`mimeType` varchar(128),
 	`sizeBytes` int,
 	`uploadedById` int,
@@ -90,7 +91,7 @@ CREATE TABLE `opportunityStages` (
 	`sortOrder` int NOT NULL DEFAULT 0,
 	`isActive` boolean NOT NULL DEFAULT true,
 	`defaultProbability` int,
-	`classification` enum('open','won','lost','parked') NOT NULL DEFAULT 'open',
+	`classification` enum('open','won','lost','parked','declined') NOT NULL DEFAULT 'open',
 	`isSystem` boolean NOT NULL DEFAULT false,
 	`color` varchar(24),
 	`createdAt` timestamp NOT NULL DEFAULT (now()),
@@ -102,7 +103,7 @@ CREATE TABLE `opportunityStages` (
 ALTER TABLE `opportunities` ADD `stageId` int;--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `description` text;--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `recordType` enum('qbo_residential','commercial','residential','maintenance','service_contract') DEFAULT 'qbo_residential' NOT NULL;--> statement-breakpoint
-ALTER TABLE `opportunities` ADD `status` enum('open','awarded','lost','on_hold','cancelled');--> statement-breakpoint
+ALTER TABLE `opportunities` ADD `status` enum('open','awarded','lost','on_hold','cancelled','declined');--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `opportunityType` enum('commercial','residential','public_work','decarbonization','direct_replacement','new_construction','service_contract','preventive_maintenance','other');--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `opportunityNumber` varchar(32);--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `estimatorId` int;--> statement-breakpoint
@@ -120,6 +121,30 @@ ALTER TABLE `opportunities` ADD `awardedAt` timestamp;--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `lostAt` timestamp;--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `communicationPlatform` varchar(64);--> statement-breakpoint
 ALTER TABLE `opportunities` ADD `externalReference` varchar(128);--> statement-breakpoint
+-- ── Commercial-bid additions (folded into 0065) ──
+ALTER TABLE `opportunities` ADD `isBid` boolean NOT NULL DEFAULT false;--> statement-breakpoint
+ALTER TABLE `opportunities` ADD `isStrategicLead` boolean NOT NULL DEFAULT false;--> statement-breakpoint
+ALTER TABLE `opportunities` ADD `isStrategicProject` boolean NOT NULL DEFAULT false;--> statement-breakpoint
+-- priorityScore already exists in PRODUCTION (0062 out-of-band apply); guard so the
+-- ALTER is a no-op there but still adds the column on fresh / non-prod databases.
+DROP PROCEDURE IF EXISTS `_mig0065_add_priorityscore`;--> statement-breakpoint
+CREATE PROCEDURE `_mig0065_add_priorityscore`()
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='opportunities' AND COLUMN_NAME='priorityScore') THEN
+    ALTER TABLE `opportunities` ADD `priorityScore` tinyint unsigned;
+  END IF;
+END;--> statement-breakpoint
+CALL `_mig0065_add_priorityscore`();--> statement-breakpoint
+DROP PROCEDURE IF EXISTS `_mig0065_add_priorityscore`;--> statement-breakpoint
+-- Monotonic number sequences (ME-BID series). Seed at 2158 = Trello max 2157 + 1.
+CREATE TABLE `numberSequences` (
+	`key` varchar(48) NOT NULL,
+	`nextValue` int NOT NULL,
+	`updatedAt` timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `numberSequences_key` PRIMARY KEY(`key`)
+);
+--> statement-breakpoint
+INSERT INTO `numberSequences` (`key`,`nextValue`) VALUES ('commercial_bid', 2158) ON DUPLICATE KEY UPDATE `key`=`key`;--> statement-breakpoint
 CREATE INDEX `opportunityChecklistItems_opportunityId_idx` ON `opportunityChecklistItems` (`opportunityId`);--> statement-breakpoint
 CREATE INDEX `opportunityChecklistTemplateItems_templateId_idx` ON `opportunityChecklistTemplateItems` (`templateId`);--> statement-breakpoint
 CREATE INDEX `opportunityComments_opportunityId_idx` ON `opportunityComments` (`opportunityId`);--> statement-breakpoint
@@ -129,7 +154,7 @@ CREATE INDEX `opportunityProjectCategories_opportunityId_idx` ON `opportunityPro
 CREATE INDEX `opportunityStages_pipeline_order_idx` ON `opportunityStages` (`pipelineKey`,`sortOrder`);--> statement-breakpoint
 CREATE INDEX `opportunities_recordType_idx` ON `opportunities` (`recordType`);--> statement-breakpoint
 CREATE INDEX `opportunities_stageId_idx` ON `opportunities` (`stageId`);--> statement-breakpoint
-CREATE INDEX `opportunities_opportunityNumber_idx` ON `opportunities` (`opportunityNumber`);--> statement-breakpoint
+CREATE UNIQUE INDEX `opportunities_opportunityNumber_uq` ON `opportunities` (`opportunityNumber`);--> statement-breakpoint
 CREATE INDEX `opportunities_recordType_stageId_sortOrder_idx` ON `opportunities` (`recordType`,`stageId`,`sortOrder`);--> statement-breakpoint
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Hand-written DML (drizzle-kit generate emits DDL only). Seed both pipelines,
@@ -157,7 +182,8 @@ INSERT INTO `opportunityStages` (`pipelineKey`,`stageKey`,`name`,`sortOrder`,`is
  ('commercial','deposit_received','Deposit Received',13,true,100,'won',true),
  ('commercial','ready_for_scheduling','Ready for Scheduling',14,true,100,'won',true),
  ('commercial','converted_to_job','Converted to Job',15,true,100,'won',true),
- ('commercial','lost','Lost',16,true,0,'lost',true)
+ ('commercial','lost','Lost',16,true,0,'lost',true),
+ ('commercial','declined_to_bid','Declined to Bid',17,true,0,'declined',true)
 ON DUPLICATE KEY UPDATE `name`=VALUES(`name`),`sortOrder`=VALUES(`sortOrder`),`defaultProbability`=VALUES(`defaultProbability`),`classification`=VALUES(`classification`),`isSystem`=VALUES(`isSystem`);--> statement-breakpoint
 -- Seed RESIDENTIAL pipeline = the 11 existing `stage` enum values, classified to
 -- match A2's stageMeta (follow_up_later = parked). This is the backfill target.

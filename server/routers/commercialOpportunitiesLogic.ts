@@ -188,7 +188,7 @@ export function planStageTransition(input: {
 // Partial update diff — set only changed fields; emit one event per real change
 // ─────────────────────────────────────────────────────────────────────────────
 
-type FieldKind = "string" | "int" | "money" | "date" | "enum";
+type FieldKind = "string" | "int" | "money" | "date" | "enum" | "boolean";
 
 interface FieldSpec {
   key: string;
@@ -221,12 +221,17 @@ export const UPDATABLE_FIELDS: FieldSpec[] = [
   { key: "expectedCloseAt", label: "Expected close", kind: "date" },
   { key: "communicationPlatform", label: "Communication platform", kind: "string" },
   { key: "externalReference", label: "External reference", kind: "string" },
+  // ── Commercial-bid additions ──
+  { key: "priorityScore", label: "Priority score", kind: "int" },
+  { key: "isStrategicLead", label: "Strategic lead", kind: "boolean" },
+  { key: "isStrategicProject", label: "Strategic project", kind: "boolean" },
 ];
 
 const FIELD_BY_KEY = new Map(UPDATABLE_FIELDS.map(f => [f.key, f]));
 
 /** Normalize a value for equality comparison + storage per its field kind. */
-function normalize(kind: FieldKind, v: unknown): string | number | Date | null {
+function normalize(kind: FieldKind, v: unknown): string | number | boolean | Date | null {
+  if (kind === "boolean") return v === true || v === 1 || v === "true" || v === "1";
   if (v === undefined || v === null || v === "") return null;
   switch (kind) {
     case "money":

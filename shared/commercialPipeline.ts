@@ -14,10 +14,12 @@
  * `opportunityStages`, legacy QBO records keep using `stage`.
  */
 
-// Includes "parked" so the type matches opportunityStages.classification (aligned
-// to A2's stageMeta, where follow_up_later = parked). Commercial stages use only
-// open/won/lost; statusForClassification maps parked → open.
-export type StageClassification = "open" | "won" | "lost" | "parked";
+// "parked" matches opportunityStages.classification (aligned to A2's stageMeta,
+// where follow_up_later = parked). "declined" is a TERMINAL outcome that is NOT a
+// loss (declining to bid a job isn't losing it) — it must be countable separately
+// from `lost` in reporting so win-rate stays correct. statusForClassification maps
+// parked → open, declined → declined, won → awarded, lost → lost.
+export type StageClassification = "open" | "won" | "lost" | "parked" | "declined";
 
 export interface PipelineStageSeed {
   /** Stable internal key — the behavioral identity of the stage. */
@@ -57,6 +59,9 @@ export const COMMERCIAL_STAGE_SEEDS: PipelineStageSeed[] = [
   { key: "ready_for_scheduling", name: "Ready for Scheduling", order: 14, defaultProbability: 100, classification: "won" },
   { key: "converted_to_job", name: "Converted to Job", order: 15, defaultProbability: 100, classification: "won" },
   { key: "lost", name: "Lost", order: 16, defaultProbability: 0, classification: "lost" },
+  // Declined-to-bid: a bid we chose NOT to submit. Terminal, but NOT a loss —
+  // classified `declined` so it is excluded from win-rate and counted on its own.
+  { key: "declined_to_bid", name: "Declined to Bid", order: 17, defaultProbability: 0, classification: "declined" },
 ];
 
 export const COMMERCIAL_STAGE_KEYS = COMMERCIAL_STAGE_SEEDS.map(s => s.key);
@@ -88,13 +93,14 @@ export const OPPORTUNITY_RECORD_TYPES = [
 export type OpportunityRecordType = (typeof OPPORTUNITY_RECORD_TYPES)[number];
 
 // ── status (derived from stage classification for commercial records) ──
-export const OPPORTUNITY_STATUSES = ["open", "awarded", "lost", "on_hold", "cancelled"] as const;
+export const OPPORTUNITY_STATUSES = ["open", "awarded", "lost", "on_hold", "cancelled", "declined"] as const;
 export type OpportunityStatus = (typeof OPPORTUNITY_STATUSES)[number];
 
 /** Map a stage classification to the default opportunity status. */
 export function statusForClassification(c: StageClassification): OpportunityStatus {
   if (c === "won") return "awarded";
   if (c === "lost") return "lost";
+  if (c === "declined") return "declined";
   return "open";
 }
 
@@ -244,10 +250,32 @@ function centsToDecimalString(cents: number): string {
   return `${sign}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
 }
 
+// ── Commercial evaluation priority score ──
+// The real business scoring: 10 / 7 / 5 / 3 / 1 (stored in opportunities.priorityScore,
+// tinyint unsigned). Distinct from the dormant `priority` enum (0064). 0 = unscored.
+export const COMMERCIAL_PRIORITY_SCORES = [10, 7, 5, 3, 1] as const;
+export type CommercialPriorityScore = (typeof COMMERCIAL_PRIORITY_SCORES)[number];
+export const isPriorityScore = (v?: number | null): v is CommercialPriorityScore =>
+  v != null && (COMMERCIAL_PRIORITY_SCORES as readonly number[]).includes(v);
+
+// ── Numbering ──
+// Non-bid commercial opportunities (change orders, service work) keep OPP-<year>-<id>.
+// BIDS get their own ME-BID-<n> series that continues the business's Trello numbers
+// (cards 2035–2157 migrate with numbers intact; new bids start at max+1 = 2158).
+
 /**
- * Format a human-facing opportunity number: OPP-<year>-<zero-padded id>.
+ * OPP number for non-bid commercial opportunities: OPP-<year>-<zero-padded id>.
  * Deterministic from the row id (mirrors the jobs.jobNumber convention).
  */
 export function makeOpportunityNumber(id: number, year: number): string {
   return `OPP-${year}-${String(id).padStart(4, "0")}`;
+}
+
+/** The numberSequences key + seed for the bid series (2158 = Trello max 2157 + 1). */
+export const BID_NUMBER_SEQ_KEY = "commercial_bid";
+export const BID_NUMBER_SEED = 2158;
+
+/** Format a bid number from an allocated sequence value: ME-BID-<n> (no zero-pad — matches Trello). */
+export function makeBidNumber(n: number): string {
+  return `ME-BID-${n}`;
 }

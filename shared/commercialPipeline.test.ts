@@ -24,28 +24,31 @@ import {
 } from "./commercialPipeline";
 
 describe("commercial pipeline seeds", () => {
-  it("seeds exactly the 16 approved stages", () => {
-    expect(COMMERCIAL_STAGE_SEEDS).toHaveLength(16);
+  it("seeds exactly the 17 approved stages", () => {
+    expect(COMMERCIAL_STAGE_SEEDS).toHaveLength(17);
     expect(COMMERCIAL_STAGE_KEYS).toEqual([
       "new_lead", "contacted", "qualified", "site_visit_scheduled", "site_visit_complete",
       "estimating", "internal_review", "proposal_sent", "follow_up", "negotiation",
       "awarded", "contract_signed", "deposit_received", "ready_for_scheduling",
-      "converted_to_job", "lost",
+      "converted_to_job", "lost", "declined_to_bid",
     ]);
   });
 
-  it("has contiguous 1..16 order and unique keys", () => {
+  it("has contiguous 1..17 order and unique keys", () => {
     const orders = COMMERCIAL_STAGE_SEEDS.map(s => s.order);
-    expect(orders).toEqual(Array.from({ length: 16 }, (_, i) => i + 1));
-    expect(new Set(COMMERCIAL_STAGE_KEYS).size).toBe(16);
+    expect(orders).toEqual(Array.from({ length: 17 }, (_, i) => i + 1));
+    expect(new Set(COMMERCIAL_STAGE_KEYS).size).toBe(17);
   });
 
-  it("classifies awarded→converted as won, lost as lost, rest open", () => {
+  it("classifies awarded→converted as won, lost as lost, declined_to_bid as declined, rest open", () => {
     const won = COMMERCIAL_STAGE_SEEDS.filter(s => s.classification === "won").map(s => s.key);
     const lost = COMMERCIAL_STAGE_SEEDS.filter(s => s.classification === "lost").map(s => s.key);
+    const declined = COMMERCIAL_STAGE_SEEDS.filter(s => s.classification === "declined").map(s => s.key);
     const open = COMMERCIAL_STAGE_SEEDS.filter(s => s.classification === "open").map(s => s.key);
     expect(won).toEqual(["awarded", "contract_signed", "deposit_received", "ready_for_scheduling", "converted_to_job"]);
     expect(lost).toEqual(["lost"]);
+    // Declined-to-bid is TERMINAL but distinct from lost — never counted in win-rate as a loss.
+    expect(declined).toEqual(["declined_to_bid"]);
     expect(open).toHaveLength(10);
   });
 
@@ -80,6 +83,8 @@ describe("status derivation", () => {
     expect(statusForClassification("won")).toBe("awarded");
     expect(statusForClassification("lost")).toBe("lost");
     expect(statusForClassification("open")).toBe("open");
+    expect(statusForClassification("declined")).toBe("declined");
+    expect(statusForClassification("parked")).toBe("open");
   });
 });
 
@@ -87,7 +92,7 @@ describe("vocabularies", () => {
   it("has the expected counts", () => {
     expect(OPPORTUNITY_RECORD_TYPES).toContain("qbo_residential");
     expect(OPPORTUNITY_RECORD_TYPES).toContain("commercial");
-    expect(OPPORTUNITY_STATUSES).toEqual(["open", "awarded", "lost", "on_hold", "cancelled"]);
+    expect(OPPORTUNITY_STATUSES).toEqual(["open", "awarded", "lost", "on_hold", "cancelled", "declined"]);
     expect(OPPORTUNITY_TYPES).toHaveLength(9);
     expect(PROJECT_CATEGORIES).toHaveLength(16);
     expect(DOCUMENT_CATEGORIES).toHaveLength(18);
