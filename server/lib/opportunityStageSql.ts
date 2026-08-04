@@ -5,20 +5,22 @@
  * zero-weighted in the DB path.
  */
 import { sql, type SQL, type SQLWrapper } from "drizzle-orm";
-import { STAGE_DEFAULT_PROBABILITY, STAGE_ORDER, isParkedStage, PARKED_STAGES } from "@shared/opportunityDashboard";
+import { STAGE_DEFAULT_PROBABILITY, STAGE_ORDER, isParkedStage, isProvisionalWeightStage, PARKED_STAGES } from "@shared/opportunityDashboard";
 
 /**
  * `CASE <stageCol> WHEN 'stage' THEN <default probability> ... ELSE 0 END` for every
  * NON-parked enum member — so weighted pipeline value counts the A1-added open stages
  * with their funnel default, instead of the old hardcoded CASE that fell through to 0.
  *
- * PARKED stages (follow_up_later) are deliberately omitted: a parked deal is not open
- * pipeline and must contribute ZERO to weighted value, so it falls through to ELSE 0.
- * Mirrors the parked short-circuit in weightedValue() on the JS side.
+ * Two omissions, mirroring weightedValue() on the JS side:
+ *  - PARKED (follow_up_later): a parked deal must never be weighted → falls through to ELSE 0.
+ *  - PROVISIONAL new stages: their default probability is unconfirmed, so it must not surface a
+ *    weighted figure until confirmed (blocker 3) → also ELSE 0. An explicit per-row probability
+ *    still counts via the COALESCE at the call site; only the unconfirmed DEFAULT is gated.
  */
 export function stageDefaultProbabilityCase(stageCol: SQLWrapper): SQL {
   const whens = STAGE_ORDER
-    .filter(s => !isParkedStage(s))
+    .filter(s => !isParkedStage(s) && !isProvisionalWeightStage(s))
     .map(s => sql`WHEN ${s} THEN ${STAGE_DEFAULT_PROBABILITY[s]}`);
   return sql`CASE ${stageCol} ${sql.join(whens, sql` `)} ELSE 0 END`;
 }

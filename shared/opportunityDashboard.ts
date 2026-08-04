@@ -68,6 +68,25 @@ export const STAGE_DEFAULT_PROBABILITY: Record<OpportunityStage, number> = {
   follow_up_later: 10,
 };
 
+/**
+ * Stages whose default win-probability is CONFIRMED (validated against real close rates).
+ * The original 5 are long-standing. The 6 A1-added stages carry PROVISIONAL guesses, so
+ * their DEFAULT must not produce an invented weighted/forecast figure on any user-visible
+ * surface until confirmed (A2 blocker 3). Deriving "provisional" as "not confirmed" means a
+ * FUTURE new stage is gated-safe by default — same fail-safe posture as the STAGE_META tripwire.
+ */
+const CONFIRMED_PROBABILITY_STAGES: readonly OpportunityStage[] = ["new", "proposal_sent", "pending", "won", "lost"];
+
+/**
+ * True while `stage` uses a PROVISIONAL default probability that must not surface a weighted
+ * figure. Parked is excluded here — it is zeroed from weighting permanently and separately, not
+ * "pending confirmation". To confirm a provisional stage: validate its STAGE_DEFAULT_PROBABILITY
+ * value against real close rates and move it into CONFIRMED_PROBABILITY_STAGES (update the tests).
+ */
+export function isProvisionalWeightStage(stage: OpportunityStage): boolean {
+  return !isParkedStage(stage) && !CONFIRMED_PROBABILITY_STAGES.includes(stage);
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
@@ -116,12 +135,16 @@ export function effectiveProbability(row: Pick<OpportunityRow, "stage" | "probab
 /**
  * weightedValue = amount × effectiveProbability / 100.
  *
- * PARKED stages (follow_up_later) are excluded ENTIRELY — a parked deal is neither open
- * pipeline nor forecastable, so it contributes ZERO regardless of an explicit or default
- * probability. Mirrors the parked omission in the SQL path (stageDefaultProbabilityCase).
+ * Two exclusions, both mirrored in the SQL path (stageDefaultProbabilityCase):
+ *  - PARKED (follow_up_later): excluded ENTIRELY — neither open pipeline nor forecastable —
+ *    so it contributes ZERO regardless of an explicit or default probability.
+ *  - PROVISIONAL new stages with NO explicit probability: their default is an unconfirmed
+ *    guess, so it contributes ZERO until confirmed (blocker 3). An explicit, user-entered
+ *    probability is a real input and still counts.
  */
 export function weightedValue(row: Pick<OpportunityRow, "stage" | "amount" | "probability">): number {
   if (isParkedStage(row.stage)) return 0;
+  if (row.probability == null && isProvisionalWeightStage(row.stage)) return 0;
   return round2(row.amount * (effectiveProbability(row) / 100));
 }
 

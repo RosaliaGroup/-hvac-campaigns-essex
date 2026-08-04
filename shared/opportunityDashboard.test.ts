@@ -13,6 +13,7 @@ import {
   sortOpportunities,
   valueDiffersFromQuickbooks,
   weightedValue,
+  isProvisionalWeightStage,
   type OpportunityRow,
 } from "./opportunityDashboard";
 
@@ -65,6 +66,25 @@ describe("weighted value + probability", () => {
     expect(weightedValue(row({ amount: 5000, probability: null, stage: "follow_up_later" }))).toBe(0);
     // And even an explicit probability on a parked deal contributes nothing.
     expect(weightedValue(row({ amount: 5000, probability: 80, stage: "follow_up_later" }))).toBe(0);
+  });
+  it("gates provisional new-stage DEFAULTS out of weighted value until confirmed", () => {
+    // assessment_scheduled is provisional: its unconfirmed 25% default must NOT weight.
+    expect(weightedValue(row({ amount: 10000, probability: null, stage: "assessment_scheduled" }))).toBe(0);
+    // But an explicit, user-entered probability is a real input and still counts.
+    expect(weightedValue(row({ amount: 10000, probability: 40, stage: "assessment_scheduled" }))).toBe(4000);
+    // A confirmed stage still uses its default (unchanged behavior).
+    expect(weightedValue(row({ amount: 4000, probability: null, stage: "pending" }))).toBe(2000);
+  });
+});
+
+describe("provisional weight gate (blocker 3)", () => {
+  it("the 5 new OPEN stages are provisional; the original 5 and parked are not", () => {
+    for (const s of ["qualified", "assessment_scheduled", "assessment_completed", "sales_document_created", "negotiating"] as const) {
+      expect(isProvisionalWeightStage(s), `${s} should be provisional`).toBe(true);
+    }
+    for (const s of ["new", "proposal_sent", "pending", "won", "lost", "follow_up_later"] as const) {
+      expect(isProvisionalWeightStage(s), `${s} should NOT be provisional`).toBe(false);
+    }
   });
 });
 
