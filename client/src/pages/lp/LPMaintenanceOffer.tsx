@@ -4,6 +4,7 @@ import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Turnstile from "@/components/Turnstile";
 import {
   CheckCircle, Phone, Clock, Wrench, Star, Shield,
   ArrowRight, Calendar, Zap, Home, Building2, TrendingUp
@@ -94,12 +95,14 @@ export default function LPMaintenanceOffer() {
     address: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   // Stable per-mount idempotency key for the GA4 conversion.
   const [convKey] = useState(() => `lp_maintenance-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
       // Existing Google Ads conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/lp_maintenance_subscription" });
@@ -137,6 +140,7 @@ export default function LPMaintenanceOffer() {
       captureType: "lp_maintenance_subscription",
       ...captureContext(),
       message: `Maintenance Subscription LP: Plan: ${selectedPlan || "Not selected"} | Address: ${form.address || "Not provided"}`,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -311,6 +315,7 @@ export default function LPMaintenanceOffer() {
                     value={form.address}
                     onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
                   />
+                  <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                   <Button
                     type="submit"
                     disabled={captureLead.isPending}

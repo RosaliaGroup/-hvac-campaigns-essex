@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -16,6 +17,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
   const [isVisible, setIsVisible] = useState(false);
   const [hasShown, setHasShown] = useState(false);
   const [email, setEmail] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -32,6 +34,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
       }
       
       setIsVisible(false);
+      setTurnstileToken("");
       localStorage.setItem(`hvac-exit-popup-${pageType}`, "true");
     },
     onError: (error) => {
@@ -86,6 +89,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
       email: email,
       captureType: `exit_popup_${pageType}`,
       ...captureContext(),
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -150,6 +154,8 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
                   className="text-base"
                 />
               </div>
+
+              <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 
               <Button
                 type="submit"

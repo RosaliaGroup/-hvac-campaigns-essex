@@ -3,6 +3,7 @@ import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Turnstile from "@/components/Turnstile";
 import { CheckCircle, Phone, Star, Download, FileText, Mail, Shield, Award } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -17,10 +18,12 @@ export default function LPRebateGuide() {
   });
   const [form, setForm] = useState({ firstName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
     },
     onError: () => {
       toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
@@ -40,6 +43,7 @@ export default function LPRebateGuide() {
       captureType: "download_gate",
       ...captureContext(),
       message: "Email LP: Rebate Guide Download",
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -130,6 +134,7 @@ export default function LPRebateGuide() {
                     <Input placeholder="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
                     <Input type="email" placeholder="Email Address *" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     <Input type="tel" placeholder="Phone (optional)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                    <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                     <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4 text-base">
                       {captureLead.isPending ? "Sending..." : "📥 Send Me the Free Guide"}
                     </Button>

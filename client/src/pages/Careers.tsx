@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ClipboardCheck, CheckCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useSEO } from "@/hooks/useSEO";
@@ -30,10 +31,12 @@ export default function Careers() {
     coverLetter: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
     },
     onError: (error) => {
       toast.error(`Failed to submit: ${error.message}`);
@@ -55,6 +58,7 @@ export default function Careers() {
       captureType: "career_application" as any,
       ...captureContext(),
       message: `Position: ${form.position}\nExperience: ${form.experience}\nLicensed: ${form.licensed}\nCover Letter: ${form.coverLetter}`,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -208,6 +212,8 @@ export default function Careers() {
                         onChange={(e) => setForm({ ...form, coverLetter: e.target.value })}
                       />
                     </div>
+
+                    <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 
                     <Button
                       type="submit"

@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import Turnstile from "@/components/Turnstile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,7 @@ export default function Qualify() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const sqftNum = parseInt(form.sqft) || 1500;
   const rebate = calculateRebate(form.homeType, sqftNum, form.currentSystem, form.income);
@@ -82,6 +84,7 @@ export default function Qualify() {
     onSuccess: () => {
       setSubmitting(false);
       setSubmitted(true);
+      setTurnstileToken(""); // single-use token
     },
     onError: () => {
       setSubmitting(false);
@@ -98,6 +101,7 @@ export default function Qualify() {
       captureType: "qualify_form",
       ...captureContext(),
       message: `Service: Heat Pump Assessment\nHome Type: ${form.homeType}\nSq Ft: ${form.sqft}\nCurrent System: ${form.currentSystem}\nIncome Level: ${form.income}\nOwn/Rent: ${form.ownOrRent}\nZIP: ${form.zip}\nEstimated Rebate: $${rebate.toLocaleString()}\nOut of Pocket: $${outOfPocket.toLocaleString()}\nPreferred Date: ${bookingForm.preferredDate || "Not specified"}\nPreferred Time: ${bookingForm.preferredTime || "Not specified"}\nNotes: ${bookingForm.notes || "None"}`,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   }
 
@@ -420,6 +424,8 @@ export default function Qualify() {
                   onChange={e => setBookingForm(b => ({ ...b, notes: e.target.value }))}
                 />
               </div>
+
+              <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 
               <Button
                 className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold text-lg py-6"

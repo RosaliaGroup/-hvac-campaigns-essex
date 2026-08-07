@@ -3,7 +3,8 @@
  * Public-facing tool for homeowners to estimate HVAC rebates and place assessment orders
  */
 import { publicProcedure, protectedProcedure, router } from "../_core/trpc";
-import { enforceRateLimit, getClientIp, phoneKey, HOUR_MS } from "../_core/rateLimit";
+import { enforceRateLimit, getClientIp, phoneKey, HOUR_MS, publicWriteIpRule } from "../_core/rateLimit";
+import { evaluateSpam } from "@shared/spamGuard";
 
 // ── Task 5 rate-limit constants (adjust here) ──
 const SMS_LIMIT_PER_PHONE_HOUR = 3;
@@ -216,10 +217,14 @@ export const rebateCalculatorRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Rate limit (Task 5): public form; block spam floods
-      enforceRateLimit([
-        { bucket: "rebate.submit.ip", key: getClientIp(ctx), max: SUBMIT_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
-      ]);
+      // Rate limit (Task 5): public form; per-IP cap + shared public-form backstop.
+      enforceRateLimit(
+        [
+          { bucket: "rebate.submit.ip", key: getClientIp(ctx), max: SUBMIT_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
+          publicWriteIpRule(getClientIp(ctx)),
+        ],
+        { route: "rebate.submitCalculation", ip: getClientIp(ctx) },
+      );
       const db = await requireDb();
 
       const rebates = calculateRebates({
@@ -252,6 +257,20 @@ export const rebateCalculatorRouter = router({
         finalOutOfPocket = 0;
         giftCard = 0;
         warrantyYears = 3;
+      }
+
+      // ── Spam protection (content guard over RAW user fields) ──
+      // On a positive signal we skip the DB write, the owner notification, and
+      // the confirmation emails, but return a normal, fully-shaped success
+      // result so the bot sees no difference. Nothing is persisted.
+      const submitGuard = evaluateSpam({
+        name: [input.firstName, input.lastName].filter(Boolean).join(" ") || undefined,
+        email: input.email,
+        phone: input.phone,
+      });
+      if (submitGuard.blocked) {
+        console.warn(`[spam-guard] blocked rebate.submitCalculation score=${submitGuard.score} reasons=${submitGuard.reasons.join(",")}`);
+        return { id: 0, rebates, finalOutOfPocket, giftCard, warrantyYears, assessmentRequested: input.assessmentRequested };
       }
 
       const [result] = await db.insert(rebateCalculations).values({
@@ -599,11 +618,24 @@ export const rebateCalculatorRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Rate limit (Task 5): this endpoint sends a real SMS — protect the budget
-      enforceRateLimit([
-        { bucket: "rebate.sms.phone", key: phoneKey(input.phone), max: SMS_LIMIT_PER_PHONE_HOUR, windowMs: HOUR_MS },
-        { bucket: "rebate.sms.ip", key: getClientIp(ctx), max: SMS_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
-      ]);
+      // Rate limit (Task 5): this endpoint sends a real SMS — protect the budget.
+      // SMS endpoint: keeps its own per-phone + per-IP caps; intentionally NOT part
+      // of the shared public-write backstop (that's for form endpoints only).
+      enforceRateLimit(
+        [
+          { bucket: "rebate.sms.phone", key: phoneKey(input.phone), max: SMS_LIMIT_PER_PHONE_HOUR, windowMs: HOUR_MS },
+          { bucket: "rebate.sms.ip", key: getClientIp(ctx), max: SMS_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
+        ],
+        { route: "rebate.sendResultsSms", ip: getClientIp(ctx) },
+      );
+      // ── Spam protection (content guard over RAW user fields) ──
+      // Blocked → no SMS is sent; the bot sees a success-shaped response.
+      const smsGuard = evaluateSpam({ name: input.firstName, phone: input.phone });
+      if (smsGuard.blocked) {
+        console.warn(`[spam-guard] blocked rebate.sendResultsSms score=${smsGuard.score} reasons=${smsGuard.reasons.join(",")}`);
+        return { success: true };
+      }
+
       if (!telnyxConfigured()) {
         console.error("Telnyx credentials not configured");
         return { success: false, error: "SMS service not configured" };
@@ -661,12 +693,30 @@ export const rebateCalculatorRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      // Rate limit (Task 5): sends an SMS link on success
-      enforceRateLimit([
-        { bucket: "rebate.register.phone", key: phoneKey(input.phone), max: SMS_LIMIT_PER_PHONE_HOUR, windowMs: HOUR_MS },
-        { bucket: "rebate.register.ip", key: getClientIp(ctx), max: REGISTER_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
-      ]);
+      // Rate limit (Task 5): sends an SMS link on success. SMS endpoint: keeps its
+      // own per-phone + per-IP caps; excluded from the shared public-write backstop
+      // (form endpoints only).
+      enforceRateLimit(
+        [
+          { bucket: "rebate.register.phone", key: phoneKey(input.phone), max: SMS_LIMIT_PER_PHONE_HOUR, windowMs: HOUR_MS },
+          { bucket: "rebate.register.ip", key: getClientIp(ctx), max: REGISTER_LIMIT_PER_IP_HOUR, windowMs: HOUR_MS },
+        ],
+        { route: "rebate.register", ip: getClientIp(ctx) },
+      );
       const db = await requireDb();
+
+      // ── Spam protection (content guard over RAW user fields) ──
+      // Blocked → no registration row, no SMS link, no owner email; the bot
+      // still sees a success-shaped response.
+      const registerGuard = evaluateSpam({
+        name: [input.firstName, input.lastName].filter(Boolean).join(" ") || undefined,
+        email: input.email,
+        phone: input.phone,
+      });
+      if (registerGuard.blocked) {
+        console.warn(`[spam-guard] blocked rebate.register score=${registerGuard.score} reasons=${registerGuard.reasons.join(",")}`);
+        return { success: true, smsSent: false, emailSent: false };
+      }
 
       // Strict E.164 (no cleaning/padding). Store the validated form when the
       // number is usable; otherwise store the raw input rather than fabricating

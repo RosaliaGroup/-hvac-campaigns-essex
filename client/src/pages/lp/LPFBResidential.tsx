@@ -4,6 +4,7 @@ import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Turnstile from "@/components/Turnstile";
 import { CheckCircle, Phone, Star, Clock, Home, ArrowRight, DollarSign, Leaf } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -18,12 +19,14 @@ export default function LPFBResidential() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   // Stable per-mount idempotency key for the GA4 conversion.
   const [convKey] = useState(() => `lp_fb_residential-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
       // Existing Facebook Pixel + Google Ads conversions — left untouched.
       if (typeof window !== "undefined" && (window as any).fbq) {
         (window as any).fbq("track", "Lead");
@@ -57,6 +60,7 @@ export default function LPFBResidential() {
       captureType: "lp_fb_residential",
       ...captureContext(),
       message: "Facebook LP: Residential Homeowners Rebate",
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -109,6 +113,7 @@ export default function LPFBResidential() {
                   </div>
                   <Input type="email" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                   <Input type="tel" placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                   <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4">
                     {captureLead.isPending ? "Checking..." : "Check My Eligibility →"}
                   </Button>

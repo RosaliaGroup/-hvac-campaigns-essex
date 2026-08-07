@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { CheckCircle } from "lucide-react";
+import Turnstile from "@/components/Turnstile";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 
 interface QuickQuoteFormProps {
   title?: string;
@@ -37,6 +39,11 @@ export default function QuickQuoteForm({
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  // ── Spam protection ──
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const [turnstileToken, setTurnstileToken] = useState("");
+  // Page/form-load time; a submit <4s later is treated as robotic server-side.
+  const loadedAt = useRef(Date.now());
   // Holds the current submission's idempotency key + the service picked at
   // submit time, so the GA4 conversion fires once with the right (non-PII)
   // classification even though formData is reset inside onSuccess.
@@ -69,6 +76,7 @@ export default function QuickQuoteForm({
         service: defaultService || "",
         message: "",
       });
+      setTurnstileToken(""); // single-use token; force a fresh challenge next time
     },
     onError: (error) => {
       toast.error(`Failed to submit: ${error.message}`);
@@ -96,7 +104,12 @@ export default function QuickQuoteForm({
       phone: formData.phone || undefined,
       captureType: "quick_quote",
       ...captureContext(),
-      message: `Service: ${formData.service}\\n\\n${formData.message}`,
+      message: `Service: ${formData.service}\n\n${formData.message}`,
+      // Spam-protection signals (never persisted).
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -131,6 +144,7 @@ export default function QuickQuoteForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <HoneypotFields values={honeypot} onChange={setHoneypot} />
           <div className="grid md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="quote-name">Name *</Label>
@@ -204,6 +218,12 @@ export default function QuickQuoteForm({
               rows={4}
             />
           </div>
+
+          <Turnstile
+            className="flex justify-center"
+            onVerify={setTurnstileToken}
+            onExpire={() => setTurnstileToken("")}
+          />
 
           <Button
             type="submit"

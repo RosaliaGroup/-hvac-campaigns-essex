@@ -3,6 +3,7 @@ import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Turnstile from "@/components/Turnstile";
 import {
   CheckCircle, Phone, Star, ArrowRight, DollarSign,
   Users, Briefcase, Home, Building2, Gift, TrendingUp
@@ -45,10 +46,12 @@ export default function LPReferralPartner() {
     occupation: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/lp_referral_partner" });
       }
@@ -72,6 +75,7 @@ export default function LPReferralPartner() {
       captureType: "lp_referral_partner",
       ...captureContext(),
       message: `Referral Partner LP: Occupation: ${form.occupation || "Not specified"}`,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -155,6 +159,7 @@ export default function LPReferralPartner() {
                     value={form.occupation}
                     onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))}
                   />
+                  <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                   <Button
                     type="submit"
                     disabled={captureLead.isPending}

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import Turnstile from "@/components/Turnstile";
 import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ export default function LPEmergencyHVAC() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   // Stable per-mount idempotency key for the GA4 conversion (this LP shows a
   // one-time confirmation, so one key per mount is exactly one conversion).
   const [convKey] = useState(() => `lp_emergency-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
@@ -25,6 +27,7 @@ export default function LPEmergencyHVAC() {
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken(""); // single-use token
       // Existing Google Ads conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/emergency_lp" });
@@ -55,6 +58,7 @@ export default function LPEmergencyHVAC() {
       captureType: "lp_emergency",
       ...captureContext(),
       message: "Google Ads LP: Emergency HVAC Service",
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -125,6 +129,7 @@ export default function LPEmergencyHVAC() {
                     </div>
                     <Input type="tel" placeholder="Phone Number *" required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
                     <Input type="email" placeholder="Email (optional)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                    <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                     <Button type="submit" disabled={captureLead.isPending} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 text-base">
                       {captureLead.isPending ? "Sending..." : "🚨 Request Emergency Service"}
                     </Button>

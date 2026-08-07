@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useSEO } from "@/hooks/useSEO";
@@ -29,10 +30,12 @@ export default function Partnerships() {
     message: "",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
     },
     onError: (error) => {
       toast.error(`Failed to submit: ${error.message}`);
@@ -54,6 +57,7 @@ export default function Partnerships() {
       captureType: "partnership_inquiry" as any,
       ...captureContext(),
       message: `Company: ${form.companyName}\nPartnership Type: ${form.partnershipType}\nWebsite: ${form.website}\nMessage: ${form.message}`,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -616,6 +620,8 @@ export default function Partnerships() {
                       onChange={(e) => setForm({ ...form, message: e.target.value })}
                     />
                   </div>
+
+                  <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 
                   <Button
                     type="submit"

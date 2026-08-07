@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// Same dependency-free guard the Railway backend uses (Layer 1 content checks).
+import { evaluateSpam } from "../../../shared/spamGuard.ts";
 
 const ALLOWED_ORIGINS = [
   "https://mechanicalenterprise.com",
@@ -85,6 +87,23 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "You cannot refer yourself — email addresses match" }),
         { status: 400, headers: { ...headers, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Spam protection (Layer 1 content guard over RAW submitted fields) ──
+    // Evaluate both parties. On a positive signal, skip the insert + emails and
+    // return a SUCCESS-shaped 200 so the bot cannot tell it was blocked.
+    const refGuard = evaluateSpam({ name: ref_name, email: ref_email, phone: ref_phone, website: body.website, company_url: body.company_url });
+    const newGuard = evaluateSpam({ name: new_name, email: new_email, phone: new_phone });
+    if (refGuard.blocked || newGuard.blocked) {
+      const reasons = [
+        ...refGuard.reasons.map((r) => `ref:${r}`),
+        ...newGuard.reasons.map((r) => `new:${r}`),
+      ];
+      console.warn(`[spam-guard] blocked submit-referral reasons=${reasons.join(",")}`);
+      return new Response(
+        JSON.stringify({ success: true, id: null }),
+        { status: 200, headers: { ...headers, "Content-Type": "application/json" } }
       );
     }
 

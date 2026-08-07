@@ -3,6 +3,7 @@ import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Turnstile from "@/components/Turnstile";
 import {
   CheckCircle, Phone, Shield, Clock, FileText, ArrowRight,
   Award, Square, ChevronDown, Star, AlertTriangle,
@@ -25,10 +26,12 @@ export default function LPPsegChecklist() {
     propertyType: "residential" as "residential" | "commercial",
   });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", {
           send_to: "AW-17768263516/pseg_checklist_download",
@@ -57,6 +60,7 @@ export default function LPPsegChecklist() {
       captureType: "pseg_checklist_download",
       ...captureContext(),
       message: `Property Type: ${form.propertyType}`,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -184,6 +188,7 @@ export default function LPPsegChecklist() {
                         </button>
                       </div>
                     </div>
+                    <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                     <Button
                       type="submit"
                       disabled={captureLead.isPending}

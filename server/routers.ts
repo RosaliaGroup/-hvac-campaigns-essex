@@ -4,7 +4,9 @@ import { extractAttribution } from "@shared/attribution";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
-import { enforceRateLimit, getClientIp, HOUR_MS } from "./_core/rateLimit";
+import { enforceRateLimit, getClientIp, HOUR_MS, publicWriteIpRule } from "./_core/rateLimit";
+import { evaluateSpam } from "@shared/spamGuard";
+import { verifyTurnstile, isTurnstileEnforced } from "./_core/turnstile";
 import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
@@ -195,11 +197,67 @@ export const appRouter = router({
           // First-touch marketing attribution: the client sends document.referrer
           // (empty string for a direct visit). UTM/gclid are parsed from pageUrl.
           referrer: z.string().optional(),
+          // ── Spam protection (never persisted) ──
+          // Honeypots: hidden off-screen inputs a human never fills.
+          website: z.string().optional(),
+          company_url: z.string().optional(),
+          // Epoch-ms captured at page load; submits <4s later are robotic.
+          _ts: z.number().optional(),
+          // Cloudflare Turnstile token (present only on widget-enabled forms).
+          cfTurnstileResponse: z.string().optional(),
         })
       )
       .mutation(async ({ input, ctx }) => {
-        // Rate limit (Task 5): public capture endpoint — 20/IP/hour
-        enforceRateLimit([{ bucket: "leadCapture.ip", key: getClientIp(ctx), max: 20, windowMs: HOUR_MS }]);
+        const clientIp = getClientIp(ctx);
+        const route = input.pageUrl ?? input.captureType ?? "unknown";
+        // Rate limit: per-form 20/IP/hour + shared public-FORM backstop
+        // (10/IP/10min across all public form endpoints; Turnstile is the gate).
+        enforceRateLimit(
+          [
+            { bucket: "leadCapture.ip", key: clientIp, max: 20, windowMs: HOUR_MS },
+            publicWriteIpRule(clientIp),
+          ],
+          { route, ip: clientIp },
+        );
+
+        // ── Spam protection ──────────────────────────────────────────────
+        // On any positive signal we return a SUCCESS-shaped response (never an
+        // error) and log the reason: a rejection just teaches the bot to mutate.
+        //
+        // Layer 3 (Turnstile) — THE single point of enforcement for every public
+        // form that reaches this mutation, so a form that forgets to render the
+        // widget is still checked. Fail-closed when TURNSTILE_ENFORCED=true and a
+        // secret is set: a missing OR invalid token is rejected and the lead is
+        // NOT inserted. With the kill switch off (or no secret) we fall back to
+        // verify-if-present, so a bad rollout is disabled by flipping the env var
+        // with no deploy. `ts.skipped` (no secret) => success => always passes.
+        const ts = await verifyTurnstile(input.cfTurnstileResponse, clientIp);
+        const enforced = isTurnstileEnforced();
+        if (!ts.success && (enforced || input.cfTurnstileResponse)) {
+          console.warn(
+            `[spam-guard] turnstile reject ts=${new Date().toISOString()} ` +
+              `route=${route} ip=${clientIp} enforced=${enforced} ` +
+              `reason=${(ts.errorCodes ?? ["missing-input-response"]).join(",")}`,
+          );
+          return { success: true }; // success-shaped 200, but the lead is NOT persisted
+        }
+        // Layer 1 (content): scored over RAW user fields only — never a
+        // server-composed string. name = whatever the user actually typed.
+        const rawName = input.name ?? ([input.firstName, input.lastName].filter(Boolean).join(" ") || undefined);
+        const guard = evaluateSpam({
+          name: rawName,
+          email: input.email,
+          phone: input.phone,
+          website: input.website,
+          company_url: input.company_url,
+          ts: input._ts,
+        });
+        if (guard.blocked) {
+          console.warn(`[spam-guard] blocked captureType=${input.captureType} score=${guard.score} reasons=${guard.reasons.join(",")}`);
+          return { success: true };
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         // Validate that at least email or phone is provided
         if (!input.email && !input.phone) {
           throw new Error("Either email or phone is required");
@@ -213,7 +271,15 @@ export const appRouter = router({
           if (input.pageUrl && /^https?:\/\//i.test(input.pageUrl)) selfHost = new URL(input.pageUrl).host;
         } catch { /* ignore malformed pageUrl */ }
         const attribution = extractAttribution(input.pageUrl, input.referrer, selfHost);
-        const { referrer: _referrer, ...captureInput } = input;
+        // Strip attribution-only + spam-protection fields; neither is persisted.
+        const {
+          referrer: _referrer,
+          website: _website,
+          company_url: _companyUrl,
+          _ts: _tsField,
+          cfTurnstileResponse: _cfToken,
+          ...captureInput
+        } = input;
 
         await db.createLeadCapture({ ...captureInput, ...attribution });
 

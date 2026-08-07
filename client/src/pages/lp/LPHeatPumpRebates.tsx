@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import Turnstile from "@/components/Turnstile";
 import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +19,14 @@ export default function LPHeatPumpRebates() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   // Stable per-mount idempotency key for the GA4 conversion.
   const [convKey] = useState(() => `lp_heat_pump-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken(""); // single-use token
       // Existing Google Ads conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/heat_pump_lp" });
@@ -54,6 +57,7 @@ export default function LPHeatPumpRebates() {
       captureType: "lp_heat_pump",
       ...captureContext(),
       message: "Google Ads LP: Heat Pump Rebates",
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -121,6 +125,7 @@ export default function LPHeatPumpRebates() {
                     </div>
                     <Input type="email" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     <Input type="tel" placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                    <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                     <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4 text-base">
                       {captureLead.isPending ? "Sending..." : "Get My Free Estimate →"}
                     </Button>

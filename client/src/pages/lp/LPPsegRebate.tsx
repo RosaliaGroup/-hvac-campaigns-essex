@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
+import Turnstile from "@/components/Turnstile";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -18,10 +20,15 @@ export default function LPPsegRebate() {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  // ── Spam protection ──
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const loadedAt = useRef(Date.now());
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken(""); // single-use token
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/pseg_rebate_lp" });
       }
@@ -45,6 +52,11 @@ export default function LPPsegRebate() {
       captureType: "lp_heat_pump",
       ...captureContext(),
       message: "Google Ads LP: PSE&G Rebate Contractor",
+      // Spam-protection signals (never persisted).
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -106,12 +118,14 @@ export default function LPPsegRebate() {
                   <h2 className="text-xl font-bold text-[#1e3a5f] mb-1">Book Free Assessment</h2>
                   <p className="text-sm text-gray-500 mb-4">We handle all PSE&G paperwork — you just enjoy the savings</p>
                   <form onSubmit={handleSubmit} className="space-y-3">
+                    <HoneypotFields values={honeypot} onChange={setHoneypot} />
                     <div className="grid grid-cols-2 gap-3">
                       <Input placeholder="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
                       <Input placeholder="Last Name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
                     </div>
                     <Input type="email" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     <Input type="tel" placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                    <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                     <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4 text-base">
                       {captureLead.isPending ? "Sending..." : "Book Free Assessment — We Handle All Paperwork →"}
                     </Button>

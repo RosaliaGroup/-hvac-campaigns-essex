@@ -10,7 +10,7 @@ import { TRPCError } from "@trpc/server";
 import { appRouter } from "./routers";
 import { createCallerFactory } from "./_core/trpc";
 import type { TrpcContext, AuthenticatedUser } from "./_core/context";
-import { resetRateLimits } from "./_core/rateLimit";
+import { resetRateLimits, publicWriteIpRule } from "./_core/rateLimit";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -139,10 +139,35 @@ describe("rate limiting — public SMS endpoint (integration)", () => {
     expect(await errorCode(() => caller.rebateCalculator.sendResultsSms(smsInput))).toBe("TOO_MANY_REQUESTS");
   });
 
-  it("a different phone from the same IP still works until the IP cap", async () => {
+  it("SMS endpoints are EXEMPT from the shared public-write backstop (different phones, one IP)", async () => {
     const caller = asAnon();
-    for (let i = 0; i < 3; i++) await errorCode(() => caller.rebateCalculator.sendResultsSms(smsInput));
-    const other = { ...smsInput, phone: "8625559999" };
-    expect(await errorCode(() => caller.rebateCalculator.sendResultsSms(other))).not.toBe("TOO_MANY_REQUESTS");
+    // 6 distinct phones from a single IP. Under the old shared 3/IP/10min bucket
+    // the 4th would have been TOO_MANY_REQUESTS; SMS endpoints are now excluded
+    // from that backstop, so all pass (bounded only by rebate.sms.ip = 10/IP/hr).
+    for (let i = 0; i < 6; i++) {
+      const other = { ...smsInput, phone: `862555${i}000` };
+      expect(await errorCode(() => caller.rebateCalculator.sendResultsSms(other))).not.toBe("TOO_MANY_REQUESTS");
+    }
+  });
+});
+
+describe("rate limiting — shared public-write backstop (forms)", () => {
+  beforeEach(() => resetRateLimits());
+
+  it("publicWriteIpRule is a 10-per-IP / 10-minute backstop", () => {
+    const rule = publicWriteIpRule("9.9.9.9");
+    expect(rule.max).toBe(10);
+    expect(rule.windowMs).toBe(10 * 60 * 1000);
+  });
+
+  it("blocks the 11th public FORM submission from one IP within 10 minutes", async () => {
+    const caller = createCaller(makeCtx(null, "5.5.5.5"));
+    const input = { captureType: "inline_form" as const, email: "load@test.com", firstName: "Load" };
+    // First 10 clear the limiter (they fail later on the missing test DB — never
+    // TOO_MANY_REQUESTS); the 11th trips the shared public-write backstop.
+    for (let i = 0; i < 10; i++) {
+      expect(await errorCode(() => caller.leadCaptures.create(input))).not.toBe("TOO_MANY_REQUESTS");
+    }
+    expect(await errorCode(() => caller.leadCaptures.create(input))).toBe("TOO_MANY_REQUESTS");
   });
 });

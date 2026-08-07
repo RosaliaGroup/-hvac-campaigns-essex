@@ -4,6 +4,7 @@ import { X, FileText, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -11,6 +12,7 @@ export default function ExitIntentPopup() {
   const [isVisible, setIsVisible] = useState(false);
   const [hasShown, setHasShown] = useState(false);
   const [email, setEmail] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -27,6 +29,7 @@ export default function ExitIntentPopup() {
       }
 
       setIsVisible(false);
+      setTurnstileToken("");
       localStorage.setItem("hvac-exit-popup-shown", "true");
     },
     onError: (error) => {
@@ -85,6 +88,7 @@ export default function ExitIntentPopup() {
       captureType: "pseg_checklist_download",
       ...captureContext(),
       message: "Exit popup checklist download",
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -145,6 +149,8 @@ export default function ExitIntentPopup() {
                 required
                 className="h-11"
               />
+
+              <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 
               <Button
                 type="submit"

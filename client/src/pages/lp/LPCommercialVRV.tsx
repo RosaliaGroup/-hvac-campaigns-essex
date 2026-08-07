@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { captureContext } from "@/lib/captureContext";
+import Turnstile from "@/components/Turnstile";
 import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +19,14 @@ export default function LPCommercialVRV() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   // Stable per-mount idempotency key for the GA4 conversion.
   const [convKey] = useState(() => `lp_commercial_vrv-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken(""); // single-use token
       // Existing Google Ads conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).gtag) {
         (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/commercial_vrv_lp" });
@@ -54,6 +57,7 @@ export default function LPCommercialVRV() {
       captureType: "lp_commercial_vrv",
       ...captureContext(),
       message: `Google Ads LP: Commercial VRV/VRF | Company: ${form.company}`,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -121,6 +125,7 @@ export default function LPCommercialVRV() {
                     <Input placeholder="Company / Property Name" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
                     <Input type="email" placeholder="Business Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     <Input type="tel" placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                    <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                     <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4 text-base">
                       {captureLead.isPending ? "Sending..." : "Request Free Site Survey →"}
                     </Button>

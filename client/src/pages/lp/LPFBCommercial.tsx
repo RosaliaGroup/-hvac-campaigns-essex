@@ -4,6 +4,7 @@ import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Turnstile from "@/components/Turnstile";
 import { CheckCircle, Phone, Star, Clock, Building2, ArrowRight, TrendingDown, Shield } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -18,12 +19,14 @@ export default function LPFBCommercial() {
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "", sqft: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState("");
   // Stable per-mount idempotency key for the GA4 conversion.
   const [convKey] = useState(() => `lp_fb_commercial-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
       setSubmitted(true);
+      setTurnstileToken("");
       // Existing Facebook Pixel conversion — left untouched.
       if (typeof window !== "undefined" && (window as any).fbq) {
         (window as any).fbq("track", "Lead");
@@ -54,6 +57,7 @@ export default function LPFBCommercial() {
       captureType: "lp_fb_commercial",
       ...captureContext(),
       message: `Facebook LP: Commercial Business | Company: ${form.company} | Sq Ft: ${form.sqft}`,
+      cfTurnstileResponse: turnstileToken || undefined,
     });
   };
 
@@ -106,6 +110,7 @@ export default function LPFBCommercial() {
                   <Input placeholder="Approx. Square Footage" value={form.sqft} onChange={(e) => setForm({ ...form, sqft: e.target.value })} />
                   <Input type="email" placeholder="Business Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                   <Input type="tel" placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                   <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white font-bold py-4">
                     {captureLead.isPending ? "Analyzing..." : "Get My Free Analysis →"}
                   </Button>
