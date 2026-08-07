@@ -5,15 +5,31 @@
  */
 import { Badge } from "@/components/ui/badge";
 import { workCategoryLabel, type WorkCategory } from "@shared/opportunityCategory";
-import type { OpportunityStage, SalesDocStatus, AgingBucket } from "@shared/opportunityDashboard";
+import {
+  STAGE_META as STAGE_META_CORE, STAGE_ORDER,
+  type OpportunityStage, type StageClassification, type SalesDocStatus, type AgingBucket,
+} from "@shared/opportunityDashboard";
 
-export const STAGE_META: { value: OpportunityStage; label: string; badge: string; column: string }[] = [
-  { value: "new", label: "New", badge: "bg-slate-100 text-slate-700 border-slate-200", column: "border-slate-300" },
-  { value: "proposal_sent", label: "Proposal Sent", badge: "bg-blue-100 text-blue-700 border-blue-200", column: "border-blue-300" },
-  { value: "pending", label: "Pending", badge: "bg-amber-100 text-amber-700 border-amber-200", column: "border-amber-300" },
-  { value: "won", label: "Won", badge: "bg-green-100 text-green-700 border-green-200", column: "border-green-300" },
-  { value: "lost", label: "Lost", badge: "bg-red-100 text-red-700 border-red-200", column: "border-red-300" },
-];
+// UI-only presentation per stage (badge + board-column border). Classification, label
+// and ORDER all come from the single source of truth (STAGE_META_CORE / STAGE_ORDER);
+// this only layers on Tailwind styling. Because the array is DERIVED from STAGE_ORDER,
+// every stage — including the A1-added ones — renders as a board column and a
+// stage-select option automatically (no hardcoded 5-stage list).
+const STAGE_UI: Record<OpportunityStage, { badge: string; column: string }> = {
+  new:                    { badge: "bg-slate-100 text-slate-700 border-slate-200",   column: "border-slate-300" },
+  qualified:              { badge: "bg-cyan-100 text-cyan-700 border-cyan-200",       column: "border-cyan-300" },
+  assessment_scheduled:   { badge: "bg-indigo-100 text-indigo-700 border-indigo-200", column: "border-indigo-300" },
+  assessment_completed:   { badge: "bg-violet-100 text-violet-700 border-violet-200", column: "border-violet-300" },
+  sales_document_created: { badge: "bg-sky-100 text-sky-700 border-sky-200",          column: "border-sky-300" },
+  proposal_sent:          { badge: "bg-blue-100 text-blue-700 border-blue-200",       column: "border-blue-300" },
+  pending:                { badge: "bg-amber-100 text-amber-700 border-amber-200",    column: "border-amber-300" },
+  negotiating:            { badge: "bg-orange-100 text-orange-700 border-orange-200", column: "border-orange-300" },
+  won:                    { badge: "bg-green-100 text-green-700 border-green-200",    column: "border-green-300" },
+  lost:                   { badge: "bg-red-100 text-red-700 border-red-200",          column: "border-red-300" },
+  follow_up_later:        { badge: "bg-gray-100 text-gray-600 border-gray-200",       column: "border-gray-300" },
+};
+export const STAGE_META: { value: OpportunityStage; label: string; badge: string; column: string; classification: StageClassification }[] =
+  STAGE_ORDER.map(s => ({ value: s, label: STAGE_META_CORE[s].label, classification: STAGE_META_CORE[s].classification, ...STAGE_UI[s] }));
 
 export const WORK_CATEGORY_BADGE: Record<WorkCategory, string> = {
   residential: "bg-sky-100 text-sky-800 border-sky-200",

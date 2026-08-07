@@ -8,6 +8,7 @@
  *
  * READ-ONLY: nothing here writes; `quickbooksCustomerId` is never mutated.
  */
+import { OPEN_STAGES } from "@shared/opportunityDashboard";
 
 export interface RelOpportunity {
   id: number;
@@ -64,8 +65,9 @@ export interface AssembleInput {
 export const ACTIVE_JOB_STATUSES = new Set([
   "new", "scheduled", "in_progress", "waiting_parts", "estimate_sent", "approved",
 ]);
-/** Opportunity stages that are still open (not decided). */
-export const OPEN_OPPORTUNITY_STAGES = new Set(["new", "proposal_sent", "pending"]);
+/** Opportunity stages that are still open (not decided) — derived from the single
+ *  source of truth (STAGE_META) so the A1-added open stages are counted. */
+export const OPEN_OPPORTUNITY_STAGES = new Set<string>(OPEN_STAGES);
 
 function toTime(d: Date | string | null): number {
   if (!d) return 0;

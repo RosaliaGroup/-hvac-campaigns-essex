@@ -1,4 +1,4 @@
-import { boolean, date, decimal, index, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { boolean, date, decimal, index, int, json, mediumtext, mysqlEnum, mysqlTable, text, timestamp, tinyint, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -1833,6 +1833,75 @@ export const opportunities = mysqlTable(
      * unspecified (the historical behaviour). No DB-level FK, per repo convention. (0062)
      */
     propertyId: int("propertyId"),
+    // ── Opportunity Center P2 (commercial) — 0065 ──────────────────────────────
+    /**
+     * COEXISTENCE model: the `stage` enum above stays authoritative for QBO /
+     * residential rows (QBO sync + A2 reporting read it); `stageId` →
+     * opportunityStages is authoritative for COMMERCIAL rows and enables the
+     * admin-configurable pipeline. Dual-written; reads prefer stageId. The enum
+     * is NOT dropped in 0065 — a later migration removes it once A2 lands.
+     * Backfilled non-null for every existing row by 0065. No DB-level FK, per repo convention.
+     */
+    stageId: int("stageId"),
+    /** Long-form description / scope notes. Added by P2 (main had none). */
+    description: text("description"),
+    /**
+     * Which module/pipeline owns the record — the isolation discriminator the
+     * commercial router filters every query by (assertCommercial). Existing rows
+     * backfill to 'qbo_residential' so the commercial board starts empty.
+     * Distinct from `workCategory` (QBO-derived work type, kept as-is).
+     */
+    recordType: mysqlEnum("recordType", [
+      "qbo_residential", "commercial", "residential", "maintenance", "service_contract",
+    ]).default("qbo_residential").notNull(),
+    /** Denormalized from the current stage's classification (open/awarded/lost/on_hold/cancelled). */
+    status: mysqlEnum("status", ["open", "awarded", "lost", "on_hold", "cancelled", "declined"]),
+    /** Commercial project subtype (distinct from recordType and workCategory). */
+    opportunityType: mysqlEnum("opportunityType", [
+      "commercial", "residential", "public_work", "decarbonization", "direct_replacement",
+      "new_construction", "service_contract", "preventive_maintenance", "other",
+    ]),
+    /** Human-friendly commercial reference, e.g. OPP-2026-0042. Null for legacy rows. */
+    opportunityNumber: varchar("opportunityNumber", { length: 32 }),
+    /** Estimator (teamMembers.id) — a distinct role from the field technician / sales owner. */
+    estimatorId: int("estimatorId"),
+    /** Project manager (teamMembers.id) — distinct from estimator and assignedTechnicianId. */
+    projectManagerId: int("projectManagerId"),
+    /** Estimated project cost (basis for margin). Manual; QBO sync never writes it. */
+    estimatedCost: decimal("estimatedCost", { precision: 12, scale: 2 }),
+    /** Estimated gross margin ($). Manual; QBO sync never writes it. */
+    estimatedGrossMargin: decimal("estimatedGrossMargin", { precision: 12, scale: 2 }),
+    /** Primary contact (customers.id) — customers IS the person entity; no separate contacts table. */
+    primaryContactId: int("primaryContactId"),
+    /** teamMembers.id of the creator (commercial records are staff-created, not QBO-synced). */
+    createdBy: int("createdBy"),
+    bidDueAt: timestamp("bidDueAt"),
+    siteVisitAt: timestamp("siteVisitAt"),
+    proposalDueAt: timestamp("proposalDueAt"),
+    proposalSentAt: timestamp("proposalSentAt"),
+    followUpAt: timestamp("followUpAt"),
+    awardedAt: timestamp("awardedAt"),
+    lostAt: timestamp("lostAt"),
+    communicationPlatform: varchar("communicationPlatform", { length: 64 }),
+    externalReference: varchar("externalReference", { length: 128 }),
+    // ── Commercial-bid additions (folded into 0065) ──
+    /**
+     * True when this commercial opportunity is a BID (drawings-in → review →
+     * bid/decline). Only bids draw ME-BID- numbers; change orders and service
+     * work are commercial but not bids and keep OPP- numbers. (0065)
+     */
+    isBid: boolean("isBid").default(false).notNull(),
+    /**
+     * Commercial evaluation score (the real values in use: 10, 7, 5, 3, 1) — a
+     * 3-word enum can't hold these. `tinyint unsigned` (0–255) with headroom.
+     * ALREADY PRESENT IN PROD (0062 apply); the 0065 ALTER is guarded. Distinct
+     * from the dormant `priority` enum (0064), which is left untouched. (0065)
+     */
+    priorityScore: tinyint("priorityScore", { unsigned: true }),
+    /** Commercial evaluation flag — strategic LEAD. Manual; sync never writes it. (0065) */
+    isStrategicLead: boolean("isStrategicLead").default(false).notNull(),
+    /** Commercial evaluation flag — strategic PROJECT. Manual; sync never writes it. (0065) */
+    isStrategicProject: boolean("isStrategicProject").default(false).notNull(),
     closedAt: timestamp("closedAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -1843,6 +1912,15 @@ export const opportunities = mysqlTable(
     projectRefIdx: index("opportunities_projectReference_idx").on(table.projectReference),
     // Board reads: cards grouped by stage, ordered by intra-stage rank. (0062)
     stageSortIdx: index("opportunities_stage_sortOrder_idx").on(table.stage, table.sortOrder),
+    // ── P2 (0065) ──
+    recordTypeIdx: index("opportunities_recordType_idx").on(table.recordType),
+    stageIdIdx: index("opportunities_stageId_idx").on(table.stageId),
+    // Unique so a bid/opportunity number can never be duplicated (numbering relies on it). (0065)
+    opportunityNumberUq: uniqueIndex("opportunities_opportunityNumber_uq").on(table.opportunityNumber),
+    // Commercial board reads: cards grouped by stageId within a pipeline, ordered by rank.
+    recordTypeStageSortIdx: index("opportunities_recordType_stageId_sortOrder_idx").on(
+      table.recordType, table.stageId, table.sortOrder,
+    ),
   }),
 );
 export type Opportunity = typeof opportunities.$inferSelect;
@@ -1992,6 +2070,203 @@ export const opportunityTasks = mysqlTable(
 );
 export type OpportunityTask = typeof opportunityTasks.$inferSelect;
 export type InsertOpportunityTask = typeof opportunityTasks.$inferInsert;
+
+// ─── Opportunity Center P2 (commercial) child tables — migration 0065 ──────────
+/**
+ * Normalized, admin-configurable pipeline stages. Replaces the inline `stage`
+ * enum as the source of truth for COMMERCIAL rows (opportunities.stageId → here);
+ * the enum is kept in coexistence for QBO/residential rows until a later cutover.
+ * `classification` includes `parked` to stay consistent with A2's stageMeta
+ * (follow_up_later = parked); the commercial pipeline itself uses only open/won/lost.
+ */
+export const opportunityStages = mysqlTable(
+  "opportunityStages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** Which pipeline this stage belongs to, e.g. "commercial" or "residential". */
+    pipelineKey: varchar("pipelineKey", { length: 48 }).default("commercial").notNull(),
+    stageKey: varchar("stageKey", { length: 48 }).notNull(),
+    name: varchar("name", { length: 80 }).notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    isActive: boolean("isActive").default(true).notNull(),
+    defaultProbability: int("defaultProbability"),
+    classification: mysqlEnum("classification", ["open", "won", "lost", "parked", "declined"]).default("open").notNull(),
+    /** System stages are seeded and cannot be deleted (only deactivated). */
+    isSystem: boolean("isSystem").default(false).notNull(),
+    color: varchar("color", { length: 24 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    pipelineStageKeyUq: uniqueIndex("opportunityStages_pipeline_stageKey_unique").on(table.pipelineKey, table.stageKey),
+    pipelineOrderIdx: index("opportunityStages_pipeline_order_idx").on(table.pipelineKey, table.sortOrder),
+  }),
+);
+export type OpportunityStageRow = typeof opportunityStages.$inferSelect;
+export type InsertOpportunityStageRow = typeof opportunityStages.$inferInsert;
+
+/** Multi-select project categories tagged on a commercial opportunity. */
+export const opportunityProjectCategories = mysqlTable(
+  "opportunityProjectCategories",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    category: varchar("category", { length: 48 }).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    oppCategoryUq: uniqueIndex("opportunityProjectCategories_opp_category_unique").on(table.opportunityId, table.category),
+    opportunityIdx: index("opportunityProjectCategories_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type OpportunityProjectCategory = typeof opportunityProjectCategories.$inferSelect;
+export type InsertOpportunityProjectCategory = typeof opportunityProjectCategories.$inferInsert;
+
+/** Team members assigned to a commercial opportunity (teamMemberId → teamMembers.id). */
+export const opportunityMembers = mysqlTable(
+  "opportunityMembers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    teamMemberId: int("teamMemberId").notNull(),
+    role: varchar("role", { length: 48 }).default("member").notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    oppMemberRoleUq: uniqueIndex("opportunityMembers_opp_member_role_unique").on(table.opportunityId, table.teamMemberId, table.role),
+    opportunityIdx: index("opportunityMembers_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type OpportunityMember = typeof opportunityMembers.$inferSelect;
+export type InsertOpportunityMember = typeof opportunityMembers.$inferInsert;
+
+/** Reusable checklist templates (e.g. the seeded QA checklist). */
+export const opportunityChecklistTemplates = mysqlTable(
+  "opportunityChecklistTemplates",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+    description: text("description"),
+    isActive: boolean("isActive").default(true).notNull(),
+    isSystem: boolean("isSystem").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+);
+export type OpportunityChecklistTemplate = typeof opportunityChecklistTemplates.$inferSelect;
+export type InsertOpportunityChecklistTemplate = typeof opportunityChecklistTemplates.$inferInsert;
+
+/** Items belonging to a checklist template. */
+export const opportunityChecklistTemplateItems = mysqlTable(
+  "opportunityChecklistTemplateItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    templateId: int("templateId").notNull(),
+    label: varchar("label", { length: 255 }).notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    requiredForConversion: boolean("requiredForConversion").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    templateIdx: index("opportunityChecklistTemplateItems_templateId_idx").on(table.templateId),
+  }),
+);
+export type OpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferSelect;
+export type InsertOpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferInsert;
+
+/** Per-opportunity checklist items (instantiated from a template or added ad hoc). */
+export const opportunityChecklistItems = mysqlTable(
+  "opportunityChecklistItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    templateItemId: int("templateItemId"),
+    label: varchar("label", { length: 255 }).notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    isComplete: boolean("isComplete").default(false).notNull(),
+    requiredForConversion: boolean("requiredForConversion").default(false).notNull(),
+    assigneeId: int("assigneeId"),
+    dueAt: timestamp("dueAt"),
+    completedAt: timestamp("completedAt"),
+    completedById: int("completedById"),
+    notes: text("notes"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityChecklistItems_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type OpportunityChecklistItem = typeof opportunityChecklistItems.$inferSelect;
+export type InsertOpportunityChecklistItem = typeof opportunityChecklistItems.$inferInsert;
+
+/** Threaded comments on an opportunity (soft-deleted via deletedAt). */
+export const opportunityComments = mysqlTable(
+  "opportunityComments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    authorId: int("authorId"),
+    body: text("body").notNull(),
+    editedAt: timestamp("editedAt"),
+    deletedAt: timestamp("deletedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityComments_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type OpportunityComment = typeof opportunityComments.$inferSelect;
+export type InsertOpportunityComment = typeof opportunityComments.$inferInsert;
+
+/** Document metadata / external links attached to an opportunity (no blob storage; proxy pattern). */
+export const opportunityDocuments = mysqlTable(
+  "opportunityDocuments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    category: mysqlEnum("category", [
+      "photos", "drone_photos", "videos", "drawings", "plans", "scope", "proposal",
+      "estimate", "contract", "permit", "equipment", "specifications", "submittals",
+      "rfis", "change_orders", "closeout", "warranty", "miscellaneous",
+    ]).default("miscellaneous").notNull(),
+    kind: mysqlEnum("kind", ["file", "link"]).default("file").notNull(),
+    fileName: varchar("fileName", { length: 255 }),
+    /**
+     * External URL for kind='link', OR the current download URL for kind='file'.
+     * Nullable so an uploaded file can be stored by `storageKey` alone (the
+     * download URL is minted on demand via storageGet). Ships link-only today;
+     * this nullability means the upload path needs no second migration. (0065)
+     */
+    url: varchar("url", { length: 1024 }),
+    /** Object-storage key (server/storage.ts) for kind='file' uploads. Null for links. (0065) */
+    storageKey: varchar("storageKey", { length: 512 }),
+    mimeType: varchar("mimeType", { length: 128 }),
+    sizeBytes: int("sizeBytes"),
+    uploadedById: int("uploadedById"),
+    notes: varchar("notes", { length: 500 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    oppCategoryIdx: index("opportunityDocuments_opp_category_idx").on(table.opportunityId, table.category),
+  }),
+);
+export type OpportunityDocument = typeof opportunityDocuments.$inferSelect;
+export type InsertOpportunityDocument = typeof opportunityDocuments.$inferInsert;
+
+/**
+ * Monotonic number sequences, allocated race-safely via the atomic
+ * `UPDATE … SET nextValue = LAST_INSERT_ID(nextValue+1)` idiom (never a MAX()
+ * scan). `key='commercial_bid'` drives ME-BID-<n>, seeded at 2158 = the known
+ * Trello max (2157) + 1; the Trello import reconciles it to the actual max+1. (0065)
+ */
+export const numberSequences = mysqlTable("numberSequences", {
+  key: varchar("key", { length: 48 }).primaryKey(),
+  nextValue: int("nextValue").notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type NumberSequence = typeof numberSequences.$inferSelect;
+export type InsertNumberSequence = typeof numberSequences.$inferInsert;
 
 /**
  * Customer sync conflicts — append-only, human-reviewable log of how each

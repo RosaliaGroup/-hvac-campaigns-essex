@@ -3,7 +3,9 @@
  *
  * When a sales document is Sent/Pending we open a short close loop:
  *   - a same-day CALL task (worked by a human — never auto-dispatched),
- *   - EMAIL + TEXT touches at day 0, day 1, and day 3.
+ *   - EMAIL + TEXT touches at day 0, day 1, and day 3,
+ *   - a day-3 CALL "forced decision" task (loopStep 3) prompting the owner to
+ *     disposition the deal (Won / Lost / Follow-up-later) once the loop expires.
  *
  * SAFETY: text (SMS) touches are created with status "gated" and are NEVER
  * dispatched unless SMS_FOLLOWUPS_ENABLED=true (10DLC is registered; this flag
@@ -22,6 +24,8 @@ import {
 import { sendEmail } from "../../services/emailService";
 import { sendTelnyxSms } from "../../services/telnyxSms";
 import { gateSmsRecipient, isTerminalBlock } from "../../services/smsCompliance";
+import { logOutboundBestEffort, mechanicalSmsFrom } from "../../services/smsOutbound";
+import { DECISION_TASK_LOOP_STEP } from "../../../shared/followupLoop";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -64,7 +68,7 @@ export function buildFollowupPlan(
   const emailBody =
     `Hi ${who}, following up on your ${label}${ctx.amount ? ` for $${ctx.amount}` : ""}. ` +
     `We'd love to answer any questions and get you scheduled.${linkLine}`;
-  const textBody = `Hi ${who}, checking in on your ${label} from Mechanical Enterprise.${linkLine} Reply here with any questions.`;
+  const textBody = `Hi ${who}, checking in on your ${label} from Mechanical Enterprise.${linkLine} Reply here with any questions. Reply STOP to opt out.`;
   const textStatus = smsEnabled ? ("open" as const) : ("gated" as const);
 
   const tasks: InsertOpportunityTask[] = [
@@ -103,6 +107,21 @@ export function buildFollowupPlan(
       loopStep: step,
     });
   }
+
+  // Day-3 FORCED DECISION — a human-worked call task (never auto-dispatched)
+  // that surfaces once the touches run out, so an open deal can't silently
+  // stall. Identified by (type=call, loopStep=3); drives the drawer banner.
+  tasks.push({
+    opportunityId,
+    customerId,
+    type: "call",
+    title: `Decision needed on ${label} — mark Won, Lost, or Follow-up later`,
+    body: "The 3-day follow-up loop has ended. Choose an outcome so this deal doesn't stall: Won, Lost, or Follow up later.",
+    dueAt: new Date(now.getTime() + DECISION_TASK_LOOP_STEP * DAY_MS),
+    status: "open",
+    loopStep: DECISION_TASK_LOOP_STEP,
+  });
+
   return tasks;
 }
 
@@ -270,6 +289,21 @@ export async function processDueFollowups(args: { now?: Date; db?: Db } = {}): P
         }
         const r = await sendTelnyxSms(gate.to, task.body ?? task.title);
         if (!r.success) throw new Error(r.error ?? "SMS send failed");
+        // Persist the send like every other outbound path, so the Telnyx
+        // delivery webhook can stamp delivered/failed onto it
+        // (smsInboxMessages.textBeltId == telnyxMessageId). Without this the
+        // follow-up loop was the one channel with zero delivery visibility.
+        // Best-effort: a logging failure must never fail an accepted send.
+        await logOutboundBestEffort(db, {
+          phone: gate.to,
+          message: task.body ?? task.title,
+          fromNumber: mechanicalSmsFrom(),
+          telnyxMessageId: r.messageId ?? null,
+          deliveryStatus: "accepted",
+          source: "followup",
+          customerId: task.customerId ?? null,
+          sentByName: "Follow-up",
+        });
         result.textsSent++;
       } else {
         if (!task.email) throw new Error("No email on customer");

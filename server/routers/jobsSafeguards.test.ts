@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { ACTIVE_JOB_STATUSES, OPEN_OPPORTUNITY_STAGES } from "./customerRelations";
+import { OPEN_STAGES } from "@shared/opportunityDashboard";
 
 const read = (rel: string) => readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
 
@@ -43,7 +44,10 @@ describe("Jobs module — customer 360 counts protection", () => {
     );
   });
 
-  it("OPEN_OPPORTUNITY_STAGES is unchanged", () => {
-    expect([...OPEN_OPPORTUNITY_STAGES].sort()).toEqual(["new", "pending", "proposal_sent"].sort());
+  it("OPEN_OPPORTUNITY_STAGES derives from the canonical OPEN_STAGES (single source of truth)", () => {
+    // A2: the customer-360 open-opportunity count must include EVERY open stage
+    // (incl. the A1-added ones), so it tracks the shared OPEN_STAGES rather than a
+    // frozen list. This guards against drift in either direction.
+    expect([...OPEN_OPPORTUNITY_STAGES].sort()).toEqual([...OPEN_STAGES].sort());
   });
 });

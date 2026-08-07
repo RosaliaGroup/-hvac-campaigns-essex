@@ -44,7 +44,9 @@ function Card({ row, onOpen, onMove, dragging, onDragStart, onDragEnd }: {
               <button className="rounded p-0.5 hover:bg-muted"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" onClick={e => e.stopPropagation()}>
-              {STAGE_META.filter(s => s.value !== row.stage).map(s => (
+              {/* Won/Lost are reached only via the close endpoints (card/drawer Won/Lost
+                  actions), so the quick-move menu offers open + parked stages only. */}
+              {STAGE_META.filter(s => s.value !== row.stage && s.classification !== "won" && s.classification !== "lost").map(s => (
                 <DropdownMenuItem key={s.value} onSelect={() => onMove(row.id, s.value)}>Move to {s.label}</DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -98,19 +100,22 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
       {STAGE_META.map(col => {
         const colRows = rows.filter(r => r.stage === col.value);
         const total = colRows.reduce((s, r) => s + r.amount, 0);
+        // Won/Lost are terminal, set only via the close endpoints — their columns display
+        // closed deals but are NOT drop targets (dropping there would bypass close semantics).
+        const closed = col.classification === "won" || col.classification === "lost";
         return (
           <div
             key={col.value}
-            onDragOver={e => { e.preventDefault(); setOverStage(col.value); }}
+            onDragOver={e => { if (closed) return; e.preventDefault(); setOverStage(col.value); }}
             onDragLeave={() => setOverStage(s => (s === col.value ? null : s))}
             onDrop={e => {
               e.preventDefault();
               const id = Number(e.dataTransfer.getData("text/plain"));
               const from = rows.find(r => r.id === id)?.stage;
               setOverStage(null); setDragId(null);
-              if (id) move(id, col.value, from);
+              if (id && !closed) move(id, col.value, from);
             }}
-            className={`flex w-72 shrink-0 flex-col rounded-xl border-t-4 bg-muted/30 ${col.column} ${overStage === col.value ? "ring-2 ring-[#1e3a5f]/40" : ""}`}
+            className={`flex w-72 shrink-0 flex-col rounded-xl border-t-4 bg-muted/30 ${col.column} ${closed ? "opacity-90" : ""} ${overStage === col.value ? "ring-2 ring-[#1e3a5f]/40" : ""}`}
           >
             <div className="flex items-center justify-between px-3 py-2">
               <span className="text-sm font-semibold">{col.label}</span>
@@ -125,7 +130,7 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
                   onDragStart={setDragId} onDragEnd={() => setDragId(null)}
                 />
               ))}
-              {colRows.length === 0 ? <p className="px-1 py-6 text-center text-xs text-muted-foreground">Drop here</p> : null}
+              {colRows.length === 0 ? <p className="px-1 py-6 text-center text-xs text-muted-foreground">{closed ? "Set via a card's Won/Lost action" : "Drop here"}</p> : null}
             </div>
           </div>
         );

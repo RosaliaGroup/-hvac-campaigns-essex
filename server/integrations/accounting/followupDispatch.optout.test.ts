@@ -165,4 +165,23 @@ describe("processDueFollowups — opt-out gate at dispatch", () => {
     expect(res.textsSuppressed).toBe(0);
     expect(db.updates).toContainEqual(expect.objectContaining({ status: "done" }));
   });
+
+  it("a sent follow-up is logged to the SMS Inbox keyed by the Telnyx id (delivery-status wiring)", async () => {
+    // Every other outbound path persists a row so the Telnyx delivery webhook can
+    // stamp delivered/failed onto it (matched on textBeltId == telnyxMessageId).
+    // The follow-up path must too — this is the 40010 blind spot being closed.
+    sendTelnyxSmsMock.mockResolvedValue({ success: true, messageId: "tx_deliver_1" });
+    const db = makeDispatchDb([textTask()], [[], []]);
+    const res = await processDueFollowups({ db, now: new Date(0) });
+
+    expect(res.textsSent).toBe(1);
+    expect(db.inserts).toContainEqual(expect.objectContaining({
+      direction: "outbound",
+      source: "followup",
+      customerId: 5,
+      textBeltId: "tx_deliver_1",        // the webhook's match key
+      providerMessageId: "tx_deliver_1",
+      deliveryStatus: "accepted",
+    }));
+  });
 });

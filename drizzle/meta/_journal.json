@@ -428,6 +428,20 @@
       "when": 1785530507407,
       "tag": "0064_opportunity_center_p1",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "5",
+      "when": 1785679834088,
+      "tag": "0065_opportunity_center_p2",
+      "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "5",
+      "when": 1785814913936,
+      "tag": "0066_commercial_bid",
+      "breakpoints": true
     }
   ]
 }

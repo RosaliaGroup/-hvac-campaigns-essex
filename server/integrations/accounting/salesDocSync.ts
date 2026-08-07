@@ -11,6 +11,7 @@
  */
 import { and, eq, sql } from "drizzle-orm";
 import { getDb, createDedicatedConnection } from "../../db";
+import { deriveResidentialStageId } from "../../services/opportunityStages";
 import {
   quickbooksSalesDocuments,
   opportunities,
@@ -26,6 +27,7 @@ import { buildDisplayName, normalizePhone, splitName } from "../../routers/custo
 import { deriveWorkCategory, extractSalesDocSignals } from "../../../shared/opportunityCategory";
 import type { WorkCategory } from "../../../shared/opportunityCategory";
 import { quickbooksProvider, writeSyncLog } from "./quickbooks";
+import { isClosedStage } from "@shared/opportunityDashboard";
 import {
   buildContactFromEstimate,
   buildCustomerEstimateQuery,
@@ -484,7 +486,7 @@ async function upsertOpportunity(
   },
 ): Promise<{ id: number; created: boolean; stageChanged: boolean }> {
   const stage = mapDocStatusToStage(args.status, args.sentAt);
-  const isClosed = stage === "won" || stage === "lost";
+  const isClosed = isClosedStage(stage);
 
   if (args.existingOpportunityId) {
     const prev = (
@@ -528,6 +530,9 @@ async function upsertOpportunity(
     title,
     source: "quickbooks",
     stage,
+    // Keep stageId in lockstep with the enum (coexistence) so QBO-synced rows
+    // never land NULL. Falls back to null pre-0065 (helper is best-effort).
+    stageId: await deriveResidentialStageId(db, stage),
     amount: args.totalAmount,
     workCategory: args.workCategory,
     closedAt: isClosed ? args.now : null,

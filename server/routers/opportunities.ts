@@ -12,6 +12,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { deriveResidentialStageId } from "../services/opportunityStages";
 import {
   opportunities,
   opportunityEvents,
@@ -33,9 +34,13 @@ import {
 } from "./opportunityToJob";
 import { computeDaysPending } from "../integrations/accounting/estimates";
 import { cancelOpenFollowups, smsFollowupsEnabled } from "../integrations/accounting/followups";
+import { DECISION_TASK_LOOP_STEP } from "@shared/followupLoop";
 import { extractSalesDocSignals, deriveDocTypeLabel, deriveWorkCategory } from "@shared/opportunityCategory";
 import {
   AGING_BUCKETS,
+  OPEN_STAGES,
+  STAGE_ORDER,
+  isClosedStage,
   agingBucket,
   computeOverview,
   effectiveProbability,
@@ -44,18 +49,14 @@ import {
   valueDiffersFromQuickbooks,
   weightedValue,
   type OpportunityRow,
+  type OpportunityStage,
 } from "@shared/opportunityDashboard";
+import { weightedValueSql, stageFieldOrder } from "../lib/opportunityStageSql";
 
-// Mirrors the `opportunities.stage` DB enum (0062 appended the last 6). Drives the
-// list-filter and setStage Zod validators; the tRPC client stage types infer from here.
-const STAGE_ENUM = [
-  "new", "proposal_sent", "pending", "won", "lost",
-  "qualified", "assessment_scheduled", "assessment_completed",
-  "sales_document_created", "negotiating", "follow_up_later",
-] as const;
-// NOTE: which of the 6 new stages count as "open" is A2 board-logic — deliberately
-// left as the original 3 here; no opportunity can occupy a new stage until A2/B.
-const OPEN_STAGES = ["new", "proposal_sent", "pending"] as const;
+// The `opportunities.stage` enum for the list-filter / setStage Zod validators, derived
+// from the single source of truth (STAGE_ORDER ← STAGE_META). z.enum needs a non-empty
+// tuple. OPEN_STAGES is likewise imported (derived), not redefined here.
+const STAGE_ENUM = STAGE_ORDER as [OpportunityStage, ...OpportunityStage[]];
 const DOC_STATUS_ENUM = ["pending", "accepted", "closed", "rejected", "expired"] as const;
 const WORK_CATEGORY_ENUM = ["residential", "commercial", "change_order"] as const;
 const AGING_ENUM = ["0-3", "4-7", "8-14", "15+"] as const;
@@ -67,8 +68,8 @@ const SORT_ENUM = [
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** SQL: weighted value using explicit probability or the stage default. */
-const weightedSql = sql<string>`${opportunities.amount} * (COALESCE(${opportunities.probability}, CASE ${opportunities.stage} WHEN 'new' THEN 10 WHEN 'proposal_sent' THEN 30 WHEN 'pending' THEN 50 WHEN 'won' THEN 100 ELSE 0 END)) / 100`;
+/** SQL: weighted value using explicit probability or the stage default; parked → 0 (matches JS weightedValue). */
+const weightedSql = weightedValueSql(opportunities.amount, opportunities.probability, opportunities.stage);
 /** SQL: whole days pending, anchored on sent (else issue) date, per the DB clock. */
 const daysPendingSql = sql<number>`DATEDIFF(CURDATE(), COALESCE(${quickbooksSalesDocuments.sentAt}, ${quickbooksSalesDocuments.txnDate}))`;
 /** SQL: the anchor date used by date-range + aging filters. */
@@ -188,7 +189,7 @@ function orderExpression(sortBy: (typeof SORT_ENUM)[number]) {
     case "amount":
       return opportunities.amount;
     case "stage":
-      return sql`FIELD(${opportunities.stage}, 'new','proposal_sent','pending','won','lost')`;
+      return stageFieldOrder(opportunities.stage);
     case "sentAt":
       return quickbooksSalesDocuments.sentAt;
     case "createdAt":
@@ -402,7 +403,7 @@ export const opportunitiesRouter = router({
       openPipeline: 0, weightedPipeline: 0, sentCount: 0, followUpsDueToday: 0,
       wonThisMonth: 0, lostThisMonth: 0, wonValueThisMonth: 0, closeRate: 0,
       averageTicket: 0, averageDaysToClose: 0,
-      pipelineByStage: { new: 0, proposal_sent: 0, pending: 0, won: 0, lost: 0 },
+      pipelineByStage: Object.fromEntries(STAGE_ORDER.map(s => [s, 0])) as Record<OpportunityStage, number>,
       categoryTotals: { residential: 0, commercial: 0, change_order: 0 },
       agingBuckets: Object.fromEntries(AGING_BUCKETS.map(b => [b, { count: 0, amount: 0 }])),
     };
@@ -539,7 +540,7 @@ export const opportunitiesRouter = router({
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const now = new Date();
-      const isClosed = input.stage === "won" || input.stage === "lost";
+      const isClosed = isClosedStage(input.stage);
       await db
         .update(opportunities)
         .set({ stage: input.stage, stageOverridden: true, closedAt: isClosed ? now : null })
@@ -669,6 +670,19 @@ export const opportunitiesRouter = router({
         .update(opportunities)
         .set({ nextAction: `Follow up (${input.days}d)`, nextActionDueAt: dueAt })
         .where(eq(opportunities.id, input.id));
+      // Defer the open day-3 decision task too, so the "decision needed" banner
+      // clears now and re-surfaces when the deferral lapses (it stays "open").
+      await db
+        .update(opportunityTasks)
+        .set({ dueAt })
+        .where(
+          and(
+            eq(opportunityTasks.opportunityId, input.id),
+            eq(opportunityTasks.type, "call"),
+            eq(opportunityTasks.loopStep, DECISION_TASK_LOOP_STEP),
+            eq(opportunityTasks.status, "open"),
+          ),
+        );
       await insertEvent(db, input.id, "follow_up_later", `Follow-up scheduled for ${dueAt.toDateString()}.`);
       return { ok: true, dueAt };
     }),
@@ -815,6 +829,9 @@ export const opportunitiesRouter = router({
         title,
         source: "crm",
         stage: "new",
+        // Coexistence: keep stageId in lockstep with the enum so manual CRM rows
+        // never land NULL. Best-effort (null pre-0065). (P2)
+        stageId: await deriveResidentialStageId(db, "new"),
         stageOverridden: true,
         workCategory: input.workCategory ?? null,
         sourceLeadCaptureId: input.sourceLeadCaptureId ?? null,
