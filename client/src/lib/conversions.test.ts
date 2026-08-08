@@ -49,13 +49,15 @@ describe("trackConversion — confirmed success fires exactly once", () => {
   beforeEach(enableGa4);
 
   it("emits one GA4-scoped event with the coarse, non-PII payload", () => {
+    // Uses a still-null-label event so ONLY the GA4 event fires. quote_request
+    // now also fires a live Ads conversion — covered in its own test below.
     trackConversion(
-      "quote_request",
+      "contact_form_submit",
       { form_type: "quick_quote_form", service_category: "general", customer_segment: "residential", lead_source_surface: "quick_quote_form" },
       { dedupeKey: "sub-1" },
     );
     expect(gtag).toHaveBeenCalledTimes(1);
-    expect(gtag).toHaveBeenCalledWith("event", "quote_request", {
+    expect(gtag).toHaveBeenCalledWith("event", "contact_form_submit", {
       page_path: "/services/ac-repair",
       form_type: "quick_quote_form",
       service_category: "general",
@@ -103,8 +105,9 @@ describe("idempotency — double-click / re-render / StrictMode never duplicate"
   });
 
   it("distinct submissions (distinct keys) each fire once", () => {
-    trackConversion("quote_request", {}, { dedupeKey: "k1" });
-    trackConversion("quote_request", {}, { dedupeKey: "k2" });
+    // still-null-label event → exactly one gtag call per submission.
+    trackConversion("contact_form_submit", {}, { dedupeKey: "k1" });
+    trackConversion("contact_form_submit", {}, { dedupeKey: "k2" });
     expect(gtag).toHaveBeenCalledTimes(2);
   });
 
@@ -158,7 +161,8 @@ describe("no PII ever appears in the payload", () => {
 describe("no-op safety", () => {
   it("does nothing when GA4 is unset and no Ads label exists", () => {
     disableGa4();
-    trackConversion("quote_request", { service_category: "general" }, { dedupeKey: "n1" });
+    // still-null-label event: GA4 disabled AND no Ads label ⇒ nothing fires.
+    trackConversion("contact_form_submit", { service_category: "general" }, { dedupeKey: "n1" });
     expect(gtag).not.toHaveBeenCalled();
   });
 
@@ -178,10 +182,12 @@ describe("no-op safety", () => {
 describe("Google Ads label independence", () => {
   it("unset Ads label does NOT block the GA4 event", () => {
     enableGa4();
-    expect(ADS_CONVERSION_LABELS.quote_request).toBeNull();
-    trackConversion("quote_request", { service_category: "general" }, { dedupeKey: "ads-null" });
+    // contact_form_submit stays null (only quote_request is wired live), so it
+    // keeps covering the "GA4 fires, no Ads conversion" path.
+    expect(ADS_CONVERSION_LABELS.contact_form_submit).toBeNull();
+    trackConversion("contact_form_submit", { service_category: "contact" }, { dedupeKey: "ads-null" });
     expect(gtag).toHaveBeenCalledTimes(1);
-    expect(gtag).toHaveBeenCalledWith("event", "quote_request", expect.objectContaining({ send_to: GA4_ID }));
+    expect(gtag).toHaveBeenCalledWith("event", "contact_form_submit", expect.objectContaining({ send_to: GA4_ID }));
     // no separate Ads "conversion" event
     expect(gtag.mock.calls.some((c) => c[1] === "conversion")).toBe(false);
   });
@@ -199,6 +205,17 @@ describe("Google Ads label independence", () => {
     } finally {
       ADS_CONVERSION_LABELS.quote_request = original;
     }
+  });
+
+  it("quote_request fires the LIVE Ads conversion (DY_nCO3H4t0cENzeyJhC) alongside GA4", () => {
+    enableGa4();
+    expect(ADS_CONVERSION_LABELS.quote_request).toBe("DY_nCO3H4t0cENzeyJhC");
+    trackConversion("quote_request", { service_category: "general" }, { dedupeKey: "quote-live" });
+    expect(gtag).toHaveBeenCalledTimes(2);
+    expect(gtag).toHaveBeenCalledWith("event", "quote_request", expect.objectContaining({ send_to: GA4_ID }));
+    expect(gtag).toHaveBeenCalledWith("event", "conversion", {
+      send_to: "AW-17768263516/DY_nCO3H4t0cENzeyJhC",
+    });
   });
 });
 
