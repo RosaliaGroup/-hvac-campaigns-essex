@@ -48,9 +48,15 @@ describe("rateLimit — key helpers", () => {
     expect(phoneKey(null)).toBe("unknown-phone");
   });
 
-  it("getClientIp prefers x-forwarded-for first hop", () => {
+  it("getClientIp uses the trusted (rightmost) hop, NOT the spoofable first hop", () => {
+    // A client that forges "1.2.3.4" cannot beat the real address the trusted
+    // proxy appended on the right.
     const ctx = { req: { headers: { "x-forwarded-for": "1.2.3.4, 10.0.0.1" }, ip: "9.9.9.9" } } as never;
-    expect(getClientIp(ctx)).toBe("1.2.3.4");
+    expect(getClientIp(ctx)).toBe("10.0.0.1");
+  });
+
+  it("getClientIp returns the single hop when the chain has only the real client", () => {
+    expect(getClientIp({ req: { headers: { "x-forwarded-for": "10.0.0.1" } } } as never)).toBe("10.0.0.1");
   });
 
   it("getClientIp falls back to req.ip then unknown", () => {
