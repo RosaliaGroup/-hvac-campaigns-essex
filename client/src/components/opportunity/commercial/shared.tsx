@@ -50,6 +50,8 @@ export const CLASSIFICATION_COLUMN: Record<string, string> = {
   open: "border-slate-300",
   won: "border-green-400",
   lost: "border-red-400",
+  parked: "border-amber-300",
+  declined: "border-red-300",
 };
 
 export function PriorityBadge({ priority }: { priority: string | null | undefined }) {

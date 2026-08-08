@@ -7,7 +7,7 @@
  * QuickBooks Now" pulls estimates/proposals + related customers.
  */
 import { useEffect, useState } from "react";
-import { useSearch } from "wouter";
+import { useSearch, Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { OPEN_STAGES } from "@shared/opportunityDashboard";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -15,7 +15,7 @@ import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, RefreshCw } from "lucide-react";
+import { FileText, RefreshCw, Briefcase } from "lucide-react";
 import OverviewTab from "@/components/opportunity/OverviewTab";
 import PipelineBoard from "@/components/opportunity/PipelineBoard";
 import AllOpportunitiesTab from "@/components/opportunity/AllOpportunitiesTab";
@@ -65,10 +65,17 @@ export default function Opportunities() {
               {open} open · {total} total. QuickBooks is the source of truth for estimates &amp; amounts.
             </p>
           </div>
-          <Button onClick={() => sync.mutate()} disabled={sync.isPending} className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
-            <RefreshCw className={`mr-2 h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} />
-            {sync.isPending ? "Syncing…" : "Sync QuickBooks Now"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Link href="/opportunities/commercial">
+              <Button variant="outline">
+                <Briefcase className="mr-2 h-4 w-4" /> Commercial Board
+              </Button>
+            </Link>
+            <Button onClick={() => sync.mutate()} disabled={sync.isPending} className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
+              <RefreshCw className={`mr-2 h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} />
+              {sync.isPending ? "Syncing…" : "Sync QuickBooks Now"}
+            </Button>
+          </div>
         </div>
 
         <Tabs value={tab} onValueChange={setTab}>
