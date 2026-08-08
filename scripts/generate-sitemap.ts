@@ -7,19 +7,50 @@
  */
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 
 const BASE = "https://mechanicalenterprise.com";
 const root = path.resolve(import.meta.dirname, "..");
+
+// Minimum URLs a healthy sitemap must contain. A collapsed sitemap (empty or
+// near-empty) has shipped before when the route-scraping strategy was rewritten;
+// falling below this floor FAILS the build instead of silently deploying it.
+const MIN_URLS = 250;
+
+// Build date (YYYY-MM-DD), used as the lastmod fallback when git is unavailable.
+const BUILD_DATE = new Date().toISOString().split("T")[0];
 
 function readFile(rel: string): string {
   return fs.readFileSync(path.resolve(root, rel), "utf-8");
 }
 
+// Real lastmod: the date the given source file was last committed. Beats a frozen
+// hardcoded date — Google re-reads a sitemap whose lastmod actually moves. Falls
+// back to the build date if git isn't available (e.g. non-repo build sandbox).
+const _mtimeCache = new Map<string, string>();
+function lastModified(rel: string): string {
+  const cached = _mtimeCache.get(rel);
+  if (cached) return cached;
+  let date = BUILD_DATE;
+  try {
+    const out = execSync(`git log -1 --format=%cs -- "${rel}"`, {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(out)) date = out;
+  } catch {
+    // git missing / shallow-cloneless build — keep BUILD_DATE
+  }
+  _mtimeCache.set(rel, date);
+  return date;
+}
+
 function toIsoDate(dateStr: string): string {
   try {
     const d = new Date(dateStr);
-    return isNaN(d.getTime()) ? "2026-04-01" : d.toISOString().split("T")[0];
-  } catch { return "2026-04-01"; }
+    return isNaN(d.getTime()) ? BUILD_DATE : d.toISOString().split("T")[0];
+  } catch { return BUILD_DATE; }
 }
 
 // ── 1. Extract all Route paths from App.tsx ─────────────────────────────────
@@ -109,9 +140,10 @@ function addUrl(urlPath: string, priority: string, changefreq: string, lastmod: 
 }
 
 // Static routes from App.tsx
+const appLastmod = lastModified("client/src/App.tsx");
 for (const r of publicRoutes) {
   const priority = getPriority(r.path, r.line);
-  addUrl(r.path, priority, getChangefreq(priority), "2026-04-12");
+  addUrl(r.path, priority, getChangefreq(priority), appLastmod);
 }
 
 // Blog posts
@@ -120,8 +152,9 @@ for (let i = 0; i < blogSlugs.length; i++) {
 }
 
 // Direct install industry pages
+const diLastmod = lastModified("client/src/data/directInstallIndustries.ts");
 for (const slug of diSlugs) {
-  addUrl(`/direct-install/${slug}`, "0.6", "monthly", "2026-04-01");
+  addUrl(`/direct-install/${slug}`, "0.6", "monthly", diLastmod);
 }
 
 // ── 6. Sort: higher priority first, then alphabetical ───────────────────────
@@ -149,6 +182,19 @@ for (const e of entries) {
 }
 
 lines.push("</urlset>");
+
+// ── 8. Guard: refuse to ship a collapsed sitemap ────────────────────────────
+// Fail the build (non-zero exit) BEFORE overwriting the last-good file on disk,
+// so a broken run can't silently deploy an empty/near-empty sitemap.
+if (entries.length < MIN_URLS) {
+  console.error(
+    `[sitemap] ABORT: generated only ${entries.length} URLs (minimum ${MIN_URLS}).\n` +
+    `  This usually means route/data extraction broke — e.g. App.tsx routes were\n` +
+    `  refactored away from string-literal <Route path="..."> form, or a data file\n` +
+    `  moved. Not writing sitemap.xml; failing the build.`
+  );
+  process.exit(1);
+}
 
 const outPath = path.resolve(root, "client", "public", "sitemap.xml");
 fs.writeFileSync(outPath, lines.join("\n"), "utf-8");
