@@ -52,7 +52,7 @@ export type ConversionEvent =
  * Google Ads UI in Batch B2, one verified label per event.
  */
 export const ADS_CONVERSION_LABELS: Record<ConversionEvent, string | null> = {
-  quote_request: null,
+  quote_request: "DY_nCO3H4t0cENzeyJhC",
   contact_form_submit: null,
   schedule_service: null,
   commercial_quote_request: null,
