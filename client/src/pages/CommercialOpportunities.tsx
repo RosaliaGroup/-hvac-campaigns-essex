@@ -11,12 +11,14 @@ import { Link, useSearch } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
-import { Briefcase, ArrowLeft } from "lucide-react";
+import { Briefcase, ArrowLeft, Plus } from "lucide-react";
 import CommercialBoard from "@/components/opportunity/commercial/CommercialBoard";
+import NewBidDialog from "@/components/opportunity/commercial/NewBidDialog";
 import OpportunityDetailDrawer from "@/components/opportunity/OpportunityDetailDrawer";
 
 export default function CommercialOpportunities() {
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [newBidOpen, setNewBidOpen] = useState(false);
   // Deep-link support: /opportunities/commercial?opportunityId=42 opens that drawer.
   const search = useSearch();
   useEffect(() => {
@@ -38,16 +40,22 @@ export default function CommercialOpportunities() {
               Commercial pipeline stages. Drag a card between stages to move it; closing goes through the card's detail drawer.
             </p>
           </div>
-          <Link href="/opportunities">
-            <Button variant="outline">
-              <ArrowLeft className="mr-2 h-4 w-4" /> Opportunity Center
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setNewBidOpen(true)} className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
+              <Plus className="mr-2 h-4 w-4" /> New Bid
             </Button>
-          </Link>
+            <Link href="/opportunities">
+              <Button variant="outline">
+                <ArrowLeft className="mr-2 h-4 w-4" /> Opportunity Center
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <CommercialBoard onOpen={setDetailId} />
       </div>
 
+      <NewBidDialog open={newBidOpen} onOpenChange={setNewBidOpen} onCreated={id => setDetailId(id)} />
       <OpportunityDetailDrawer id={detailId} open={detailId != null} onClose={() => setDetailId(null)} />
     </DashboardLayout>
   );
