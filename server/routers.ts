@@ -2,6 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { LEAD_STAGE_ENUM, buildLeadCapturePatch, deriveContactRelationship } from "@shared/leadPipeline";
 import { extractAttribution } from "@shared/attribution";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { logAuthEventFromReq } from "./_core/authLog";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, adminProcedure, router, mergeRouters } from "./_core/trpc";
 import { enforceRateLimit, getClientIp, HOUR_MS, publicWriteIpRule } from "./_core/rateLimit";
@@ -112,6 +113,16 @@ export const appRouter = router({
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      // Defeat the back button / bfcache restoring an authenticated view after
+      // logout: tell the browser never to serve this response from cache.
+      if (typeof ctx.res.setHeader === "function") {
+        ctx.res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+        ctx.res.setHeader("Pragma", "no-cache");
+        ctx.res.setHeader("Expires", "0");
+      }
+      const userId =
+        typeof ctx.user?.id === "number" ? ctx.user.id : (ctx.user?.openId ?? null);
+      logAuthEventFromReq(ctx.req, { event: "logout", outcome: "success", userId });
       return {
         success: true,
       } as const;

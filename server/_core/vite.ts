@@ -68,6 +68,18 @@ export function serveStatic(app: Express) {
     const indexPath = path.resolve(distPath, "index.html");
     let html = fs.readFileSync(indexPath, "utf-8");
     html = injectMeta(html, req.originalUrl);
-    res.status(200).set({ "Content-Type": "text/html" }).send(html);
+    // The SPA HTML document is never cached: prevents the browser back button /
+    // bfcache from restoring an authenticated dashboard view after logout or
+    // session expiry. Hashed JS/CSS assets are served by express.static above
+    // and keep their normal long-lived caching.
+    res
+      .status(200)
+      .set({
+        "Content-Type": "text/html",
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        Pragma: "no-cache",
+        Expires: "0",
+      })
+      .send(html);
   });
 }

@@ -1,4 +1,4 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { exchangeCodeForTokens } from "../googleAds";
@@ -6,6 +6,8 @@ import { exchangeCodeForToken, getLongLivedToken, getPageAccessToken } from "../
 import { saveAiVaCredentials } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
+import { ENV } from "./env";
+import { logAuthEventFromReq } from "./authLog";
 
 function getQueryParam(req: Request, key: string): string | undefined {
   const value = req.query[key];
@@ -129,13 +131,16 @@ export function registerOAuthRoutes(app: Express) {
         lastSignedIn: new Date(),
       });
 
-      const sessionToken = await sdk.createSessionToken(userInfo.openId, {
-        name: userInfo.name || "",
-        expiresInMs: ONE_YEAR_MS,
-      });
+      // Hardened session: 8h absolute cap + 30m idle window (same as staff login).
+      const { token, ttlMs } = await sdk.issueSession(
+        { openId: userInfo.openId, appId: ENV.appId, name: userInfo.name || "" },
+        { rememberDevice: false }
+      );
 
       const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+      res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ttlMs });
+
+      logAuthEventFromReq(req, { event: "login", outcome: "success", userId: userInfo.openId, reason: "oauth" });
 
       res.redirect(302, "/");
     } catch (error) {

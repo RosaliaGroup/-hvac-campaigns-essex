@@ -52,10 +52,96 @@ export function checkRateLimit(
   return { allowed: true, remaining: max - hits.length };
 }
 
+/**
+ * Peek the number of live hits for `key` WITHOUT recording a new one. Used by
+ * login rate limiting to check the lockout threshold before deciding whether to
+ * even attempt authentication.
+ */
+export function countRateLimitHits(
+  bucket: string,
+  key: string,
+  windowMs: number,
+  nowFn: () => number = Date.now,
+): number {
+  const now = nowFn();
+  const storeKey = `${bucket}:${key}`;
+  const hits = (store.get(storeKey) ?? []).filter(t => now - t < windowMs);
+  store.set(storeKey, hits);
+  return hits.length;
+}
+
+/** Record one hit for `key` (e.g. a failed login). Returns the new live count. */
+export function recordRateLimitHit(
+  bucket: string,
+  key: string,
+  windowMs: number,
+  nowFn: () => number = Date.now,
+): number {
+  const now = nowFn();
+  const storeKey = `${bucket}:${key}`;
+  const hits = (store.get(storeKey) ?? []).filter(t => now - t < windowMs);
+  hits.push(now);
+  store.set(storeKey, hits);
+  return hits.length;
+}
+
+/** Clear the counter for `key` (e.g. after a successful login). */
+export function clearRateLimit(bucket: string, key: string): void {
+  store.delete(`${bucket}:${key}`);
+}
+
 /** Test helper: clear all limiter state. */
 export function resetRateLimits(): void {
   store.clear();
   lastSweep = 0;
+}
+
+/**
+ * Trusted client IP for SECURITY decisions (login rate limiting).
+ *
+ * VERIFIED against Railway's edge (2026-07-24, echo deploy on an isolated temp
+ * env). Railway is a REWRITING proxy — it does NOT append to client-supplied
+ * headers, it REPLACES them:
+ *   - `X-Real-IP` is set to the true client IP and OVERWRITES any client-supplied
+ *     value (an injected `X-Real-IP: 9.9.9.9` came through as the real IP).
+ *   - `X-Forwarded-For` is rewritten as "<real-client>, <railway-edge-hop>";
+ *     client-injected XFF entries (single or multi-hop) are DISCARDED. So the
+ *     real client is the LEFTMOST entry, and the RIGHTMOST is Railway's own
+ *     internal edge IP (152.233.x.x) — the same for everyone. Keying on the
+ *     rightmost would bucket ALL users together (global-lockout DoS).
+ *   - `Forwarded` is passed through UNSANITIZED and must never be trusted.
+ *
+ * We therefore trust `X-Real-IP` first (Railway-managed, spoof-proof), then the
+ * LEFTMOST `X-Forwarded-For` entry, then the socket peer. Because Railway
+ * overwrites both `X-Real-IP` and `X-Forwarded-For`, a client cannot forge the
+ * value we key on in production. Never key security limits on `getClientIp`.
+ */
+function firstHeaderValue(v: string | string[] | undefined): string | null {
+  if (Array.isArray(v)) v = v[0];
+  if (typeof v !== "string") return null;
+  const t = v.split(",")[0]!.trim();
+  return t.length > 0 ? t : null;
+}
+
+export function getTrustedClientIp(ctx: Pick<TrpcContext, "req">): string {
+  const req = ctx.req as {
+    headers?: Record<string, string | string[] | undefined>;
+    ip?: string;
+    socket?: { remoteAddress?: string };
+  };
+
+  // 1) X-Real-IP — Railway sets this to the true client and overwrites spoofs.
+  const xRealIp = firstHeaderValue(req?.headers?.["x-real-ip"]);
+  if (xRealIp) return xRealIp;
+
+  // 2) Leftmost X-Forwarded-For — the real client after Railway's rewrite.
+  const fwd = req?.headers?.["x-forwarded-for"];
+  const raw = Array.isArray(fwd) ? fwd.join(",") : (fwd ?? "");
+  const parts = raw.split(",").map(s => s.trim()).filter(Boolean);
+  if (parts.length > 0) return parts[0]!;
+
+  // 3) Direct socket peer (no proxy in front).
+  return req?.socket?.remoteAddress || req?.ip || "unknown-ip";
 }
 
 /** Best-effort client IP behind Netlify/any proxy. */

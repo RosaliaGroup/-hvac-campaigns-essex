@@ -1,6 +1,8 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
+import { COOKIE_NAME } from "@shared/const";
+import { getSessionCookieOptions } from "./cookies";
 
 /**
  * Authenticated user with the (optional) real team role.
@@ -21,9 +23,22 @@ export async function createContext(
   let user: AuthenticatedUser | null = null;
 
   try {
-    user = await sdk.authenticateRequest(opts.req);
+    const auth = await sdk.authenticateRequest(opts.req);
+    user = auth.user;
+
+    // Sliding idle window: on every authenticated request, re-issue the session
+    // cookie with a fresh 30-minute idle deadline (capped at the absolute
+    // expiry). This is what "any authenticated request resets the timer" means
+    // for a stateless JWT session. Never runs for anonymous/public requests.
+    if (user && auth.refreshedToken && opts.res && typeof opts.res.cookie === "function") {
+      const cookieOptions = getSessionCookieOptions(opts.req);
+      opts.res.cookie(COOKIE_NAME, auth.refreshedToken, {
+        ...cookieOptions,
+        maxAge: auth.refreshMaxAgeMs,
+      });
+    }
   } catch (error) {
-    // Authentication is optional for public procedures.
+    // Authentication is optional for public procedures; never block on it.
     user = null;
   }
 
