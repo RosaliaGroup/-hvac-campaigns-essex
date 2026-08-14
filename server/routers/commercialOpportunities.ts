@@ -549,6 +549,8 @@ const checklistRouter = router({
         .update(opportunityChecklistItems)
         .set({
           isComplete: input.isComplete,
+          // INVARIANT: boardStatus "done" and isComplete always agree (0067).
+          boardStatus: input.isComplete ? "done" : "todo",
           completedAt: input.isComplete ? new Date() : null,
           completedById: input.isComplete ? me : null,
         })
@@ -568,6 +570,7 @@ const checklistRouter = router({
     .input(
       z.object({
         itemId: z.number().int().positive(),
+        label: z.string().min(1).max(255).optional(),
         assigneeId: optionalId,
         dueAt: z.date().nullable().optional(),
         notes: z.string().max(2000).nullable().optional(),
@@ -581,12 +584,79 @@ const checklistRouter = router({
       if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Checklist item not found" });
       await assertCanEdit(db, ctx, item.opportunityId);
       const set: Record<string, unknown> = {};
+      if (input.label !== undefined) set.label = input.label;
       if (input.assigneeId !== undefined) set.assigneeId = input.assigneeId;
       if (input.dueAt !== undefined) set.dueAt = input.dueAt;
       if (input.notes !== undefined) set.notes = input.notes;
       if (input.requiredForConversion !== undefined) set.requiredForConversion = input.requiredForConversion;
       if (!Object.keys(set).length) return { ok: true };
       await db.update(opportunityChecklistItems).set(set).where(eq(opportunityChecklistItems.id, input.itemId));
+      return { ok: true };
+    }),
+
+  /**
+   * Trello-style move: change column and/or position within it.
+   *
+   * INVARIANT: boardStatus "done" and isComplete are the same signal — convert-to-job
+   * gates on isComplete + requiredForConversion, so this writes both together in
+   * every direction. Never set boardStatus without setting isComplete.
+   */
+  move: protectedProcedure
+    .input(
+      z.object({
+        itemId: z.number().int().positive(),
+        boardStatus: z.enum(["todo", "doing", "done"]),
+        sortOrder: z.number().int().min(0).default(0),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw dbUnavailable();
+      const item = (await db.select().from(opportunityChecklistItems).where(eq(opportunityChecklistItems.id, input.itemId)).limit(1))[0];
+      if (!item) throw new TRPCError({ code: "NOT_FOUND", message: "Checklist item not found" });
+      await assertCanEdit(db, ctx, item.opportunityId);
+
+      const becomingDone = input.boardStatus === "done";
+      const me = currentTeamMemberId(ctx);
+
+      await db
+        .update(opportunityChecklistItems)
+        .set({
+          boardStatus: input.boardStatus,
+          isComplete: becomingDone,
+          completedAt: becomingDone ? (item.completedAt ?? new Date()) : null,
+          completedById: becomingDone ? (item.completedById ?? me) : null,
+        })
+        .where(eq(opportunityChecklistItems.id, input.itemId));
+
+      // Renumber the destination column so sortOrder stays dense and stable.
+      const column = await db
+        .select({ id: opportunityChecklistItems.id })
+        .from(opportunityChecklistItems)
+        .where(
+          and(
+            eq(opportunityChecklistItems.opportunityId, item.opportunityId),
+            eq(opportunityChecklistItems.boardStatus, input.boardStatus),
+          ),
+        )
+        .orderBy(asc(opportunityChecklistItems.sortOrder));
+
+      const rest = column.map(r => r.id).filter(id => id !== input.itemId);
+      const index = Math.min(input.sortOrder, rest.length);
+      const ordered = [...rest.slice(0, index), input.itemId, ...rest.slice(index)];
+      for (let i = 0; i < ordered.length; i++) {
+        await db.update(opportunityChecklistItems).set({ sortOrder: i }).where(eq(opportunityChecklistItems.id, ordered[i]));
+      }
+
+      if (item.boardStatus !== input.boardStatus) {
+        await insertEvent(
+          db,
+          item.opportunityId,
+          "checklist_item_moved",
+          `Checklist: ${item.label} moved to ${input.boardStatus}.`,
+          { itemId: item.id, from: item.boardStatus, to: input.boardStatus },
+        );
+      }
       return { ok: true };
     }),
 

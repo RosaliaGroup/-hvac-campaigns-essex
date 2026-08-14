@@ -119,8 +119,9 @@ export default function OpportunityDetail() {
           </CardContent>
         </Card>
 
-        {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval. */}
-        <EstimatesSection opportunityId={id} />
+        {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval.
+            Residential-only: commercial deals go out as bids, not Good/Better/Best tiers. */}
+        {o.recordType !== "commercial" ? <EstimatesSection opportunityId={id} /> : null}
       </div>
     </DashboardLayout>
   );

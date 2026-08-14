@@ -2184,6 +2184,12 @@ export const opportunityChecklistItems = mysqlTable(
     label: varchar("label", { length: 255 }).notNull(),
     sortOrder: int("sortOrder").default(0).notNull(),
     isComplete: boolean("isComplete").default(false).notNull(),
+    /**
+     * Board column for the Trello-style checklist (0067). INVARIANT: "done" and
+     * isComplete always agree — convert-to-job gates on isComplete +
+     * requiredForConversion, so the two must never drift apart.
+     */
+    boardStatus: mysqlEnum("boardStatus", ["todo", "doing", "done"]).default("todo").notNull(),
     requiredForConversion: boolean("requiredForConversion").default(false).notNull(),
     assigneeId: int("assigneeId"),
     dueAt: timestamp("dueAt"),
