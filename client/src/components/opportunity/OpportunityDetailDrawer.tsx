@@ -248,8 +248,9 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                 )) : <p className="text-sm text-muted-foreground">No QuickBooks document (manual opportunity).</p>}
               </Section>
 
-              {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval. */}
-              {id != null ? <EstimatesSection opportunityId={id} /> : null}
+              {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval.
+                  Residential-only: commercial deals go out as bids, not Good/Better/Best tiers. */}
+              {id != null && o.recordType !== "commercial" ? <EstimatesSection opportunityId={id} /> : null}
 
               {/* Conflicts */}
               {data && data.conflicts.length > 0 ? (
