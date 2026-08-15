@@ -4,6 +4,7 @@ import ChecklistSection from "./ChecklistSection";
 import CommentsSection from "./CommentsSection";
 import DocumentsSection from "./DocumentsSection";
 import MembersSection from "./MembersSection";
+import DescriptionSection from "./DescriptionSection";
 import QuickFieldsSection from "./QuickFieldsSection";
 
 /**
@@ -22,13 +23,17 @@ export default function CommercialSections({
    * just the comment stream for the right-hand column; "quickfields" renders the chip row
    * that sits under the card title. All mount the same query, which react-query dedupes.
    */
-  section?: "work" | "activity" | "quickfields";
+  section?: "work" | "activity" | "quickfields" | "description";
 }) {
   const q = trpc.opportunities.commercial.get.useQuery({ id: opportunityId }, { retry: false });
   const d = q.data;
   // Render nothing until commercial detail loads; non-commercial records resolve to
   // NOT_FOUND (assertCommercial) → q.data stays undefined → this stays invisible.
   if (!d) return null;
+
+  if (section === "description") {
+    return <DescriptionSection opportunityId={opportunityId} description={d.opportunity.description ?? null} />;
+  }
 
   if (section === "quickfields") {
     return <QuickFieldsSection opportunityId={opportunityId} detail={d} />;

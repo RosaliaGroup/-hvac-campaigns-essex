@@ -39,7 +39,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function ActionButton({ href, disabled, onClick, icon: Icon, label }: {
   href?: string; disabled?: boolean; onClick?: () => void; icon: React.ElementType; label: string;
 }) {
-  const cls = "flex flex-col items-center gap-1 rounded-lg border p-2 text-[11px] font-medium hover:bg-muted disabled:opacity-40";
+  // Trello's card buttons: a horizontal pill with the icon beside the label, wrapping
+  // across rows, rather than a fixed grid of stacked tiles.
+  const cls = "inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40";
   if (href && !disabled) {
     return <a href={href} className={cls}><Icon className="h-4 w-4" />{label}</a>;
   }
@@ -116,7 +118,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
         ) : (
           <div className="flex flex-col">
             <SheetHeader className="border-b p-4">
-              <SheetTitle className="flex items-center gap-2 text-lg">
+              <SheetTitle className="flex items-center gap-2 text-2xl font-bold">
                 {formatDisplayName(c?.companyName || c?.displayName) || "Opportunity"}
                 {data?.opportunity.relationship ? (
                   <Badge variant="secondary" className={RELATIONSHIP_BADGE[data.opportunity.relationship] ?? ""}>{data.opportunity.relationship}</Badge>
@@ -138,7 +140,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
             ) : null}
 
             {/* Quick actions */}
-            <div className="grid grid-cols-4 gap-2 border-b p-3 sm:grid-cols-6">
+            <div className="flex flex-wrap gap-2 border-b p-3">
               <ActionButton href={c?.phone ? `tel:${c.phone}` : undefined} disabled={!c?.phone} icon={Phone} label="Call" />
               <ActionButton onClick={() => c?.phone && navigate(internalSmsConversationPath(c.phone))} disabled={!c?.phone} icon={MessageSquare} label="Text" />
               <ActionButton href={c?.email ? `mailto:${c.email}` : undefined} disabled={!c?.email} icon={Mail} label="Email" />
@@ -177,6 +179,8 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                 single column below lg so nothing is lost on a phone. */}
             <div className="grid gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="min-w-0 space-y-5">
+                {/* Description — Trello's card description, directly under the title row. */}
+                {id != null ? <CommercialSections opportunityId={id} section="description" /> : null}
               {/* Day-3 forced decision — the loop expired and this deal is still open. */}
               {decisionPending ? (
                 <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
@@ -191,12 +195,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   </div>
                 </div>
               ) : null}
-                {/* Description — long-form scope notes carried on the opportunity. */}
-                {o.description ? (
-                  <Section title="Description">
-                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">{o.description}</p>
-                  </Section>
-                ) : null}
               {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval.
                   Residential-only: commercial deals go out as bids, not Good/Better/Best tiers. */}
               {id != null && o.recordType !== "commercial" ? <EstimatesSection opportunityId={id} /> : null}
