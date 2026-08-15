@@ -1,15 +1,13 @@
 /**
- * Card checklists — Trello's card layout: several named checklists on one opportunity,
- * each with its own progress bar, its own items, and its own "Add an item".
+ * Card checklists — Trello's card layout and interaction model.
  *
- * Items are plain checkboxes (Trello semantics), with assignee, due date and notes
- * revealed on click. This replaced the To do / In progress / Done board: the board's
- * `boardStatus` column still exists and is kept in lockstep by the server, but the
- * checkbox is the completion signal the conversion gate reads.
+ * Several named checklists per opportunity. Each has a heading (click the name to
+ * rename), a percentage bar, and its items. Clicking an item turns it into a compact
+ * editor: a text box with Save / Cancel and a row of small actions (Assign, Due date,
+ * and an overflow for the required flag and Delete) — not a stacked panel.
  *
- * INVARIANT: convert-to-job gates on requiredForConversion + isComplete, so anything
- * that could clear a required item without completing it (deleting a whole checklist)
- * is refused server-side rather than handled here.
+ * INVARIANT: convert-to-job gates on requiredForConversion + isComplete, so the server
+ * refuses to delete a checklist holding outstanding required items.
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -19,8 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, CheckSquare, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, CheckSquare, Clock, MoreHorizontal, Plus, UserPlus, X } from "lucide-react";
 import { checklistProgress, fmtDate } from "@/lib/commercialOpportunities";
 import type { CommercialDetail } from "@/lib/commercialApiTypes";
 import { useCommercialPerms } from "./shared";
@@ -54,7 +55,10 @@ export default function ChecklistSection({
   const { toast } = useToast();
   const { canWrite } = useCommercialPerms();
 
-  const [openItem, setOpenItem] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<number | null>(null);
+  const [itemDraft, setItemDraft] = useState("");
+  const [panel, setPanel] = useState<"assign" | "due" | null>(null);
+  const [renaming, setRenaming] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [adding, setAdding] = useState<number | null>(null);
   const [newList, setNewList] = useState<string | null>(null);
@@ -73,7 +77,7 @@ export default function ChecklistSection({
   const renameGroup = c.renameGroup.useMutation({ onSuccess: refresh, onError: onErr });
   const removeGroup = c.removeGroup.useMutation({ onSuccess: refresh, onError: onErr });
 
-  // Overall gate status stays across all checklists — conversion doesn't care which list.
+  // Conversion readiness spans every checklist — the gate doesn't care which list.
   const overall = checklistProgress(
     items.map(i => ({ isComplete: !!i.isComplete, requiredForConversion: !!i.requiredForConversion })),
   );
@@ -88,6 +92,19 @@ export default function ChecklistSection({
       (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
     );
 
+  const openEditor = (item: ChecklistItem) => {
+    setEditingItem(item.id);
+    setItemDraft(item.label);
+    setPanel(null);
+  };
+  const closeEditor = () => { setEditingItem(null); setPanel(null); };
+
+  const saveLabel = (item: ChecklistItem) => {
+    const v = itemDraft.trim();
+    if (v && v !== item.label) updateItem.mutate({ itemId: item.id, label: v });
+    closeEditor();
+  };
+
   const submitItem = (g: Group) => {
     const label = (drafts[g.id] ?? "").trim();
     if (!label) return;
@@ -96,7 +113,7 @@ export default function ChecklistSection({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {!overall.conversionReady ? (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -106,134 +123,155 @@ export default function ChecklistSection({
 
       {lists.map(g => {
         const list = itemsOf(g);
-        const done = list.filter(i => i.isComplete).length;
         return (
           <div key={g.id} className="space-y-2">
             <div className="flex items-center gap-2">
-              <CheckSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-              {canWrite && g.id !== UNGROUPED ? (
-                <input
+              <CheckSquare className="h-5 w-5 shrink-0 text-muted-foreground" />
+              {renaming === g.id ? (
+                <Input
+                  autoFocus
                   defaultValue={g.name}
-                  className="flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold uppercase tracking-wide hover:border-input focus:border-input focus:outline-none"
+                  className="h-8 flex-1 text-sm font-semibold"
                   onBlur={e => {
                     const v = e.target.value.trim();
                     if (v && v !== g.name) renameGroup.mutate({ groupId: g.id, name: v });
-                    else e.target.value = g.name;
+                    setRenaming(null);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    if (e.key === "Escape") setRenaming(null);
                   }}
                 />
               ) : (
-                <span className="flex-1 text-sm font-semibold uppercase tracking-wide">{g.name}</span>
-              )}
-              <span className="text-xs text-muted-foreground">{done}/{list.length}</span>
-              {canWrite && g.id !== UNGROUPED ? (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 px-2 text-xs"
-                  onClick={() => removeGroup.mutate({ groupId: g.id })}
+                <button
+                  className="flex-1 rounded px-1 py-0.5 text-left text-base font-semibold hover:bg-muted"
+                  onClick={() => canWrite && g.id !== UNGROUPED && setRenaming(g.id)}
                 >
+                  {g.name}
+                </button>
+              )}
+              {canWrite && g.id !== UNGROUPED ? (
+                <Button size="sm" variant="secondary" className="h-7 px-2 text-xs" onClick={() => removeGroup.mutate({ groupId: g.id })}>
                   Delete
                 </Button>
               ) : null}
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="w-8 text-right text-[11px] text-muted-foreground">{pct(list)}%</span>
-              <Progress value={pct(list)} className="flex-1" />
+              <span className="w-9 shrink-0 text-right text-[11px] text-muted-foreground">{pct(list)}%</span>
+              <Progress value={pct(list)} className="h-2 flex-1" />
             </div>
 
-            <div className="space-y-0.5">
+            <div>
               {list.map(item => {
                 const assignee = members.find(m => m.teamMemberId === item.assigneeId);
-                const open = openItem === item.id;
+                const editing = editingItem === item.id;
                 const overdue = item.dueAt && !item.isComplete && new Date(item.dueAt).getTime() < Date.now();
-                return (
-                  <div key={item.id} className="rounded-md px-1 py-1 hover:bg-muted/50">
-                    <div className="flex items-start gap-2">
-                      <Checkbox
-                        className="mt-0.5"
-                        checked={!!item.isComplete}
-                        disabled={!canWrite}
-                        onCheckedChange={v => setComplete.mutate({ itemId: item.id, isComplete: v === true })}
-                      />
-                      <button className="min-w-0 flex-1 text-left" onClick={() => setOpenItem(open ? null : item.id)}>
-                        <span className={`text-sm ${item.isComplete ? "text-muted-foreground line-through" : ""}`}>{item.label}</span>
-                      </button>
-                      {item.requiredForConversion ? (
-                        <Badge variant="outline" className="border-amber-300 text-[9px] text-amber-700">required</Badge>
-                      ) : null}
-                      {item.dueAt ? (
-                        <span className={`shrink-0 text-[11px] ${overdue ? "font-medium text-red-600" : "text-muted-foreground"}`}>
-                          {fmtDate(item.dueAt)}
-                        </span>
-                      ) : null}
-                      {assignee ? (
-                        <span
-                          title={assignee.name ?? undefined}
-                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1e3a5f] text-[9px] font-semibold text-white"
-                        >
-                          {initials(assignee.name)}
-                        </span>
-                      ) : null}
-                    </div>
 
-                    {open ? (
-                      <div className="ml-6 mt-2 space-y-2 border-l pl-3">
-                        <Input
-                          defaultValue={item.label}
-                          disabled={!canWrite}
-                          className="h-8 text-sm"
-                          onBlur={e => {
-                            const v = e.target.value.trim();
-                            if (v && v !== item.label) updateItem.mutate({ itemId: item.id, label: v });
+                if (editing) {
+                  return (
+                    <div key={item.id} className="flex items-start gap-2 rounded-md px-1 py-1.5">
+                      <Checkbox className="mt-2" checked={!!item.isComplete} disabled />
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <Textarea
+                          autoFocus
+                          value={itemDraft}
+                          className="min-h-[60px] text-sm"
+                          onChange={e => setItemDraft(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); saveLabel(item); }
+                            if (e.key === "Escape") closeEditor();
                           }}
                         />
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Button size="sm" className="h-7 text-xs" onClick={() => saveLabel(item)}>Save</Button>
+                          <Button size="sm" variant="ghost" className="h-7 px-2" onClick={closeEditor}><X className="h-4 w-4" /></Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 text-xs"
+                            onClick={() => setPanel(panel === "assign" ? null : "assign")}
+                          >
+                            <UserPlus className="mr-1 h-3.5 w-3.5" /> Assign
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-7 text-xs"
+                            onClick={() => setPanel(panel === "due" ? null : "due")}
+                          >
+                            <Clock className="mr-1 h-3.5 w-3.5" /> Due date
+                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="secondary" className="h-7 px-2"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuItem onSelect={() => updateItem.mutate({ itemId: item.id, requiredForConversion: !item.requiredForConversion })}>
+                                {item.requiredForConversion ? "Not required for conversion" : "Required for conversion"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600" onSelect={() => { removeItem.mutate({ itemId: item.id }); closeEditor(); }}>
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {panel === "assign" ? (
                           <select
-                            className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
-                            disabled={!canWrite}
+                            className="h-8 w-full rounded-md border bg-background px-2 text-xs"
                             value={item.assigneeId ?? ""}
-                            onChange={e => updateItem.mutate({ itemId: item.id, assigneeId: e.target.value ? Number(e.target.value) : null })}
+                            onChange={e => { updateItem.mutate({ itemId: item.id, assigneeId: e.target.value ? Number(e.target.value) : null }); setPanel(null); }}
                           >
                             <option value="">Unassigned</option>
                             {members.map(m => (
                               <option key={m.id} value={m.teamMemberId}>{m.name ?? `Member ${m.teamMemberId}`}</option>
                             ))}
                           </select>
+                        ) : null}
+
+                        {panel === "due" ? (
                           <input
                             type="date"
-                            className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
-                            disabled={!canWrite}
+                            className="h-8 w-full rounded-md border bg-background px-2 text-xs"
                             value={toDateInput(item.dueAt)}
-                            onChange={e => updateItem.mutate({ itemId: item.id, dueAt: e.target.value ? new Date(`${e.target.value}T12:00:00`) : null })}
+                            onChange={e => { updateItem.mutate({ itemId: item.id, dueAt: e.target.value ? new Date(`${e.target.value}T12:00:00`) : null }); setPanel(null); }}
                           />
-                        </div>
-                        <Textarea
-                          defaultValue={item.notes ?? ""}
-                          disabled={!canWrite}
-                          placeholder="Notes"
-                          className="min-h-[52px] text-xs"
-                          onBlur={e => {
-                            const v = e.target.value;
-                            if (v !== (item.notes ?? "")) updateItem.mutate({ itemId: item.id, notes: v || null });
-                          }}
-                        />
-                        <div className="flex items-center justify-between">
-                          <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                            <Checkbox
-                              checked={!!item.requiredForConversion}
-                              disabled={!canWrite}
-                              onCheckedChange={v => updateItem.mutate({ itemId: item.id, requiredForConversion: v === true })}
-                            />
-                            Required before converting to a Job
-                          </label>
-                          {canWrite ? (
-                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-red-600" onClick={() => removeItem.mutate({ itemId: item.id })}>
-                              <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
-                            </Button>
-                          ) : null}
-                        </div>
+                        ) : null}
                       </div>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={item.id} className="flex items-start gap-2 rounded-md px-1 py-1.5 hover:bg-muted/60">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={!!item.isComplete}
+                      disabled={!canWrite}
+                      onCheckedChange={v => setComplete.mutate({ itemId: item.id, isComplete: v === true })}
+                    />
+                    <button
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => canWrite && openEditor(item)}
+                    >
+                      <span className={`text-sm ${item.isComplete ? "text-muted-foreground line-through" : ""}`}>{item.label}</span>
+                    </button>
+                    {item.requiredForConversion ? (
+                      <Badge variant="outline" className="shrink-0 border-amber-300 text-[9px] text-amber-700">required</Badge>
+                    ) : null}
+                    {item.dueAt ? (
+                      <span className={`shrink-0 rounded px-1 text-[11px] ${overdue ? "bg-red-100 font-medium text-red-700" : "text-muted-foreground"}`}>
+                        {fmtDate(item.dueAt)}
+                      </span>
+                    ) : null}
+                    {assignee ? (
+                      <span
+                        title={assignee.name ?? undefined}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#1e3a5f] text-[9px] font-semibold text-white"
+                      >
+                        {initials(assignee.name)}
+                      </span>
                     ) : null}
                   </div>
                 );
@@ -242,23 +280,25 @@ export default function ChecklistSection({
 
             {canWrite ? (
               adding === g.id ? (
-                <div className="ml-6 flex gap-1">
-                  <Input
+                <div className="ml-7 space-y-1.5">
+                  <Textarea
                     autoFocus
                     value={drafts[g.id] ?? ""}
                     placeholder="Add an item"
-                    className="h-8 text-sm"
+                    className="min-h-[60px] text-sm"
                     onChange={e => setDrafts(d => ({ ...d, [g.id]: e.target.value }))}
                     onKeyDown={e => {
-                      if (e.key === "Enter") { e.preventDefault(); submitItem(g); }
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitItem(g); }
                       if (e.key === "Escape") setAdding(null);
                     }}
                   />
-                  <Button size="sm" className="h-8" onClick={() => submitItem(g)}>Save</Button>
-                  <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setAdding(null)}><X className="h-4 w-4" /></Button>
+                  <div className="flex items-center gap-1.5">
+                    <Button size="sm" className="h-7 text-xs" onClick={() => submitItem(g)}>Add</Button>
+                    <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setAdding(null)}><X className="h-4 w-4" /></Button>
+                  </div>
                 </div>
               ) : (
-                <Button size="sm" variant="secondary" className="ml-6 h-7 text-xs" onClick={() => setAdding(g.id)}>
+                <Button size="sm" variant="secondary" className="ml-7 h-8 text-xs" onClick={() => setAdding(g.id)}>
                   Add an item
                 </Button>
               )
@@ -269,7 +309,7 @@ export default function ChecklistSection({
 
       {canWrite ? (
         newList !== null ? (
-          <div className="flex gap-1">
+          <div className="space-y-1.5">
             <Input
               autoFocus
               value={newList}
@@ -277,26 +317,19 @@ export default function ChecklistSection({
               className="h-8 text-sm"
               onChange={e => setNewList(e.target.value)}
               onKeyDown={e => {
-                if (e.key === "Enter" && newList.trim()) {
-                  e.preventDefault();
-                  addGroup.mutate({ opportunityId, name: newList.trim() });
-                  setNewList(null);
-                }
+                if (e.key === "Enter" && newList.trim()) { e.preventDefault(); addGroup.mutate({ opportunityId, name: newList.trim() }); setNewList(null); }
                 if (e.key === "Escape") setNewList(null);
               }}
             />
-            <Button
-              size="sm"
-              className="h-8"
-              disabled={!newList.trim()}
-              onClick={() => { addGroup.mutate({ opportunityId, name: newList.trim() }); setNewList(null); }}
-            >
-              Add
-            </Button>
-            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setNewList(null)}><X className="h-4 w-4" /></Button>
+            <div className="flex items-center gap-1.5">
+              <Button size="sm" className="h-7 text-xs" disabled={!newList.trim()} onClick={() => { addGroup.mutate({ opportunityId, name: newList.trim() }); setNewList(null); }}>
+                Add
+              </Button>
+              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setNewList(null)}><X className="h-4 w-4" /></Button>
+            </div>
           </div>
         ) : (
-          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setNewList("")}>
+          <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => setNewList("")}>
             <Plus className="mr-1 h-4 w-4" /> Add checklist
           </Button>
         )
