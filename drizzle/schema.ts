@@ -2162,6 +2162,8 @@ export const opportunityChecklistTemplateItems = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     templateId: int("templateId").notNull(),
+    /** Checklist this item instantiates into. NULL groups under a default list (0068). */
+    groupName: varchar("groupName", { length: 120 }),
     label: varchar("label", { length: 255 }).notNull(),
     sortOrder: int("sortOrder").default(0).notNull(),
     requiredForConversion: boolean("requiredForConversion").default(false).notNull(),
@@ -2174,12 +2176,36 @@ export const opportunityChecklistTemplateItems = mysqlTable(
 export type OpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferSelect;
 export type InsertOpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferInsert;
 
+/**
+ * Named checklist on an opportunity — the Trello "checklist" that groups items on a
+ * card. An opportunity can carry several (QA, project type, commercial evaluation),
+ * each with its own progress. Items point at a group via groupId (0068).
+ */
+export const opportunityChecklistGroups = mysqlTable(
+  "opportunityChecklistGroups",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    opportunityId: int("opportunityId").notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    sortOrder: int("sortOrder").default(0).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    opportunityIdx: index("opportunityChecklistGroups_opportunityId_idx").on(table.opportunityId),
+  }),
+);
+export type OpportunityChecklistGroup = typeof opportunityChecklistGroups.$inferSelect;
+export type InsertOpportunityChecklistGroup = typeof opportunityChecklistGroups.$inferInsert;
+
 /** Per-opportunity checklist items (instantiated from a template or added ad hoc). */
 export const opportunityChecklistItems = mysqlTable(
   "opportunityChecklistItems",
   {
     id: int("id").autoincrement().primaryKey(),
     opportunityId: int("opportunityId").notNull(),
+    /** Owning checklist group (0068). NULL only for rows predating the backfill. */
+    groupId: int("groupId"),
     templateItemId: int("templateItemId"),
     label: varchar("label", { length: 255 }).notNull(),
     sortOrder: int("sortOrder").default(0).notNull(),

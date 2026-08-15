@@ -25,6 +25,7 @@ import {
   opportunityMembers,
   opportunityChecklistTemplates,
   opportunityChecklistTemplateItems,
+  opportunityChecklistGroups,
   opportunityChecklistItems,
   opportunityComments,
   opportunityDocuments,
@@ -227,7 +228,13 @@ async function ensureQaTemplateSeeded(db: Db): Promise<number> {
   return templateId;
 }
 
-/** Copy a template's items onto an opportunity as fresh (incomplete) instances. */
+/**
+ * Copy a template's items onto an opportunity as fresh (incomplete) instances.
+ *
+ * Template items carry a groupName (0068); each distinct name becomes one checklist
+ * group on the opportunity, in first-appearance order. Items without a groupName fall
+ * under a single default group so nothing is ever orphaned.
+ */
 async function instantiateChecklist(db: Db, oppId: number, templateId: number) {
   const items = await db
     .select()
@@ -235,9 +242,31 @@ async function instantiateChecklist(db: Db, oppId: number, templateId: number) {
     .where(eq(opportunityChecklistTemplateItems.templateId, templateId))
     .orderBy(asc(opportunityChecklistTemplateItems.sortOrder));
   if (!items.length) return 0;
+
+  const existingGroups = await db
+    .select()
+    .from(opportunityChecklistGroups)
+    .where(eq(opportunityChecklistGroups.opportunityId, oppId))
+    .orderBy(asc(opportunityChecklistGroups.sortOrder));
+
+  const byName = new Map(existingGroups.map(g => [g.name, g.id]));
+  let nextOrder = existingGroups.length;
+
+  const names: string[] = [];
+  for (const it of items) {
+    const name = it.groupName?.trim() || DEFAULT_CHECKLIST_GROUP;
+    if (!names.includes(name)) names.push(name);
+  }
+  for (const name of names) {
+    if (byName.has(name)) continue;
+    const res = await db.insert(opportunityChecklistGroups).values({ opportunityId: oppId, name, sortOrder: nextOrder++ });
+    byName.set(name, Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0));
+  }
+
   await db.insert(opportunityChecklistItems).values(
     items.map(it => ({
       opportunityId: oppId,
+      groupId: byName.get(it.groupName?.trim() || DEFAULT_CHECKLIST_GROUP) ?? null,
       templateItemId: it.id,
       label: it.label,
       sortOrder: it.sortOrder,
@@ -245,6 +274,16 @@ async function instantiateChecklist(db: Db, oppId: number, templateId: number) {
     })),
   );
   return items.length;
+}
+
+/** Where ungrouped items land, matching the 0068 backfill so the two never diverge. */
+const DEFAULT_CHECKLIST_GROUP = "QA CHECKLIST";
+
+/** Resolve a group to its opportunity, for permission checks on group-scoped writes. */
+async function groupOpportunityId(db: Db, groupId: number): Promise<number> {
+  const g = (await db.select().from(opportunityChecklistGroups).where(eq(opportunityChecklistGroups.id, groupId)).limit(1))[0];
+  if (!g) throw new TRPCError({ code: "NOT_FOUND", message: "Checklist not found" });
+  return g.opportunityId;
 }
 
 async function resolveStage(db: Db, stageId: number | null): Promise<StageLike | null> {
@@ -521,17 +560,81 @@ const checklistRouter = router({
     }),
 
   addItem: protectedProcedure
-    .input(z.object({ opportunityId: z.number().int().positive(), label: z.string().min(1).max(255), requiredForConversion: z.boolean().default(false) }))
+    .input(
+      z.object({
+        opportunityId: z.number().int().positive(),
+        groupId: z.number().int().positive().nullable().default(null),
+        label: z.string().min(1).max(255),
+        requiredForConversion: z.boolean().default(false),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw dbUnavailable();
       await assertCanEdit(db, ctx, input.opportunityId);
+      // New items append to the end of their checklist.
+      const siblings = input.groupId
+        ? await db.select({ id: opportunityChecklistItems.id }).from(opportunityChecklistItems).where(eq(opportunityChecklistItems.groupId, input.groupId))
+        : [];
       const res = await db.insert(opportunityChecklistItems).values({
         opportunityId: input.opportunityId,
+        groupId: input.groupId,
         label: input.label,
+        sortOrder: siblings.length,
         requiredForConversion: input.requiredForConversion,
       });
       return { ok: true, id: Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0) };
+    }),
+
+  /** Create a named checklist on the card. */
+  addGroup: protectedProcedure
+    .input(z.object({ opportunityId: z.number().int().positive(), name: z.string().min(1).max(120) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw dbUnavailable();
+      await assertCanEdit(db, ctx, input.opportunityId);
+      const existing = await db.select({ id: opportunityChecklistGroups.id }).from(opportunityChecklistGroups).where(eq(opportunityChecklistGroups.opportunityId, input.opportunityId));
+      const res = await db.insert(opportunityChecklistGroups).values({ opportunityId: input.opportunityId, name: input.name, sortOrder: existing.length });
+      return { ok: true, id: Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0) };
+    }),
+
+  renameGroup: protectedProcedure
+    .input(z.object({ groupId: z.number().int().positive(), name: z.string().min(1).max(120) }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw dbUnavailable();
+      const oppId = await groupOpportunityId(db, input.groupId);
+      await assertCanEdit(db, ctx, oppId);
+      await db.update(opportunityChecklistGroups).set({ name: input.name }).where(eq(opportunityChecklistGroups.id, input.groupId));
+      return { ok: true };
+    }),
+
+  /**
+   * Delete a checklist and everything on it.
+   *
+   * Refuses while any item is still required for conversion — silently dropping a
+   * required item would quietly unblock convert-to-job, which is the one thing the
+   * checklist exists to gate.
+   */
+  removeGroup: protectedProcedure
+    .input(z.object({ groupId: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw dbUnavailable();
+      const oppId = await groupOpportunityId(db, input.groupId);
+      await assertCanEdit(db, ctx, oppId);
+      const items = await db.select().from(opportunityChecklistItems).where(eq(opportunityChecklistItems.groupId, input.groupId));
+      const blocking = items.filter(i => i.requiredForConversion && !i.isComplete);
+      if (blocking.length) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `This checklist has ${blocking.length} required item(s) outstanding. Clear or unmark them before deleting it.`,
+        });
+      }
+      await db.delete(opportunityChecklistItems).where(eq(opportunityChecklistItems.groupId, input.groupId));
+      await db.delete(opportunityChecklistGroups).where(eq(opportunityChecklistGroups.id, input.groupId));
+      await insertEvent(db, oppId, "checklist_removed", `Checklist deleted with ${items.length} item(s).`, { groupId: input.groupId });
+      return { ok: true, removed: items.length };
     }),
 
   /** Toggle complete/incomplete, recording completedAt + completedBy. */
@@ -1082,7 +1185,7 @@ export const commercialOpportunitiesRouter = router({
     const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
     assertCommercial(opp); // commercial detail never loads legacy/non-commercial records
 
-    const [stage, customer, primaryContact, property, categories, members, checklist, comments, documents, tasks, appts, salesDocs, linkedJobs, events] =
+    const [stage, customer, primaryContact, property, categories, members, checklistGroups, checklist, comments, documents, tasks, appts, salesDocs, linkedJobs, events] =
       await Promise.all([
         opp.stageId ? db.select().from(opportunityStages).where(eq(opportunityStages.id, opp.stageId)).limit(1) : Promise.resolve([]),
         db.select().from(customers).where(eq(customers.id, opp.customerId)).limit(1),
@@ -1094,6 +1197,7 @@ export const commercialOpportunitiesRouter = router({
           .from(opportunityMembers)
           .leftJoin(teamMembers, eq(opportunityMembers.teamMemberId, teamMembers.id))
           .where(eq(opportunityMembers.opportunityId, input.id)),
+        db.select().from(opportunityChecklistGroups).where(eq(opportunityChecklistGroups.opportunityId, input.id)).orderBy(asc(opportunityChecklistGroups.sortOrder)),
         db.select().from(opportunityChecklistItems).where(eq(opportunityChecklistItems.opportunityId, input.id)).orderBy(asc(opportunityChecklistItems.sortOrder)),
         db
           .select({ id: opportunityComments.id, body: opportunityComments.body, authorId: opportunityComments.authorId, authorName: teamMembers.name, editedAt: opportunityComments.editedAt, createdAt: opportunityComments.createdAt })
@@ -1123,6 +1227,7 @@ export const commercialOpportunitiesRouter = router({
       property: property[0] ?? null,
       projectCategories: categories.map(c => c.category),
       members,
+      checklistGroups,
       checklist,
       comments,
       documents,

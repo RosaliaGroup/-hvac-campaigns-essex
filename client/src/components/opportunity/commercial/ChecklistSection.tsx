@@ -1,15 +1,15 @@
 /**
- * Checklist board — Trello-style columns (To do / In progress / Done) with native
- * HTML5 drag-and-drop (same pattern as PipelineBoard, no extra dependency), an
- * add-card input per column, and an inline card editor for label / assignee /
- * due date / notes / required flag.
+ * Card checklists — Trello's card layout: several named checklists on one opportunity,
+ * each with its own progress bar, its own items, and its own "Add an item".
  *
- * INVARIANT: the Done column and `isComplete` are the same signal. The server's
- * `checklist.move` mutation writes both together in every direction, because
- * convert-to-job gates on isComplete + requiredForConversion. Nothing here may
- * set a column without going through that mutation.
+ * Items are plain checkboxes (Trello semantics), with assignee, due date and notes
+ * revealed on click. This replaced the To do / In progress / Done board: the board's
+ * `boardStatus` column still exists and is kept in lockstep by the server, but the
+ * checkbox is the completion signal the conversion gate reads.
  *
- * A per-card "Move to" menu is the accessible fallback for moving without dragging.
+ * INVARIANT: convert-to-job gates on requiredForConversion + isComplete, so anything
+ * that could clear a required item without completing it (deleting a whole checklist)
+ * is refused server-side rather than handled here.
  */
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -19,31 +19,17 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, GripVertical, MoreVertical, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckSquare, Plus, Trash2, X } from "lucide-react";
 import { checklistProgress, fmtDate } from "@/lib/commercialOpportunities";
 import type { CommercialDetail } from "@/lib/commercialApiTypes";
 import { useCommercialPerms } from "./shared";
 
 type ChecklistItem = CommercialDetail["checklist"][number];
 type Member = CommercialDetail["members"][number];
+type Group = { id: number; name: string; sortOrder: number };
 
-const COLUMNS = [
-  { key: "todo", label: "To do" },
-  { key: "doing", label: "In progress" },
-  { key: "done", label: "Done" },
-] as const;
-type BoardStatus = (typeof COLUMNS)[number]["key"];
-
-/** Pre-0067 rows read back without boardStatus — fall back to the isComplete flag. */
-function columnOf(item: ChecklistItem): BoardStatus {
-  const s = (item as { boardStatus?: string }).boardStatus;
-  if (s === "doing" || s === "done" || s === "todo") return s;
-  return item.isComplete ? "done" : "todo";
-}
+const UNGROUPED = -1; // pre-0068 rows with a null groupId still need somewhere to render
 
 function initials(name: string | null | undefined): string {
   if (!name) return "?";
@@ -56,266 +42,265 @@ function toDateInput(d: string | Date | null | undefined): string {
   return Number.isNaN(dt.getTime()) ? "" : dt.toISOString().slice(0, 10);
 }
 
-function isPastDue(item: ChecklistItem): boolean {
-  if (!item.dueAt || item.isComplete) return false;
-  return new Date(item.dueAt).getTime() < Date.now();
+function pct(items: ChecklistItem[]): number {
+  if (!items.length) return 0;
+  return Math.round((items.filter(i => i.isComplete).length / items.length) * 100);
 }
 
 export default function ChecklistSection({
-  opportunityId, items, members = [],
-}: { opportunityId: number; items: ChecklistItem[]; members?: Member[] }) {
+  opportunityId, items, groups = [], members = [],
+}: { opportunityId: number; items: ChecklistItem[]; groups?: Group[]; members?: Member[] }) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
   const { canWrite } = useCommercialPerms();
 
-  const [dragId, setDragId] = useState<number | null>(null);
-  const [overColumn, setOverColumn] = useState<BoardStatus | null>(null);
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [openItem, setOpenItem] = useState<number | null>(null);
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [adding, setAdding] = useState<number | null>(null);
+  const [newList, setNewList] = useState<string | null>(null);
 
   const key = { id: opportunityId };
   const refresh = () => utils.opportunities.commercial.get.invalidate(key);
   const onErr = (err: { message: string }) =>
     toast({ title: "Checklist update failed", description: err.message, variant: "destructive" });
+  const c = trpc.opportunities.commercial.checklist;
 
-  // Optimistic move so the card lands under the cursor immediately; rolled back on error.
-  const move = trpc.opportunities.commercial.checklist.move.useMutation({
-    onMutate: async vars => {
-      await utils.opportunities.commercial.get.cancel(key);
-      const prev = utils.opportunities.commercial.get.getData(key);
-      if (prev) {
-        utils.opportunities.commercial.get.setData(key, {
-          ...prev,
-          checklist: prev.checklist.map(i =>
-            i.id === vars.itemId
-              ? { ...i, boardStatus: vars.boardStatus, isComplete: vars.boardStatus === "done" }
-              : i,
-          ),
-        });
-      }
-      return { prev };
-    },
-    onError: (err, _vars, ctx) => {
-      if (ctx?.prev) utils.opportunities.commercial.get.setData(key, ctx.prev);
-      onErr(err);
-    },
-    onSettled: refresh,
-  });
+  const setComplete = c.setComplete.useMutation({ onSuccess: refresh, onError: onErr });
+  const addItem = c.addItem.useMutation({ onSuccess: refresh, onError: onErr });
+  const updateItem = c.updateItem.useMutation({ onSuccess: refresh, onError: onErr });
+  const removeItem = c.removeItem.useMutation({ onSuccess: refresh, onError: onErr });
+  const addGroup = c.addGroup.useMutation({ onSuccess: refresh, onError: onErr });
+  const renameGroup = c.renameGroup.useMutation({ onSuccess: refresh, onError: onErr });
+  const removeGroup = c.removeGroup.useMutation({ onSuccess: refresh, onError: onErr });
 
-  const addItem = trpc.opportunities.commercial.checklist.addItem.useMutation({ onSuccess: refresh, onError: onErr });
-  const updateItem = trpc.opportunities.commercial.checklist.updateItem.useMutation({ onSuccess: refresh, onError: onErr });
-  const removeItem = trpc.opportunities.commercial.checklist.removeItem.useMutation({ onSuccess: refresh, onError: onErr });
-
-  const progress = checklistProgress(
+  // Overall gate status stays across all checklists — conversion doesn't care which list.
+  const overall = checklistProgress(
     items.map(i => ({ isComplete: !!i.isComplete, requiredForConversion: !!i.requiredForConversion })),
   );
 
-  const columnItems = (col: BoardStatus) =>
-    items.filter(i => columnOf(i) === col).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-
-  const doMove = (itemId: number, col: BoardStatus, sortOrder: number) => {
-    if (!canWrite) return;
-    move.mutate({ itemId, boardStatus: col, sortOrder });
-  };
-
-  const dropOnColumn = (col: BoardStatus) => {
-    const id = dragId;
-    setDragId(null);
-    setOverColumn(null);
-    if (id == null) return;
-    const existing = columnItems(col);
-    if (existing.length && existing[existing.length - 1]?.id === id) return; // already last here
-    doMove(id, col, existing.filter(i => i.id !== id).length);
-  };
-
-  const addCard = (col: BoardStatus) => {
-    const label = (drafts[col] ?? "").trim();
-    if (!label) return;
-    setDrafts(d => ({ ...d, [col]: "" }));
-    addItem.mutate(
-      { opportunityId, label, requiredForConversion: false },
-      {
-        onSuccess: res => {
-          // Items are created in To do; move them only when they belong elsewhere.
-          if (col !== "todo" && res?.id) doMove(res.id, col, columnItems(col).length);
-          refresh();
-        },
-      },
+  const orphans = items.filter(i => i.groupId == null);
+  const lists: Group[] = [
+    ...groups,
+    ...(orphans.length ? [{ id: UNGROUPED, name: "Checklist", sortOrder: 999 }] : []),
+  ];
+  const itemsOf = (g: Group) =>
+    (g.id === UNGROUPED ? orphans : items.filter(i => i.groupId === g.id)).sort(
+      (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
     );
+
+  const submitItem = (g: Group) => {
+    const label = (drafts[g.id] ?? "").trim();
+    if (!label) return;
+    setDrafts(d => ({ ...d, [g.id]: "" }));
+    addItem.mutate({ opportunityId, groupId: g.id === UNGROUPED ? null : g.id, label, requiredForConversion: false });
   };
 
   return (
-    <div className="space-y-3">
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-sm">
-          <span className="font-medium">{progress.done} / {progress.total} complete</span>
-          <span className="text-muted-foreground">{progress.pct}%</span>
-        </div>
-        <Progress value={progress.pct} />
-      </div>
-
-      {!progress.conversionReady ? (
+    <div className="space-y-5">
+      {!overall.conversionReady ? (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{progress.requiredIncomplete} required item(s) must be completed before this opportunity can be converted to a Job.</span>
+          <span>{overall.requiredIncomplete} required item(s) must be completed before this opportunity can be converted to a Job.</span>
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3">
-        {COLUMNS.map(col => {
-          const cards = columnItems(col.key);
-          return (
-            <div
-              key={col.key}
-              onDragOver={e => { if (canWrite) { e.preventDefault(); setOverColumn(col.key); } }}
-              onDragLeave={() => setOverColumn(c => (c === col.key ? null : c))}
-              onDrop={e => { e.preventDefault(); dropOnColumn(col.key); }}
-              className={`rounded-lg border bg-muted/30 p-2 transition ${overColumn === col.key ? "border-[#1e3a5f] bg-muted/60" : ""}`}
-            >
-              <div className="mb-2 flex items-center justify-between px-1">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{col.label}</span>
-                <Badge variant="secondary" className="text-[10px]">{cards.length}</Badge>
-              </div>
+      {lists.map(g => {
+        const list = itemsOf(g);
+        const done = list.filter(i => i.isComplete).length;
+        return (
+          <div key={g.id} className="space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+              {canWrite && g.id !== UNGROUPED ? (
+                <input
+                  defaultValue={g.name}
+                  className="flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold uppercase tracking-wide hover:border-input focus:border-input focus:outline-none"
+                  onBlur={e => {
+                    const v = e.target.value.trim();
+                    if (v && v !== g.name) renameGroup.mutate({ groupId: g.id, name: v });
+                    else e.target.value = g.name;
+                  }}
+                />
+              ) : (
+                <span className="flex-1 text-sm font-semibold uppercase tracking-wide">{g.name}</span>
+              )}
+              <span className="text-xs text-muted-foreground">{done}/{list.length}</span>
+              {canWrite && g.id !== UNGROUPED ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => removeGroup.mutate({ groupId: g.id })}
+                >
+                  Delete
+                </Button>
+              ) : null}
+            </div>
 
-              <div className="space-y-2">
-                {cards.map(item => {
-                  const assignee = members.find(m => m.teamMemberId === item.assigneeId);
-                  const editing = editingId === item.id;
-                  return (
-                    <div
-                      key={item.id}
-                      draggable={canWrite && !editing}
-                      onDragStart={e => { e.dataTransfer.effectAllowed = "move"; setDragId(item.id); }}
-                      onDragEnd={() => { setDragId(null); setOverColumn(null); }}
-                      className={`group rounded-lg border bg-card p-2.5 shadow-sm transition hover:shadow-md ${dragId === item.id ? "opacity-50" : ""}`}
-                    >
-                      <div className="flex items-start justify-between gap-1.5">
-                        <button className="min-w-0 flex-1 text-left" onClick={() => setEditingId(editing ? null : item.id)}>
-                          <span className={`text-sm ${item.isComplete ? "text-muted-foreground line-through" : ""}`}>{item.label}</span>
-                        </button>
-                        <div className="flex items-center gap-1">
-                          {canWrite ? <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-muted-foreground opacity-0 group-hover:opacity-100" /> : null}
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="rounded p-0.5 hover:bg-muted"><MoreVertical className="h-4 w-4 text-muted-foreground" /></button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {COLUMNS.filter(c => c.key !== col.key).map(c => (
-                                <DropdownMenuItem key={c.key} disabled={!canWrite} onSelect={() => doMove(item.id, c.key, columnItems(c.key).length)}>
-                                  Move to {c.label}
-                                </DropdownMenuItem>
-                              ))}
-                              <DropdownMenuItem disabled={!canWrite} onSelect={() => setEditingId(item.id)}>Edit details</DropdownMenuItem>
-                              <DropdownMenuItem disabled={!canWrite} className="text-red-600" onSelect={() => removeItem.mutate({ itemId: item.id })}>
-                                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
+            <div className="flex items-center gap-2">
+              <span className="w-8 text-right text-[11px] text-muted-foreground">{pct(list)}%</span>
+              <Progress value={pct(list)} className="flex-1" />
+            </div>
 
-                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        {item.requiredForConversion ? (
-                          <Badge variant="outline" className="border-amber-300 text-[9px] text-amber-700">required</Badge>
-                        ) : null}
-                        {item.dueAt ? (
-                          <span className={`text-[11px] ${isPastDue(item) ? "font-medium text-red-600" : "text-muted-foreground"}`}>
-                            Due {fmtDate(item.dueAt)}
-                          </span>
-                        ) : null}
-                        {assignee ? (
-                          <span
-                            title={assignee.name ?? undefined}
-                            className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-[#1e3a5f] text-[9px] font-semibold text-white"
+            <div className="space-y-0.5">
+              {list.map(item => {
+                const assignee = members.find(m => m.teamMemberId === item.assigneeId);
+                const open = openItem === item.id;
+                const overdue = item.dueAt && !item.isComplete && new Date(item.dueAt).getTime() < Date.now();
+                return (
+                  <div key={item.id} className="rounded-md px-1 py-1 hover:bg-muted/50">
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        className="mt-0.5"
+                        checked={!!item.isComplete}
+                        disabled={!canWrite}
+                        onCheckedChange={v => setComplete.mutate({ itemId: item.id, isComplete: v === true })}
+                      />
+                      <button className="min-w-0 flex-1 text-left" onClick={() => setOpenItem(open ? null : item.id)}>
+                        <span className={`text-sm ${item.isComplete ? "text-muted-foreground line-through" : ""}`}>{item.label}</span>
+                      </button>
+                      {item.requiredForConversion ? (
+                        <Badge variant="outline" className="border-amber-300 text-[9px] text-amber-700">required</Badge>
+                      ) : null}
+                      {item.dueAt ? (
+                        <span className={`shrink-0 text-[11px] ${overdue ? "font-medium text-red-600" : "text-muted-foreground"}`}>
+                          {fmtDate(item.dueAt)}
+                        </span>
+                      ) : null}
+                      {assignee ? (
+                        <span
+                          title={assignee.name ?? undefined}
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#1e3a5f] text-[9px] font-semibold text-white"
+                        >
+                          {initials(assignee.name)}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {open ? (
+                      <div className="ml-6 mt-2 space-y-2 border-l pl-3">
+                        <Input
+                          defaultValue={item.label}
+                          disabled={!canWrite}
+                          className="h-8 text-sm"
+                          onBlur={e => {
+                            const v = e.target.value.trim();
+                            if (v && v !== item.label) updateItem.mutate({ itemId: item.id, label: v });
+                          }}
+                        />
+                        <div className="flex gap-2">
+                          <select
+                            className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
+                            disabled={!canWrite}
+                            value={item.assigneeId ?? ""}
+                            onChange={e => updateItem.mutate({ itemId: item.id, assigneeId: e.target.value ? Number(e.target.value) : null })}
                           >
-                            {initials(assignee.name)}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {item.notes && !editing ? <p className="mt-1 truncate text-[11px] text-muted-foreground">{item.notes}</p> : null}
-
-                      {editing ? (
-                        <div className="mt-2 space-y-2 border-t pt-2">
-                          <Input
-                            defaultValue={item.label}
+                            <option value="">Unassigned</option>
+                            {members.map(m => (
+                              <option key={m.id} value={m.teamMemberId}>{m.name ?? `Member ${m.teamMemberId}`}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="date"
+                            className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
                             disabled={!canWrite}
-                            className="h-8 text-sm"
-                            onBlur={e => {
-                              const v = e.target.value.trim();
-                              if (v && v !== item.label) updateItem.mutate({ itemId: item.id, label: v });
-                            }}
+                            value={toDateInput(item.dueAt)}
+                            onChange={e => updateItem.mutate({ itemId: item.id, dueAt: e.target.value ? new Date(`${e.target.value}T12:00:00`) : null })}
                           />
-                          <div className="flex gap-2">
-                            <select
-                              className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
-                              disabled={!canWrite}
-                              value={item.assigneeId ?? ""}
-                              onChange={e => updateItem.mutate({ itemId: item.id, assigneeId: e.target.value ? Number(e.target.value) : null })}
-                            >
-                              <option value="">Unassigned</option>
-                              {members.map(m => (
-                                <option key={m.id} value={m.teamMemberId}>{m.name ?? `Member ${m.teamMemberId}`}</option>
-                              ))}
-                            </select>
-                            <input
-                              type="date"
-                              className="h-8 flex-1 rounded-md border bg-background px-2 text-xs"
-                              disabled={!canWrite}
-                              value={toDateInput(item.dueAt)}
-                              onChange={e => updateItem.mutate({ itemId: item.id, dueAt: e.target.value ? new Date(`${e.target.value}T12:00:00`) : null })}
-                            />
-                          </div>
-                          <Textarea
-                            defaultValue={item.notes ?? ""}
-                            disabled={!canWrite}
-                            placeholder="Notes"
-                            className="min-h-[52px] text-xs"
-                            onBlur={e => {
-                              const v = e.target.value;
-                              if (v !== (item.notes ?? "")) updateItem.mutate({ itemId: item.id, notes: v || null });
-                            }}
-                          />
+                        </div>
+                        <Textarea
+                          defaultValue={item.notes ?? ""}
+                          disabled={!canWrite}
+                          placeholder="Notes"
+                          className="min-h-[52px] text-xs"
+                          onBlur={e => {
+                            const v = e.target.value;
+                            if (v !== (item.notes ?? "")) updateItem.mutate({ itemId: item.id, notes: v || null });
+                          }}
+                        />
+                        <div className="flex items-center justify-between">
                           <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
                             <Checkbox
                               checked={!!item.requiredForConversion}
                               disabled={!canWrite}
-                              onCheckedChange={c => updateItem.mutate({ itemId: item.id, requiredForConversion: c === true })}
+                              onCheckedChange={v => updateItem.mutate({ itemId: item.id, requiredForConversion: v === true })}
                             />
                             Required before converting to a Job
                           </label>
-                          <Button size="sm" variant="ghost" className="h-7 w-full text-xs" onClick={() => setEditingId(null)}>Close</Button>
+                          {canWrite ? (
+                            <Button size="sm" variant="ghost" className="h-7 px-2 text-xs text-red-600" onClick={() => removeItem.mutate({ itemId: item.id })}>
+                              <Trash2 className="mr-1 h-3.5 w-3.5" /> Delete
+                            </Button>
+                          ) : null}
                         </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-
-                {canWrite ? (
-                  <div className="flex gap-1">
-                    <Input
-                      value={drafts[col.key] ?? ""}
-                      placeholder="Add a card…"
-                      className="h-8 text-sm"
-                      onChange={e => setDrafts(d => ({ ...d, [col.key]: e.target.value }))}
-                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addCard(col.key); } }}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-2"
-                      disabled={!(drafts[col.key] ?? "").trim() || addItem.isPending}
-                      onClick={() => addCard(col.key)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
-              </div>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
+
+            {canWrite ? (
+              adding === g.id ? (
+                <div className="ml-6 flex gap-1">
+                  <Input
+                    autoFocus
+                    value={drafts[g.id] ?? ""}
+                    placeholder="Add an item"
+                    className="h-8 text-sm"
+                    onChange={e => setDrafts(d => ({ ...d, [g.id]: e.target.value }))}
+                    onKeyDown={e => {
+                      if (e.key === "Enter") { e.preventDefault(); submitItem(g); }
+                      if (e.key === "Escape") setAdding(null);
+                    }}
+                  />
+                  <Button size="sm" className="h-8" onClick={() => submitItem(g)}>Save</Button>
+                  <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setAdding(null)}><X className="h-4 w-4" /></Button>
+                </div>
+              ) : (
+                <Button size="sm" variant="secondary" className="ml-6 h-7 text-xs" onClick={() => setAdding(g.id)}>
+                  Add an item
+                </Button>
+              )
+            ) : null}
+          </div>
+        );
+      })}
+
+      {canWrite ? (
+        newList !== null ? (
+          <div className="flex gap-1">
+            <Input
+              autoFocus
+              value={newList}
+              placeholder="Checklist name"
+              className="h-8 text-sm"
+              onChange={e => setNewList(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && newList.trim()) {
+                  e.preventDefault();
+                  addGroup.mutate({ opportunityId, name: newList.trim() });
+                  setNewList(null);
+                }
+                if (e.key === "Escape") setNewList(null);
+              }}
+            />
+            <Button
+              size="sm"
+              className="h-8"
+              disabled={!newList.trim()}
+              onClick={() => { addGroup.mutate({ opportunityId, name: newList.trim() }); setNewList(null); }}
+            >
+              Add
+            </Button>
+            <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setNewList(null)}><X className="h-4 w-4" /></Button>
+          </div>
+        ) : (
+          <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setNewList("")}>
+            <Plus className="mr-1 h-4 w-4" /> Add checklist
+          </Button>
+        )
+      ) : null}
     </div>
   );
 }
