@@ -1,5 +1,69 @@
 import { describe, it, expect } from "vitest";
-import { isLeadPushable, phoneDigits } from "./leadQuality";
+import { isLeadPushable, isGibberishName, phoneDigits } from "./leadQuality";
+
+// The exact 56 gibberish names the Aug 2026 bot flood pushed into live QuickBooks
+// (customers.source='web:quick_quote', ids 50–112, later archived). Pulled from
+// production; kept verbatim as a regression corpus — the detector must catch 100%.
+const REAL_SPAM_NAMES = [
+  "HdMJXLBFoDZkNKBDpCMUcg", "RzVBtSHAzOwBtCyIaRZOwPk", "vKUmXCOkOIISAmxqYHaCgNw",
+  "OJStaEUbBltsoiDWlmC", "otKYnHOflDnGtchKbewkq", "NWcervafXNLlwQNWFNi",
+  "uowbFQFPMcvoIpAK", "bWSOOBgoKuAiprXMZRJabn", "bdklrXKuZwnOsCGy",
+  "fedNjZfxMWQdtRuIxW", "MRjTuWsCmBGWBrWKBZnKwZU", "XmGybldCtJYCpmvlpc",
+  "LaqODSCNoLdaEHWzCndmiGXM", "WZVXjKzwoqawuWVgNOVWPA", "lMtQGEygjcpaidGaYDmxkl",
+  "bjpOEsGqmucexPzp", "lWCfOfZhKeNpdqzdHh", "OCSFDxhWITXCXLdjBxn",
+  "pBbQwhwAsrfHASycVAXywczB", "mcYaoGenNPIgKwcK", "rSxWLScnVqhifcckHsrfUJM",
+  "XXgScQNqlcwsvgMFYUTIoo", "uVeLAjCYuuvQBxfzPJ", "HBbVRrbMRmTcTIKiCzlOIUF",
+  "FttWxVPVxTrnHGZbNotCha", "oZlGnmrjEGWzEpwK", "RATrdOwqVehfoEBKGDtVo",
+  "YGCDooyoAUMBOcVggE", "ogKzmkLctPovmHypBE", "pabBabntTpnVzPPh",
+  "zYylPjfOvTCwlbqVLkFAFPr", "EbrPVIYdvOzJscCLPbPrfbd", "EHWyQCtDADkaZUhKqqMHaEH",
+  "ZzwnESAZtTDWuahOxJNLeMWn", "nOxXRjEItEaCKkSZg", "qYTXtGgpNGLgKIuvoEnJv",
+  "nCPRHQeuItpYGwZBCfUqRU", "vpfZqGZZckOkRzKmDtYaBQ", "XoMJFLWrCxOQtnsFdB",
+  "idEZeBEPVjAYJltAuJIGqY", "KUplnwyKjBseKepo", "zgbTszVImBLLZjKFiPGrAWjM",
+  "QCAtlVIHIaQqDJDB", "ubTLnzmqByhNRdWc", "IwtVgobFtlgHwkhpRowPDxu",
+  "LmeeatgKYutymqJddvnELO", "iyApccxzDxMfijQPvpYTdotd", "ibYFgAHBhpvOQvsSfijXybXp",
+  "SdwXnivyvepOnKZaWqua", "TUHqVSFfgaezICLDLRMRUU", "uGlSDyfYuYKWYvQy",
+  "ILowUTuFpdlVDrJtX", "CLufDZJTAkSjuODblj", "GsJyrubVIrEdolkPRXB",
+  "bxLnGVnsRzkHYYcwhbWmDOX", "UeguKHwXIHkLmRHyfhxjsL",
+];
+
+// Real names that MUST NOT be flagged — legit rows seen alongside the spam plus
+// the edge cases called out in the task: hyphenated, apostrophe, short ethnic,
+// and long-but-real single tokens.
+const LEGIT_NAMES = [
+  // Legit customers that arrived through the SAME quick_quote form during the flood:
+  "Asad Khan", "Jason Morales", "Ahmed Kamel", "Emilee Burgman",
+  "Brice Mcmillon", "Ade Ola", "Kelly Fitzpatrick",
+  // Hyphenated / apostrophe:
+  "Anne-Marie", "Jean-Baptiste", "Mary-Jane Watson", "O'Brien", "D'Angelo", "Sarah O'Connor",
+  // Short ethnic names:
+  "Ng", "Li", "Xu Wei", "An Nguyen", "Jo Kim", "Bo Li",
+  // Long but real single tokens (near the length threshold):
+  "Konstantinos", "Christopher", "Bartholomew", "Schlumberger", "Muhammad",
+  // Longer real full names with a company:
+  "United Builders Group LLC", "Jersey's Mike", "Alexandria Featherstone",
+];
+
+describe("isGibberishName — bot form-spam name detector", () => {
+  it("flags every one of the 56 real production spam names (100% recall)", () => {
+    const missed = REAL_SPAM_NAMES.filter((n) => !isGibberishName({ name: n }));
+    expect(missed).toEqual([]);
+  });
+
+  it("does not flag any legit / edge-case name (no false positives)", () => {
+    const falsePositives = LEGIT_NAMES.filter((n) => isGibberishName({ name: n }));
+    expect(falsePositives).toEqual([]);
+  });
+
+  it("reads firstName/lastName the same way the gate does", () => {
+    expect(isGibberishName({ firstName: "UeguKHwXIHkLmRHyfhxjsL", lastName: null })).toBe(true);
+    expect(isGibberishName({ firstName: "Jason", lastName: "Morales" })).toBe(false);
+  });
+
+  it("ignores short tokens and empty input", () => {
+    expect(isGibberishName({ name: "" })).toBe(false);
+    expect(isGibberishName({ name: "aBcDeF" })).toBe(false); // case flips but too short to judge
+  });
+});
 
 describe("isLeadPushable — shared live+backfill quality gate", () => {
   it("passes a real consumer lead with a name and a working phone or email", () => {
@@ -42,6 +106,19 @@ describe("isLeadPushable — shared live+backfill quality gate", () => {
   it("does not mistake a normal name containing a role word for a role inbox", () => {
     // "salesman" starts with "sales" but isn't the role token → still pushable.
     expect(isLeadPushable({ name: "Bob Smith", email: "salesman.bob@gmail.com" }).pushable).toBe(true);
+  });
+
+  it("rejects a gibberish name even with a real-looking phone and email", () => {
+    // Bots supply plausible contacts, so the name alone must reject.
+    const r = isLeadPushable({ name: "UeguKHwXIHkLmRHyfhxjsL", email: "tomharaske@aol.com", phone: "4724790281" });
+    expect(r).toMatchObject({ pushable: false, rule: "gibberish_name" });
+  });
+
+  it("still passes the legit leads that came through the same spammed form", () => {
+    expect(isLeadPushable({ name: "Asad Khan", email: "khanasad@gmail.com", phone: "8457461300" }).pushable).toBe(true);
+    expect(isLeadPushable({ name: "Jason Morales", email: "jasonmorales6585@gmail.com", phone: "8625294086" }).pushable).toBe(true);
+    expect(isLeadPushable({ firstName: "Brice", lastName: "Mcmillon", phone: "9739514052" }).pushable).toBe(true);
+    expect(isLeadPushable({ firstName: "Ade", lastName: "Ola", phone: "8623380792" }).pushable).toBe(true);
   });
 
   it("phoneDigits strips a leading US country code", () => {

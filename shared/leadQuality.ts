@@ -94,10 +94,77 @@ function hasRealName(i: LeadPushableInput): boolean {
   return true;
 }
 
+// --- Gibberish-name detection --------------------------------------------------
+// Signature of the Aug 2026 bot form-spam flood: a single-token, ~16-24 char
+// name of random UPPER/lower letters with few vowels and long consonant runs,
+// e.g. "UeguKHwXIHkLmRHyfhxjsL". These passed hasRealName (≥2 letters, not a
+// placeholder word) and were auto-pushed into live QuickBooks.
+//
+// This complements — it does NOT replace — the form-submission spam guard
+// (shared/spamGuard.ts, which blocks BEFORE persistence). Here we are the last
+// line before the QBO push, so precision is paramount: a real customer must
+// never be rejected. A long token is flagged ONLY when it shows heavy
+// UPPER/lower alternation (near-certain machine output) OR two independent
+// unnatural traits. `y` counts as a vowel so "Lynn"/"Bryn" are never vowelless.
+
+function nameCaseFlips(word: string): number {
+  let flips = 0;
+  let prev: "u" | "l" | null = null;
+  for (const ch of word) {
+    if (ch >= "A" && ch <= "Z") { if (prev === "l") flips++; prev = "u"; }
+    else if (ch >= "a" && ch <= "z") { if (prev === "u") flips++; prev = "l"; }
+    else prev = null; // non-letter breaks the run
+  }
+  return flips;
+}
+function maxConsonantRun(letters: string): number {
+  let max = 0, run = 0;
+  for (const ch of letters) {
+    if (/[bcdfghjklmnpqrstvwxz]/i.test(ch)) { run++; if (run > max) max = run; }
+    else run = 0;
+  }
+  return max;
+}
+function vowelRatio(letters: string): number {
+  if (letters.length === 0) return 1;
+  const v = (letters.match(/[aeiouy]/gi) ?? []).length;
+  return v / letters.length;
+}
+
+/**
+ * True when a name looks machine-generated (bot form-spam), evaluated per
+ * whitespace-separated token so a legit multi-word name is never dragged down
+ * by an unusual neighbor. Tokens shorter than 12 letters are ignored — real
+ * single-name tokens are short, and the spam is uniformly long.
+ */
+export function isGibberishName(
+  i: Pick<LeadPushableInput, "name" | "firstName" | "lastName">,
+): boolean {
+  const raw = ([i.firstName, i.lastName].filter(Boolean).join(" ").trim()) || (i.name ?? "").trim();
+  for (const word of raw.split(/\s+/).filter(Boolean)) {
+    const letters = word.replace(/[^a-zA-Z]/g, "");
+    if (letters.length < 12) continue; // real name tokens are short; skip
+
+    const flips = nameCaseFlips(word);
+    if (flips >= 4) return true; // sustained random UPPER/lower = machine output
+
+    const traits =
+      (flips >= 3 ? 1 : 0) +
+      (maxConsonantRun(letters) >= 5 ? 1 : 0) +
+      (vowelRatio(letters) <= 0.32 ? 1 : 0) +
+      (letters.length >= 16 ? 1 : 0);
+    if (traits >= 2) return true;
+  }
+  return false;
+}
+
 const skip = (rule: string, reason: string): LeadPushableResult => ({ pushable: false, rule, reason });
 
 export function isLeadPushable(lead: LeadPushableInput): LeadPushableResult {
   if (!hasRealName(lead)) return skip("no_name", "missing or placeholder name");
+  // A gibberish/random name is bot form-spam regardless of contact fields — the
+  // bots supply real-looking phones/emails, so reject on the name alone.
+  if (isGibberishName(lead)) return skip("gibberish_name", "random/gibberish name");
 
   const parts = emailParts(lead.email);
 
