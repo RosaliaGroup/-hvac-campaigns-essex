@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import { X, FileText, CheckCircle, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,12 +7,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 
 export default function ExitIntentPopup() {
   const [isVisible, setIsVisible] = useState(false);
   const [hasShown, setHasShown] = useState(false);
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -88,6 +91,9 @@ export default function ExitIntentPopup() {
       captureType: "pseg_checklist_download",
       ...captureContext(),
       message: "Exit popup checklist download",
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -141,6 +147,7 @@ export default function ExitIntentPopup() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3">
+              <HoneypotFields values={honeypot} onChange={setHoneypot} />
               <Input
                 type="email"
                 value={email}

@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import Turnstile from "@/components/Turnstile";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +21,9 @@ export default function LPEmergencyHVAC() {
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  // Spam protection: honeypot decoy fields + form-load timestamp (too-fast submit).
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
   // Stable per-mount idempotency key for the GA4 conversion (this LP shows a
   // one-time confirmation, so one key per mount is exactly one conversion).
   const [convKey] = useState(() => `lp_emergency-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
@@ -58,6 +62,9 @@ export default function LPEmergencyHVAC() {
       captureType: "lp_emergency",
       ...captureContext(),
       message: "Google Ads LP: Emergency HVAC Service",
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -123,6 +130,7 @@ export default function LPEmergencyHVAC() {
                   </div>
                   <p className="text-sm text-gray-500 mb-4">Technician dispatched within 2 hours of confirmation</p>
                   <form onSubmit={handleSubmit} className="space-y-3">
+                    <HoneypotFields values={honeypot} onChange={setHoneypot} />
                     <div className="grid grid-cols-2 gap-3">
                       <Input placeholder="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
                       <Input placeholder="Last Name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />

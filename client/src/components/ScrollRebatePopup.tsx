@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import { X, Gift, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 
 interface ScrollRebatePopupProps {
   pageType: "residential" | "commercial";
@@ -18,6 +19,8 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
   const [hasShown, setHasShown] = useState(false);
   const [email, setEmail] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -89,6 +92,9 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
       email: email,
       captureType: `exit_popup_${pageType}`,
       ...captureContext(),
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -130,6 +136,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <HoneypotFields values={honeypot} onChange={setHoneypot} />
               <div className="bg-gradient-to-r from-orange-50 to-blue-50 border border-orange-200 rounded-lg p-4">
                 <p className="text-sm font-semibold text-[#1e3a5f] mb-2">
                   Get Your Free Rebate Guide

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import { Link } from "wouter";
 import { Users, TrendingUp, FileText, Handshake, Building2, Home, Zap, DollarSign, Clock, CheckCircle2, CheckCircle } from "lucide-react";
@@ -13,6 +13,7 @@ import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useSEO } from "@/hooks/useSEO";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 
 export default function Partnerships() {
   useSEO({
@@ -31,6 +32,8 @@ export default function Partnerships() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -57,6 +60,9 @@ export default function Partnerships() {
       captureType: "partnership_inquiry" as any,
       ...captureContext(),
       message: `Company: ${form.companyName}\nPartnership Type: ${form.partnershipType}\nWebsite: ${form.website}\nMessage: ${form.message}`,
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -534,6 +540,7 @@ export default function Partnerships() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  <HoneypotFields values={honeypot} onChange={setHoneypot} />
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="companyName">Company Name <span className="text-red-500">*</span></Label>
@@ -600,9 +607,9 @@ export default function Partnerships() {
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="website">Company Website</Label>
+                      <Label htmlFor="companyWebsite">Company Website</Label>
                       <Input
-                        id="website"
+                        id="companyWebsite"
                         placeholder="https://yourcompany.com"
                         value={form.website}
                         onChange={(e) => setForm({ ...form, website: e.target.value })}

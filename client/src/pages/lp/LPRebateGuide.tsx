@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Turnstile from "@/components/Turnstile";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 import { CheckCircle, Phone, Star, Download, FileText, Mail, Shield, Award } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +20,8 @@ export default function LPRebateGuide() {
   const [form, setForm] = useState({ firstName: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -43,6 +46,9 @@ export default function LPRebateGuide() {
       captureType: "download_gate",
       ...captureContext(),
       message: "Email LP: Rebate Guide Download",
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -131,6 +137,7 @@ export default function LPRebateGuide() {
                     <p className="text-sm text-gray-500 mt-1">Sent instantly to your email</p>
                   </div>
                   <form onSubmit={handleSubmit} className="space-y-3">
+                    <HoneypotFields values={honeypot} onChange={setHoneypot} />
                     <Input placeholder="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
                     <Input type="email" placeholder="Email Address *" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     <Input type="tel" placeholder="Phone (optional)" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />

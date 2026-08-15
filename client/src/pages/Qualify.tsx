@@ -2,7 +2,7 @@
  * Qualify Landing Page — NJ Heat Pump Rebate Calculator
  * Homeowners enter house details → see rebate amount → out-of-pocket cost → book free assessment
  */
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import Turnstile from "@/components/Turnstile";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle, ArrowRight, Phone, Home, Zap, DollarSign, Calendar } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 
 // NJ Rebate calculation logic based on home type and current system
 function calculateRebate(homeType: string, sqft: number, currentSystem: string, income: string) {
@@ -69,6 +70,8 @@ export default function Qualify() {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
 
   const sqftNum = parseInt(form.sqft) || 1500;
   const rebate = calculateRebate(form.homeType, sqftNum, form.currentSystem, form.income);
@@ -101,6 +104,9 @@ export default function Qualify() {
       captureType: "qualify_form",
       ...captureContext(),
       message: `Service: Heat Pump Assessment\nHome Type: ${form.homeType}\nSq Ft: ${form.sqft}\nCurrent System: ${form.currentSystem}\nIncome Level: ${form.income}\nOwn/Rent: ${form.ownOrRent}\nZIP: ${form.zip}\nEstimated Rebate: $${rebate.toLocaleString()}\nOut of Pocket: $${outOfPocket.toLocaleString()}\nPreferred Date: ${bookingForm.preferredDate || "Not specified"}\nPreferred Time: ${bookingForm.preferredTime || "Not specified"}\nNotes: ${bookingForm.notes || "None"}`,
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   }
@@ -424,6 +430,8 @@ export default function Qualify() {
                   onChange={e => setBookingForm(b => ({ ...b, notes: e.target.value }))}
                 />
               </div>
+
+              <HoneypotFields values={honeypot} onChange={setHoneypot} />
 
               <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 

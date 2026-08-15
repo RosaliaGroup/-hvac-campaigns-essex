@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Turnstile from "@/components/Turnstile";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 import {
   CheckCircle, Phone, Clock, Wrench, Star, Shield,
   ArrowRight, Calendar, Zap, Home, Building2, TrendingUp
@@ -96,6 +97,8 @@ export default function LPMaintenanceOffer() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
   // Stable per-mount idempotency key for the GA4 conversion.
   const [convKey] = useState(() => `lp_maintenance-${Date.now()}-${Math.floor(Math.random() * 1e9)}`);
 
@@ -140,6 +143,9 @@ export default function LPMaintenanceOffer() {
       captureType: "lp_maintenance_subscription",
       ...captureContext(),
       message: `Maintenance Subscription LP: Plan: ${selectedPlan || "Not selected"} | Address: ${form.address || "Not provided"}`,
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -281,6 +287,7 @@ export default function LPMaintenanceOffer() {
                   </div>
                 )}
                 <form onSubmit={handleSubmit} className="space-y-3">
+                  <HoneypotFields values={honeypot} onChange={setHoneypot} />
                   <div className="grid grid-cols-2 gap-3">
                     <Input
                       placeholder="First Name"

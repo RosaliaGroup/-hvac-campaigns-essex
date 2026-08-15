@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Turnstile from "@/components/Turnstile";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 import {
   CheckCircle, Phone, Shield, Clock, FileText, ArrowRight,
   Award, Square, ChevronDown, Star, AlertTriangle,
@@ -27,6 +28,8 @@ export default function LPPsegChecklist() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -60,6 +63,9 @@ export default function LPPsegChecklist() {
       captureType: "pseg_checklist_download",
       ...captureContext(),
       message: `Property Type: ${form.propertyType}`,
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -144,6 +150,7 @@ export default function LPPsegChecklist() {
                     Instant download — we'll email you the complete checklist
                   </p>
                   <form onSubmit={handleSubmit} className="space-y-3">
+                    <HoneypotFields values={honeypot} onChange={setHoneypot} />
                     <Input
                       placeholder="First Name"
                       value={form.firstName}

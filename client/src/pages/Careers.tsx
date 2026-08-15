@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useSEO } from "@/hooks/useSEO";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 
 export default function Careers() {
   useSEO({
@@ -32,6 +33,8 @@ export default function Careers() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
 
   const createCapture = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -58,6 +61,9 @@ export default function Careers() {
       captureType: "career_application" as any,
       ...captureContext(),
       message: `Position: ${form.position}\nExperience: ${form.experience}\nLicensed: ${form.licensed}\nCover Letter: ${form.coverLetter}`,
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -111,6 +117,7 @@ export default function Careers() {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-6">
+                    <HoneypotFields values={honeypot} onChange={setHoneypot} />
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-2">
                         <Label htmlFor="name">Full Name <span className="text-red-500">*</span></Label>

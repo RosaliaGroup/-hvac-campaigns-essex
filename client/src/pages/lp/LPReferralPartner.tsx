@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Turnstile from "@/components/Turnstile";
+import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 import {
   CheckCircle, Phone, Star, ArrowRight, DollarSign,
   Users, Briefcase, Home, Building2, Gift, TrendingUp
@@ -47,6 +48,8 @@ export default function LPReferralPartner() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
+  const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
+  const loadedAt = useRef(Date.now());
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -75,6 +78,9 @@ export default function LPReferralPartner() {
       captureType: "lp_referral_partner",
       ...captureContext(),
       message: `Referral Partner LP: Occupation: ${form.occupation || "Not specified"}`,
+      website: honeypot.website || undefined,
+      company_url: honeypot.company_url || undefined,
+      _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
     });
   };
@@ -130,6 +136,7 @@ export default function LPReferralPartner() {
                 <h3 className="text-xl font-bold text-[#1e3a5f] mb-1">Join the Partner Program</h3>
                 <p className="text-sm text-gray-500 mb-4">Free sign-up — takes 60 seconds</p>
                 <form onSubmit={handleSubmit} className="space-y-3">
+                  <HoneypotFields values={honeypot} onChange={setHoneypot} />
                   <div className="grid grid-cols-2 gap-3">
                     <Input
                       placeholder="First Name"
