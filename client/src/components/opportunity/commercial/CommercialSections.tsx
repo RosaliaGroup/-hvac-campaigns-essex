@@ -44,8 +44,7 @@ export default function CommercialSections({
   }
 
   return (
-    <div className="mt-4 border-t pt-4">
-      <h3 className="mb-2 text-sm font-semibold">Commercial</h3>
+    <div>
       <Tabs defaultValue="checklist">
         <TabsList>
           <TabsTrigger value="checklist">Checklist{d.checklist.length ? ` (${d.checklist.length})` : ""}</TabsTrigger>

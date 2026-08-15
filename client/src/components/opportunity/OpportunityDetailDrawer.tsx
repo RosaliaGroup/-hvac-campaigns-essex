@@ -117,8 +117,8 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           <div className="p-6 text-sm text-muted-foreground">Loading…</div>
         ) : (
           <div className="flex flex-col">
-            <SheetHeader className="border-b p-4">
-              <SheetTitle className="flex items-center gap-2 text-2xl font-bold">
+            <SheetHeader className="space-y-2 px-4 pb-3 pt-5">
+              <SheetTitle className="flex flex-wrap items-center gap-2 pr-10 text-2xl font-bold leading-tight">
                 {formatDisplayName(c?.companyName || c?.displayName) || "Opportunity"}
                 {data?.opportunity.relationship ? (
                   <Badge variant="secondary" className={RELATIONSHIP_BADGE[data.opportunity.relationship] ?? ""}>{data.opportunity.relationship}</Badge>
@@ -134,13 +134,13 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
             {/* Quick fields — Trello's chip row under the title: project type, priority,
                 strategic flags, platform. Commercial records only; renders nothing else. */}
             {id != null ? (
-              <div className="border-b px-4 py-2">
+              <div className="px-4 pb-2">
                 <CommercialSections opportunityId={id} section="quickfields" />
               </div>
             ) : null}
 
             {/* Quick actions */}
-            <div className="flex flex-wrap gap-2 border-b p-3">
+            <div className="flex flex-wrap gap-2 px-4 pb-2">
               <ActionButton href={c?.phone ? `tel:${c.phone}` : undefined} disabled={!c?.phone} icon={Phone} label="Call" />
               <ActionButton onClick={() => c?.phone && navigate(internalSmsConversationPath(c.phone))} disabled={!c?.phone} icon={MessageSquare} label="Text" />
               <ActionButton href={c?.email ? `mailto:${c.email}` : undefined} disabled={!c?.email} icon={Mail} label="Email" />
@@ -154,7 +154,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
             </div>
 
             {/* Stage / outcome actions */}
-            <div className="flex flex-wrap gap-2 border-b p-3">
+            <div className="flex flex-wrap gap-2 border-b px-4 pb-3">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-1" disabled={stageMutating}><GitBranch className="h-4 w-4" /> Change stage</Button>
@@ -177,7 +177,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
             {/* Trello card layout: the card body (description, fields, checklists) fills the
                 main column; comments and activity sit in the right-hand column. Stacks to a
                 single column below lg so nothing is lost on a phone. */}
-            <div className="grid gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="grid gap-8 px-4 pb-6 pt-5 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="min-w-0 space-y-5">
                 {/* Description — Trello's card description, directly under the title row. */}
                 {id != null ? <CommercialSections opportunityId={id} section="description" /> : null}
