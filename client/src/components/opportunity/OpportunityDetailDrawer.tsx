@@ -110,7 +110,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   return (
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-xl">
+      <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-2xl lg:max-w-5xl">
         {isLoading || !o ? (
           <div className="p-6 text-sm text-muted-foreground">Loading…</div>
         ) : (
@@ -164,7 +164,11 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
               <ConvertToJobControl opportunityId={id} primaryJob={primaryJob} onConverted={invalidate} />
             </div>
 
-            <div className="space-y-5 p-4">
+            {/* Trello card layout: the card body (description, fields, checklists) fills the
+                main column; comments and activity sit in the right-hand column. Stacks to a
+                single column below lg so nothing is lost on a phone. */}
+            <div className="grid gap-6 p-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+              <div className="min-w-0 space-y-5">
               {/* Day-3 forced decision — the loop expired and this deal is still open. */}
               {decisionPending ? (
                 <div className="rounded-lg border border-amber-300 bg-amber-50 p-3">
@@ -179,7 +183,32 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   </div>
                 </div>
               ) : null}
-
+                {/* Description — long-form scope notes carried on the opportunity. */}
+                {o.description ? (
+                  <Section title="Description">
+                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">{o.description}</p>
+                  </Section>
+                ) : null}
+              {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval.
+                  Residential-only: commercial deals go out as bids, not Good/Better/Best tiers. */}
+              {id != null && o.recordType !== "commercial" ? <EstimatesSection opportunityId={id} /> : null}
+              {/* Conflicts */}
+              {data && data.conflicts.length > 0 ? (
+                <Section title="Sync conflicts (review)">
+                  <div className="space-y-1.5">
+                    {data.conflicts.map(cf => (
+                      <div key={cf.id} className="rounded border border-amber-200 bg-amber-50 p-2 text-xs">
+                        <p className="font-medium">{cf.fieldName}: CRM "{cf.crmValue}" vs QBO "{cf.qboValue}"</p>
+                        <div className="mt-1 flex gap-2">
+                          <button className="text-[#1e3a5f] underline" onClick={() => resolveConflict.mutate({ conflictId: cf.id, resolution: "keep_crm" })}>Keep CRM</button>
+                          <button className="text-[#1e3a5f] underline" onClick={() => resolveConflict.mutate({ conflictId: cf.id, resolution: "use_qbo" })}>Use QBO</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              ) : null}
+                {id != null && <CommercialSections opportunityId={id} />}
               {/* Money */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg border p-3">
@@ -206,7 +235,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                 </div>
                 <Button size="sm" className="bg-[#1e3a5f]" onClick={saveValue} disabled={updateValue.isPending}>Save</Button>
               </div>
-
               {/* Contact */}
               <Section title="Contact">
                 <div className="text-sm">
@@ -216,7 +244,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   {c?.quickbooksCustomerId ? <p className="text-[11px] text-muted-foreground">QBO customer #{c.quickbooksCustomerId}</p> : null}
                 </div>
               </Section>
-
               {/* Addresses */}
               <div className="grid grid-cols-2 gap-3">
                 <Section title="Billing address">
@@ -233,7 +260,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   ) : <p className="text-sm text-muted-foreground">—</p>}
                 </Section>
               </div>
-
               {/* QBO document */}
               <Section title="QuickBooks document">
                 {data && data.salesDocuments.length > 0 ? data.salesDocuments.map(d => (
@@ -247,28 +273,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   </div>
                 )) : <p className="text-sm text-muted-foreground">No QuickBooks document (manual opportunity).</p>}
               </Section>
-
-              {/* Task 8A — CRM-authored tiered estimates (Good/Better/Best) + QBO push on approval.
-                  Residential-only: commercial deals go out as bids, not Good/Better/Best tiers. */}
-              {id != null && o.recordType !== "commercial" ? <EstimatesSection opportunityId={id} /> : null}
-
-              {/* Conflicts */}
-              {data && data.conflicts.length > 0 ? (
-                <Section title="Sync conflicts (review)">
-                  <div className="space-y-1.5">
-                    {data.conflicts.map(cf => (
-                      <div key={cf.id} className="rounded border border-amber-200 bg-amber-50 p-2 text-xs">
-                        <p className="font-medium">{cf.fieldName}: CRM "{cf.crmValue}" vs QBO "{cf.qboValue}"</p>
-                        <div className="mt-1 flex gap-2">
-                          <button className="text-[#1e3a5f] underline" onClick={() => resolveConflict.mutate({ conflictId: cf.id, resolution: "keep_crm" })}>Keep CRM</button>
-                          <button className="text-[#1e3a5f] underline" onClick={() => resolveConflict.mutate({ conflictId: cf.id, resolution: "use_qbo" })}>Use QBO</button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </Section>
-              ) : null}
-
               {/* Tasks */}
               <Section title="Follow-up tasks">
                 {data && data.tasks.length > 0 ? data.tasks.map(t => (
@@ -285,7 +289,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   </div>
                 )) : <p className="text-sm text-muted-foreground">No tasks.</p>}
               </Section>
-
               {/* Appointments */}
               <Section title="Appointments">
                 {data && data.appointments.length > 0 ? data.appointments.slice(0, 5).map(a => (
@@ -296,16 +299,18 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   </div>
                 )) : <p className="text-sm text-muted-foreground">No appointments.</p>}
               </Section>
-
               {/* Reasons */}
               {o.closeReason || o.lossReason ? (
                 <Section title={o.stage === "won" ? "Close reason" : "Loss reason"}>
                   <p className="text-sm text-muted-foreground">{o.closeReason || o.lossReason}</p>
                 </Section>
               ) : null}
+              </div>
 
-              {/* Timeline */}
-              <Section title="Timeline">
+              <aside className="min-w-0 space-y-4 lg:border-l lg:pl-5">
+                <h3 className="text-sm font-semibold">Comments and activity</h3>
+                {id != null ? <CommercialSections opportunityId={id} section="activity" /> : null}
+                            <Section title="Activity">
                 <div className="space-y-2 border-l-2 pl-3">
                   {(data?.events ?? []).map(ev => (
                     <div key={ev.id} className="relative text-xs">
@@ -316,7 +321,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   ))}
                 </div>
               </Section>
-              {id != null && <CommercialSections opportunityId={id} />}
+              </aside>
             </div>
           </div>
         )}
