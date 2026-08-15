@@ -30,7 +30,7 @@ export default function CommercialSections({ opportunityId }: { opportunityId: n
           <TabsTrigger value="comments">Comments{d.comments.length ? ` (${d.comments.length})` : ""}</TabsTrigger>
         </TabsList>
         <TabsContent value="checklist" className="mt-3">
-          <ChecklistSection opportunityId={opportunityId} items={d.checklist} members={d.members} />
+          <ChecklistSection opportunityId={opportunityId} items={d.checklist} groups={d.checklistGroups} members={d.members} />
         </TabsContent>
         <TabsContent value="members" className="mt-3">
           <MembersSection opportunityId={opportunityId} members={d.members} />

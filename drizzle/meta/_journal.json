@@ -449,6 +449,13 @@
       "when": 1785901313936,
       "tag": "0067_checklist_board_status",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "5",
+      "when": 1785987713936,
+      "tag": "0068_checklist_groups",
+      "breakpoints": true
     }
   ]
 }
