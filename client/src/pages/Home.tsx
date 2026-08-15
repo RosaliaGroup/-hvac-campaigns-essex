@@ -34,7 +34,7 @@ export default function Home() {
         "url": "https://mechanicalenterprise.com",
         "address": { "@type": "PostalAddress", "addressLocality": "Newark", "addressRegion": "NJ", "addressCountry": "US" },
         "areaServed": "New Jersey",
-        "priceRange": "$100-$275",
+        "priceRange": "$100-$550",
         "openingHours": "Mo-Su 00:00-23:59",
         "description": "Expert HVAC solutions in NJ. Heat pumps, VRV/VRF systems, free assessments with combined rebates up to $20,000."
       }) }} />

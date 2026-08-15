@@ -157,7 +157,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   return (
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto p-0 sm:max-w-2xl lg:max-w-5xl">
+      <SheetContent side="right" className="inset-y-0 h-full w-full overflow-y-auto p-0 sm:max-w-2xl lg:max-w-5xl">
         {isLoading || !o ? (
           <div className="p-6 text-sm text-muted-foreground">Loading…</div>
         ) : (

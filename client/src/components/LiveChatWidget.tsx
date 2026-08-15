@@ -29,8 +29,8 @@ const PARTNERSHIPS_URL = `${BASE}/partnerships#apply`;
 /* ── Stripe payment links (placeholders — replace with real links) ── */
 const STRIPE_RESIDENTIAL_STANDARD = "https://buy.stripe.com/7sY8wIcuM0hz7M17I40oM03";
 const STRIPE_RESIDENTIAL_EMERGENCY = "https://buy.stripe.com/aFaeV6dyQ1lDgix1jG0oM02";
-const STRIPE_COMMERCIAL_STANDARD = "https://buy.stripe.com/8x2aEQ3Yg7K14zP5zW0oM01";
-const STRIPE_COMMERCIAL_EMERGENCY = "https://buy.stripe.com/5kQaEQfGYaWd9U90fC0oM00";
+const STRIPE_COMMERCIAL_STANDARD = "https://buy.stripe.com/28EdR266o7K14zP8M80oM06";
+const STRIPE_COMMERCIAL_EMERGENCY = "https://buy.stripe.com/eVqaEQdyQfcteapfaw0oM04";
 
 const LEAD_FORM_THRESHOLD = 3;
 const AUTO_OPEN_MS = 8_000;
@@ -86,7 +86,7 @@ const FOLLOW_UP_REPLIES: Record<string, string> = {
   "💰 Rebate Calculator": "Check your estimate instantly — up to $16,000 residential, 80% commercial.",
   "🔄 Maintenance Plan": "Plans start at $19/mo — includes priority scheduling plus 15% off repairs. Book below!",
   "🏭 VRV/VRF Systems": "We're one of NJ's top VRV/VRF specialists — ideal for multi-zone buildings.",
-  "🔧 Service & Repair": "We service all commercial HVAC brands with same-day availability. $200 flat rate — fill out the form below.",
+  "🔧 Service & Repair": "We service all commercial HVAC brands with same-day availability. $375 flat rate — fill out the form below.",
   "💸 80% Rebates": "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.",
   "🔩 HVAC Technician": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
   "🏢 Commercial Tech": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
@@ -446,8 +446,8 @@ export default function LiveChatWidget() {
   };
 
   /* ── pricing helpers ───────────────────────────────────────────── */
-  const emergencyPrice = isCommercial ? "$275" : "$175";
-  const regularPrice = isCommercial ? "$200" : "$100";
+  const emergencyPrice = isCommercial ? "$550" : "$175";
+  const regularPrice = isCommercial ? "$375" : "$100";
 
   /* ── render ────────────────────────────────────────────────────── */
   const followUpButtons = getFollowUpButtons();

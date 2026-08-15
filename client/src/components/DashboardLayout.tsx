@@ -36,7 +36,7 @@ import {
   type NavDepartment,
   type NavItem,
 } from "@/lib/navigation";
-import { ChevronRight, LayoutDashboard, LogOut } from "lucide-react";
+import { ChevronRight, Inbox, LayoutDashboard, LogOut, Menu, Target, UserRound } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -50,6 +50,50 @@ import { Button } from "./ui/button";
  * can be applied centrally (via ProtectedRoute) without touching every page.
  */
 const DashboardChromeContext = createContext(false);
+
+/** Destinations worth a thumb on a phone. Everything else lives behind More. */
+const MOBILE_TABS = [
+  { label: "Home", path: "/command-center", Icon: LayoutDashboard },
+  { label: "Leads", path: "/lead-dashboard", Icon: Inbox },
+  { label: "Bids", path: "/opportunities", Icon: Target },
+  { label: "Contacts", path: "/customers", Icon: UserRound },
+] as const;
+
+function MobileTabBar({
+  activeItemKey, onNavigate, onMore,
+}: { activeItemKey: string | null; onNavigate: (path: string) => void; onMore: () => void }) {
+  return (
+    <nav
+      className="fixed inset-x-0 bottom-0 z-50 flex border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur md:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      aria-label="Primary"
+    >
+      {MOBILE_TABS.map(({ label, path, Icon }) => {
+        const active = activeItemKey === path;
+        return (
+          <button
+            key={path}
+            onClick={() => onNavigate(path)}
+            aria-current={active ? "page" : undefined}
+            className={`flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
+              active ? "text-[#ff6b35]" : "text-muted-foreground"
+            }`}
+          >
+            <Icon className="h-5 w-5" />
+            {label}
+          </button>
+        );
+      })}
+      <button
+        onClick={onMore}
+        className="flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium text-muted-foreground"
+      >
+        <Menu className="h-5 w-5" />
+        More
+      </button>
+    </nav>
+  );
+}
 
 export default function DashboardLayout({
   children,
@@ -208,7 +252,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             {activeLabel}
           </span>
         </header>
-        <main className="flex-1 p-4 min-w-0 overflow-x-hidden">{children}</main>
+        {/* pb-24 on mobile keeps content clear of the fixed tab bar and the iOS home bar. */}
+        <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:pb-4">{children}</main>
+        <MobileTabBar activeItemKey={activeItemKey} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
       </SidebarInset>
     </>
   );
