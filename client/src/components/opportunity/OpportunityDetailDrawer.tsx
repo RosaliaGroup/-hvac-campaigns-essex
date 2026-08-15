@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { internalSmsConversationPath } from "@/lib/internalSms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +25,6 @@ import {
 import { ConvertToJobControl } from "./ConvertToJobControl";
 import { EstimatesSection } from "./EstimatesSection";
 import CommercialSections from "./commercial/CommercialSections"; // P2: self-gating; renders only for commercial records
-import { internalSmsConversationPath } from "@/lib/internalSms";
 import { STAGE_META, DOC_STATUS_BADGE, RELATIONSHIP_BADGE, WorkCategoryBadge, StageBadge, fmtMoney, fmtDate } from "./shared";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -46,6 +46,51 @@ function ActionButton({ href, disabled, onClick, icon: Icon, label }: {
     return <a href={href} className={cls}><Icon className="h-4 w-4" />{label}</a>;
   }
   return <button onClick={onClick} disabled={disabled} className={cls}><Icon className="h-4 w-4" />{label}</button>;
+}
+
+/**
+ * Click-to-rename card title, Trello-style. Writes opportunities.title, which is what the
+ * bid board cards display — so naming a card here renames it everywhere.
+ */
+function EditableCardTitle({ id, title }: { id: number; title: string }) {
+  const utils = trpc.useUtils();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(title);
+  const update = trpc.opportunities.commercial.update.useMutation({
+    onSuccess: () => { utils.opportunities.commercial.get.invalidate({ id }); utils.opportunities.invalidate(); setEditing(false); },
+  });
+
+  const save = () => {
+    const v = draft.trim();
+    if (v && v !== title) update.mutate({ id, title: v });
+    else setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={save}
+        onKeyDown={e => {
+          if (e.key === "Enter") save();
+          if (e.key === "Escape") { setDraft(title); setEditing(false); }
+        }}
+        className="min-w-0 flex-1 rounded border px-1 text-2xl font-bold leading-tight"
+      />
+    );
+  }
+
+  return (
+    <button
+      className="rounded px-1 text-left hover:bg-muted"
+      title="Click to rename"
+      onClick={() => { setDraft(title); setEditing(true); }}
+    >
+      {title || "Name this card…"}
+    </button>
+  );
 }
 
 export default function OpportunityDetailDrawer({ id, open, onClose }: { id: number | null; open: boolean; onClose: () => void }) {
@@ -119,11 +164,18 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           <div className="flex flex-col">
             <SheetHeader className="shrink-0 space-y-2 px-4 pb-3 pt-5">
               <SheetTitle className="flex flex-wrap items-center gap-2 pr-10 text-2xl font-bold leading-tight">
-                {formatDisplayName(c?.companyName || c?.displayName) || "Opportunity"}
+                {id != null && o.recordType === "commercial" ? (
+                  <EditableCardTitle id={id} title={o.title ?? ""} />
+                ) : (
+                  <span>{o.title || formatDisplayName(c?.companyName || c?.displayName) || "Opportunity"}</span>
+                )}
                 {data?.opportunity.relationship ? (
                   <Badge variant="secondary" className={RELATIONSHIP_BADGE[data.opportunity.relationship] ?? ""}>{data.opportunity.relationship}</Badge>
                 ) : null}
               </SheetTitle>
+              <p className="text-sm text-muted-foreground">
+                {formatDisplayName(c?.companyName || c?.displayName) || "No customer linked"}
+              </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 <StageBadge stage={o.stage} />
                 <WorkCategoryBadge category={o.workCategory} />
@@ -141,9 +193,6 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
             {/* Quick actions */}
             <div className="flex shrink-0 flex-wrap gap-2 px-4 pb-2">
-              <ActionButton href={c?.phone ? `tel:${c.phone}` : undefined} disabled={!c?.phone} icon={Phone} label="Call" />
-              <ActionButton onClick={() => c?.phone && navigate(internalSmsConversationPath(c.phone))} disabled={!c?.phone} icon={MessageSquare} label="Text" />
-              <ActionButton href={c?.email ? `mailto:${c.email}` : undefined} disabled={!c?.email} icon={Mail} label="Email" />
               <ActionButton
                 href={data?.salesDocuments.find(d => d.id === data.primaryDocumentId)?.documentLink ?? undefined}
                 disabled={!data?.salesDocuments.find(d => d.id === data.primaryDocumentId)?.documentLink}
@@ -248,6 +297,14 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   {c?.companyName ? <p className="text-muted-foreground">{formatDisplayName(c.companyName)}</p> : null}
                   <p className="text-muted-foreground">{c?.phone ?? "no phone"} · {c?.email ?? "no email"}</p>
                   {c?.quickbooksCustomerId ? <p className="text-[11px] text-muted-foreground">QBO customer #{c.quickbooksCustomerId}</p> : null}
+                </div>
+                {/* Reach the contact from where their details already are. Text routes to the
+                    INTERNAL Communications thread, never the OS messaging app — see
+                    client/src/__tests__/leadCustomerSmsInternal.test.ts. */}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <ActionButton href={c?.phone ? `tel:${c.phone}` : undefined} disabled={!c?.phone} icon={Phone} label="Call" />
+                  <ActionButton onClick={() => c?.phone && navigate(internalSmsConversationPath(c.phone))} disabled={!c?.phone} icon={MessageSquare} label="Text" />
+                  <ActionButton href={c?.email ? `mailto:${c.email}` : undefined} disabled={!c?.email} icon={Mail} label="Email" />
                 </div>
               </Section>
               {/* Addresses */}
