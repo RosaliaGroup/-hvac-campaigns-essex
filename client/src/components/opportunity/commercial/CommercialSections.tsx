@@ -4,6 +4,7 @@ import ChecklistSection from "./ChecklistSection";
 import CommentsSection from "./CommentsSection";
 import DocumentsSection from "./DocumentsSection";
 import MembersSection from "./MembersSection";
+import QuickFieldsSection from "./QuickFieldsSection";
 
 /**
  * P2 commercial detail sections (Checklist / Members / Documents / Comments) rendered
@@ -18,16 +19,20 @@ export default function CommercialSections({
   opportunityId: number;
   /**
    * "work" renders the card body (Checklist / Members / Documents); "activity" renders
-   * just the comment stream, so the drawer can put it in the right-hand column the way
-   * Trello does. Both mount the same query, which react-query dedupes.
+   * just the comment stream for the right-hand column; "quickfields" renders the chip row
+   * that sits under the card title. All mount the same query, which react-query dedupes.
    */
-  section?: "work" | "activity";
+  section?: "work" | "activity" | "quickfields";
 }) {
   const q = trpc.opportunities.commercial.get.useQuery({ id: opportunityId }, { retry: false });
   const d = q.data;
   // Render nothing until commercial detail loads; non-commercial records resolve to
   // NOT_FOUND (assertCommercial) → q.data stays undefined → this stays invisible.
   if (!d) return null;
+
+  if (section === "quickfields") {
+    return <QuickFieldsSection opportunityId={opportunityId} detail={d} />;
+  }
 
   if (section === "activity") {
     return <CommentsSection opportunityId={opportunityId} comments={d.comments} />;

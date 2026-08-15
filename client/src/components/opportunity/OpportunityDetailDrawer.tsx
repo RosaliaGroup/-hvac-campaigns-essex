@@ -129,6 +129,14 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
               </div>
             </SheetHeader>
 
+            {/* Quick fields — Trello's chip row under the title: project type, priority,
+                strategic flags, platform. Commercial records only; renders nothing else. */}
+            {id != null ? (
+              <div className="border-b px-4 py-2">
+                <CommercialSections opportunityId={id} section="quickfields" />
+              </div>
+            ) : null}
+
             {/* Quick actions */}
             <div className="grid grid-cols-4 gap-2 border-b p-3 sm:grid-cols-6">
               <ActionButton href={c?.phone ? `tel:${c.phone}` : undefined} disabled={!c?.phone} icon={Phone} label="Call" />
