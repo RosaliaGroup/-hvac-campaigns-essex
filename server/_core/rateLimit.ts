@@ -58,12 +58,33 @@ export function resetRateLimits(): void {
   lastSweep = 0;
 }
 
-/** Best-effort client IP behind Netlify/any proxy. */
+/**
+ * Number of trusted reverse proxies that append to `X-Forwarded-For` in front
+ * of this server (Railway edge = 1; raise if a CDN/Netlify hop also appends).
+ * The real client IP is the entry these TRUSTED proxies recorded, counted from
+ * the RIGHT of the chain — a client can forge the leftmost XFF entries but never
+ * the hop the trusted proxy itself observed. Tune via env to match the infra.
+ */
+const TRUSTED_PROXY_HOPS = Math.max(1, Number(process.env.TRUSTED_PROXY_HOPS) || 1);
+
+/**
+ * Client IP for rate-limit keys, resolved from the TRUSTED proxy hop — NOT the
+ * client-controlled leftmost `X-Forwarded-For` value. Trusting the first hop let
+ * a bot reset its per-IP bucket by rotating a forged first XFF entry; taking the
+ * hop the trusted proxy appended (from the right) closes that bypass.
+ */
 export function getClientIp(ctx: Pick<TrpcContext, "req">): string {
   const req = ctx.req as { headers?: Record<string, string | string[] | undefined>; ip?: string; socket?: { remoteAddress?: string } };
-  const fwd = req?.headers?.["x-forwarded-for"];
-  const first = Array.isArray(fwd) ? fwd[0] : fwd?.split(",")[0];
-  return (first?.trim() || req?.ip || req?.socket?.remoteAddress || "unknown-ip");
+  const raw = req?.headers?.["x-forwarded-for"];
+  const chain = (Array.isArray(raw) ? raw.join(",") : raw ?? "")
+    .split(",")
+    .map(s => s.trim())
+    .filter(Boolean);
+  if (chain.length >= TRUSTED_PROXY_HOPS) {
+    // e.g. hops=1, chain ["1.2.3.4"(forged), "10.0.0.1"(appended by proxy)] → "10.0.0.1".
+    return chain[chain.length - TRUSTED_PROXY_HOPS];
+  }
+  return req?.ip || req?.socket?.remoteAddress || "unknown-ip";
 }
 
 /** Normalize a phone to a stable limiter key (last 10 digits). */
