@@ -10,6 +10,9 @@ import { trpc } from "@/lib/trpc";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { internalSmsConversationPath } from "@/lib/internalSms";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -150,9 +153,30 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
       probability: probDraft === "" ? null : Number(probDraft),
     });
   };
-  const addCallTask = () => {
-    if (id == null) return;
-    createTask.mutate({ opportunityId: id, type: "call", title: "Call customer", dueAt: new Date(Date.now() + 24 * 3600 * 1000) });
+  // Task creation opens a dialog rather than firing immediately: the old one-click
+  // button silently queued another identical "Call customer" every time it was pressed,
+  // which is why cards ended up with five of them in the timeline.
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [taskTitle, setTaskTitle] = useState("Call customer");
+  const [taskType, setTaskType] = useState<"call" | "email" | "text">("call");
+  const [taskDue, setTaskDue] = useState(() => new Date(Date.now() + 24 * 3600 * 1000).toISOString().slice(0, 10));
+  const [taskAssignee, setTaskAssignee] = useState<string>("");
+  const [taskBody, setTaskBody] = useState("");
+  const { data: assignees = [] } = trpc.appointments.assignees.useQuery();
+
+  const submitTask = () => {
+    if (id == null || !taskTitle.trim()) return;
+    createTask.mutate(
+      {
+        opportunityId: id,
+        type: taskType,
+        title: taskTitle.trim(),
+        body: taskBody.trim() || undefined,
+        dueAt: new Date(`${taskDue}T09:00:00`),
+        assignedToId: taskAssignee ? Number(taskAssignee) : null,
+      },
+      { onSuccess: () => { setTaskOpen(false); setTaskBody(""); } },
+    );
   };
 
   return (
@@ -199,7 +223,7 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                 icon={ExternalLink} label="QBO doc"
               />
               <ActionButton onClick={() => c && navigate(`/customers/${c.id}`)} disabled={!c} icon={User} label="Customer" />
-              <ActionButton onClick={addCallTask} icon={CalendarPlus} label="Task" />
+              <ActionButton onClick={() => setTaskOpen(true)} icon={CalendarPlus} label="Task" />
             </div>
 
             {/* Stage / outcome actions */}
@@ -389,6 +413,70 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           </div>
         )}
       </SheetContent>
+
+      {/* New task / follow-up reminder. An "email" task is dispatched by the follow-up
+          service on its due date; "call" stays a human to-do and is never auto-sent. */}
+      <Dialog open={taskOpen} onOpenChange={setTaskOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>New task</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label htmlFor="task-title">Title</Label>
+              <Input id="task-title" value={taskTitle} onChange={e => setTaskTitle(e.target.value)} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label htmlFor="task-type">Type</Label>
+                <select
+                  id="task-type"
+                  className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  value={taskType}
+                  onChange={e => setTaskType(e.target.value as "call" | "email" | "text")}
+                >
+                  <option value="call">Call — reminder only</option>
+                  <option value="email">Email — sends on due date</option>
+                  <option value="text">Text — sends on due date</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="task-due">Due</Label>
+                <input
+                  id="task-due"
+                  type="date"
+                  className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  value={taskDue}
+                  onChange={e => setTaskDue(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="task-assignee">Assign to</Label>
+              <select
+                id="task-assignee"
+                className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                value={taskAssignee}
+                onChange={e => setTaskAssignee(e.target.value)}
+              >
+                <option value="">Unassigned</option>
+                {assignees.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="task-body">Notes {taskType !== "call" ? "(sent as the message body)" : ""}</Label>
+              <Textarea id="task-body" value={taskBody} onChange={e => setTaskBody(e.target.value)} className="min-h-[70px]" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setTaskOpen(false)}>Cancel</Button>
+            <Button onClick={submitTask} disabled={!taskTitle.trim() || createTask.isPending}>
+              {createTask.isPending ? "Creating…" : "Create task"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
