@@ -566,12 +566,27 @@ export const opportunitiesRouter = router({
       return { ok: true };
     }),
 
-  /** Mark Lost with an optional loss reason. */
+  /**
+   * Mark Lost with an optional loss reason.
+   *
+   * Refuses once a Job has been converted from this opportunity. A card showing both
+   * "Lost" and a live Job is not a display quirk — it corrupts close-rate reporting,
+   * which counts won and lost against each other.
+   */
   markLost: protectedProcedure
     .input(z.object({ id: z.number().int().positive(), lossReason: z.string().max(1000).optional() }))
     .mutation(async ({ input }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const converted = (await db.select({ jobNumber: jobs.jobNumber }).from(jobs).where(eq(jobs.opportunityId, input.id)).limit(1))[0];
+      if (converted) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `This opportunity was converted to Job ${converted.jobNumber}, so it can't be marked Lost. Cancel the Job first if the work isn't happening.`,
+        });
+      }
+
       await db
         .update(opportunities)
         .set({ stage: "lost", stageOverridden: true, closedAt: new Date(), lossReason: input.lossReason ?? null })
@@ -593,6 +608,16 @@ export const opportunitiesRouter = router({
     .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      // A Lost bid must be reopened before it can become a Job. Without this the same
+      // record counts as both lost and sold, and close rate stops meaning anything.
+      const current = (await db.select({ stage: opportunities.stage }).from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
+      if (current?.stage === "lost") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "This opportunity is marked Lost. Change its stage first if the work is going ahead.",
+        });
+      }
 
       const port: ConvertJobPort = {
         getOpportunity: async id => {
