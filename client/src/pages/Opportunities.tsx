@@ -65,7 +65,8 @@ export default function Opportunities() {
               {open} open · {total} total. QuickBooks is the source of truth for estimates &amp; amounts.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          {/* Wraps on a phone; the sync label shortens so the button fits the screen. */}
+          <div className="flex flex-wrap items-center gap-2">
             <Link href="/opportunities/commercial">
               <Button variant="outline">
                 <Briefcase className="mr-2 h-4 w-4" /> Commercial Board
@@ -73,7 +74,12 @@ export default function Opportunities() {
             </Link>
             <Button onClick={() => sync.mutate()} disabled={sync.isPending} className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
               <RefreshCw className={`mr-2 h-4 w-4 ${sync.isPending ? "animate-spin" : ""}`} />
-              {sync.isPending ? "Syncing…" : "Sync QuickBooks Now"}
+              {sync.isPending ? "Syncing…" : (
+                <>
+                  <span className="sm:hidden">Sync QBO</span>
+                  <span className="hidden sm:inline">Sync QuickBooks Now</span>
+                </>
+              )}
             </Button>
           </div>
         </div>

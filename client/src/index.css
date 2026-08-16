@@ -139,11 +139,47 @@
   html {
     overflow-x: hidden;
   }
+  /*
+   * Phone scale. Tailwind sizes everything in rem, so a desktop-tuned layout keeps its
+   * desktop dimensions on a 360px screen — headings overflow, cards get cut off, tables
+   * run past the edge. Dropping the root font size scales type, padding, gaps and card
+   * widths together, proportionally, instead of us re-tuning every page by hand.
+   *
+   * 14px at ≤480px is a ~12% reduction; 15px covers the 481–640px band.
+   */
+  @media (max-width: 480px) {
+    html {
+      font-size: 14px;
+    }
+  }
+  @media (min-width: 481px) and (max-width: 640px) {
+    html {
+      font-size: 15px;
+    }
+  }
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-body);
     overflow-x: hidden;
     width: 100%;
+    max-width: 100vw;
+  }
+  /*
+   * Long unbroken strings (URLs, emails, QuickBooks references) are a common cause of a
+   * page being wider than the screen — one such string sets the minimum width for its
+   * whole container. Allow them to break on phones.
+   */
+  @media (max-width: 640px) {
+    body {
+      overflow-wrap: break-word;
+    }
+    /* Tables can't reflow; let them scroll inside their own box rather than stretching
+       the page. */
+    table {
+      display: block;
+      overflow-x: auto;
+      max-width: 100%;
+    }
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
