@@ -332,7 +332,7 @@ export async function processDueFollowups(args: { now?: Date; db?: Db } = {}): P
         body: task.body ?? null,
         entityType: "opportunity",
         entityId: task.opportunityId,
-        link: `/opportunities?open=${task.opportunityId}`,
+        link: `/opportunities/${task.opportunityId}`,
       });
     } catch (e) {
       result.failed++;

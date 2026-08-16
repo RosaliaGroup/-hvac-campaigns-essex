@@ -12,6 +12,7 @@
  * the opportunity system, not a disconnected router.
  */
 import { z } from "zod";
+import { notify } from "./notifications";
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, inArray, gt, lt, like, or, sql } from "drizzle-orm";
 import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
@@ -864,6 +865,23 @@ const commentsRouter = router({
       const res = await db.insert(opportunityComments).values({ opportunityId: input.opportunityId, authorId, body: input.body });
       const id = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
       await insertEvent(db, input.opportunityId, "comment_added", "Comment added.", { commentId: id });
+
+      // Alert everyone on the bid except the author.
+      const team = await db
+        .select({ teamMemberId: opportunityMembers.teamMemberId })
+        .from(opportunityMembers)
+        .where(eq(opportunityMembers.opportunityId, input.opportunityId));
+      await notify(db, {
+        teamMemberIds: team.map(t => t.teamMemberId),
+        exclude: authorId,
+        type: "comment_added",
+        title: "New comment on a bid you're on",
+        body: input.body.slice(0, 200),
+        entityType: "opportunity",
+        entityId: input.opportunityId,
+        link: `/opportunities/${input.opportunityId}`,
+      });
+
       return { ok: true, id };
     }),
 

@@ -202,7 +202,9 @@ async function alertTeamOfReply(db: AnyDb, phone: string, message: string, isOpt
       title: isOptOut ? `${phone} opted out of texts` : `New text from ${phone}`,
       body: message.slice(0, 200),
       entityType: "sms",
-      link: "/communications",
+      // Deep-link into the internal thread for this number. Mirrors
+      // internalSmsConversationPath on the client; "/communications" never existed.
+      link: `/sms-campaigns?phone=${encodeURIComponent(phone)}`,
     });
   } catch (err) {
     // An alert must never break message intake.
