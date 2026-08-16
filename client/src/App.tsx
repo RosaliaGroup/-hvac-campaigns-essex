@@ -62,6 +62,7 @@ import AppointmentCalendar from "./pages/AppointmentCalendar";
 import Jobs from "./pages/Jobs";
 import Opportunities from "./pages/Opportunities";
 import CommercialOpportunities from "./pages/CommercialOpportunities";
+import ResidentialOpportunities from "./pages/ResidentialOpportunities";
 import OpportunityDetail from "./pages/OpportunityDetail";
 import JobDetail from "./pages/JobDetail";
 import AlertSettings from "./pages/settings/Alerts";
@@ -353,6 +354,7 @@ function Router() {
       <Route path={"/jobs/:id"} component={protect(JobDetail)} />
       <Route path={"/opportunities"} component={protect(Opportunities)} />
       <Route path={"/opportunities/commercial"} component={protect(CommercialOpportunities)} />
+      <Route path={"/opportunities/residential"} component={protect(ResidentialOpportunities)} />
       <Route path={"/opportunities/:id"} component={protect(OpportunityDetail)} />
       <Route path={"/campaign-performance"} component={protect(CampaignPerformance)} />
       <Route path={"/google-ads-campaigns"} component={protect(GoogleAdsCampaigns)} />
