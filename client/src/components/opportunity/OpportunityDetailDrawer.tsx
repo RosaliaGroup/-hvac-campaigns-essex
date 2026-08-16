@@ -156,6 +156,8 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
   // Task creation opens a dialog rather than firing immediately: the old one-click
   // button silently queued another identical "Call customer" every time it was pressed,
   // which is why cards ended up with five of them in the timeline.
+  const [closeIntent, setCloseIntent] = useState<"won" | "lost" | null>(null);
+  const [closeNote, setCloseNote] = useState("");
   const [taskOpen, setTaskOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState("Call customer");
   const [taskType, setTaskType] = useState<"call" | "email" | "text">("call");
@@ -241,8 +243,10 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => id != null && markWon.mutate({ id })}><Trophy className="h-4 w-4" /> Won</Button>
-              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => id != null && markLost.mutate({ id })}><XCircle className="h-4 w-4" /> Lost</Button>
+              {/* Won and Lost close the opportunity, cancel its open follow-ups and feed
+                  close-rate reporting, so both confirm first rather than firing on a click. */}
+              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => setCloseIntent("won")}><Trophy className="h-4 w-4" /> Won</Button>
+              <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => setCloseIntent("lost")}><XCircle className="h-4 w-4" /> Lost</Button>
               <Button variant="outline" size="sm" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
               <ConvertToJobControl opportunityId={id} primaryJob={primaryJob} onConverted={invalidate} />
             </div>
@@ -413,6 +417,50 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           </div>
         )}
       </SheetContent>
+
+      {/* Closing an opportunity is final in practice: it cancels open follow-ups and
+          lands in close-rate reporting. Confirm, and capture the reason while it's fresh. */}
+      <Dialog open={closeIntent !== null} onOpenChange={v => { if (!v) { setCloseIntent(null); setCloseNote(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Mark this opportunity {closeIntent === "won" ? "Won" : "Lost"}?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {closeIntent === "won"
+                ? "This closes the opportunity and cancels its open follow-ups. You can still convert it to a Job afterwards."
+                : "This closes the opportunity and cancels its open follow-ups. A Lost opportunity can't be converted to a Job until you change its stage back."}
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="close-note">{closeIntent === "won" ? "Close reason" : "Loss reason"} (optional)</Label>
+              <Textarea
+                id="close-note"
+                value={closeNote}
+                onChange={e => setCloseNote(e.target.value)}
+                placeholder={closeIntent === "won" ? "Why did we win it?" : "Why did we lose it?"}
+                className="min-h-[70px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setCloseIntent(null); setCloseNote(""); }}>Cancel</Button>
+            <Button
+              className={closeIntent === "won" ? "bg-green-700 hover:bg-green-800" : "bg-red-700 hover:bg-red-800"}
+              disabled={stageMutating}
+              onClick={() => {
+                if (id == null || closeIntent == null) return;
+                const note = closeNote.trim() || undefined;
+                if (closeIntent === "won") markWon.mutate({ id, closeReason: note });
+                else markLost.mutate({ id, lossReason: note });
+                setCloseIntent(null);
+                setCloseNote("");
+              }}
+            >
+              {closeIntent === "won" ? "Mark Won" : "Mark Lost"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* New task / follow-up reminder. An "email" task is dispatched by the follow-up
           service on its due date; "call" stays a human to-do and is never auto-sent. */}
