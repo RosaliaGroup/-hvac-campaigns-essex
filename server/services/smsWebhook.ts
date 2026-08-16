@@ -190,7 +190,11 @@ async function alertTeamOfReply(db: AnyDb, phone: string, message: string, isOpt
       .select({ id: teamMembers.id })
       .from(teamMembers)
       .where(eq(teamMembers.status, "active"));
-    if (!team.length) return;
+    if (!team.length) {
+      // Worth saying out loud: an empty active team silently swallows every inbound alert.
+      console.warn("[SMSWebhook] No active team members — inbound text alert not raised.");
+      return;
+    }
 
     await notify(db as never, {
       teamMemberIds: team.map(t => t.id),
