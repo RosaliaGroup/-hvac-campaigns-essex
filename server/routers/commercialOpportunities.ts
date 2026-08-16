@@ -181,6 +181,81 @@ const QA_CHECKLIST_ITEMS: Array<{ label: string; required?: boolean }> = [
   { label: "Follow-up scheduled" },
 ];
 
+/**
+ * QA items the system can prove from the record itself. Each returns true once the
+ * underlying data exists, so the tick reflects reality rather than someone's memory.
+ *
+ * Deliberately absent: "File links verified" and "Internal review completed". Nothing in
+ * the data can evidence either — a human looked, or they didn't — so they stay manual.
+ * Inventing a rule for them would put a tick on the board that means nothing, and two of
+ * the auto items below gate Convert-to-Job.
+ */
+type AutoQaFacts = {
+  memberCount: number;
+  documentCount: number;
+  salesDocCount: number;
+  categoryCount: number;
+  opp: Record<string, unknown>;
+};
+
+const filled = (v: unknown) => v != null && String(v).trim() !== "";
+const past = (v: unknown) => v != null && new Date(v as string).getTime() <= Date.now();
+
+const AUTO_QA_RULES: Record<string, (f: AutoQaFacts) => boolean> = {
+  "Members assigned": f => f.memberCount > 0,
+  "Due date verified": f => filled(f.opp.bidDueAt),
+  "Customer linked": f => filled(f.opp.customerId),
+  "Contact person linked": f => filled(f.opp.primaryContactId),
+  "Property/address linked": f => filled(f.opp.propertyId),
+  "Project type selected": f => filled(f.opp.opportunityType),
+  "Category selected": f => f.categoryCount > 0,
+  "Files linked": f => f.documentCount > 0,
+  "Communication platform entered": f => filled(f.opp.communicationPlatform),
+  // Only once the visit date has actually passed — a booked visit isn't a completed one.
+  "Site visit completed": f => past(f.opp.siteVisitAt),
+  "Scope entered": f => filled(f.opp.description),
+  "Estimate created": f => f.salesDocCount > 0,
+  "Proposal sent": f => filled(f.opp.proposalSentAt),
+  "Follow-up scheduled": f => filled(f.opp.followUpAt),
+};
+
+export const isAutoQaItem = (label: string) => Object.hasOwn(AUTO_QA_RULES, label);
+
+/**
+ * Bring the auto-derived QA ticks in line with the record. Writes only rows whose state
+ * actually changed, and keeps boardStatus in lockstep with isComplete (0067 invariant).
+ * Returns the checklist as it now stands so callers don't have to re-read.
+ */
+async function recomputeAutoQa(
+  db: Db,
+  oppId: number,
+  checklist: Array<Record<string, unknown>>,
+  facts: AutoQaFacts,
+) {
+  const changed: Array<{ id: number; isComplete: boolean }> = [];
+  for (const item of checklist) {
+    const rule = AUTO_QA_RULES[String(item.label)];
+    if (!rule) continue;
+    const should = rule(facts);
+    if (should === !!item.isComplete) continue;
+    changed.push({ id: Number(item.id), isComplete: should });
+    item.isComplete = should;
+    item.boardStatus = should ? "done" : "todo";
+    item.completedAt = should ? new Date() : null;
+  }
+  for (const c of changed) {
+    await db
+      .update(opportunityChecklistItems)
+      .set({
+        isComplete: c.isComplete,
+        boardStatus: c.isComplete ? "done" : "todo",
+        completedAt: c.isComplete ? new Date() : null,
+      })
+      .where(eq(opportunityChecklistItems.id, c.id));
+  }
+  return changed.length;
+}
+
 /** Insert the default commercial stages if the pipeline has none. Idempotent. */
 async function ensureStagesSeeded(db: Db) {
   const existing = await db
@@ -1215,6 +1290,15 @@ export const commercialOpportunitiesRouter = router({
         db.select({ id: jobs.id, jobNumber: jobs.jobNumber, status: jobs.status, title: jobs.title, createdAt: jobs.createdAt }).from(jobs).where(eq(jobs.opportunityId, input.id)).orderBy(jobs.id),
         db.select().from(opportunityEvents).where(eq(opportunityEvents.opportunityId, input.id)).orderBy(desc(opportunityEvents.createdAt)),
       ]);
+
+    // Reconcile the auto-derived QA ticks with the record before anything reads them.
+    await recomputeAutoQa(db, input.id, checklist as Array<Record<string, unknown>>, {
+      memberCount: members.length,
+      documentCount: documents.length,
+      salesDocCount: salesDocs.length,
+      categoryCount: categories.length,
+      opp: opp as unknown as Record<string, unknown>,
+    });
 
     const m = marginView(opp.amount, opp.estimatedCost, opp.estimatedGrossMargin);
     const weightedValue = m.estimatedValue != null && opp.probability != null ? ((Number(m.estimatedValue) * opp.probability) / 100).toFixed(2) : null;
