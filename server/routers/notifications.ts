@@ -13,7 +13,8 @@ import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { notifications } from "../../drizzle/schema";
+import { notifications, pushSubscriptions } from "../../drizzle/schema";
+import { sendPushToMembers, vapidPublicKey } from "../services/webPush";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -55,6 +56,15 @@ export async function notify(db: Db, input: NotifyInput): Promise<number> {
         link: input.link ?? null,
       })),
     );
+    // Same alert, second channel: in-app row above, device push here. Fire-and-forget —
+    // sendPushToMembers never throws and is a no-op when VAPID keys aren't configured.
+    void sendPushToMembers(db, Array.from(seen), {
+      title: input.title,
+      body: input.body ?? null,
+      link: input.link ?? null,
+      tag: input.entityType && input.entityId ? `${input.entityType}:${input.entityId}` : null,
+    });
+
     return seen.size;
   } catch (err) {
     console.error("[notify] failed to raise alert", err);
@@ -107,6 +117,77 @@ export const notificationsRouter = router({
         .where(and(eq(notifications.id, input.id), eq(notifications.teamMemberId, me)));
       return { ok: true };
     }),
+
+  /** The browser needs this to subscribe. Null means push isn't configured on the server. */
+  vapidKey: protectedProcedure.query(() => ({ key: vapidPublicKey() })),
+
+  /** Register this device for push. Idempotent — re-subscribing updates the same endpoint. */
+  subscribe: protectedProcedure
+    .input(
+      z.object({
+        endpoint: z.string().url().max(512),
+        p256dh: z.string().max(255),
+        auth: z.string().max(255),
+        userAgent: z.string().max(255).optional(),
+      }),
+    )
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const me = meOrThrow(ctx as never);
+
+      // The endpoint is unique, so a device that re-subscribes (or changes hands) updates
+      // in place rather than creating a duplicate that would double every alert.
+      const existing = (await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.endpoint, input.endpoint)).limit(1))[0];
+      if (existing) {
+        await db
+          .update(pushSubscriptions)
+          .set({ teamMemberId: me, p256dh: input.p256dh, auth: input.auth, userAgent: input.userAgent ?? null })
+          .where(eq(pushSubscriptions.id, existing.id));
+        return { ok: true, updated: true };
+      }
+
+      await db.insert(pushSubscriptions).values({
+        teamMemberId: me,
+        endpoint: input.endpoint,
+        p256dh: input.p256dh,
+        auth: input.auth,
+        userAgent: input.userAgent ?? null,
+      });
+      return { ok: true, updated: false };
+    }),
+
+  /** Turn alerts off for this device. */
+  unsubscribe: protectedProcedure
+    .input(z.object({ endpoint: z.string().max(512) }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, input.endpoint));
+      return { ok: true };
+    }),
+
+  /** How many devices this person currently has alerts enabled on. */
+  deviceCount: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) return 0;
+    const me = meOrThrow(ctx as never);
+    const rows = await db.select({ id: pushSubscriptions.id }).from(pushSubscriptions).where(eq(pushSubscriptions.teamMemberId, me));
+    return rows.length;
+  }),
+
+  /** Send a test push to this person's devices, so they can confirm it works. */
+  sendTest: protectedProcedure.mutation(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+    const me = meOrThrow(ctx as never);
+    const sent = await sendPushToMembers(db, [me], {
+      title: "Alerts are working",
+      body: "This is a test notification from Mechanical Enterprise.",
+      link: "/settings/alerts",
+    });
+    return { sent };
+  }),
 
   markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
     const db = await getDb();
