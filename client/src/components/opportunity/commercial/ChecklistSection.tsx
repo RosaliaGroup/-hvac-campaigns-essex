@@ -32,6 +32,28 @@ type Group = { id: number; name: string; sortOrder: number };
 
 const UNGROUPED = -1; // pre-0068 rows with a null groupId still need somewhere to render
 
+/**
+ * QA items the server derives from the record and keeps in sync on every read. They are
+ * read-only here on purpose: two of them gate Convert-to-Job, so a hand-tick would let a
+ * job convert with no estimate attached. Mirrors AUTO_QA_RULES in the commercial router.
+ */
+const AUTO_QA_LABELS = new Set([
+  "Members assigned",
+  "Due date verified",
+  "Customer linked",
+  "Contact person linked",
+  "Property/address linked",
+  "Project type selected",
+  "Category selected",
+  "Files linked",
+  "Communication platform entered",
+  "Site visit completed",
+  "Scope entered",
+  "Estimate created",
+  "Proposal sent",
+  "Follow-up scheduled",
+]);
+
 function initials(name: string | null | undefined): string {
   if (!name) return "?";
   return name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? "").join("") || "?";
@@ -248,15 +270,20 @@ export default function ChecklistSection({
                     <Checkbox
                       className="mt-0.5"
                       checked={!!item.isComplete}
-                      disabled={!canWrite}
+                      disabled={!canWrite || AUTO_QA_LABELS.has(item.label)}
+                      title={AUTO_QA_LABELS.has(item.label) ? "Ticks itself once the record has this" : undefined}
                       onCheckedChange={v => setComplete.mutate({ itemId: item.id, isComplete: v === true })}
                     />
                     <button
                       className="min-w-0 flex-1 text-left"
-                      onClick={() => canWrite && openEditor(item)}
+                      disabled={AUTO_QA_LABELS.has(item.label)}
+                      onClick={() => canWrite && !AUTO_QA_LABELS.has(item.label) && openEditor(item)}
                     >
                       <span className={`text-sm ${item.isComplete ? "text-muted-foreground line-through" : ""}`}>{item.label}</span>
                     </button>
+                    {AUTO_QA_LABELS.has(item.label) ? (
+                      <Badge variant="outline" className="shrink-0 text-[9px] text-muted-foreground" title="Ticks itself once the record has this">auto</Badge>
+                    ) : null}
                     {item.requiredForConversion ? (
                       <Badge variant="outline" className="shrink-0 border-amber-300 text-[9px] text-amber-700">required</Badge>
                     ) : null}
