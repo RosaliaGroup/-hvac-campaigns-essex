@@ -10,7 +10,7 @@
 import { z } from "zod";
 import { notify } from "./notifications";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, like, or, sql, isNull } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { deriveResidentialStageId } from "../services/opportunityStages";
@@ -83,6 +83,8 @@ function endOfToday(now: Date): Date {
 const listInput = z
   .object({
     search: z.string().max(255).optional(),
+    /** Show archived opportunities too. Off everywhere by default. */
+    includeArchived: z.boolean().optional(),
     // Back-compat: single stage still accepted; `stages` is the multi-select form.
     stage: z.enum(STAGE_ENUM).optional(),
     stages: z.array(z.enum(STAGE_ENUM)).optional(),
@@ -107,6 +109,11 @@ const listInput = z
 /** Build the combined WHERE conditions shared by the list + totals queries. */
 function buildConditions(input: z.infer<typeof listInput>, now: Date) {
   const conditions = [];
+
+  // Archived opportunities are hidden everywhere unless explicitly asked for. This is the
+  // single filter point for every list and board, so the exclusion belongs here rather
+  // than at each call site where it would eventually be forgotten.
+  conditions.push(input.includeArchived ? sql`1 = 1` : isNull(opportunities.archivedAt));
 
   if (input.search?.trim()) {
     const s = input.search.trim();
@@ -552,6 +559,54 @@ export const opportunitiesRouter = router({
     }),
 
   /** Mark Won with an optional close reason. */
+  /**
+   * Archive an opportunity — the "delete" affordance. Nothing is removed: the record
+   * keeps its checklists, comments, documents, tasks and events, and can be restored.
+   *
+   * Refuses when a Job was converted from this opportunity. Archiving would hide the
+   * record the Job was built from, leaving the Job pointing at something invisible.
+   */
+  archive: protectedProcedure
+    .input(z.object({ id: z.number().int().positive(), reason: z.string().max(500).optional() }))
+    .mutation(async ({ input, ctx }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+
+      const converted = (await db.select({ jobNumber: jobs.jobNumber }).from(jobs).where(eq(jobs.opportunityId, input.id)).limit(1))[0];
+      if (converted) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `This opportunity was converted to Job ${converted.jobNumber} and can't be archived. Cancel the Job first.`,
+        });
+      }
+
+      await db
+        .update(opportunities)
+        .set({
+          archivedAt: new Date(),
+          archivedById: (ctx as { user?: { teamMemberId?: number | null } }).user?.teamMemberId ?? null,
+          archivedReason: input.reason ?? null,
+        })
+        .where(eq(opportunities.id, input.id));
+      await cancelOpenFollowups(input.id, "archived", db);
+      await insertEvent(db, input.id, "archived", "Opportunity archived.", { reason: input.reason });
+      return { ok: true };
+    }),
+
+  /** Restore an archived opportunity to the board. */
+  unarchive: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      await db
+        .update(opportunities)
+        .set({ archivedAt: null, archivedById: null, archivedReason: null })
+        .where(eq(opportunities.id, input.id));
+      await insertEvent(db, input.id, "unarchived", "Opportunity restored from archive.", {});
+      return { ok: true };
+    }),
+
   markWon: protectedProcedure
     .input(z.object({ id: z.number().int().positive(), closeReason: z.string().max(1000).optional() }))
     .mutation(async ({ input }) => {

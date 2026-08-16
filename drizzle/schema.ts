@@ -1856,6 +1856,14 @@ export const opportunities = mysqlTable(
     ]).default("qbo_residential").notNull(),
     /** Denormalized from the current stage's classification (open/awarded/lost/on_hold/cancelled). */
     status: mysqlEnum("status", ["open", "awarded", "lost", "on_hold", "cancelled", "declined"]),
+    /**
+     * Archive (0070). Hidden from boards and lists, never deleted: an opportunity owns
+     * checklists, comments, documents, tasks and possibly a converted Job, and a hard
+     * delete would orphan all of it. NULL = live.
+     */
+    archivedAt: timestamp("archivedAt"),
+    archivedById: int("archivedById"),
+    archivedReason: varchar("archivedReason", { length: 500 }),
     /** Commercial project subtype (distinct from recordType and workCategory). */
     opportunityType: mysqlEnum("opportunityType", [
       "commercial", "residential", "public_work", "decarbonization", "direct_replacement",

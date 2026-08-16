@@ -23,7 +23,7 @@ import { formatDisplayName, formatAddress, formatStateCode } from "@shared/nameF
 import { isOpenStage } from "@shared/stageMeta";
 import { isDecisionTask } from "@shared/followupLoop";
 import {
-  Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
+  Archive, ArchiveRestore, Phone, MessageSquare, Mail, ExternalLink, User, CalendarPlus, GitBranch, Trophy, XCircle, Clock, AlertTriangle,
 } from "lucide-react";
 import { ConvertToJobControl } from "./ConvertToJobControl";
 import { EstimatesSection } from "./EstimatesSection";
@@ -122,6 +122,14 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
 
   const updateValue = trpc.opportunities.updateValue.useMutation({ onSuccess: () => { toast({ title: "Saved" }); invalidate(); }, onError: onErr });
   const setStage = trpc.opportunities.setStage.useMutation({ onSuccess: () => { toast({ title: "Stage updated" }); invalidate(); }, onError: onErr });
+  const archive = trpc.opportunities.archive.useMutation({
+    onSuccess: () => { toast({ title: "Archived" }); setArchiveOpen(false); setArchiveReason(""); invalidate(); onClose(); },
+    onError: onErr,
+  });
+  const unarchive = trpc.opportunities.unarchive.useMutation({
+    onSuccess: () => { toast({ title: "Restored" }); invalidate(); },
+    onError: onErr,
+  });
   const markWon = trpc.opportunities.markWon.useMutation({ onSuccess: () => { toast({ title: "Marked Won" }); invalidate(); }, onError: onErr });
   const markLost = trpc.opportunities.markLost.useMutation({ onSuccess: () => { toast({ title: "Marked Lost" }); invalidate(); }, onError: onErr });
   const followUpLater = trpc.opportunities.followUpLater.useMutation({ onSuccess: () => { toast({ title: "Follow-up scheduled" }); invalidate(); }, onError: onErr });
@@ -156,6 +164,8 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
   // Task creation opens a dialog rather than firing immediately: the old one-click
   // button silently queued another identical "Call customer" every time it was pressed,
   // which is why cards ended up with five of them in the timeline.
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveReason, setArchiveReason] = useState("");
   const [closeIntent, setCloseIntent] = useState<"won" | "lost" | null>(null);
   const [closeNote, setCloseNote] = useState("");
   const [taskOpen, setTaskOpen] = useState(false);
@@ -245,6 +255,15 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
               </DropdownMenu>
               {/* Won and Lost close the opportunity, cancel its open follow-ups and feed
                   close-rate reporting, so both confirm first rather than firing on a click. */}
+              {o.archivedAt ? (
+                <Button variant="outline" size="sm" disabled={unarchive.isPending} className="gap-1" onClick={() => id != null && unarchive.mutate({ id })}>
+                  <ArchiveRestore className="h-4 w-4" /> Restore
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" className="gap-1 text-muted-foreground" onClick={() => setArchiveOpen(true)}>
+                  <Archive className="h-4 w-4" /> Archive
+                </Button>
+              )}
               <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "won"} className="gap-1 text-green-700" onClick={() => setCloseIntent("won")}><Trophy className="h-4 w-4" /> Won</Button>
               <Button variant="outline" size="sm" disabled={stageMutating || o.stage === "lost"} className="gap-1 text-red-700" onClick={() => setCloseIntent("lost")}><XCircle className="h-4 w-4" /> Lost</Button>
               <Button variant="outline" size="sm" disabled={stageMutating} className="gap-1" onClick={() => id != null && followUpLater.mutate({ id, days: 3 })}><Clock className="h-4 w-4" /> Follow up later</Button>
@@ -417,6 +436,40 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
           </div>
         )}
       </SheetContent>
+
+      {/* Archive is this system's "delete". Say plainly that nothing is lost, so nobody
+          reaches for a real delete instead. */}
+      <Dialog open={archiveOpen} onOpenChange={v => { if (!v) { setArchiveOpen(false); setArchiveReason(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Archive this opportunity?</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              It disappears from the board and lists, and its open follow-ups are cancelled.
+              Nothing is deleted — the checklists, comments, documents and history stay, and
+              you can restore it at any time.
+            </p>
+            <div className="space-y-1">
+              <Label htmlFor="archive-reason">Reason (optional)</Label>
+              <Textarea
+                id="archive-reason"
+                value={archiveReason}
+                onChange={e => setArchiveReason(e.target.value)}
+                placeholder="Duplicate, created by mistake, customer withdrew…"
+                className="min-h-[70px]"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setArchiveOpen(false); setArchiveReason(""); }}>Cancel</Button>
+            <Button
+              disabled={archive.isPending}
+              onClick={() => id != null && archive.mutate({ id, reason: archiveReason.trim() || undefined })}
+            >
+              {archive.isPending ? "Archiving…" : "Archive"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Closing an opportunity is final in practice: it cancels open follow-ups and
           lands in close-rate reporting. Confirm, and capture the reason while it's fresh. */}
