@@ -65,6 +65,9 @@ export async function sendPushToMembers(db: Db, teamMemberIds: number[], payload
 
   try {
     const subs = await db.select().from(pushSubscriptions).where(inArray(pushSubscriptions.teamMemberId, teamMemberIds));
+    // Log the attempt, not just failures. A silent log used to be indistinguishable
+    // between "sent fine" and "never ran", which made this impossible to diagnose.
+    console.log(`[webPush] attempt: members=${teamMemberIds.join(",")} devices=${subs.length} title="${payload.title}"`);
     if (!subs.length) return 0;
 
     const body = JSON.stringify({
@@ -96,6 +99,7 @@ export async function sendPushToMembers(db: Db, teamMemberIds: number[], payload
     for (const id of dead) {
       await db.delete(pushSubscriptions).where(eq(pushSubscriptions.id, id));
     }
+    console.log(`[webPush] result: sent=${sent} dead=${dead.length} of ${subs.length}`);
     return sent;
   } catch (err) {
     console.error("[webPush] unexpected failure", err);
