@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -36,9 +37,10 @@ import {
   type NavDepartment,
   type NavItem,
 } from "@/lib/navigation";
-import { ChevronRight, Inbox, LayoutDashboard, LogOut, Menu, Target, UserRound } from "lucide-react";
+import { Bell, ChevronRight, Inbox, LayoutDashboard, LogOut, Menu, Target, UserRound } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
 import { iconFor } from "./navIcons";
 import { Button } from "./ui/button";
@@ -50,6 +52,73 @@ import { Button } from "./ui/button";
  * can be applied centrally (via ProtectedRoute) without touching every page.
  */
 const DashboardChromeContext = createContext(false);
+
+/**
+ * Alert bell. Polls rather than holding a socket open — a CRM this size doesn't justify
+ * the infrastructure, and a minute of latency on "someone commented" is not material.
+ */
+function NotificationBell() {
+  const [, setLocation] = useLocation();
+  const utils = trpc.useUtils();
+  const [open, setOpen] = useState(false);
+  const { data: unread = 0 } = trpc.notifications.unreadCount.useQuery(undefined, { refetchInterval: 60_000 });
+  const { data: items = [] } = trpc.notifications.list.useQuery({ limit: 20 }, { enabled: open });
+  const markRead = trpc.notifications.markRead.useMutation({
+    onSuccess: () => { utils.notifications.invalidate(); },
+  });
+  const markAll = trpc.notifications.markAllRead.useMutation({
+    onSuccess: () => { utils.notifications.invalidate(); },
+  });
+
+  const openItem = (n: { id: number; link: string | null; readAt: Date | string | null }) => {
+    if (!n.readAt) markRead.mutate({ id: n.id });
+    setOpen(false);
+    if (n.link) setLocation(n.link);
+  };
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button className="relative rounded-lg p-2 hover:bg-accent/50" aria-label={`Alerts${unread ? ` (${unread} unread)` : ""}`}>
+          <Bell className="h-5 w-5" />
+          {unread > 0 ? (
+            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#ff6b35] px-1 text-[10px] font-semibold text-white">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          ) : null}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <div className="flex items-center justify-between px-2 py-1.5">
+          <span className="text-sm font-semibold">Alerts</span>
+          {unread > 0 ? (
+            <button className="text-xs text-muted-foreground hover:underline" onClick={() => markAll.mutate()}>
+              Mark all read
+            </button>
+          ) : null}
+        </div>
+        <DropdownMenuSeparator />
+        {items.length === 0 ? (
+          <p className="px-2 py-6 text-center text-sm text-muted-foreground">Nothing yet.</p>
+        ) : (
+          <div className="max-h-96 overflow-y-auto">
+            {items.map(n => (
+              <button
+                key={n.id}
+                onClick={() => openItem(n)}
+                className={`flex w-full flex-col items-start gap-0.5 px-2 py-2 text-left hover:bg-accent/50 ${n.readAt ? "opacity-60" : ""}`}
+              >
+                <span className="text-sm font-medium">{n.title}</span>
+                {n.body ? <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span> : null}
+                <span className="text-[10px] text-muted-foreground">{new Date(n.createdAt).toLocaleString()}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 /** Destinations worth a thumb on a phone. Everything else lives behind More. */
 const MOBILE_TABS = [
@@ -251,6 +320,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <span className="font-medium tracking-tight text-foreground truncate">
             {activeLabel}
           </span>
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
         </header>
         {/* pb-24 on mobile keeps content clear of the fixed tab bar and the iOS home bar. */}
         <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:pb-4">{children}</main>
