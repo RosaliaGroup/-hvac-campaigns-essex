@@ -21,11 +21,13 @@
  *   Public key : Account → Keys & Credentials → Public Key → env TELNYX_PUBLIC_KEY
  */
 import type { Express, Request, Response } from "express";
+import { notify } from "../routers/notifications";
 import { getDb } from "../db";
 import {
   smsContacts,
   scheduledSends,
   smsInboxMessages,
+  teamMembers,
   smsSends,
   smsWebhookEvents,
   customers,
@@ -166,6 +168,41 @@ async function saveInboxMessage(
     });
   } catch (err) {
     console.error("[SMSWebhook] Failed to save inbox message:", err);
+  }
+
+  await alertTeamOfReply(db, args.phone, args.message, args.isOptOut);
+}
+
+/**
+ * Raise an in-app alert when a customer texts in.
+ *
+ * Every active team member is alerted, not an "owner": an inbound text carries only a
+ * phone number, and `leads.assignedTo` is a free-text name rather than a teamMembers.id,
+ * so there is no reliable owner to route to. For a shop this size a missed customer reply
+ * costs more than a duplicate alert. If the team grows, route this by lead owner instead
+ * of widening the alert.
+ *
+ * Opt-out replies (STOP) are alerted too — the team needs to know a number went quiet.
+ */
+async function alertTeamOfReply(db: AnyDb, phone: string, message: string, isOptOut: boolean): Promise<void> {
+  try {
+    const team = await db
+      .select({ id: teamMembers.id })
+      .from(teamMembers)
+      .where(eq(teamMembers.status, "active"));
+    if (!team.length) return;
+
+    await notify(db as never, {
+      teamMemberIds: team.map(t => t.id),
+      type: isOptOut ? "sms_optout" : "sms_inbound",
+      title: isOptOut ? `${phone} opted out of texts` : `New text from ${phone}`,
+      body: message.slice(0, 200),
+      entityType: "sms",
+      link: "/communications",
+    });
+  } catch (err) {
+    // An alert must never break message intake.
+    console.error("[SMSWebhook] Failed to raise inbound-text alert:", err);
   }
 }
 

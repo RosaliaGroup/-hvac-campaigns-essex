@@ -22,6 +22,7 @@ import {
   type InsertOpportunityTask,
 } from "../../../drizzle/schema";
 import { sendEmail } from "../../services/emailService";
+import { notify } from "../../routers/notifications";
 import { sendTelnyxSms } from "../../services/telnyxSms";
 import { gateSmsRecipient, isTerminalBlock } from "../../services/smsCompliance";
 import { logOutboundBestEffort, mechanicalSmsFrom } from "../../services/smsOutbound";
@@ -233,6 +234,7 @@ export async function processDueFollowups(args: { now?: Date; db?: Db } = {}): P
       title: opportunityTasks.title,
       body: opportunityTasks.body,
       customerId: opportunityTasks.customerId,
+      assignedToId: opportunityTasks.assignedToId,
       email: customers.email,
       phone: customers.phone,
     })
@@ -319,6 +321,19 @@ export async function processDueFollowups(args: { now?: Date; db?: Db } = {}): P
         .update(opportunityTasks)
         .set({ status: "done", dispatchedAt: now, completedAt: now, lastError: null })
         .where(eq(opportunityTasks.id, task.id));
+
+      // Tell whoever owns the task that it actually went out. Only the assignee is
+      // alerted — these dispatch on a poll, so alerting the whole team would produce
+      // steady background noise nobody acts on.
+      await notify(db as never, {
+        teamMemberIds: [task.assignedToId ?? null],
+        type: task.type === "text" ? "followup_text_sent" : "followup_email_sent",
+        title: `Follow-up ${task.type === "text" ? "text" : "email"} sent: ${task.title}`,
+        body: task.body ?? null,
+        entityType: "opportunity",
+        entityId: task.opportunityId,
+        link: `/opportunities?open=${task.opportunityId}`,
+      });
     } catch (e) {
       result.failed++;
       // Leave "open" so the next poll retries; record why.
