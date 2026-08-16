@@ -72,10 +72,20 @@ export async function notify(db: Db, input: NotifyInput): Promise<number> {
   }
 }
 
-function meOrThrow(ctx: { user?: { teamMemberId?: number | null } | null }): number {
-  const id = ctx.user?.teamMemberId ?? null;
-  if (id == null) throw new TRPCError({ code: "FORBIDDEN", message: "No team member on this session" });
-  return id;
+/**
+ * The caller's teamMembers.id.
+ *
+ * Sessions carry it encoded in openId as "team:123" — there is no teamMemberId field on
+ * the session. This mirrors currentTeamMemberId in commercialOpportunities.ts; the two
+ * must agree, or alerts get filed against a different id than the one that reads them.
+ */
+function meOrThrow(ctx: { user?: { openId?: string | null } | null }): number {
+  const openId = ctx.user?.openId;
+  if (typeof openId === "string" && openId.startsWith("team:")) {
+    const id = Number(openId.slice(5));
+    if (Number.isFinite(id)) return id;
+  }
+  throw new TRPCError({ code: "FORBIDDEN", message: "No team member on this session" });
 }
 
 export const notificationsRouter = router({

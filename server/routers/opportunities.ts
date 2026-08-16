@@ -336,6 +336,19 @@ async function insertEvent(
   await db.insert(opportunityEvents).values({ opportunityId, type, message, metadata: metadata ?? null });
 }
 
+/**
+ * The caller's teamMembers.id. Sessions encode it in openId as "team:123" — there is no
+ * teamMemberId field. Mirrors currentTeamMemberId in commercialOpportunities.ts.
+ */
+function sessionTeamMemberId(ctx: unknown): number | null {
+  const openId = (ctx as { user?: { openId?: string | null } })?.user?.openId;
+  if (typeof openId === "string" && openId.startsWith("team:")) {
+    const id = Number(openId.slice(5));
+    return Number.isFinite(id) ? id : null;
+  }
+  return null;
+}
+
 export const opportunitiesRouter = router({
   /**
    * Dashboard list: one row per opportunity joined to its customer and PRIMARY
@@ -584,7 +597,7 @@ export const opportunitiesRouter = router({
         .update(opportunities)
         .set({
           archivedAt: new Date(),
-          archivedById: (ctx as { user?: { teamMemberId?: number | null } }).user?.teamMemberId ?? null,
+          archivedById: sessionTeamMemberId(ctx),
           archivedReason: input.reason ?? null,
         })
         .where(eq(opportunities.id, input.id));
@@ -804,7 +817,7 @@ export const opportunitiesRouter = router({
       // Alert the assignee — but not when they assigned it to themselves.
       await notify(db, {
         teamMemberIds: [input.assignedToId ?? null],
-        exclude: (ctx as { user?: { teamMemberId?: number | null } }).user?.teamMemberId ?? null,
+        exclude: sessionTeamMemberId(ctx),
         type: "task_assigned",
         title: `Task assigned: ${input.title}`,
         body: input.dueAt ? `Due ${new Date(input.dueAt).toLocaleDateString()}` : null,
