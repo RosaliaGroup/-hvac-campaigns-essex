@@ -1,27 +1,30 @@
 /**
- * /opportunities/commercial — Commercial Bid Board (Phase 1).
- * A dedicated Kanban of the commercial pipeline (opportunityStages, pipelineKey=
- * 'commercial'), filtered to recordType='commercial'. Cards open the shared
- * Opportunity detail drawer (which renders the commercial sections). Stage
- * administration, project-type labels, task assignment and file upload are out
- * of scope here (later phases).
+ * /opportunities/residential — Residential Board.
+ *
+ * The same Kanban component as the commercial board, over a separate set of columns
+ * (opportunityStages, pipelineKey='residential') and filtered to recordType='residential'.
+ * Keeping them as two pipelines rather than one mixed board means residential stages
+ * ("Assessment Scheduled", "Sales Doc Created") stop appearing on commercial bids and
+ * vice versa.
+ *
+ * The residential pipeline starts with no columns — use Columns to create them. An empty
+ * board is deliberate: nobody's guessed stage names are better than yours.
  */
 import { useEffect, useState } from "react";
 import { Link, useSearch } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import { Button } from "@/components/ui/button";
-import { Briefcase, ArrowLeft, Columns3, Plus } from "lucide-react";
+import { Home, ArrowLeft, Columns3 } from "lucide-react";
 import CommercialBoard from "@/components/opportunity/commercial/CommercialBoard";
 import ColumnManager from "@/components/opportunity/commercial/ColumnManager";
-import NewBidDialog from "@/components/opportunity/commercial/NewBidDialog";
 import OpportunityDetailDrawer from "@/components/opportunity/OpportunityDetailDrawer";
 
-export default function CommercialOpportunities() {
+export default function ResidentialOpportunities() {
   const [detailId, setDetailId] = useState<number | null>(null);
-  const [newBidOpen, setNewBidOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
-  // Deep-link support: /opportunities/commercial?opportunityId=42 opens that drawer.
+
+  // Deep-link support: /opportunities/residential?opportunityId=42 opens that drawer.
   const search = useSearch();
   useEffect(() => {
     const raw = new URLSearchParams(search).get("opportunityId");
@@ -36,21 +39,18 @@ export default function CommercialOpportunities() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <Briefcase className="h-6 w-6 text-[#1e3a5f]" /> Commercial Bid Board
+              <Home className="h-6 w-6 text-[#1e3a5f]" /> Residential Board
             </h1>
             <p className="text-sm text-muted-foreground">
-              Commercial pipeline stages. Drag a card between stages to move it; closing goes through the card's detail drawer.
+              Residential pipeline stages. Drag a card between stages to move it; closing goes through the card's detail drawer.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={() => setNewBidOpen(true)} className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
-              <Plus className="mr-2 h-4 w-4" /> New Bid
-            </Button>
             <Button variant="outline" onClick={() => setColumnsOpen(true)}>
               <Columns3 className="mr-2 h-4 w-4" /> Columns
             </Button>
-            <Link href="/opportunities/residential">
-              <Button variant="outline">Residential</Button>
+            <Link href="/opportunities/commercial">
+              <Button variant="outline">Commercial</Button>
             </Link>
             <Link href="/opportunities">
               <Button variant="outline">
@@ -60,11 +60,10 @@ export default function CommercialOpportunities() {
           </div>
         </div>
 
-        <CommercialBoard onOpen={setDetailId} />
+        <CommercialBoard onOpen={setDetailId} pipelineKey="residential" recordType="residential" />
       </div>
 
-      <ColumnManager open={columnsOpen} onOpenChange={setColumnsOpen} pipelineKey="commercial" />
-      <NewBidDialog open={newBidOpen} onOpenChange={setNewBidOpen} onCreated={id => setDetailId(id)} />
+      <ColumnManager open={columnsOpen} onOpenChange={setColumnsOpen} pipelineKey="residential" />
       <OpportunityDetailDrawer id={detailId} open={detailId != null} onClose={() => setDetailId(null)} />
     </DashboardLayout>
   );

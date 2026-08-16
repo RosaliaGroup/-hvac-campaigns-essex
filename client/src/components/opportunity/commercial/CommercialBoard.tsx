@@ -119,11 +119,22 @@ function Card({ row, columns, onOpen, onMove, dragging, onDragStart, onDragEnd }
   );
 }
 
-export default function CommercialBoard({ onOpen }: { onOpen: (id: number) => void }) {
+/**
+ * The board is pipeline-agnostic: which columns it shows and which records it holds are
+ * both props. Commercial and residential are the same Kanban over different
+ * opportunityStages rows, so there is one component rather than two that drift apart.
+ */
+export default function CommercialBoard({
+  onOpen, pipelineKey = "commercial", recordType = "commercial",
+}: {
+  onOpen: (id: number) => void;
+  pipelineKey?: string;
+  recordType?: string;
+}) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
-  const stagesQuery = trpc.opportunities.commercial.stages.list.useQuery({ pipelineKey: "commercial", includeInactive: false });
-  const listQuery = trpc.opportunities.commercial.list.useQuery({ recordType: "commercial", limit: 200, offset: 0, sortBy: "createdAt", sortDir: "desc" });
+  const stagesQuery = trpc.opportunities.commercial.stages.list.useQuery({ pipelineKey, includeInactive: false });
+  const listQuery = trpc.opportunities.commercial.list.useQuery({ recordType, limit: 200, offset: 0, sortBy: "createdAt", sortDir: "desc" });
 
   const [dragId, setDragId] = useState<number | null>(null);
   const [overStageId, setOverStageId] = useState<number | null>(null);
