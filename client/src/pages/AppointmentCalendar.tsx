@@ -159,23 +159,23 @@ export default function AppointmentCalendar() {
   return (
     <DashboardLayout>
       <InternalNav />
-      <div className="space-y-6 p-6">
+      <div className="space-y-3 p-3 sm:space-y-6 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <h1 className="flex items-center gap-2 text-xl font-bold sm:text-2xl">
               <CalendarClock className="h-6 w-6 text-[#1e3a5f]" /> Appointment Calendar
             </h1>
-            <p className="text-sm text-muted-foreground">Jessica's bookings and staff bookings, in one view.</p>
+            <p className="hidden text-sm text-muted-foreground sm:block">Jessica's bookings and staff bookings, in one view.</p>
           </div>
           <Button className="bg-[#1e3a5f] hover:bg-[#16304f]" onClick={() => openCreate(selectedDay ?? undefined)}>
             <CalendarPlus className="h-4 w-4 mr-1" /> New Appointment
           </Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Filters — side by side on a phone; the status toggles wrap beneath. */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-            <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All assignees</SelectItem>
               <SelectItem value="unassigned">Unassigned</SelectItem>
@@ -183,7 +183,7 @@ export default function AppointmentCalendar() {
             </SelectContent>
           </Select>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-52"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               {APPOINTMENT_TYPES.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -196,7 +196,7 @@ export default function AppointmentCalendar() {
             className="flex-wrap"
           >
             {Object.keys(STATUS_DOT).map(s => (
-              <ToggleGroupItem key={s} value={s} className="gap-1.5 capitalize text-xs px-2.5" aria-label={s}>
+              <ToggleGroupItem key={s} value={s} className="gap-1 capitalize px-1.5 text-[10px] sm:gap-1.5 sm:px-2.5 sm:text-xs" aria-label={s}>
                 <span className={`h-2 w-2 rounded-full ${STATUS_DOT[s]}`} /> {s}
               </ToggleGroupItem>
             ))}
@@ -205,7 +205,7 @@ export default function AppointmentCalendar() {
 
         {/* Month grid */}
         <Card>
-          <CardContent className="pt-6 flex justify-center">
+          <CardContent className="flex justify-center p-2 pt-3 sm:p-6">
             <Calendar
               mode="single"
               month={month}
@@ -213,7 +213,7 @@ export default function AppointmentCalendar() {
               selected={selectedDay ?? undefined}
               onSelect={d => setSelectedDay(d ?? null)}
               components={{ DayButton: DayWithCounts }}
-              className="[--cell-size:--spacing(14)] md:[--cell-size:--spacing(16)]"
+              className="[--cell-size:--spacing(10)] sm:[--cell-size:--spacing(14)] md:[--cell-size:--spacing(16)]"
             />
           </CardContent>
         </Card>
