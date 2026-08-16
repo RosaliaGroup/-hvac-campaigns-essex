@@ -8,6 +8,7 @@
  * Nothing here pushes back to QuickBooks. Raw QBO payloads are never returned.
  */
 import { z } from "zod";
+import { notify } from "./notifications";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { protectedProcedure, router } from "../_core/trpc";
@@ -702,7 +703,7 @@ export const opportunitiesRouter = router({
         assignedToId: z.number().int().nullable().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
       const opp = (await db.select({ customerId: opportunities.customerId }).from(opportunities).where(eq(opportunities.id, input.opportunityId)).limit(1))[0];
@@ -719,6 +720,19 @@ export const opportunitiesRouter = router({
         assignedToId: input.assignedToId ?? null,
       });
       await insertEvent(db, input.opportunityId, "task_created", `Task created: ${input.title}`, { type: input.type, status });
+
+      // Alert the assignee — but not when they assigned it to themselves.
+      await notify(db, {
+        teamMemberIds: [input.assignedToId ?? null],
+        exclude: (ctx as { user?: { teamMemberId?: number | null } }).user?.teamMemberId ?? null,
+        type: "task_assigned",
+        title: `Task assigned: ${input.title}`,
+        body: input.dueAt ? `Due ${new Date(input.dueAt).toLocaleDateString()}` : null,
+        entityType: "opportunity",
+        entityId: input.opportunityId,
+        link: `/opportunities?open=${input.opportunityId}`,
+      });
+
       return { ok: true, id: Number((inserted as { insertId?: number }).insertId), gated: status === "gated" };
     }),
 

@@ -2177,6 +2177,36 @@ export type OpportunityChecklistTemplateItem = typeof opportunityChecklistTempla
 export type InsertOpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferInsert;
 
 /**
+ * In-app alerts for a team member: a task assigned to them, a customer replying by text,
+ * a comment on a bid they're on. One row per recipient per event, because "read" is
+ * per-person — a shared row could not record that Ana read it and Dan hasn't (0069).
+ *
+ * `link` is the in-app path the bell opens. `entityType`/`entityId` let a future feature
+ * group or dedupe alerts about the same record without parsing that path.
+ */
+export const notifications = mysqlTable(
+  "notifications",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    teamMemberId: int("teamMemberId").notNull(),
+    type: varchar("type", { length: 48 }).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    body: text("body"),
+    entityType: varchar("entityType", { length: 32 }),
+    entityId: int("entityId"),
+    link: varchar("link", { length: 255 }),
+    readAt: timestamp("readAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    // Drives the unread badge and the bell list in one index.
+    inboxIdx: index("notifications_inbox_idx").on(table.teamMemberId, table.readAt, table.createdAt),
+  }),
+);
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
+
+/**
  * Named checklist on an opportunity — the Trello "checklist" that groups items on a
  * card. An opportunity can carry several (QA, project type, commercial evaluation),
  * each with its own progress. Items point at a group via groupId (0068).

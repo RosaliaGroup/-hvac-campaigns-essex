@@ -35,6 +35,7 @@ import { jobsRouter } from "./routers/jobs";
 import { dispatchAuditRouter } from "./routers/dispatchAudit";
 import { dispatchRouter } from "./routers/dispatch";
 import { quickbooksRouter } from "./routers/quickbooks";
+import { notificationsRouter } from "./routers/notifications";
 import { opportunitiesRouter } from "./routers/opportunities";
 import { commercialOpportunitiesRouter } from "./routers/commercialOpportunities";
 import { estimatesRouter } from "./routers/estimates";
@@ -97,6 +98,7 @@ export const appRouter = router({
   dispatch: dispatchRouter,
   quickbooks: quickbooksRouter,
   // Commercial Opportunities (P2) extend the same system, nested under `commercial`.
+  notifications: notificationsRouter,
   opportunities: mergeRouters(opportunitiesRouter, router({ commercial: commercialOpportunitiesRouter })),
   estimates: estimatesRouter,
   seo: seoRouter,
