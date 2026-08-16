@@ -98,6 +98,13 @@ function NotificationBell() {
           ) : null}
         </div>
         <DropdownMenuSeparator />
+        <button
+          className="w-full px-2 py-1.5 text-left text-xs text-muted-foreground hover:bg-accent/50"
+          onClick={() => { setOpen(false); setLocation("/settings/alerts"); }}
+        >
+          Notification settings
+        </button>
+        <DropdownMenuSeparator />
         {items.length === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-muted-foreground">Nothing yet.</p>
         ) : (

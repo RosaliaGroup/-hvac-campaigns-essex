@@ -64,6 +64,7 @@ import Opportunities from "./pages/Opportunities";
 import CommercialOpportunities from "./pages/CommercialOpportunities";
 import OpportunityDetail from "./pages/OpportunityDetail";
 import JobDetail from "./pages/JobDetail";
+import AlertSettings from "./pages/settings/Alerts";
 import Integrations from "./pages/settings/Integrations";
 import MarketingAutopilot from "./pages/MarketingAutopilot";
 import TeamLogin from "./pages/TeamLogin";
@@ -338,6 +339,7 @@ function Router() {
       <Route path={"/customers"} component={protect(Customers)} />
       <Route path={"/contacts"} component={protect(Customers)} />
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />
+      <Route path={"/settings/alerts"} component={protect(AlertSettings)} />
       <Route path={"/settings/integrations"} component={protect(Integrations)} />
       <Route path={"/calendar"} component={protect(AppointmentCalendar)} />
       {/* Field App (mobile) — today's assigned appointments for technicians/sales */}

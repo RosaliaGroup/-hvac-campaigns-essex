@@ -2185,6 +2185,31 @@ export type OpportunityChecklistTemplateItem = typeof opportunityChecklistTempla
 export type InsertOpportunityChecklistTemplateItem = typeof opportunityChecklistTemplateItems.$inferInsert;
 
 /**
+ * A browser/phone this team member has allowed alerts on (0071).
+ *
+ * One row per device, keyed by the push endpoint: the same person legitimately has a
+ * phone and a laptop, and each needs its own subscription. Endpoints expire — a 404/410
+ * from the push service means the device is gone and the row is deleted.
+ */
+export const pushSubscriptions = mysqlTable(
+  "pushSubscriptions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    teamMemberId: int("teamMemberId").notNull(),
+    /** The push service URL. Long: Apple/FCM endpoints run to several hundred chars. */
+    endpoint: varchar("endpoint", { length: 512 }).notNull().unique(),
+    p256dh: varchar("p256dh", { length: 255 }).notNull(),
+    auth: varchar("auth", { length: 255 }).notNull(),
+    userAgent: varchar("userAgent", { length: 255 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    memberIdx: index("pushSubscriptions_teamMemberId_idx").on(table.teamMemberId),
+  }),
+);
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+
+/**
  * In-app alerts for a team member: a task assigned to them, a customer replying by text,
  * a comment on a bid they're on. One row per recipient per event, because "read" is
  * per-person — a shared row could not record that Ana read it and Dan hasn't (0069).
