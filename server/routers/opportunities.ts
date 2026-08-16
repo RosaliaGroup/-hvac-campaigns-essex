@@ -823,7 +823,7 @@ export const opportunitiesRouter = router({
         body: input.dueAt ? `Due ${new Date(input.dueAt).toLocaleDateString()}` : null,
         entityType: "opportunity",
         entityId: input.opportunityId,
-        link: `/opportunities?open=${input.opportunityId}`,
+        link: `/opportunities/${input.opportunityId}`,
       });
 
       return { ok: true, id: Number((inserted as { insertId?: number }).insertId), gated: status === "gated" };
