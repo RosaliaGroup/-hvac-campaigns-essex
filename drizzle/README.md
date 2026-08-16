@@ -61,11 +61,12 @@ without a safe default may ship without **all** of:
 
 ## Current exceptional state (⚠️ read before planning any migration)
 
-- **Repository journal head:** `0061_estimate_number_nullable` (`drizzle/meta/_journal.json`).
-  Reconciled here from a stale `0056_job_lifecycle` head — see the `0060`/`0061` note below.
+- **Repository journal head:** `0069_notifications` (`drizzle/meta/_journal.json`),
+  66 entries. (Was `0061` when this section was first written; `0063`–`0069` have
+  landed since — see the 2026-08-15 log below.)
 - **Production `__drizzle_migrations` recorded head:** `0054`
-  (55 tracker rows = migrations `0000`–`0054`; drizzle's row `id` is 1-based, so
-  the highest `id` 55 corresponds to tag `0054`).
+  (56 tracker rows as of 2026-08-16; drizzle's row `id` is 1-based). The tracker has
+  **not** advanced since — every migration from `0055` on is hand-applied and unrecorded.
 - **`0055`, `0056`, `0060`, and `0061` are already physically applied to production**
   (verified: `smsConversationLinks`, `jobs.lifecycleState`, the estimate tables
   `estimates`/`estimateOptions`/`estimateLineItems`, and `estimates.estimateNumber`
@@ -111,9 +112,40 @@ without a safe default may ship without **all** of:
     **dropped from production 2026-08-01**, realigning prod's index set with `0064`.
     The `propertyId` / `assignedTechnicianId` **columns** are legitimate (both `0062`
     and `0064` add them) and were kept.
+### Hand-applied 2026-08-15 → 16 (commercial card + alerts)
+
+All four applied manually against prod `railway` (MySQL 9.4.0) by the owner, each
+after a verified `mysqldump`. **None are recorded in `__drizzle_migrations`** — see
+the checksum caveat under "Tracker reconciliation"; they join the unrecorded set
+rather than getting a single guessed-hash row, which would make the tracker *less*
+trustworthy than a consistently-behind one.
+
+| Migration | What | Backup | Validation at apply |
+|---|---|---|---|
+| `0067_checklist_board_status` | `opportunityChecklistItems.boardStatus` enum + backfill + index | `/tmp/railway-pre0067.sql` (3.8M) | 32 items, 31 todo / 0 doing / 1 done, **0 mismatched** |
+| `0068_checklist_groups` | `opportunityChecklistGroups` table, `groupId`, template `groupName`, backfill, index | `/tmp/railway-pre0068.sql` (3.8M) | 32 items, **0 orphaned**, 3 groups |
+| *(data only, no migration)* | Seeded 3 card segments — QA CHECKLIST / TYPE OF PROJECT / EVALUACIÓN COMERCIAL — into the template **and** existing opportunities. `NOT EXISTS`-guarded, re-runnable. | `/tmp/railway-pre-segments.sql` (3.8M) | 16 / 10 / 7 items per opportunity; template matches |
+| `0069_notifications` | `notifications` table + inbox index. Purely additive, no backfill. | `/tmp/railway-pre0069.sql` (3.8M) | table exists, 0 rows (nothing writes until deploy) |
+
+State confirmed 2026-08-16: **56 tracker rows** (unchanged), **132 checklist items**,
+**12 checklist groups** across 4 commercial opportunities (3 segments each — the
+template instantiates correctly on new bids), **0 notification rows**.
+
+`boardStatus` (0067) is now **vestigial**: the To do / In progress / Done board it was
+built for was replaced by the grouped card checklists in the same session. It is kept
+in lockstep with `isComplete` by `checklist.setComplete`, costs nothing, and dropping it
+would mean another production migration. Retire it with the next unrelated change to
+that table rather than on its own.
+
+⚠️ The backups above live in the **container's `/tmp`**, which does not survive a
+service restart. They were adequate at apply time; they are not durable archives. Move
+future backups off the container or use a managed snapshot.
+
 - **No tool may attempt to apply `0055`, `0056`, `0060`, or `0061` again.** A fresh
   `drizzle-kit migrate` would read the tracker, believe they are unapplied, and
   re-run their DDL → failure / partial application / damage.
+- **The same applies to `0063`–`0069`.** Everything from `0055` onward is physically
+  applied but unrecorded, so a fresh `drizzle-kit migrate` would try to re-run all of it.
 - **Production must be treated as hand-reconciled.**
 - **Live schema inspection is mandatory before planning any future migration.**
 
