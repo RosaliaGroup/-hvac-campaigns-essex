@@ -127,6 +127,9 @@ trustworthy than a consistently-behind one.
 | *(data only, no migration)* | Seeded 3 card segments — QA CHECKLIST / TYPE OF PROJECT / EVALUACIÓN COMERCIAL — into the template **and** existing opportunities. `NOT EXISTS`-guarded, re-runnable. | `/tmp/railway-pre-segments.sql` (3.8M) | 16 / 10 / 7 items per opportunity; template matches |
 | `0069_notifications` | `notifications` table + inbox index. Purely additive, no backfill. | `/tmp/railway-pre0069.sql` (3.8M) | table exists, 0 rows (nothing writes until deploy) |
 
+`0070_opportunity_archive` (archive columns on `opportunities`) follows the same pattern —
+additive, three nullable columns plus an index, no backfill, tested `.down.sql`.
+
 State confirmed 2026-08-16: **56 tracker rows** (unchanged), **132 checklist items**,
 **12 checklist groups** across 4 commercial opportunities (3 segments each — the
 template instantiates correctly on new bids), **0 notification rows**.
