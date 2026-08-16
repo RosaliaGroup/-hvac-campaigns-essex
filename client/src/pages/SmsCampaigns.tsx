@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
+import { ChevronLeft,
   MessageSquare,
   Users,
   Send,
@@ -1257,8 +1257,9 @@ function SmsInboxTab({ initialPhone }: { initialPhone?: string | null }) {
     onError: (e) => toast({ title: "Couldn't add contact", description: e.message, variant: "destructive" }),
   });
 
-  function selectConversation(key: string) {
+  function selectConversation(key: string | null) {
     setSelectedConvKey(key);
+    if (key === null) return; // phone "back" — just clear the thread
     const conv = conversations.find((c) => c.key === key);
     if (conv && conv.unreadCount > 0) {
       // Mark read by PHONE (the conversation identity). A contact-linked thread
@@ -1357,10 +1358,11 @@ function SmsInboxTab({ initialPhone }: { initialPhone?: string | null }) {
         </Card>
       ) : (
         <div className="grid lg:grid-cols-3 gap-4 h-[600px]">
-          {/* Conversation List */}
-          <Card className="lg:col-span-1 overflow-hidden flex flex-col">
+          {/* Conversation List — hidden on a phone once a thread is open, so a deep link
+              from an alert lands straight in the reply view instead of the whole inbox. */}
+          <Card className={`lg:col-span-1 overflow-hidden flex-col ${selectedConv ? "hidden lg:flex" : "flex"}`}>
             <div className="p-3 border-b bg-gray-50">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{conversations.length} Conversations</p>
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">{conversations.length} Conversations</p>
             </div>
             <div className="overflow-y-auto flex-1">
               {conversations.map((conv) => (
@@ -1383,7 +1385,7 @@ function SmsInboxTab({ initialPhone }: { initialPhone?: string | null }) {
                       <p className="text-xs text-gray-400 truncate mt-0.5 line-clamp-1">{conv.latestMessage}</p>
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                      <span className="text-xs text-gray-400">{new Date(conv.latestAt).toLocaleDateString()}</span>
+                      <span className="text-xs text-gray-600">{new Date(conv.latestAt).toLocaleDateString()}</span>
                       {conv.unreadCount > 0 && (
                         <span className="bg-[#ff6b35] text-white text-xs font-bold px-1.5 py-0.5 rounded-full">{conv.unreadCount}</span>
                       )}
@@ -1407,9 +1409,18 @@ function SmsInboxTab({ initialPhone }: { initialPhone?: string | null }) {
               <>
                 {/* Thread Header */}
                 <div className="p-4 border-b bg-gray-50 flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-gray-800">{selectedConv.contactName?.trim() || selectedConv.phone}</p>
-                    <p className="text-xs text-gray-500">{selectedConv.phone} · {selectedConv.totalCount} messages</p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="rounded p-1 text-gray-700 hover:bg-gray-200 lg:hidden"
+                      aria-label="Back to conversations"
+                      onClick={() => selectConversation(null)}
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <div>
+                      <p className="font-semibold text-gray-900">{selectedConv.contactName?.trim() || selectedConv.phone}</p>
+                      <p className="text-xs text-gray-600">{selectedConv.phone} · {selectedConv.totalCount} messages</p>
+                    </div>
                   </div>
                   {selectedConv.contactId && (
                     <Badge variant="outline" className="text-xs">
@@ -1418,8 +1429,12 @@ function SmsInboxTab({ initialPhone }: { initialPhone?: string | null }) {
                   )}
                 </div>
 
-                {/* CRM workspace (Phase 2) — lazy-loaded, does not block the thread */}
-                <ConversationCrmPanel phone={selectedConv.phone} />
+                {/* CRM workspace (Phase 2) — lazy-loaded, does not block the thread.
+                    Desktop only: on a phone it pushed the conversation off screen and
+                    read as clutter above the reply box. */}
+                <div className="hidden lg:block">
+                  <ConversationCrmPanel phone={selectedConv.phone} />
+                </div>
 
                 {/* Messages */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3">
