@@ -68,8 +68,14 @@ export function resolveSyncOpportunityId(
  * A CRM-authored estimate we pushed drives its own lifecycle (approve/decline),
  * so the sync must NOT open a nudge loop for it (Task 8B defect fix).
  */
-export function shouldOpenCloseLoop(status: string | null | undefined, isCrmPushedEstimate: boolean): boolean {
-  return status === "pending" && !isCrmPushedEstimate;
+export function shouldOpenCloseLoop(
+  status: string | null | undefined,
+  sentAt: Date | null | undefined,
+  isCrmPushedEstimate: boolean,
+): boolean {
+  // Loops open ONLY on delivery evidence: QBO EmailStatus=EmailSent (sentAt).
+  // "pending" alone = the estimate merely exists (est 330248 incident, 2026-08-19).
+  return status === "pending" && sentAt != null && !isCrmPushedEstimate;
 }
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -662,7 +668,7 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
 
   // Follow-up loop: open it for Sent/Pending docs; cancel it once the deal closes.
   // Skip opening for a CRM-pushed estimate — it drives its own approve/decline lifecycle.
-  if (shouldOpenCloseLoop(mapped.status, !!crmPushed)) {
+  if (shouldOpenCloseLoop(mapped.status, mapped.sentAt ?? null, !!crmPushed)) {
     const n = await ensureFollowupsForOpportunity({
       db,
       opportunityId: opp.id,

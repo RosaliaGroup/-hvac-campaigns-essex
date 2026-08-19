@@ -19,15 +19,19 @@ describe("resolveSyncOpportunityId", () => {
 });
 
 describe("shouldOpenCloseLoop", () => {
-  it("opens the loop for a genuinely QBO-originated pending estimate", () => {
-    expect(shouldOpenCloseLoop("pending", false)).toBe(true);
+  it("opens the loop for a QBO pending estimate WITH delivery evidence", () => {
+    expect(shouldOpenCloseLoop("pending", new Date(), false)).toBe(true);
   });
-  it("does NOT open the loop for a CRM-pushed estimate (it drives its own lifecycle)", () => {
-    expect(shouldOpenCloseLoop("pending", true)).toBe(false);
+  it("does NOT open the loop for an UNSENT pending estimate (est 330248 incident)", () => {
+    expect(shouldOpenCloseLoop("pending", null, false)).toBe(false);
+    expect(shouldOpenCloseLoop("pending", undefined, false)).toBe(false);
   });
-  it("does not open the loop for non-pending statuses", () => {
-    for (const s of ["accepted", "closed", "rejected", "expired", null, undefined]) {
-      expect(shouldOpenCloseLoop(s, false)).toBe(false);
+  it("does NOT open the loop for a CRM-pushed estimate", () => {
+    expect(shouldOpenCloseLoop("pending", new Date(), true)).toBe(false);
+  });
+  it("does not open for non-pending statuses even when sent", () => {
+    for (const st of ["accepted", "closed", "rejected", "expired", null, undefined]) {
+      expect(shouldOpenCloseLoop(st, new Date(), false)).toBe(false);
     }
   });
 });
