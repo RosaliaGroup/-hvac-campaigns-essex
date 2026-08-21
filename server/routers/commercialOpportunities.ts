@@ -877,20 +877,6 @@ const commentsRouter = router({
       const authorId = currentTeamMemberId(ctx);
       const res = await db.insert(opportunityComments).values({ opportunityId: input.opportunityId, authorId, body: input.body });
       const id = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
-    // Creation alert: bell + email to the active team (creator excluded).
-    try {
-      const everyone = await db.select({ id: teamMembers.id }).from(teamMembers).where(eq(teamMembers.status, "active"));
-      await notify(db, {
-        teamMemberIds: everyone.map(t => t.id),
-        exclude: me,
-        type: "bid_created",
-        title: `New ${input.isBid ? "bid" : "project"} created: ${input.title}`,
-        body: null,
-        entityType: "opportunity",
-        entityId: id,
-        link: `/opportunities/${id}`,
-      });
-    } catch { /* alerting must never block creation */ }
       await insertEvent(db, input.opportunityId, "comment_added", "Comment added.", { commentId: id });
 
       // @mentions — "@First" or "@First Last" routes a DIRECT notification to
@@ -1012,20 +998,6 @@ const documentsRouter = router({
         notes: input.notes ?? null,
       });
       const id = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
-    // Creation alert: bell + email to the active team (creator excluded).
-    try {
-      const everyone = await db.select({ id: teamMembers.id }).from(teamMembers).where(eq(teamMembers.status, "active"));
-      await notify(db, {
-        teamMemberIds: everyone.map(t => t.id),
-        exclude: me,
-        type: "bid_created",
-        title: `New ${input.isBid ? "bid" : "project"} created: ${input.title}`,
-        body: null,
-        entityType: "opportunity",
-        entityId: id,
-        link: `/opportunities/${id}`,
-      });
-    } catch { /* alerting must never block creation */ }
       await insertEvent(db, input.opportunityId, "document_linked", `Document linked (${input.category}).`, { documentId: id });
       return { ok: true, id };
     }),
