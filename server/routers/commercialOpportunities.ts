@@ -427,6 +427,8 @@ const createInput = z.object({
   title: z.string().min(1).max(255),
   description: z.string().max(5000).optional(),
   customerId: z.number().int().positive(),
+  /** residential | commercial — where the record lives; defaults commercial. */
+  recordType: z.enum(["residential", "commercial"]).optional(),
   primaryContactId: optionalId,
   propertyId: optionalId,
   opportunityType: opportunityTypeSchema.optional(),
@@ -1162,7 +1164,7 @@ export const commercialOpportunitiesRouter = router({
       customerId: input.customerId,
       title: bidTitle,
       description: input.description ?? null,
-      recordType: "commercial",
+      recordType: input.recordType ?? "commercial",
       stageId: firstStage?.id ?? null,
       status: "open",
       opportunityType: (input.opportunityType as never) ?? null,

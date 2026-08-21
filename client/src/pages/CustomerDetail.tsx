@@ -122,6 +122,12 @@ export default function CustomerDetail() {
     onSuccess: () => { toast({ title: "Customer updated" }); setEditOpen(false); refetch(); },
     onError: err => toast({ title: "Update failed", description: err.message, variant: "destructive" }),
   });
+  const [oppOpen, setOppOpen] = useState(false);
+  const [oppType, setOppType] = useState<"residential" | "commercial">("commercial");
+  const [oppAddress, setOppAddress] = useState("");
+  const createOpportunity = trpc.opportunities.commercial.create.useMutation({
+    onSuccess: () => { setOppOpen(false); setOppAddress(""); refetch(); },
+  });
   const addProperty = trpc.customers.addProperty.useMutation({
     onSuccess: () => { toast({ title: "Property added" }); setPropOpen(false); refetch(); },
     onError: err => toast({ title: "Could not add property", description: err.message, variant: "destructive" }),
@@ -384,6 +390,9 @@ export default function CustomerDetail() {
           </TabsContent>
 
           <TabsContent value="opportunities">
+            <div className="mb-3 flex justify-end">
+              <button type="button" onClick={() => setOppOpen(true)} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:opacity-90">+ Add Opportunity</button>
+            </div>
             <Card><CardContent className="pt-6 space-y-3">
               {opportunities.length === 0 ? <p className="text-sm text-muted-foreground">No opportunities linked to this customer.</p> :
                 opportunities.map(o => (
@@ -444,6 +453,29 @@ export default function CustomerDetail() {
       </div>
 
       {/* Edit customer dialog */}
+      <Dialog open={oppOpen} onOpenChange={setOppOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Add Opportunity</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Type</p>
+              <select value={oppType} onChange={e => setOppType(e.target.value as "residential" | "commercial")} className="w-full rounded-md border bg-background px-3 py-2 text-sm">
+                <option value="commercial">Commercial (bid)</option>
+                <option value="residential">Residential</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Property address / project</p>
+              <input value={oppAddress} onChange={e => setOppAddress(e.target.value)} placeholder="42 Crystal Ave, West Orange" className="w-full rounded-md border bg-background px-3 py-2 text-sm" />
+              <p className="text-xs text-muted-foreground">{oppType === "commercial" ? "Bid number and client name are added to the title automatically." : "Creates a residential opportunity linked to this customer."}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <button type="button" onClick={() => setOppOpen(false)} className="rounded-md border px-3 py-1.5 text-sm">Cancel</button>
+            <button type="button" disabled={!oppAddress.trim() || createOpportunity.isPending} onClick={() => createOpportunity.mutate({ customerId: customer.id, title: oppAddress.trim(), recordType: oppType, isBid: oppType === "commercial" })} className="rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground disabled:opacity-50">{createOpportunity.isPending ? "Creating…" : "Create"}</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Edit Customer</DialogTitle></DialogHeader>
