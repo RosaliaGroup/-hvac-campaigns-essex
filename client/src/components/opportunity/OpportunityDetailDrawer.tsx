@@ -100,6 +100,10 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const [, navigate] = useLocation();
+  const reserveInQbo = trpc.opportunities.commercial.reserveInQbo.useMutation({
+    onSuccess: (res) => { toast({ title: "Reserved in QuickBooks as estimate " + res.docNumber }); utils.invalidate(); },
+    onError: (err) => toast({ title: "Could not reserve", description: err.message, variant: "destructive" }),
+  });
   const { data, isLoading } = trpc.opportunities.get.useQuery({ id: id! }, { enabled: open && id != null });
 
   const [valueDraft, setValueDraft] = useState("");
@@ -235,6 +239,18 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                 icon={ExternalLink} label="QBO doc"
               />
               <ActionButton onClick={() => c && navigate(`/customers/${c.id}`)} disabled={!c} icon={User} label="Customer" />
+              {String(o?.opportunityNumber ?? "").startsWith("ME-BID-") && !data?.salesDocuments?.length ? (
+                <ActionButton
+                  onClick={() => {
+                    if (id != null && window.confirm("Create a $0 placeholder estimate in QuickBooks under this bid number, so the number is reserved there?")) {
+                      reserveInQbo.mutate({ id });
+                    }
+                  }}
+                  disabled={reserveInQbo.isPending}
+                  icon={ExternalLink}
+                  label={reserveInQbo.isPending ? "Reserving…" : "Reserve # in QB"}
+                />
+              ) : null}
               <ActionButton onClick={() => setTaskOpen(true)} icon={CalendarPlus} label="Task" />
             </div>
 
