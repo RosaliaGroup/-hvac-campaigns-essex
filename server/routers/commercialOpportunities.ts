@@ -770,6 +770,19 @@ const checklistRouter = router({
       if (input.requiredForConversion !== undefined) set.requiredForConversion = input.requiredForConversion;
       if (!Object.keys(set).length) return { ok: true };
       await db.update(opportunityChecklistItems).set(set).where(eq(opportunityChecklistItems.id, input.itemId));
+      // Assignment alert: bell + email to the newly-assigned teammate.
+      if (input.assigneeId != null && input.assigneeId !== item.assigneeId) {
+        await notify(db, {
+          teamMemberIds: [input.assigneeId],
+          exclude: currentTeamMemberId(ctx),
+          type: "task_assigned",
+          title: "Task assigned to you: " + (input.label ?? item.label),
+          body: null,
+          entityType: "opportunity",
+          entityId: item.opportunityId,
+          link: `/opportunities/${item.opportunityId}`,
+        });
+      }
       return { ok: true };
     }),
 
@@ -864,6 +877,20 @@ const commentsRouter = router({
       const authorId = currentTeamMemberId(ctx);
       const res = await db.insert(opportunityComments).values({ opportunityId: input.opportunityId, authorId, body: input.body });
       const id = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+    // Creation alert: bell + email to the active team (creator excluded).
+    try {
+      const everyone = await db.select({ id: teamMembers.id }).from(teamMembers).where(eq(teamMembers.status, "active"));
+      await notify(db, {
+        teamMemberIds: everyone.map(t => t.id),
+        exclude: me,
+        type: "bid_created",
+        title: `New ${input.isBid ? "bid" : "project"} created: ${input.title}`,
+        body: null,
+        entityType: "opportunity",
+        entityId: id,
+        link: `/opportunities/${id}`,
+      });
+    } catch { /* alerting must never block creation */ }
       await insertEvent(db, input.opportunityId, "comment_added", "Comment added.", { commentId: id });
 
       // @mentions — "@First" or "@First Last" routes a DIRECT notification to
@@ -985,6 +1012,20 @@ const documentsRouter = router({
         notes: input.notes ?? null,
       });
       const id = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+    // Creation alert: bell + email to the active team (creator excluded).
+    try {
+      const everyone = await db.select({ id: teamMembers.id }).from(teamMembers).where(eq(teamMembers.status, "active"));
+      await notify(db, {
+        teamMemberIds: everyone.map(t => t.id),
+        exclude: me,
+        type: "bid_created",
+        title: `New ${input.isBid ? "bid" : "project"} created: ${input.title}`,
+        body: null,
+        entityType: "opportunity",
+        entityId: id,
+        link: `/opportunities/${id}`,
+      });
+    } catch { /* alerting must never block creation */ }
       await insertEvent(db, input.opportunityId, "document_linked", `Document linked (${input.category}).`, { documentId: id });
       return { ok: true, id };
     }),
@@ -1133,6 +1174,20 @@ export const commercialOpportunitiesRouter = router({
       createdBy: me,
     });
     const id = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+    // Creation alert: bell + email to the active team (creator excluded).
+    try {
+      const everyone = await db.select({ id: teamMembers.id }).from(teamMembers).where(eq(teamMembers.status, "active"));
+      await notify(db, {
+        teamMemberIds: everyone.map(t => t.id),
+        exclude: me,
+        type: "bid_created",
+        title: `New ${input.isBid ? "bid" : "project"} created: ${input.title}`,
+        body: null,
+        entityType: "opportunity",
+        entityId: id,
+        link: `/opportunities/${id}`,
+      });
+    } catch { /* alerting must never block creation */ }
     // Numbering: BIDS draw a ME-BID-<n> from the atomic sequence (continues the
     // Trello series); non-bid commercial records keep OPP-<year>-<id>.
     const opportunityNumber = input.isBid

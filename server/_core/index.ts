@@ -10,6 +10,7 @@ import { serveStatic, setupVite } from "./vite";
 import { registerSeoRoutes } from "../seo";
 import { startScheduledSmsProcessor } from "../services/scheduledSms";
 import { startSalesDocPoller } from "../services/salesDocPoller";
+import { startDueReminderSweep } from "../services/dueReminderSweep";
 import { registerSmsWebhookRoutes, assertWebhookSecurityOrExit } from "../services/smsWebhook";
 import { attachBodyParsers } from "./bodyParser";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
@@ -99,6 +100,8 @@ async function startServer() {
     startScheduledSmsProcessor();
     // Start QuickBooks sales-document poller (incremental sync + follow-up dispatch)
     startSalesDocPoller();
+    // Hourly sweep: task due dates + bid deadlines -> bell + email reminders
+    startDueReminderSweep();
     // Start daily Search Console → cache sync for SEO Intelligence
     startSeoSyncScheduler();
     // Start daily GA4 Analytics Data API → cache sync for Marketing Analytics

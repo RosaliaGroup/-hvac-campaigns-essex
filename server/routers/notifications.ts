@@ -9,11 +9,12 @@
  * record that one member has seen an alert and another hasn't.
  */
 import { z } from "zod";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
-import { notifications, pushSubscriptions } from "../../drizzle/schema";
+import { notifications, pushSubscriptions, teamMembers } from "../../drizzle/schema";
+import { sendEmail } from "../services/emailService";
 import { sendPushToMembers, vapidPublicKey } from "../services/webPush";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -35,6 +36,9 @@ export type NotifyInput = {
  * Raise an alert for each recipient. Never throws — an alert failing must not roll back
  * the action that triggered it, so callers can fire this without a try/catch.
  */
+/** Alert types that ALSO send an email — inbox-worthy pings, never routine chatter. */
+const EMAILED_TYPES = new Set(["mentioned", "task_assigned", "bid_created", "task_due", "bid_due"]);
+
 export async function notify(db: Db, input: NotifyInput): Promise<number> {
   try {
     const seen = new Set<number>();
@@ -56,6 +60,31 @@ export async function notify(db: Db, input: NotifyInput): Promise<number> {
         link: input.link ?? null,
       })),
     );
+    // Third channel: email — only for EMAILED_TYPES. Fire-and-forget; a mail
+    // failure must never affect the action that raised the alert.
+    if (EMAILED_TYPES.has(input.type)) {
+      void (async () => {
+        try {
+          const recips = await db
+            .select({ email: teamMembers.email, name: teamMembers.name })
+            .from(teamMembers)
+            .where(and(inArray(teamMembers.id, Array.from(seen)), ne(teamMembers.status, "suspended")));
+          const link = input.link ? `https://mechanicalenterprise.com${input.link}` : "https://mechanicalenterprise.com";
+          const html =
+            `<p><strong>${input.title}</strong></p>` +
+            (input.body ? `<p>${String(input.body).replace(/</g, "&lt;")}</p>` : "") +
+            `<p><a href="${link}">Open in Mechanical Enterprise CRM</a></p>` +
+            `<p style="color:#888;font-size:12px">Internal team alert.</p>`;
+          for (const r of recips) {
+            if (!r.email) continue;
+            await sendEmail({ to: r.email, subject: input.title.slice(0, 150), html });
+          }
+        } catch (e) {
+          console.warn("[notify] email channel failed:", (e as Error).message);
+        }
+      })();
+    }
+
     // Same alert, second channel: in-app row above, device push here. Fire-and-forget —
     // sendPushToMembers never throws and is a no-op when VAPID keys aren't configured.
     void sendPushToMembers(db, Array.from(seen), {
