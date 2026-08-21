@@ -51,8 +51,27 @@ export default function QuickFieldsSection({
 
   const chip = "h-7 gap-1 text-xs";
 
+  const bidDue = o.bidDueAt ? new Date(o.bidDueAt) : null;
+  const bidDueOverdue = bidDue != null && bidDue < new Date();
+
   return (
     <div className="flex flex-wrap items-center gap-1.5">
+      {/* Bid due date — the submission deadline for this bid. */}
+      <span className={`inline-flex items-center gap-1 h-7 rounded-md border px-2 text-xs ${bidDueOverdue ? "border-red-300 bg-red-50 text-red-700" : "text-muted-foreground"}`}>
+        Bid due
+        <input
+          type="date"
+          className="bg-transparent text-xs outline-none"
+          value={bidDue ? bidDue.toISOString().slice(0, 10) : ""}
+          disabled={!canWrite || update.isPending}
+          onChange={(e) =>
+            update.mutate({
+              id: opportunityId,
+              bidDueAt: e.target.value ? new Date(e.target.value + "T12:00:00") : null,
+            })
+          }
+        />
+      </span>
       {/* Project type — multi-select, since a job can be both e.g. Restaurant and Commercial. */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

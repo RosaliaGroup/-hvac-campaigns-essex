@@ -108,6 +108,11 @@ function Card({ row, columns, onOpen, onMove, dragging, onDragStart, onDragEnd }
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {row.isBid ? <Badge variant="secondary" className="text-[10px]">BID</Badge> : null}
+        {(row as { bidDueAt?: string | Date | null }).bidDueAt ? (
+          <Badge variant="outline" className={`text-[10px] gap-0.5 ${new Date((row as { bidDueAt?: string | Date | null }).bidDueAt as string) < new Date() ? "border-red-200 bg-red-50 text-red-700" : "text-muted-foreground"}`}>
+            due {new Date((row as { bidDueAt?: string | Date | null }).bidDueAt as string).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+          </Badge>
+        ) : null}
         <PriorityScoreBadge score={row.priorityScore} />
         <StrategicFlags row={row} />
       </div>
