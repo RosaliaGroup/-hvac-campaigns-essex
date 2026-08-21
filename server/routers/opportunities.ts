@@ -28,6 +28,7 @@ import {
   type InsertJob,
 } from "../../drizzle/schema";
 import { makeJobNumber } from "./jobs";
+import { quickbooksSalesDocuments as qbDocsForJobNum } from "../../drizzle/schema";
 import {
   convertOpportunityToJob,
   ConvertError,
@@ -725,7 +726,13 @@ export const opportunitiesRouter = router({
           };
           const result = await db.insert(jobs).values(values);
           const id = Number((result as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
-          const jobNumber = makeJobNumber(id);
+          // Consistent numbering: the job carries its estimate's number (ME-2184);
+          // sequence fallback when the opportunity has no numeric estimate.
+          const oppDoc = (await db.select({ docNumber: qbDocsForJobNum.docNumber }).from(qbDocsForJobNum).where(eq(qbDocsForJobNum.opportunityId, j.opportunityId)).orderBy(qbDocsForJobNum.id).limit(1))[0];
+          const numericDoc = /^[0-9]+$/.test(String(oppDoc?.docNumber ?? "")) ? String(oppDoc?.docNumber) : null;
+          let jobNumber = numericDoc ? "ME-" + numericDoc : makeJobNumber(id);
+          const dupJob = (await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.jobNumber, jobNumber)).limit(1))[0];
+          if (dupJob) jobNumber = numericDoc ? "ME-" + numericDoc + "-" + id : makeJobNumber(id);
           await db.update(jobs).set({ jobNumber }).where(eq(jobs.id, id));
           return { id, jobNumber };
         },

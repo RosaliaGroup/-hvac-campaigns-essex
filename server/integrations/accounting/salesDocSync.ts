@@ -690,7 +690,12 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
           status: "new",
         });
         const jobId = Number((insJob as { insertId?: number }).insertId);
-        const jobNumber = makeJobNumber(jobId);
+        // Consistent numbering (ask 2026-08-21): the job carries the ESTIMATE number
+        // (ME-2184), falling back to the ME-YYYY-#### sequence when non-numeric.
+        const numericDoc = /^[0-9]+$/.test(String(mapped.docNumber ?? "")) ? String(mapped.docNumber) : null;
+        let jobNumber = numericDoc ? "ME-" + numericDoc : makeJobNumber(jobId);
+        const dupJob = (await db.select({ id: autoJobJobs.id }).from(autoJobJobs).where(eq(autoJobJobs.jobNumber, jobNumber)).limit(1))[0];
+        if (dupJob) jobNumber = numericDoc ? "ME-" + numericDoc + "-" + jobId : makeJobNumber(jobId);
         await db.update(autoJobJobs).set({ jobNumber }).where(eq(autoJobJobs.id, jobId));
         await db.insert(opportunityEvents).values({
           opportunityId: opp.id,
