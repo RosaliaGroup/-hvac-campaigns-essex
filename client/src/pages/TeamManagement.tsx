@@ -228,7 +228,7 @@ export default function TeamManagement() {
           </div>
         </div>
         <Button className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 gap-2" onClick={openCreate}>
-          <UserPlus className="w-4 h-4" /> Add Technician
+          <UserPlus className="w-4 h-4" /> Add Team Member
         </Button>
       </div>
 
@@ -236,11 +236,11 @@ export default function TeamManagement() {
       <Dialog open={dialogOpen} onOpenChange={(o) => (o ? setDialogOpen(true) : closeDialog())}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{mode === "create" ? "Add a Technician" : "Edit Contact Details"}</DialogTitle>
+            <DialogTitle>{mode === "create" ? "Add a Team Member" : "Edit Contact Details"}</DialogTitle>
             <DialogDescription>
               {mode === "create"
                 ? "Fill in their details. They'll get an invite link to set a password and access the app."
-                : "Update this technician's contact details. Login email and role are managed separately."}
+                : "Update this team member's contact details. Login email and role are managed separately."}
             </DialogDescription>
           </DialogHeader>
 
@@ -249,7 +249,7 @@ export default function TeamManagement() {
               <Alert className="border-green-200 bg-green-50">
                 <CheckCircle2 className="w-4 h-4 text-green-600" />
                 <AlertDescription className="text-green-700">
-                  Technician added! Copy the invite link below and send it to <strong>{form.email}</strong>.
+                  Team member added! Copy the invite link below and send it to <strong>{form.email}</strong>.
                 </AlertDescription>
               </Alert>
               <div className="flex gap-2">
@@ -354,7 +354,7 @@ export default function TeamManagement() {
               <div className="text-center py-10 text-muted-foreground">
                 <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p className="font-medium">No team members yet</p>
-                <p className="text-sm mt-1">Add a technician to give them access.</p>
+                <p className="text-sm mt-1">Add a team member and assign their role to give them access.</p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -467,10 +467,10 @@ export default function TeamManagement() {
           <CardContent className="pt-4">
             <h3 className="font-semibold text-sm mb-3">How team access works</h3>
             <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-              <li>Click <strong>Add Technician</strong> and fill in their name, work email, mobile phone, and contact details.</li>
+              <li>Click <strong>Add Team Member</strong>, fill in their details, and assign a role: <strong>Admin</strong> (full access), <strong>Member</strong> (standard), or <strong>Viewer</strong> (read-only).</li>
               <li>Copy the generated invite link and send it to them directly (email, text, etc.).</li>
               <li>They click the link, set their password, and are immediately logged in.</li>
-              <li>Technicians can keep their own phone, address, emergency contact, and photo up to date from the field app under <strong>My Profile</strong>.</li>
+              <li>Team members (including field technicians) can keep their own phone, address, emergency contact, and photo up to date under <strong>My Profile</strong>.</li>
               <li>Use the <strong>pencil</strong> icon to edit contact details, or suspend/remove access at any time.</li>
             </ol>
           </CardContent>
