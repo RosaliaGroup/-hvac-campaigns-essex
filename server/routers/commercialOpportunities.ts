@@ -377,7 +377,7 @@ async function resolveStage(db: Db, stageId: number | null): Promise<StageLike |
  * is left pointing at value+1). The unique index on opportunityNumber is the
  * backstop against any duplicate.
  */
-import { nextDocNumberFrom } from "../integrations/accounting/quickbooks";
+import { nextDocNumberFrom, quickbooksProvider } from "../integrations/accounting/quickbooks";
 import { quickbooksSalesDocuments as qbDocsForBidNumbering } from "../../drizzle/schema";
 
 /**
@@ -1109,6 +1109,31 @@ export const commercialOpportunitiesRouter = router({
   comments: commentsRouter,
   documents: documentsRouter,
   members: membersRouter,
+
+  /** Reserve this bid's number in QuickBooks as a $0 placeholder estimate, so the
+   * number is visible/taken in QBO before the real estimate is built there. */
+  reserveInQbo: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+    const db = await getDb();
+    if (!db) throw dbUnavailable();
+    const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
+    if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Bid not found" });
+    const num = String(opp.opportunityNumber ?? "").replace("ME-BID-", "");
+    if (!/^\d+$/.test(num)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "This bid has no numeric ME-BID number." });
+    const cust = opp.customerId
+      ? (await db.select().from(customers).where(eq(customers.id, opp.customerId)).limit(1))[0]
+      : null;
+    if (!cust?.quickbooksCustomerId) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Customer is not synced to QuickBooks yet — sync the customer first." });
+    }
+    const result = await quickbooksProvider.pushEstimate({
+      customerRef: String(cust.quickbooksCustomerId),
+      docNumber: num,
+      privateNote: "Reserved from CRM bid " + (opp.opportunityNumber ?? "") + " — replace the placeholder line with the real scope.",
+      lines: [{ name: "Reserved", description: "RESERVED — CRM bid " + (opp.opportunityNumber ?? "") + ". Replace with actual line items.", quantity: 1, unitPrice: 0, amount: 0 }],
+    });
+    await insertEvent(db, input.id, "qbo_reserved", "Number " + (result.docNumber ?? num) + " reserved in QuickBooks (placeholder estimate " + result.qbId + ").");
+    return { docNumber: result.docNumber ?? num, qbId: result.qbId };
+  }),
 
   /** Delete a bid — admin only. Archives the record and clears its board presence. */
   removeBid: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
