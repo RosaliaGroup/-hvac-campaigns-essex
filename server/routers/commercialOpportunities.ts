@@ -377,6 +377,25 @@ async function resolveStage(db: Db, stageId: number | null): Promise<StageLike |
  * is left pointing at value+1). The unique index on opportunityNumber is the
  * backstop against any duplicate.
  */
+import { nextDocNumberFrom } from "../integrations/accounting/quickbooks";
+import { quickbooksSalesDocuments as qbDocsForBidNumbering } from "../../drizzle/schema";
+
+/**
+ * Bid numbers mirror QuickBooks estimate numbers (ask 2026-08-21): a new bid takes
+ * the NEXT estimate DocNumber so ME-BID-N and the eventual estimate N match.
+ * Derived from our ~3-min QBO mirror; falls back to the internal atomic sequence
+ * if the mirror is empty/unavailable. Provisional by nature — create the estimate
+ * promptly so QBO issues the same number.
+ */
+async function allocateBidNumberFromQb(db: Db): Promise<number> {
+  try {
+    const rows = await db.select({ docNumber: qbDocsForBidNumbering.docNumber }).from(qbDocsForBidNumbering);
+    const next = Number(nextDocNumberFrom(rows.map(r => r.docNumber)));
+    if (Number.isFinite(next) && next > 0) return next;
+  } catch { /* fall through */ }
+  return allocateBidNumber(db);
+}
+
 async function allocateBidNumber(db: Db): Promise<number> {
   return db.transaction(async (tx) => {
     await tx.execute(
@@ -1088,6 +1107,23 @@ export const commercialOpportunitiesRouter = router({
   documents: documentsRouter,
   members: membersRouter,
 
+  /** Delete a bid — admin only. Archives the record and clears its board presence. */
+  removeBid: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+    const db = await getDb();
+    if (!db) throw dbUnavailable();
+    const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
+    if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Bid not found" });
+    await db.update(opportunities).set({
+      archivedAt: new Date(),
+      archivedById: currentTeamMemberId(ctx),
+      stage: "lost",
+      status: "closed",
+      title: "[deleted] " + (opp.title ?? ""),
+    }).where(eq(opportunities.id, input.id));
+    await insertEvent(db, input.id, "archived", "Bid deleted (archived) by admin.");
+    return { ok: true };
+  }),
+
   /** Create a commercial opportunity. Never creates a customer or property. */
   create: protectedProcedure.input(createInput).mutation(async ({ input, ctx }) => {
     const db = await getDb();
@@ -1163,7 +1199,7 @@ export const commercialOpportunitiesRouter = router({
     // Numbering: BIDS draw a ME-BID-<n> from the atomic sequence (continues the
     // Trello series); non-bid commercial records keep OPP-<year>-<id>.
     const opportunityNumber = input.isBid
-      ? makeBidNumber(await allocateBidNumber(db))
+      ? makeBidNumber(await allocateBidNumberFromQb(db))
       : makeOpportunityNumber(id, new Date().getFullYear());
     await db.update(opportunities).set({ opportunityNumber }).where(eq(opportunities.id, id));
 

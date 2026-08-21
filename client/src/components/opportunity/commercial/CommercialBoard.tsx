@@ -74,6 +74,10 @@ function Card({ row, columns, onOpen, onMove, dragging, onDragStart, onDragEnd }
   onDragEnd: () => void;
 }) {
   const name = formatDisplayName(row.customerCompany || row.customerName || row.title);
+  const utils = trpc.useUtils();
+  const removeBid = trpc.opportunities.commercial.removeBid.useMutation({
+    onSuccess: () => utils.opportunities.commercial.list.invalidate(),
+  });
   return (
     <div
       draggable
@@ -102,6 +106,16 @@ function Card({ row, columns, onOpen, onMove, dragging, onDragStart, onDragEnd }
               {columns.filter(c => c.id !== row.stageId && !isTerminal(c.classification)).map(c => (
                 <DropdownMenuItem key={c.id} onSelect={() => onMove(row.id, c.id)}>Move to {c.name}</DropdownMenuItem>
               ))}
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-600"
+                onSelect={() => {
+                  if (window.confirm("Delete this bid? It will be archived and removed from the board.")) {
+                    removeBid.mutate({ id: row.id });
+                  }
+                }}
+              >
+                Delete bid…
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
