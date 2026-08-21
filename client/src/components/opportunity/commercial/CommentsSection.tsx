@@ -13,12 +13,24 @@ import type { CommercialDetail } from "@/lib/commercialApiTypes";
 import { useCommercialPerms } from "./shared";
 
 type Comment = CommercialDetail["comments"][number];
+type Member = { teamMemberId: number; name?: string | null };
 
-export default function CommentsSection({ opportunityId, comments }: { opportunityId: number; comments: Comment[] }) {
+export default function CommentsSection({ opportunityId, comments, members = [] }: { opportunityId: number; comments: Comment[]; members?: Member[] }) {
   const utils = trpc.useUtils();
   const { toast } = useToast();
   const { canWrite, isAdmin, currentMemberId } = useCommercialPerms();
   const [draft, setDraft] = useState("");
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const mentionMatches = mentionQuery == null ? [] : members.filter(m => (m.name ?? "").toLowerCase().startsWith(mentionQuery.toLowerCase())).slice(0, 6);
+  const onDraftChange = (v: string) => {
+    setDraft(v);
+    const m = /(?:^|\s)@([A-Za-z]*)$/.exec(v);
+    setMentionQuery(m ? m[1] : null);
+  };
+  const insertMention = (name: string) => {
+    setDraft(d => d.replace(/@[A-Za-z]*$/, "@" + name + " "));
+    setMentionQuery(null);
+  };
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editBody, setEditBody] = useState("");
 
@@ -35,7 +47,23 @@ export default function CommentsSection({ opportunityId, comments }: { opportuni
     <div className="space-y-3">
       {canWrite ? (
         <div className="space-y-2">
-          <Textarea value={draft} onChange={e => setDraft(e.target.value)} placeholder="Add a comment…" rows={2} />
+          <div className="relative">
+            <Textarea value={draft} onChange={e => onDraftChange(e.target.value)} placeholder="Add a comment… (@ to tag a teammate)" rows={2} />
+            {mentionQuery != null && mentionMatches.length > 0 && (
+              <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-md border bg-white shadow-md">
+                {mentionMatches.map(m => (
+                  <button
+                    key={m.teamMemberId}
+                    type="button"
+                    className="block w-full px-3 py-1.5 text-left text-sm hover:bg-muted"
+                    onClick={() => insertMention(m.name ?? "")}
+                  >
+                    @{m.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex justify-end">
             <Button size="sm" disabled={!draft.trim() || create.isPending} onClick={() => create.mutate({ opportunityId, body: draft.trim() })}>
               {create.isPending ? "Posting…" : "Comment"}

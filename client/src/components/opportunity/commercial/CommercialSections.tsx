@@ -41,7 +41,7 @@ export default function CommercialSections({
   }
 
   if (section === "activity") {
-    return <CommentsSection opportunityId={opportunityId} comments={d.comments} />;
+    return <CommentsSection opportunityId={opportunityId} comments={d.comments} members={d.members} />;
   }
 
   return (
