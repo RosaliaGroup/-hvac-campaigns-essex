@@ -390,7 +390,8 @@ import { quickbooksSalesDocuments as qbDocsForBidNumbering } from "../../drizzle
 async function allocateBidNumberFromQb(db: Db): Promise<number> {
   try {
     const rows = await db.select({ docNumber: qbDocsForBidNumbering.docNumber }).from(qbDocsForBidNumbering);
-    const next = Number(nextDocNumberFrom(rows.map(r => r.docNumber)));
+    const workingSeries = rows.map(r => r.docNumber).filter(n => { const v = Number(n); return Number.isFinite(v) && v < 100000; });
+    const next = Number(nextDocNumberFrom(workingSeries));
     if (Number.isFinite(next) && next > 0) return next;
   } catch { /* fall through */ }
   return allocateBidNumber(db);
@@ -1117,7 +1118,7 @@ export const commercialOpportunitiesRouter = router({
       archivedAt: new Date(),
       archivedById: currentTeamMemberId(ctx),
       stage: "lost",
-      status: "closed",
+      status: "cancelled",
       title: "[deleted] " + (opp.title ?? ""),
     }).where(eq(opportunities.id, input.id));
     await insertEvent(db, input.id, "archived", "Bid deleted (archived) by admin.");
@@ -1148,9 +1149,18 @@ export const commercialOpportunitiesRouter = router({
     )[0];
 
     const me = currentTeamMemberId(ctx);
+    // Bids: allocate the number FIRST so the title always carries "<n> - <client> - <address>".
+    let qbBidNo: number | null = null;
+    let bidTitle = input.title;
+    if (input.isBid) {
+      qbBidNo = await allocateBidNumberFromQb(db);
+      const cust = (await db.select({ displayName: customers.displayName }).from(customers).where(eq(customers.id, input.customerId)).limit(1))[0];
+      const clientName = (cust?.displayName ?? "").trim();
+      bidTitle = qbBidNo + " - " + (clientName ? clientName + " - " : "") + input.title;
+    }
     const res = await db.insert(opportunities).values({
       customerId: input.customerId,
-      title: input.title,
+      title: bidTitle,
       description: input.description ?? null,
       recordType: "commercial",
       stageId: firstStage?.id ?? null,
@@ -1199,7 +1209,7 @@ export const commercialOpportunitiesRouter = router({
     // Numbering: BIDS draw a ME-BID-<n> from the atomic sequence (continues the
     // Trello series); non-bid commercial records keep OPP-<year>-<id>.
     const opportunityNumber = input.isBid
-      ? makeBidNumber(await allocateBidNumberFromQb(db))
+      ? makeBidNumber(qbBidNo ?? (await allocateBidNumberFromQb(db)))
       : makeOpportunityNumber(id, new Date().getFullYear());
     await db.update(opportunities).set({ opportunityNumber }).where(eq(opportunities.id, id));
 
