@@ -167,6 +167,9 @@ function formatPropertyAddress(p: {
 // ─────────────────────────────────────────────────────────────
 
 /** Human job number derived from the autoincrement id — race-free, sortable. */
+import { notify as notifyJobTeam } from "./notifications";
+import { teamMembers as jobAlertTeam } from "../../drizzle/schema";
+
 export function makeJobNumber(id: number, year: number = new Date().getFullYear()): string {
   return `ME-${year}-${String(id).padStart(4, "0")}`;
 }
@@ -1014,7 +1017,7 @@ export const jobsRouter = router({
     .mutation(async ({ input }) => {
       const db = await requireDb();
       const { id, ...patch } = input;
-      const existing = (await db.select({ id: jobs.id, customerId: jobs.customerId }).from(jobs).where(eq(jobs.id, id)).limit(1))[0];
+      const existing = (await db.select({ id: jobs.id, customerId: jobs.customerId, status: jobs.status }).from(jobs).where(eq(jobs.id, id)).limit(1))[0];
       if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Job not found" });
       // Invalid-relationship prevention on re-parenting a property.
       if (patch.propertyId != null) {
@@ -1028,6 +1031,12 @@ export const jobsRouter = router({
       const clean: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(patch)) if (v !== undefined) clean[k] = v;
       if (Object.keys(clean).length) await db.update(jobs).set(clean).where(eq(jobs.id, id));
+      // Setting a schedule on a fresh job flips it to Scheduled automatically
+      // (ask 2026-08-21) — no separate status click needed.
+      if (input.scheduledStartAt && existing.status === "new") {
+        await db.update(jobs).set({ status: "scheduled" }).where(eq(jobs.id, id));
+        await recordStatusChange(db, id, "new", "scheduled", null, "Auto: schedule set");
+      }
       return { success: true };
     }),
 
@@ -1044,6 +1053,21 @@ export const jobsRouter = router({
       await recordStatusChange(db, input.id, existing.status, input.status, ctx.user?.id ?? null, input.note);
       // Shadow: keep the canonical lifecycle fresh (best-effort; never blocks).
       await recordJobLifecycleSafe(input.id, { source: "office", eventKey: `office:${input.id}:${existing.status}->${input.status}`, actorId: ctx.user?.id ?? null, actorName: ctx.user?.name ?? null });
+      // Paid = the finish line — tell the whole team (bell + email).
+      if (input.status === "paid") {
+        try {
+          const team = await db.select({ id: jobAlertTeam.id }).from(jobAlertTeam).where(eq(jobAlertTeam.status, "active"));
+          await notifyJobTeam(db, {
+            teamMemberIds: team.map(t => t.id),
+            type: "job_paid",
+            title: "Job PAID: " + (existing.jobNumber ?? "") + " — " + (existing.title ?? ""),
+            body: "The job has been marked Paid.",
+            entityType: "job",
+            entityId: input.id,
+            link: "/jobs/" + input.id,
+          });
+        } catch (e) { console.warn("[jobPaid] alert failed:", (e as Error).message); }
+      }
       return { success: true };
     }),
 
