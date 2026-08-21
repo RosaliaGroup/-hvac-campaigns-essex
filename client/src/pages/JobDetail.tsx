@@ -312,7 +312,12 @@ export default function JobDetail() {
 
         {/* Schedule & actuals */}
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4 text-[#1e3a5f]" /> Schedule</CardTitle></CardHeader>
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4 text-[#1e3a5f]" /> Schedule</CardTitle>
+            {!job.scheduledStartAt && (
+              <Button size="sm" variant="outline" onClick={openEdit}>Set schedule</Button>
+            )}
+          </CardHeader>
           <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
             <div><div className="text-xs text-muted-foreground">Scheduled start</div><div>{formatDate(job.scheduledStartAt)}</div></div>
             <div><div className="text-xs text-muted-foreground">Scheduled end</div><div>{formatDate(job.scheduledEndAt)}</div></div>
