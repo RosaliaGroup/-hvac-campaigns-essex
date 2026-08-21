@@ -38,6 +38,7 @@ import { quickbooksRouter } from "./routers/quickbooks";
 import { notificationsRouter } from "./routers/notifications";
 import { opportunitiesRouter } from "./routers/opportunities";
 import { commercialOpportunitiesRouter } from "./routers/commercialOpportunities";
+import { bidAssistantRouter } from "./routers/bidAssistant";
 import { estimatesRouter } from "./routers/estimates";
 import { seoRouter } from "./routers/seo";
 import { attributionRouter } from "./routers/attribution";
@@ -100,6 +101,7 @@ export const appRouter = router({
   // Commercial Opportunities (P2) extend the same system, nested under `commercial`.
   notifications: notificationsRouter,
   opportunities: mergeRouters(opportunitiesRouter, router({ commercial: commercialOpportunitiesRouter })),
+  bidAssistant: bidAssistantRouter,
   estimates: estimatesRouter,
   seo: seoRouter,
   attribution: attributionRouter,

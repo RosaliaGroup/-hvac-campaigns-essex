@@ -6,6 +6,7 @@ import DocumentsSection from "./DocumentsSection";
 import MembersSection from "./MembersSection";
 import DescriptionSection from "./DescriptionSection";
 import QuickFieldsSection from "./QuickFieldsSection";
+import AskAISection from "./AskAISection";
 
 /**
  * P2 commercial detail sections (Checklist / Members / Documents / Comments) rendered
@@ -59,6 +60,7 @@ export default function CommercialSections({
         </TabsContent>
         <TabsContent value="documents" className="mt-3">
           <DocumentsSection opportunityId={opportunityId} documents={d.documents} />
+          <AskAISection opportunityId={opportunityId} />
         </TabsContent>
       </Tabs>
     </div>
