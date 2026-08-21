@@ -1135,6 +1135,31 @@ export const commercialOpportunitiesRouter = router({
     return { docNumber: result.docNumber ?? num, qbId: result.qbId };
   }),
 
+  /** Reserve this bid's number in QuickBooks as a $0 placeholder estimate, so the
+   * number is visible/taken in QBO before the real estimate is built there. */
+  reserveInQbo: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
+    const db = await getDb();
+    if (!db) throw dbUnavailable();
+    const opp = (await db.select().from(opportunities).where(eq(opportunities.id, input.id)).limit(1))[0];
+    if (!opp) throw new TRPCError({ code: "NOT_FOUND", message: "Bid not found" });
+    const num = String(opp.opportunityNumber ?? "").replace("ME-BID-", "");
+    if (!/^[0-9]+$/.test(num)) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "This bid has no numeric ME-BID number." });
+    const cust = opp.customerId
+      ? (await db.select().from(customers).where(eq(customers.id, opp.customerId)).limit(1))[0]
+      : null;
+    if (!cust || !cust.quickbooksCustomerId) {
+      throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Customer is not synced to QuickBooks yet — sync the customer first." });
+    }
+    const result = await quickbooksProvider.pushEstimate({
+      customerRef: String(cust.quickbooksCustomerId),
+      docNumber: num,
+      privateNote: "Reserved from CRM bid " + (opp.opportunityNumber ?? "") + " — replace the placeholder line with the real scope.",
+      lines: [{ name: "Reserved", description: "RESERVED — CRM bid " + (opp.opportunityNumber ?? "") + ". Replace with actual line items.", quantity: 1, unitPrice: 0, amount: 0 }],
+    });
+    await insertEvent(db, input.id, "qbo_reserved", "Number " + (result.docNumber ?? num) + " reserved in QuickBooks (placeholder estimate " + result.qbId + ").");
+    return { docNumber: result.docNumber ?? num, qbId: result.qbId };
+  }),
+
   /** Delete a bid — admin only. Archives the record and clears its board presence. */
   removeBid: adminProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input, ctx }) => {
     const db = await getDb();
@@ -1181,7 +1206,7 @@ export const commercialOpportunitiesRouter = router({
     let bidTitle = input.title;
     if (input.isBid) {
       qbBidNo = await allocateBidNumberFromQb(db);
-      const cust = (await db.select({ displayName: customers.displayName }).from(customers).where(eq(customers.id, input.customerId)).limit(1))[0];
+      const cust = (await db.select({ displayName: customers.displayName, quickbooksCustomerId: customers.quickbooksCustomerId }).from(customers).where(eq(customers.id, input.customerId)).limit(1))[0];
       const clientName = (cust?.displayName ?? "").trim();
       bidTitle = qbBidNo + " - " + (clientName ? clientName + " - " : "") + input.title;
     }
@@ -1239,6 +1264,27 @@ export const commercialOpportunitiesRouter = router({
       ? makeBidNumber(qbBidNo ?? (await allocateBidNumberFromQb(db)))
       : makeOpportunityNumber(id, new Date().getFullYear());
     await db.update(opportunities).set({ opportunityNumber }).where(eq(opportunities.id, id));
+    // Policy (2026-08-21): every bid on the board is one we are actually estimating,
+    // so its number is reserved in QuickBooks automatically at creation ($0
+    // placeholder estimate). Best-effort — a QBO hiccup must never block creation;
+    // the drawer "Reserve # in QB" button remains as the manual retry.
+    if (input.isBid && qbBidNo != null) {
+      if (cust && cust.quickbooksCustomerId) {
+        try {
+          const reserved = await quickbooksProvider.pushEstimate({
+            customerRef: String(cust.quickbooksCustomerId),
+            docNumber: String(qbBidNo),
+            privateNote: "Reserved from CRM bid " + opportunityNumber + " — replace the placeholder line with the real scope.",
+            lines: [{ name: "Reserved", description: "RESERVED — CRM bid " + opportunityNumber + ". Replace with actual line items.", quantity: 1, unitPrice: 0, amount: 0 }],
+          });
+          await insertEvent(db, id, "qbo_reserved", "Number " + (reserved.docNumber ?? String(qbBidNo)) + " auto-reserved in QuickBooks (placeholder estimate " + reserved.qbId + ").");
+        } catch (e) {
+          await insertEvent(db, id, "qbo_reserved", "Auto-reserve in QuickBooks FAILED (" + (e instanceof Error ? e.message : String(e)) + ") — use Reserve # in QB in the drawer to retry.");
+        }
+      } else {
+        await insertEvent(db, id, "qbo_reserved", "Auto-reserve skipped: customer is not synced to QuickBooks — sync the customer, then use Reserve # in QB.");
+      }
+    }
 
     // Categories (multi-select), members, and checklist instantiation.
     if (input.projectCategories?.length) {
