@@ -27,6 +27,9 @@ import { buildDisplayName, normalizePhone, splitName } from "../../routers/custo
 import { deriveWorkCategory, extractSalesDocSignals } from "../../../shared/opportunityCategory";
 import type { WorkCategory } from "../../../shared/opportunityCategory";
 import { quickbooksProvider, writeSyncLog } from "./quickbooks";
+import { makeJobNumber } from "../../routers/jobs";
+import { notify } from "../../routers/notifications";
+import { jobs as autoJobJobs, properties as autoJobProps, teamMembers as autoJobTeam } from "../../../drizzle/schema";
 import { isClosedStage } from "@shared/opportunityDashboard";
 import {
   buildContactFromEstimate,
@@ -665,6 +668,51 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
     .update(opportunities)
     .set({ quickbooksSalesDocumentId: docId })
     .where(and(eq(opportunities.id, opp.id), sql`${opportunities.quickbooksSalesDocumentId} IS NULL`));
+
+  // AUTO-JOB (ask 2026-08-21): a deposit payment recorded in QuickBooks against
+  // this estimate means the customer committed — create the Job automatically so
+  // scheduling can start. Idempotent: one job per opportunity, ever.
+  try {
+    const rawTxn = (mapped as { raw?: unknown }).raw as { LinkedTxn?: Array<{ TxnType?: string }> } | null | undefined;
+    const hasPayment = Array.isArray(rawTxn?.LinkedTxn) && (rawTxn!.LinkedTxn ?? []).some(t => String((t && t.TxnType) ?? "").toLowerCase().includes("payment"));
+    if (hasPayment) {
+      const existingJob = (await db.select({ id: autoJobJobs.id }).from(autoJobJobs).where(eq(autoJobJobs.opportunityId, opp.id)).limit(1))[0];
+      const oppRow = (await db.select({ stage: opportunities.stage, title: opportunities.title, customerId: opportunities.customerId }).from(opportunities).where(eq(opportunities.id, opp.id)).limit(1))[0];
+      if (!existingJob && oppRow && oppRow.stage !== "lost" && oppRow.customerId != null) {
+        const props = await db.select({ id: autoJobProps.id, isPrimary: autoJobProps.isPrimary }).from(autoJobProps).where(eq(autoJobProps.customerId, oppRow.customerId));
+        const propertyId = (props.find(p => !!p.isPrimary) ?? (props.length === 1 ? props[0] : undefined))?.id ?? null;
+        const [insJob] = await db.insert(autoJobJobs).values({
+          jobNumber: "",
+          customerId: oppRow.customerId,
+          opportunityId: opp.id,
+          propertyId,
+          title: oppRow.title ?? ("Job for estimate " + (mapped.docNumber ?? "")),
+          status: "new",
+        });
+        const jobId = Number((insJob as { insertId?: number }).insertId);
+        const jobNumber = makeJobNumber(jobId);
+        await db.update(autoJobJobs).set({ jobNumber }).where(eq(autoJobJobs.id, jobId));
+        await db.insert(opportunityEvents).values({
+          opportunityId: opp.id,
+          type: "job_created",
+          message: `Deposit payment detected in QuickBooks on estimate ${mapped.docNumber ?? mapped.quickbooksId} — job ${jobNumber} auto-created for scheduling.`,
+          metadata: { jobId, quickbooksId: mapped.quickbooksId },
+        });
+        const team = await db.select({ id: autoJobTeam.id }).from(autoJobTeam).where(eq(autoJobTeam.status, "active"));
+        await notify(db, {
+          teamMemberIds: team.map(t => t.id),
+          type: "job_created",
+          title: "Deposit received — job " + jobNumber + " created: " + (oppRow.title ?? ""),
+          body: "Estimate " + (mapped.docNumber ?? "") + " received a payment in QuickBooks. Ready to schedule.",
+          entityType: "opportunity",
+          entityId: opp.id,
+          link: "/opportunities/" + opp.id,
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("[autoJob] payment-to-job hook failed:", (e as Error).message);
+  }
 
   // Follow-up loop: open it for Sent/Pending docs; cancel it once the deal closes.
   // Skip opening for a CRM-pushed estimate — it drives its own approve/decline lifecycle.

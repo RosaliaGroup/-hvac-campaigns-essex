@@ -37,7 +37,7 @@ export type NotifyInput = {
  * the action that triggered it, so callers can fire this without a try/catch.
  */
 /** Alert types that ALSO send an email — inbox-worthy pings, never routine chatter. */
-const EMAILED_TYPES = new Set(["mentioned", "task_assigned", "bid_created", "task_due", "bid_due"]);
+const EMAILED_TYPES = new Set(["mentioned", "task_assigned", "bid_created", "task_due", "bid_due", "job_created"]);
 
 export async function notify(db: Db, input: NotifyInput): Promise<number> {
   try {
