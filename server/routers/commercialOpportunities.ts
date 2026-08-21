@@ -880,7 +880,7 @@ const commentsRouter = router({
           .filter(m => {
             const full = (m.name ?? "").toLowerCase();
             const first = (m.firstName ?? "").toLowerCase();
-            return [...candidates].some(cand =>
+            return Array.from(candidates).some(cand =>
               cand === full || (!cand.includes(" ") && cand === first) || (cand.includes(" ") && full.startsWith(cand)));
           })
           .map(m => m.id)
