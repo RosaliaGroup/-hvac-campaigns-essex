@@ -866,13 +866,46 @@ const commentsRouter = router({
       const id = Number((res as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
       await insertEvent(db, input.opportunityId, "comment_added", "Comment added.", { commentId: id });
 
+      // @mentions — "@First" or "@First Last" routes a DIRECT notification to
+      // that teammate (they get the mention alert instead of the generic blast).
+      const rawTokens = (input.body.match(/@([A-Za-z][A-Za-z'.-]*(?:[ ][A-Za-z][A-Za-z'.-]*)?)/g) ?? []).map(m => m.slice(1).toLowerCase());
+      const candidates = new Set(rawTokens.flatMap(t => [t, t.split(" ")[0]]));
+      let mentionedIds: number[] = [];
+      if (candidates.size) {
+        const everyone = await db
+          .select({ id: teamMembers.id, name: teamMembers.name, firstName: teamMembers.firstName })
+          .from(teamMembers)
+          .where(eq(teamMembers.status, "active"));
+        mentionedIds = everyone
+          .filter(m => {
+            const full = (m.name ?? "").toLowerCase();
+            const first = (m.firstName ?? "").toLowerCase();
+            return [...candidates].some(cand =>
+              cand === full || (!cand.includes(" ") && cand === first) || (cand.includes(" ") && full.startsWith(cand)));
+          })
+          .map(m => m.id)
+          .filter(mid => mid !== authorId);
+        if (mentionedIds.length) {
+          await notify(db, {
+            teamMemberIds: mentionedIds,
+            exclude: authorId,
+            type: "mentioned",
+            title: "You were mentioned in a comment",
+            body: input.body.slice(0, 200),
+            entityType: "opportunity",
+            entityId: input.opportunityId,
+            link: `/opportunities/${input.opportunityId}`,
+          });
+        }
+      }
+
       // Alert everyone on the bid except the author.
       const team = await db
         .select({ teamMemberId: opportunityMembers.teamMemberId })
         .from(opportunityMembers)
         .where(eq(opportunityMembers.opportunityId, input.opportunityId));
       await notify(db, {
-        teamMemberIds: team.map(t => t.teamMemberId),
+        teamMemberIds: team.map(t => t.teamMemberId).filter(tid => tid != null && !mentionedIds.includes(tid)),
         exclude: authorId,
         type: "comment_added",
         title: "New comment on a bid you're on",
