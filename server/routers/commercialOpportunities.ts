@@ -1283,7 +1283,13 @@ export const commercialOpportunitiesRouter = router({
     const db = await getDb();
     if (!db) return { items: [], total: 0 };
 
-    const conds = [eq(opportunities.recordType, input.recordType as never)];
+    // Residential view includes QBO-synced residential deals (their recordType is
+    // "qbo_residential" by design) — the board was silently empty without them.
+    const conds = [
+      input.recordType === "residential"
+        ? inArray(opportunities.recordType, ["residential", "qbo_residential"] as never[])
+        : eq(opportunities.recordType, input.recordType as never),
+    ];
     if (input.stageId?.length) conds.push(inArray(opportunities.stageId, input.stageId));
     if (input.opportunityType?.length) conds.push(inArray(opportunities.opportunityType, input.opportunityType as never[]));
     if (input.priority?.length) conds.push(inArray(opportunities.priority, input.priority as never[]));
