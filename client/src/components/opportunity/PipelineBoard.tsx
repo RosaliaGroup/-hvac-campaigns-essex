@@ -97,7 +97,9 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-4">
-      {STAGE_META.map(col => {
+      {/* Lean board (ask 2026-08-21): core columns always show; other stages
+          appear only while they actually hold deals — never hiding a card. */}
+      {STAGE_META.filter(col => ["new", "assessment_scheduled", "proposal_sent", "pending", "won", "lost", "follow_up_later"].includes(col.value) || rows.some(r => r.stage === col.value)).map(col => {
         const colRows = rows.filter(r => r.stage === col.value);
         const total = colRows.reduce((s, r) => s + r.amount, 0);
         // Won/Lost are terminal, set only via the close endpoints — their columns display
