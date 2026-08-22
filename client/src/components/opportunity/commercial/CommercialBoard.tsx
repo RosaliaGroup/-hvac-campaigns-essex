@@ -199,7 +199,7 @@ export default function CommercialBoard({
               setOverStageId(null); setDragId(null);
               if (id && !terminal) move(id, col.id, from);
             }}
-            className={`flex w-72 shrink-0 flex-col rounded-xl border-t-4 bg-muted/30 ${CLASSIFICATION_COLUMN[col.classification] ?? "border-slate-300"} ${terminal ? "opacity-90" : ""} ${overStageId === col.id ? "ring-2 ring-[#1e3a5f]/40" : ""}`}
+            className={`flex min-w-[150px] flex-1 flex-col rounded-xl border-t-4 bg-muted/30 ${CLASSIFICATION_COLUMN[col.classification] ?? "border-slate-300"} ${terminal ? "opacity-90" : ""} ${overStageId === col.id ? "ring-2 ring-[#1e3a5f]/40" : ""}`}
           >
             <div className="flex items-center justify-between px-3 py-2">
               <span className="text-sm font-semibold">{col.name}</span>
