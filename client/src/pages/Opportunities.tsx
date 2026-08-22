@@ -26,6 +26,7 @@ export default function Opportunities() {
   const utils = trpc.useUtils();
   const [tab, setTab] = useState("overview");
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [jump, setJump] = useState<Record<string, unknown> | null>(null);
   // Deep-link support: /opportunities?opportunityId=42 opens that drawer
   // (used by the Job → Opportunity back-link in Phase A).
   const search = useSearch();
@@ -91,13 +92,13 @@ export default function Opportunities() {
             <TabsTrigger value="all">All Opportunities</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="mt-4">
-            <OverviewTab />
+            <OverviewTab onDrill={f => { setJump(f); setTab("all"); }} />
           </TabsContent>
           <TabsContent value="pipeline" className="mt-4">
             <PipelineBoard onOpen={setDetailId} />
           </TabsContent>
           <TabsContent value="all" className="mt-4">
-            <AllOpportunitiesTab onOpen={setDetailId} />
+            <AllOpportunitiesTab key={jump ? JSON.stringify(jump) : "base"} initialFilters={(jump ?? undefined) as never} onOpen={setDetailId} />
           </TabsContent>
         </Tabs>
       </div>

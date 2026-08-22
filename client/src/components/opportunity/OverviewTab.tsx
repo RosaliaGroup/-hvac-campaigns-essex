@@ -21,10 +21,10 @@ function Kpi({ label, value, icon: Icon, hint }: { label: string; value: string;
   );
 }
 
-function Bar({ label, amount, max, className }: { label: string; amount: number; max: number; className: string }) {
+function Bar({ label, amount, max, className, onClick }: { label: string; amount: number; max: number; className: string; onClick?: () => void }) {
   const pct = max > 0 ? Math.max(2, Math.round((amount / max) * 100)) : 0;
   return (
-    <div className="space-y-1">
+    <div className={"space-y-1" + (onClick ? " cursor-pointer hover:opacity-75" : "")} onClick={onClick} role={onClick ? "button" : undefined}>
       <div className="flex justify-between text-xs">
         <span className="font-medium">{label}</span>
         <span className="tabular-nums text-muted-foreground">{fmtMoney(amount)}</span>
@@ -36,7 +36,7 @@ function Bar({ label, amount, max, className }: { label: string; amount: number;
   );
 }
 
-export default function OverviewTab() {
+export default function OverviewTab({ onDrill }: { onDrill?: (f: Record<string, unknown>) => void }) {
   const { data: m, isLoading } = trpc.opportunities.overview.useQuery();
 
   if (isLoading || !m) {
@@ -55,13 +55,13 @@ export default function OverviewTab() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
-        <Kpi label="Open pipeline" value={fmtMoney(m.openPipeline)} icon={DollarSign} />
+        <div className="cursor-pointer" onClick={() => onDrill?.({ wonLostOpen: ["open"] })}><Kpi label="Open pipeline" value={fmtMoney(m.openPipeline)} icon={DollarSign} /></div>
         <Kpi label="Weighted pipeline" value={fmtMoney(m.weightedPipeline)} icon={Scale} hint="value × probability" />
         <Kpi label="Estimates/proposals sent" value={String(m.sentCount)} icon={Send} />
-        <Kpi label="Follow-ups due today" value={String(m.followUpsDueToday)} icon={CalendarClock} />
+        <div className="cursor-pointer" onClick={() => onDrill?.({ followUpDue: true })}><Kpi label="Follow-ups due today" value={String(m.followUpsDueToday)} icon={CalendarClock} /></div>
         <Kpi label="Close rate" value={`${Math.round(m.closeRate * 100)}%`} icon={Percent} />
-        <Kpi label="Won this month" value={String(m.wonThisMonth)} icon={Trophy} hint={fmtMoney(m.wonValueThisMonth)} />
-        <Kpi label="Lost this month" value={String(m.lostThisMonth)} icon={XCircle} />
+        <div className="cursor-pointer" onClick={() => onDrill?.({ stages: ["won"] })}><Kpi label="Won this month" value={String(m.wonThisMonth)} icon={Trophy} hint={fmtMoney(m.wonValueThisMonth)} /></div>
+        <div className="cursor-pointer" onClick={() => onDrill?.({ stages: ["lost"] })}><Kpi label="Lost this month" value={String(m.lostThisMonth)} icon={XCircle} /></div>
         <Kpi label="Average ticket" value={fmtMoney(m.averageTicket)} icon={Receipt} />
         <Kpi label="Avg days to close" value={String(m.averageDaysToClose)} icon={Timer} />
       </div>
@@ -71,7 +71,7 @@ export default function OverviewTab() {
           <CardHeader className="pb-2"><CardTitle className="text-sm">Pipeline dollars by stage</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {STAGE_META.map(s => (
-              <Bar key={s.value} label={s.label} amount={(m.pipelineByStage as Record<string, number>)[s.value] ?? 0} max={stageMax} className="bg-[#1e3a5f]" />
+              <Bar key={s.value} label={s.label} amount={(m.pipelineByStage as Record<string, number>)[s.value] ?? 0} max={stageMax} className="bg-[#1e3a5f]" onClick={() => onDrill?.({ stages: [s.value] })} />
             ))}
           </CardContent>
         </Card>
@@ -80,7 +80,7 @@ export default function OverviewTab() {
           <CardHeader className="pb-2"><CardTitle className="text-sm">Open pipeline by work category</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {catEntries.map(([cat, val]) => (
-              <Bar key={cat} label={workCategoryLabel(cat)} amount={val} max={catMax} className="bg-violet-500" />
+              <Bar key={cat} label={workCategoryLabel(cat)} amount={val} max={catMax} className="bg-violet-500" onClick={() => onDrill?.({ workCategory: [cat] })} />
             ))}
           </CardContent>
         </Card>
@@ -91,7 +91,7 @@ export default function OverviewTab() {
             {AGING_BUCKETS.map((b: AgingBucket) => {
               const bucket = (m.agingBuckets as Record<string, { count: number; amount: number }>)[b];
               return (
-                <div key={b} className="space-y-1">
+                <div key={b} className="space-y-1 cursor-pointer hover:opacity-75" onClick={() => onDrill?.({ agingBucket: [b] })} role="button">
                   <div className="flex items-center justify-between text-xs">
                     <span className={`rounded px-1.5 py-0.5 font-medium ${AGING_BADGE[b]}`}>{b} days</span>
                     <span className="tabular-nums text-muted-foreground">{bucket.count} · {fmtMoney(bucket.amount)}</span>

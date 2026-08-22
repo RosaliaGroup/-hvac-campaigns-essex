@@ -70,10 +70,10 @@ const SORT_COLUMNS: { key: SortKey; label: string; className?: string }[] = [
   { key: "nextFollowUp", label: "Next follow-up" },
 ];
 
-export default function AllOpportunitiesTab({ onOpen }: { onOpen: (id: number) => void }) {
+export default function AllOpportunitiesTab({ onOpen, initialFilters }: { onOpen: (id: number) => void; initialFilters?: Partial<Filters> }) {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
-  const [filters, setFilters] = useState<Filters>(EMPTY);
+  const [filters, setFilters] = useState<Filters>({ ...EMPTY, ...(initialFilters ?? {}) });
   const [sortBy, setSortBy] = useState<SortKey>("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(0);
