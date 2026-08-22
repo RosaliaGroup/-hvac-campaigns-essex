@@ -628,8 +628,19 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
         .limit(1))[0]
     : undefined;
 
+  // A doc whose number matches a bid reservation (ME-BID-<n>) belongs to that bid —
+  // link it instead of spawning a duplicate card (fix 2026-08-22).
+  let reservedBidId: number | null = null;
+  if (mapped.docNumber) {
+    const reservedBid = (await db
+      .select({ id: opportunities.id })
+      .from(opportunities)
+      .where(eq(opportunities.opportunityNumber, "ME-BID-" + mapped.docNumber))
+      .limit(1))[0];
+    reservedBidId = reservedBid?.id ?? null;
+  }
   const opp = await upsertOpportunity(db, {
-    existingOpportunityId: resolveSyncOpportunityId(existing?.opportunityId ?? null, crmPushed?.opportunityId ?? null),
+    existingOpportunityId: resolveSyncOpportunityId(existing?.opportunityId ?? null, crmPushed?.opportunityId ?? null) ?? reservedBidId,
     customerId,
     displayName,
     docNumber: mapped.docNumber ?? null,
