@@ -98,10 +98,10 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
   // Lenses follow the work-category badge: Commercial = badged Commercial,
   // Residential = everything else (the old recordType rule died with the
   // retired Residential Board, 2026-08-22).
-  const viewRows =
-    catView === "all" ? rows :
-    catView === "commercial" ? rows.filter(r => r.workCategory === "commercial") :
-    rows.filter(r => r.workCategory !== "commercial");
+  // STRICT badges: each lens shows only cards actually badged with that
+  // category. Unbadged cards (no class on the QB doc) appear under All only —
+  // set the Class on the estimate in QuickBooks to badge them.
+  const viewRows = catView === "all" ? rows : rows.filter(r => r.workCategory === catView);
 
   if (isLoading) return <p className="py-10 text-center text-sm text-muted-foreground">Loading pipeline…</p>;
 
@@ -142,7 +142,7 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
               setOverStage(null); setDragId(null);
               if (id && !closed) move(id, col.value, from);
             }}
-            className={`flex w-72 shrink-0 flex-col rounded-xl border-t-4 bg-muted/30 ${col.column} ${closed ? "opacity-90" : ""} ${overStage === col.value ? "ring-2 ring-[#1e3a5f]/40" : ""}`}
+            className={`flex min-w-[150px] flex-1 flex-col rounded-xl border-t-4 bg-muted/30 ${col.column} ${closed ? "opacity-90" : ""} ${overStage === col.value ? "ring-2 ring-[#1e3a5f]/40" : ""}`}
           >
             <div className="flex items-center justify-between px-3 py-2">
               <span className="text-sm font-semibold">{col.label}</span>
