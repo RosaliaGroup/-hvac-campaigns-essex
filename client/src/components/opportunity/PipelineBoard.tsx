@@ -95,12 +95,13 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
   // Residential / Commercial lens (ask 2026-08-22): view either pipeline separately.
   const [catView, setCatView] = useState<"all" | "residential" | "commercial">("all");
   const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
-  // Residential lens mirrors the Residential Board (recordType-driven: everything
-  // synced/native residential); Commercial lens is the commercial work category.
+  // Lenses follow the work-category badge: Commercial = badged Commercial,
+  // Residential = everything else (the old recordType rule died with the
+  // retired Residential Board, 2026-08-22).
   const viewRows =
     catView === "all" ? rows :
-    catView === "residential" ? rows.filter(r => (r as { recordType?: string }).recordType !== "commercial") :
-    rows.filter(r => r.workCategory === "commercial");
+    catView === "commercial" ? rows.filter(r => r.workCategory === "commercial") :
+    rows.filter(r => r.workCategory !== "commercial");
 
   if (isLoading) return <p className="py-10 text-center text-sm text-muted-foreground">Loading pipeline…</p>;
 
