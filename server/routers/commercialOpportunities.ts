@@ -1618,7 +1618,10 @@ export const commercialOpportunitiesRouter = router({
         }
         throw e;
       }
-      await db.update(opportunities).set(plan.set).where(eq(opportunities.id, input.id));
+      // A human moved this card — flag the override so the QuickBooks sync
+      // stops re-deriving its stage from the linked doc (cards were snapping
+      // back within one 3-min poll; fix 2026-08-21).
+      await db.update(opportunities).set({ ...plan.set, stageOverridden: true }).where(eq(opportunities.id, input.id));
       await insertEvent(db, input.id, plan.event.type, plan.event.message, plan.event.metadata);
       return { ok: true, status: plan.set.status, reopened: plan.reopened };
     }),
