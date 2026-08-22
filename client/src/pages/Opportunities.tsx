@@ -70,7 +70,7 @@ export default function Opportunities() {
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/opportunities/commercial">
               <Button variant="outline">
-                <Briefcase className="mr-2 h-4 w-4" /> Commercial Board
+                <Briefcase className="mr-2 h-4 w-4" /> Bid Board
               </Button>
             </Link>
             <Button onClick={() => sync.mutate()} disabled={sync.isPending} className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">

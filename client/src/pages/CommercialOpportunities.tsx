@@ -1,5 +1,5 @@
 /**
- * /opportunities/commercial — Commercial Bid Board (Phase 1).
+ * /opportunities/commercial — Bid Board: bids being prepared, first look → estimate.
  * A dedicated Kanban of the commercial pipeline (opportunityStages, pipelineKey=
  * 'commercial'), filtered to recordType='commercial'. Cards open the shared
  * Opportunity detail drawer (which renders the commercial sections). Stage
@@ -36,7 +36,7 @@ export default function CommercialOpportunities() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold">
-              <Briefcase className="h-6 w-6 text-[#1e3a5f]" /> Commercial Bid Board
+              <Briefcase className="h-6 w-6 text-[#1e3a5f]" /> Bid Board
             </h1>
             <p className="text-sm text-muted-foreground">
               Commercial pipeline stages. Drag a card between stages to move it; closing goes through the card's detail drawer.
