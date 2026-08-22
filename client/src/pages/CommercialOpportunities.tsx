@@ -49,9 +49,6 @@ export default function CommercialOpportunities() {
             <Button variant="outline" onClick={() => setColumnsOpen(true)}>
               <Columns3 className="mr-2 h-4 w-4" /> Columns
             </Button>
-            <Link href="/opportunities/residential">
-              <Button variant="outline">Residential</Button>
-            </Link>
             <Link href="/opportunities">
               <Button variant="outline">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Opportunity Center
