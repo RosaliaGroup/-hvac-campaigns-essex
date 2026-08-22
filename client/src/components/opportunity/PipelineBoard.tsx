@@ -94,7 +94,13 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
   const rows = (data?.items ?? []) as unknown as OppRow[];
   // Residential / Commercial lens (ask 2026-08-22): view either pipeline separately.
   const [catView, setCatView] = useState<"all" | "residential" | "commercial">("all");
-  const viewRows = catView === "all" ? rows : rows.filter(r => r.workCategory === catView);
+  const [expandedCols, setExpandedCols] = useState<Record<string, boolean>>({});
+  // Residential lens mirrors the Residential Board (recordType-driven: everything
+  // synced/native residential); Commercial lens is the commercial work category.
+  const viewRows =
+    catView === "all" ? rows :
+    catView === "residential" ? rows.filter(r => (r as { recordType?: string }).recordType !== "commercial") :
+    rows.filter(r => r.workCategory === "commercial");
 
   if (isLoading) return <p className="py-10 text-center text-sm text-muted-foreground">Loading pipeline…</p>;
 
@@ -117,6 +123,8 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
           appear only while they actually hold deals — never hiding a card. */}
       {STAGE_META.filter(col => ["new", "assessment_scheduled", "proposal_sent", "pending", "won", "lost", "follow_up_later"].includes(col.value) || viewRows.some(r => r.stage === col.value)).map(col => {
         const colRows = viewRows.filter(r => r.stage === col.value);
+        const isExpanded = !!expandedCols[col.value];
+        const shownRows = isExpanded ? colRows : colRows.slice(0, 7);
         const total = colRows.reduce((s, r) => s + r.amount, 0);
         // Won/Lost are terminal, set only via the close endpoints — their columns display
         // closed deals but are NOT drop targets (dropping there would bypass close semantics).
@@ -140,7 +148,7 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
               <span className="text-xs text-muted-foreground tabular-nums">{colRows.length} · {fmtMoney(total)}</span>
             </div>
             <div className="flex-1 space-y-2 px-2 pb-3">
-              {colRows.map(r => (
+              {shownRows.map(r => (
                 <Card
                   key={r.id} row={r} onOpen={onOpen}
                   onMove={(id, stage) => move(id, stage, r.stage)}
@@ -149,6 +157,15 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
                 />
               ))}
               {colRows.length === 0 ? <p className="px-1 py-6 text-center text-xs text-muted-foreground">{closed ? "Set via a card's Won/Lost action" : "Drop here"}</p> : null}
+              {colRows.length > 7 ? (
+                <button
+                  type="button"
+                  className="w-full rounded-md border border-dashed px-2 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                  onClick={() => setExpandedCols(p => ({ ...p, [col.value]: !p[col.value] }))}
+                >
+                  {isExpanded ? "Show less ▴" : `Show ${colRows.length - 7} more ▾`}
+                </button>
+              ) : null}
             </div>
           </div>
         );

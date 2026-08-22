@@ -115,6 +115,8 @@ function buildConditions(input: z.infer<typeof listInput>, now: Date) {
   // single filter point for every list and board, so the exclusion belongs here rather
   // than at each call site where it would eventually be forgotten.
   conditions.push(input.includeArchived ? sql`1 = 1` : isNull(opportunities.archivedAt));
+  // Bids (recordType commercial) live on the Bid Board, not the Opportunity Center.
+  conditions.push(sql`${opportunities.recordType} <> 'commercial'`);
 
   if (input.search?.trim()) {
     const s = input.search.trim();
@@ -225,6 +227,7 @@ const projection = {
   amountOverridden: opportunities.amountOverridden,
   stageOverridden: opportunities.stageOverridden,
   workCategory: opportunities.workCategory,
+  recordType: opportunities.recordType,
   title: opportunities.title,
   nextAction: opportunities.nextAction,
   nextActionDueAt: opportunities.nextActionDueAt,
