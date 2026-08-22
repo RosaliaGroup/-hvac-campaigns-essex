@@ -122,7 +122,7 @@ export default function PipelineBoard({ onOpen }: { onOpen: (id: number) => void
       <div className="flex gap-3 overflow-x-auto pb-4">
       {/* Lean board (ask 2026-08-21): core columns always show; other stages
           appear only while they actually hold deals — never hiding a card. */}
-      {STAGE_META.filter(col => ["new", "proposal_sent", "pending", "won", "lost"].includes(col.value) || viewRows.some(r => r.stage === col.value)).map(col => {
+      {STAGE_META.filter(col => !["assessment_scheduled", "follow_up_later"].includes(col.value)).filter(col => ["new", "proposal_sent", "pending", "won", "lost"].includes(col.value) || viewRows.some(r => r.stage === col.value)).map(col => {
         const colRows = viewRows.filter(r => r.stage === col.value);
         const isExpanded = !!expandedCols[col.value];
         const shownRows = isExpanded ? colRows : colRows.slice(0, 7);
