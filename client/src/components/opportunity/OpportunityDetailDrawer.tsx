@@ -105,12 +105,26 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
     onError: (err) => toast({ title: "Could not reserve", description: err.message, variant: "destructive" }),
   });
   const openEstimatePdf = async (salesDocumentId: number) => {
+    // Claim the tab inside the click gesture so popup blockers allow it.
+    const tab = window.open("", "_blank");
     try {
+      if (tab) tab.document.write("<title>Loading estimate…</title><p style=\"font-family:sans-serif\">Loading the estimate from QuickBooks…</p>");
       const res = await utils.opportunities.estimatePdf.fetch({ salesDocumentId });
       const bytes = Uint8Array.from(atob(res.base64), ch => ch.charCodeAt(0));
       const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
-      window.open(url, "_blank");
+      if (tab && !tab.closed) {
+        tab.location.href = url;
+      } else {
+        // Blocker ate the tab — hand the file over as a download instead.
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "estimate-" + (res.docNumber ?? salesDocumentId) + ".pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
     } catch (e) {
+      if (tab && !tab.closed) tab.close();
       toast({ title: "Could not load the estimate PDF", description: (e as Error).message, variant: "destructive" });
     }
   };
