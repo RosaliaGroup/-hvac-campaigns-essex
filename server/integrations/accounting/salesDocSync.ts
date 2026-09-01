@@ -29,7 +29,7 @@ import type { WorkCategory } from "../../../shared/opportunityCategory";
 import { quickbooksProvider, writeSyncLog } from "./quickbooks";
 import { makeJobNumber } from "../../routers/jobs";
 import { notify } from "../../routers/notifications";
-import { jobs as autoJobJobs, properties as autoJobProps, teamMembers as autoJobTeam } from "../../../drizzle/schema";
+import { jobs as autoJobJobs, properties as autoJobProps, teamMembers as autoJobTeam, opportunityStages as bidStages } from "../../../drizzle/schema";
 import { isClosedStage } from "@shared/opportunityDashboard";
 import {
   buildContactFromEstimate,
@@ -728,6 +728,49 @@ async function processEstimate(db: Db, conn: QuickbooksConnection, estimate: Qbo
     }
   } catch (e) {
     console.warn("[autoJob] payment-to-job hook failed:", (e as Error).message);
+  }
+
+  // BID AUTO-CLASSIFY (ask 2026-08-22): a bid's card follows its QB estimate.
+  // sent -> "Submitted" column (created once if absent), accepted -> awarded,
+  // rejected -> declined. A human drag (stageOverridden) always wins.
+  try {
+    const bidRow = (await db
+      .select({ id: opportunities.id, opportunityNumber: opportunities.opportunityNumber, stageId: opportunities.stageId, stageOverridden: opportunities.stageOverridden })
+      .from(opportunities)
+      .where(eq(opportunities.id, opp.id))
+      .limit(1))[0];
+    const isBidRecord = String(bidRow?.opportunityNumber ?? "").startsWith("ME-BID-");
+    if (isBidRecord && bidRow && !bidRow.stageOverridden) {
+      const stages = await db
+        .select({ id: bidStages.id, name: bidStages.name, classification: bidStages.classification, sortOrder: bidStages.sortOrder })
+        .from(bidStages)
+        .where(and(eq(bidStages.pipelineKey, "commercial"), eq(bidStages.isActive, true)));
+      const accepted = mapped.status === "accepted" || mapped.status === "closed";
+      const dead = mapped.status === "rejected" || mapped.status === "expired";
+      const sent = (mapped as { sentAt?: Date | null }).sentAt != null;
+      let target: { id: number; name: string } | undefined;
+      if (accepted) target = stages.find(st => st.classification === "won");
+      else if (dead) target = stages.find(st => st.classification === "declined") ?? stages.find(st => st.classification === "lost");
+      else if (sent) {
+        target = stages.find(st => /submit|sent/i.test(st.name));
+        if (!target) {
+          const after = stages.filter(st => st.classification === "open").reduce((m, st) => Math.max(m, st.sortOrder), 0);
+          const ins = await db.insert(bidStages).values({ pipelineKey: "commercial", stageKey: "submitted", name: "Submitted", sortOrder: after + 1, classification: "open" });
+          const newId = Number((ins as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+          if (newId) target = { id: newId, name: "Submitted" };
+        }
+      }
+      if (target && bidRow.stageId !== target.id) {
+        await db.update(opportunities).set({ stageId: target.id }).where(eq(opportunities.id, opp.id));
+        await db.insert(opportunityEvents).values({
+          opportunityId: opp.id,
+          type: "status_changed",
+          message: "Bid auto-classified to \"" + target.name + "\" (QB estimate " + (mapped.docNumber ?? "") + " is " + (accepted ? mapped.status : dead ? mapped.status : "sent") + ").",
+        });
+      }
+    }
+  } catch (e) {
+    console.warn("[bidClassify] failed:", (e as Error).message);
   }
 
   // Follow-up loop: open it for Sent/Pending docs; cancel it once the deal closes.
