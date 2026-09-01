@@ -104,6 +104,16 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
     onSuccess: (res) => { toast({ title: "Reserved in QuickBooks as estimate " + res.docNumber }); utils.invalidate(); },
     onError: (err) => toast({ title: "Could not reserve", description: err.message, variant: "destructive" }),
   });
+  const openEstimatePdf = async (salesDocumentId: number) => {
+    try {
+      const res = await utils.opportunities.estimatePdf.fetch({ salesDocumentId });
+      const bytes = Uint8Array.from(atob(res.base64), ch => ch.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      window.open(url, "_blank");
+    } catch (e) {
+      toast({ title: "Could not load the estimate PDF", description: (e as Error).message, variant: "destructive" });
+    }
+  };
   const { data, isLoading } = trpc.opportunities.get.useQuery({ id: id! }, { enabled: open && id != null });
 
   const [valueDraft, setValueDraft] = useState("");
@@ -395,7 +405,12 @@ export default function OpportunityDetailDrawer({ id, open, onClose }: { id: num
                       {d.status ? <Badge variant="secondary" className={`ml-2 ${DOC_STATUS_BADGE[d.status] ?? ""}`}>{d.status}</Badge> : null}
                       <p className="text-[11px] text-muted-foreground">Sent {fmtDate(d.sentAt)} · issued {fmtDate(d.txnDate)}</p>
                     </div>
-                    <span className="font-medium tabular-nums">{fmtMoney(Number(d.totalAmount))}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium tabular-nums">{fmtMoney(Number(d.totalAmount))}</span>
+                      {d.docType === "estimate" ? (
+                        <button type="button" className="rounded border px-2 py-0.5 text-[11px] hover:bg-muted" onClick={() => openEstimatePdf(d.id)}>PDF</button>
+                      ) : null}
+                    </div>
                   </div>
                 )) : <p className="text-sm text-muted-foreground">No QuickBooks document (manual opportunity).</p>}
               </Section>

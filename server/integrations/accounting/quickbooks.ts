@@ -555,6 +555,13 @@ export class QuickBooksProvider implements AccountingProvider {
     return json.CompanyInfo?.CompanyName ?? null;
   }
 
+  /** Rendered PDF of an estimate, straight from QuickBooks (base64). */
+  async estimatePdfBase64(quickbooksId: string): Promise<string> {
+    const res = await this.qboFetch(`/estimate/${quickbooksId}/pdf`, { headers: { Accept: "application/pdf" } });
+    if (!res.ok) throw new Error(`QuickBooks PDF fetch failed (${res.status})`);
+    return Buffer.from(await res.arrayBuffer()).toString("base64");
+  }
+
   private async qboFetch(path: string, init?: RequestInit): Promise<Response> {
     const { accessToken, realmId } = await this.getValidAccessToken();
     const base = qboApiBase(this.cfg().environment);

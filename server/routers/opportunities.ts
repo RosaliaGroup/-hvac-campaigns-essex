@@ -29,6 +29,7 @@ import {
 } from "../../drizzle/schema";
 import { makeJobNumber } from "./jobs";
 import { quickbooksSalesDocuments as qbDocsForJobNum } from "../../drizzle/schema";
+import { quickbooksProvider } from "../integrations/accounting/quickbooks";
 import {
   convertOpportunityToJob,
   ConvertError,
@@ -354,6 +355,22 @@ function sessionTeamMemberId(ctx: unknown): number | null {
 }
 
 export const opportunitiesRouter = router({
+  /** The estimate PDF as QuickBooks renders it — viewable/attachable from the drawer. */
+  estimatePdf: protectedProcedure
+    .input(z.object({ salesDocumentId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database unavailable");
+      const doc = (await db
+        .select({ quickbooksId: qbDocsForJobNum.quickbooksId, docNumber: qbDocsForJobNum.docNumber, docType: qbDocsForJobNum.docType })
+        .from(qbDocsForJobNum)
+        .where(eq(qbDocsForJobNum.id, input.salesDocumentId))
+        .limit(1))[0];
+      if (!doc) throw new Error("Document not found");
+      if (doc.docType !== "estimate") throw new Error("PDF fetch supports estimates only");
+      const base64 = await quickbooksProvider.estimatePdfBase64(String(doc.quickbooksId));
+      return { base64, docNumber: doc.docNumber };
+    }),
   /**
    * Dashboard list: one row per opportunity joined to its customer and PRIMARY
    * QuickBooks sales document (one-to-one via quickbooksSalesDocumentId). Fully
