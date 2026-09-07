@@ -29,8 +29,16 @@ import { getGa4MeasurementId, toPagePath } from "./analytics";
  * Google Ads account id — the SAME gtag.js instance configured in
  * `client/index.html` (there is no second gtag load). Used only to build a
  * `send_to` of the form `AW-…/<label>` when a real label is supplied.
+ *
+ * Reads from `VITE_GOOGLE_ADS_ACCOUNT_ID` at build time; falls back to the
+ * hard-coded live production account id so deploys without the env var stay
+ * bit-for-bit identical to today's behaviour. New environments (staging /
+ * previews / tests) should set the env var to point at a different account
+ * rather than editing this file.
  */
-export const ADS_CONVERSION_ID = "AW-17768263516";
+export const ADS_CONVERSION_ID =
+  (import.meta.env.VITE_GOOGLE_ADS_ACCOUNT_ID as string | undefined) ||
+  "AW-17768263516";
 
 /** Every conversion event this app is allowed to emit. */
 export type ConversionEvent =
@@ -46,22 +54,34 @@ export type ConversionEvent =
   | "maintenance_plan_inquiry";
 
 /**
- * Google Ads conversion-label mapping — a typed placeholder. Ads fires ONLY for
- * events whose value is a non-empty label string; `null` means "no label
- * supplied yet" (GA4 still fires). DO NOT invent labels — populate these from the
- * Google Ads UI in Batch B2, one verified label per event.
+ * Google Ads conversion-label mapping — populated at build time from per-event
+ * env vars (`VITE_ADS_LABEL_<EVENT>`). Ads fires ONLY for events whose value
+ * is a non-empty label string; `null` means "no label supplied yet" (GA4 still
+ * fires). DO NOT invent labels — populate the env vars from the Google Ads UI
+ * (Tools & Settings → Conversions → each conversion action → tag setup), one
+ * verified label per event. See `.env.example` for the full list.
+ *
+ * `quote_request` keeps its historical hard-coded default so an env-less build
+ * behaves identically to production today; every other event ships as `null`
+ * until its env var is set.
  */
+function envLabel(name: string): string | null {
+  const raw = (import.meta.env[name] as string | undefined) ?? null;
+  const trimmed = raw ? raw.trim() : "";
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 export const ADS_CONVERSION_LABELS: Record<ConversionEvent, string | null> = {
-  quote_request: "DY_nCO3H4t0cENzeyJhC",
-  contact_form_submit: null,
-  schedule_service: null,
-  commercial_quote_request: null,
-  residential_quote_request: null,
-  service_request: null,
-  repair_request: null,
-  installation_request: null,
-  replacement_request: null,
-  maintenance_plan_inquiry: null,
+  quote_request: envLabel("VITE_ADS_LABEL_QUOTE_REQUEST") ?? "DY_nCO3H4t0cENzeyJhC",
+  contact_form_submit: envLabel("VITE_ADS_LABEL_CONTACT_FORM_SUBMIT"),
+  schedule_service: envLabel("VITE_ADS_LABEL_SCHEDULE_SERVICE"),
+  commercial_quote_request: envLabel("VITE_ADS_LABEL_COMMERCIAL_QUOTE_REQUEST"),
+  residential_quote_request: envLabel("VITE_ADS_LABEL_RESIDENTIAL_QUOTE_REQUEST"),
+  service_request: envLabel("VITE_ADS_LABEL_SERVICE_REQUEST"),
+  repair_request: envLabel("VITE_ADS_LABEL_REPAIR_REQUEST"),
+  installation_request: envLabel("VITE_ADS_LABEL_INSTALLATION_REQUEST"),
+  replacement_request: envLabel("VITE_ADS_LABEL_REPLACEMENT_REQUEST"),
+  maintenance_plan_inquiry: envLabel("VITE_ADS_LABEL_MAINTENANCE_PLAN_INQUIRY"),
 };
 
 export type CustomerSegment = "residential" | "commercial";

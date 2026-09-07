@@ -56,11 +56,14 @@
     </script>
 
     <!-- Meta Pixel Code -->
-    <!-- TODO Ana: replace 000000000000000 with your Meta Pixel ID from Business
-         Manager (Events Manager > Data Sources > your pixel). Once set, every
-         confirmed lead capture will fire the standard `Lead` event via
-         fbLeadEvent() in client/src/lib/conversions.ts. Until then window.fbq
-         is loaded but no events resolve to a real pixel, so nothing is sent. -->
+    <!-- Meta Pixel ID is injected at build time from VITE_META_PIXEL_ID (Vite
+         %VITE_...% HTML template substitution — same pattern as GA4 above).
+         Set it in Business Manager (Events Manager > Data Sources > your pixel)
+         and add VITE_META_PIXEL_ID=<numeric id> to the build env. When the env
+         var is unset, Vite leaves the literal placeholder in place and the
+         guard below short-circuits, so fbq() never fires against a fake id.
+         Once set, every confirmed lead capture will fire the standard `Lead`
+         event via fbLeadEvent() in client/src/lib/conversions.ts. -->
     <script>
       !function(f,b,e,v,n,t,s)
       {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -70,11 +73,23 @@
       t.src=v;s=b.getElementsByTagName(e)[0];
       s.parentNode.insertBefore(t,s)}(window, document,'script',
       'https://connect.facebook.net/en_US/fbevents.js');
-      fbq('init', '000000000000000');
-      fbq('track', 'PageView');
+      (function () {
+        var metaPixelId = '%VITE_META_PIXEL_ID%';
+        // When VITE_META_PIXEL_ID is unset, Vite leaves the literal placeholder
+        // string "%VITE_META_PIXEL_ID%" untouched — the indexOf('%VITE') guard
+        // catches that case and prevents init against a bogus id. Also skip if
+        // the value is empty.
+        if (metaPixelId && metaPixelId.indexOf('%VITE') === -1) {
+          fbq('init', metaPixelId);
+          fbq('track', 'PageView');
+        }
+      })();
     </script>
+    <!-- noscript fallback: when VITE_META_PIXEL_ID is unset the placeholder is
+         left literal and the img request 404s silently — acceptable per the
+         same "no fake id" guarantee as the script block above. -->
     <noscript><img height="1" width="1" style="display:none"
-      src="https://www.facebook.com/tr?id=000000000000000&ev=PageView&noscript=1"/></noscript>
+      src="https://www.facebook.com/tr?id=%VITE_META_PIXEL_ID%&ev=PageView&noscript=1"/></noscript>
     <!-- End Meta Pixel Code -->
   </head>
 
