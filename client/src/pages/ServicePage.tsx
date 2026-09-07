@@ -5,6 +5,19 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
+import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
+
+// Pick the intent-aware variant from the service slug so a commercial/VRV page
+// surfaces the navy card, an emergency-repair page surfaces the red urgent card,
+// a rebate/financing page surfaces the green one, and everything else stays
+// residential (orange — the default site colour).
+function pickServiceVariant(slug: string): InlineLeadVariant {
+  const s = slug.toLowerCase();
+  if (/(emergency|repair)/.test(s)) return "emergency";
+  if (/(rebate|financing)/.test(s)) return "rebate";
+  if (/(commercial|vrv|vrf|rtu|warehouse|office|restaurant|industrial)/.test(s)) return "commercial";
+  return "residential";
+}
 
 const BASE = "https://mechanicalenterprise.com";
 const REBATE_URL = `${BASE}/rebate-calculator`;
@@ -64,6 +77,19 @@ export default function ServicePage({ service, slug, description }: ServicePageP
                 </Button>
               </a>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Inline Lead Capture (top, immediately after hero) */}
+      <section className="py-8 bg-[#f7f8fa] border-b">
+        <div className="container">
+          <div className="max-w-2xl mx-auto">
+            <InlineLeadCapture
+              variant={pickServiceVariant(slug)}
+              pageContext={`service:${slug}`}
+              defaultService={service}
+            />
           </div>
         </div>
       </section>

@@ -9,6 +9,7 @@ import { Link } from "wouter";
 import { getNearbyCities, pickDeterministic } from "@/data/njCounties";
 import { blogPosts } from "@/data/blogPosts";
 import { directInstallIndustries } from "@/data/directInstallIndustries";
+import InlineLeadCapture from "@/components/InlineLeadCapture";
 
 const BASE = "https://mechanicalenterprise.com";
 const REBATE_URL = `${BASE}/rebate-calculator`;
@@ -88,6 +89,21 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
         </div>
       </section>
 
+      {/* Inline Lead Capture (top, immediately after hero) */}
+      <section className="py-8 bg-[#f7f8fa] border-b lg:hidden">
+        <div className="container">
+          <div className="max-w-2xl mx-auto">
+            <InlineLeadCapture
+              variant="residential"
+              pageContext={`luxury:${slug}`}
+              defaultService="Heat Pump Installation"
+              title={`Premium HVAC Consultation — ${area}`}
+              subtitle="Whole-home comfort design. Carrier, Trane, Lennox. NJ rebates included."
+            />
+          </div>
+        </div>
+      </section>
+
       {/* Stats Bar */}
       <section className="py-8 bg-white border-b">
         <div className="container">
@@ -107,9 +123,22 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
         </div>
       </section>
 
-      {/* Premium Systems */}
+      {/* Premium Systems + sticky desktop lead capture */}
       <section className="py-16 bg-[#f7f8fa]">
         <div className="container">
+          <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-10 mb-8">
+            <div className="flex-1" />
+            <aside className="lg:w-[320px] shrink-0 hidden lg:block">
+              <InlineLeadCapture
+                variant="residential"
+                pageContext={`luxury:${slug}:sidebar`}
+                defaultService="Heat Pump Installation"
+                title={`Design My ${area} System`}
+                subtitle="Free premium consultation. We come to you."
+                sticky
+              />
+            </aside>
+          </div>
           <div className="max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold text-[#0a1628] mb-4 text-center">
               Premium Systems for {area} Homes

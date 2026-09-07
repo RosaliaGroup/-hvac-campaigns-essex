@@ -44,6 +44,9 @@
       // page_view itself (initial + route changes) via client/src/lib/analytics.ts,
       // so there is no duplicate initial page_view. Guarded so an unset or
       // unsubstituted placeholder is ignored and GA4 simply stays off.
+      // TODO Ana: set VITE_GA4_MEASUREMENT_ID in Netlify env vars to your GA4
+      // property ID (looks like G-XXXXXXXXXX). Until then GA4 stays off; Google
+      // Ads keeps working. See client/src/lib/analytics.ts for the guard.
       (function () {
         var ga4Id = '%VITE_GA4_MEASUREMENT_ID%';
         if (ga4Id.indexOf('G-') === 0) {
@@ -51,6 +54,28 @@
         }
       })();
     </script>
+
+    <!-- Meta Pixel Code -->
+    <!-- TODO Ana: replace 000000000000000 with your Meta Pixel ID from Business
+         Manager (Events Manager > Data Sources > your pixel). Once set, every
+         confirmed lead capture will fire the standard `Lead` event via
+         fbLeadEvent() in client/src/lib/conversions.ts. Until then window.fbq
+         is loaded but no events resolve to a real pixel, so nothing is sent. -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '000000000000000');
+      fbq('track', 'PageView');
+    </script>
+    <noscript><img height="1" width="1" style="display:none"
+      src="https://www.facebook.com/tr?id=000000000000000&ev=PageView&noscript=1"/></noscript>
+    <!-- End Meta Pixel Code -->
   </head>
 
   <body>

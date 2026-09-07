@@ -9,6 +9,21 @@ import { Redirect } from "wouter";
 import { Link } from "wouter";
 import { ALL_CITIES, pickDeterministic } from "@/data/njCounties";
 import { directInstallIndustries } from "@/data/directInstallIndustries";
+import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
+
+/**
+ * Pick the intent-aware lead-capture variant from the blog post slug. Matches
+ * the routing rules called out in the PR description so an emergency-repair
+ * post surfaces the red urgent card, a rebate post surfaces the green one, and
+ * commercial guides surface the navy variant.
+ */
+function pickBlogVariant(slug: string): InlineLeadVariant {
+  const s = slug.toLowerCase();
+  if (/(emergency|repair)/.test(s)) return "emergency";
+  if (/(rebate|financing)/.test(s)) return "rebate";
+  if (/(commercial|vrv|vrf)/.test(s)) return "commercial";
+  return "residential";
+}
 
 const BASE = "https://mechanicalenterprise.com";
 const PHONE = "(862) 423-9396";
@@ -141,28 +156,55 @@ export default function BlogPost({ slug }: { slug: string }) {
           <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-10">
             {/* Main Content */}
             <article className="flex-1 max-w-[800px]">
-              {post.sections.map((section, i) => (
-                <RenderSection key={i} section={section} />
-              ))}
+              {(() => {
+                const variant = pickBlogVariant(slug);
+                const pageContext = `blog:${slug}`;
+                // Insert the inline capture immediately after the FIRST h2 so it
+                // sits above the fold on most devices without pushing intro copy
+                // below the viewport.
+                let inlineInserted = false;
+                return post.sections.map((section, i) => {
+                  const rendered = <RenderSection key={`s-${i}`} section={section} />;
+                  if (!inlineInserted && section.type === "h2") {
+                    inlineInserted = true;
+                    return (
+                      <div key={`h2-block-${i}`}>
+                        {rendered}
+                        <div className="my-8 lg:hidden">
+                          <InlineLeadCapture
+                            variant={variant}
+                            pageContext={pageContext}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                  return rendered;
+                });
+              })()}
+
+              {/* Bottom-of-article inline capture — replaces the old /contact CTA */}
+              <div className="mt-10">
+                <InlineLeadCapture
+                  variant={pickBlogVariant(slug)}
+                  pageContext={`blog:${slug}:bottom`}
+                />
+              </div>
             </article>
 
-            {/* Sidebar */}
-            <aside className="lg:w-[280px] shrink-0">
-              <div className="lg:sticky lg:top-8 space-y-4">
-                <div className="bg-[#f7f8fa] rounded-xl border p-6">
-                  <h3 className="font-bold text-lg text-[#0a1628] mb-3">Get Your Free Assessment</h3>
-                  <p className="text-sm text-gray-600 mb-4">We come to you, assess your system, and show you every rebate you qualify for — no cost, no obligation.</p>
-                  <a href={BASE} className="block mb-3">
-                    <Button className="w-full bg-[#e8813a] hover:bg-[#d5732f] text-white">
-                      📅 Book Free Assessment
-                    </Button>
-                  </a>
-                  <a href={PHONE_TEL} className="block">
-                    <Button variant="outline" className="w-full border-[#0a1628] text-[#0a1628]">
-                      <Phone className="mr-2 h-4 w-4" /> {PHONE}
-                    </Button>
-                  </a>
-                </div>
+            {/* Sidebar — desktop-only sticky inline lead capture */}
+            <aside className="lg:w-[320px] shrink-0 hidden md:block">
+              <InlineLeadCapture
+                variant={pickBlogVariant(slug)}
+                pageContext={`blog:${slug}:sidebar`}
+                sticky
+              />
+              <div className="mt-4 bg-[#f7f8fa] rounded-xl border p-4 hidden lg:block">
+                <a href={PHONE_TEL} className="block">
+                  <Button variant="outline" className="w-full border-[#0a1628] text-[#0a1628]">
+                    <Phone className="mr-2 h-4 w-4" /> {PHONE}
+                  </Button>
+                </a>
               </div>
             </aside>
           </div>

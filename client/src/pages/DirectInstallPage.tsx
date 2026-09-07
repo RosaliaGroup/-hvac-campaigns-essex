@@ -10,6 +10,7 @@ import { directInstallIndustries, type IndustryPage } from "@/data/directInstall
 import { Redirect, Link } from "wouter";
 import { pickDeterministic, ALL_CITIES } from "@/data/njCounties";
 import { blogPosts } from "@/data/blogPosts";
+import InlineLeadCapture from "@/components/InlineLeadCapture";
 
 const BASE = "https://mechanicalenterprise.com";
 const COMMERCIAL_URL = `${BASE}/commercial`;
@@ -65,6 +66,21 @@ export default function DirectInstallPage({ slug }: { slug: string }) {
                 </Button>
               </a>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Inline Lead Capture (top, immediately after hero) */}
+      <section className="py-8 bg-[#f7f8fa] border-b">
+        <div className="container">
+          <div className="max-w-2xl mx-auto">
+            <InlineLeadCapture
+              variant="commercial"
+              pageContext={`direct-install:${slug}`}
+              defaultService="Commercial HVAC"
+              title={`Free ${page.industry} Assessment`}
+              subtitle="NJ Direct Install: lighting free, HVAC up to 80% covered. We handle every form."
+            />
           </div>
         </div>
       </section>
