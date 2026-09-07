@@ -265,6 +265,26 @@ export function mapServiceToConversion(service: string | undefined): ServiceMapp
   return { event: "quote_request", service_category: "general", customer_segment: segmentFor(s) };
 }
 
+/**
+ * Meta (Facebook) Pixel — fire the standard `Lead` event.
+ *
+ * A no-op until the pixel base code (window.fbq) is loaded from index.html AND
+ * Ana pastes her real Pixel ID in place of the `000000000000000` placeholder.
+ * Safe to call unconditionally — never throws, never leaks PII. `content_name`
+ * and `content_category` are the only allowed fields, mirroring the strict
+ * allowlist we use for GA4.
+ */
+export function fbLeadEvent(params: { content_name?: string; content_category?: string } = {}): boolean {
+  if (typeof window === "undefined") return false;
+  const fbq = (window as unknown as { fbq?: (...args: unknown[]) => void }).fbq;
+  if (typeof fbq !== "function") return false;
+  const payload: Record<string, string> = {};
+  if (params.content_name) payload.content_name = params.content_name;
+  if (params.content_category) payload.content_category = params.content_category;
+  fbq("track", "Lead", payload);
+  return true;
+}
+
 /** Test-only: clear the idempotency guard between cases. Not for app use. */
 export function __resetConversionTrackingForTests(): void {
   firedDedupeKeys.clear();

@@ -454,6 +454,18 @@ export default function CityPage({ city, slug }: CityPageProps) {
         </div>
       </section>
 
+      {/* ── Inline Lead Capture (top; mobile-first, hidden on lg) ── */}
+      <section className="py-8 bg-[#f7f8fa] border-b lg:hidden">
+        <div className="container">
+          <div className="max-w-lg mx-auto">
+            <InlineLeadCapture
+              variant={pickCityVariant(slug)}
+              pageContext={`city:${slug}`}
+            />
+          </div>
+        </div>
+      </section>
+
       {/* ── Stats Bar ────────────────────────────────────────────── */}
       <section className="py-8 bg-white border-b">
         <div className="container">
@@ -473,11 +485,12 @@ export default function CityPage({ city, slug }: CityPageProps) {
         </div>
       </section>
 
-      {/* ── Unique City Content (SEO) ──────────────────────────────── */}
+      {/* ── Unique City Content (SEO) + sticky desktop lead capture ── */}
       {CITY_CONTENT[slug] && (
         <section className="py-12 bg-white">
           <div className="container">
-            <div className="max-w-3xl mx-auto prose prose-gray">
+            <div className="max-w-5xl mx-auto flex flex-col lg:flex-row gap-10">
+              <div className="flex-1 max-w-3xl prose prose-gray">
               <h2 className="text-2xl font-bold text-[#0a1628] mb-4">
                 HVAC Services in {city}, {CITY_CONTENT[slug].county}, NJ
               </h2>
@@ -499,6 +512,15 @@ export default function CityPage({ city, slug }: CityPageProps) {
                   </Button>
                 </a>
               </div>
+              </div>
+              {/* Desktop-only sticky inline lead capture in the right rail */}
+              <aside className="lg:w-[320px] shrink-0 hidden lg:block">
+                <InlineLeadCapture
+                  variant={pickCityVariant(slug)}
+                  pageContext={`city:${slug}:sidebar`}
+                  sticky
+                />
+              </aside>
             </div>
           </div>
         </section>
