@@ -48,6 +48,19 @@ const WHY_US_COMMERCIAL = [
   { icon: "🛡️", title: "Licensed, Insured & Certified", desc: "Fully licensed NJ commercial contractor. WMBE/SBE certified. PSE&G Trade Ally." },
 ];
 
+// Choose the correct inline-lead variant for a given SEO page. Emergency
+// keywords in slug or service override the category default so hot leads see
+// the red 24/7 CTA. Rebate/heat-pump copy surfaces the rebate-focused variant.
+// Otherwise fall back to residential/commercial. Defined at module scope so it
+// is hoisted above the component body (PR #110 hotfix: previously undefined at
+// call site, causing a runtime ReferenceError on all 15 SEO pages).
+function leadCaptureVariant(data: SeoLandingPageData): InlineLeadVariant {
+  const s = `${data.slug} ${data.service} ${data.serviceType}`.toLowerCase();
+  if (/emergency|24[- ]?7|no[- ]?heat/.test(s)) return "emergency";
+  if (/rebate|heat[- ]?pump|pseg|incentive/.test(s)) return "rebate";
+  return data.category === "commercial" ? "commercial" : "residential";
+}
+
 export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
   const isCommercial = data.category === "commercial";
   const phone = isCommercial ? PHONE_COMMERCIAL : PHONE_RESIDENTIAL;
