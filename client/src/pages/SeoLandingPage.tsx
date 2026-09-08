@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
 import type { SeoLandingPageData } from "@/data/seoLandingPages";
+import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
 
 /**
  * SeoLandingPage — data-driven service/repair landing page.
@@ -262,6 +263,19 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
                 <div className="text-sm text-gray-500 mt-1">{l.sub}</div>
               </Link>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Inline Lead Capture — Stage 2 wiring (fixes the "SEO page → no form" gap) */}
+      <section className="py-16 bg-white">
+        <div className="container">
+          <div className="max-w-2xl mx-auto">
+            <InlineLeadCapture
+              variant={leadCaptureVariant(data)}
+              pageContext={`seo:${data.slug}`}
+              defaultService={data.service}
+            />
           </div>
         </div>
       </section>
