@@ -10,14 +10,13 @@
  */
 
 import blogPosts from "./blog-meta.json" with { type: "json" };
+import { PHONE_DISPLAY as PHONE } from "../../shared/business.ts";
 
 const BASE = "https://mechanicalenterprise.com";
 const DEFAULT_TITLE = "Mechanical Enterprise | #1 MWBE HVAC Contractor in NJ | Up to $16K Rebates";
 const DEFAULT_DESC =
-  "Licensed & MWBE-certified HVAC contractor in Newark, NJ. Heat pump, AC & furnace installation. PSE&G-approved, up to $16K in rebates. Serving 15 NJ counties. Free assessment. Call (862) 423-9396.";
+  `Licensed & MWBE-certified HVAC contractor in Newark, NJ. Heat pump, AC & furnace installation. PSE&G-approved, up to $16K in rebates. Serving 15 NJ counties. Free assessment. Call ${PHONE}.`;
 const DEFAULT_OG_IMAGE = `${BASE}/og-default.png`;
-const PHONE = "(862) 423-9396";
-const PHONE_COMMERCIAL = "(862) 419-1763";
 
 // ── Known page metadata ────────────────────────────────────────────────────
 
@@ -35,7 +34,7 @@ const PAGE_META: Record<string, PageMeta> = {
   },
   "/commercial": {
     title: "Commercial HVAC Contractor NJ | Direct Install | Up to 80% Covered",
-    description: "Commercial HVAC installation & repair in NJ. PSE&G Direct Install covers up to 80% of costs. VRF/VRV specialists. MWBE certified. Free commercial assessment. Call (862) 419-1763.",
+    description: "Commercial HVAC installation & repair in NJ. PSE&G Direct Install covers up to 80% of costs. VRF/VRV specialists. MWBE certified. Free commercial assessment. Call (862) 423-9396.",
   },
   "/rebate-calculator": {
     title: "NJ HVAC Rebate Calculator | Mechanical Enterprise",
@@ -47,11 +46,11 @@ const PAGE_META: Record<string, PageMeta> = {
   },
   "/about": {
     title: "About Mechanical Enterprise | NJ HVAC Contractor",
-    description: "Licensed NJ HVAC contractor serving 15 counties. WMBE/SBE certified. PSE&G approved. Call (862) 419-1763.",
+    description: "Licensed NJ HVAC contractor serving 15 counties. WMBE/SBE certified. PSE&G approved. Call (862) 423-9396.",
   },
   "/contact": {
     title: "Contact Mechanical Enterprise | NJ HVAC",
-    description: "Contact Mechanical Enterprise for HVAC service in New Jersey. Call (862) 419-1763 or request a free assessment online.",
+    description: "Contact Mechanical Enterprise for HVAC service in New Jersey. Call (862) 423-9396 or request a free assessment online.",
   },
   "/blog": {
     title: "NJ HVAC Blog | Rebate Guides, Heat Pump Tips & Energy Savings",
@@ -104,13 +103,13 @@ const SEO_LANDING_META: Record<string, LandingMeta> = {
   "/heat-pump-repair-nj": { parent: "Residential", name: "Heat Pump Repair", title: "Heat Pump Repair NJ | Ducted & Ductless | Mechanical Enterprise", description: "Expert heat pump repair across NJ — no heat/cooling, defrost & refrigerant faults, all brands. Upgrade rebates. Call (862) 423-9396." },
   "/ductless-mini-split-repair-nj": { parent: "Residential", name: "Ductless Mini-Split Repair", title: "Ductless Mini-Split Repair NJ | All Brands | Mechanical Enterprise", description: "Mini-split repair across NJ — not cooling, leaks, error codes, comm faults. Mitsubishi, Daikin, Fujitsu & more. Call (862) 423-9396." },
   "/emergency-hvac-repair-nj": { parent: "Residential", name: "Emergency HVAC Repair", title: "Emergency HVAC Repair NJ | 24/7 No Heat / No AC | Mechanical Enterprise", description: "24/7 emergency HVAC repair across New Jersey. No heat, no AC, sudden breakdowns — fast local response. Call (862) 423-9396 now." },
-  "/commercial-hvac-service-nj": { parent: "Commercial", name: "Commercial HVAC Service", title: "Commercial HVAC Service & Repair NJ | Mechanical Enterprise", description: "Commercial HVAC service & repair across NJ — RTUs, splits, VRF, controls. Service agreements & 24/7 response. Call (862) 419-1763." },
-  "/commercial-rtu-service-nj": { parent: "Commercial", name: "RTU Service", title: "Commercial RTU Service & Repair NJ | Rooftop Units | Mechanical Enterprise", description: "Rooftop unit (RTU) service, repair & replacement across NJ. Economizers, compressors, PM programs. Minimize downtime. Call (862) 419-1763." },
-  "/commercial-hvac-maintenance-nj": { parent: "Commercial", name: "Commercial HVAC Maintenance", title: "Commercial HVAC Maintenance NJ | PM Agreements | Mechanical Enterprise", description: "Commercial HVAC preventive maintenance plans across NJ. Fewer breakdowns, longer equipment life, priority service. Call (862) 419-1763." },
-  "/restaurant-hvac-nj": { parent: "Commercial", name: "Restaurant HVAC", title: "Restaurant HVAC & Kitchen Ventilation NJ | Mechanical Enterprise", description: "Restaurant HVAC across NJ — kitchen exhaust & makeup air, dining comfort, RTUs. Off-hours service to avoid closures. Call (862) 419-1763." },
-  "/warehouse-hvac-nj": { parent: "Commercial", name: "Warehouse HVAC", title: "Warehouse HVAC NJ | Heating, Ventilation & Cooling | Mechanical Enterprise", description: "Warehouse & distribution HVAC across NJ — unit heaters, ventilation, HVLS, rooftop units. Worker comfort & compliance. Call (862) 419-1763." },
-  "/office-building-hvac-nj": { parent: "Commercial", name: "Office Building HVAC", title: "Office Building HVAC NJ | Multi-Zone Comfort | Mechanical Enterprise", description: "Office HVAC across NJ — RTUs, VAV/VRF, chillers, controls & IAQ. Tenant comfort, fewer complaints. Call (862) 419-1763." },
-  "/industrial-hvac-nj": { parent: "Commercial", name: "Industrial HVAC", title: "Industrial HVAC NJ | Process Cooling & Chillers | Mechanical Enterprise", description: "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. 24/7 uptime & compliance. Call (862) 419-1763." },
+  "/commercial-hvac-service-nj": { parent: "Commercial", name: "Commercial HVAC Service", title: "Commercial HVAC Service & Repair NJ | Mechanical Enterprise", description: "Commercial HVAC service & repair across NJ — RTUs, splits, VRF, controls. Service agreements & 24/7 response. Call (862) 423-9396." },
+  "/commercial-rtu-service-nj": { parent: "Commercial", name: "RTU Service", title: "Commercial RTU Service & Repair NJ | Rooftop Units | Mechanical Enterprise", description: "Rooftop unit (RTU) service, repair & replacement across NJ. Economizers, compressors, PM programs. Minimize downtime. Call (862) 423-9396." },
+  "/commercial-hvac-maintenance-nj": { parent: "Commercial", name: "Commercial HVAC Maintenance", title: "Commercial HVAC Maintenance NJ | PM Agreements | Mechanical Enterprise", description: "Commercial HVAC preventive maintenance plans across NJ. Fewer breakdowns, longer equipment life, priority service. Call (862) 423-9396." },
+  "/restaurant-hvac-nj": { parent: "Commercial", name: "Restaurant HVAC", title: "Restaurant HVAC & Kitchen Ventilation NJ | Mechanical Enterprise", description: "Restaurant HVAC across NJ — kitchen exhaust & makeup air, dining comfort, RTUs. Off-hours service to avoid closures. Call (862) 423-9396." },
+  "/warehouse-hvac-nj": { parent: "Commercial", name: "Warehouse HVAC", title: "Warehouse HVAC NJ | Heating, Ventilation & Cooling | Mechanical Enterprise", description: "Warehouse & distribution HVAC across NJ — unit heaters, ventilation, HVLS, rooftop units. Worker comfort & compliance. Call (862) 423-9396." },
+  "/office-building-hvac-nj": { parent: "Commercial", name: "Office Building HVAC", title: "Office Building HVAC NJ | Multi-Zone Comfort | Mechanical Enterprise", description: "Office HVAC across NJ — RTUs, VAV/VRF, chillers, controls & IAQ. Tenant comfort, fewer complaints. Call (862) 423-9396." },
+  "/industrial-hvac-nj": { parent: "Commercial", name: "Industrial HVAC", title: "Industrial HVAC NJ | Process Cooling & Chillers | Mechanical Enterprise", description: "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. 24/7 uptime & compliance. Call (862) 423-9396." },
 };
 
 // ── Dynamic page metadata generators ──────────────────────────────────────
@@ -132,7 +131,7 @@ function getDirectInstallMeta(slug: string): PageMeta & { canonical: string } {
   const industry = industryPart.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   return {
     title: `Free HVAC & Lighting for ${industry} in NJ | Direct Install Program`,
-    description: `NJ ${industry.toLowerCase()} qualify for 100% free commercial lighting and up to 80% off HVAC upgrades through the NJ Direct Install Program. PSE&G Trade Ally. No upfront cost. Free assessment. Call ${PHONE_COMMERCIAL}.`,
+    description: `NJ ${industry.toLowerCase()} qualify for 100% free commercial lighting and up to 80% off HVAC upgrades through the NJ Direct Install Program. PSE&G Trade Ally. No upfront cost. Free assessment. Call ${PHONE}.`,
     canonical: `${BASE}/direct-install/${slug}`,
   };
 }

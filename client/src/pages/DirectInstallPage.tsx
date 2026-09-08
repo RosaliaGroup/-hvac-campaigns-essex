@@ -11,11 +11,10 @@ import { Redirect, Link } from "wouter";
 import { pickDeterministic, ALL_CITIES } from "@/data/njCounties";
 import { blogPosts } from "@/data/blogPosts";
 import InlineLeadCapture from "@/components/InlineLeadCapture";
+import { PHONE_DISPLAY as PHONE, PHONE_TEL } from "@shared/business";
 
 const BASE = "https://mechanicalenterprise.com";
 const COMMERCIAL_URL = `${BASE}/commercial`;
-const PHONE = "(862) 419-1763";
-const PHONE_TEL = "tel:+18624191763";
 
 export default function DirectInstallPage({ slug }: { slug: string }) {
   const page = directInstallIndustries.find((p) => p.slug === slug);

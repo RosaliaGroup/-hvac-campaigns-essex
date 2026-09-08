@@ -6,7 +6,7 @@ const NOW = 1_754_000_000_000;
 
 describe("spamGuard — the three concrete attack samples (no escape-sequence rule)", () => {
   it("SAMPLE 1: throwaway itw-dahti.com email blocks on domain alone", () => {
-    const r = evaluateSpam({ name: "Amanda Cole", email: "qz8@itw-dahti.com", phone: "8624191763" }, { now: NOW });
+    const r = evaluateSpam({ name: "Amanda Cole", email: "qz8@itw-dahti.com", phone: "8624239396" }, { now: NOW });
     expect(r.blocked).toBe(true);
     expect(r.score).toBeGreaterThanOrEqual(60);
     expect(r.reasons).toContain("blocked_domain:itw-dahti.com");
@@ -29,7 +29,7 @@ describe("spamGuard — the three concrete attack samples (no escape-sequence ru
 
 describe("spamGuard — random alphanumeric NAMES on gibberish scoring alone", () => {
   // Clean email + valid phone so ONLY the gibberish score can reach 60.
-  const clean = { email: "user@gmail.com", phone: "8624191763", now: NOW } as const;
+  const clean = { email: "user@gmail.com", phone: "8624239396", now: NOW } as const;
   const nameOnly = (name: string) =>
     evaluateSpam({ name, email: clean.email, phone: clean.phone }, { now: clean.now });
 

@@ -6,10 +6,9 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { directInstallIndustries, INDUSTRY_CATEGORIES } from "@/data/directInstallIndustries";
+import { PHONE_DISPLAY as PHONE, PHONE_TEL } from "@shared/business";
 
 const BASE = "https://mechanicalenterprise.com";
-const PHONE = "(862) 419-1763";
-const PHONE_TEL = "tel:+18624191763";
 
 export default function DirectInstallIndex() {
   useSEO({

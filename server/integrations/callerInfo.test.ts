@@ -10,7 +10,7 @@ import {
 } from "./callerInfo";
 
 const NOW = new Date("2026-07-17T12:00:00Z");
-const KEY = "8624191763"; // normalized last-10 of the numbers used below
+const KEY = "8624239396"; // normalized last-10 of the numbers used below
 
 function emptyBundle(): CallerDataBundle {
   return { customers: [], appointments: [], properties: [], serviceRecords: [] };
@@ -32,7 +32,7 @@ describe("getCallerInfo — exact match", () => {
             firstName: "Ana",
             lastName: "Haynes",
             email: "ana@example.com",
-            phone: "(862) 419-1763",
+            phone: "(862) 423-9396",
           },
         ],
       }),
@@ -60,8 +60,8 @@ describe("getCallerInfo — shared phone number", () => {
     const result = buildCallerInfo(
       bundle({
         customers: [
-          { id: 1, displayName: "Ana Haynes", email: "ana@example.com", phone: "8624191763" },
-          { id: 2, displayName: "Bob Haynes", email: "bob@example.com", phone: "8624191763" },
+          { id: 1, displayName: "Ana Haynes", email: "ana@example.com", phone: "8624239396" },
+          { id: 2, displayName: "Bob Haynes", email: "bob@example.com", phone: "8624239396" },
         ],
         properties: [{ customerId: 1, addressLine1: "1 Main St", city: "Newark", state: "NJ" }],
       }),
@@ -80,8 +80,8 @@ describe("getCallerInfo — shared phone number", () => {
     const result = buildCallerInfo(
       bundle({
         appointments: [
-          { phone: "8624191763", fullName: "Ana Haynes", status: "confirmed", preferredDate: "2026-08-01" },
-          { phone: "8624191763", fullName: "Chris Doe", status: "confirmed", preferredDate: "2026-08-02" },
+          { phone: "8624239396", fullName: "Ana Haynes", status: "confirmed", preferredDate: "2026-08-01" },
+          { phone: "8624239396", fullName: "Chris Doe", status: "confirmed", preferredDate: "2026-08-02" },
         ],
       }),
       KEY,
@@ -93,11 +93,11 @@ describe("getCallerInfo — shared phone number", () => {
 
 // ── normalized number variants ─────────────────────────────────
 describe("getCallerInfo — normalized number variants", () => {
-  const variants = ["(862) 419-1763", "+1 862-419-1763", "18624191763", "862.419.1763"];
+  const variants = ["(862) 423-9396", "+1 862-423-9396", "18624239396", "862.423.9396"];
   for (const v of variants) {
     it(`matches customer regardless of formatting: ${v}`, async () => {
       const loader = vi.fn(async () =>
-        bundle({ customers: [{ id: 7, displayName: "Ana Haynes", phone: "8624191763" }] }),
+        bundle({ customers: [{ id: 7, displayName: "Ana Haynes", phone: "8624239396" }] }),
       );
       const result = await lookupCallerInfo(v, { loader, now: NOW });
       expect(result.found).toBe(true);
@@ -113,7 +113,7 @@ describe("getCallerInfo — multiple properties", () => {
   it("returns all formatted property addresses for the one customer", () => {
     const result = buildCallerInfo(
       bundle({
-        customers: [{ id: 3, displayName: "Acme HVAC", phone: "8624191763" }],
+        customers: [{ id: 3, displayName: "Acme HVAC", phone: "8624239396" }],
         properties: [
           { customerId: 3, addressLine1: "10 Warehouse Rd", city: "Elizabeth", state: "NJ", zip: "07201" },
           { customerId: 3, addressLine1: "22 Depot Ave", addressLine2: "Unit 4", city: "Newark", state: "NJ" },
@@ -137,7 +137,7 @@ describe("getCallerInfo — upcoming appointment summary", () => {
   it("includes future appointments and excludes past/cancelled", () => {
     const result = buildCallerInfo(
       bundle({
-        customers: [{ id: 5, displayName: "Ana Haynes", phone: "8624191763" }],
+        customers: [{ id: 5, displayName: "Ana Haynes", phone: "8624239396" }],
         appointments: [
           {
             customerId: 5,
@@ -168,7 +168,7 @@ describe("getCallerInfo — privacy filtering", () => {
     const dirtyCustomer = {
       id: 8,
       displayName: "Ana Haynes",
-      phone: "8624191763",
+      phone: "8624239396",
       email: "ana@example.com",
       // forbidden extras (not on the interface — must be dropped by projection):
       notes: "PRIVATE customer note",
@@ -202,8 +202,8 @@ describe("getCallerInfo — privacy filtering", () => {
     const result = buildCallerInfo(
       bundle({
         customers: [
-          { id: 1, displayName: "Ana", email: "ana@example.com", phone: "8624191763" },
-          { id: 2, displayName: "Bob", email: "bob@example.com", phone: "8624191763" },
+          { id: 1, displayName: "Ana", email: "ana@example.com", phone: "8624239396" },
+          { id: 2, displayName: "Bob", email: "bob@example.com", phone: "8624239396" },
         ],
       }),
       KEY,
@@ -235,9 +235,9 @@ describe("getCallerInfo — Mechanical-only, no cross-project calls", () => {
   it("makes no network/fetch call — only the injected data loader", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch" as never);
     const loader = vi.fn(async () =>
-      bundle({ customers: [{ id: 1, displayName: "Ana Haynes", phone: "8624191763" }] }),
+      bundle({ customers: [{ id: 1, displayName: "Ana Haynes", phone: "8624239396" }] }),
     );
-    await lookupCallerInfo("862-419-1763", { loader, now: NOW });
+    await lookupCallerInfo("862-423-9396", { loader, now: NOW });
     expect(loader).toHaveBeenCalledTimes(1);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -250,12 +250,12 @@ describe("getCallerInfo — database error", () => {
       throw new Error("connection reset");
     });
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const result = await lookupCallerInfo("862-419-1763", { loader, now: NOW });
+    const result = await lookupCallerInfo("862-423-9396", { loader, now: NOW });
     expect(result).toEqual({ found: false });
     // The log line must not contain the raw number or any customer detail.
     const logged = errSpy.mock.calls.flat().join(" ");
-    expect(logged).not.toContain("8624191763");
-    expect(logged).toContain("***1763");
+    expect(logged).not.toContain("8624239396");
+    expect(logged).toContain("***9396");
   });
 
   it("returns not-found for an unusable phone without calling the loader", async () => {
@@ -269,7 +269,7 @@ describe("getCallerInfo — database error", () => {
 // ── helper ─────────────────────────────────────────────────────
 describe("maskPhone", () => {
   it("keeps only the last four digits", () => {
-    expect(maskPhone("+1 (862) 419-1763")).toBe("***1763");
+    expect(maskPhone("+1 (862) 423-9396")).toBe("***9396");
     expect(maskPhone("12")).toBe("****");
     expect(maskPhone(null)).toBe("****");
   });

@@ -31,7 +31,7 @@ const payload = {
     type: "tool-calls",
     call: { id: "vapi_1" },
     toolCallList: [
-      { id: "tc_1", type: "function", function: { name: "sendReferralLink", arguments: JSON.stringify({ phone: "8624191763" }) } },
+      { id: "tc_1", type: "function", function: { name: "sendReferralLink", arguments: JSON.stringify({ phone: "8624239396" }) } },
     ],
   },
 };

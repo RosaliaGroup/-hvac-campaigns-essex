@@ -10,12 +10,12 @@ import {
 
 describe("customers helpers — normalizePhone", () => {
   it("strips formatting and keeps last 10 digits", () => {
-    expect(normalizePhone("(862) 419-1763")).toBe("8624191763");
-    expect(normalizePhone("+1 862-419-1763")).toBe("8624191763");
-    expect(normalizePhone("18624191763")).toBe("8624191763");
+    expect(normalizePhone("(862) 423-9396")).toBe("8624239396");
+    expect(normalizePhone("+1 862-423-9396")).toBe("8624239396");
+    expect(normalizePhone("18624239396")).toBe("8624239396");
   });
   it("matches the same number written differently", () => {
-    expect(normalizePhone("862.419.1763")).toBe(normalizePhone("+1 (862) 419 1763"));
+    expect(normalizePhone("862.423.9396")).toBe(normalizePhone("+1 (862) 423 9396"));
   });
   it("rejects empty/too-short values", () => {
     expect(normalizePhone(null)).toBeNull();
@@ -47,19 +47,19 @@ describe("customers helpers — buildDisplayName", () => {
   });
   it("falls back to email, then phone, then placeholder", () => {
     expect(buildDisplayName({ email: "a@b.com" })).toBe("a@b.com");
-    expect(buildDisplayName({ phone: "8624191763" })).toBe("8624191763");
+    expect(buildDisplayName({ phone: "8624239396" })).toBe("8624239396");
     expect(buildDisplayName({})).toBe("Unnamed Customer");
   });
 });
 
 describe("customers helpers — appointmentMatchesLead (appointment appears under lead/contact)", () => {
-  const lead = { customerId: 5, phone: "(862) 419-1763", email: "Hector@Example.com" };
+  const lead = { customerId: 5, phone: "(862) 423-9396", email: "Hector@Example.com" };
 
   it("matches on the same customerId", () => {
     expect(appointmentMatchesLead({ customerId: 5, phone: null, email: null }, lead)).toBe(true);
   });
   it("matches on phone even when written differently and not yet linked", () => {
-    expect(appointmentMatchesLead({ customerId: null, phone: "+1 862-419-1763", email: null }, lead)).toBe(true);
+    expect(appointmentMatchesLead({ customerId: null, phone: "+1 862-423-9396", email: null }, lead)).toBe(true);
   });
   it("matches on email case-insensitively", () => {
     expect(appointmentMatchesLead({ customerId: null, phone: null, email: "hector@example.com" }, lead)).toBe(true);
@@ -73,16 +73,16 @@ describe("customers helpers — appointmentMatchesLead (appointment appears unde
 });
 
 describe("customers helpers — appointmentQualifiesForRelink (lead conversion relinking)", () => {
-  const target = { phone: "(862) 419-1763", email: "Hector@Example.com" };
+  const target = { phone: "(862) 423-9396", email: "Hector@Example.com" };
 
   it("relinks an unlinked appointment that matches on phone", () => {
-    expect(appointmentQualifiesForRelink({ customerId: null, phone: "+1 862-419-1763", email: null }, target)).toBe(true);
+    expect(appointmentQualifiesForRelink({ customerId: null, phone: "+1 862-423-9396", email: null }, target)).toBe(true);
   });
   it("relinks an unlinked appointment that matches on email (case-insensitive)", () => {
     expect(appointmentQualifiesForRelink({ customerId: null, phone: null, email: "hector@example.com" }, target)).toBe(true);
   });
   it("does NOT touch an appointment already linked to a customer, even if it matches", () => {
-    expect(appointmentQualifiesForRelink({ customerId: 99, phone: "862-419-1763", email: null }, target)).toBe(false);
+    expect(appointmentQualifiesForRelink({ customerId: 99, phone: "862-423-9396", email: null }, target)).toBe(false);
   });
   it("does NOT touch a nonmatching unlinked appointment", () => {
     expect(appointmentQualifiesForRelink({ customerId: null, phone: "973-000-0000", email: "someone@else.com" }, target)).toBe(false);
@@ -91,7 +91,7 @@ describe("customers helpers — appointmentQualifiesForRelink (lead conversion r
     expect(appointmentQualifiesForRelink({ customerId: null, phone: null, email: null }, target)).toBe(false);
   });
   it("does not relink when the target lead has no contact keys", () => {
-    expect(appointmentQualifiesForRelink({ customerId: null, phone: "862-419-1763", email: "x@y.com" }, { phone: null, email: null })).toBe(false);
+    expect(appointmentQualifiesForRelink({ customerId: null, phone: "862-423-9396", email: "x@y.com" }, { phone: null, email: null })).toBe(false);
   });
 });
 

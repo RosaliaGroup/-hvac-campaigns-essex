@@ -391,7 +391,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Commercial HVAC service and repair across New Jersey for every property type — rooftop units, split systems, VRF/VRV, and controls. Service agreements and 24/7 response.",
     metaTitle: "Commercial HVAC Service & Repair NJ | Mechanical Enterprise",
     metaDescription:
-      "Commercial HVAC service & repair across NJ — RTUs, splits, VRF, controls. Service agreements & 24/7 response. Call (862) 419-1763.",
+      "Commercial HVAC service & repair across NJ — RTUs, splits, VRF, controls. Service agreements & 24/7 response. Call (862) 423-9396.",
     introHeading: "Commercial HVAC Service for New Jersey Businesses",
     intro:
       "Downtime costs money and comfort. We service and repair every kind of commercial system, respond fast, and offer planned maintenance agreements that keep your equipment running and your budget predictable.",
@@ -407,7 +407,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Do you offer commercial service contracts?", a: "Yes — planned maintenance agreements tailored to your equipment and site, with priority response and member pricing. See our commercial maintenance page." },
       { q: "What property types do you serve?", a: "Offices, retail, restaurants, medical, warehouses, and industrial facilities across New Jersey." },
       { q: "Can you work after hours to avoid disrupting my business?", a: "Yes — we schedule around your operations, including nights and weekends, to keep disruption to a minimum." },
-      { q: "How fast can you respond to a breakdown?", a: "We offer 24/7 emergency dispatch and prioritize contract customers. Call (862) 419-1763." },
+      { q: "How fast can you respond to a breakdown?", a: "We offer 24/7 emergency dispatch and prioritize contract customers. Call (862) 423-9396." },
       { q: "Do commercial upgrades qualify for incentives?", a: "Many do — PSE&G Direct Install can cover up to 80% of qualifying commercial HVAC costs. We handle the paperwork." },
       { q: "Are you licensed, insured, and able to provide a COI?", a: "Yes — fully licensed and insured NJ commercial contractor, WMBE/SBE certified, and we provide certificates of insurance on request." },
     ],
@@ -431,7 +431,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Rooftop unit service, repair, and replacement across New Jersey — economizers, compressors, motors, and controls. Keep your facility comfortable and running.",
     metaTitle: "Commercial RTU Service & Repair NJ | Rooftop Units | Mechanical Enterprise",
     metaDescription:
-      "Rooftop unit (RTU) service, repair & replacement across NJ. Economizers, compressors, PM programs. Minimize downtime. Call (862) 419-1763.",
+      "Rooftop unit (RTU) service, repair & replacement across NJ. Economizers, compressors, PM programs. Minimize downtime. Call (862) 423-9396.",
     introHeading: "Rooftop Unit (RTU) Experts Across New Jersey",
     intro:
       "Packaged rooftop units are the workhorses of NJ commercial buildings. We repair, maintain, and replace RTUs of every tonnage and brand — with crane coordination for change-outs and preventive programs to prevent failures.",
@@ -448,7 +448,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Do you handle the crane and rigging for change-outs?", a: "Yes — we coordinate crane, rigging, curb adapters, and permits for a turnkey replacement." },
       { q: "Can you service all RTU brands?", a: "We service Carrier, Trane, York, Lennox, Daikin, and all major packaged rooftop brands." },
       { q: "What's included in a rooftop PM program?", a: "Scheduled inspections, filter and belt changes, coil cleaning, economizer checks, and refrigerant/electrical testing — tailored to your unit count." },
-      { q: "How quickly can you respond to a down RTU?", a: "We offer 24/7 emergency dispatch and prioritize contract customers. Call (862) 419-1763." },
+      { q: "How quickly can you respond to a down RTU?", a: "We offer 24/7 emergency dispatch and prioritize contract customers. Call (862) 423-9396." },
       { q: "Do RTU upgrades qualify for rebates?", a: "Often — PSE&G Direct Install can cover up to 80% of qualifying commercial HVAC. We handle the paperwork." },
     ],
     related: [
@@ -471,7 +471,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Commercial HVAC preventive maintenance agreements across New Jersey. Scheduled tune-ups that reduce emergency costs, extend equipment life, and keep your facility comfortable.",
     metaTitle: "Commercial HVAC Maintenance NJ | PM Agreements | Mechanical Enterprise",
     metaDescription:
-      "Commercial HVAC preventive maintenance plans across NJ. Fewer breakdowns, longer equipment life, priority service. Call (862) 419-1763.",
+      "Commercial HVAC preventive maintenance plans across NJ. Fewer breakdowns, longer equipment life, priority service. Call (862) 423-9396.",
     introHeading: "Preventive Maintenance That Pays for Itself",
     intro:
       "Most commercial HVAC failures are preventable. Our planned maintenance agreements catch small problems before they become expensive emergencies, lower energy costs, and give you predictable, budget-friendly service.",
@@ -511,7 +511,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Restaurant HVAC and kitchen ventilation across New Jersey — exhaust hoods, makeup air, dining-room comfort, and RTUs. Off-hours service to avoid costly closures.",
     metaTitle: "Restaurant HVAC & Kitchen Ventilation NJ | Mechanical Enterprise",
     metaDescription:
-      "Restaurant HVAC across NJ — kitchen exhaust & makeup air, dining comfort, RTUs. Off-hours service to avoid closures. Call (862) 419-1763.",
+      "Restaurant HVAC across NJ — kitchen exhaust & makeup air, dining comfort, RTUs. Off-hours service to avoid closures. Call (862) 423-9396.",
     introHeading: "Restaurant HVAC & Ventilation Specialists in NJ",
     intro:
       "Restaurants live and die by comfort and code. We balance kitchen exhaust and makeup air, keep the dining room comfortable, and service your rooftop units — scheduling around your hours so you never lose a shift.",
@@ -527,7 +527,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Why is my kitchen so hot even with the exhaust running?", a: "Usually an imbalance between exhaust and makeup air. If makeup air can't keep up, the kitchen overheats and doors are hard to open. We balance the system." },
       { q: "Can you service us without closing the restaurant?", a: "Yes — we schedule overnight and between-shift work to keep you open and serving." },
       { q: "Do you handle both kitchen ventilation and dining comfort?", a: "We handle the whole picture — exhaust, makeup air, RTUs, and dining-room comfort — so it all works together." },
-      { q: "How fast can you respond if our AC or hood fails?", a: "We offer 24/7 emergency dispatch to prevent a closure. Call (862) 419-1763." },
+      { q: "How fast can you respond if our AC or hood fails?", a: "We offer 24/7 emergency dispatch to prevent a closure. Call (862) 423-9396." },
       { q: "Do restaurant HVAC upgrades qualify for incentives?", a: "Often — PSE&G Direct Install and efficiency programs can cover a significant share of qualifying upgrades. We handle the paperwork." },
       { q: "Are you licensed and insured for commercial work?", a: "Yes — licensed, insured, WMBE/SBE-certified NJ commercial contractor with COIs on request." },
     ],
@@ -551,7 +551,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Warehouse and distribution HVAC across New Jersey — unit and infrared heaters, ventilation, HVLS fans, and rooftop units for large spaces. Worker comfort and compliance.",
     metaTitle: "Warehouse HVAC NJ | Heating, Ventilation & Cooling | Mechanical Enterprise",
     metaDescription:
-      "Warehouse & distribution HVAC across NJ — unit heaters, ventilation, HVLS, rooftop units. Worker comfort & compliance. Call (862) 419-1763.",
+      "Warehouse & distribution HVAC across NJ — unit heaters, ventilation, HVLS, rooftop units. Worker comfort & compliance. Call (862) 423-9396.",
     introHeading: "Large-Space HVAC for NJ Warehouses & Distribution",
     intro:
       "New Jersey's logistics corridor runs on warehouses that are hard to heat, ventilate, and cool. We design and service large-space systems that keep workers comfortable and compliant without wasting energy.",
@@ -591,7 +591,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Office building HVAC across New Jersey — RTUs, VAV and VRF systems, chillers, controls, and indoor air quality. Fewer hot-and-cold complaints, better efficiency.",
     metaTitle: "Office Building HVAC NJ | Multi-Zone Comfort | Mechanical Enterprise",
     metaDescription:
-      "Office HVAC across NJ — RTUs, VAV/VRF, chillers, controls & IAQ. Tenant comfort, fewer complaints. Call (862) 419-1763.",
+      "Office HVAC across NJ — RTUs, VAV/VRF, chillers, controls & IAQ. Tenant comfort, fewer complaints. Call (862) 423-9396.",
     introHeading: "Office HVAC That Keeps Tenants Comfortable",
     intro:
       "Hot-and-cold complaints are the fastest way to frustrate tenants. We service and optimize multi-zone office systems, fix comfort imbalances, and improve air quality and efficiency across your building.",
@@ -631,7 +631,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Industrial HVAC across New Jersey — process cooling, chillers, industrial ventilation, and makeup air for plants and manufacturing facilities. 24/7 uptime and compliance.",
     metaTitle: "Industrial HVAC NJ | Process Cooling & Chillers | Mechanical Enterprise",
     metaDescription:
-      "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. 24/7 uptime & compliance. Call (862) 419-1763.",
+      "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. 24/7 uptime & compliance. Call (862) 423-9396.",
     introHeading: "Industrial HVAC & Process Cooling in New Jersey",
     intro:
       "In a plant, HVAC isn't just comfort — it's uptime, product quality, and worker safety. We service industrial chillers, process cooling, and large-scale ventilation with the responsiveness critical operations demand.",
@@ -647,7 +647,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "What's the difference between process cooling and comfort cooling?", a: "Comfort cooling keeps people comfortable; process cooling holds precise temperatures for equipment or product. Process cooling is less forgiving, so it needs tighter control and faster response — which we're built for." },
       { q: "Do you service and replace industrial chillers?", a: "Yes — we service, repair, and replace chilled-water and process-cooling systems, and coordinate rigging for large equipment." },
       { q: "Can you help with ventilation and air-quality compliance?", a: "Yes — we design and service makeup air and exhaust systems to maintain safe temperatures and meet compliance requirements." },
-      { q: "How fast can you respond to a critical failure?", a: "We offer 24/7 emergency dispatch and prioritize critical-process customers. Call (862) 419-1763." },
+      { q: "How fast can you respond to a critical failure?", a: "We offer 24/7 emergency dispatch and prioritize critical-process customers. Call (862) 423-9396." },
       { q: "Do you offer preventive maintenance for critical equipment?", a: "Yes — tailored PM programs with monitoring and redundancy planning to prevent unplanned downtime." },
       { q: "Are you licensed, insured, and able to provide a COI?", a: "Yes — licensed, insured, WMBE/SBE-certified NJ commercial contractor with COIs on request." },
     ],

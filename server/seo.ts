@@ -75,7 +75,7 @@ function getBlogPosts(): BlogMeta[] {
 
 const BASE = "https://mechanicalenterprise.com";
 const DEFAULT_TITLE = "Mechanical Enterprise | Expert HVAC Solutions in New Jersey";
-const DEFAULT_DESC = "Licensed HVAC contractor in Newark NJ. PSE&G-approved for heat pump rebates up to $16K. Serving 15 NJ counties. Call (862) 419-1763.";
+const DEFAULT_DESC = "Licensed HVAC contractor in Newark NJ. PSE&G-approved for heat pump rebates up to $16K. Serving 15 NJ counties. Call (862) 423-9396.";
 
 interface PageMeta {
   title: string;
@@ -88,8 +88,8 @@ const PAGE_META: Record<string, PageMeta> = {
   "/commercial": { title: "Commercial HVAC Services NJ | Mechanical Enterprise", description: "Commercial HVAC solutions for NJ businesses. PSE&G Direct Install covers up to 80%. VRF/VRV specialists. Free assessment." },
   "/rebate-calculator": { title: "NJ HVAC Rebate Calculator | Mechanical Enterprise", description: "Calculate your NJ heat pump rebate in 2 minutes. PSE&G rebates up to $16K. Free assessment, no obligation." },
   "/services": { title: "HVAC Services | Mechanical Enterprise NJ", description: "Full-service HVAC contractor in New Jersey. Installation, repair, maintenance. Heat pumps, AC, furnaces. WMBE certified." },
-  "/about": { title: "About Mechanical Enterprise | NJ HVAC Contractor", description: "Licensed NJ HVAC contractor serving 15 counties. WMBE/SBE certified. PSE&G approved. Call (862) 419-1763." },
-  "/contact": { title: "Contact Mechanical Enterprise | NJ HVAC", description: "Contact Mechanical Enterprise for HVAC service in New Jersey. Call (862) 419-1763 or request a free assessment online." },
+  "/about": { title: "About Mechanical Enterprise | NJ HVAC Contractor", description: "Licensed NJ HVAC contractor serving 15 counties. WMBE/SBE certified. PSE&G approved. Call (862) 423-9396." },
+  "/contact": { title: "Contact Mechanical Enterprise | NJ HVAC", description: "Contact Mechanical Enterprise for HVAC service in New Jersey. Call (862) 423-9396 or request a free assessment online." },
   "/blog": { title: "HVAC Blog | Mechanical Enterprise NJ", description: "HVAC tips, NJ rebate guides, heat pump advice, and energy savings articles from Mechanical Enterprise." },
 };
 

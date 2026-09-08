@@ -42,7 +42,7 @@ Wrong/missing secret → **401**. No `sendForm` call in the body → **400**.
         "id": "<tool-call-id>",
         "function": {
           "name": "sendForm",
-          "arguments": "{\"phone\":\"+18624191763\",\"type\":\"booking\"}"
+          "arguments": "{\"phone\":\"+18624239396\",\"type\":\"booking\"}"
         }
       }
     ]

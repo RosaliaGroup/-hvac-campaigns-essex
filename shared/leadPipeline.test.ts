@@ -166,8 +166,8 @@ describe("deriveContactRelationship (lifecycle rules)", () => {
 
 describe("buildLeadCapturePatch (editing lead saves)", () => {
   it("maps editable fields and recomputes name from first/last", () => {
-    const patch = buildLeadCapturePatch({ firstName: "Ana", lastName: "Haynes", phone: "8624191763" });
-    expect(patch).toMatchObject({ firstName: "Ana", lastName: "Haynes", phone: "8624191763", name: "Ana Haynes" });
+    const patch = buildLeadCapturePatch({ firstName: "Ana", lastName: "Haynes", phone: "8624239396" });
+    expect(patch).toMatchObject({ firstName: "Ana", lastName: "Haynes", phone: "8624239396", name: "Ana Haynes" });
   });
   it("coerces empty strings to null", () => {
     const patch = buildLeadCapturePatch({ email: "", phone: "" });

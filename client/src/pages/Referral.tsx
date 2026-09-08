@@ -116,7 +116,7 @@ export default function Referral() {
     const cleanPhone = textFriendPhone.replace(/\D/g, "");
     if (cleanPhone.length < 10) return;
     const message = encodeURIComponent(
-      "Hey — I use Mechanical Enterprise for HVAC stuff in NJ. They do free assessments and rebates up to $16K. Worth a call: (862) 419-1763 or https://mechanicalenterprise.com/rebate-calculator"
+      "Hey — I use Mechanical Enterprise for HVAC stuff in NJ. They do free assessments and rebates up to $16K. Worth a call: (862) 423-9396 or https://mechanicalenterprise.com/rebate-calculator"
     );
     window.open(`sms:${cleanPhone}?body=${message}`, "_self");
 

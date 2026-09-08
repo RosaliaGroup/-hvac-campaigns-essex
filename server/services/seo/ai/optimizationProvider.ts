@@ -12,6 +12,7 @@
  * AiOptimizationProvider interface and is selected here.
  */
 import type { AiFaqItem, AiInternalLink, SeoCategory, SeoProblem } from "@shared/seo";
+import { PHONE_DISPLAY } from "@shared/business";
 
 /** Everything the AI needs about a page to draft optimizations. */
 export interface PageContext {
@@ -43,7 +44,7 @@ export interface AiOptimizationProvider {
 /* ── Helpers (pure) ──────────────────────────────────────────────────────── */
 
 const BRAND = "Mechanical Enterprise";
-const PHONE = "(862) 419-1763";
+const PHONE = PHONE_DISPLAY;
 
 /** Turn a path like "/hvac-newark-nj" into a readable phrase "HVAC Newark NJ". */
 export function keywordFromPath(path: string): string {

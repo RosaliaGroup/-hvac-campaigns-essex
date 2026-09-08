@@ -57,7 +57,7 @@ function baseInput(extra: Partial<CallRecapInput> = {}): CallRecapInput {
   return {
     call_id: "call_abc123",
     name: "Ana Haynes",
-    phone: "(862) 419-1763",
+    phone: "(862) 423-9396",
     reason_for_call: "No heat upstairs",
     requested_service: "furnace repair",
     urgency: "emergency",
@@ -87,7 +87,7 @@ describe("sendCallRecap — buildRecapRecord privacy whitelist", () => {
     }
     // operational fields preserved
     expect(record.callerName).toBe("Ana Haynes");
-    expect(record.normalizedPhone).toBe("8624191763");
+    expect(record.normalizedPhone).toBe("8624239396");
     expect(record.requestedService).toBe("furnace repair");
     expect(record.urgency).toBe("emergency");
     expect(record.followUpRequired).toBe(true);

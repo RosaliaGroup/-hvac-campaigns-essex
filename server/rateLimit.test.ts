@@ -43,8 +43,8 @@ describe("rateLimit — checkRateLimit", () => {
 
 describe("rateLimit — key helpers", () => {
   it("phoneKey normalizes to last 10 digits", () => {
-    expect(phoneKey("(862) 419-1763")).toBe("8624191763");
-    expect(phoneKey("+18624191763")).toBe("8624191763");
+    expect(phoneKey("(862) 423-9396")).toBe("8624239396");
+    expect(phoneKey("+18624239396")).toBe("8624239396");
     expect(phoneKey(null)).toBe("unknown-phone");
   });
 

@@ -37,7 +37,7 @@ function mockRes() {
   return res;
 }
 
-const validBody = { name: "Ana Haynes", phone: "8624191763" };
+const validBody = { name: "Ana Haynes", phone: "8624239396" };
 
 describe("vapiRecapRoute — fail-closed authentication", () => {
   const handler = captureHandler();

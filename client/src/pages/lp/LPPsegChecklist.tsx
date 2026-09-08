@@ -44,7 +44,7 @@ export default function LPPsegChecklist() {
     onError: () => {
       toast({
         title: "Something went wrong",
-        description: "Please call us directly at (862) 419-1763",
+        description: "Please call us directly at (862) 423-9396",
         variant: "destructive",
       });
     },
@@ -129,9 +129,9 @@ export default function LPPsegChecklist() {
                   <p className="text-sm text-gray-500 mb-6">
                     Want us to handle the entire application for you? Book a free assessment.
                   </p>
-                  <a href="tel:+18624191763">
+                  <a href="tel:+18624239396">
                     <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-3">
-                      <Phone className="h-4 w-4 mr-2" /> Call Now: (862) 419-1763
+                      <Phone className="h-4 w-4 mr-2" /> Call Now: (862) 423-9396
                     </Button>
                   </a>
                   <a href="/pseg-rebate-contractor-nj">
@@ -350,12 +350,12 @@ export default function LPPsegChecklist() {
             >
               Get Free Checklist <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
-            <a href="tel:+18624191763">
+            <a href="tel:+18624239396">
               <Button
                 size="lg"
                 className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold px-8"
               >
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
               </Button>
             </a>
           </div>

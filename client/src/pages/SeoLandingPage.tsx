@@ -7,6 +7,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
 import type { SeoLandingPageData } from "@/data/seoLandingPages";
 import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
+import { PHONE_DISPLAY, PHONE_TEL } from "@shared/business";
 
 /**
  * SeoLandingPage — data-driven service/repair landing page.
@@ -29,10 +30,12 @@ import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLe
 
 const BASE = "https://mechanicalenterprise.com";
 const REBATE_URL = `${BASE}/rebate-calculator`;
-const PHONE_RESIDENTIAL = "(862) 423-9396";
-const PHONE_RESIDENTIAL_TEL = "tel:+18624239396";
-const PHONE_COMMERCIAL = "(862) 419-1763";
-const PHONE_COMMERCIAL_TEL = "tel:+18624191763";
+// Residential and commercial used to advertise different numbers; there is
+// now a single business line for both (see shared/business.ts).
+const PHONE_RESIDENTIAL = PHONE_DISPLAY;
+const PHONE_RESIDENTIAL_TEL = PHONE_TEL;
+const PHONE_COMMERCIAL = PHONE_DISPLAY;
+const PHONE_COMMERCIAL_TEL = PHONE_TEL;
 
 const WHY_US_RESIDENTIAL = [
   { icon: "⚡", title: "Fast, Local Response", desc: "Same-day and 24/7 emergency service across New Jersey. Based in Newark, serving all of NJ." },

@@ -33,7 +33,7 @@ function makeDeps(over: Partial<SendFormDeps> = {}): SendFormDeps {
   };
 }
 const send = (d: SendFormDeps) => d.send as ReturnType<typeof vi.fn>;
-const CONSENTED = { phone: "862-419-1763", type: "booking" };
+const CONSENTED = { phone: "862-423-9396", type: "booking" };
 
 describe("buildFormUrl / buildMessage — Mechanical /qualify only", () => {
   it("points at the in-repo Mechanical /qualify form (no Rosalia, no LP)", () => {
@@ -75,16 +75,16 @@ describe("sendMechanicalFormLink — send + gating + history", () => {
     expect(res).toMatchObject({ success: true, smsSent: true, formUrl: "https://mechanicalenterprise.com/qualify" });
     expect(send(deps)).toHaveBeenCalledOnce();
     const [phone, message] = send(deps).mock.calls[0];
-    expect(phone).toBe("+18624191763"); // normalized E.164
+    expect(phone).toBe("+18624239396"); // normalized E.164
     expect(message).toContain("https://mechanicalenterprise.com/qualify");
     expect(deps.recordOutbound).toHaveBeenCalledOnce();
     const rec = (deps.recordOutbound as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(rec).toMatchObject({ contactId: 42, phone: "+18624191763", providerMessageId: "telnyx_1" });
+    expect(rec).toMatchObject({ contactId: 42, phone: "+18624239396", providerMessageId: "telnyx_1" });
   });
 
   it("uses reschedule wording for type=reschedule", async () => {
     const deps = makeDeps();
-    await sendMechanicalFormLink({ phone: "8624191763", type: "reschedule" }, deps);
+    await sendMechanicalFormLink({ phone: "8624239396", type: "reschedule" }, deps);
     expect(send(deps).mock.calls[0][1]).toMatch(/new time/i);
   });
 
@@ -162,8 +162,8 @@ describe("handleSendForm — idempotency across Vapi retries", () => {
   it("prefers the stable toolCallId for the idempotency key", () => {
     expect(buildIdemKey({ toolCallId: "call_xyz", callId: "vapi_9", input: CONSENTED }))
       .toBe("vapi-sendform:call_xyz");
-    expect(buildIdemKey({ toolCallId: "", callId: "vapi_9", input: { phone: "862-419-1763", type: "reschedule" } }))
-      .toBe("vapi-sendform:vapi_9:8624191763:reschedule");
+    expect(buildIdemKey({ toolCallId: "", callId: "vapi_9", input: { phone: "862-423-9396", type: "reschedule" } }))
+      .toBe("vapi-sendform:vapi_9:8624239396:reschedule");
   });
 });
 
@@ -173,12 +173,12 @@ describe("extractSendFormCall — Vapi envelope parsing", () => {
   });
 
   it("parses string-encoded arguments (Vapi default)", () => {
-    const call = extractSendFormCall(envelope(JSON.stringify({ phone: "8624191763", type: "booking" })));
-    expect(call).toMatchObject({ toolCallId: "tc_1", callId: "vapi_1", input: { phone: "8624191763", type: "booking" } });
+    const call = extractSendFormCall(envelope(JSON.stringify({ phone: "8624239396", type: "booking" })));
+    expect(call).toMatchObject({ toolCallId: "tc_1", callId: "vapi_1", input: { phone: "8624239396", type: "booking" } });
   });
 
   it("parses object arguments", () => {
-    expect(extractSendFormCall(envelope({ phone: "8624191763", type: "reschedule" }))?.input.type).toBe("reschedule");
+    expect(extractSendFormCall(envelope({ phone: "8624239396", type: "reschedule" }))?.input.type).toBe("reschedule");
   });
 
   it("returns null when no sendForm call is present (cannot invoke other tools)", () => {
@@ -278,7 +278,7 @@ describe("sendForm — explicit sent/skipped/failed status (incident regression)
 describe("sendForm — verified caller-number fallback (misheard spoken number)", () => {
   const VERIFIED = "9735181815";        // → +19735181815
   const VERIFIED_E164 = "+19735181815";
-  const OTHER_VALID = "8624191763";     // → +18624191763 (valid, different)
+  const OTHER_VALID = "8624239396";     // → +18624239396 (valid, different)
   const INVALID_11 = "364-622-69189";   // 11 digits, no leading 1 → invalid
 
   it("1. verified caller valid + spoken invalid → sends to the verified caller number", async () => {
@@ -300,7 +300,7 @@ describe("sendForm — verified caller-number fallback (misheard spoken number)"
     const deps = makeDeps();
     const r = await sendMechanicalFormLink({ phone: OTHER_VALID, type: "booking" }, deps);
     expect(r.status).toBe("sent");
-    expect(send(deps).mock.calls[0][0]).toBe("+18624191763");
+    expect(send(deps).mock.calls[0][0]).toBe("+18624239396");
   });
 
   it("4. no verified + supplied invalid → failed/invalid_phone (never guessed)", async () => {
@@ -370,7 +370,7 @@ describe("sendForm — verified caller-number fallback (misheard spoken number)"
 describe("sendForm — flat callerPhone field ({{customer.number}}) priority", () => {
   const CALLER = "9735181815";        // → +19735181815
   const CALLER_E164 = "+19735181815";
-  const OTHER_VALID = "8624191763";   // → +18624191763
+  const OTHER_VALID = "8624239396";   // → +18624239396
   const INVALID_11 = "364-622-69189"; // 11 digits, no leading 1 → invalid
   const UNSUBSTITUTED = "{{customer.number}}"; // Vapi didn't fill it → no digits → invalid
 
@@ -392,14 +392,14 @@ describe("sendForm — flat callerPhone field ({{customer.number}}) priority", (
     const deps = makeDeps();
     const r = await sendMechanicalFormLink({ phone: OTHER_VALID, type: "booking" }, deps);
     expect(r.status).toBe("sent");
-    expect(send(deps).mock.calls[0][0]).toBe("+18624191763");
+    expect(send(deps).mock.calls[0][0]).toBe("+18624239396");
   });
 
   it("4. invalid/unsubstituted callerPhone + valid spoken → falls through to spoken", async () => {
     const deps = makeDeps();
     const r = await sendMechanicalFormLink({ callerPhone: UNSUBSTITUTED, phone: OTHER_VALID, type: "booking" }, deps);
     expect(r.status).toBe("sent");
-    expect(send(deps).mock.calls[0][0]).toBe("+18624191763"); // never guessed from the template
+    expect(send(deps).mock.calls[0][0]).toBe("+18624239396"); // never guessed from the template
   });
 
   it("5. both invalid → failed/invalid_phone (never guessed)", async () => {

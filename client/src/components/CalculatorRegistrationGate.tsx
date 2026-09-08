@@ -586,11 +586,11 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
                 and check program availability for your area.
               </p>
               <a
-                href="tel:+18624191763"
+                href="tel:+18624239396"
                 className="inline-flex items-center gap-2 bg-[#ff6b35] text-white px-5 py-3 rounded-lg font-semibold hover:bg-[#e55a25] transition-all w-full justify-center"
               >
                 <Phone className="w-4 h-4" />
-                Call Now: (862) 419-1763
+                Call Now: (862) 423-9396
               </a>
               <p className="text-white/60 text-xs text-center mt-3">
                 Free assessment • No obligation • Available Mon–Sat 8am–6pm
