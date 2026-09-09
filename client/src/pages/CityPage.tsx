@@ -10,6 +10,19 @@ import { Link } from "wouter";
 import { getNearbyCities, pickDeterministic, ALL_CITIES } from "@/data/njCounties";
 import { blogPosts } from "@/data/blogPosts";
 import { directInstallIndustries } from "@/data/directInstallIndustries";
+import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
+
+// City slugs are plain town names, so this always resolves to "residential"
+// today — kept as a function (rather than a hardcoded prop) to match the
+// pickBlogVariant/pickServiceVariant signature InlineLeadCapture's callers use
+// elsewhere, in case a future city page ever needs a different variant.
+function pickCityVariant(slug: string): InlineLeadVariant {
+  const s = slug.toLowerCase();
+  if (/(emergency|repair)/.test(s)) return "emergency";
+  if (/(rebate|financing)/.test(s)) return "rebate";
+  if (/(commercial|vrv|vrf)/.test(s)) return "commercial";
+  return "residential";
+}
 
 const BASE = "https://mechanicalenterprise.com";
 const REBATE_URL = `${BASE}/rebate-calculator`;
