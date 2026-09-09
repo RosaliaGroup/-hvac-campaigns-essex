@@ -71,9 +71,15 @@ function getRoutesFromSitemap(): string[] {
   return locs.map((u) => new URL(u).pathname);
 }
 
+// Flat "{route}.html" — NOT "{route}/index.html". Netlify serves a bare
+// extensionless path from name.html directly (its native pretty-URL
+// convention); if only name/index.html exists, it 301s the bare path to
+// name/ first. Since sitemap.xml, canonical tags, and every internal link
+// use the no-trailing-slash form, a flat file avoids that extra redirect
+// hop entirely — verified against the live deploy.
 function outPathFor(routePath: string): string {
   if (routePath === "/") return path.join(distDir, "index.html");
-  return path.join(distDir, routePath.replace(/^\//, ""), "index.html");
+  return path.join(distDir, `${routePath.replace(/^\//, "")}.html`);
 }
 
 async function main() {
