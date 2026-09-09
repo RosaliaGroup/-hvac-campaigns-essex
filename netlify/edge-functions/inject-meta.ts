@@ -399,6 +399,17 @@ export default async function handler(request: Request, context: any) {
     "/blog/warehouse-lighting-hvac-direct-install-nj": "/blog/warehouse-hvac-nj",
     "/blog/old-ac-replacement-nj-rebates": "/blog/central-ac-replacement-nj-cost",
     "/blog/nj-direct-install-program-commercial-guide": "/direct-install",
+    // Duplicated a city/service page's own ranking — see netlify.toml.
+    "/blog/hvac-contractor-newark-nj": "/hvac-newark-nj",
+    "/blog/hvac-contractor-jersey-city-nj": "/hvac-jersey-city-nj",
+    "/blog/hvac-contractor-elizabeth-nj": "/hvac-elizabeth-nj",
+    "/blog/hvac-contractor-clifton-nj": "/hvac-clifton-nj",
+    "/blog/hvac-contractor-woodbridge-nj": "/hvac-woodbridge-nj",
+    "/blog/commercial-hvac-newark-nj": "/commercial",
+    "/blog/commercial-hvac-jersey-city-nj": "/commercial",
+    "/blog/commercial-hvac-paterson-nj": "/commercial",
+    "/blog/emergency-hvac-repair-newark-nj": "/lp/emergency-hvac",
+    "/blog/heating-not-working-newark-nj": "/lp/emergency-hvac",
   };
   const redirectTarget = REDIRECTS[url.pathname];
   if (redirectTarget) {

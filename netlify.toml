@@ -87,6 +87,67 @@
   status = 301
   force = true
 
+# ── 301: blog posts that duplicated a city/service page's own ranking ──
+[[redirects]]
+  from = "/blog/hvac-contractor-newark-nj"
+  to = "/hvac-newark-nj"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/hvac-contractor-jersey-city-nj"
+  to = "/hvac-jersey-city-nj"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/hvac-contractor-elizabeth-nj"
+  to = "/hvac-elizabeth-nj"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/hvac-contractor-clifton-nj"
+  to = "/hvac-clifton-nj"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/hvac-contractor-woodbridge-nj"
+  to = "/hvac-woodbridge-nj"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/commercial-hvac-newark-nj"
+  to = "/commercial"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/commercial-hvac-jersey-city-nj"
+  to = "/commercial"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/commercial-hvac-paterson-nj"
+  to = "/commercial"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/emergency-hvac-repair-newark-nj"
+  to = "/lp/emergency-hvac"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/blog/heating-not-working-newark-nj"
+  to = "/lp/emergency-hvac"
+  status = 301
+  force = true
+
 # ── SPA catch-all (must be last) ──
 [[redirects]]
   from = "/*"
