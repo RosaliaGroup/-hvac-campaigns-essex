@@ -90,6 +90,18 @@ async function main() {
   const shell = fs.readFileSync(shellPath, "utf-8");
   const routes = getRoutesFromSitemap();
 
+  // dist/public/index.html is about to be overwritten with prerendered
+  // homepage content (for exact "/" requests, which Netlify serves as a
+  // direct static-file match). But netlify.toml's and _redirects' SPA
+  // catch-all ("/* -> /index.html status=200") also serves that SAME file
+  // for every route with no matching static file (e.g. /admin, /dashboard,
+  // /team-login) — those need the original EMPTY-root shell, not the
+  // homepage's markup, or a non-prerendered route would render mismatched
+  // content before hydration sorts it out. Save the pre-prerender shell
+  // under a separate name and point the catch-all at that instead (see
+  // netlify.toml / client/public/_redirects).
+  fs.writeFileSync(path.join(distDir, "200.html"), shell, "utf-8");
+
   // Middleware-mode Vite dev server: reuses vite.config.ts (aliases, env,
   // plugins) purely as an SSR module loader — nothing here binds a port.
   const vite: ViteDevServer = await createServer({

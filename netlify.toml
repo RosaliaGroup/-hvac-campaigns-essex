@@ -149,7 +149,13 @@
   force = true
 
 # ── SPA catch-all (must be last) ──
+# Targets 200.html, NOT index.html: scripts/prerender.ts overwrites
+# dist/public/index.html with prerendered homepage content (served directly
+# as a static file for exact "/" requests) and saves the original
+# empty-root shell as 200.html specifically so this catch-all — which
+# serves every route with no matching static file (/admin, /dashboard,
+# /team-login, etc.) — still gets the empty shell, not homepage markup.
 [[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/200.html"
   status = 200
