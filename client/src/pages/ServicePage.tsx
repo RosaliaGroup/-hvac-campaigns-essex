@@ -29,15 +29,15 @@ type ServicePageProps = { service: string; slug: string; description: string };
 export default function ServicePage({ service, slug, description }: ServicePageProps) {
   useSEO({
     title: `${service} Installation NJ | Free Assessment & Rebates | Mechanical Enterprise`,
-    description: `${service} installation in NJ. Free assessment, rebates up to $16,000, federal tax credit up to $2,000. Licensed NJ contractor. Call ${PHONE}.`,
+    description: `${service} installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call ${PHONE}.`,
     ogUrl: `${BASE}/${slug}`,
   });
 
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const faqs = [
-    { q: `How much does ${service.toLowerCase()} installation cost in NJ?`, a: `Costs vary by system size and property. With NJ rebates up to $16,000 and a federal tax credit up to $2,000, many NJ homeowners significantly reduce their out-of-pocket cost. Book a free assessment to get your exact numbers.` },
-    { q: `What rebates are available for ${service.toLowerCase()} installation in NJ?`, a: `NJ homeowners may qualify for state rebates up to $16,000 plus a federal tax credit up to $2,000. Eligibility depends on your equipment and property. We assess your exact eligibility for free.` },
+    { q: `How much does ${service.toLowerCase()} installation cost in NJ?`, a: `Costs vary by system size and property. With NJ rebates up to $16,000, many NJ homeowners significantly reduce their out-of-pocket cost. Book a free assessment to get your exact numbers.` },
+    { q: `What rebates are available for ${service.toLowerCase()} installation in NJ?`, a: `NJ homeowners may qualify for state rebates up to $16,000. Eligibility depends on your equipment and property. We assess your exact eligibility for free.` },
     { q: `How long does ${service.toLowerCase()} installation take?`, a: `Most residential installations take 1-2 days. We handle all permits, inspections, and rebate paperwork so you don't have to.` },
     { q: `Do you handle the rebate paperwork for ${service.toLowerCase()} installation?`, a: `Yes — we handle 100% of the rebate paperwork for you. Assessment, installation, permits, and all rebate applications are included at no extra charge.` },
     { q: `How do I get started with ${service.toLowerCase()} installation?`, a: `Call ${PHONE} or book online. We come to your property, assess your system, and show you every rebate you qualify for — completely free, no obligation.` },
@@ -51,7 +51,7 @@ export default function ServicePage({ service, slug, description }: ServicePageP
         "email": "sales@mechanicalenterprise.com", "url": BASE,
         "areaServed": "New Jersey", "priceRange": "Free Assessment",
         "openingHours": "Mo-Su 00:00-23:59",
-        "description": `${service} installation in NJ. Free assessments, NJ rebates up to $16,000, federal tax credit up to $2,000.`,
+        "description": `${service} installation in NJ. Free assessments, NJ rebates up to $16,000.`,
       }) }} />
       <Navigation />
 
@@ -63,7 +63,7 @@ export default function ServicePage({ service, slug, description }: ServicePageP
               {service} Installation in New Jersey
             </h1>
             <p className="text-lg md:text-xl text-white/80 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Free assessment · NJ rebates up to $16,000 · Federal tax credit up to $2,000 · Licensed NJ contractor
+              Free assessment · NJ rebates up to $16,000 · Licensed NJ contractor
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
@@ -100,7 +100,7 @@ export default function ServicePage({ service, slug, description }: ServicePageP
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto text-center">
             {[
               { big: "Up to $16,000", small: "NJ Rebates Available" },
-              { big: "Up to $2,000", small: "Federal Tax Credit" },
+              { big: "MWBE Certified", small: "PSE&G-Approved Contractor" },
               { big: "Free", small: "Assessment & Paperwork" },
               { big: "Licensed & Insured", small: "NJ Contractor" },
             ].map((s, i) => (
@@ -122,10 +122,6 @@ export default function ServicePage({ service, slug, description }: ServicePageP
             </h2>
             <p className="text-gray-600 leading-relaxed text-lg text-center mb-8">{description}</p>
             <div className="rounded-xl overflow-hidden border-2 border-[#e8813a] mb-4">
-              <div className="flex justify-between items-center p-5 bg-white border-b">
-                <span className="font-medium text-[#0a1628]">Federal Tax Credit (IRA)</span>
-                <span className="font-bold text-lg text-[#e8813a]">Up to $2,000</span>
-              </div>
               <div className="flex justify-between items-center p-5 bg-white">
                 <span className="font-medium text-[#0a1628]">NJ State Rebates</span>
                 <span className="font-bold text-lg text-[#e8813a]">Up to $16,000</span>

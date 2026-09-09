@@ -126,7 +126,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "How much does heating repair cost?", a: "Typical repairs run $150–$700 depending on the part and system. You approve an exact flat-rate price before we begin." },
       { q: "My heat works but some rooms are cold — can you help?", a: "Yes. Uneven heating is usually airflow, zoning, or distribution. We diagnose the cause and fix it rather than just band-aiding symptoms." },
       { q: "Do you handle both gas and electric heating?", a: "We service gas and electric furnaces, gas and oil boilers, and electric/gas heat pumps." },
-      { q: "When should I replace instead of repair?", a: "If the system is old, unsafe, or facing a major repair, replacement may be smarter — and NJ rebates up to $16,000 plus a federal tax credit can offset the cost. We'll give you an honest recommendation." },
+      { q: "When should I replace instead of repair?", a: "If the system is old, unsafe, or facing a major repair, replacement may be smarter — and NJ rebates up to $16,000 can offset the cost. We'll give you an honest recommendation." },
       { q: "Are you licensed and insured?", a: "Yes — fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied workmanship." },
     ],
     related: [
@@ -166,7 +166,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Is a cracked heat exchanger dangerous?", a: "Yes — it can leak carbon monoxide. If we find one we'll show you the evidence and your safe options. We never scare you into a sale." },
       { q: "Can you repair my furnace the same day?", a: "Usually yes. We stock common parts on the truck and offer 24/7 emergency service. Call (862) 423-9396." },
       { q: "Why does my furnace keep shutting off?", a: "Short cycling is often a dirty filter, a failing limit switch, or an oversized system. We pinpoint the exact cause." },
-      { q: "Should I repair or replace my furnace?", a: "If it's 15+ years old or facing a major repair, replacement may pay off — and NJ rebates plus a federal tax credit can offset a new high-efficiency system. We'll advise honestly." },
+      { q: "Should I repair or replace my furnace?", a: "If it's 15+ years old or facing a major repair, replacement may pay off — and NJ rebates up to $16,000 can offset a new high-efficiency system. We'll advise honestly." },
       { q: "Do you offer maintenance to prevent breakdowns?", a: "Yes — a seasonal tune-up prevents most no-heat emergencies and keeps your warranty valid." },
     ],
     related: [
@@ -206,7 +206,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Do you work on both steam and hot-water boilers?", a: "Yes. We service steam and hot-water (hydronic) boilers, gas and oil, including the older systems common in NJ." },
       { q: "Why are some of my radiators cold?", a: "Usually trapped air, a failing circulator, or a balancing issue. We diagnose the exact cause instead of guessing." },
       { q: "Can you come out the same day?", a: "Yes — same-day and 24/7 emergency service. No heat or no hot water in winter is a priority call. Ring (862) 423-9396." },
-      { q: "Is it worth repairing an old boiler?", a: "Often yes, but if it's inefficient or failing we'll show you replacement options — high-efficiency systems may qualify for NJ rebates and a federal tax credit." },
+      { q: "Is it worth repairing an old boiler?", a: "Often yes, but if it's inefficient or failing we'll show you replacement options — high-efficiency systems may qualify for NJ rebates up to $16,000." },
       { q: "Are you licensed and insured?", a: "Fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied repairs." },
     ],
     related: [
@@ -285,7 +285,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Why is my heat pump not heating in cold weather?", a: "Common causes are a stuck reversing valve, a failed defrost board, low refrigerant, or a fault in the backup heat. We diagnose the exact issue rather than guessing." },
       { q: "Why is my outdoor unit covered in ice?", a: "A little frost is normal; a solid block of ice usually means the defrost cycle has failed. We repair the defrost control and sensors." },
       { q: "How much does heat pump repair cost in NJ?", a: "Most repairs run $200–$900 depending on the part. Inverter boards and compressors are higher. You get an exact price upfront." },
-      { q: "Should I repair or replace my heat pump?", a: "If it's newer, repair is usually best. If it's aging or facing a major repair, a new cold-climate heat pump may qualify for NJ rebates up to $16,000 plus a federal tax credit — we'll show you the numbers." },
+      { q: "Should I repair or replace my heat pump?", a: "If it's newer, repair is usually best. If it's aging or facing a major repair, a new cold-climate heat pump may qualify for NJ rebates up to $16,000 — we'll show you the numbers." },
       { q: "Do you service ductless mini-split heat pumps?", a: "Yes — see our dedicated mini-split repair service, and we handle multi-zone systems from every major brand." },
       { q: "Are you licensed and insured?", a: "Fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied repairs." },
     ],
@@ -326,7 +326,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "What do the blinking lights on my mini-split mean?", a: "They're a fault code specific to your brand. We read the code, confirm the cause, and repair it — no guesswork." },
       { q: "One zone works but another doesn't — can you fix that?", a: "Yes. Multi-zone issues are often a communication fault, a failed indoor board, or a refrigerant problem to that head. We isolate and repair the affected zone." },
       { q: "How much does mini-split repair cost in NJ?", a: "Most repairs run $150–$800 depending on the fault. Drain clearing is on the low end; inverter boards are higher. You get an exact price upfront." },
-      { q: "Do you install new mini-splits too?", a: "We do — and new ductless heat-pump systems may qualify for NJ rebates and a federal tax credit. Ask us during your visit." },
+      { q: "Do you install new mini-splits too?", a: "We do — and new ductless heat-pump systems may qualify for NJ rebates up to $16,000. Ask us during your visit." },
       { q: "Are you factory-trained on my brand?", a: "We're trained across Mitsubishi, Daikin, Fujitsu, and all major ductless brands." },
     ],
     related: [

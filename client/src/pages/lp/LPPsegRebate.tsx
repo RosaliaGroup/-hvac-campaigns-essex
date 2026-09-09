@@ -14,7 +14,7 @@ export default function LPPsegRebate() {
   const { toast } = useToast();
   useSEO({
     title: "PSE&G Certified HVAC Contractor NJ — We Handle All Rebate Paperwork | Mechanical Enterprise",
-    description: "Looking for a PSE&G certified contractor? We file your entire rebate application for free. Up to $20,000 in combined rebates. Free 20-minute assessment, zero paperwork on your end.",
+    description: "Looking for a PSE&G certified contractor? We file your entire rebate application for free. Up to $16,000 in NJ rebates. Free 20-minute assessment, zero paperwork on your end.",
     ogUrl: "https://mechanicalenterprise.com/pseg-rebate-contractor-nj",
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
@@ -83,7 +83,7 @@ export default function LPPsegRebate() {
               <div className="space-y-3 mb-6">
                 {[
                   "We file every PSE&G rebate application for you",
-                  "Up to $20,000 in combined rebates",
+                  "Up to $16,000 in NJ rebates",
                   "Free 20-minute assessment — no obligation",
                   "Zero paperwork on your end",
                 ].map((item) => (
@@ -150,17 +150,9 @@ export default function LPPsegRebate() {
             <div className="border-t-4 border-t-[#ff6b35] rounded-lg p-6 shadow-sm bg-white">
               <h3 className="font-bold text-[#1e3a5f] mb-1 text-lg">Residential</h3>
               <div className="space-y-3 mt-4">
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-gray-600">PSE&G Rebate</span>
-                  <span className="font-bold text-[#1e3a5f]">Up to $18,000</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-gray-600">ME Additional Incentive</span>
-                  <span className="font-bold text-[#ff6b35]">$2,000</span>
-                </div>
                 <div className="flex justify-between items-center py-2 bg-[#1e3a5f] text-white rounded-lg px-4">
-                  <span className="font-semibold">Total Combined</span>
-                  <span className="font-bold text-2xl text-[#ff6b35]">$20,000</span>
+                  <span className="font-semibold">NJ Rebates</span>
+                  <span className="font-bold text-2xl text-[#ff6b35]">Up to $16,000</span>
                 </div>
               </div>
             </div>
@@ -268,7 +260,7 @@ export default function LPPsegRebate() {
         <div className="max-w-2xl mx-auto">
           <FileText className="h-12 w-12 text-[#ff6b35] mx-auto mb-4" />
           <h2 className="text-3xl font-bold mb-3">Stop Fighting PSE&G Paperwork</h2>
-          <p className="text-white/80 mb-6">We're a certified NJ contractor who files every rebate application for you. Up to $20,000 in combined savings.</p>
+          <p className="text-white/80 mb-6">We're a certified NJ contractor who files every rebate application for you. Up to $16,000 in NJ rebates.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="tel:+18624239396">
               <Button size="lg" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold px-8">

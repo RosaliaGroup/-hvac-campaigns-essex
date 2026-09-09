@@ -38,7 +38,7 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
     { q: `What are the best HVAC systems for large homes in ${area}?`, a: `For larger ${area} homes, we typically recommend multi-zone heat pump systems from Carrier, Trane, or Lennox. These provide independent temperature control for each room and integrate with smart home systems. We assess your property and design a custom solution during your free consultation.` },
     { q: `Can I get smart home integration with my new HVAC system?`, a: `Absolutely. All of our premium systems — Carrier Infinity, Trane XV, and Lennox Signature — include smart home integration. Control your system remotely, set zone-by-zone temperatures, and monitor efficiency from your phone.` },
     { q: `How long does installation take for a whole-home system?`, a: `Whole-home premium installations in ${area} typically take 2-4 days depending on the number of zones and complexity. We coordinate everything including permits and inspections to minimize disruption.` },
-    { q: `Do premium systems qualify for NJ rebates?`, a: `Yes — even premium Carrier, Trane, and Lennox systems qualify for full NJ rebates up to $16,000 plus a $2,000 federal tax credit. Most ${area} homeowners receive the maximum rebate amounts.` },
+    { q: `Do premium systems qualify for NJ rebates?`, a: `Yes — even premium Carrier, Trane, and Lennox systems qualify for full NJ rebates up to $16,000. Most ${area} homeowners receive the maximum rebate amounts.` },
     { q: `What warranty do premium HVAC systems come with?`, a: `Premium systems come with manufacturer warranties of 10-12 years on parts and compressors. We also offer extended service agreements for complete peace of mind. Our installation workmanship is guaranteed.` },
   ];
 
@@ -110,7 +110,7 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto text-center">
             {[
               { big: "Up to $16,000", small: "NJ Rebates Available" },
-              { big: "Up to $2,000", small: "Federal Tax Credit" },
+              { big: "MWBE Certified", small: "PSE&G-Approved Contractor" },
               { big: "Free", small: "Consultation & Design" },
               { big: "Premium Brands", small: "Carrier · Trane · Lennox" },
             ].map((s, i) => (
@@ -164,13 +164,9 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
       <section className="py-16 bg-white">
         <div className="container">
           <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-[#0a1628] mb-3">Rebates & Tax Credits</h2>
-            <p className="text-gray-600 mb-8">Even premium systems qualify for full NJ rebates. Most {area} homeowners receive $16,000+ in combined rebates and tax credits.</p>
+            <h2 className="text-3xl font-bold text-[#0a1628] mb-3">Rebates</h2>
+            <p className="text-gray-600 mb-8">Even premium systems qualify for full NJ rebates. Most {area} homeowners receive up to $16,000 in combined rebates.</p>
             <div className="rounded-xl overflow-hidden border-2 border-[#e8813a] mb-4">
-              <div className="flex justify-between items-center p-5 bg-white border-b">
-                <span className="font-medium text-[#0a1628]">Federal Tax Credit (IRA)</span>
-                <span className="font-bold text-lg text-[#e8813a]">Up to $2,000</span>
-              </div>
               <div className="flex justify-between items-center p-5 bg-white">
                 <span className="font-medium text-[#0a1628]">NJ State Rebates</span>
                 <span className="font-bold text-lg text-[#e8813a]">Up to $16,000</span>

@@ -15,7 +15,7 @@ export default function LPHeatPumpRebates() {
   const { toast } = useToast();
   useSEO({
     title: "Get Up to $16,000 in Heat Pump Incentives | Mechanical Enterprise NJ",
-    description: "Stack PSE&G, NJ Clean Energy, and Federal Tax Credit incentives on your new heat pump. Free estimate — we handle all rebate paperwork. Serving Essex, Morris, Union, Bergen, Passaic, Hudson Counties.",
+    description: "Stack PSE&G and NJ Clean Energy incentives on your new heat pump — up to $16,000 in NJ rebates. Free estimate — we handle all rebate paperwork. Serving Essex, Morris, Union, Bergen, Passaic, Hudson Counties.",
     ogUrl: "https://mechanicalenterprise.com/lp/heat-pump-rebates",
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
@@ -86,13 +86,12 @@ export default function LPHeatPumpRebates() {
                 Get Up to <span className="text-[#ff6b35]">$16,000</span> in Heat Pump Incentives
               </h1>
               <p className="text-lg text-white/90 mb-6">
-                Stack PSE&G, NJ Clean Energy, and Federal Tax Credit incentives. Mechanical Enterprise handles all paperwork — you just enjoy the savings.
+                Stack PSE&G and NJ Clean Energy incentives. Mechanical Enterprise handles all paperwork — you just enjoy the savings.
               </p>
               <div className="space-y-3 mb-6">
                 {[
                   "PSE&G Rebate: Up to $6,000",
                   "NJ Clean Energy Program: Up to $3,000",
-                  "Federal Tax Credit: 30% of install cost",
                   "Free in-home estimate — no obligation",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-2 text-sm">
@@ -157,7 +156,7 @@ export default function LPHeatPumpRebates() {
           <div className="grid md:grid-cols-4 gap-6">
             {[
               { step: "1", title: "Free Estimate", desc: "We assess your home and identify all eligible incentives" },
-              { step: "2", title: "We Handle Paperwork", desc: "Our team files all PSE&G, NJ Clean Energy, and federal forms" },
+              { step: "2", title: "We Handle Paperwork", desc: "Our team files all PSE&G and NJ Clean Energy forms" },
               { step: "3", title: "Expert Installation", desc: "Certified technicians install your new heat pump system" },
               { step: "4", title: "You Get Paid", desc: "Incentive checks arrive — up to $16,000 back in your pocket" },
             ].map((item) => (
@@ -179,7 +178,7 @@ export default function LPHeatPumpRebates() {
             {[
               { name: "PSE&G Rebate", amount: "Up to $6,000", desc: "For PSE&G customers replacing old systems with qualifying heat pumps", color: "border-[#ff6b35]" },
               { name: "NJ Clean Energy", amount: "Up to $3,000", desc: "State program for high-efficiency heat pump installations", color: "border-[#1e3a5f]" },
-              { name: "Federal Tax Credit", amount: "30% of Cost", desc: "IRS Section 25C credit — up to $2,000 per year on your tax return", color: "border-green-500" },
+              { name: "0% Financing (OBR)", amount: "$0 Down", desc: "On-Bill Repayment — pay for the rest through your utility bill at zero interest", color: "border-green-500" },
             ].map((item) => (
               <div key={item.name} className={`border-t-4 ${item.color} rounded-lg p-5 shadow-sm`}>
                 <h3 className="font-bold text-[#1e3a5f] mb-1">{item.name}</h3>

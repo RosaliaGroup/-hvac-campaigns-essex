@@ -29,7 +29,6 @@ interface EstimateResult {
   range: string;
   programs: string[];
   note?: string;
-  federalCredit?: string;
 }
 
 function getEstimate(
@@ -68,40 +67,32 @@ function getEstimate(
         range: "$15,000–$25,000+",
         programs: [
           "Heat pump rebate up to $7,000",
-          "Inflation Reduction Act 25C tax credit up to $2,000",
           "NJ Clean Energy electrification rebates",
           "Possible utility-specific bonuses",
         ],
-        federalCredit: "+ $2,000 federal tax credit",
       };
     case "middle":
       return {
         range: "$10,000–$18,000",
         programs: [
           "Heat pump rebate up to $7,000",
-          "Inflation Reduction Act 25C tax credit up to $2,000",
           "NJ Clean Energy electrification rebates",
           "Possible utility-specific bonuses",
         ],
-        federalCredit: "+ $2,000 federal tax credit",
       };
     case "standard":
       return {
         range: "$5,000–$12,000",
         programs: [
           "Heat pump rebate up to $7,000",
-          "Federal 25C tax credit up to $2,000",
           "NJ Clean Energy base rebates",
         ],
-        note: "Income tier doesn't disqualify you — full IRA tax credits still apply",
-        federalCredit: "+ $2,000 federal tax credit",
       };
     default: // "prefer_not_to_say"
       return {
         range: "$5,000–$25,000",
         programs: [
           "NJ Clean Energy rebates",
-          "Federal tax credits",
           "Utility-specific incentives",
           "Income-based enhanced programs (if eligible)",
         ],
@@ -425,11 +416,6 @@ export default function CalculatorRegistrationGate({ onRegistered }: Props) {
                   {estimate?.range}
                 </p>
                 <p className="text-lg text-green-800 font-medium">in combined rebates and incentives</p>
-                {estimate?.federalCredit && (
-                  <p className="text-base text-blue-700 font-semibold mt-2 bg-blue-50 inline-block px-3 py-1 rounded-full">
-                    {estimate.federalCredit}
-                  </p>
-                )}
               </div>
               <p className="text-sm text-slate-600 text-center mt-3">
                 Based on average rebates in <strong>{zip}</strong> for{" "}

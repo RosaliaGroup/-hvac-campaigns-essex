@@ -15,7 +15,7 @@ export default function LPFBResidential() {
   const { toast } = useToast();
   useSEO({
     title: "NJ Homeowners: Get Up to $16,000 Back on Heat Pumps | Mechanical Enterprise",
-    description: "Stack PSE&G, NJ Clean Energy, and federal incentives. Most NJ homeowners pay ~$1,000 after all rebates. Free estimate — we handle all paperwork.",
+    description: "Stack PSE&G and NJ Clean Energy incentives — up to $16,000 in NJ rebates. Most NJ homeowners pay ~$1,000 after all rebates. Free estimate — we handle all paperwork.",
     ogUrl: "https://mechanicalenterprise.com/lp/fb-residential",
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
@@ -86,7 +86,7 @@ export default function LPFBResidential() {
             NJ Homeowners Are Getting <span className="text-[#ff6b35]">$16,000 Back</span> on New Heat Pumps
           </h1>
           <p className="text-xl text-gray-600 mb-6 max-w-2xl mx-auto">
-            Most homeowners don't know they can stack PSE&G, NJ Clean Energy, and federal incentives. We handle all the paperwork — you just enjoy the savings.
+            Most homeowners don't know they can stack PSE&G and NJ Clean Energy incentives. We handle all the paperwork — you just enjoy the savings.
           </p>
 
           {/* Social Proof Bar */}
@@ -142,7 +142,7 @@ export default function LPFBResidential() {
             {[
               { label: "Avg. Install Cost", value: "$12,000", sub: "before incentives", icon: DollarSign },
               { label: "PSE&G Rebate", value: "-$6,000", sub: "for eligible customers", icon: CheckCircle },
-              { label: "NJ + Federal", value: "-$5,000+", sub: "stacked incentives", icon: Leaf },
+              { label: "NJ Clean Energy", value: "-$5,000+", sub: "stacked incentives", icon: Leaf },
               { label: "Your Net Cost", value: "~$1,000", sub: "after all incentives", icon: Star },
             ].map((item) => (
               <div key={item.label} className="bg-white/10 rounded-xl p-4">

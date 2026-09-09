@@ -115,7 +115,7 @@ const VARIANTS: Record<InlineLeadVariant, VariantConfig> = {
     buttonClass: "w-full bg-green-600 hover:bg-green-700 text-white text-base py-6",
     buttonLabel: "Check My Rebate Amount",
     defaultTitle: "Check Your NJ Rebate",
-    defaultSubtitle: "See exactly what you qualify for — up to $16,000 in NJ rebates + $2,000 federal.",
+    defaultSubtitle: "See exactly what you qualify for — up to $16,000 in NJ rebates.",
     successMessage: "We'll email your rebate breakdown shortly",
     icon: <DollarSign className="h-5 w-5" />,
   },

@@ -13,8 +13,8 @@ import { useSEO } from "@/hooks/useSEO";
 export default function LPRebateGuide() {
   const { toast } = useToast();
   useSEO({
-    title: "Free 2026 NJ HVAC Incentive Guide — $16,000+ Available | Mechanical Enterprise",
-    description: "Download the complete 2026 NJ HVAC incentive guide. Learn how to stack PSE&G, NJ Clean Energy, and federal tax credits for maximum savings on heat pump installations.",
+    title: "Free 2026 NJ HVAC Incentive Guide — Up to $16,000 Available | Mechanical Enterprise",
+    description: "Download the complete 2026 NJ HVAC incentive guide. Learn how to stack PSE&G and NJ Clean Energy programs for maximum savings on heat pump installations.",
     ogUrl: "https://mechanicalenterprise.com/lp/rebate-guide",
   });
   const [form, setForm] = useState({ firstName: "", email: "", phone: "" });
@@ -56,7 +56,6 @@ export default function LPRebateGuide() {
   const guideContents = [
     "Complete list of all 2026 NJ HVAC incentive programs",
     "Step-by-step application guide for PSE&G rebates",
-    "How to claim the 30% Federal Tax Credit",
     "NJ Clean Energy Program eligibility checklist",
     "Commercial 179D deduction explained",
     "How to stack multiple programs for maximum savings",
@@ -67,7 +66,7 @@ export default function LPRebateGuide() {
   return (
     <div className="min-h-screen bg-white font-sans">
       <div className="bg-[#1e3a5f] text-white py-2 px-4 text-center text-sm">
-        📥 Free Download: The Complete 2026 NJ HVAC Incentive Guide — <strong className="text-[#ff6b35]">$16,000+ Available</strong>
+        📥 Free Download: The Complete 2026 NJ HVAC Incentive Guide — <strong className="text-[#ff6b35]">Up to $16,000 Available</strong>
       </div>
 
       {/* Hero */}
@@ -81,7 +80,7 @@ export default function LPRebateGuide() {
                 The Complete 2026 NJ HVAC Incentive Guide
               </h1>
               <p className="text-lg text-gray-600 mb-6">
-                Everything NJ homeowners and business owners need to know about stacking PSE&G, NJ Clean Energy, and federal incentives — written by the experts at Mechanical Enterprise.
+                Everything NJ homeowners and business owners need to know about stacking PSE&G, NJ Clean Energy, and other available incentives — written by the experts at Mechanical Enterprise.
               </p>
 
               {/* Guide Contents */}
@@ -166,7 +165,6 @@ export default function LPRebateGuide() {
               { program: "PSE&G Residential Rebate", amount: "Up to $6,000", type: "Residential" },
               { program: "JCP&L Heat Pump Rebate", amount: "Up to $4,000", type: "Residential" },
               { program: "NJ Clean Energy Program", amount: "Up to $3,000", type: "Residential & Commercial" },
-              { program: "Federal Tax Credit (25C)", amount: "30% of cost", type: "Residential" },
               { program: "PSE&G Commercial Rebate", amount: "Up to $200/ton", type: "Commercial" },
               { program: "Federal 179D Deduction", amount: "Up to $5/sq ft", type: "Commercial" },
               { program: "NJ Clean Energy Business", amount: "Up to 30% of cost", type: "Commercial" },

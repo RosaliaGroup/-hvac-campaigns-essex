@@ -19,7 +19,6 @@ type CompetitorPageProps = {
 const COMPARISON_ROWS = [
   { feature: "Free Assessment", us: "Always free", them: "Fees apply", usGood: true, themGood: false },
   { feature: "NJ Rebate Assistance", us: "Up to $16,000", them: "Limited", usGood: true, themGood: null },
-  { feature: "Federal Tax Credit Help", us: "Up to $2,000", them: "Varies", usGood: true, themGood: null },
   { feature: "Rebate Paperwork", us: "We handle it all", them: "You handle it", usGood: true, themGood: false },
   { feature: "Local Newark Based", us: "Newark, NJ", them: "Regional chain", usGood: true, themGood: false },
   { feature: "WMBE/SBE Certified", us: "Certified", them: "No", usGood: true, themGood: false },
@@ -37,7 +36,7 @@ const WHY_CARDS = [
 const COMPETITOR_CONTENT: Record<string, string[]> = {
   "aj-perri": [
     "A.J. Perri is a well-known regional HVAC and plumbing company that has served New Jersey homeowners for decades. As a large operation with multiple service vans across the state, they offer broad coverage but operate more like a general service company than a specialized installation firm. If you're considering A.J. Perri for a new heat pump or HVAC system, it's worth understanding how the experience differs from working with a local, installation-focused contractor like Mechanical Enterprise.",
-    "The biggest difference between Mechanical Enterprise and A.J. Perri is our approach to NJ rebates and incentives. Mechanical Enterprise was built around the NJ Clean Energy rebate programs — it's the core of what we do. We assess every property for maximum rebate qualification, select equipment specifically to hit the highest rebate tiers, and file all PSE&G and NJ Clean Energy paperwork on your behalf at no extra charge. Many of our customers qualify for $8,000 to $16,000 in NJ rebates plus the $2,000 federal tax credit. A.J. Perri offers HVAC installation among many other services, but rebate optimization is not their primary focus — homeowners often end up handling their own rebate paperwork or not qualifying for the maximum amounts.",
+    "The biggest difference between Mechanical Enterprise and A.J. Perri is our approach to NJ rebates and incentives. Mechanical Enterprise was built around the NJ Clean Energy rebate programs — it's the core of what we do. We assess every property for maximum rebate qualification, select equipment specifically to hit the highest rebate tiers, and file all PSE&G and NJ Clean Energy paperwork on your behalf at no extra charge. Many of our customers qualify for up to $16,000 in NJ rebates. A.J. Perri offers HVAC installation among many other services, but rebate optimization is not their primary focus — homeowners often end up handling their own rebate paperwork or not qualifying for the maximum amounts.",
     "Pricing transparency is another key differentiator. Mechanical Enterprise provides detailed written quotes showing equipment costs, labor, permits, and exact rebate amounts you can expect — so you know your true out-of-pocket cost before committing. With NJ's On-Bill Repayment (OBR) program, many of our customers pay $0 upfront and repay through their utility bill at zero interest. A.J. Perri uses a flat-rate pricing model that can make it harder to understand exactly what you're paying for. Their diagnostic fees, which typically range from $80 to $120, are charged even for assessment visits — Mechanical Enterprise assessments are always 100% free.",
     "Mechanical Enterprise is a WMBE (Women/Minority Business Enterprise) and SBE (Small Business Enterprise) certified contractor, meaning we meet rigorous state certification standards. We are locally based in Newark, NJ and serve 15 NJ counties. Our team focuses exclusively on HVAC installation and system upgrades — we don't do general plumbing, drain cleaning, or appliance repair. This specialization means every installation gets our full engineering attention. When you call Mechanical Enterprise, you talk to the people who will actually install your system — not a call center.",
   ],
@@ -69,7 +68,7 @@ export default function CompetitorPage({ competitor, slug }: CompetitorPageProps
     },
     {
       q: `Does Mechanical Enterprise offer better rebates than ${competitor}?`,
-      a: `We specialize in NJ rebate programs and handle all paperwork for you. Many homeowners qualify for up to $16,000 in NJ rebates plus a $2,000 federal tax credit.`,
+      a: `We specialize in NJ rebate programs and handle all paperwork for you. Many homeowners qualify for up to $16,000 in NJ rebates.`,
     },
     {
       q: `How do I get started with Mechanical Enterprise?`,
@@ -210,13 +209,9 @@ export default function CompetitorPage({ competitor, slug }: CompetitorPageProps
         <div className="container">
           <div className="max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold text-center text-[#0a1628] mb-8">
-              Available Rebates & Credits
+              Available Rebates
             </h2>
             <div className="rounded-xl overflow-hidden border-2 border-[#e8813a]">
-              <div className="flex justify-between items-center p-5 bg-gray-50 border-b">
-                <span className="font-medium text-[#0a1628]">Federal Tax Credit (IRA)</span>
-                <span className="font-bold text-lg text-[#e8813a]">Up to $2,000</span>
-              </div>
               <div className="flex justify-between items-center p-5">
                 <span className="font-medium text-[#0a1628]">NJ State Rebates</span>
                 <span className="font-bold text-lg text-[#e8813a]">Up to $16,000</span>

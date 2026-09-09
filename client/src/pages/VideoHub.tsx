@@ -96,7 +96,7 @@ const VIDEOS: VideoTopic[] = [
     interest: "rebates",
     title: "How to Get Up to $16,000 Back on a New Heat Pump in NJ",
     description:
-      "New Jersey homeowners can stack federal tax credits, utility rebates, and On-Bill Repayment financing to get a brand-new heat pump with little to nothing out of pocket. We walk you through every dollar available.",
+      "New Jersey homeowners can stack NJ Clean Energy rebates and On-Bill Repayment financing to get a brand-new heat pump with little to nothing out of pocket. We walk you through every dollar available.",
     duration: "1:30",
     youtubeId: null, // Replace with real YouTube ID when uploaded — preview video available below
     thumbnail:
@@ -107,7 +107,6 @@ const VIDEOS: VideoTopic[] = [
     ctaHref: "/rebate-calculator",
     keyPoints: [
       "Up to $7,500 from NJ Whole Home Program",
-      "30% Federal Tax Credit (up to $2,000)",
       "Additional utility rebates on top",
       "Up to $16,000 total for LMI households",
     ],

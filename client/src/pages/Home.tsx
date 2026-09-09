@@ -19,7 +19,7 @@ export default function Home() {
 
   useSEO({
     title: "HVAC Contractor Newark NJ | Heat Pumps & AC Repair | Mechanical Enterprise",
-    description: "NJ's trusted HVAC experts. Free assessments, combined rebates up to $20,000, $100 flat service calls. Serving 15 NJ counties. Call (862) 423-9396.",
+    description: "NJ's trusted HVAC experts. Free assessments, NJ rebates up to $16,000, $100 flat service calls. Serving 15 NJ counties. Call (862) 423-9396.",
     ogUrl: "https://mechanicalenterprise.com",
   });
 
@@ -36,7 +36,7 @@ export default function Home() {
         "areaServed": "New Jersey",
         "priceRange": "$100-$550",
         "openingHours": "Mo-Su 00:00-23:59",
-        "description": "Expert HVAC solutions in NJ. Heat pumps, VRV/VRF systems, free assessments with combined rebates up to $20,000."
+        "description": "Expert HVAC solutions in NJ. Heat pumps, VRV/VRF systems, free assessments with NJ rebates up to $16,000."
       }) }} />
       <ExitIntentPopup />
       <Navigation />
@@ -56,10 +56,10 @@ export default function Home() {
           <div className="max-w-3xl">
             <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">WMBE/SBE Certified</Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-              Up to $20,000 in Rebates for NJ Homeowners
+              Up to $16,000 in NJ Rebates for Homeowners
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-              PSE&G covers up to $18,000. Mechanical Enterprise adds up to $2,000 for qualifying clients. Free assessment. No obligation.
+              PSE&G and NJ Clean Energy rebates cover up to $16,000. Free assessment. No obligation.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link href="/contact">
@@ -280,7 +280,7 @@ export default function Home() {
                   <li>• Single-family homes</li>
                   <li>• Multi-family properties</li>
                   <li>• Heat pump installations</li>
-                  <li>• Up to $20,000 in combined rebates</li>
+                  <li>• Up to $16,000 in NJ rebates</li>
                 </ul>
                 <Link href="/residential">
                   <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90">
@@ -289,7 +289,7 @@ export default function Home() {
                 </Link>
                 <a href="https://mechanicalenterprise.com/rebate-calculator" target="_blank" rel="noopener noreferrer">
                   <Button variant="outline" className="w-full border-[#ff6b35] text-[#ff6b35] hover:bg-[#ff6b35]/10">
-                    🏠 Rebate Calculator — Up to $20,000
+                    🏠 Rebate Calculator — Up to $16,000
                   </Button>
                 </a>
               </CardContent>

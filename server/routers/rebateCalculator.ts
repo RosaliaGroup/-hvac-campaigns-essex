@@ -61,7 +61,12 @@ export async function gateRebateSms(
  * High-Efficiency Heat Pump (HSPF2 ≥ 8.1, SEER2 ≥ 16): up to $7,000 per unit
  * Standard Heat Pump (HSPF2 ≥ 7.5, SEER2 ≥ 14.3): up to $3,000 per unit
  * Additional rebates for whole-home electrification: up to $9,000
- * Federal Tax Credit (25C): 30% of cost, up to $2,000/year for heat pumps
+ *
+ * Federal Tax Credit (25C) expired Dec 31, 2025 — no longer added to new
+ * estimates (see federalHighEfficiency/federalStandard below). The
+ * federalTaxCredit field is kept at 0 rather than removed so this stays a
+ * forward-only change: existing stored rebateCalculations rows and the
+ * federalTaxCreditCents DB column are untouched.
  */
 function calculateRebates(input: {
   squareFootage: number;
@@ -100,9 +105,10 @@ function calculateRebates(input: {
   const psegHighEfficiency = Math.min(psegHighEfficiencyPerUnit * unitsNeeded + fossilFuelBonus, 16000);
   const psegStandard = Math.min(psegStandardPerUnit * unitsNeeded + fossilFuelBonus, 9000);
 
-  // Federal Tax Credit (IRA Section 25C): 30% up to $2,000 for heat pumps
-  const federalHighEfficiency = Math.min(highEfficiencyEquipment * 0.30, 2000);
-  const federalStandard = Math.min(standardEquipment * 0.30, 2000);
+  // Federal Tax Credit (IRA Section 25C) expired Dec 31, 2025 — no longer
+  // offered on new estimates.
+  const federalHighEfficiency = 0;
+  const federalStandard = 0;
 
   // Annual energy savings estimate
   const annualSavingsHighEfficiency = Math.round(squareFootage * 0.65); // ~$0.65/sqft/year

@@ -40,7 +40,7 @@ const PHONE_COMMERCIAL_TEL = PHONE_TEL;
 const WHY_US_RESIDENTIAL = [
   { icon: "⚡", title: "Fast, Local Response", desc: "Same-day and 24/7 emergency service across New Jersey. Based in Newark, serving all of NJ." },
   { icon: "🧰", title: "All Makes & Models", desc: "Factory-trained on every major brand. Honest diagnosis and an upfront price before we start." },
-  { icon: "💰", title: "Repair or Upgrade — We Maximize Rebates", desc: "If replacement makes sense, we unlock every NJ rebate and federal tax credit you qualify for." },
+  { icon: "💰", title: "Repair or Upgrade — We Maximize Rebates", desc: "If replacement makes sense, we unlock every NJ rebate you qualify for." },
   { icon: "🛡️", title: "Licensed & Insured", desc: "Fully licensed, bonded, and insured NJ contractor. WMBE/SBE certified. Warrantied workmanship." },
 ];
 
@@ -226,7 +226,7 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
               <p className="text-white/85 leading-relaxed mb-4">
                 {isCommercial
                   ? "If your repair leads to an upgrade, PSE&G Direct Install can cover up to 80% of qualifying commercial HVAC costs. We handle the paperwork."
-                  : "When replacement is the smart call, NJ rebates up to $16,000 plus a federal tax credit up to $2,000 can dramatically cut your cost. We handle every application."}
+                  : "When replacement is the smart call, NJ rebates up to $16,000 can dramatically cut your cost. We handle every application."}
               </p>
               <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
                 <Button className="bg-white text-[#146130] hover:bg-white/90">See What You Qualify For</Button>

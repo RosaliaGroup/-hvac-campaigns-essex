@@ -30,7 +30,7 @@ const PAGE_META: Record<string, PageMeta> = {
   "/": { title: DEFAULT_TITLE, description: DEFAULT_DESC },
   "/residential": {
     title: "Residential HVAC Installation NJ | Heat Pump & AC | Up to $16K Rebates",
-    description: "Expert residential HVAC installation in NJ. Heat pumps, central AC, ductless mini-splits & furnaces. Up to $16K in NJ rebates + $2K federal tax credit. MWBE certified. Free in-home assessment.",
+    description: "Expert residential HVAC installation in NJ. Heat pumps, central AC, ductless mini-splits & furnaces. Up to $16K in NJ rebates. MWBE certified. Free in-home assessment.",
   },
   "/commercial": {
     title: "Commercial HVAC Contractor NJ | Direct Install | Up to 80% Covered",
@@ -70,7 +70,7 @@ const PAGE_META: Record<string, PageMeta> = {
   },
   "/rebate-guide": {
     title: "NJ HVAC Rebate Guide 2026 | Mechanical Enterprise",
-    description: "Complete guide to every NJ HVAC rebate in 2026. PSE&G, federal, state programs. How to stack rebates for maximum savings.",
+    description: "Complete guide to every NJ HVAC rebate in 2026. PSE&G and state programs, up to $16K in combined savings.",
   },
   "/maintenance": {
     title: "HVAC Maintenance Plans NJ | Mechanical Enterprise",
@@ -120,7 +120,7 @@ function getCityMeta(slug: string): PageMeta & { canonical: string } {
   const city = cityPart.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   return {
     title: `${city} NJ HVAC Contractor | AC & Heat Pump Installation | Up to $16K Rebates`,
-    description: `Top-rated HVAC contractor in ${city}, NJ. Heat pump, central AC & furnace installation and repair. Up to $16K in NJ rebates + $2K federal tax credit. Free assessment, no obligation. Call ${PHONE}.`,
+    description: `Top-rated HVAC contractor in ${city}, NJ. Heat pump, central AC & furnace installation and repair. Up to $16K in NJ rebates. Free assessment, no obligation. Call ${PHONE}.`,
     canonical: `${BASE}/${slug}`,
   };
 }
@@ -139,8 +139,8 @@ function getDirectInstallMeta(slug: string): PageMeta & { canonical: string } {
 function getLandingPageMeta(slug: string): PageMeta & { canonical: string } {
   const LP_META: Record<string, PageMeta> = {
     "heat-pump-rebates": {
-      title: "NJ Heat Pump Rebates 2026 | Up to $22,000 Back | Mechanical Enterprise",
-      description: "Get up to $22,000 in NJ heat pump rebates. PSE&G + federal + state programs stack. Free assessment, we handle all paperwork.",
+      title: "NJ Heat Pump Rebates 2026 | Up to $16,000 Back | Mechanical Enterprise",
+      description: "Get up to $16,000 in NJ heat pump rebates. PSE&G and state programs. Free assessment, we handle all paperwork.",
     },
     "emergency-hvac": {
       title: "Emergency HVAC Repair NJ | Same-Day Service | Mechanical Enterprise",
@@ -156,7 +156,7 @@ function getLandingPageMeta(slug: string): PageMeta & { canonical: string } {
     },
     "rebate-guide": {
       title: "NJ HVAC Rebate Guide 2026 | Every Program Explained",
-      description: "Complete guide to NJ HVAC rebates in 2026. PSE&G, federal, HEEHRA, Clean Heat. How to stack for maximum savings.",
+      description: "Complete guide to NJ HVAC rebates in 2026. PSE&G, HEEHRA, Clean Heat. Up to $16,000 in combined residential savings.",
     },
     "referral-partner": {
       title: "HVAC Referral Partner Program NJ | Mechanical Enterprise",
@@ -235,7 +235,7 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function injectMeta(html: string, urlPath: string): string {
+export function injectMeta(html: string, urlPath: string): string {
   const meta = getMetaForPath(urlPath);
   const t = escHtml(meta.title);
   const d = escHtml(meta.description);
