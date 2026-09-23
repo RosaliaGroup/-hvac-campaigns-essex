@@ -58,6 +58,34 @@ describe("getRouteStatus", () => {
   });
 });
 
+// PR-1: every URL a Vapi tool, SMS template, or transactional email sends
+// directly to a real customer today. Traced repo-wide (grep for
+// "mechanicalenterprise.com/" across server/, netlify/functions/, shared/)
+// during Step-0/Step-2 review. If any of these ever became unregistered —
+// a typo in a future edit, a route rename, a sitemap-exclusion mistake —
+// the customer would land on a 404 instead of the real page, silently
+// breaking a live lead-generation or customer-communication channel. This
+// test is the guard against that regression; it is deliberately independent
+// of the "known routes" tests above so a change to those can't accidentally
+// stop covering these specific, high-stakes URLs.
+describe("getRouteStatus — every URL sent directly to customers by Vapi/SMS/email stays registered", () => {
+  it("never 404s a customer-facing send-target URL", () => {
+    const customerFacingSendTargets: Record<string, string> = {
+      "/referral": "Vapi sendReferralLink SMS (server/services/referralSms.ts CUSTOMER_REFERRAL_LINK) + netlify/functions/sendReferralEmails.js referral-program mention",
+      "/qualify": "Vapi sendForm tool (server/services/vapiSendForm.ts) + netlify/functions/sendReferralEmails.js BOOKING_URL",
+      "/assessment": "same Qualify.tsx component as /qualify; LiveChatWidget.tsx ASSESSMENT_URL",
+      "/rebate-calculator": "rebate calculator client confirmation email (server/routers/rebateCalculator.ts, '#assessment' anchor — hash is not part of route matching)",
+      "/pseg-rebate-contractor-nj": "PSE&G rebate checklist customer email (server/routers.ts)",
+      "/promos": "kept registered and indexable per PR-1 item C; verified live in Step 2",
+    };
+    for (const [path, sentBy] of Object.entries(customerFacingSendTargets)) {
+      const status = getRouteStatus(path);
+      expect(status.isRegistered, `${path} (sent by: ${sentBy}) must resolve, not 404`).toBe(true);
+      expect(status.isInternalOrDynamic, `${path} is customer-facing marketing content, not CRM/internal`).toBe(false);
+    }
+  });
+});
+
 describe("injectMeta — unregistered slug no longer gets fabricated city metadata", () => {
   it("getMetaForPath is only reachable for registered routes in the real handler (see getRouteStatus tests above); injectMeta itself is still exercised for known routes", () => {
     const html = `<html><head><title>x</title><meta name="description" content="x" /></head><body></body></html>`;
