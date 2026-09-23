@@ -33,6 +33,7 @@ Full diff and exact line numbers: `git diff origin/main -- <path>` on this branc
 - **This is also the fix for the "slug-based title injection for unregistered `hvac-*-nj` slugs" bug**: `getMetaForPath()`'s city-page pattern match is unchanged, but it's now gated behind the registered-route check, so a fake slug like `/hvac-paterson-nj` never reaches it — verified by `inject-meta.test.ts`.
 - `client/public/404.html`: added as a standalone static fallback (noindex, no app bundle) — not the primary mechanism (see above) but satisfies a direct static-file hit and matches what was asked for literally.
 - Client-facing customer routes (calculator, forms, `/assessment`, `/qualify`, `/promos`) — confirmed unaffected; they're all in `routes-manifest.json`, verified by the new test suite and by re-running the full existing test suite clean.
+- `scripts/prerender.ts`: **caught during final review, fixed.** It previously read its route list from `sitemap.xml` — fine before item C existed, but once the sitemap was trimmed (item C: `/courses`, `/portal`, `/estimating`, `/presentation-2026`, three `/lp/` pages excluded) it would have silently *stopped prerendering real content for those pages*, not just stopped indexing them. Real visitors, crawlers that don't execute JS, and link-preview bots (Slack/iMessage/Facebook unfurl) hitting `/courses` etc. would have seen the empty SPA shell instead of the actual page — a functional regression, not just an SEO one. Switched to read `routes-manifest.json` instead (the same file the 404 check uses) so every real route still gets a prerendered static file regardless of sitemap inclusion. Verified: `npx tsx scripts/prerender.ts` against the existing `dist/public` build → `305/305 routes rendered`, confirmed `dist/public/courses.html`, `portal.html`, `estimating.html` all exist with real content (previously would have been 296/305, with those three falling back to the empty shell).
 
 ## B — CRM isolation
 
@@ -83,7 +84,7 @@ Full diff and exact line numbers: `git diff origin/main -- <path>` on this branc
 - Heading → "Example Project Economics"
 - Subtitle → drops "Real projects... actual... received" framing
 - Disclaimer → replaced with the exact sentence specified: "Illustrative scenarios based on typical NJ Direct Install / commercial HVAC project economics. Actual incentives, project costs, financing and savings vary by building, utility program and equipment." "All case studies represent actual projects completed in New Jersey" is gone.
-- All dollar figures/percentages: **unchanged**, exactly as instructed (copy-safety fix, not a data change).
+- The "Rebate Received:" field label → **"Illustrative Rebate:"**. This goes one step beyond the literal spec text: the spec only asked about relabeling if the figure combined multiple programs (it doesn't — confirmed, no relabel needed on that basis), but leaving the actual dollar figure's label as "Rebate Received" while the heading/disclaimer above it now say "illustrative" was an internal contradiction on the same card. Relabeling the field itself closes that gap. All dollar figures/percentages: **unchanged**, exactly as instructed (copy-safety fix, not a data change).
 
 ## J — `/promos`
 
