@@ -133,6 +133,13 @@ export default function Partnerships() {
         </div>
       </section>
 
+      {/*
+        TODO(claim-safety): earnings testimonials below (Maria R. $8,500, James T. $12,300,
+        David K. $6,200) and the "Start earning immediately" claim further down this page
+        are unsubstantiated — no supporting records found in the repo as of PR-1 (2026-09).
+        Do not treat as verified until the business owner confirms. See docs/pr1/ for the
+        source audit.
+      */}
       {/* Partner Success Stories */}
       <section className="py-16 bg-gradient-to-br from-slate-50 to-white">
         <div className="container mx-auto px-4">
