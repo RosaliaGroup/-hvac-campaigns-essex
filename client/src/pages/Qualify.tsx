@@ -14,6 +14,7 @@ import { CheckCircle, ArrowRight, Phone, Home, Zap, DollarSign, Calendar } from 
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { trackConversion } from "@/lib/conversions";
 
 // NJ Rebate calculation logic based on home type and current system
 function calculateRebate(homeType: string, sqft: number, currentSystem: string, income: string) {
@@ -69,6 +70,7 @@ export default function Qualify() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
   const loadedAt = useRef(Date.now());
@@ -87,16 +89,31 @@ export default function Qualify() {
     onSuccess: () => {
       setSubmitting(false);
       setSubmitted(true);
+      setSubmitError(false);
       setTurnstileToken(""); // single-use token
+      // Confirmed-success only — fires once per submission via dedupeKey.
+      // form_type=assessment per PR-1; event bucket is residential_quote_request,
+      // the closest existing category (this page is the residential heat-pump
+      // rebate/assessment funnel). GTM migration is tracked for PR-2.
+      trackConversion(
+        "residential_quote_request",
+        { form_type: "assessment", service_category: "assessment", customer_segment: "residential" },
+        { dedupeKey: `qualify:${loadedAt.current}` },
+      );
     },
     onError: () => {
       setSubmitting(false);
-      setSubmitted(true); // Still show success — lead may have been partially captured
+      setSubmitError(true);
+      // Turnstile tokens are single-use — don't resend a possibly-already-consumed
+      // token on retry. Clearing it makes the server fall back to the Layer-1
+      // content guard (see Turnstile.tsx) rather than resubmitting a stale token.
+      setTurnstileToken("");
     },
   });
 
   function handleSubmitBooking() {
     setSubmitting(true);
+    setSubmitError(false);
     captureLead.mutate({
       name: `${form.firstName} ${form.lastName}`.trim() || undefined,
       email: form.email || undefined,
@@ -435,12 +452,23 @@ export default function Qualify() {
 
               <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 
+              {submitError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-800">
+                  <p className="font-semibold mb-1">We couldn't submit your request — please try again.</p>
+                  <p className="text-red-700">
+                    Your info hasn't been saved yet. Tap "Try Again" below, or call us directly and we'll book your
+                    free assessment over the phone: {" "}
+                    <a href="tel:+18624239396" className="font-semibold underline">(862) 423-9396</a>.
+                  </p>
+                </div>
+              )}
+
               <Button
                 className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold text-lg py-6"
                 disabled={submitting}
                 onClick={handleSubmitBooking}
               >
-                {submitting ? "Submitting..." : "Confirm My FREE Assessment"} <CheckCircle className="ml-2 h-5 w-5" />
+                {submitting ? "Submitting..." : submitError ? "Try Again" : "Confirm My FREE Assessment"} <CheckCircle className="ml-2 h-5 w-5" />
               </Button>
 
               <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
