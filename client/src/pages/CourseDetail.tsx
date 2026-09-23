@@ -3,7 +3,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Clock, Users, Award, BookOpen, CheckCircle, Star } from 'lucide-react';
+import { ArrowLeft, Clock, Users, Award, BookOpen, CheckCircle, Star, Phone } from 'lucide-react';
+import { PHONE_DISPLAY, PHONE_TEL } from '@shared/business';
+
+// PR-1 claim-safety gate (2026-09): course checkout was never wired to a live
+// payment flow (no onClick handler existed on "Enroll Now"), so the page was
+// showing a purchase button, a Stripe reassurance line, and a money-back
+// guarantee for a transaction that could never complete. Flip this back to
+// true only once a real checkout is wired up — the original enroll UI below
+// is preserved, not deleted, for that switch-over.
+const COURSE_PURCHASES_ENABLED = false;
 
 interface CourseModule {
   title: string;
@@ -818,10 +827,26 @@ export default function CourseDetail() {
                 <p className="text-sm text-gray-600">One-time payment</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold py-6">
-                  Enroll Now
-                </Button>
-                <p className="text-sm text-center text-gray-600">30-day money-back guarantee</p>
+                {COURSE_PURCHASES_ENABLED ? (
+                  <>
+                    <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold py-6">
+                      Enroll Now
+                    </Button>
+                    <p className="text-sm text-center text-gray-600">30-day money-back guarantee</p>
+                  </>
+                ) : (
+                  <>
+                    <Button asChild className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white font-semibold py-6">
+                      <a href={PHONE_TEL}>
+                        <Phone className="h-4 w-4 mr-2" />
+                        Coming Soon — Contact Us
+                      </a>
+                    </Button>
+                    <p className="text-sm text-center text-gray-600">
+                      Online enrollment isn't open yet. Call {PHONE_DISPLAY} for availability.
+                    </p>
+                  </>
+                )}
 
                 <div className="border-t pt-4">
                   <p className="text-sm font-semibold mb-3">This course includes:</p>
@@ -849,11 +874,13 @@ export default function CourseDetail() {
                   </ul>
                 </div>
 
-                <div className="border-t pt-4">
-                  <p className="text-xs text-gray-600 text-center">
-                    Secure payment with Stripe. Your data is encrypted and protected.
-                  </p>
-                </div>
+                {COURSE_PURCHASES_ENABLED && (
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-gray-600 text-center">
+                      Secure payment with Stripe. Your data is encrypted and protected.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
