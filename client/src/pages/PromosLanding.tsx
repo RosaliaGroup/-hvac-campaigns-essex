@@ -133,7 +133,7 @@ export default function PromosLanding() {
           </div>
 
           <Badge className="mb-4 bg-[#ff6b35] text-white text-sm px-4 py-1 uppercase tracking-wide">
-            🔥 Limited-Time Residential Promos
+            🔥 Residential Promos
           </Badge>
 
           <h1 className="text-4xl md:text-6xl font-extrabold text-white leading-tight mb-4">
@@ -254,10 +254,10 @@ export default function PromosLanding() {
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-extrabold text-[#1e3a5f]">
-              Real Homeowner Results
+              Example Homeowner Scenarios
             </h2>
             <p className="text-gray-500 mt-2">
-              See how NJ homeowners are saving money and increasing property value
+              See how NJ homeowners could save money and increase property value
             </p>
           </div>
 
@@ -287,7 +287,7 @@ export default function PromosLanding() {
                           { label: "Old System", value: cs.oldSystem, color: "text-red-600" },
                           { label: "New System", value: cs.newSystem, color: "text-green-600" },
                           { label: "Installation Cost", value: cs.installCost, color: "text-gray-700" },
-                          { label: "Rebate Received", value: cs.rebate, color: "text-[#ff6b35] font-bold" },
+                          { label: "Illustrative Rebate", value: cs.rebate, color: "text-[#ff6b35] font-bold" },
                           { label: "Out of Pocket", value: cs.outOfPocket, color: "text-[#1e3a5f] font-bold" },
                           { label: "Monthly Payment", value: `${cs.monthly} (10 yrs)`, color: "text-gray-700" },
                         ].map((item) => (
@@ -357,6 +357,10 @@ export default function PromosLanding() {
               </Card>
             ))}
           </div>
+
+          <p className="text-xs text-gray-400 text-center mt-6 max-w-2xl mx-auto">
+            Illustrative scenarios based on typical NJ residential heat pump project economics. Actual incentives, project costs, financing and savings vary by home, utility program and equipment.
+          </p>
         </div>
       </section>
 

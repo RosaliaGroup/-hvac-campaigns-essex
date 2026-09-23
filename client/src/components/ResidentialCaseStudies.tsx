@@ -85,10 +85,10 @@ export default function ResidentialCaseStudies() {
     <section className="py-20 bg-white">
       <div className="container">
         <div className="text-center mb-12">
-          <Badge className="mb-4 bg-[#ff6b35] text-white text-base px-4 py-2">Real Homeowner Results</Badge>
-          <h2 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">Residential Success Stories</h2>
+          <Badge className="mb-4 bg-[#ff6b35] text-white text-base px-4 py-2">Example Homeowner Scenarios</Badge>
+          <h2 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] mb-4">Residential Project Economics</h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            See how New Jersey homeowners are saving money and increasing property value with heat pump upgrades
+            Illustrative examples of how New Jersey homeowners could save money and increase property value with heat pump upgrades
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export default function ResidentialCaseStudies() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium flex items-center gap-1">
                       <DollarSign className="h-4 w-4 text-green-600" />
-                      Rebate Received:
+                      Illustrative Rebate:
                     </span>
                     <span className="text-lg font-bold text-green-700">{study.rebateReceived}</span>
                   </div>
@@ -210,7 +210,7 @@ export default function ResidentialCaseStudies() {
             Ready to upgrade your home and start saving?
           </p>
           <p className="text-sm text-muted-foreground">
-            All case studies represent actual residential projects in New Jersey. Individual results may vary based on home size, insulation, usage patterns, and equipment selected.
+            Illustrative scenarios based on typical NJ residential heat pump project economics. Actual incentives, project costs, financing and savings vary by home, utility program and equipment.
           </p>
         </div>
       </div>
