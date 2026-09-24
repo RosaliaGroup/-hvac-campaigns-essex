@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Sheet,
   SheetContent,
@@ -73,6 +74,18 @@ import {
   type AiDraftStatus,
   type BusinessImpact,
 } from "@shared/seo";
+
+/**
+ * Temporary guard (PR-1): "Optimize Selected" generates AI drafts with no
+ * exclusion list and no claims linter behind it yet — those are being built
+ * in the seo-bulk-approve workflow (docs/seo-bulk-approve-spec.md). The
+ * mutation itself never publishes (server/routers/seo.ts bulkGenerateOptimization
+ * is explicitly draft-only), so this isn't a live-content-safety issue, but
+ * every draft it generates today has to be manually re-reviewed once the
+ * exclusion list exists, and that backlog is already at 247. Flip this back
+ * to true once seo-bulk-approve ships its exclusion list + linter.
+ */
+const BULK_OPTIMIZE_ENABLED = false;
 
 /* ── Formatting helpers ─────────────────────────────────────────────────── */
 
@@ -1020,9 +1033,23 @@ export default function SeoIntelligence() {
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#ff6b35]/30 bg-[#ff6b35]/5 p-2.5">
                 <span className="text-sm font-medium text-[#1e3a5f] px-1">{selectedVisible.length} selected</span>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkOptimize}>
-                    {bulkGenerate.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />} Optimize Selected
-                  </Button>
+                  {BULK_OPTIMIZE_ENABLED ? (
+                    <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkOptimize}>
+                      {bulkGenerate.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />} Optimize Selected
+                    </Button>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {/* span wrapper: a disabled <button> swallows pointer events, so Radix's hover-based tooltip trigger needs a non-disabled element around it to fire on. */}
+                        <span tabIndex={0}>
+                          <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled>
+                            <Sparkles className="h-4 w-4 mr-1.5" /> Optimize Selected
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>Disabled — pending bulk-approve workflow (exclusion list + claims linter not built yet)</TooltipContent>
+                    </Tooltip>
+                  )}
                   <Button size="sm" variant="outline" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkReindex}>
                     <RotateCw className="h-4 w-4 mr-1.5" /> Request Reindex
                   </Button>
