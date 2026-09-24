@@ -165,22 +165,65 @@ for (const slug of diSlugs) {
   addUrl(`/direct-install/${slug}`, "0.6", "monthly", BUILD_DATE);
 }
 
-// ── 6. Sort: higher priority first, then alphabetical ───────────────────────
+// ── 5b. Routes manifest (PR-1) ──────────────────────────────────────────────
+// `entries` above is every concrete, resolvable public URL — static routes
+// (minus protect()-wrapped/dynamic-param ones, which the SPA fallback +
+// isInternalRoute() already handle), blog posts, and direct-install pages.
+// This is a DIFFERENT list than the sitemap: the sitemap is curated for SEO
+// (some real, working pages are deliberately excluded from it below — see
+// SITEMAP_EXCLUDE), but every one of THOSE pages still needs to resolve as a
+// normal 200, not a 404. netlify/edge-functions/inject-meta.ts's 404 check
+// uses this broader, unfiltered manifest as its source of truth for "is this
+// a registered route" so excluding a page from the sitemap can never make it
+// 404. Written before the sitemap-exclusion filter below runs.
+const manifestPaths = entries.map((e) => e.loc.replace(BASE, "") || "/");
+const manifestOutPath = path.resolve(root, "netlify", "edge-functions", "routes-manifest.json");
+fs.writeFileSync(manifestOutPath, JSON.stringify(manifestPaths.sort(), null, 2), "utf-8");
 
-entries.sort((a, b) => {
+// ── 6. Sitemap-only exclusions (PR-1 item C, "technical hygiene") ──────────
+// These are real, working, resolvable pages (see routes-manifest.json above)
+// that we deliberately keep OUT of the search-engine-facing sitemap:
+//   - /rebate-calc: pure duplicate of /rebate-calculator (same component);
+//     also gets a 301 there — see netlify/edge-functions/inject-meta.ts.
+//   - /courses, /portal, /estimating, /presentation-2026: internal/inert
+//     tools, not marketing content; noindex via X-Robots-Tag instead.
+//   - /lp/fb-commercial, /lp/fb-residential, /lp/referral-partner: paid-only
+//     landing pages (Facebook creative / recruiting), not organic-intent.
+//   - /lp/rebate-guide: pure duplicate of /rebate-guide; canonicalized there.
+// NOTE: /referral is deliberately NOT excluded here. It's the live destination
+// of the Vapi sendReferralLink customer SMS (server/services/referralSms.ts,
+// locked by server/referralSms.test.ts), so it — and its sitemap presence —
+// were left completely unchanged pending explicit owner sign-off. See the
+// open questions in docs/pr1/.
+const SITEMAP_EXCLUDE = new Set([
+  "/rebate-calc",
+  "/courses",
+  "/portal",
+  "/estimating",
+  "/presentation-2026",
+  "/lp/fb-commercial",
+  "/lp/fb-residential",
+  "/lp/referral-partner",
+  "/lp/rebate-guide",
+]);
+const sitemapEntries = entries.filter((e) => !SITEMAP_EXCLUDE.has(e.loc.replace(BASE, "") || "/"));
+
+// ── 7. Sort: higher priority first, then alphabetical ───────────────────────
+
+sitemapEntries.sort((a, b) => {
   const pd = parseFloat(b.priority) - parseFloat(a.priority);
   if (pd !== 0) return pd;
   return a.loc.localeCompare(b.loc);
 });
 
-// ── 7. Generate XML ─────────────────────────────────────────────────────────
+// ── 8. Generate XML ─────────────────────────────────────────────────────────
 
 const lines = [
   '<?xml version="1.0" encoding="UTF-8"?>',
   '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
 ];
 
-for (const e of entries) {
+for (const e of sitemapEntries) {
   lines.push("  <url>");
   lines.push(`    <loc>${e.loc}</loc>`);
   lines.push(`    <lastmod>${e.lastmod}</lastmod>`);
@@ -191,12 +234,12 @@ for (const e of entries) {
 
 lines.push("</urlset>");
 
-// ── 8. Guard: refuse to ship a collapsed sitemap ────────────────────────────
+// ── 9. Guard: refuse to ship a collapsed sitemap ────────────────────────────
 // Fail the build (non-zero exit) BEFORE overwriting the last-good file on disk,
 // so a broken run can't silently deploy an empty/near-empty sitemap.
-if (entries.length < MIN_URLS) {
+if (sitemapEntries.length < MIN_URLS) {
   console.error(
-    `[sitemap] ABORT: generated only ${entries.length} URLs (minimum ${MIN_URLS}).\n` +
+    `[sitemap] ABORT: generated only ${sitemapEntries.length} URLs (minimum ${MIN_URLS}).\n` +
     `  This usually means route/data extraction broke — e.g. App.tsx routes were\n` +
     `  refactored away from string-literal <Route path="..."> form, or a data file\n` +
     `  moved. Not writing sitemap.xml; failing the build.`
@@ -210,8 +253,9 @@ fs.writeFileSync(outPath, lines.join("\n"), "utf-8");
 // Summary
 const blogCount = blogSlugs.length;
 const diCount = diSlugs.length;
-const staticCount = entries.length - blogCount - diCount;
-console.log(`[sitemap] Generated ${entries.length} URLs → ${outPath}`);
+const staticCount = sitemapEntries.length - blogCount - diCount;
+console.log(`[sitemap] Generated ${sitemapEntries.length} URLs → ${outPath} (${entries.length - sitemapEntries.length} excluded from sitemap, still in routes-manifest.json)`);
 console.log(`  Static routes: ${staticCount}`);
 console.log(`  Blog posts: ${blogCount}`);
 console.log(`  Direct install: ${diCount}`);
+console.log(`[routes-manifest] Wrote ${manifestPaths.length} paths → ${manifestOutPath}`);

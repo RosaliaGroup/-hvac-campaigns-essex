@@ -3,8 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, Award, Clock, Users, Star, Check } from 'lucide-react';
+import { BookOpen, Award, Clock, Users, Star, Check, Phone } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { PHONE_DISPLAY, PHONE_TEL } from '@shared/business';
+
+// PR-1 claim-safety gate (2026-09): subscription "Start Plan" buttons had no
+// onClick handler — no live checkout was ever wired up. Preserved below, not
+// deleted; flip back to true once a real subscription checkout exists.
+const COURSE_PURCHASES_ENABLED = false;
 
 interface Course {
   id: string;
@@ -349,15 +355,24 @@ export default function Courses() {
                           </li>
                         ))}
                       </ul>
-                      <Button
-                        className={`w-full ${
-                          plan.highlighted
-                            ? 'bg-[#ff6b35] hover:bg-[#ff6b35]/90'
-                            : 'bg-[#1e3a5f] hover:bg-[#1e3a5f]/90'
-                        }`}
-                      >
-                        Start {plan.name} Plan
-                      </Button>
+                      {COURSE_PURCHASES_ENABLED ? (
+                        <Button
+                          className={`w-full ${
+                            plan.highlighted
+                              ? 'bg-[#ff6b35] hover:bg-[#ff6b35]/90'
+                              : 'bg-[#1e3a5f] hover:bg-[#1e3a5f]/90'
+                          }`}
+                        >
+                          Start {plan.name} Plan
+                        </Button>
+                      ) : (
+                        <Button asChild variant="outline" className="w-full">
+                          <a href={PHONE_TEL}>
+                            <Phone className="h-4 w-4 mr-2" />
+                            Coming Soon — Call {PHONE_DISPLAY}
+                          </a>
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

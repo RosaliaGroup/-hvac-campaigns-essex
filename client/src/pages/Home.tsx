@@ -12,13 +12,35 @@ import ExitIntentPopup from "@/components/ExitIntentPopup";
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Professional HVAC company homepage showcasing expertise and services */
 
+// Service Area Grid (below) — single source for both the "Serving N
+// communities" count and the grid itself, so the two can never drift apart.
+const SERVICE_AREA_CITIES = [
+  { city: "Newark", slug: "newark" }, { city: "Elizabeth", slug: "elizabeth" }, { city: "Jersey City", slug: "jersey-city" },
+  { city: "Hoboken", slug: "hoboken" }, { city: "Bayonne", slug: "bayonne" }, { city: "Kearny", slug: "kearny" },
+  { city: "Harrison", slug: "harrison" }, { city: "East Orange", slug: "east-orange" }, { city: "Orange", slug: "orange" },
+  { city: "West Orange", slug: "west-orange" }, { city: "South Orange", slug: "south-orange" }, { city: "Maplewood", slug: "maplewood" },
+  { city: "Irvington", slug: "irvington" }, { city: "Bloomfield", slug: "bloomfield" }, { city: "Nutley", slug: "nutley" },
+  { city: "Belleville", slug: "belleville" }, { city: "Montclair", slug: "montclair" }, { city: "Clifton", slug: "clifton" },
+  { city: "Passaic", slug: "passaic" }, { city: "Garfield", slug: "garfield" }, { city: "Linden", slug: "linden" },
+  { city: "Rahway", slug: "rahway" }, { city: "Roselle", slug: "roselle" }, { city: "Roselle Park", slug: "roselle-park" },
+  { city: "Hillside", slug: "hillside" }, { city: "Union", slug: "union" }, { city: "Springfield", slug: "springfield" },
+  { city: "Millburn", slug: "millburn" }, { city: "Short Hills", slug: "short-hills" }, { city: "Summit", slug: "summit" },
+  { city: "Westfield", slug: "westfield" }, { city: "Cranford", slug: "cranford" }, { city: "Clark", slug: "clark" },
+  { city: "Woodbridge", slug: "woodbridge" }, { city: "Secaucus", slug: "secaucus" }, { city: "North Bergen", slug: "north-bergen" },
+  { city: "Weehawken", slug: "weehawken" }, { city: "Union City", slug: "union-city" }, { city: "West New York", slug: "west-new-york" },
+  { city: "Guttenberg", slug: "guttenberg" }, { city: "Hackensack", slug: "hackensack" }, { city: "Teaneck", slug: "teaneck" },
+  { city: "Englewood", slug: "englewood" }, { city: "Fort Lee", slug: "fort-lee" }, { city: "Edgewater", slug: "edgewater" },
+  { city: "Palisades Park", slug: "palisades-park" }, { city: "Ridgefield", slug: "ridgefield" }, { city: "Fairview", slug: "fairview" },
+  { city: "Cliffside Park", slug: "cliffside-park" },
+];
+
 export default function Home() {
   // The userAuth hooks provides authentication state
   // To implement login/logout functionality, simply call logout() or redirect to getLoginUrl()
   let { user, loading, error, isAuthenticated, logout } = useAuth();
 
   useSEO({
-    title: "HVAC Contractor Newark NJ | Heat Pumps & AC Repair | Mechanical Enterprise",
+    title: "Licensed HVAC Contractor in Newark, NJ | Up to $16K Rebates",
     description: "NJ's trusted HVAC experts. Free assessments, NJ rebates up to $16,000, $100 flat service calls. Serving 15 NJ counties. Call (862) 423-9396.",
     ogUrl: "https://mechanicalenterprise.com",
   });
@@ -86,9 +108,7 @@ export default function Home() {
             {[
               { city: "Newark", slug: "newark" },
               { city: "Jersey City", slug: "jersey-city" },
-              { city: "Paterson", slug: "clifton" },
               { city: "Elizabeth", slug: "elizabeth" },
-              { city: "Edison", slug: "woodbridge" },
               { city: "Woodbridge", slug: "woodbridge" },
               { city: "Clifton", slug: "clifton" },
               { city: "Hoboken", slug: "hoboken" },
@@ -331,27 +351,9 @@ export default function Home() {
       <section className="py-16 bg-[#f7f8fa]">
         <div className="container">
           <h2 className="text-3xl font-bold text-center text-[#1e3a5f] mb-3">HVAC Installation Service Area — Greater Newark, NJ</h2>
-          <p className="text-center text-muted-foreground mb-10">Serving 49 communities within 20 miles of Newark</p>
+          <p className="text-center text-muted-foreground mb-10">Serving {SERVICE_AREA_CITIES.length} communities within 20 miles of Newark</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-5xl mx-auto">
-            {[
-              { city: "Newark", slug: "newark" }, { city: "Elizabeth", slug: "elizabeth" }, { city: "Jersey City", slug: "jersey-city" },
-              { city: "Hoboken", slug: "hoboken" }, { city: "Bayonne", slug: "bayonne" }, { city: "Kearny", slug: "kearny" },
-              { city: "Harrison", slug: "harrison" }, { city: "East Orange", slug: "east-orange" }, { city: "Orange", slug: "orange" },
-              { city: "West Orange", slug: "west-orange" }, { city: "South Orange", slug: "south-orange" }, { city: "Maplewood", slug: "maplewood" },
-              { city: "Irvington", slug: "irvington" }, { city: "Bloomfield", slug: "bloomfield" }, { city: "Nutley", slug: "nutley" },
-              { city: "Belleville", slug: "belleville" }, { city: "Montclair", slug: "montclair" }, { city: "Clifton", slug: "clifton" },
-              { city: "Passaic", slug: "passaic" }, { city: "Garfield", slug: "garfield" }, { city: "Linden", slug: "linden" },
-              { city: "Rahway", slug: "rahway" }, { city: "Roselle", slug: "roselle" }, { city: "Roselle Park", slug: "roselle-park" },
-              { city: "Hillside", slug: "hillside" }, { city: "Union", slug: "union" }, { city: "Springfield", slug: "springfield" },
-              { city: "Millburn", slug: "millburn" }, { city: "Short Hills", slug: "short-hills" }, { city: "Summit", slug: "summit" },
-              { city: "Westfield", slug: "westfield" }, { city: "Cranford", slug: "cranford" }, { city: "Clark", slug: "clark" },
-              { city: "Woodbridge", slug: "woodbridge" }, { city: "Secaucus", slug: "secaucus" }, { city: "North Bergen", slug: "north-bergen" },
-              { city: "Weehawken", slug: "weehawken" }, { city: "Union City", slug: "union-city" }, { city: "West New York", slug: "west-new-york" },
-              { city: "Guttenberg", slug: "guttenberg" }, { city: "Hackensack", slug: "hackensack" }, { city: "Teaneck", slug: "teaneck" },
-              { city: "Englewood", slug: "englewood" }, { city: "Fort Lee", slug: "fort-lee" }, { city: "Edgewater", slug: "edgewater" },
-              { city: "Palisades Park", slug: "palisades-park" }, { city: "Ridgefield", slug: "ridgefield" }, { city: "Fairview", slug: "fairview" },
-              { city: "Cliffside Park", slug: "cliffside-park" },
-            ].map(({ city, slug }) => (
+            {SERVICE_AREA_CITIES.map(({ city, slug }) => (
               <Link key={slug} href={`/hvac-${slug}-nj`}>
                 <div className="bg-white rounded-lg border px-3 py-2.5 text-center text-sm font-medium text-[#1e3a5f] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
                   {city}

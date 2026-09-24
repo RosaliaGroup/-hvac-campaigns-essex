@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isInternalRoute } from "@/lib/navigation";
 import { trackPageView } from "@/lib/analytics";
+import { useCrmMeta } from "@/hooks/useCrmMeta";
 import { Route, Switch, useLocation } from "wouter";
 import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -399,12 +400,18 @@ function PublicChat() {
   return <LiveChatWidget />;
 }
 
+function CrmMetaTags() {
+  useCrmMeta();
+  return null;
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
+          <CrmMetaTags />
           <Router />
           <PublicChat />
         </TooltipProvider>
