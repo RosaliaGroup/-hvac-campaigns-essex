@@ -56,6 +56,31 @@ describe("getRouteStatus", () => {
     expect(getRouteStatus("/commercial?utm_source=google").isRegistered).toBe(true);
     expect(getRouteStatus("/commercial/").isRegistered).toBe(true);
   });
+
+  // pr1-hotfix-build: /team-login, /accept-invite, /reset-password are real,
+  // public, pre-authentication CRM entry points — a staff member cannot log
+  // in at all if these 404. They were caught 404ing on the deploy-preview-114
+  // check because scripts/generate-sitemap.ts's old SKIP_PATHS filter (meant
+  // to keep auth pages out of the SEARCH-ENGINE sitemap) was also feeding
+  // routes-manifest.json (the 404-decision list) — conflating "don't index
+  // this" with "this route doesn't exist." Fixed by only excluding them from
+  // the sitemap, not the manifest.
+  it("keeps the CRM auth entry points registered — staff cannot reach them if these 404", () => {
+    for (const p of ["/team-login", "/accept-invite", "/reset-password"]) {
+      expect(getRouteStatus(p).isRegistered, `${p} must resolve — it's the CRM's own auth entry point`).toBe(true);
+    }
+  });
+
+  // /m was never a real route in this app — confirmed by a repo-wide grep for
+  // the literal string "/m" across every .ts/.tsx/.toml file (zero matches).
+  // It only ever appeared as an illustrative example path in the original
+  // PR-1 handoff spec's internal-route list, not as an actual <Route> in
+  // App.tsx, a navigation.ts prefix, or a link anywhere in the codebase. A
+  // real 404 for it is correct, expected behavior, not a regression.
+  it("correctly 404s /m — it was never a real route, unlike the auth pages above", () => {
+    expect(getRouteStatus("/m").isRegistered).toBe(false);
+    expect(getRouteStatus("/m/").isRegistered).toBe(false);
+  });
 });
 
 // PR-1: every URL a Vapi tool, SMS template, or transactional email sends
