@@ -72,11 +72,18 @@ const allRoutes: RouteInfo[] = routeMatches.map(m => {
   return { path: m[1], line: routeLines[lineIdx] ?? "" };
 });
 
-// Filter: skip protected routes, auth routes, dynamic param routes, 404
-const SKIP_PATHS = new Set(["/team-login", "/accept-invite", "/reset-password", "/404"]);
+// Filter: skip protected routes, dynamic param routes, and the /404 fallback
+// itself. NOTE: /team-login, /accept-invite, /reset-password are deliberately
+// NOT filtered out here (pr1-hotfix-build) — they're real, public, working
+// routes (the CRM's actual login/invite/reset-password entry points, reached
+// pre-authentication) that must resolve 200 via routes-manifest.json below.
+// They're excluded from the *search-engine* sitemap separately, via
+// SITEMAP_EXCLUDE (item C), which is the correct place for a "don't index
+// this, but it still works" distinction — not this filter, which controls
+// "is this a real route at all" for the 404 check in inject-meta.ts.
 const publicRoutes = allRoutes.filter(r => {
   if (r.line.includes("protect(")) return false;     // protected/admin routes
-  if (SKIP_PATHS.has(r.path)) return false;           // auth/utility
+  if (r.path === "/404") return false;                // the 404 fallback route itself
   if (r.path.includes(":")) return false;             // dynamic params (expanded below)
   return true;
 });
@@ -190,6 +197,11 @@ fs.writeFileSync(manifestOutPath, JSON.stringify(manifestPaths.sort(), null, 2),
 //   - /lp/fb-commercial, /lp/fb-residential, /lp/referral-partner: paid-only
 //     landing pages (Facebook creative / recruiting), not organic-intent.
 //   - /lp/rebate-guide: pure duplicate of /rebate-guide; canonicalized there.
+//   - /team-login, /accept-invite, /reset-password: auth entry points, not
+//     marketing content — same as the old (pre-PR-1) SKIP_PATHS exclusion,
+//     just applied at the sitemap layer instead of the routes-manifest layer
+//     now that those two lists serve different purposes (see publicRoutes
+//     filter above, and the "routes manifest" comment for routes-manifest.json).
 // NOTE: /referral is deliberately NOT excluded here. It's the live destination
 // of the Vapi sendReferralLink customer SMS (server/services/referralSms.ts,
 // locked by server/referralSms.test.ts), so it — and its sitemap presence —
@@ -201,6 +213,9 @@ const SITEMAP_EXCLUDE = new Set([
   "/portal",
   "/estimating",
   "/presentation-2026",
+  "/team-login",
+  "/accept-invite",
+  "/reset-password",
   "/lp/fb-commercial",
   "/lp/fb-residential",
   "/lp/referral-partner",
