@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getRouteStatus, injectMeta } from "./inject-meta";
+import { getRouteStatus, injectMeta } from "../edge-functions/inject-meta";
 
 // PR-1 item A: real 404s for unregistered routes, without breaking any
 // registered route — public, internal/CRM, or public-dynamic.
