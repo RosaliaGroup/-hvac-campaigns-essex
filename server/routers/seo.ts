@@ -22,6 +22,7 @@ import {
   DEFAULT_BULK_CONCURRENCY,
 } from "../services/seo/ai/jobs";
 import { getAiOptimizationProvider, isMockProvider } from "../services/seo/ai/optimizationProvider";
+import { AiDraftLintFailedError } from "../services/seo/ai/anthropicProvider";
 import { findLockedPages } from "../seo/lockedPages";
 import { lintPageMeta } from "../../shared/seoLinter";
 import {
@@ -60,6 +61,9 @@ function toTRPCError(err: unknown): never {
   }
   if (err instanceof MockProviderError) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+  }
+  if (err instanceof AiDraftLintFailedError) {
+    throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: err.message, cause: err.findings });
   }
   if (err instanceof TagNoteRequiredError) {
     throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
@@ -184,6 +188,7 @@ export const seoRouter = router({
         if (err instanceof DuplicateJobError) {
           throw new TRPCError({ code: "CONFLICT", message: err.message });
         }
+        if (err instanceof AiDraftLintFailedError) toTRPCError(err);
         throw err;
       }
     }),
@@ -205,6 +210,7 @@ export const seoRouter = router({
         if (err instanceof DuplicateJobError) {
           throw new TRPCError({ code: "CONFLICT", message: err.message });
         }
+        if (err instanceof AiDraftLintFailedError) toTRPCError(err);
         throw err;
       }
     }),

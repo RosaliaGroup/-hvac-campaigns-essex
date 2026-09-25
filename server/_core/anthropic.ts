@@ -231,6 +231,11 @@ async function attemptOnce(
  * model falls back to the next in the chain; fatal errors return immediately.
  * Returns a structured result so callers surface a clear error instead of an
  * empty analysis. The API key stays server-side and is never echoed back.
+ *
+ * Thin wrapper over callAnthropicModelChain() using Take-Off's mode->model
+ * config; other callers (e.g. the SEO drafting provider) that need their own
+ * model/env config call callAnthropicModelChain() directly instead of
+ * reusing Take-Off's TAKEOFF_MODEL_QUICK/PRECISE overrides.
  */
 export async function callAnthropicWithFallback(opts: {
   apiKey: string;
@@ -240,10 +245,28 @@ export async function callAnthropicWithFallback(opts: {
   maxTokens?: number;
   retry?: Partial<RetryConfig>;
 }): Promise<AnthropicCallResult> {
-  const { apiKey, mode, system, messages } = opts;
+  return callAnthropicModelChain({ ...opts, models: modelChain(opts.mode) });
+}
+
+/**
+ * Call the Anthropic Messages API, walking an explicit model chain (left to
+ * right). Same retry/fallback/error-classification behavior as
+ * callAnthropicWithFallback(), parameterized by the caller's own models
+ * instead of Take-Off's mode config — the generic entry point for any
+ * non-Take-Off caller.
+ */
+export async function callAnthropicModelChain(opts: {
+  apiKey: string;
+  models: string[];
+  system?: string;
+  messages: unknown[];
+  maxTokens?: number;
+  retry?: Partial<RetryConfig>;
+}): Promise<AnthropicCallResult> {
+  const { apiKey, system, messages } = opts;
   const maxTokens = Math.min(Math.max(1, opts.maxTokens ?? MAX_OUTPUT_TOKENS), MAX_OUTPUT_TOKENS);
   const cfg: RetryConfig = { ...DEFAULT_RETRY, ...opts.retry };
-  const chain = modelChain(mode);
+  const chain = opts.models;
 
   let last: { status: number; errType: string; detail: string } = {
     status: 502,

@@ -7,7 +7,7 @@
  * service only reads `seoPages` and writes `seoAiDrafts` (+ the operational
  * `seoPages.status` workflow column, which the sync already leaves alone).
  */
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, desc } from "drizzle-orm";
 import {
   ACTION_DRAFT_FIELDS,
   computeBusinessImpact,
@@ -22,16 +22,34 @@ import {
   type SeoProblem,
   type SeoStatus,
 } from "@shared/seo";
+import { cityUtilityTerritory } from "@shared/seoLinter";
 import { getDb } from "../../db";
 import {
   seoAiDrafts,
   seoPages,
+  seoQueries,
   type InsertSeoAiDraft,
   type SeoAiDraftRow,
   type SeoPageRow,
 } from "../../../drizzle/schema";
 import { getSeoSiteUrl } from "../../integrations/searchConsole";
-import { getAiOptimizationProvider, type PageContext } from "./ai/optimizationProvider";
+import { getAiOptimizationProvider, isMockProvider, type PageContext } from "./ai/optimizationProvider";
+import { fetchBodyExcerpt } from "./ai/pageBody";
+
+const TOP_QUERIES_LIMIT = 8;
+
+/** Top Search Console queries landing on this page, by clicks. Empty if unsynced or DB unavailable. */
+async function fetchTopQueries(pagePath: string): Promise<string[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ query: seoQueries.query })
+    .from(seoQueries)
+    .where(eq(seoQueries.page, pagePath))
+    .orderBy(desc(seoQueries.clicks), desc(seoQueries.impressions))
+    .limit(TOP_QUERIES_LIMIT);
+  return rows.map((r) => r.query);
+}
 
 /* ── Mapping ─────────────────────────────────────────────────────────────── */
 
@@ -51,8 +69,15 @@ function rowToDraft(row: SeoAiDraftRow): AiOptimizationDraft {
   };
 }
 
-function buildContext(page: SeoPageRow): PageContext {
-  return {
+/**
+ * The mock provider ignores topQueries/bodyExcerpt/cityUtilityTerritory, so
+ * they're only actually fetched (a DB query + a live HTTP fetch) when the
+ * active provider needs them — keeps every mock-driven call (which is most
+ * of them, today) exactly as fast/offline as before this real provider
+ * existed.
+ */
+async function buildContext(page: SeoPageRow, includeAiContext: boolean): Promise<PageContext> {
+  const base = {
     page: page.page,
     url: page.url,
     title: page.title ?? "",
@@ -65,6 +90,11 @@ function buildContext(page: SeoPageRow): PageContext {
     position: Number(page.position),
     problems: Array.isArray(page.problems) ? (page.problems as SeoProblem[]) : [],
   };
+  if (!includeAiContext) {
+    return { ...base, topQueries: [], bodyExcerpt: "", cityUtilityTerritory: "unknown" as const };
+  }
+  const [topQueries, bodyExcerpt] = await Promise.all([fetchTopQueries(page.page), fetchBodyExcerpt(page.url)]);
+  return { ...base, topQueries, bodyExcerpt, cityUtilityTerritory: cityUtilityTerritory(page.page) };
 }
 
 /* ── Reads ───────────────────────────────────────────────────────────────── */
@@ -109,7 +139,7 @@ export async function generateOptimization(
   }
 
   const provider = getAiOptimizationProvider();
-  const ctx = buildContext(page);
+  const ctx = await buildContext(page, !isMockProvider(provider.model));
   const gen: Partial<InsertSeoAiDraft> = {};
   for (const f of fields) {
     switch (f) {
