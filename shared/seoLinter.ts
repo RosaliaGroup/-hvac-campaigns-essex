@@ -136,6 +136,23 @@ function cityPageSlug(pagePath: string): string | null {
   return m ? m[1] : null;
 }
 
+export type UtilityTerritory = "pseg" | "non_pseg" | "unknown";
+
+/**
+ * Which utility territory a page's town is in, from PSEG_TERRITORY_CITY_SLUGS /
+ * KNOWN_NON_PSEG_CITY_SLUGS above — exported so the AI drafting prompt (see
+ * server/services/seo/ai/anthropicProvider.ts) can tell the model up front
+ * whether a "$16K" PSE&G rebate claim is even eligible for this page, instead
+ * of relying on the linter to catch it after the fact.
+ */
+export function cityUtilityTerritory(pagePath: string): UtilityTerritory {
+  const slug = cityPageSlug(pagePath);
+  if (!slug) return "unknown";
+  if (PSEG_TERRITORY_CITY_SLUGS.has(slug)) return "pseg";
+  if (KNOWN_NON_PSEG_CITY_SLUGS.has(slug)) return "non_pseg";
+  return "unknown";
+}
+
 // Last-10-digits comparison (matches server/_core/rateLimit.ts's phoneKey()
 // convention) — a bare "(862) 423-9396" and a "+1"-prefixed "18624239396"
 // must compare equal, or the canonical number itself gets falsely flagged.
