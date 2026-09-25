@@ -412,7 +412,7 @@ function DraftWorkspace({ opportunity, isAdmin }: { opportunity: SeoOpportunity;
     onError: (e) => toast.error(e.message),
   });
   const approve = trpc.seo.approveOptimization.useMutation({
-    onSuccess: () => { afterWrite(); toast.success("Draft approved for review"); },
+    onSuccess: () => { afterWrite(); toast.success("Marked reviewed — use \"Approve to PR\" to publish"); },
     onError: (e) => toast.error(e.message),
   });
   const reject = trpc.seo.rejectOptimization.useMutation({
@@ -478,7 +478,7 @@ function DraftWorkspace({ opportunity, isAdmin }: { opportunity: SeoOpportunity;
     <div className="space-y-5">
       <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
-        <span>Drafts only — nothing here is published to your live site. Generate, edit, then approve for human review.</span>
+        <span>Drafts only — nothing here is published to your live site. "Mark Reviewed" only flags a draft as human-checked; it does not publish. Publishing happens exclusively through "Approve to PR" below the table, which opens a pull request a human still has to merge on GitHub.</span>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -486,7 +486,7 @@ function DraftWorkspace({ opportunity, isAdmin }: { opportunity: SeoOpportunity;
           <span className="text-sm font-semibold text-[#1e3a5f]">AI Draft</span>
           {draft && (
             <Badge variant="outline" className={`text-xs ${DRAFT_STATUS_STYLE[draft.status]}`}>
-              {draft.status === "edited" ? "Edited" : draft.status === "approved" ? "Approved" : "Draft"}
+              {draft.status === "edited" ? "Edited" : draft.status === "approved" ? "Reviewed" : "Draft"}
             </Badge>
           )}
           {draft?.model && draft.model !== "none" && (
@@ -498,7 +498,7 @@ function DraftWorkspace({ opportunity, isAdmin }: { opportunity: SeoOpportunity;
             <Ban className="mr-1.5 h-4 w-4" /> Reject
           </Button>
           <Button type="button" size="sm" className="bg-emerald-600 hover:bg-emerald-600/90" disabled={writeDisabled || !hasDraft} onClick={() => approve.mutate({ id: pageId })}>
-            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve
+            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Mark Reviewed
           </Button>
         </div>
       </div>
@@ -1207,6 +1207,7 @@ export default function SeoIntelligence() {
   const syncStatus = trpc.seo.getSyncStatus.useQuery(undefined, { enabled: isAuthenticated });
   const businessImpact = trpc.seo.getBusinessImpact.useQuery(undefined, { enabled: isAuthenticated });
   const githubConfigured = trpc.seo.githubConfigured.useQuery(undefined, { enabled: isAuthenticated });
+  const aiProviderStatus = trpc.seo.aiProviderStatus.useQuery(undefined, { enabled: isAuthenticated });
   // Lock status covers every synced page (not just the filtered view) so
   // selection stays correct if a filter changes after the query lands.
   const allPaths = (opportunities.data ?? []).map((o) => o.page);
@@ -1349,8 +1350,10 @@ export default function SeoIntelligence() {
 
   const bulkOptimize = () => {
     setBulkResult(null);
+    // Selection stays put (unlike the other bulk actions below) — these are
+    // exactly the rows a reviewer wants to go straight from drafting into
+    // "Approve to PR" for, without re-selecting them.
     bulkGenerate.mutate({ ids: toIds(selectedVisible), action: "optimize_everything" });
-    clearSelection();
   };
   const bulkReindex = () => {
     setBulkResult(null);
@@ -1362,8 +1365,12 @@ export default function SeoIntelligence() {
     clearSelection();
   };
   const bulkRegenerateUnlocked = () => {
+    // Selection stays put — same reasoning as bulkOptimize above.
     regenerateUnlocked.mutate({ ids: toIds(selectedVisible) });
-    clearSelection();
+  };
+  /** "Select Drafted" shortcut — every unlocked, currently-filtered row that already has AI-drafted content (status flips to "optimizing" once a draft exists). */
+  const selectDrafted = () => {
+    setSelectedIds(new Set(filtered.filter((r) => r.status === "optimizing" && !isPageLocked(r.page)).map((r) => r.id)));
   };
 
   const handleRefresh = () => {
@@ -1408,6 +1415,12 @@ export default function SeoIntelligence() {
               </Button>
             </div>
           </div>
+          {aiProviderStatus.data?.isMock && (
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              AI drafts are placeholder mock content (provider "{aiProviderStatus.data.model}") — not researched or verified. "Approve to PR" is disabled until a real AI provider is configured.
+            </div>
+          )}
           {!githubConfigured.isLoading && githubConfigured.data && !githubConfigured.data.configured && (
             <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
               <ShieldAlert className="h-4 w-4 shrink-0" />
@@ -1537,6 +1550,9 @@ export default function SeoIntelligence() {
                   <X className="h-3 w-3" /> Clear filters
                 </button>
               )}
+              <button onClick={selectDrafted} className="ml-auto inline-flex items-center gap-1 text-xs text-[#ff6b35] hover:underline">
+                <Sparkles className="h-3 w-3" /> Select Drafted
+              </button>
             </div>
           </CardHeader>
 
@@ -1558,7 +1574,18 @@ export default function SeoIntelligence() {
                   <Button size="sm" variant="outline" disabled={!isAdmin || setStatus.isPending} onClick={bulkComplete}>
                     <CheckCircle2 className="h-4 w-4 mr-1.5" /> Mark Complete
                   </Button>
-                  {!githubConfigured.data?.configured ? (
+                  {aiProviderStatus.data?.isMock ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0}>
+                          <Button size="sm" variant="outline" disabled>
+                            <GitPullRequest className="h-4 w-4 mr-1.5" /> Approve to PR
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>Drafts are placeholder mock content ({aiProviderStatus.data.model}) — configure a real AI provider before publishing</TooltipContent>
+                    </Tooltip>
+                  ) : !githubConfigured.data?.configured ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span tabIndex={0}>
