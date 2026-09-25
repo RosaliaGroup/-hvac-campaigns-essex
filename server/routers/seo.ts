@@ -2,6 +2,8 @@ import { protectedProcedure, adminProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { SEO_ACTION, SEO_STATUS } from "@shared/seo";
+import { SEO_PAGE_TAGS } from "../../drizzle/schema";
+import { resolveTeamMemberId } from "../../shared/fieldApp";
 import { getSeoProvider } from "../services/seo/provider";
 import { runSeoSync, readSyncStatus } from "../services/seo/sync";
 import {
@@ -19,6 +21,60 @@ import {
   DuplicateJobError,
   DEFAULT_BULK_CONCURRENCY,
 } from "../services/seo/ai/jobs";
+import { findLockedPages } from "../seo/lockedPages";
+import { lintPageMeta } from "../../shared/seoLinter";
+import {
+  buildBatchDiff,
+  approveBatchToPR,
+  revertBatch,
+  refreshBatchStatus,
+  assertReindexAllowed,
+  LockedPagesError,
+  LintBlockedError,
+  BatchTooLargeError,
+  PendingBatchError,
+} from "../services/seo/bulkApprove";
+import { isGithubConfigured, GithubNotConfiguredError } from "../services/seo/github";
+import { listTags, addTag, removeTag, TagNoteRequiredError } from "../services/seo/tags";
+import { listAuditLog, auditLogToCsv } from "../services/seo/auditLog";
+import { discardAllDrafts, regenerateUnlockedDrafts, expireStaleDrafts } from "../services/seo/draftManagement";
+import { getDb } from "../db";
+import { seoApprovalBatches, seoPages } from "../../drizzle/schema";
+import { eq } from "drizzle-orm";
+
+/** Map the bulk-approve service's typed errors to the right tRPC/HTTP status. */
+function toTRPCError(err: unknown): never {
+  if (err instanceof LockedPagesError) {
+    throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: err.message, cause: err.locked });
+  }
+  if (err instanceof LintBlockedError) {
+    throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: err.message, cause: err.blocked });
+  }
+  if (err instanceof BatchTooLargeError) {
+    throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: err.message });
+  }
+  if (err instanceof GithubNotConfiguredError) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+  }
+  if (err instanceof TagNoteRequiredError) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+  }
+  if (err instanceof Error) {
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err.message });
+  }
+  throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: String(err) });
+}
+
+/** True if this page can't be reindexed right now (title/meta sitting in an open PR). */
+async function isReindexBlocked(pageId: number): Promise<boolean> {
+  try {
+    await assertReindexAllowed(pageId);
+    return false;
+  } catch (err) {
+    if (err instanceof PendingBatchError) return true;
+    throw err;
+  }
+}
 
 /**
  * SEO Intelligence router.
@@ -112,6 +168,7 @@ export const seoRouter = router({
   generateOptimization: adminProcedure
     .input(z.object({ id: z.number().int().positive(), action: z.enum(SEO_ACTION) }))
     .mutation(async ({ input }) => {
+      if (input.action === "request_reindex") await assertReindexAllowed(input.id).catch(toTRPCError);
       try {
         const draft = await runOptimizationJob(input.id, input.action);
         if (input.action === "request_reindex") {
@@ -135,6 +192,7 @@ export const seoRouter = router({
   regenerateOptimization: adminProcedure
     .input(z.object({ id: z.number().int().positive(), action: z.enum(SEO_ACTION) }))
     .mutation(async ({ input }) => {
+      if (input.action === "request_reindex") await assertReindexAllowed(input.id).catch(toTRPCError);
       try {
         const draft = await runOptimizationJob(input.id, input.action);
         return { draft };
@@ -161,8 +219,17 @@ export const seoRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
+      let ids = input.ids;
+      let blockedByPendingBatch: number[] = [];
+      if (input.action === "request_reindex") {
+        const checks = await Promise.all(
+          ids.map(async (id) => [id, await isReindexBlocked(id)] as const),
+        );
+        blockedByPendingBatch = checks.filter(([, blocked]) => blocked).map(([id]) => id);
+        ids = checks.filter(([, blocked]) => !blocked).map(([id]) => id);
+      }
       const results = await runBulkOptimization(
-        input.ids,
+        ids,
         input.action,
         input.concurrency ?? DEFAULT_BULK_CONCURRENCY,
       );
@@ -174,6 +241,7 @@ export const seoRouter = router({
         results,
         succeeded: results.filter((r) => r.ok).length,
         failed: results.filter((r) => !r.ok).length,
+        skippedPendingBatch: blockedByPendingBatch,
       };
     }),
 
@@ -220,11 +288,153 @@ export const seoRouter = router({
       return { draft };
     }),
 
-  /** Move one or more pages to a workflow status (Phase 6). Admin-only. */
+  /**
+   * Move one or more pages to a workflow status (Phase 6). Admin-only.
+   * "waiting_for_indexing" is gated the same as the request_reindex action —
+   * a page can't be requested for reindex while its title/meta is sitting in
+   * an unmerged bulk-approve PR (spec §11 acceptance test).
+   */
   setWorkflowStatus: adminProcedure
     .input(z.object({ ids: z.array(z.number().int().positive()).min(1), status: z.enum(SEO_STATUS) }))
     .mutation(async ({ input }) => {
-      const updated = await setWorkflowStatus(input.ids, input.status);
+      let ids = input.ids;
+      if (input.status === "waiting_for_indexing") {
+        const checks = await Promise.all(ids.map(async (id) => [id, await isReindexBlocked(id)] as const));
+        ids = checks.filter(([, blocked]) => !blocked).map(([id]) => id);
+      }
+      const updated = await setWorkflowStatus(ids, input.status);
       return { updated };
     }),
+
+  /* ── SEO bulk-approve workflow (docs/seo-bulk-approve-spec.md) ─────────── */
+
+  /** Whether the server-side GitHub PAT is configured — drives the UI's "not configured" state. */
+  githubConfigured: protectedProcedure.query(() => ({ configured: isGithubConfigured() })),
+
+  /** Lock status for a set of page paths — for greying out rows in the table. */
+  getLockStatus: protectedProcedure
+    .input(z.object({ paths: z.array(z.string()).min(1) }))
+    .query(async ({ input }) => {
+      const locked = await findLockedPages(input.paths);
+      return Object.fromEntries(locked.entries());
+    }),
+
+  /** Claims-linter result for one page's CURRENT draft (or its live title/meta if no draft). */
+  lintPage: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const draft = await getDraft(input.id);
+      const db = await getDb();
+      if (!db) return { findings: [], passes: true };
+      const [page] = await db.select().from(seoPages).where(eq(seoPages.id, input.id)).limit(1);
+      if (!page) return { findings: [], passes: true };
+      return lintPageMeta({
+        pagePath: page.page,
+        title: draft.title ?? page.title,
+        metaDescription: draft.metaDescription ?? page.metaDescription,
+      });
+    }),
+
+  /** Build the diff table for a candidate batch (approval modal, before confirm). Admin-only. */
+  buildBatchDiff: adminProcedure
+    .input(z.object({ pageIds: z.array(z.number().int().positive()).min(1).max(20) }))
+    .mutation(async ({ input }) => {
+      try {
+        return { rows: await buildBatchDiff(input.pageIds) };
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
+
+  /** Approve a batch → commit + PR. Admin-only. Never writes to main. */
+  approveBatchToPR: adminProcedure
+    .input(z.object({ pageIds: z.array(z.number().int().positive()).min(1).max(20), label: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await approveBatchToPR({ pageIds: input.pageIds, label: input.label, actorId: resolveTeamMemberId(ctx.user) });
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
+
+  /** List approval batches (for the batch history / PR-status panel). */
+  listBatches: protectedProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) return [];
+    return db.select().from(seoApprovalBatches).orderBy(seoApprovalBatches.createdAt);
+  }),
+
+  /** Revert a merged batch — opens a new PR. Admin-only. */
+  revertBatch: adminProcedure
+    .input(z.object({ batchId: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await revertBatch(input.batchId, resolveTeamMemberId(ctx.user));
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
+
+  /** Poll this batch's PR (merged/closed?) and sync the DB. No webhook — admin-triggered. */
+  refreshBatchStatus: adminProcedure
+    .input(z.object({ batchId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      try {
+        return await refreshBatchStatus(input.batchId);
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
+
+  /** Tags for one page (row menu). */
+  getTags: protectedProcedure.input(z.object({ pagePath: z.string() })).query(async ({ input }) => listTags(input.pagePath)),
+
+  addTag: adminProcedure
+    .input(z.object({ pagePath: z.string(), tag: z.enum(SEO_PAGE_TAGS), note: z.string().nullable().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      await addTag({ pagePath: input.pagePath, tag: input.tag, note: input.note ?? null, actorId: resolveTeamMemberId(ctx.user) });
+      return { ok: true };
+    }),
+
+  /** Removing "claims-review" requires a note (enforced in the service, not just here). */
+  removeTag: adminProcedure
+    .input(z.object({ pagePath: z.string(), tag: z.enum(SEO_PAGE_TAGS), note: z.string().nullable().optional() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        await removeTag({ pagePath: input.pagePath, tag: input.tag, note: input.note ?? null, actorId: resolveTeamMemberId(ctx.user) });
+        return { ok: true };
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
+
+  /** Audit log side panel. */
+  getAuditLog: protectedProcedure
+    .input(
+      z.object({
+        batchId: z.number().int().positive().optional(),
+        pagePath: z.string().optional(),
+        limit: z.number().int().min(1).max(2000).optional(),
+      }).optional(),
+    )
+    .query(async ({ input }) => listAuditLog(input ?? {})),
+
+  /** CSV export of the audit log (same filters as getAuditLog). */
+  exportAuditLogCsv: protectedProcedure
+    .input(z.object({ batchId: z.number().int().positive().optional(), pagePath: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      const rows = await listAuditLog(input ?? {});
+      return { csv: auditLogToCsv(rows) };
+    }),
+
+  /** "Discard all drafts" — resets every drafted page back to needs_review. Admin-only. */
+  discardAllDrafts: adminProcedure.mutation(async ({ ctx }) => discardAllDrafts(resolveTeamMemberId(ctx.user))),
+
+  /** "Regenerate drafts (unlocked only)" — skips anything on the exclusion list. Admin-only. */
+  regenerateUnlockedDrafts: adminProcedure
+    .input(z.object({ ids: z.array(z.number().int().positive()).min(1), concurrency: z.number().int().min(1).max(16).optional() }))
+    .mutation(async ({ input }) => regenerateUnlockedDrafts(input.ids, input.concurrency)),
+
+  /** Manual trigger for the 30-day soft-expiry sweep (spec §8) — not wired to a cron yet. Admin-only. */
+  expireStaleDrafts: adminProcedure.mutation(async () => expireStaleDrafts()),
 });
