@@ -268,11 +268,16 @@ describe("buildBatchDiff — validation", () => {
     expect(ghState.prs.size).toBe(0);
   });
 
-  it("rejects a page whose title fails the claims linter", async () => {
+  it("resolves with the blocked row's lint findings attached, rather than throwing (so the modal can show them)", async () => {
     const { db } = makeDb([page({ id: 1, title: "#1 HVAC Contractor in Elizabeth, NJ" })]);
     vi.mocked(getDb).mockResolvedValue(db as never);
 
-    await expect(buildBatchDiff([1])).rejects.toBeInstanceOf(LintBlockedError);
+    const rows = await buildBatchDiff([1]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].lint.passes).toBe(false);
+    expect(rows[0].lint.findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "superlative", severity: "block", field: "both" })]),
+    );
   });
 
   it("returns a clean diff row for a valid, unlocked page", async () => {
@@ -306,6 +311,19 @@ describe("approveBatchToPR — commit/PR guarantees (spec §11)", () => {
     vi.mocked(getDb).mockResolvedValue(db as never);
 
     await expect(approveBatchToPR({ pageIds: [1], label: "test", actorId: 1 })).rejects.toBeInstanceOf(MockProviderError);
+    expect(batches.size).toBe(0);
+    expect(ghState.commits).toHaveLength(0);
+    expect(ghState.prs.size).toBe(0);
+  });
+
+  it("throws LintBlockedError and writes nothing when a page's title fails the claims linter — the actual enforcement point now that buildBatchDiff itself no longer throws", async () => {
+    const { db, batches } = makeDb([page({ id: 1, title: "#1 HVAC Contractor in Elizabeth, NJ" })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+
+    const err = await approveBatchToPR({ pageIds: [1], label: "test", actorId: 1 }).catch((e) => e);
+    expect(err).toBeInstanceOf(LintBlockedError);
+    expect((err as InstanceType<typeof LintBlockedError>).blocked[0].pagePath).toBe("/hvac-elizabeth-nj");
+    expect((err as InstanceType<typeof LintBlockedError>).blocked[0].findings.some((f) => f.code === "superlative")).toBe(true);
     expect(batches.size).toBe(0);
     expect(ghState.commits).toHaveLength(0);
     expect(ghState.prs.size).toBe(0);
