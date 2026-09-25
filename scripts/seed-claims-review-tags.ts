@@ -6,7 +6,7 @@
  * server/seo/lockedPages.ts's SEEDED_CLAIMS_REVIEW_PATHS.
  *
  * Idempotent — safe to re-run (onDuplicateKeyUpdate against the
- * seoPageTags_page_tag_uq unique index on (pagePath, tag)).
+ * seoPageTags_page_tag_uq unique index on (pagePathHash, tag)).
  *
  * Run: npx tsx scripts/seed-claims-review-tags.ts
  * (Point DATABASE_URL at the target environment first — this does not run
@@ -14,6 +14,7 @@
  */
 import { getDb } from "../server/db";
 import { seoPageTags } from "../drizzle/schema";
+import { hashPagePath } from "../server/seo/lockedPages";
 
 const PATHS = [
   "/hvac-newark-nj",
@@ -36,7 +37,7 @@ async function main() {
   for (const pagePath of PATHS) {
     await db
       .insert(seoPageTags)
-      .values({ pagePath, tag: "claims-review", note: NOTE })
+      .values({ pagePath, pagePathHash: hashPagePath(pagePath), tag: "claims-review", note: NOTE })
       .onDuplicateKeyUpdate({ set: { note: NOTE } });
     console.log(`[seed-claims-review-tags] tagged ${pagePath}`);
   }
