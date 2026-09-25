@@ -378,12 +378,24 @@ export function deriveProblems(s: SeoPageSignals): SeoProblem[] {
   return Array.from(new Set(out));
 }
 
-/** One-line human summary for the table "Issue" column. */
+/**
+ * One-line human summary for the table "Issue" column.
+ *
+ * Data-honest by design (docs/seo-bulk-approve-spec.md §9) — a low/0% CTR
+ * far down the results page is expected (nobody sees it), not evidence the
+ * title or meta description is weak. That diagnosis only holds when the page
+ * is ranking well enough to actually be seen. Order matters: signal-quality
+ * gates (impressions, deep position) run BEFORE the CTR-based diagnosis so
+ * they can't be reached with too little data or too low a ranking to mean
+ * anything.
+ */
 export function summarizeIssue(s: SeoPageSignals): string {
   if (s.indexStatus === "crawled_not_indexed") return "Crawled — currently not indexed by Google";
   if (isNotIndexed(s.indexStatus)) return "Not indexed — excluded from Google's index";
-  if (s.position >= 8 && s.position <= 20) return `Ranking #${s.position.toFixed(0)} — one push from page 1`;
-  if (s.impressions > 0 && s.ctr < LOW_CTR) return "High impressions, low CTR — title & meta need work";
+  if (s.impressions < 20) return "Insufficient data — too few impressions to diagnose";
+  if (s.position >= 30) return "Not on page 1–2 — content/authority, not CTR";
+  if (s.position >= 8 && s.position <= 20 && s.impressions >= 100) return "Page 2 — refresh candidate";
+  if (s.position <= 25 && s.impressions > 0 && s.ctr < LOW_CTR) return "High impressions, low CTR — title & meta need work";
   if (isDeclining(s)) return "Declining clicks vs. the previous 90 days";
   if (s.position >= 21 && s.position <= 40) return "Page 3–4 ranking — needs stronger content";
   return "Stable — monitor";
