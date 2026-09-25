@@ -42,12 +42,22 @@
       // page_view itself (initial + route changes) via client/src/lib/analytics.ts,
       // so there is no duplicate initial page_view. Guarded so an unset or
       // unsubstituted placeholder is ignored and GA4 simply stays off.
-      // TODO Ana: set VITE_GA4_MEASUREMENT_ID in Netlify env vars to your GA4
-      // property ID (looks like G-XXXXXXXXXX). Until then GA4 stays off; Google
-      // Ads keeps working. See client/src/lib/analytics.ts for the guard.
+      // TODO Ana: set VITE_GA4_MEASUREMENT_ID in Netlify env vars to your real
+      // GA4 property ID (Admin > Data Streams > your stream > Measurement ID,
+      // a "G-" prefix followed by ten alphanumeric characters). Until then
+      // GA4 stays off; Google Ads keeps working. See client/src/lib/analytics.ts
+      // for the guard.
       (function () {
         var ga4Id = '%VITE_GA4_MEASUREMENT_ID%';
-        if (ga4Id.indexOf('G-') === 0) {
+        // Guards against three things a naive `indexOf('G-') === 0` check
+        // would NOT catch: an unsubstituted build placeholder, an empty
+        // value, and someone pasting the all-"X" example format (a string of
+        // X's after "G-") into the env var instead of a real measurement ID
+        // from GA4 — that's syntactically valid enough to pass a format
+        // check on its own, so it has to be excluded explicitly, or gtag
+        // fires against a fake, non-existent GA4 property.
+        var isPlaceholderExample = /^G-X+$/i.test(ga4Id);
+        if (/^G-[A-Z0-9]{6,}$/i.test(ga4Id) && !isPlaceholderExample) {
           gtag('config', ga4Id, { send_page_view: false });
         }
       })();
