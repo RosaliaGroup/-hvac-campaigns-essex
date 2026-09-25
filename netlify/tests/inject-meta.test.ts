@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { getRouteStatus, injectMeta } from "../edge-functions/inject-meta";
+import { CUSTOMER_FACING_SEND_TARGETS } from "../../shared/seoLockedRoutes";
 
 // PR-1 item A: real 404s for unregistered routes, without breaking any
 // registered route — public, internal/CRM, or public-dynamic.
@@ -95,15 +96,10 @@ describe("getRouteStatus", () => {
 // stop covering these specific, high-stakes URLs.
 describe("getRouteStatus — every URL sent directly to customers by Vapi/SMS/email stays registered", () => {
   it("never 404s a customer-facing send-target URL", () => {
-    const customerFacingSendTargets: Record<string, string> = {
-      "/referral": "Vapi sendReferralLink SMS (server/services/referralSms.ts CUSTOMER_REFERRAL_LINK) + netlify/functions/sendReferralEmails.js referral-program mention",
-      "/qualify": "Vapi sendForm tool (server/services/vapiSendForm.ts) + netlify/functions/sendReferralEmails.js BOOKING_URL",
-      "/assessment": "same Qualify.tsx component as /qualify; LiveChatWidget.tsx ASSESSMENT_URL",
-      "/rebate-calculator": "rebate calculator client confirmation email (server/routers/rebateCalculator.ts, '#assessment' anchor — hash is not part of route matching)",
-      "/pseg-rebate-contractor-nj": "PSE&G rebate checklist customer email (server/routers.ts)",
-      "/promos": "kept registered and indexable per PR-1 item C; verified live in Step 2",
-    };
-    for (const [path, sentBy] of Object.entries(customerFacingSendTargets)) {
+    // seo-bulk-approve: this fixture moved to shared/seoLockedRoutes.ts
+    // (CUSTOMER_FACING_SEND_TARGETS) so the SEO bulk-approve exclusion list
+    // can reuse the exact same list instead of a second, driftable copy.
+    for (const [path, sentBy] of Object.entries(CUSTOMER_FACING_SEND_TARGETS)) {
       const status = getRouteStatus(path);
       expect(status.isRegistered, `${path} (sent by: ${sentBy}) must resolve, not 404`).toBe(true);
       expect(status.isInternalOrDynamic, `${path} is customer-facing marketing content, not CRM/internal`).toBe(false);

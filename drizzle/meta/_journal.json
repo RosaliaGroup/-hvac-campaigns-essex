@@ -477,6 +477,13 @@
       "when": 1786246913936,
       "tag": "0071_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "5",
+      "when": 1790300000000,
+      "tag": "0072_seo_bulk_approve",
+      "breakpoints": true
     }
   ]
 }

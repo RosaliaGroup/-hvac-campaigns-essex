@@ -14,6 +14,31 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   MousePointerClick,
   Eye,
   Percent,
@@ -48,6 +73,15 @@ import {
   Info,
   ShieldAlert,
   DollarSign,
+  Lock,
+  GitPullRequest,
+  Undo2,
+  Tag as TagIcon,
+  ListChecks,
+  Trash2,
+  History,
+  Download,
+  MoreVertical,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,16 +110,26 @@ import {
 } from "@shared/seo";
 
 /**
- * Temporary guard (PR-1): "Optimize Selected" generates AI drafts with no
- * exclusion list and no claims linter behind it yet — those are being built
- * in the seo-bulk-approve workflow (docs/seo-bulk-approve-spec.md). The
- * mutation itself never publishes (server/routers/seo.ts bulkGenerateOptimization
- * is explicitly draft-only), so this isn't a live-content-safety issue, but
- * every draft it generates today has to be manually re-reviewed once the
- * exclusion list exists, and that backlog is already at 247. Flip this back
- * to true once seo-bulk-approve ships its exclusion list + linter.
+ * The bulk-approve workflow's own safety net (docs/seo-bulk-approve-spec.md)
+ * now gates the actual publish path — buildBatchDiff/approveBatchToPR reject
+ * locked pages and BLOCK-level lint findings server-side before anything ever
+ * reaches a PR. "Optimize Selected" only ever writes drafts (never publishes),
+ * and locked rows are unselectable in the table below (see `lockedByPath`),
+ * so it no longer needs its own separate gate.
  */
-const BULK_OPTIMIZE_ENABLED = false;
+
+/** Mirrors server/services/seo/bulkApprove.ts's MAX_BATCH_SIZE. */
+const MAX_BULK_APPROVE_BATCH = 20;
+
+/** Mirrors drizzle/schema.ts's SEO_PAGE_TAGS — not imported directly to keep drizzle out of the client bundle. */
+const SEO_TAG_OPTIONS = ["claims-review", "locked", "verified-project", "illustrative"] as const;
+type SeoPageTagName = (typeof SEO_TAG_OPTIONS)[number];
+const SEO_TAG_LABELS: Record<SeoPageTagName, string> = {
+  "claims-review": "Claims Review",
+  locked: "Locked",
+  "verified-project": "Verified Project",
+  illustrative: "Illustrative",
+};
 
 /* ── Formatting helpers ─────────────────────────────────────────────────── */
 
@@ -631,6 +675,102 @@ function BusinessImpactPanel({ data, loading }: { data?: BusinessImpact; loading
   );
 }
 
+/* ── Tags (spec §4) ──────────────────────────────────────────────────────── */
+
+function TagMenu({ pagePath, isAdmin }: { pagePath: string; isAdmin: boolean }) {
+  const utils = trpc.useUtils();
+  const tagsQ = trpc.seo.getTags.useQuery({ pagePath });
+  const [removeTarget, setRemoveTarget] = useState<SeoPageTagName | null>(null);
+  const [removeNote, setRemoveNote] = useState("");
+
+  const afterWrite = () => {
+    utils.seo.getTags.invalidate({ pagePath });
+    utils.seo.getLockStatus.invalidate();
+  };
+
+  const addTag = trpc.seo.addTag.useMutation({
+    onSuccess: () => { afterWrite(); toast.success("Tag added"); },
+    onError: (e) => toast.error(e.message),
+  });
+  const removeTag = trpc.seo.removeTag.useMutation({
+    onSuccess: () => { afterWrite(); toast.success("Tag removed"); setRemoveTarget(null); setRemoveNote(""); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const active = new Set((tagsQ.data ?? []).map((t) => t.tag as SeoPageTagName));
+  const busy = addTag.isPending || removeTag.isPending;
+
+  const requestRemove = (tag: SeoPageTagName) => {
+    if (tag === "claims-review") {
+      setRemoveTarget(tag); // claims-review requires a note — confirm inline below
+      return;
+    }
+    removeTag.mutate({ pagePath, tag, note: null });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tags</p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 px-2 text-xs text-muted-foreground" disabled={!isAdmin || busy}>
+              <TagIcon className="h-3.5 w-3.5" /> Add tag
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {SEO_TAG_OPTIONS.filter((t) => !active.has(t)).map((t) => (
+              <DropdownMenuItem key={t} onClick={() => addTag.mutate({ pagePath, tag: t, note: null })}>
+                {SEO_TAG_LABELS[t]}
+              </DropdownMenuItem>
+            ))}
+            {SEO_TAG_OPTIONS.every((t) => active.has(t)) && (
+              <DropdownMenuItem disabled>All tags applied</DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {tagsQ.isLoading ? (
+        <p className="text-xs text-muted-foreground">Loading tags…</p>
+      ) : active.size === 0 ? (
+        <p className="text-xs text-muted-foreground">No tags on this page.</p>
+      ) : (
+        <ul className="flex flex-wrap gap-1.5">
+          {Array.from(active).map((t) => (
+            <li key={t}>
+              <Badge variant="outline" className="gap-1 text-xs">
+                {SEO_TAG_LABELS[t]}
+                {isAdmin && (
+                  <button type="button" className="ml-0.5 text-muted-foreground hover:text-foreground" disabled={busy} onClick={() => requestRemove(t)} aria-label={`Remove ${SEO_TAG_LABELS[t]}`}>
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </Badge>
+            </li>
+          ))}
+        </ul>
+      )}
+      {removeTarget === "claims-review" && (
+        <div className="space-y-1.5 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+          <p className="text-xs text-amber-800">Removing "Claims Review" requires a note (why it's now verified).</p>
+          <Textarea rows={2} value={removeNote} onChange={(e) => setRemoveNote(e.target.value)} placeholder="e.g. Phone number confirmed canonical 2026-09-25" className="text-xs" />
+          <div className="flex justify-end gap-2">
+            <Button type="button" size="sm" variant="ghost" onClick={() => { setRemoveTarget(null); setRemoveNote(""); }}>Cancel</Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!removeNote.trim() || removeTag.isPending}
+              onClick={() => removeTag.mutate({ pagePath, tag: "claims-review", note: removeNote.trim() })}
+            >
+              Confirm removal
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OpportunityDrawer({
   opportunity,
   open,
@@ -719,6 +859,11 @@ function OpportunityDrawer({
 
               <Separator />
 
+              {/* Tags (spec §4) — claims-review here locks the page out of bulk-approve */}
+              <TagMenu pagePath={o.page} isAdmin={isAdmin} />
+
+              <Separator />
+
               {/* AI draft workspace */}
               <DraftWorkspace opportunity={o} isAdmin={isAdmin} />
             </div>
@@ -726,6 +871,327 @@ function OpportunityDrawer({
         )}
       </SheetContent>
     </Sheet>
+  );
+}
+
+/* ── Bulk-approve modal (spec §5) ───────────────────────────────────────── */
+
+function LintFindingList({ findings }: { findings: { severity: "block" | "warn"; code: string; message: string; field: string }[] }) {
+  if (findings.length === 0) return <span className="text-xs text-emerald-700">Clean</span>;
+  return (
+    <ul className="space-y-0.5">
+      {findings.map((f, i) => (
+        <li key={i} className={`text-xs ${f.severity === "block" ? "text-red-700" : "text-amber-700"}`}>
+          {f.severity === "block" ? "⛔" : "⚠️"} {f.message}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function BulkApproveModal({
+  open,
+  onClose,
+  pageIds,
+  onApproved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  pageIds: number[];
+  onApproved: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const [label, setLabel] = useState("");
+  const buildDiff = trpc.seo.buildBatchDiff.useMutation();
+  const approve = trpc.seo.approveBatchToPR.useMutation();
+  const key = pageIds.join(",");
+
+  useEffect(() => {
+    if (open && pageIds.length > 0) {
+      setLabel("");
+      buildDiff.mutate({ pageIds });
+    }
+    // Re-run only when the modal opens for a new selection, not on every render
+    // (pageIds is a fresh array each render — `key` is the stable dependency).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, key]);
+
+  const rows = buildDiff.data?.rows ?? [];
+  const hasBlockers = rows.some((r) => !r.lint.passes);
+  const hasBodyChanges = rows.some((r) => r.hasBodyChanges);
+
+  const handleApprove = () => {
+    if (!label.trim()) return;
+    approve.mutate(
+      { pageIds, label: label.trim() },
+      {
+        onSuccess: (res) => {
+          toast.success(`Batch approved — PR #${res.prNumber} opened`);
+          utils.seo.listBatches.invalidate();
+          utils.seo.getOpportunities.invalidate();
+          onApproved();
+          onClose();
+        },
+        onError: (e) => toast.error(e.message),
+      },
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-[#1e3a5f]">
+            <GitPullRequest className="h-5 w-5 text-[#ff6b35]" /> Approve to PR — {pageIds.length} page{pageIds.length === 1 ? "" : "s"}
+          </DialogTitle>
+          <DialogDescription>
+            Title &amp; meta description only. This opens a pull request — nothing publishes until a human merges it on GitHub.
+          </DialogDescription>
+        </DialogHeader>
+
+        {buildDiff.isPending ? (
+          <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" /> Building diff…
+          </div>
+        ) : buildDiff.isError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">{buildDiff.error.message}</div>
+        ) : (
+          <>
+            {hasBodyChanges && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+                <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                Some drafts also contain body/H1/FAQ/schema changes — only title/meta will be applied here. Review those individually via the single-page Optimize flow.
+              </div>
+            )}
+            <div className="overflow-x-auto rounded-lg border">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50">
+                  <tr className="border-b">
+                    <th className="p-2 text-left font-medium">Page</th>
+                    <th className="p-2 text-left font-medium">Title</th>
+                    <th className="p-2 text-left font-medium">Meta description</th>
+                    <th className="p-2 text-left font-medium">Lint</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.pageId} className="border-b last:border-0 align-top">
+                      <td className="p-2 font-medium text-[#1e3a5f] whitespace-nowrap">{r.pagePath}</td>
+                      <td className="p-2 max-w-[220px]">
+                        <p className="text-muted-foreground line-through decoration-muted-foreground/50">{r.before.title || "—"}</p>
+                        <p>{r.after.title}</p>
+                      </td>
+                      <td className="p-2 max-w-[260px]">
+                        <p className="text-muted-foreground line-through decoration-muted-foreground/50">{r.before.description || "—"}</p>
+                        <p>{r.after.description}</p>
+                      </td>
+                      <td className="p-2 min-w-[160px]"><LintFindingList findings={r.lint.findings} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Batch label</label>
+              <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. city-pages-essex-title-meta" />
+            </div>
+          </>
+        )}
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            type="button"
+            className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+            disabled={buildDiff.isPending || !!buildDiff.error || hasBlockers || !label.trim() || approve.isPending}
+            onClick={handleApprove}
+          >
+            {approve.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <GitPullRequest className="mr-1.5 h-4 w-4" />}
+            Approve to PR
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── Batch history + revert (spec §5, §6) ───────────────────────────────── */
+
+const BATCH_STATUS_STYLE: Record<string, string> = {
+  pr_open: "bg-blue-100 text-blue-800 border-blue-200",
+  merged: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  reverted: "bg-slate-100 text-slate-700 border-slate-200",
+  failed: "bg-red-100 text-red-800 border-red-200",
+};
+
+function BatchHistoryPanel() {
+  const utils = trpc.useUtils();
+  const batchesQ = trpc.seo.listBatches.useQuery();
+  const revert = trpc.seo.revertBatch.useMutation({
+    onSuccess: (res) => {
+      toast.success(`Revert PR #${res.prNumber} opened`);
+      utils.seo.listBatches.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const batches = [...(batchesQ.data ?? [])].reverse();
+  if (batchesQ.isLoading || batches.length === 0) return null;
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base text-[#1e3a5f]">
+          <History className="h-4 w-4 text-[#ff6b35]" /> Bulk-Approve Batches
+        </CardTitle>
+        <CardDescription>Every batch opens a PR — merges happen on GitHub, never here.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y">
+          {batches.slice(0, 10).map((b) => {
+            const pages = b.pages as string[];
+            return (
+              <li key={b.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                <div>
+                  <p className="font-medium text-[#1e3a5f]">
+                    {b.label} {b.revertsBatchId ? <span className="text-xs text-muted-foreground">(reverts #{b.revertsBatchId})</span> : null}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {pages.length} page{pages.length === 1 ? "" : "s"} · {new Date(b.createdAt).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={`text-xs ${BATCH_STATUS_STYLE[b.status] ?? ""}`}>{b.status.replace("_", " ")}</Badge>
+                  {b.prUrl && (
+                    <a href={b.prUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#ff6b35] hover:underline">
+                      PR #{b.prNumber} <ExternalLink className="h-3 w-3" />
+                    </a>
+                  )}
+                  {b.status === "merged" && (
+                    <Button type="button" size="sm" variant="outline" disabled={revert.isPending} onClick={() => revert.mutate({ batchId: b.id })}>
+                      {revert.isPending && revert.variables?.batchId === b.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Undo2 className="mr-1.5 h-3.5 w-3.5" />}
+                      Revert
+                    </Button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Audit log (spec §7) ─────────────────────────────────────────────────── */
+
+function AuditLogSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const logQ = trpc.seo.getAuditLog.useQuery(undefined, { enabled: open });
+  const utils = trpc.useUtils();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const { csv } = await utils.seo.exportAuditLogCsv.fetch();
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `seo-audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const rows = logQ.data ?? [];
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="flex items-center gap-2 text-[#1e3a5f]">
+            <ListChecks className="h-5 w-5 text-[#ff6b35]" /> Audit Log
+          </SheetTitle>
+          <SheetDescription>Every bulk-approve action — drafts, PRs, tags, reindex.</SheetDescription>
+        </SheetHeader>
+        <div className="p-5 pt-0">
+          <Button type="button" size="sm" variant="outline" className="mb-4" disabled={exporting} onClick={handleExport}>
+            {exporting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+            Export CSV
+          </Button>
+          {logQ.isLoading ? (
+            <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" /> Loading…
+            </div>
+          ) : rows.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">No audit events yet.</p>
+          ) : (
+            <ul className="divide-y">
+              {rows.map((r) => (
+                <li key={r.id} className="py-2.5 text-sm">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-[#1e3a5f]">{r.action.replace(/_/g, " ")}</span>
+                    <span className="text-xs text-muted-foreground">{new Date(r.ts).toLocaleString()}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {r.pagePath ?? "—"} {r.batchId ? `· batch #${r.batchId}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* ── Draft management (spec §8) ─────────────────────────────────────────── */
+
+function DiscardAllDraftsButton({ isAdmin }: { isAdmin: boolean }) {
+  const utils = trpc.useUtils();
+  const [open, setOpen] = useState(false);
+  const discard = trpc.seo.discardAllDrafts.useMutation({
+    onSuccess: (res) => {
+      utils.seo.getOpportunities.invalidate();
+      utils.seo.getBusinessImpact.invalidate();
+      toast.success(`Discarded ${res.discarded} draft${res.discarded === 1 ? "" : "s"}`);
+      setOpen(false);
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm" disabled={!isAdmin}>
+          <Trash2 className="h-4 w-4 mr-1.5" /> Discard All Drafts
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Discard all drafts?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This clears every drafted title, meta description, and content across all pages and logs a "draft
+            discarded" event for each one. Pages return to "needs review". It does not undo anything already
+            approved to a PR.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction disabled={discard.isPending} onClick={() => discard.mutate()}>
+            {discard.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+            Discard all
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -740,10 +1206,20 @@ export default function SeoIntelligence() {
   const opportunities = trpc.seo.getOpportunities.useQuery(undefined, { enabled: isAuthenticated });
   const syncStatus = trpc.seo.getSyncStatus.useQuery(undefined, { enabled: isAuthenticated });
   const businessImpact = trpc.seo.getBusinessImpact.useQuery(undefined, { enabled: isAuthenticated });
+  const githubConfigured = trpc.seo.githubConfigured.useQuery(undefined, { enabled: isAuthenticated });
+  // Lock status covers every synced page (not just the filtered view) so
+  // selection stays correct if a filter changes after the query lands.
+  const allPaths = (opportunities.data ?? []).map((o) => o.page);
+  const lockStatus = trpc.seo.getLockStatus.useQuery(
+    { paths: allPaths },
+    { enabled: isAuthenticated && allPaths.length > 0 },
+  );
 
   const [activeFilters, setActiveFilters] = useState<SeoFilterKey[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [auditOpen, setAuditOpen] = useState(false);
   const [bulkResult, setBulkResult] = useState<{
     succeeded: number;
     failed: number;
@@ -807,6 +1283,19 @@ export default function SeoIntelligence() {
     onError: (err) => toast.error(err.message),
   });
 
+  const regenerateUnlocked = trpc.seo.regenerateUnlockedDrafts.useMutation({
+    onSuccess: (res) => {
+      invalidate();
+      const ok = res.results.filter((r) => r.ok).length;
+      const failed = res.results.length - ok;
+      const skipped = res.skippedLocked.length;
+      toast.success(
+        `Regenerated ${ok} draft${ok === 1 ? "" : "s"}${failed > 0 ? `, ${failed} failed` : ""}${skipped > 0 ? `, ${skipped} skipped (locked)` : ""}`,
+      );
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -820,9 +1309,15 @@ export default function SeoIntelligence() {
   const rows: SeoOpportunity[] = opportunities.data ?? [];
   const filtered = applySeoFilters(rows, activeFilters);
   const drawerOpportunity = drawerId ? rows.find((r) => r.id === drawerId) ?? null : null;
+  const lockedByPath = lockStatus.data ?? {};
+  const isPageLocked = (page: string) => !!lockedByPath[page]?.locked;
 
-  // Selection is scoped to the currently-visible (filtered) rows.
-  const filteredIds = filtered.map((r) => r.id);
+  // Selection is scoped to the currently-visible (filtered), UNLOCKED rows —
+  // locked pages are unselectable everywhere (spec §2: "render them
+  // unselectable ... UI hiding alone is not acceptable"), so this single
+  // filter is what keeps every bulk action (Optimize, Reindex, Approve to
+  // PR) off quarantined pages without a separate gate per button.
+  const filteredIds = filtered.filter((r) => !isPageLocked(r.page)).map((r) => r.id);
   const selectedVisible = filteredIds.filter((id) => selectedIds.has(id));
   const allVisibleSelected = filteredIds.length > 0 && selectedVisible.length === filteredIds.length;
   const someVisibleSelected = selectedVisible.length > 0 && !allVisibleSelected;
@@ -866,6 +1361,10 @@ export default function SeoIntelligence() {
     setStatus.mutate({ ids: selectedVisible, status: "published" });
     clearSelection();
   };
+  const bulkRegenerateUnlocked = () => {
+    regenerateUnlocked.mutate({ ids: toIds(selectedVisible) });
+    clearSelection();
+  };
 
   const handleRefresh = () => {
     overview.refetch();
@@ -894,6 +1393,11 @@ export default function SeoIntelligence() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setAuditOpen(true)}>
+                <ListChecks className="h-4 w-4 mr-1.5" />
+                Audit Log
+              </Button>
+              <DiscardAllDraftsButton isAdmin={isAdmin} />
               <Button variant="outline" onClick={handleRefresh}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
@@ -904,6 +1408,12 @@ export default function SeoIntelligence() {
               </Button>
             </div>
           </div>
+          {!githubConfigured.isLoading && githubConfigured.data && !githubConfigured.data.configured && (
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              GitHub not configured — set <code className="font-mono">SEO_GITHUB_TOKEN</code> to enable "Approve to PR".
+            </div>
+          )}
         </div>
 
         {/* Organic Leads — the metric that matters */}
@@ -985,6 +1495,9 @@ export default function SeoIntelligence() {
         {/* Projected business impact (transparent estimates) */}
         <BusinessImpactPanel data={businessImpact.data} loading={businessImpact.isLoading} />
 
+        {/* Bulk-approve batch history + revert (spec §5, §6) */}
+        <BatchHistoryPanel />
+
         {/* SEO Opportunities work queue */}
         <Card>
           <CardHeader>
@@ -1028,34 +1541,50 @@ export default function SeoIntelligence() {
           </CardHeader>
 
           <CardContent>
-            {/* Bulk action bar */}
+            {/* Bulk action bar — locked pages are excluded from selection entirely (see filteredIds above), so every button here already only ever acts on unlocked rows. */}
             {selectedVisible.length > 0 && (
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#ff6b35]/30 bg-[#ff6b35]/5 p-2.5">
                 <span className="text-sm font-medium text-[#1e3a5f] px-1">{selectedVisible.length} selected</span>
                 <div className="flex flex-wrap gap-2">
-                  {BULK_OPTIMIZE_ENABLED ? (
-                    <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkOptimize}>
-                      {bulkGenerate.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />} Optimize Selected
-                    </Button>
-                  ) : (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        {/* span wrapper: a disabled <button> swallows pointer events, so Radix's hover-based tooltip trigger needs a non-disabled element around it to fire on. */}
-                        <span tabIndex={0}>
-                          <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled>
-                            <Sparkles className="h-4 w-4 mr-1.5" /> Optimize Selected
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>Disabled — pending bulk-approve workflow (exclusion list + claims linter not built yet)</TooltipContent>
-                    </Tooltip>
-                  )}
+                  <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkOptimize}>
+                    {bulkGenerate.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />} Optimize Selected
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={!isAdmin || regenerateUnlocked.isPending} onClick={bulkRegenerateUnlocked}>
+                    {regenerateUnlocked.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1.5" />} Regenerate Drafts
+                  </Button>
                   <Button size="sm" variant="outline" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkReindex}>
                     <RotateCw className="h-4 w-4 mr-1.5" /> Request Reindex
                   </Button>
                   <Button size="sm" variant="outline" disabled={!isAdmin || setStatus.isPending} onClick={bulkComplete}>
                     <CheckCircle2 className="h-4 w-4 mr-1.5" /> Mark Complete
                   </Button>
+                  {!githubConfigured.data?.configured ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0}>
+                          <Button size="sm" variant="outline" disabled>
+                            <GitPullRequest className="h-4 w-4 mr-1.5" /> Approve to PR
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>GitHub not configured — set SEO_GITHUB_TOKEN</TooltipContent>
+                    </Tooltip>
+                  ) : selectedVisible.length > MAX_BULK_APPROVE_BATCH ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span tabIndex={0}>
+                          <Button size="sm" variant="outline" disabled>
+                            <GitPullRequest className="h-4 w-4 mr-1.5" /> Approve to PR
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>Batch cap is {MAX_BULK_APPROVE_BATCH} pages — narrow your selection</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled={!isAdmin} onClick={() => setApproveModalOpen(true)}>
+                      <GitPullRequest className="h-4 w-4 mr-1.5" /> Approve to PR
+                    </Button>
+                  )}
                 </div>
                 {!isAdmin && <span className="text-xs text-amber-700">Admin only</span>}
                 <button onClick={clearSelection} className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -1115,7 +1644,6 @@ export default function SeoIntelligence() {
                       <th className="text-left p-3 font-medium">Priority</th>
                       <th className="text-left p-3 font-medium">Page</th>
                       <th className="text-left p-3 font-medium">Status</th>
-                      <th className="text-left p-3 font-medium">Score</th>
                       <th className="text-left p-3 font-medium">Issue</th>
                       <th className="text-right p-3 font-medium">Clicks</th>
                       <th className="text-right p-3 font-medium">Impr.</th>
@@ -1127,19 +1655,43 @@ export default function SeoIntelligence() {
                   <tbody>
                     {filtered.map((r) => {
                       const checked = selectedIds.has(r.id);
+                      const lock = lockedByPath[r.page];
+                      const locked = !!lock?.locked;
                       return (
                         <tr
                           key={r.id}
                           onClick={() => setDrawerId(r.id)}
-                          className={`border-b last:border-0 cursor-pointer align-top transition-colors ${checked ? "bg-[#ff6b35]/5" : "hover:bg-slate-50"}`}
+                          className={`border-b last:border-0 cursor-pointer align-top transition-colors ${locked ? "bg-slate-50/80 opacity-70" : checked ? "bg-[#ff6b35]/5" : "hover:bg-slate-50"}`}
                         >
                           <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox checked={checked} onCheckedChange={() => toggleSelect(r.id)} aria-label={`Select ${r.page}`} />
+                            {locked ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span tabIndex={0} className="inline-flex">
+                                    <Checkbox checked={false} disabled aria-label={`${r.page} is locked for manual review`} />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs">{lock.message}</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Checkbox checked={checked} onCheckedChange={() => toggleSelect(r.id)} aria-label={`Select ${r.page}`} />
+                            )}
                           </td>
                           <td className="p-3"><PriorityBadge priority={r.priority} /></td>
-                          <td className="p-3"><span className="font-medium text-[#1e3a5f] whitespace-nowrap">{r.page}</span></td>
+                          <td className="p-3">
+                            <span className="inline-flex items-center gap-1.5 font-medium text-[#1e3a5f] whitespace-nowrap">
+                              {locked && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">{lock.message}</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {r.page}
+                            </span>
+                          </td>
                           <td className="p-3"><StatusBadge status={r.status} /></td>
-                          <td className="p-3"><ScoreMeter score={r.seoScore} /></td>
                           <td className="p-3 text-muted-foreground max-w-xs">{r.issue}</td>
                           <td className="p-3 text-right tabular-nums">{fmtInt(r.clicks)}</td>
                           <td className="p-3 text-right tabular-nums">{fmtInt(r.impressions)}</td>
@@ -1172,6 +1724,15 @@ export default function SeoIntelligence() {
         onClose={() => setDrawerId(null)}
         isAdmin={isAdmin}
       />
+
+      <BulkApproveModal
+        open={approveModalOpen}
+        onClose={() => setApproveModalOpen(false)}
+        pageIds={toIds(selectedVisible)}
+        onApproved={clearSelection}
+      />
+
+      <AuditLogSheet open={auditOpen} onClose={() => setAuditOpen(false)} />
 
       <DashboardFooter />
     </div>

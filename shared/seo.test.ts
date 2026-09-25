@@ -241,8 +241,28 @@ describe("deriveProblems", () => {
 describe("summarizeIssue", () => {
   it("leads with the most actionable signal", () => {
     expect(summarizeIssue(signals({ indexStatus: "crawled_not_indexed" }))).toMatch(/not indexed/i);
-    expect(summarizeIssue(signals({ position: 11 }))).toMatch(/page 1/i);
+    expect(summarizeIssue(signals({ position: 11, impressions: 1000 }))).toMatch(/page 2/i);
     expect(summarizeIssue(signals({ position: 3, ctr: 0.004, impressions: 5000 }))).toMatch(/low CTR/i);
+  });
+
+  // docs/seo-bulk-approve-spec.md §9 — data-honest labels, not heuristics dressed up as diagnoses.
+  it("position >= 30 blames content/authority, never CTR", () => {
+    expect(summarizeIssue(signals({ position: 35, ctr: 0, impressions: 500 }))).toMatch(/not on page 1.?2/i);
+    expect(summarizeIssue(signals({ position: 35, ctr: 0, impressions: 500 }))).not.toMatch(/title & meta/i);
+  });
+
+  it("position 8-20 with impressions >= 100 reads as a refresh candidate, not '#N away from page 1'", () => {
+    expect(summarizeIssue(signals({ position: 12, impressions: 150 }))).toMatch(/page 2.*refresh candidate/i);
+  });
+
+  it("under 20 impressions is 'insufficient data', regardless of position or CTR", () => {
+    expect(summarizeIssue(signals({ position: 12, impressions: 5, ctr: 0 }))).toMatch(/insufficient data/i);
+    expect(summarizeIssue(signals({ position: 35, impressions: 5, ctr: 0 }))).toMatch(/insufficient data/i);
+  });
+
+  it("never labels 0% CTR past position 25 as a title/meta problem", () => {
+    const result = summarizeIssue(signals({ position: 27, ctr: 0, impressions: 200 }));
+    expect(result).not.toMatch(/title & meta/i);
   });
 });
 
