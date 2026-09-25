@@ -45,9 +45,14 @@ function setCanonical(href: string) {
   el.href = href;
 }
 
+/** Same normalization inject-meta.ts's getMetaForPath() uses — strip a query string and any trailing slash(es), "/" for the root. */
+function normalizePath(pathname: string): string {
+  return pathname.split("?")[0].replace(/\/+$/, "") || "/";
+}
+
 export function useSEO(props: SEOProps) {
   // Guarded: this hook runs during SSR/prerender too, where `window` doesn't exist.
-  const override = typeof window !== "undefined" ? SEO_OVERRIDES[window.location.pathname] : undefined;
+  const override = typeof window !== "undefined" ? SEO_OVERRIDES[normalizePath(window.location.pathname)] : undefined;
   const title = override?.title ?? props.title;
   const description = override?.description ?? props.description;
   const { ogTitle, ogDescription, ogUrl, ogImage } = props;
