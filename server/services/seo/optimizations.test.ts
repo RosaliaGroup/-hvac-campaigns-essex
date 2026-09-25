@@ -26,8 +26,10 @@ vi.mock("drizzle-orm", async (importOriginal) => {
   };
 });
 
+vi.mock("./ai/pageBody", () => ({ fetchBodyExcerpt: vi.fn(async () => "Licensed HVAC contractor serving Newark, NJ.") }));
+
 import { getDb } from "../../db";
-import { seoPages, seoAiDrafts } from "../../../drizzle/schema";
+import { seoPages, seoAiDrafts, seoQueries } from "../../../drizzle/schema";
 import {
   generateOptimization,
   updateDraft,
@@ -52,12 +54,13 @@ import {
   type AiOptimizationProvider,
   type PageContext,
 } from "./ai/optimizationProvider";
+import { AiDraftLintFailedError } from "./ai/anthropicProvider";
 
 /* ── In-memory fake drizzle db ───────────────────────────────────────────── */
 
 type Cond = { __op: "eq"; col: { name: string }; val: unknown } | { __op: "in"; col: { name: string }; vals: unknown[] };
 
-function makeDb(pages: Array<Record<string, any>>) {
+function makeDb(pages: Array<Record<string, any>>, queries: Array<Record<string, any>> = []) {
   const drafts = new Map<number, Record<string, any>>();
   /** Every object passed to `.set()` on seoPages — proves what columns are mutated. */
   const pageUpdates: Array<Record<string, unknown>> = [];
@@ -68,14 +71,16 @@ function makeDb(pages: Array<Record<string, any>>) {
     if (cond.__op === "eq") return rows.filter((r) => rowVal(r, cond) === cond.val);
     return rows.filter((r) => cond.vals.includes(rowVal(r, cond)));
   };
+  const backing = (table: unknown) => (table === seoPages ? pages : table === seoQueries ? queries : [...drafts.values()]);
 
   const db: any = {
     select: () => ({
       from: (table: unknown) => ({
         where: (cond: Cond) => {
-          const rows = () => filter(table === seoPages ? pages : [...drafts.values()], cond);
+          const rows = () => filter(backing(table), cond);
           return {
             limit: () => Promise.resolve(rows()),
+            orderBy: () => ({ limit: () => Promise.resolve(rows()) }),
             then: (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) =>
               Promise.resolve(rows()).then(res, rej),
           };
@@ -150,7 +155,9 @@ function failingProvider(msg = "provider down"): AiOptimizationProvider {
     throw new Error(msg);
   };
   return {
-    model: "failing",
+    // "mock-" prefixed so isMockProvider() keeps buildContext() from fetching
+    // real AI context (a DB query + a live HTTP fetch) for this test double.
+    model: "mock-failing",
     generateTitle: fail,
     generateMetaDescription: fail,
     generateH1: fail,
@@ -264,6 +271,82 @@ describe("runOptimizationJob — success & finalization", () => {
     expect(p.status).toBe("needs_review"); // never advanced to optimizing
     expect(drafts.has(1)).toBe(false); // no partial draft persisted
     expect(pageUpdates).toEqual([]); // no page write at all on failure
+  });
+
+  it("a typed AiDraftLintFailedError from the provider propagates unchanged and writes no draft (real-provider safety gate)", async () => {
+    const p = page();
+    const { db, drafts, pageUpdates } = makeDb([p]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    setAiOptimizationProvider({
+      model: "mock-lint-failing",
+      generateTitle: async () => {
+        throw new AiDraftLintFailedError([{ severity: "block", code: "superlative", message: "test", field: "title" }]);
+      },
+      generateMetaDescription: async () => "",
+      generateH1: async () => "",
+      generateFaq: async () => [],
+      generateInternalLinks: async () => [],
+      generateSchema: async () => ({}),
+      expandContent: async () => "",
+    });
+
+    await expect(runOptimizationJob(1, "rewrite_title")).rejects.toBeInstanceOf(AiDraftLintFailedError);
+
+    expect(p.status).toBe("needs_review");
+    expect(drafts.has(1)).toBe(false);
+    expect(pageUpdates).toEqual([]);
+  });
+
+  it("populates topQueries/bodyExcerpt/cityUtilityTerritory only for a non-mock provider (buildContext gating)", async () => {
+    const { db } = makeDb(
+      [page({ page: "/hvac-newark-nj" })],
+      [
+        { page: "/hvac-newark-nj", query: "hvac newark nj", clicks: 50, impressions: 900 },
+        { page: "/hvac-newark-nj", query: "heat pump newark", clicks: 10, impressions: 300 },
+        { page: "/hvac-elizabeth-nj", query: "wrong page — must not leak in", clicks: 999, impressions: 9999 },
+      ],
+    );
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    let seenCtx: PageContext | null = null;
+    setAiOptimizationProvider({
+      model: "anthropic-spy-test", // deliberately NOT "mock-" prefixed
+      generateTitle: async (ctx) => { seenCtx = ctx; return "Spy Title"; },
+      generateMetaDescription: async () => "",
+      generateH1: async () => "",
+      generateFaq: async () => [],
+      generateInternalLinks: async () => [],
+      generateSchema: async () => ({}),
+      expandContent: async () => "",
+    });
+
+    await runOptimizationJob(1, "rewrite_title");
+
+    expect(seenCtx).not.toBeNull();
+    expect(seenCtx!.topQueries).toEqual(["hvac newark nj", "heat pump newark"]);
+    expect(seenCtx!.bodyExcerpt).toBe("Licensed HVAC contractor serving Newark, NJ.");
+    expect(seenCtx!.cityUtilityTerritory).toBe("pseg"); // newark is PSE&G territory
+  });
+
+  it("leaves topQueries/bodyExcerpt empty and territory 'unknown' for the mock provider (no wasted DB/network calls)", async () => {
+    const { db } = makeDb([page({ page: "/hvac-newark-nj" })], [{ page: "/hvac-newark-nj", query: "should not be fetched", clicks: 1, impressions: 1 }]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    let seenCtx: PageContext | null = null;
+    setAiOptimizationProvider({
+      model: "mock-spy-test",
+      generateTitle: async (ctx) => { seenCtx = ctx; return "Spy Title"; },
+      generateMetaDescription: async () => "",
+      generateH1: async () => "",
+      generateFaq: async () => [],
+      generateInternalLinks: async () => [],
+      generateSchema: async () => ({}),
+      expandContent: async () => "",
+    });
+
+    await runOptimizationJob(1, "rewrite_title");
+
+    expect(seenCtx!.topQueries).toEqual([]);
+    expect(seenCtx!.bodyExcerpt).toBe("");
+    expect(seenCtx!.cityUtilityTerritory).toBe("unknown");
   });
 
   it("rejects a second job while one is already in flight (duplicate protection)", async () => {
