@@ -99,6 +99,30 @@ const KNOWN_NON_PSEG_CITY_SLUGS = new Set([
   "chester", "harding", "bedminster", "peapack", "mountain-lakes",
 ]);
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Word-boundary regex for a phrase from one of the static rule tables above
+ * (SUPERLATIVES/EXPIRED_INCENTIVES/CERTIFICATION_WORDS/COMPETITOR_BRANDS) —
+ * plain .includes() false-positives inside ordinary words ("best" inside
+ * "asbestos", "hear" inside "heart", "horizon" inside "on the horizon").
+ * \b only applies where the phrase's edge is actually alphanumeric — a
+ * phrase like "#1" or "$2k" starts/ends with punctuation, where the natural
+ * (non-word) boundary already does the right thing without \b.
+ */
+function phraseRegex(phrase: string, opts: { caseSensitive?: boolean } = {}): RegExp {
+  const escaped = escapeRegExp(phrase);
+  const left = /^[a-z0-9]/i.test(phrase) ? "\\b" : "";
+  const right = /[a-z0-9]$/i.test(phrase) ? "\\b" : "";
+  return new RegExp(`${left}${escaped}${right}`, opts.caseSensitive ? "" : "i");
+}
+
+function includesPhrase(text: string, phrase: string, opts?: { caseSensitive?: boolean }): boolean {
+  return phraseRegex(phrase, opts).test(text);
+}
+
 const DOLLAR_FIGURE_RE = /\$\s?([\d,]+(?:\.\d+)?)\s?(k|K)?/g;
 
 function parseDollarFigure(raw: string, kSuffix: boolean): number {
@@ -139,7 +163,6 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
   const titleLower = title.toLowerCase();
   const metaLower = meta.toLowerCase();
   const combined = `${title} ${meta}`;
-  const combinedLower = `${titleLower} ${metaLower}`;
 
   // Empty title/meta
   if (!title.trim()) findings.push(blockFinding("title", "empty_title", "Title is empty."));
@@ -155,31 +178,34 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
 
   // Superlatives / unsupported claims
   for (const phrase of SUPERLATIVES) {
-    if (combinedLower.includes(phrase)) {
+    if (includesPhrase(combined, phrase)) {
       findings.push(blockFinding("both", "superlative", `Unsupported superlative claim: "${phrase}".`));
     }
   }
 
   // Expired/unverified incentives
   for (const phrase of EXPIRED_INCENTIVES) {
-    if (combinedLower.includes(phrase)) {
+    if (includesPhrase(combined, phrase)) {
       findings.push(blockFinding("both", "expired_incentive", `Expired or unverified incentive claim: "${phrase}".`));
     }
   }
 
   // Certification wording
   for (const word of CERTIFICATION_WORDS) {
-    if (combinedLower.includes(word)) {
-      const approved = APPROVED_CERTIFICATION_PHRASES.some((p) => combinedLower.includes(p.toLowerCase()));
+    if (includesPhrase(combined, word)) {
+      const approved = APPROVED_CERTIFICATION_PHRASES.some((p) => includesPhrase(combined, p));
       if (!approved) {
         findings.push(blockFinding("both", "unverified_certification", `Certification wording "${word}" is not in the approved-phrases list.`));
       }
     }
   }
 
-  // Competitor brand names
+  // Competitor brand names — case-SENSITIVE (unlike every other list above):
+  // these are proper nouns written capitalized ("Horizon"), and generic
+  // lowercase usage of the same word ("rebates on the horizon") must not
+  // false-positive as a competitor mention.
   for (const brand of COMPETITOR_BRANDS) {
-    if (combined.toLowerCase().includes(brand.toLowerCase())) {
+    if (includesPhrase(combined, brand, { caseSensitive: true })) {
       findings.push(blockFinding("both", "competitor_name", `Mentions competitor "${brand}".`));
     }
   }
