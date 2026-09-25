@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Lock, Mail, Wrench, Eye, EyeOff } from "lucide-react";
 import { Link } from "wouter";
@@ -18,6 +19,8 @@ export default function TeamLogin() {
   const [forgotMode, setForgotMode] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  // Default OFF: an unchecked box yields an 8-hour session; checked = 30 days.
+  const [rememberDevice, setRememberDevice] = useState(false);
 
   // A `?return=` path is honored after login, but SANITIZED to a safe same-origin
   // relative path (blocks open-redirects like `?return=//evil.com`). Absent → the
@@ -47,7 +50,7 @@ export default function TeamLogin() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    loginMutation.mutate({ email, password });
+    loginMutation.mutate({ email, password, rememberDevice });
   };
 
   const handleForgot = (e: React.FormEvent) => {
@@ -178,6 +181,19 @@ export default function TeamLogin() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="remember-device"
+                    checked={rememberDevice}
+                    onCheckedChange={(v) => setRememberDevice(v === true)}
+                  />
+                  <Label
+                    htmlFor="remember-device"
+                    className="text-sm font-normal text-muted-foreground cursor-pointer select-none"
+                  >
+                    Remember this device for 30 days
+                  </Label>
                 </div>
                 <Button
                   type="submit"
