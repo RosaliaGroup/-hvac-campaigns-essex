@@ -79,9 +79,15 @@ function branchForToday(): string {
  * Build the diff table for a candidate batch WITHOUT writing anything —
  * used by the approval modal (spec §5 step 2) to show the reviewer exactly
  * what will change before they type the batch label and confirm. Rejects
- * (throws) on locked pages or a BLOCK-level lint finding; the caller is
- * expected to catch these and show them inline rather than let the modal
- * open with an invalid batch.
+ * (throws) on locked pages, since those shouldn't be in a batch at all —
+ * the UI already excludes them from selection, so this should never
+ * realistically fire. A BLOCK-level lint finding does NOT throw here: every
+ * row is returned with its own `lint` result attached (pass or fail) so the
+ * reviewer can see exactly which page/finding is the problem and fix or
+ * deselect it, instead of the whole modal failing with one bare count
+ * ("1 page(s) fail the claims linter") and no way to tell which. The actual
+ * enforcement — refusing to publish a blocked page — happens at
+ * approveBatchToPR() below, right before anything is written.
  */
 export async function buildBatchDiff(pageIds: number[]): Promise<BatchDiffRow[]> {
   if (pageIds.length === 0) throw new Error("Batch is empty.");
@@ -120,7 +126,6 @@ export async function buildBatchDiff(pageIds: number[]): Promise<BatchDiffRow[]>
     );
   }
 
-  const blocked: Array<{ pagePath: string; findings: LintResult["findings"] }> = [];
   for (const p of pending) {
     const title = p.draft.title ?? p.before.title ?? "";
     const description = p.draft.metaDescription ?? p.before.description ?? "";
@@ -132,7 +137,6 @@ export async function buildBatchDiff(pageIds: number[]): Promise<BatchDiffRow[]>
       },
     );
     const hasBodyChanges = !!(p.draft.h1 || p.draft.faq?.length || p.draft.internalLinks?.length || p.draft.schema || p.draft.contentExpansion);
-    if (!lint.passes) blocked.push({ pagePath: p.pagePath, findings: lint.findings.filter((f) => f.severity === "block") });
     rows.push({
       pagePath: p.pagePath,
       pageId: p.pageId,
@@ -142,8 +146,6 @@ export async function buildBatchDiff(pageIds: number[]): Promise<BatchDiffRow[]>
       lint,
     });
   }
-
-  if (blocked.length > 0) throw new LintBlockedError(blocked);
 
   return rows;
 }
@@ -196,6 +198,11 @@ export async function approveBatchToPR(input: ApproveBatchInput): Promise<Approv
   if (!input.label.trim()) throw new Error("Batch label is required.");
 
   const diffRows = await buildBatchDiff(input.pageIds);
+  const blocked = diffRows.filter((r) => !r.lint.passes);
+  if (blocked.length > 0) {
+    throw new LintBlockedError(blocked.map((r) => ({ pagePath: r.pagePath, findings: r.lint.findings.filter((f) => f.severity === "block") })));
+  }
+
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
 

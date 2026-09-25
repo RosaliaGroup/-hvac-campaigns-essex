@@ -97,7 +97,7 @@ beforeEach(() => {
   vi.mocked(getDb).mockReset();
 });
 
-describe("seoRouter.buildBatchDiff — locked/blocked pages surface as 422 (spec §11)", () => {
+describe("seoRouter.buildBatchDiff — locked pages surface as 422; lint-blocked pages surface inline (spec §11)", () => {
   it("a locked page (exact-path exclusion) throws UNPROCESSABLE_CONTENT", async () => {
     vi.mocked(getDb).mockResolvedValue(makeDb([page({ id: 1, page: "/qualify" })]) as never);
     const caller = await seoCaller({ id: 1, role: "admin", teamRole: "admin" });
@@ -105,20 +105,26 @@ describe("seoRouter.buildBatchDiff — locked/blocked pages surface as 422 (spec
     await expect(caller.buildBatchDiff({ pageIds: [1] })).rejects.toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
   });
 
-  it('a "#1" title fails the claims linter and throws UNPROCESSABLE_CONTENT', async () => {
+  it('a "#1" title fails the claims linter — buildBatchDiff resolves with the finding attached, not a bare throw', async () => {
     vi.mocked(getDb).mockResolvedValue(makeDb([page({ id: 1, title: "#1 HVAC Contractor in Elizabeth, NJ" })]) as never);
     const caller = await seoCaller({ id: 1, role: "admin", teamRole: "admin" });
 
-    await expect(caller.buildBatchDiff({ pageIds: [1] })).rejects.toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
+    const result = await caller.buildBatchDiff({ pageIds: [1] });
+    expect(result?.rows[0].lint.passes).toBe(false);
+    expect(result?.rows[0].lint.findings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "superlative", severity: "block" })]),
+    );
   });
 
-  it('a "$2K federal tax credit" meta description fails the claims linter and throws UNPROCESSABLE_CONTENT', async () => {
+  it('a "$2K federal tax credit" meta description fails the claims linter — buildBatchDiff resolves with the findings attached', async () => {
     vi.mocked(getDb).mockResolvedValue(
       makeDb([page({ id: 1, metaDescription: "Combine PSE&G rebates with the $2K federal tax credit and save big." })]) as never,
     );
     const caller = await seoCaller({ id: 1, role: "admin", teamRole: "admin" });
 
-    await expect(caller.buildBatchDiff({ pageIds: [1] })).rejects.toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
+    const result = await caller.buildBatchDiff({ pageIds: [1] });
+    expect(result?.rows[0].lint.passes).toBe(false);
+    expect(result?.rows[0].lint.findings.some((f: { code: string }) => f.code === "expired_incentive")).toBe(true);
   });
 
   it("a clean, unlocked page returns a diff instead of throwing", async () => {

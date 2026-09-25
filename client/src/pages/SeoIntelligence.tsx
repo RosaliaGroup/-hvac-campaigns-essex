@@ -879,10 +879,15 @@ function OpportunityDrawer({
 function LintFindingList({ findings }: { findings: { severity: "block" | "warn"; code: string; message: string; field: string }[] }) {
   if (findings.length === 0) return <span className="text-xs text-emerald-700">Clean</span>;
   return (
-    <ul className="space-y-0.5">
+    <ul className="space-y-1.5">
       {findings.map((f, i) => (
         <li key={i} className={`text-xs ${f.severity === "block" ? "text-red-700" : "text-amber-700"}`}>
-          {f.severity === "block" ? "⛔" : "⚠️"} {f.message}
+          <div className="flex flex-wrap items-center gap-1">
+            <span>{f.severity === "block" ? "⛔" : "⚠️"}</span>
+            <code className="rounded bg-black/5 px-1 py-0.5 font-mono text-[10px]">{f.code}</code>
+            <span className="rounded-full border border-current/30 px-1.5 py-0 text-[10px] uppercase tracking-wide opacity-80">{f.field}</span>
+          </div>
+          <p className="mt-0.5">{f.message}</p>
         </li>
       ))}
     </ul>
@@ -892,27 +897,42 @@ function LintFindingList({ findings }: { findings: { severity: "block" | "warn";
 function BulkApproveModal({
   open,
   onClose,
-  pageIds,
+  pageIds: initialPageIds,
   onApproved,
+  onRemovePage,
 }: {
   open: boolean;
   onClose: () => void;
   pageIds: number[];
   onApproved: () => void;
+  /** Keeps the table's own selection in sync when a row is deselected from inside the modal. */
+  onRemovePage: (pageId: number) => void;
 }) {
   const utils = trpc.useUtils();
   const [label, setLabel] = useState("");
+  // Local, mutable copy of the batch — lets the reviewer deselect a
+  // lint-blocked row without leaving the modal (spec: "fix or deselect").
+  const [pageIds, setPageIds] = useState<number[]>(initialPageIds);
   const buildDiff = trpc.seo.buildBatchDiff.useMutation();
   const approve = trpc.seo.approveBatchToPR.useMutation();
-  const key = pageIds.join(",");
+  const initialKey = initialPageIds.join(",");
 
   useEffect(() => {
-    if (open && pageIds.length > 0) {
+    if (open) {
       setLabel("");
+      setPageIds(initialPageIds);
+    }
+    // Reseed only when the modal opens for a (possibly new) selection — not
+    // on every render, since initialPageIds is a fresh array each time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialKey]);
+
+  const key = pageIds.join(",");
+  useEffect(() => {
+    if (open && pageIds.length > 0) {
       buildDiff.mutate({ pageIds });
     }
-    // Re-run only when the modal opens for a new selection, not on every render
-    // (pageIds is a fresh array each render — `key` is the stable dependency).
+    // Re-run whenever the local batch changes (fresh open, or a row removed).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, key]);
 
@@ -920,8 +940,13 @@ function BulkApproveModal({
   const hasBlockers = rows.some((r) => !r.lint.passes);
   const hasBodyChanges = rows.some((r) => r.hasBodyChanges);
 
+  const removeRow = (pageId: number) => {
+    setPageIds((prev) => prev.filter((id) => id !== pageId));
+    onRemovePage(pageId);
+  };
+
   const handleApprove = () => {
-    if (!label.trim()) return;
+    if (!label.trim() || pageIds.length === 0) return;
     approve.mutate(
       { pageIds, label: label.trim() },
       {
@@ -946,10 +971,13 @@ function BulkApproveModal({
           </DialogTitle>
           <DialogDescription>
             Title &amp; meta description only. This opens a pull request — nothing publishes until a human merges it on GitHub.
+            {hasBlockers && " Pages that fail the claims linter are shown below — fix the draft or remove the row to continue."}
           </DialogDescription>
         </DialogHeader>
 
-        {buildDiff.isPending ? (
+        {pageIds.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Every page was removed from this batch. Close and reselect from the table.</p>
+        ) : buildDiff.isPending ? (
           <div className="flex items-center justify-center gap-2 py-10 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" /> Building diff…
           </div>
@@ -971,11 +999,12 @@ function BulkApproveModal({
                     <th className="p-2 text-left font-medium">Title</th>
                     <th className="p-2 text-left font-medium">Meta description</th>
                     <th className="p-2 text-left font-medium">Lint</th>
+                    <th className="p-2 w-8" />
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.pageId} className="border-b last:border-0 align-top">
+                    <tr key={r.pageId} className={`border-b last:border-0 align-top ${!r.lint.passes ? "bg-red-50/60" : ""}`}>
                       <td className="p-2 font-medium text-[#1e3a5f] whitespace-nowrap">{r.pagePath}</td>
                       <td className="p-2 max-w-[220px]">
                         <p className="text-muted-foreground line-through decoration-muted-foreground/50">{r.before.title || "—"}</p>
@@ -985,7 +1014,12 @@ function BulkApproveModal({
                         <p className="text-muted-foreground line-through decoration-muted-foreground/50">{r.before.description || "—"}</p>
                         <p>{r.after.description}</p>
                       </td>
-                      <td className="p-2 min-w-[160px]"><LintFindingList findings={r.lint.findings} /></td>
+                      <td className="p-2 min-w-[180px]"><LintFindingList findings={r.lint.findings} /></td>
+                      <td className="p-2 align-top">
+                        <Button type="button" variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground" onClick={() => removeRow(r.pageId)} aria-label={`Remove ${r.pagePath} from this batch`}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1004,7 +1038,7 @@ function BulkApproveModal({
           <Button
             type="button"
             className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-            disabled={buildDiff.isPending || !!buildDiff.error || hasBlockers || !label.trim() || approve.isPending}
+            disabled={pageIds.length === 0 || buildDiff.isPending || !!buildDiff.error || hasBlockers || !label.trim() || approve.isPending}
             onClick={handleApprove}
           >
             {approve.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <GitPullRequest className="mr-1.5 h-4 w-4" />}
@@ -1757,6 +1791,7 @@ export default function SeoIntelligence() {
         onClose={() => setApproveModalOpen(false)}
         pageIds={toIds(selectedVisible)}
         onApproved={clearSelection}
+        onRemovePage={(pageId) => setSelectedIds((prev) => { const next = new Set(prev); next.delete(String(pageId)); return next; })}
       />
 
       <AuditLogSheet open={auditOpen} onClose={() => setAuditOpen(false)} />
