@@ -1,4 +1,18 @@
 import { useEffect } from "react";
+import seoOverrides from "../../../netlify/edge-functions/seo-meta-overrides.json";
+
+/**
+ * seo-bulk-approve override — the SAME file netlify/edge-functions/inject-meta.ts
+ * reads server-side. Checked first, below, so that after a human approves a
+ * title/meta change via the gated bulk-approve PR flow, client-side hydration
+ * can never revert the tab back to the page's hardcoded title/description
+ * (the exact failure mode this file's import guards against — see
+ * docs/seo-bulk-approve-spec.md, "hydration doesn't override the served
+ * title"). Only title/description are ever overridden; og/twitter variants
+ * and canonical stay driven by the page's own props.
+ */
+type SeoOverride = { title: string; description: string };
+const SEO_OVERRIDES = seoOverrides as Record<string, SeoOverride>;
 
 type SEOProps = {
   title: string;
@@ -31,7 +45,13 @@ function setCanonical(href: string) {
   el.href = href;
 }
 
-export function useSEO({ title, description, ogTitle, ogDescription, ogUrl, ogImage }: SEOProps) {
+export function useSEO(props: SEOProps) {
+  // Guarded: this hook runs during SSR/prerender too, where `window` doesn't exist.
+  const override = typeof window !== "undefined" ? SEO_OVERRIDES[window.location.pathname] : undefined;
+  const title = override?.title ?? props.title;
+  const description = override?.description ?? props.description;
+  const { ogTitle, ogDescription, ogUrl, ogImage } = props;
+
   useEffect(() => {
     document.title = title;
     setMeta("description", description);

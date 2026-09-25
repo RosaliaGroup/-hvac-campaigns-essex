@@ -13,22 +13,8 @@ import blogPosts from "./blog-meta.json" with { type: "json" };
 import routesManifest from "./routes-manifest.json" with { type: "json" };
 import { PHONE_DISPLAY as PHONE } from "../../shared/business.ts";
 import { isInternalRoute } from "../../client/src/lib/navigation.ts";
-
-// PR-1 item E: paid-only landing pages — indexable by nobody, but crawlable
-// (so Google understands the destination when it does see a link/ad-slug).
-const NOINDEX_FOLLOW_PATHS = new Set<string>([
-  "/lp/fb-commercial",
-  "/lp/fb-residential",
-  "/lp/referral-partner",
-]);
-
-// PR-1 items C/K/L: real, working, registered pages that are simply not
-// marketing content — noindex, and no crawl budget wasted following them out.
-const NOINDEX_NOFOLLOW_PATHS = new Set<string>([
-  "/courses",
-  "/estimating",
-  "/presentation-2026",
-]);
+import { NOINDEX_FOLLOW_PATHS, NOINDEX_NOFOLLOW_PATHS } from "../../shared/seoLockedRoutes.ts";
+import overrides from "./seo-meta-overrides.json" with { type: "json" };
 
 // PR-1 item E: /lp/rebate-guide is a pure duplicate of /rebate-guide.
 const CANONICAL_OVERRIDES: Record<string, string> = {
@@ -204,8 +190,26 @@ function getLandingPageMeta(slug: string): PageMeta & { canonical: string } {
   return { title: DEFAULT_TITLE, description: DEFAULT_DESC, canonical: `${BASE}/lp/${slug}` };
 }
 
+/**
+ * seo-bulk-approve override — title/meta a human approved via the gated
+ * bulk-approve PR flow (docs/seo-bulk-approve-spec.md). Checked FIRST, ahead
+ * of every other mechanism below (static PAGE_META, blog, city/direct-install
+ * templates, LP pages) so an approved edit always wins regardless of which of
+ * those five mechanisms would otherwise have served the page. This is the
+ * ONLY place bulk-approve writes to — see server/seo/bulkApprove.ts. The
+ * client-side equivalent is client/src/hooks/useSEO.ts, which imports this
+ * same JSON file so hydration can never revert an approved title.
+ */
+type SeoOverride = { title: string; description: string };
+const SEO_OVERRIDES = overrides as Record<string, SeoOverride>;
+
 function getMetaForPath(urlPath: string): PageMeta & { canonical: string } {
   const clean = urlPath.split("?")[0].replace(/\/+$/, "") || "/";
+
+  const override = SEO_OVERRIDES[clean];
+  if (override) {
+    return { title: override.title, description: override.description, canonical: `${BASE}${clean === "/" ? "" : clean}` };
+  }
 
   // Blog post
   if (clean.startsWith("/blog/")) {
