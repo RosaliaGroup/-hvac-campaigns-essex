@@ -17,6 +17,7 @@ import { seoPages, seoApprovalBatches, type SeoApprovalBatchRow } from "../../..
 import { findLockedPages } from "../../seo/lockedPages";
 import { lintPageMeta, type LintResult } from "../../../shared/seoLinter";
 import { getDraft, approveDraft } from "./optimizations";
+import { getAiOptimizationProvider, isMockProvider } from "./ai/optimizationProvider";
 import {
   isGithubConfigured,
   GithubNotConfiguredError,
@@ -57,6 +58,14 @@ export class BatchTooLargeError extends Error {
   constructor(size: number) {
     super(`Batch has ${size} pages — the cap is ${MAX_BATCH_SIZE}.`);
     this.name = "BatchTooLargeError";
+  }
+}
+
+/** Server-side twin of the UI's "drafts are mock" gate — not just UI-hidden (spec §0 principle). */
+export class MockProviderError extends Error {
+  constructor(public readonly model: string) {
+    super(`AI drafts are placeholder mock content (provider "${model}") — approve-to-PR is disabled until a real AI provider is configured.`);
+    this.name = "MockProviderError";
   }
 }
 
@@ -182,6 +191,8 @@ export type ApproveBatchResult = {
 /** Approve a validated batch, write the commit, open/append the PR, record everything. */
 export async function approveBatchToPR(input: ApproveBatchInput): Promise<ApproveBatchResult> {
   if (!isGithubConfigured()) throw new GithubNotConfiguredError();
+  const providerModel = getAiOptimizationProvider().model;
+  if (isMockProvider(providerModel)) throw new MockProviderError(providerModel);
   if (!input.label.trim()) throw new Error("Batch label is required.");
 
   const diffRows = await buildBatchDiff(input.pageIds);

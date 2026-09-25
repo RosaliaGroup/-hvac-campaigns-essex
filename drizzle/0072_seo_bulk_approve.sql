@@ -1,18 +1,26 @@
 -- 0072: SEO bulk-approve workflow (docs/seo-bulk-approve-spec.md).
 -- Additive: three new tables. No changes to existing tables, no backfill.
 -- Apply BY HAND per drizzle/README.md.
+--
+-- pagePath columns are varchar(1024) but NEVER indexed directly: under
+-- utf8mb4 that's 4096 bytes, over MySQL's 3072-byte max key length (this
+-- was caught applying an earlier draft of this migration to production —
+-- ER_TOO_LONG_KEY — and fixed the same way seoPages.pageHash already solved
+-- the identical problem: seoPageTags indexes/uniques on pagePathHash
+-- (sha256 of the normalized path, 64 chars) instead; seoAuditLog's pagePath
+-- just isn't indexed at all, since it's never a uniqueness key there.
 
 CREATE TABLE `seoPageTags` (
   `id` int AUTO_INCREMENT NOT NULL,
   `pagePath` varchar(1024) NOT NULL,
+  `pagePathHash` varchar(64) NOT NULL,
   `tag` enum('claims-review','locked','verified-project','illustrative') NOT NULL,
   `note` text,
   `createdById` int,
   `createdAt` timestamp NOT NULL DEFAULT (now()),
   CONSTRAINT `seoPageTags_id` PRIMARY KEY(`id`)
 );--> statement-breakpoint
-CREATE UNIQUE INDEX `seoPageTags_page_tag_uq` ON `seoPageTags` (`pagePath`,`tag`);--> statement-breakpoint
-CREATE INDEX `seoPageTags_pagePath_idx` ON `seoPageTags` (`pagePath`);--> statement-breakpoint
+CREATE UNIQUE INDEX `seoPageTags_page_tag_uq` ON `seoPageTags` (`pagePathHash`,`tag`);--> statement-breakpoint
 
 CREATE TABLE `seoApprovalBatches` (
   `id` int AUTO_INCREMENT NOT NULL,
@@ -45,5 +53,4 @@ CREATE TABLE `seoAuditLog` (
   CONSTRAINT `seoAuditLog_id` PRIMARY KEY(`id`)
 );--> statement-breakpoint
 CREATE INDEX `seoAuditLog_batchId_idx` ON `seoAuditLog` (`batchId`);--> statement-breakpoint
-CREATE INDEX `seoAuditLog_pagePath_idx` ON `seoAuditLog` (`pagePath`);--> statement-breakpoint
 CREATE INDEX `seoAuditLog_ts_idx` ON `seoAuditLog` (`ts`);

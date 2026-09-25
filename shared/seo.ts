@@ -33,13 +33,22 @@ export const SEO_STATUS = [
 ] as const;
 export type SeoStatus = (typeof SEO_STATUS)[number];
 
+/**
+ * "approved"/"published" here are internal workflow-status labels, not a
+ * claim that anything is live on the site — they predate the bulk-approve
+ * PR gate (docs/seo-bulk-approve-spec.md) and are set by the per-draft
+ * "Mark Reviewed" button and the "Mark Complete" bulk action respectively,
+ * neither of which writes to the live title/meta. The only thing that
+ * actually publishes is the bulk-approve PR flow, once a human merges it on
+ * GitHub. Labeled to match, so the two are never mistaken for each other.
+ */
 export const SEO_STATUS_LABELS: Record<SeoStatus, string> = {
   needs_review: "Needs Review",
   queued: "Queued",
   optimizing: "Optimizing",
   waiting_review: "Waiting Review",
-  approved: "Approved",
-  published: "Published",
+  approved: "Reviewed",
+  published: "Marked Complete",
   waiting_for_indexing: "Request Reindex",
   ranking_improved: "Ranking Improved",
 };

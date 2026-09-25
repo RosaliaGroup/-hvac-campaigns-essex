@@ -33,6 +33,11 @@ describe("lintPageMeta — BLOCK rules (spec §3, acceptance test §11)", () => 
     expect(result.findings.some((f) => f.code === "competitor_name")).toBe(true);
   });
 
+  it('still blocks "Horizon" as a capitalized competitor mention', () => {
+    const result = lintPageMeta({ pagePath: "/x", title: "Better than Horizon Services", metaDescription: "meta" });
+    expect(result.findings.some((f) => f.code === "competitor_name")).toBe(true);
+  });
+
   it("blocks a non-canonical phone number", () => {
     const result = lintPageMeta({ pagePath: "/x", title: "title", metaDescription: "Call (862) 419-1763 today." });
     expect(result.passes).toBe(false);
@@ -142,5 +147,42 @@ describe("lintPageMeta — a clean page passes with zero findings", () => {
     });
     // Note: this fixture intentionally avoids every BLOCK trigger above.
     expect(result.findings.filter((f) => f.severity === "block")).toEqual([]);
+  });
+});
+
+describe("lintPageMeta — word-boundary matching (phrase lists must not match inside ordinary words)", () => {
+  it('does not block "heart of Essex County" — "hear" (EXPIRED_INCENTIVES, the HEAR program) must not match "heart"', () => {
+    const result = lintPageMeta({
+      pagePath: "/hvac-newark-nj",
+      title: "Proudly serving the heart of Essex County, NJ",
+      metaDescription: "Licensed HVAC installation in Newark, NJ. Call (862) 423-9396.",
+    });
+    expect(result.findings.some((f) => f.code === "expired_incentive")).toBe(false);
+  });
+
+  it('does not block "asbestos" — "best" (SUPERLATIVES) must not match inside "asbestos"', () => {
+    const result = lintPageMeta({
+      pagePath: "/x",
+      title: "Older HVAC systems may contain asbestos insulation",
+      metaDescription: "Licensed HVAC installation. Call (862) 423-9396.",
+    });
+    expect(result.findings.some((f) => f.code === "superlative")).toBe(false);
+  });
+
+  it('does not block "on the horizon" — competitor brand matching is case-sensitive, so lowercase "horizon" the word is not "Horizon" the company', () => {
+    const result = lintPageMeta(
+      { pagePath: "/x", title: "New HVAC rebates on the horizon for 2026", metaDescription: "Licensed HVAC installation. Call (862) 423-9396." },
+      { now: new Date("2026-09-25") },
+    );
+    expect(result.findings.some((f) => f.code === "competitor_name")).toBe(false);
+  });
+
+  it('still blocks "HEAR" as a standalone word — the boundary fix does not remove real matches', () => {
+    const result = lintPageMeta({
+      pagePath: "/x",
+      title: "title",
+      metaDescription: "Combine PSE&G rebates with the HEAR program benefits.",
+    });
+    expect(result.findings.some((f) => f.code === "expired_incentive")).toBe(true);
   });
 });

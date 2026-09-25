@@ -7,12 +7,22 @@
  * so tests are stable and the workspace works offline. NOTHING here publishes —
  * it returns draft content the service stores for human review.
  *
- * Swap point: getAiOptimizationProvider() reads SEO_AI_PROVIDER; only "mock" is
- * implemented today. A future "openai"/"anthropic" provider implements the same
- * AiOptimizationProvider interface and is selected here.
+ * Swap point: getAiOptimizationProvider(), below. SEO_AI_PROVIDER=anthropic
+ * (with ANTHROPIC_API_KEY set) selects AnthropicOptimizationProvider — a real
+ * title/meta drafting provider (server/services/seo/ai/anthropicProvider.ts).
+ * Anything else, or a missing key, falls back to the mock — see
+ * server/routers/seo.ts's aiProviderStatus, which the CRM uses to disable
+ * "Approve to PR" while the active provider is the mock.
  */
 import type { AiFaqItem, AiInternalLink, SeoCategory, SeoProblem } from "@shared/seo";
 import { PHONE_DISPLAY } from "@shared/business";
+import type { UtilityTerritory } from "@shared/seoLinter";
+// Circular with anthropicProvider.ts (it imports MockAiOptimizationProvider
+// from here) — safe: neither module runs side-effecting code at the top
+// level, only class/function definitions, so nothing is used before it's
+// initialized. getAiOptimizationProvider() is the only place this is
+// actually constructed, well after both modules finish evaluating.
+import { AnthropicOptimizationProvider } from "./anthropicProvider";
 
 /** Everything the AI needs about a page to draft optimizations. */
 export interface PageContext {
@@ -27,6 +37,15 @@ export interface PageContext {
   ctr: number;
   position: number;
   problems: SeoProblem[];
+  /**
+   * Real-provider context (docs/seo-bulk-approve-spec.md follow-up: the
+   * Anthropic provider). The mock ignores all three; optimizations.ts's
+   * buildContext() only pays for fetching them when the active provider
+   * isn't the mock, so existing mock-driven callers/tests are unaffected.
+   */
+  topQueries: string[];
+  bodyExcerpt: string;
+  cityUtilityTerritory: UtilityTerritory;
 }
 
 export interface AiOptimizationProvider {
@@ -165,11 +184,29 @@ export class MockAiOptimizationProvider implements AiOptimizationProvider {
 
 let _provider: AiOptimizationProvider | null = null;
 
-/** The active AI optimization provider (mock today; swap via SEO_AI_PROVIDER). */
+/** True for the built-in placeholder provider — see MockAiOptimizationProvider's model id. */
+export function isMockProvider(model: string): boolean {
+  return model.startsWith("mock");
+}
+
+/**
+ * The active AI optimization provider. SEO_AI_PROVIDER=anthropic with
+ * ANTHROPIC_API_KEY set selects the real provider; anything else (unset,
+ * a typo, "mock", or the key missing) falls back to the mock — never throws,
+ * never silently no-ops, just drafts placeholder copy and lets
+ * aiProviderStatus/MockProviderError keep it out of Approve to PR. Cached
+ * after the first call (env vars don't change mid-process); use
+ * setAiOptimizationProvider(null) in tests to force a fresh read.
+ */
 export function getAiOptimizationProvider(): AiOptimizationProvider {
   if (!_provider) {
-    // Only "mock" is implemented. Future providers slot in here behind the same interface.
-    _provider = new MockAiOptimizationProvider();
+    const wantsAnthropic = (process.env.SEO_AI_PROVIDER ?? "").trim().toLowerCase() === "anthropic";
+    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
+    if (wantsAnthropic && apiKey) {
+      _provider = new AnthropicOptimizationProvider(apiKey);
+    } else {
+      _provider = new MockAiOptimizationProvider();
+    }
   }
   return _provider;
 }
