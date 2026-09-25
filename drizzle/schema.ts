@@ -2634,6 +2634,12 @@ export const seoPageTags = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     /** Page path, e.g. "/hvac-newark-nj" — matches seoPages.page. */
     pagePath: varchar("pagePath", { length: 1024 }).notNull(),
+    /** sha256(pagePath) — the indexed/uniqueness key. pagePath itself is too
+     *  long to index directly under utf8mb4 (4096 bytes > MySQL's 3072-byte
+     *  max key length) — same fix seoPages.pageHash already established for
+     *  the identical problem. Computed by server/seo/lockedPages.ts's
+     *  hashPagePath(); every writer must set it. */
+    pagePathHash: varchar("pagePathHash", { length: 64 }).notNull(),
     tag: mysqlEnum("tag", SEO_PAGE_TAGS).notNull(),
     /** Required when removing "claims-review" (spec §4) — stored on whichever
      *  row triggered the note; enforced in the service layer, not here. */
@@ -2643,8 +2649,9 @@ export const seoPageTags = mysqlTable(
     createdAt: timestamp("createdAt").defaultNow().notNull(),
   },
   table => ({
-    pageTagUq: uniqueIndex("seoPageTags_page_tag_uq").on(table.pagePath, table.tag),
-    pageIdx: index("seoPageTags_pagePath_idx").on(table.pagePath),
+    // (pagePathHash, tag) also serves single-column pagePathHash lookups via
+    // its leftmost prefix — no separate index needed for that.
+    pageTagUq: uniqueIndex("seoPageTags_page_tag_uq").on(table.pagePathHash, table.tag),
   }),
 );
 export type SeoPageTagRow = typeof seoPageTags.$inferSelect;
@@ -2705,7 +2712,15 @@ export const seoAuditLog = mysqlTable(
     action: mysqlEnum("action", SEO_AUDIT_ACTION).notNull(),
     /** seoApprovalBatches.id, when this action is part of a batch. */
     batchId: int("batchId"),
-    /** Page path, when this action is page-scoped (most actions). Null for pure batch-level rows. */
+    /**
+     * Page path, when this action is page-scoped (most actions). Null for
+     * pure batch-level rows. NOT indexed — varchar(1024) is too long to
+     * index directly under utf8mb4 (see seoPageTags.pagePathHash's comment
+     * for the same problem), and unlike seoPageTags this column is never a
+     * uniqueness key, so a plain unindexed filter (listAuditLog's optional
+     * pagePath filter, a side-panel/CSV-export path, not a hot one) is an
+     * acceptable trade rather than adding a hash column nothing else needs.
+     */
     pagePath: varchar("pagePath", { length: 1024 }),
     before: json("before"),
     after: json("after"),
@@ -2714,7 +2729,6 @@ export const seoAuditLog = mysqlTable(
   },
   table => ({
     batchIdx: index("seoAuditLog_batchId_idx").on(table.batchId),
-    pageIdx: index("seoAuditLog_pagePath_idx").on(table.pagePath),
     tsIdx: index("seoAuditLog_ts_idx").on(table.ts),
   }),
 );

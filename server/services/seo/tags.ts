@@ -7,6 +7,7 @@ import { eq, and } from "drizzle-orm";
 import { getDb } from "../../db";
 import { seoPageTags, type SeoPageTagRow, SEO_PAGE_TAGS } from "../../../drizzle/schema";
 import { logAudit } from "./auditLog";
+import { hashPagePath } from "../../seo/lockedPages";
 
 export type SeoPageTag = (typeof SEO_PAGE_TAGS)[number];
 
@@ -20,7 +21,7 @@ export class TagNoteRequiredError extends Error {
 export async function listTags(pagePath: string): Promise<SeoPageTagRow[]> {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(seoPageTags).where(eq(seoPageTags.pagePath, pagePath));
+  return db.select().from(seoPageTags).where(eq(seoPageTags.pagePathHash, hashPagePath(pagePath)));
 }
 
 export async function addTag(input: {
@@ -33,7 +34,7 @@ export async function addTag(input: {
   if (!db) return;
   await db
     .insert(seoPageTags)
-    .values({ pagePath: input.pagePath, tag: input.tag, note: input.note, createdById: input.actorId })
+    .values({ pagePath: input.pagePath, pagePathHash: hashPagePath(input.pagePath), tag: input.tag, note: input.note, createdById: input.actorId })
     .onDuplicateKeyUpdate({ set: { note: input.note, createdById: input.actorId, createdAt: new Date() } });
   await logAudit({
     actorId: input.actorId,
@@ -58,7 +59,7 @@ export async function removeTag(input: {
   }
   const db = await getDb();
   if (!db) return;
-  await db.delete(seoPageTags).where(and(eq(seoPageTags.pagePath, input.pagePath), eq(seoPageTags.tag, input.tag)));
+  await db.delete(seoPageTags).where(and(eq(seoPageTags.pagePathHash, hashPagePath(input.pagePath)), eq(seoPageTags.tag, input.tag)));
   await logAudit({
     actorId: input.actorId,
     action: "tag_removed",

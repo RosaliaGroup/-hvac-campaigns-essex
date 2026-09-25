@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isStaticallyLocked } from "./lockedPages";
+import { isStaticallyLocked, hashPagePath } from "./lockedPages";
 
 describe("isStaticallyLocked — exact-path exclusion list (spec §2)", () => {
   it("locks every exact path in the spec's list", () => {
@@ -60,5 +60,25 @@ describe("isStaticallyLocked — exact-path exclusion list (spec §2)", () => {
       expect(result.message.length).toBeGreaterThan(0);
       expect(result.reason.kind).toBeTruthy();
     }
+  });
+});
+
+describe("hashPagePath — seoPageTags/seoAuditLog's indexed key (pagePath itself is too long to index)", () => {
+  it("is deterministic — same input, same hash", () => {
+    expect(hashPagePath("/hvac-newark-nj")).toBe(hashPagePath("/hvac-newark-nj"));
+  });
+
+  it("is a 64-char lowercase hex sha256 digest", () => {
+    expect(hashPagePath("/hvac-newark-nj")).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("different paths hash differently", () => {
+    expect(hashPagePath("/hvac-newark-nj")).not.toBe(hashPagePath("/hvac-elizabeth-nj"));
+  });
+
+  it("normalizes before hashing — a trailing slash and a query string hash the same as the canonical path", () => {
+    const canonical = hashPagePath("/commercial");
+    expect(hashPagePath("/commercial/")).toBe(canonical);
+    expect(hashPagePath("/commercial?utm_source=x")).toBe(canonical);
   });
 });

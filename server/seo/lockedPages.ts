@@ -17,6 +17,20 @@ import {
 import { getDb } from "../db";
 import { seoPageTags } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
+import crypto from "node:crypto";
+
+/**
+ * sha256(pagePath) — the indexed lookup/uniqueness key for seoPageTags (and
+ * seoAuditLog's page filter). pagePath itself is varchar(1024): too long to
+ * index directly under utf8mb4 (4096 bytes > MySQL's 3072-byte max key
+ * length — this repo already solved the identical problem for seoPages via
+ * its pageHash column; same fix here). Always hash the NORMALIZED path so a
+ * trailing slash or query string can't produce two different hashes for the
+ * same page.
+ */
+export function hashPagePath(pagePath: string): string {
+  return crypto.createHash("sha256").update(normalizePath(pagePath)).digest("hex");
+}
 
 /** Exact paths locked per spec §2. */
 const LOCKED_EXACT_PATHS = new Set<string>([
@@ -120,7 +134,7 @@ export async function isLocked(path: string): Promise<LockCheckResult> {
   const [tagRow] = await db
     .select()
     .from(seoPageTags)
-    .where(and(eq(seoPageTags.pagePath, clean), eq(seoPageTags.tag, "claims-review")))
+    .where(and(eq(seoPageTags.pagePathHash, hashPagePath(clean)), eq(seoPageTags.tag, "claims-review")))
     .limit(1);
 
   if (tagRow) {
