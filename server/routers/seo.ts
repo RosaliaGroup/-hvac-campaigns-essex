@@ -21,6 +21,7 @@ import {
   DuplicateJobError,
   DEFAULT_BULK_CONCURRENCY,
 } from "../services/seo/ai/jobs";
+import { getAiOptimizationProvider, isMockProvider } from "../services/seo/ai/optimizationProvider";
 import { findLockedPages } from "../seo/lockedPages";
 import { lintPageMeta } from "../../shared/seoLinter";
 import {
@@ -33,6 +34,7 @@ import {
   LintBlockedError,
   BatchTooLargeError,
   PendingBatchError,
+  MockProviderError,
 } from "../services/seo/bulkApprove";
 import { isGithubConfigured, GithubNotConfiguredError } from "../services/seo/github";
 import { listTags, addTag, removeTag, TagNoteRequiredError } from "../services/seo/tags";
@@ -54,6 +56,9 @@ function toTRPCError(err: unknown): never {
     throw new TRPCError({ code: "UNPROCESSABLE_CONTENT", message: err.message });
   }
   if (err instanceof GithubNotConfiguredError) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
+  }
+  if (err instanceof MockProviderError) {
     throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
   }
   if (err instanceof TagNoteRequiredError) {
@@ -310,6 +315,18 @@ export const seoRouter = router({
 
   /** Whether the server-side GitHub PAT is configured — drives the UI's "not configured" state. */
   githubConfigured: protectedProcedure.query(() => ({ configured: isGithubConfigured() })),
+
+  /**
+   * Which AI optimization provider is actually drafting content, and whether
+   * it's the built-in placeholder (MockAiOptimizationProvider — fabricated
+   * copy, not researched or verified). The CRM disables "Approve to PR" while
+   * this is true: batching fabricated titles/descriptions into a real PR
+   * would be indistinguishable from real drafts once merged.
+   */
+  aiProviderStatus: protectedProcedure.query(() => {
+    const model = getAiOptimizationProvider().model;
+    return { model, isMock: isMockProvider(model) };
+  }),
 
   /** Lock status for a set of page paths — for greying out rows in the table. */
   getLockStatus: protectedProcedure

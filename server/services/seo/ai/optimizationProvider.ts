@@ -7,9 +7,14 @@
  * so tests are stable and the workspace works offline. NOTHING here publishes —
  * it returns draft content the service stores for human review.
  *
- * Swap point: getAiOptimizationProvider() reads SEO_AI_PROVIDER; only "mock" is
- * implemented today. A future "openai"/"anthropic" provider implements the same
- * AiOptimizationProvider interface and is selected here.
+ * Swap point: getAiOptimizationProvider(), below. No real provider is wired
+ * up yet — there is no env var that changes this today (a prior version of
+ * this comment claimed one, SEO_AI_PROVIDER, but the code never actually
+ * read it; removed rather than left as a misleading dead reference). Every
+ * draft in this system, on every environment including production, is
+ * MockAiOptimizationProvider's fabricated placeholder copy — see
+ * server/routers/seo.ts's aiProviderStatus, which the CRM uses to disable
+ * "Approve to PR" until a real provider exists.
  */
 import type { AiFaqItem, AiInternalLink, SeoCategory, SeoProblem } from "@shared/seo";
 import { PHONE_DISPLAY } from "@shared/business";
@@ -165,7 +170,12 @@ export class MockAiOptimizationProvider implements AiOptimizationProvider {
 
 let _provider: AiOptimizationProvider | null = null;
 
-/** The active AI optimization provider (mock today; swap via SEO_AI_PROVIDER). */
+/** True for the built-in placeholder provider — see MockAiOptimizationProvider's model id. */
+export function isMockProvider(model: string): boolean {
+  return model.startsWith("mock");
+}
+
+/** The active AI optimization provider — mock is the only one implemented today. */
 export function getAiOptimizationProvider(): AiOptimizationProvider {
   if (!_provider) {
     // Only "mock" is implemented. Future providers slot in here behind the same interface.

@@ -103,8 +103,13 @@ import {
   BatchTooLargeError,
   PendingBatchError,
   MAX_BATCH_SIZE,
+  MockProviderError,
 } from "./bulkApprove";
 import { GithubNotConfiguredError } from "./github";
+import { setAiOptimizationProvider, type AiOptimizationProvider } from "./ai/optimizationProvider";
+
+/** A non-mock stand-in so approveBatchToPR's happy-path tests aren't blocked by the new mock-provider gate; only `.model` is ever read by bulkApprove.ts. */
+const REAL_TEST_PROVIDER = { model: "real-test-provider" } as AiOptimizationProvider;
 
 /* ── In-memory fake drizzle db — seoPages, seoAiDrafts, seoApprovalBatches, seoAuditLog, seoPageTags ── */
 
@@ -238,6 +243,11 @@ function page(overrides: Record<string, any> = {}): Record<string, any> {
 beforeEach(() => {
   vi.mocked(getDb).mockReset();
   resetGhState();
+  // buildBatchDiff() doesn't touch the AI provider (a locked/lint-blocked
+  // page must reject regardless of what's drafting), but every
+  // approveBatchToPR() test below assumes a real, non-mock provider unless
+  // it explicitly resets to the default (see the MockProviderError test).
+  setAiOptimizationProvider(REAL_TEST_PROVIDER);
 });
 
 /* ── buildBatchDiff — validation gates ───────────────────────────────────── */
@@ -288,6 +298,17 @@ describe("approveBatchToPR — commit/PR guarantees (spec §11)", () => {
     await expect(approveBatchToPR({ pageIds: [1], label: "test", actorId: 1 })).rejects.toBeInstanceOf(GithubNotConfiguredError);
     expect(batches.size).toBe(0);
     expect(ghState.commits).toHaveLength(0);
+  });
+
+  it("throws MockProviderError and writes nothing while the active provider is the mock", async () => {
+    setAiOptimizationProvider(null); // back to the real default — MockAiOptimizationProvider
+    const { db, batches } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+
+    await expect(approveBatchToPR({ pageIds: [1], label: "test", actorId: 1 })).rejects.toBeInstanceOf(MockProviderError);
+    expect(batches.size).toBe(0);
+    expect(ghState.commits).toHaveLength(0);
+    expect(ghState.prs.size).toBe(0);
   });
 
   it("creates exactly one commit and one PR for a two-page batch, and never writes to main", async () => {

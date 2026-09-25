@@ -175,3 +175,19 @@ describe("seoRouter — SEO_GITHUB_TOKEN unset (spec: clear \"not configured\" s
     await expect(caller.revertBatch({ batchId: 1 })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
   });
 });
+
+describe("seoRouter — AI provider status (no real provider configured anywhere yet)", () => {
+  it("aiProviderStatus reports the mock provider", async () => {
+    const caller = await seoCaller({ id: 1, role: "member", teamRole: "member" });
+    expect(await caller.aiProviderStatus()).toEqual({ model: "mock-v1", isMock: true });
+  });
+
+  it("approveBatchToPR throws PRECONDITION_FAILED for the mock provider even with GitHub configured", async () => {
+    vi.stubEnv("SEO_GITHUB_TOKEN", "gh-pat-test-value");
+    vi.mocked(getDb).mockResolvedValue(makeDb([page({ id: 1 })]) as never);
+    const caller = await seoCaller({ id: 1, role: "admin", teamRole: "admin" });
+
+    await expect(caller.approveBatchToPR({ pageIds: [1], label: "x" })).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+    vi.stubEnv("SEO_GITHUB_TOKEN", ""); // restore this file's baseline for later tests
+  });
+});
