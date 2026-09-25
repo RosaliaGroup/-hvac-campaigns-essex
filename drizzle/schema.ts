@@ -2614,6 +2614,113 @@ export const seoAiDrafts = mysqlTable(
 export type SeoAiDraftRow = typeof seoAiDrafts.$inferSelect;
 export type InsertSeoAiDraft = typeof seoAiDrafts.$inferInsert;
 
+/* ── SEO bulk-approve workflow (0072) ─────────────────────────────────────
+ * Gated title/meta bulk-approve: a human reviews a batch of AI drafts, the
+ * server opens a PR (never writes to main, never publishes). See
+ * docs/seo-bulk-approve-spec.md. Three tables:
+ *   - seoPageTags: per-page tags (claims-review locks a page out of bulk
+ *     approve until a human removes the tag with a note).
+ *   - seoApprovalBatches: one row per approved batch — the PR it opened and
+ *     its lifecycle (pr_open → merged, or → reverted). Self-references for
+ *     "this batch reverts that batch".
+ *   - seoAuditLog: append-only trail of every action the workflow takes.
+ * ────────────────────────────────────────────────────────────────────── */
+
+export const SEO_PAGE_TAGS = ["claims-review", "locked", "verified-project", "illustrative"] as const;
+
+export const seoPageTags = mysqlTable(
+  "seoPageTags",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** Page path, e.g. "/hvac-newark-nj" — matches seoPages.page. */
+    pagePath: varchar("pagePath", { length: 1024 }).notNull(),
+    tag: mysqlEnum("tag", SEO_PAGE_TAGS).notNull(),
+    /** Required when removing "claims-review" (spec §4) — stored on whichever
+     *  row triggered the note; enforced in the service layer, not here. */
+    note: text("note"),
+    /** teamMembers.id who added/removed this tag. Nullable for system-seeded tags. */
+    createdById: int("createdById"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    pageTagUq: uniqueIndex("seoPageTags_page_tag_uq").on(table.pagePath, table.tag),
+    pageIdx: index("seoPageTags_pagePath_idx").on(table.pagePath),
+  }),
+);
+export type SeoPageTagRow = typeof seoPageTags.$inferSelect;
+export type InsertSeoPageTag = typeof seoPageTags.$inferInsert;
+
+export const SEO_BATCH_STATUS = ["pr_open", "merged", "reverted", "failed"] as const;
+
+export const seoApprovalBatches = mysqlTable(
+  "seoApprovalBatches",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** Free-text label the reviewer typed to confirm, e.g. "city-pages-essex-title-meta". */
+    label: varchar("label", { length: 255 }).notNull(),
+    /** Page paths in this batch, in review order. */
+    pages: json("pages").notNull(),
+    /** Full diff table shown in the approval modal and the PR body (per-page old/new title+meta). */
+    diff: json("diff").notNull(),
+    /** teamMembers.id who approved this batch. */
+    actorId: int("actorId"),
+    /** Branch the commit landed on, e.g. "pr-seo-meta-20260925". */
+    branch: varchar("branch", { length: 255 }).notNull(),
+    /** Commit SHA the batch (or its revert) produced. */
+    commitSha: varchar("commitSha", { length: 64 }),
+    prUrl: varchar("prUrl", { length: 512 }),
+    prNumber: int("prNumber"),
+    status: mysqlEnum("status", SEO_BATCH_STATUS).default("pr_open").notNull(),
+    /** Set when this batch IS a revert — points at the batch it reverts. Null otherwise. */
+    revertsBatchId: int("revertsBatchId"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    statusIdx: index("seoApprovalBatches_status_idx").on(table.status),
+  }),
+);
+export type SeoApprovalBatchRow = typeof seoApprovalBatches.$inferSelect;
+export type InsertSeoApprovalBatch = typeof seoApprovalBatches.$inferInsert;
+
+export const SEO_AUDIT_ACTION = [
+  "draft_generated",
+  "draft_discarded",
+  "approved_to_pr",
+  "pr_opened",
+  "merged_detected",
+  "revert_opened",
+  "reindex_requested",
+  "tag_added",
+  "tag_removed",
+] as const;
+
+export const seoAuditLog = mysqlTable(
+  "seoAuditLog",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    ts: timestamp("ts").defaultNow().notNull(),
+    /** teamMembers.id who performed the action. Nullable for system actions (e.g. merged_detected via webhook/poll). */
+    actorId: int("actorId"),
+    action: mysqlEnum("action", SEO_AUDIT_ACTION).notNull(),
+    /** seoApprovalBatches.id, when this action is part of a batch. */
+    batchId: int("batchId"),
+    /** Page path, when this action is page-scoped (most actions). Null for pure batch-level rows. */
+    pagePath: varchar("pagePath", { length: 1024 }),
+    before: json("before"),
+    after: json("after"),
+    /** The claims-linter result at the time of this action, when applicable. */
+    lintResult: json("lintResult"),
+  },
+  table => ({
+    batchIdx: index("seoAuditLog_batchId_idx").on(table.batchId),
+    pageIdx: index("seoAuditLog_pagePath_idx").on(table.pagePath),
+    tsIdx: index("seoAuditLog_ts_idx").on(table.ts),
+  }),
+);
+export type SeoAuditLogRow = typeof seoAuditLog.$inferSelect;
+export type InsertSeoAuditLog = typeof seoAuditLog.$inferInsert;
+
 /* ── GA4 Analytics ──────────────────────────────────────────────────────── */
 
 /**
