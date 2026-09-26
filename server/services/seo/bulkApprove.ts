@@ -26,8 +26,15 @@ import {
   commitOverridesFile,
   openOrGetPR,
   getPRStatus,
+  closePR,
 } from "./github";
 import { logAudit } from "./auditLog";
+import { advanceWarmup, resetWarmupByHalf, type AutopublishLane } from "./warmupGate";
+
+/** Meta-lane branches are "pr-seo-meta-*" (branchForToday() below); everything else non-revert is content-lane ("pr-content-*"). */
+export function laneForBatch(branch: string): AutopublishLane {
+  return branch.startsWith("pr-seo-meta-") ? "meta" : "content";
+}
 
 export const MAX_BATCH_SIZE = 20;
 
@@ -336,7 +343,39 @@ export async function revertBatch(batchId: number, actorId: number | null): Prom
 
   await logAudit({ actorId, action: "revert_opened", batchId: revertRow.id, pagePath: null, before: { revertsBatchId: original.id }, after: { prUrl: pr.url, prNumber: pr.number }, lintResult: null });
 
+  // Immediate, per addendum §A5 — a revert resets warm-up trust the moment it's
+  // initiated, not once it merges (mirrors vetoBatch's immediacy below).
+  await resetWarmupByHalf(laneForBatch(original.branch), "revert", actorId);
+
   return { batch: revertRow, prUrl: pr.url, prNumber: pr.number };
+}
+
+/**
+ * Veto (addendum §A2) — close the PR WITHOUT merging, mark the batch failed,
+ * and immediately reset that lane's warm-up counter (§A5). Idempotent: a
+ * batch that's already left pr_open (merged/reverted/failed some other way)
+ * is a safe no-op rather than an error, so a stale/double-clicked veto link
+ * doesn't surface a confusing failure on the confirmation page.
+ */
+export async function vetoBatch(batchId: number, actorId: number | null = null): Promise<SeoApprovalBatchRow> {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable.");
+  const [batch] = await db.select().from(seoApprovalBatches).where(eq(seoApprovalBatches.id, batchId)).limit(1);
+  if (!batch) throw new Error(`Batch ${batchId} not found.`);
+  if (batch.status !== "pr_open") return batch;
+
+  if (isGithubConfigured() && batch.prNumber) {
+    await closePR(batch.prNumber);
+  }
+  await db.update(seoApprovalBatches).set({ status: "failed" }).where(eq(seoApprovalBatches.id, batchId));
+  await logAudit({
+    actorId, action: "vetoed", batchId, pagePath: null,
+    before: { status: "pr_open" }, after: { status: "failed" }, lintResult: null,
+  });
+  await resetWarmupByHalf(laneForBatch(batch.branch), "veto", actorId);
+
+  const [updated] = await db.select().from(seoApprovalBatches).where(eq(seoApprovalBatches.id, batchId)).limit(1);
+  return updated;
 }
 
 /** True if `pagePath` is part of any batch still in `pr_open` — gates "Request Reindex" (spec §11). */
@@ -410,6 +449,9 @@ export async function refreshBatchStatus(batchId: number): Promise<RefreshBatchR
         actorId: null, action: "merged_detected", batchId: batch.revertsBatchId, pagePath: null,
         before: { status: "merged" }, after: { status: "reverted" }, lintResult: null,
       });
+    } else {
+      // A clean merge (this batch is NOT itself a revert) counts toward warm-up.
+      await advanceWarmup(laneForBatch(batch.branch), null);
     }
     const [updated] = await db.select().from(seoApprovalBatches).where(eq(seoApprovalBatches.id, batchId)).limit(1);
     return { batch: updated, changed: true };
