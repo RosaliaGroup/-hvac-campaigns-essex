@@ -30,6 +30,16 @@ import { msUntilNextRun, type Weekday } from "../../../shared/cronTiming";
 import { isWarmedUp } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { armHold } from "./autoMerge";
+import { VERIFIED_FACTS, isPriceRangeStale } from "../../../shared/verifiedFacts";
+
+/** docs/positioning-warranty-spec.md §9b — "asOf older than 180 days -> WARN in the nightly meta lane". A no-op today: VERIFIED_FACTS.priceRanges is empty until the owner supplies entries. */
+function warnOnStalePriceRanges(now: Date): void {
+  for (const range of VERIFIED_FACTS.priceRanges) {
+    if (isPriceRangeStale(range, now)) {
+      console.warn(`[SEO] price range for ${range.page} (${range.item}) is stale — last confirmed ${range.asOf}, more than 180 days ago.`);
+    }
+  }
+}
 
 export const MAX_NIGHTLY_DRAFTS = 20;
 const MIN_IMPRESSIONS_90D = 20;
@@ -102,6 +112,8 @@ export type NightlyJobSummary = {
 
 /** Real I/O: fetch pages + locks + pending batches, select, draft, tag, log, summarize; auto-approve to PR if the meta lane is warmed up and the circuit is clear (see file header), else stage only. */
 export async function runNightlyDraftJob(now: Date = new Date()): Promise<NightlyJobSummary> {
+  warnOnStalePriceRanges(now);
+
   const db = await getDb();
   if (!db) return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: 0, autoApproved: false };
 

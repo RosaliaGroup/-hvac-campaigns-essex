@@ -26,7 +26,7 @@ import fs from "fs";
 import path from "path";
 import { getDb } from "../../db";
 import { seoApprovalBatches, type SeoContentQueueRow } from "../../../drizzle/schema";
-import { VERIFIED_FACTS, isFactsConfigured, type VerifiedFacts } from "../../../shared/verifiedFacts";
+import { VERIFIED_FACTS, isFactsConfigured, isPriceRangeStale, type VerifiedFacts } from "../../../shared/verifiedFacts";
 import { lintPageMeta, type LintResult } from "../../../shared/seoLinter";
 import { lintContent, isResidentialOrRebateTopic, type ContentLintResult } from "../../../shared/contentLinter";
 import { countPostStructure, renderPostPlainText, extractInternalLinkPaths, extractExistingTitles, insertBlogPostIntoSource } from "../../../shared/blogPostRendering";
@@ -77,8 +77,19 @@ export type ContentDraftOutcome =
       batchId?: number;
     };
 
+/** docs/positioning-warranty-spec.md §9b — "reminder in the weekly summary". A no-op today: facts.priceRanges is empty until the owner supplies entries. */
+function warnOnStalePriceRanges(facts: VerifiedFacts, now: Date): void {
+  for (const range of facts.priceRanges) {
+    if (isPriceRangeStale(range, now)) {
+      console.warn(`[SEO] price range for ${range.page} (${range.item}) is stale — last confirmed ${range.asOf}, more than 180 days ago.`);
+    }
+  }
+}
+
 /** Draft (and, once warmed up, auto-approve) the next eligible topic. Safe to call repeatedly — no-ops when there's nothing to draft. */
 export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
+  warnOnStalePriceRanges(facts, new Date());
+
   const breaker = await checkCircuitBreakerConditions();
   if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
 

@@ -8,6 +8,7 @@ import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ExitIntentPopup from "@/components/ExitIntentPopup";
+import BuyFinanceMemberComparison from "@/components/BuyFinanceMemberComparison";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Professional HVAC company homepage showcasing expertise and services */
@@ -40,8 +41,10 @@ export default function Home() {
   let { user, loading, error, isAuthenticated, logout } = useAuth();
 
   useSEO({
-    title: "Licensed HVAC Contractor in Newark, NJ | Up to $16K Rebates",
-    description: "NJ's trusted HVAC experts. Free assessments, NJ rebates up to $16,000, $100 flat service calls. Serving 15 NJ counties. Call (862) 423-9396.",
+    // docs/positioning-warranty-spec.md §4 — title trimmed to fit the ≤60 char limit
+    // (shared/seoLinter.ts's title_too_long rule) while still leading with installation + coverage.
+    title: "NJ HVAC Install & 10-Year Coverage | Mechanical Enterprise",
+    description: "NJ HVAC installation with optional 10-year parts & labor coverage. PSE&G rebates may reduce your cost. Free assessment. Call (862) 423-9396.",
     ogUrl: "https://mechanicalenterprise.com",
   });
 
@@ -58,7 +61,7 @@ export default function Home() {
         "areaServed": "New Jersey",
         "priceRange": "$100-$550",
         "openingHours": "Mo-Su 00:00-23:59",
-        "description": "Expert HVAC solutions in NJ. Heat pumps, VRV/VRF systems, free assessments with NJ rebates up to $16,000."
+        "description": "Expert HVAC installation in NJ with optional 10-year parts & labor coverage. Heat pumps, VRV/VRF systems, free assessments. Rebates may reduce your cost."
       }) }} />
       <ExitIntentPopup />
       <Navigation />
@@ -78,10 +81,11 @@ export default function Home() {
           <div className="max-w-3xl">
             <Badge className="mb-4 bg-[#ff6b35] text-white hover:bg-[#ff6b35]/90">WMBE/SBE Certified</Badge>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
-              Up to $16,000 in NJ Rebates for Homeowners
+              NJ HVAC Installation, Backed by 10-Year Coverage
             </h1>
             <p className="text-xl md:text-2xl text-white/90 mb-8 leading-relaxed">
-              PSE&G and NJ Clean Energy rebates cover up to $16,000. Free assessment. No obligation.
+              Licensed NJ installation with optional 10-year parts &amp; labor coverage — no deductible on covered
+              repairs. Free assessment. No obligation.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link href="/contact">
@@ -89,15 +93,36 @@ export default function Home() {
                   Get a Free Quote <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
-              <Link href="/services">
+              <Link href="/warranty">
                 <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20">
-                  Our Services
+                  See 10-Year Coverage
                 </Button>
               </Link>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Rebates band (docs/positioning-warranty-spec.md §4 — demoted below the hero, calculator link kept) */}
+      <section className="py-4 bg-[#f7f8fa] border-b text-center">
+        <div className="container">
+          <p className="text-sm text-muted-foreground">
+            Rebates and financing may reduce your cost —{" "}
+            <a
+              href="https://mechanicalenterprise.com/rebate-calculator"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#e8813a] font-medium underline hover:no-underline"
+            >
+              check your rebate eligibility
+            </a>
+            .
+          </p>
+        </div>
+      </section>
+
+      {/* Buy / finance / member comparison (docs/positioning-warranty-spec.md §9a) */}
+      <BuyFinanceMemberComparison />
 
       {/* HVAC Service Across New Jersey */}
       <section className="py-12 bg-white border-b">

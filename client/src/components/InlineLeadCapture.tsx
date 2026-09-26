@@ -31,11 +31,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { CheckCircle, Phone, DollarSign, Flame } from "lucide-react";
+import { CheckCircle, Phone, DollarSign, Flame, ShieldCheck } from "lucide-react";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 
-export type InlineLeadVariant = "residential" | "commercial" | "emergency" | "rebate";
+export type InlineLeadVariant = "residential" | "commercial" | "emergency" | "rebate" | "warranty" | "membership";
 
 export interface InlineLeadCaptureProps {
   variant: InlineLeadVariant;
@@ -58,6 +58,13 @@ export interface InlineLeadCaptureProps {
   /** Optional subtitle override. */
   subtitle?: string;
   className?: string;
+  /**
+   * Overrides the GA4 `form_type` param (defaults to "inline_lead_capture").
+   * Used by the /warranty coverage-quote CTA to emit "warranty_quote" instead
+   * (docs/positioning-warranty-spec.md §7/§9), so warranty leads are
+   * distinguishable from ordinary inline-form leads in GA4 reporting.
+   */
+  formType?: string;
 }
 
 interface VariantConfig {
@@ -119,6 +126,28 @@ const VARIANTS: Record<InlineLeadVariant, VariantConfig> = {
     successMessage: "We'll email your rebate breakdown shortly",
     icon: <DollarSign className="h-5 w-5" />,
   },
+  warranty: {
+    cardClass: "border-2 border-[#1e3a5f]/30 bg-white shadow-lg",
+    headerClass: "bg-gradient-to-r from-[#1e3a5f] to-[#2a5a8f] text-white p-4 rounded-t-lg",
+    titleClass: "text-xl font-bold",
+    buttonClass: "w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white text-base py-6",
+    buttonLabel: "Request a Coverage Quote",
+    defaultTitle: "Request a Coverage Quote",
+    defaultSubtitle: "Coverage is priced per system — tell us about your equipment and we'll follow up with pricing.",
+    successMessage: "We'll follow up with your coverage quote shortly",
+    icon: <ShieldCheck className="h-5 w-5" />,
+  },
+  membership: {
+    cardClass: "border-2 border-[#1e3a5f]/30 bg-white shadow-lg",
+    headerClass: "bg-gradient-to-r from-[#1e3a5f] to-[#2a5a8f] text-white p-4 rounded-t-lg",
+    titleClass: "text-xl font-bold",
+    buttonClass: "w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white text-base py-6",
+    buttonLabel: "Ask About Comfort Membership",
+    defaultTitle: "Ask About Comfort Membership",
+    defaultSubtitle: "One monthly payment — coverage, maintenance, and priority service. Pricing provided at consultation.",
+    successMessage: "We'll follow up with your membership pricing shortly",
+    icon: <ShieldCheck className="h-5 w-5" />,
+  },
 };
 
 export default function InlineLeadCapture({
@@ -129,6 +158,7 @@ export default function InlineLeadCapture({
   title,
   subtitle,
   className,
+  formType,
 }: InlineLeadCaptureProps) {
   const cfg = VARIANTS[variant];
 
@@ -159,6 +189,10 @@ export default function InlineLeadCapture({
       ? "Commercial HVAC"
       : variant === "rebate"
       ? "Rebate Consultation"
+      : variant === "warranty"
+      ? "Warranty Coverage"
+      : variant === "membership"
+      ? "Comfort Membership"
       : "Residential HVAC");
 
   const createCapture = trpc.leadCaptures.create.useMutation({
@@ -169,7 +203,7 @@ export default function InlineLeadCapture({
         trackConversion(
           mapping.event,
           {
-            form_type: "inline_lead_capture",
+            form_type: formType ?? "inline_lead_capture",
             service_category: mapping.service_category,
             customer_segment: mapping.customer_segment,
             lead_source_surface: `inline:${variant}`,

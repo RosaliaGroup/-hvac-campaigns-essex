@@ -21,6 +21,9 @@ import {
   COMPETITOR_BRANDS,
   APPROVED_CERTIFICATION_PHRASES,
   includesPhrase,
+  lintWarrantyClaims,
+  lintDifferentiationClaims,
+  lintDifferentiationFactClaims,
 } from "./seoLinter";
 import { isFactsConfigured, type VerifiedFacts } from "./verifiedFacts";
 
@@ -164,6 +167,15 @@ export function lintContent(input: ContentLintInput, facts: VerifiedFacts): Cont
   }
   for (const brand of COMPETITOR_BRANDS) {
     if (includesPhrase(body, brand, { caseSensitive: true })) findings.push(blockFinding("competitor_name", `Body mentions competitor "${brand}".`));
+  }
+  for (const f of lintWarrantyClaims(body)) {
+    findings.push({ severity: f.severity, code: f.code, message: f.message });
+  }
+  for (const f of lintDifferentiationClaims(body)) {
+    findings.push({ severity: f.severity, code: f.code, message: f.message });
+  }
+  for (const f of lintDifferentiationFactClaims(body, facts)) {
+    findings.push({ severity: f.severity, code: f.code, message: f.message });
   }
 
   // ── Extended, body-specific rules (spec Part 2 / addendum §A4) ──

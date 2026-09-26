@@ -6,6 +6,8 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import ResidentialCaseStudies from "@/components/ResidentialCaseStudies";
 import ScrollRebatePopup from "@/components/ScrollRebatePopup";
+import WarrantyCoverageSection from "@/components/WarrantyCoverageSection";
+import BuyFinanceMemberComparison from "@/components/BuyFinanceMemberComparison";
 import { useSEO } from "@/hooks/useSEO";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
@@ -14,7 +16,7 @@ import { useSEO } from "@/hooks/useSEO";
 export default function ResidentialCampaigns() {
   useSEO({
     title: "Residential HVAC & Heat Pump Installation NJ | Up to $16K Rebates",
-    description: "Free HVAC assessments for NJ homeowners. Heat pump installation with rebates up to $16,000. $100 flat service calls. Book online today.",
+    description: "Free HVAC assessments for NJ homeowners. Heat pump installation with optional 10-year parts & labor coverage and rebates up to $16,000. Book online today.",
     ogUrl: "https://mechanicalenterprise.com/residential",
   });
 
@@ -36,6 +38,12 @@ export default function ResidentialCampaigns() {
           </div>
         </div>
       </section>
+
+      {/* Protect the Investment — 10-Year Coverage (docs/positioning-warranty-spec.md §4) */}
+      <WarrantyCoverageSection />
+
+      {/* Buy / finance / member comparison (docs/positioning-warranty-spec.md §9a) */}
+      <BuyFinanceMemberComparison />
 
       {/* Decarbonization Program Highlight */}
       <section className="py-20 bg-white">

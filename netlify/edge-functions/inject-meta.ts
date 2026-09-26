@@ -25,9 +25,11 @@ const BASE = "https://mechanicalenterprise.com";
 // PR-1 item H: was "...#1 MWBE HVAC Contractor..." — "#1" is an unverified
 // claim (no certification/ranking documentation in the repo). Kept in sync
 // with the client-side title in client/src/pages/Home.tsx (useSEO call).
-const DEFAULT_TITLE = "Licensed HVAC Contractor in Newark, NJ | Up to $16K Rebates";
+// docs/positioning-warranty-spec.md §4 — leads with installation + optional
+// 10-year coverage; rebates demoted to a secondary mention, same as the hero.
+const DEFAULT_TITLE = "NJ HVAC Install & 10-Year Coverage | Mechanical Enterprise";
 const DEFAULT_DESC =
-  `Licensed & MWBE-certified HVAC contractor in Newark, NJ. Heat pump, AC & furnace installation. PSE&G-approved, up to $16K in rebates. Serving 15 NJ counties. Free assessment. Call ${PHONE}.`;
+  `Licensed NJ HVAC installation with optional 10-year parts & labor coverage. Rebates may reduce your cost. Free assessment. Call ${PHONE}.`;
 const DEFAULT_OG_IMAGE = `${BASE}/og-default.png`;
 
 // ── Known page metadata ────────────────────────────────────────────────────
@@ -42,7 +44,7 @@ const PAGE_META: Record<string, PageMeta> = {
   "/": { title: DEFAULT_TITLE, description: DEFAULT_DESC },
   "/residential": {
     title: "Residential HVAC Installation NJ | Heat Pump & AC | Up to $16K Rebates",
-    description: "Expert residential HVAC installation in NJ. Heat pumps, central AC, ductless mini-splits & furnaces. Up to $16K in NJ rebates. MWBE certified. Free in-home assessment.",
+    description: "Expert residential HVAC installation in NJ. Heat pumps, central AC, ductless mini-splits & furnaces. Optional 10-year parts & labor coverage. Up to $16K in NJ rebates. Free in-home assessment.",
   },
   "/commercial": {
     title: "Commercial HVAC Contractor NJ | Direct Install | Up to 80% Covered",
@@ -122,6 +124,12 @@ const SEO_LANDING_META: Record<string, LandingMeta> = {
   "/warehouse-hvac-nj": { parent: "Commercial", name: "Warehouse HVAC", title: "Warehouse HVAC NJ | Heating, Ventilation & Cooling | Mechanical Enterprise", description: "Warehouse & distribution HVAC across NJ — unit heaters, ventilation, HVLS, rooftop units. Worker comfort & compliance. Call (862) 423-9396." },
   "/office-building-hvac-nj": { parent: "Commercial", name: "Office Building HVAC", title: "Office Building HVAC NJ | Multi-Zone Comfort | Mechanical Enterprise", description: "Office HVAC across NJ — RTUs, VAV/VRF, chillers, controls & IAQ. Tenant comfort, fewer complaints. Call (862) 423-9396." },
   "/industrial-hvac-nj": { parent: "Commercial", name: "Industrial HVAC", title: "Industrial HVAC NJ | Process Cooling & Chillers | Mechanical Enterprise", description: "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. 24/7 uptime & compliance. Call (862) 423-9396." },
+  // docs/positioning-warranty-spec.md §3/§4 — breadcrumb parent "Residential" per spec's "breadcrumb → Residential".
+  // Meta description trimmed from the spec's literal 170-char text to fit the 155-char limit (shared/seoLinter.ts).
+  "/warranty": { parent: "Residential", name: "10-Year Coverage", title: "10-Year Parts & Labor HVAC Coverage | Mechanical Enterprise", description: "Optional 10-year parts & labor coverage for new HVAC installs and qualifying existing systems in NJ. No deductible on covered repairs. Call (862) 423-9396." },
+  // docs/positioning-warranty-spec.md §9d.
+  "/commercial/property-managers": { parent: "Commercial", name: "Property Manager Portfolio Pricing", title: "Fixed Per-Unit HVAC Pricing for Portfolios | Mechanical Enterprise", description: "Fixed per-unit HVAC pricing for NJ property portfolios — PTAC, mini-split, RTU, split. Quarterly reporting, one point of contact. Free consultation." },
+  "/commercial/hvac-service-contracts": { parent: "Commercial", name: "Portfolio Service Contracts", title: "Portfolio-Wide HVAC Service Contracts | Mechanical Enterprise", description: "Portfolio-wide HVAC service contracts for NJ commercial buildings — fixed per-unit pricing, one point of contact, quarterly reporting. Free consultation." },
 };
 
 // ── Dynamic page metadata generators ──────────────────────────────────────

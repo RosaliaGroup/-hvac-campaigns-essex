@@ -92,6 +92,17 @@ describe("AnthropicOptimizationProvider — generateTitle / generateMetaDescript
     expect(call.system).toContain("25C");
   });
 
+  it("passes the warranty positioning sentence and claim rules in the system prompt (docs/positioning-warranty-spec.md §6)", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValueOnce(ok("Clean Title"));
+    const p = new AnthropicOptimizationProvider("key");
+    await p.generateTitle(ctx());
+
+    const call = vi.mocked(callAnthropicModelChain).mock.calls[0][0];
+    expect(call.system).toContain("Lead with installation quality, system fit and the optional 10-year parts & labor coverage.");
+    expect(call.system).toContain("Never describe coverage as included or free.");
+    expect(call.system.toLowerCase()).toContain("lifetime");
+  });
+
   it("passes topQueries, bodyExcerpt, and cityUtilityTerritory into the user prompt", async () => {
     vi.mocked(callAnthropicModelChain).mockResolvedValueOnce(ok("Clean Meta Description Under The Limit."));
     const p = new AnthropicOptimizationProvider("key");
