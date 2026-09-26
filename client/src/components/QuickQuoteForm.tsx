@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { CheckCircle } from "lucide-react";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 
 interface QuickQuoteFormProps {
   title?: string;
@@ -110,6 +112,7 @@ export default function QuickQuoteForm({
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -233,11 +236,7 @@ export default function QuickQuoteForm({
             {createCapture.isPending ? "Submitting..." : "Get Free Quote"}
           </Button>
 
-          <p className="text-xs text-center text-muted-foreground">
-            By submitting, you agree to receive text messages from Mechanical Enterprise about
-            your request. Msg &amp; data rates may apply. Reply STOP to opt out. See our{" "}
-            <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>.
-          </p>
+          <TcpaDisclosure className="text-xs text-center text-muted-foreground" />
         </form>
       </CardContent>
     </Card>

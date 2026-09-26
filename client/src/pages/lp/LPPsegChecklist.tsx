@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 import {
   CheckCircle, Phone, Shield, Clock, FileText, ArrowRight,
   Award, Square, ChevronDown, Star, AlertTriangle,
@@ -67,6 +69,7 @@ export default function LPPsegChecklist() {
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -206,6 +209,7 @@ export default function LPPsegChecklist() {
                     <p className="text-xs text-gray-400 text-center">
                       No spam. We respect your privacy.
                     </p>
+                  <TcpaDisclosure />
                   </form>
                   <div className="mt-4 pt-4 border-t flex items-center justify-center gap-2 text-sm text-gray-500">
                     <Clock className="h-4 w-4 text-[#ff6b35]" /> Instant delivery to your inbox

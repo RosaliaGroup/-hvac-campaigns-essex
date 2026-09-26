@@ -8,6 +8,8 @@ import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 
 export default function ExitIntentPopup() {
   const [isVisible, setIsVisible] = useState(false);
@@ -95,6 +97,7 @@ export default function ExitIntentPopup() {
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -172,6 +175,7 @@ export default function ExitIntentPopup() {
               <p className="text-xs text-center text-muted-foreground">
                 No spam. Instant delivery. Unsubscribe anytime.
               </p>
+              <TcpaDisclosure />
             </form>
           </CardContent>
         </Card>

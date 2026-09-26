@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +68,7 @@ export default function LPEmergencyHVAC() {
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -141,6 +144,7 @@ export default function LPEmergencyHVAC() {
                     <Button type="submit" disabled={captureLead.isPending} className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-4 text-base">
                       {captureLead.isPending ? "Sending..." : "🚨 Request Emergency Service"}
                     </Button>
+                  <TcpaDisclosure />
                   </form>
                   <div className="mt-4 pt-4 border-t flex items-center justify-center gap-2 text-sm text-gray-500">
                     <Clock className="h-4 w-4 text-red-500" /> Average response time: under 2 hours

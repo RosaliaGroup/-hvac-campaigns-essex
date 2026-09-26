@@ -14,6 +14,8 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useSEO } from "@/hooks/useSEO";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 
 export default function Partnerships() {
   useSEO({
@@ -64,6 +66,7 @@ export default function Partnerships() {
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -644,6 +647,7 @@ export default function Partnerships() {
                   >
                     {createCapture.isPending ? "Submitting..." : "Submit Partnership Application"}
                   </Button>
+                  <TcpaDisclosure />
                 </form>
               )}
             </div>

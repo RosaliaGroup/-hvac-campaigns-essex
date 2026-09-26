@@ -15,6 +15,8 @@ import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 import { trackConversion } from "@/lib/conversions";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 
 // NJ Rebate calculation logic based on home type and current system
 function calculateRebate(homeType: string, sqft: number, currentSystem: string, income: string) {
@@ -125,6 +127,7 @@ export default function Qualify() {
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   }
 
@@ -477,11 +480,7 @@ export default function Qualify() {
                 <a href="tel:+18624239396" className="text-[#ff6b35] font-semibold">(862) 423-9396</a>
               </div>
 
-              <p className="text-xs text-center text-gray-400">
-                By submitting, you agree to receive text messages from Mechanical Enterprise about
-                your request. Msg &amp; data rates may apply. Reply STOP to opt out. See our{" "}
-                <a href="/privacy" className="underline hover:text-gray-600">Privacy Policy</a>.
-              </p>
+              <TcpaDisclosure className="text-xs text-center text-gray-400" />
             </CardContent>
           </Card>
         )}

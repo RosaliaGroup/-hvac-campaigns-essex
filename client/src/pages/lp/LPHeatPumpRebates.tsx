@@ -2,6 +2,8 @@ import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 import { trackConversion } from "@/lib/conversions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +67,7 @@ export default function LPHeatPumpRebates() {
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -137,6 +140,7 @@ export default function LPHeatPumpRebates() {
                       {captureLead.isPending ? "Sending..." : "Get My Free Estimate →"}
                     </Button>
                     <p className="text-xs text-gray-400 text-center">No spam. We respect your privacy. Call us at (862) 423-9396</p>
+                  <TcpaDisclosure />
                   </form>
                   <div className="mt-4 pt-4 border-t flex items-center justify-center gap-2 text-sm text-gray-500">
                     <Clock className="h-4 w-4 text-[#ff6b35]" /> We respond within 2 business hours

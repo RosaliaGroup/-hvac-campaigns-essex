@@ -1,6 +1,8 @@
 import { COOKIE_NAME } from "@shared/const";
 import { LEAD_STAGE_ENUM, buildLeadCapturePatch, deriveContactRelationship } from "@shared/leadPipeline";
 import { extractAttribution } from "@shared/attribution";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
+import type { ConsentStatus } from "@shared/growthConsent";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { logAuthEventFromReq } from "./_core/authLog";
 import { systemRouter } from "./_core/systemRouter";
@@ -222,6 +224,9 @@ export const appRouter = router({
           captureType: z.enum(["exit_popup", "inline_form", "newsletter", "download_gate", "quick_quote", "qualify_form", "scroll_popup_residential", "scroll_popup_commercial", "exit_popup_residential", "exit_popup_commercial", "lp_heat_pump", "lp_commercial_vrv", "lp_emergency", "lp_fb_residential", "lp_fb_commercial", "lp_rebate_guide", "lp_maintenance", "lp_referral_partner", "lp_maintenance_subscription", "career_application", "partnership_inquiry", "pseg_checklist_download"]),
           pageUrl: z.string().optional(),
           message: z.string().optional(),
+          // Which lead-capture form version submitted this (see shared/leadFormVersion.ts).
+          // Only a match against the current TCPA_FORM_VERSION seeds consentStatus="opt_in".
+          formVersion: z.string().max(32).optional(),
           // First-touch marketing attribution: the client sends document.referrer
           // (empty string for a direct visit). UTM/gclid are parsed from pageUrl.
           referrer: z.string().optional(),
@@ -309,7 +314,15 @@ export const appRouter = router({
           ...captureInput
         } = input;
 
-        const captureInsert = await db.createLeadCapture({ ...captureInput, ...attribution });
+        // Web-lead consent gate: "opt_in" is earned, not assumed. Only a submit from
+        // a form that actually shipped the TCPA disclosure line (formVersion matches
+        // the current TCPA_FORM_VERSION) gets seeded "opt_in" — everything else
+        // (a stale/un-updated form, or formVersion omitted entirely) falls back to
+        // the column's "unknown" default. See shared/growthConsent.ts + drizzle/schema.ts.
+        const consentStatus: ConsentStatus =
+          input.formVersion === TCPA_FORM_VERSION ? "opt_in" : "unknown";
+
+        const captureInsert = await db.createLeadCapture({ ...captureInput, ...attribution, consentStatus });
 
         // Growth system speed-to-lead (§1) — fire-and-forget, never blocks or fails
         // the public form submission.

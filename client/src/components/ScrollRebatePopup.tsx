@@ -9,6 +9,8 @@ import Turnstile from "@/components/Turnstile";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 
 interface ScrollRebatePopupProps {
   pageType: "residential" | "commercial";
@@ -96,6 +98,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -179,6 +182,7 @@ export default function ScrollRebatePopup({ pageType }: ScrollRebatePopupProps) 
               <p className="text-xs text-center text-muted-foreground">
                 We'll email you the complete rebate guide immediately. No spam, unsubscribe anytime.
               </p>
+              <TcpaDisclosure />
             </form>
           </CardContent>
         </Card>

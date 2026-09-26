@@ -53,7 +53,10 @@ export const leads = mysqlTable("leads", {
   // "unknown" is email-only. Self-submitted leads default "opt_in" (a proactive
   // inquiry is treated as an existing-relationship/inquiry-response basis for the
   // reply itself — see shared/growthConsent.ts's documented judgment call);
-  // owner-imported cold contacts (§7) set this explicitly per row.
+  // owner-imported cold contacts (§7) set this explicitly per row. Unlike
+  // leadCaptures.consentStatus below, this default is unconditional: `leads` has no
+  // form/UI of its own (phone/manual/CRM-side entries only), so there is no form
+  // version to gate on.
   consentStatus: mysqlEnum("consentStatus", ["customer", "opt_in", "unknown"]).default("opt_in").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -107,7 +110,15 @@ export const leadCaptures = mysqlTable("leadCaptures", {
   customerId: int("customerId"),
   convertedAt: timestamp("convertedAt"),
   // ── Growth system (migration 0076) — see leads.consentStatus above for the rule. ──
-  consentStatus: mysqlEnum("consentStatus", ["customer", "opt_in", "unknown"]).default("opt_in").notNull(),
+  // Unlike `leads`, this DB default is fail-closed ("unknown"): "opt_in" is set
+  // explicitly, at insert time, in server/routers.ts's leadCaptures.create — and
+  // ONLY when `formVersion` matches shared/leadFormVersion.ts's TCPA_FORM_VERSION,
+  // i.e. the submitting form actually shipped the TCPA disclosure line. A request
+  // from a stale/un-updated form (or any other insert path, e.g. the Meta Lead Ads
+  // webhook) falls back to "unknown" rather than silently getting "opt_in".
+  consentStatus: mysqlEnum("consentStatus", ["customer", "opt_in", "unknown"]).default("unknown").notNull(),
+  /** Which lead-capture form version submitted this row (see TCPA_FORM_VERSION). Null for non-form inserts (e.g. Meta Lead Ads webhook). */
+  formVersion: varchar("formVersion", { length: 32 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

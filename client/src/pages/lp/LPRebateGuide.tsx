@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 import { CheckCircle, Phone, Star, Download, FileText, Mail, Shield, Award } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -50,6 +52,7 @@ export default function LPRebateGuide() {
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -144,6 +147,7 @@ export default function LPRebateGuide() {
                     <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4 text-base">
                       {captureLead.isPending ? "Sending..." : "📥 Send Me the Free Guide"}
                     </Button>
+                  <TcpaDisclosure />
                   </form>
                   <div className="mt-4 space-y-2 text-xs text-gray-400">
                     <div className="flex items-center gap-2"><Mail className="h-3 w-3" /> Delivered instantly to your inbox</div>
