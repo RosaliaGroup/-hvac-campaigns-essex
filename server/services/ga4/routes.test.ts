@@ -6,10 +6,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { Express, Request, Response } from "express";
 
-vi.mock("./sync", () => ({ runGa4Sync: vi.fn() }));
+vi.mock("./sync", () => ({ runGa4Sync: vi.fn(), readGa4SyncStatus: vi.fn() }));
+vi.mock("../../_core/notification", () => ({ notifyOwner: vi.fn().mockResolvedValue(true) }));
 
 import { registerGa4SyncRoutes } from "./routes";
-import { runGa4Sync } from "./sync";
+import { runGa4Sync, readGa4SyncStatus } from "./sync";
+import { notifyOwner } from "../../_core/notification";
 
 type Handler = (req: Request, res: Response) => Promise<void> | void;
 
@@ -69,5 +71,73 @@ describe("POST /api/analytics/ga4/sync — fail closed", () => {
     await getHandler()(fakeReq({ "x-ga4-sync-secret": "s3cret" }), res as unknown as Response);
     expect(vi.mocked(runGa4Sync)).toHaveBeenCalledOnce();
     expect(res.statusCode).toBe(200);
+  });
+});
+
+describe("GA4 staleness watchdog — runs independently of the sync scheduler flag", () => {
+  beforeEach(() => {
+    vi.mocked(readGa4SyncStatus).mockReset();
+    vi.mocked(notifyOwner).mockClear();
+  });
+
+  it("does nothing when GA4 is unconfigured (no propertyId)", async () => {
+    const { checkGa4StalenessAndAlert } = await import("./routes");
+    vi.mocked(readGa4SyncStatus).mockResolvedValue({
+      connected: false, propertyId: null, lastRunAt: null, lastRunStatus: null,
+      lastSuccessAt: null, lastError: null, rowsSynced: 0, stale: true,
+    } as never);
+    await checkGa4StalenessAndAlert();
+    expect(vi.mocked(notifyOwner)).not.toHaveBeenCalled();
+  });
+
+  it("does not alert when the last success is recent", async () => {
+    const { checkGa4StalenessAndAlert } = await import("./routes");
+    vi.mocked(readGa4SyncStatus).mockResolvedValue({
+      connected: true, propertyId: "123456789", lastRunAt: new Date().toISOString(), lastRunStatus: "success",
+      lastSuccessAt: new Date().toISOString(), lastError: null, rowsSynced: 635, stale: false,
+    } as never);
+    await checkGa4StalenessAndAlert();
+    expect(vi.mocked(notifyOwner)).not.toHaveBeenCalled();
+  });
+
+  it("alerts once when the last success is older than the stale threshold, and again after recovering-then-going-stale", async () => {
+    vi.resetModules();
+    vi.doMock("./sync", () => ({ runGa4Sync: vi.fn(), readGa4SyncStatus: vi.fn() }));
+    vi.doMock("../../_core/notification", () => ({ notifyOwner: vi.fn().mockResolvedValue(true) }));
+    const syncMod = await import("./sync");
+    const notifyMod = await import("../../_core/notification");
+    const { checkGa4StalenessAndAlert } = await import("./routes");
+
+    const staleTimestamp = new Date(Date.now() - 40 * 60 * 60 * 1000).toISOString(); // 40h ago
+    vi.mocked(syncMod.readGa4SyncStatus).mockResolvedValue({
+      connected: true, propertyId: "123456789", lastRunAt: staleTimestamp, lastRunStatus: "error",
+      lastSuccessAt: staleTimestamp, lastError: "boom", rowsSynced: 0, stale: true,
+    } as never);
+
+    await checkGa4StalenessAndAlert();
+    expect(vi.mocked(notifyMod.notifyOwner)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(notifyMod.notifyOwner)).toHaveBeenCalledWith(
+      expect.objectContaining({ title: expect.stringContaining("stale") }),
+    );
+
+    // Still stale on the next check — must NOT re-alert every 6h while stale.
+    await checkGa4StalenessAndAlert();
+    expect(vi.mocked(notifyMod.notifyOwner)).toHaveBeenCalledTimes(1);
+
+    // Recovers...
+    vi.mocked(syncMod.readGa4SyncStatus).mockResolvedValue({
+      connected: true, propertyId: "123456789", lastRunAt: new Date().toISOString(), lastRunStatus: "success",
+      lastSuccessAt: new Date().toISOString(), lastError: null, rowsSynced: 10, stale: false,
+    } as never);
+    await checkGa4StalenessAndAlert();
+    expect(vi.mocked(notifyMod.notifyOwner)).toHaveBeenCalledTimes(1);
+
+    // ...then goes stale again — should alert a second time.
+    vi.mocked(syncMod.readGa4SyncStatus).mockResolvedValue({
+      connected: true, propertyId: "123456789", lastRunAt: staleTimestamp, lastRunStatus: "error",
+      lastSuccessAt: staleTimestamp, lastError: "boom again", rowsSynced: 0, stale: true,
+    } as never);
+    await checkGa4StalenessAndAlert();
+    expect(vi.mocked(notifyMod.notifyOwner)).toHaveBeenCalledTimes(2);
   });
 });

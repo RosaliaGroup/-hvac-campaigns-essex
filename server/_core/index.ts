@@ -23,7 +23,7 @@ import { startNightlyDraftScheduler } from "../services/seo/nightlyDraftJob";
 import { startWeeklyContentScheduler } from "../services/seo/contentPipeline";
 import { startAutoMergeScheduler } from "../services/seo/autoMerge";
 import { seedContentQueue } from "../services/seo/contentQueue";
-import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
+import { registerGa4SyncRoutes, startGa4SyncScheduler, startGa4StalenessWatchdog } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
 import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
 
@@ -122,6 +122,10 @@ async function startServer() {
     startSeoSyncScheduler();
     // Start daily GA4 Analytics Data API → cache sync for Marketing Analytics
     startGa4SyncScheduler();
+    // Independent staleness watchdog — alerts the owner if GA4 hasn't synced in
+    // 36h, regardless of whether the scheduler above is enabled (catches the
+    // "scheduler left off with no external cron" failure mode).
+    startGa4StalenessWatchdog();
     // Start daily Business Profile → cache sync for Local SEO
     startGbpSyncScheduler();
     // SEO autopublish (docs/seo-automation-addendum-autopublish.md) — all

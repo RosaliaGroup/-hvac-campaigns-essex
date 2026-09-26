@@ -15,7 +15,60 @@
  * automatic GA4 traffic starts until it is deliberately enabled.
  */
 import type { Express, Request, Response } from "express";
-import { runGa4Sync } from "./sync";
+import { runGa4Sync, readGa4SyncStatus } from "./sync";
+import { notifyOwner } from "../../_core/notification";
+
+/**
+ * How stale a GA4 sync can go before the watchdog alerts. Chosen well above the
+ * (opt-in) daily cadence so a single missed run never pages anyone — this only
+ * fires when syncing has been silently broken/off for a while (the actual
+ * failure mode observed in production: GA4_SYNC_SCHEDULER_ENABLED was left
+ * false for 2.5 months with no external cron either, and nothing noticed).
+ */
+const STALE_THRESHOLD_MS = 36 * 60 * 60 * 1000; // 36h
+
+/**
+ * Alerts the owner once per process lifetime if GA4 hasn't synced successfully
+ * within STALE_THRESHOLD_MS. Runs independently of whether the in-process
+ * scheduler is enabled, so it also catches the "scheduler disabled + no
+ * external cron" case that let this go unnoticed for 2.5 months previously.
+ */
+let staleAlertSent = false;
+export async function checkGa4StalenessAndAlert(): Promise<void> {
+  try {
+    const status = await readGa4SyncStatus();
+    if (!status.propertyId) return; // unconfigured — nothing to watch
+    const lastSuccessMs = status.lastSuccessAt ? new Date(status.lastSuccessAt).getTime() : null;
+    const isStale = !lastSuccessMs || Date.now() - lastSuccessMs > STALE_THRESHOLD_MS;
+    if (isStale && !staleAlertSent) {
+      staleAlertSent = true;
+      await notifyOwner({
+        title: "GA4 sync is stale",
+        content:
+          `The GA4 analytics sync hasn't succeeded in over ${STALE_THRESHOLD_MS / 3_600_000}h. ` +
+          `Last success: ${status.lastSuccessAt ?? "never"}. Last run status: ${status.lastRunStatus ?? "none"}. ` +
+          `Last error: ${status.lastError ?? "none logged"}. Check GA4_SYNC_SCHEDULER_ENABLED, ` +
+          `GA4_PROPERTY_ID, and whether the shared Google connection needs re-consent.`,
+      });
+    } else if (!isStale) {
+      staleAlertSent = false; // recovered — allow a fresh alert if it goes stale again
+    }
+  } catch (err) {
+    console.warn("[GA4] staleness watchdog check failed:", err);
+  }
+}
+
+/**
+ * Runs independently of GA4_SYNC_SCHEDULER_ENABLED — its whole job is to catch
+ * the case where syncing is silently off or broken. Cheap (one status read),
+ * so it's always safe to run regardless of the sync scheduler's own state.
+ */
+export function startGa4StalenessWatchdog(): void {
+  const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // every 6h
+  const STARTUP_DELAY_MS = 5 * 60 * 1000; // after the sync scheduler's own startup run has had a chance to land
+  setTimeout(checkGa4StalenessAndAlert, STARTUP_DELAY_MS);
+  setInterval(checkGa4StalenessAndAlert, CHECK_INTERVAL_MS);
+}
 
 export function registerGa4SyncRoutes(app: Express) {
   app.post("/api/analytics/ga4/sync", async (req: Request, res: Response) => {
