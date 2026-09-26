@@ -2700,6 +2700,14 @@ export const SEO_AUDIT_ACTION = [
   "reindex_requested",
   "tag_added",
   "tag_removed",
+  // ── Autopublish (docs/seo-automation-addendum-autopublish.md) ──
+  "vetoed",
+  "link_consumed",
+  "circuit_breaker_paused",
+  "circuit_breaker_resumed",
+  "warmup_advanced",
+  "warmup_reset",
+  "topic_proposed",
 ] as const;
 
 export const seoAuditLog = mysqlTable(
@@ -2734,6 +2742,62 @@ export const seoAuditLog = mysqlTable(
 );
 export type SeoAuditLogRow = typeof seoAuditLog.$inferSelect;
 export type InsertSeoAuditLog = typeof seoAuditLog.$inferInsert;
+
+/* ── SEO autopublish (docs/seo-automation-addendum-autopublish.md) ───────── */
+
+export const SEO_CONTENT_STATUS = ["queued", "proposed", "drafted", "in_review", "pr_open", "published", "refresh_due"] as const;
+
+/**
+ * Weekly B2B content pipeline's topic backlog (spec Part 2). Seeded with the
+ * owner's authority-list topics (status "queued"); the model may add new
+ * rows with status "proposed" but — per the addendum's "cannot self-select"
+ * rule — the content job only ever drafts from "queued" or "refresh_due".
+ */
+export const seoContentQueue = mysqlTable(
+  "seoContentQueue",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    title: varchar("title", { length: 255 }).notNull(),
+    targetQuery: varchar("targetQuery", { length: 255 }),
+    audience: varchar("audience", { length: 255 }),
+    brief: text("brief"),
+    status: mysqlEnum("status", SEO_CONTENT_STATUS).default("queued").notNull(),
+    /** Free text: "seed" (owner-authored), "proposed" (model-suggested), "refresh" (existing-post refresh candidate). */
+    source: varchar("source", { length: 32 }).default("seed").notNull(),
+    /** Set once a draft/PR exists for this topic (seoApprovalBatches.id equivalent for content — see contentBatchId). */
+    contentBatchId: int("contentBatchId"),
+    /** For a refresh_due row: the existing blogPosts.ts slug being refreshed. Null for a brand-new post. */
+    refreshesSlug: varchar("refreshesSlug", { length: 255 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    statusIdx: index("seoContentQueue_status_idx").on(table.status),
+  }),
+);
+export type SeoContentQueueRow = typeof seoContentQueue.$inferSelect;
+export type InsertSeoContentQueue = typeof seoContentQueue.$inferInsert;
+
+/**
+ * Singleton (always id=1) tracking the autopublish warm-up counters and
+ * circuit-breaker state (addendum §A5, "warm-up gate"). One row, read-modify-
+ * written under normal application logic (not a DB transaction lock) — the
+ * autopublish jobs are already serialized by the in-process scheduler
+ * (one nightly run, one weekly run; never concurrent with each other).
+ */
+export const seoAutopublishState = mysqlTable("seoAutopublishState", {
+  id: int("id").primaryKey(), // always 1 — enforced in the service layer, not a DB constraint
+  /** Manual-approval batches remaining before the meta lane auto-merges (default 2, per addendum §A8/warm-up decision). */
+  metaWarmupRemaining: int("metaWarmupRemaining").default(2).notNull(),
+  /** Manual-approval posts remaining before the content lane auto-merges (default 8). */
+  contentWarmupRemaining: int("contentWarmupRemaining").default(8).notNull(),
+  circuitBreakerPaused: boolean("circuitBreakerPaused").default(false).notNull(),
+  circuitBreakerReason: text("circuitBreakerReason"),
+  circuitBreakerPausedAt: timestamp("circuitBreakerPausedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type SeoAutopublishStateRow = typeof seoAutopublishState.$inferSelect;
+export type InsertSeoAutopublishState = typeof seoAutopublishState.$inferInsert;
 
 /* ── GA4 Analytics ──────────────────────────────────────────────────────── */
 
