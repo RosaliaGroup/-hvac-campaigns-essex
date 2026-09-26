@@ -111,6 +111,24 @@ export async function commitOverridesFile(
   return data.commit.sha;
 }
 
+/** Raw text content + blob SHA of any file on `branch` (generalized form of getOverridesFile, for the content pipeline's blogPosts.ts writes). */
+export async function getFileContent(path: string, branch: string): Promise<{ content: string; sha: string }> {
+  const res = await gh(`/contents/${path}?ref=${encodeURIComponent(branch)}`);
+  const data = (await res.json()) as { content: string; sha: string };
+  return { content: Buffer.from(data.content, "base64").toString("utf-8"), sha: data.sha };
+}
+
+/** Write raw text `content` to any file on `branch`, one commit. Generalized form of commitOverridesFile. */
+export async function putFileContent(path: string, branch: string, content: string, message: string, previousSha: string): Promise<string> {
+  const encoded = Buffer.from(content, "utf-8").toString("base64");
+  const res = await gh(`/contents/${path}`, {
+    method: "PUT",
+    body: JSON.stringify({ message, content: encoded, sha: previousSha, branch }),
+  });
+  const data = (await res.json()) as { commit: { sha: string } };
+  return data.commit.sha;
+}
+
 export type OpenPrResult = { url: string; number: number; created: boolean };
 
 /**
