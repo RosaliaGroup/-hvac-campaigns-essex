@@ -29,6 +29,7 @@ import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
 import { startGrowthCadencePoller } from "../services/growth/cadenceEngine";
 import { startReviewEnginePoller } from "../services/growth/reviewEngine";
 import { startImportReleaseSweep } from "../services/growth/contactImport";
+import { registerSocialActionRoutes } from "../services/social/vetoRoutes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -76,6 +77,8 @@ async function startServer() {
   registerSeoSyncRoutes(app);
   // SEO autopublish — unauthenticated veto link (GET/POST /api/seo/action)
   registerActionLinkRoutes(app);
+  // Social Lane — unauthenticated veto/revert links (GET/POST /api/social/veto, /api/social/revert)
+  registerSocialActionRoutes(app);
   // GA4 Analytics — Analytics Data API sync (POST /api/analytics/ga4/sync)
   registerGa4SyncRoutes(app);
   // Local SEO — Google Business Profile sync (POST /api/gbp/sync)

@@ -67,16 +67,31 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────
 
-export function getMetaAuthUrl(redirectUri: string): string {
+const ADS_SCOPES = "ads_management,ads_read,business_management,leads_retrieval,pages_manage_metadata,pages_read_engagement,pages_manage_ads";
+
+// Social Lane "Connect" (docs/social-lane-spec.md, owner build instruction #5)
+// reuses this SAME OAuth app/dialog with the scopes it actually needs to
+// publish organic posts (pages_manage_posts) and read/publish to the linked
+// Instagram Business account (instagram_basic, instagram_content_publish),
+// rather than the ads-management scopes above.
+export const SOCIAL_SCOPES = "pages_manage_posts,pages_read_engagement,pages_show_list,instagram_basic,instagram_content_publish";
+
+export function getMetaAuthUrl(redirectUri: string, scope: string = ADS_SCOPES): string {
   if (!APP_ID) throw new Error("META_APP_ID environment variable is not set.");
   const params = new URLSearchParams({
     client_id: APP_ID,
     redirect_uri: redirectUri,
-    scope: "ads_management,ads_read,business_management,leads_retrieval,pages_manage_metadata,pages_read_engagement,pages_manage_ads",
+    scope,
     response_type: "code",
     state: Buffer.from(redirectUri).toString("base64"),
   });
   return `https://www.facebook.com/dialog/oauth?${params}`;
+}
+
+/** The Instagram Business account linked to a Facebook Page, if any (for the Social Lane connect flow). */
+export async function getInstagramBusinessAccountId(pageToken: string, pageId: string): Promise<string | null> {
+  const json = await metaGet(`/${pageId}`, pageToken, { fields: "instagram_business_account" });
+  return json.instagram_business_account?.id ?? null;
 }
 
 export async function exchangeCodeForToken(
@@ -317,4 +332,36 @@ export async function createLeadCampaign(token: string, params: MetaCampaignPara
     status: "PAUSED",
     message: "Lead generation campaign created (paused). Uses an instant lead form — name, email, phone collected on-platform. Enable in Ads Manager when ready.",
   };
+}
+
+// ─── Social Lane boost hand-off (docs/social-lane-spec.md §5) ────────────────
+// Boosting an ALREADY-PUBLISHED organic post ("boost this post") is a
+// different Graph API shape than createLeadCampaign above (which creates a
+// campaign from scratch with a lead form): it needs an ad creative built
+// from `object_story_id` pointing at the existing page post, plus a
+// campaign/ad set/ad chain around it. Real credentials for this are not
+// present anywhere in this codebase today (aiVaCredentials has zero
+// "facebook"/"meta_ads" rows in production — see the social-lane pre-flight),
+// and getting the real call chain right without a live account to verify
+// against risks silently misconfiguring real ad spend. So this is
+// deliberately left unimplemented in "real" mode — RealSocialPlatformClient
+// only ever reaches this when SOCIAL_LANE_ENABLED=true AND a real Meta
+// credential is active, and it fails loudly rather than guessing. The
+// hold→veto→publish→revert round-trip and the boost *candidate flagging* in
+// the report are fully built and tested against the mock client
+// (server/services/social/platformClient.ts, ads.ts).
+export interface BoostPostParams {
+  platform: "facebook" | "instagram" | "google_business";
+  postId: string;
+  dailyBudgetCents: number;
+  objective: "leads" | "traffic";
+  targetCounties: string[];
+  destinationUrl: string;
+}
+
+export async function boostPost(_params: BoostPostParams): Promise<{ externalCampaignId: string; spendCents: number }> {
+  throw new Error(
+    "Real Meta ad-boost execution is not implemented (docs/social-lane-spec.md §5). " +
+      "SOCIAL_BOOST_ENABLED should stay false, or boost calls should go through the mock platform client, until this is built against a live ad account.",
+  );
 }

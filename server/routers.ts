@@ -32,6 +32,9 @@ import { generateSocialPost } from "./integrations/ai-content-generator";
 import { publishSocialPost, retrySocialPost, PublishError } from "./services/socialPublisher";
 import * as marketingCanary from "./services/marketingCanary";
 import { redactCredentials } from "./services/credentialSafety";
+import { getMetaAuthUrl, SOCIAL_SCOPES } from "./metaAds";
+import { isSocialLaneEnabled } from "./services/social/platformClient";
+import { getSocialLaneState } from "./services/social/socialLaneStateRepo";
 import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelationships } from "./routers/customers";
 import { jobsRouter } from "./routers/jobs";
@@ -725,6 +728,50 @@ export const appRouter = router({
         // Only services that actually have credentials configured.
         return summaries.filter((s) => s.connected);
       }),
+
+    // ── Social Lane (docs/social-lane-spec.md, owner build instruction #5) ──
+    // Status panel: per-platform Connect / Manual-queue state, and the
+    // env-driven kill-switch summary. Facebook/Instagram share one Meta
+    // connection; GBP/Nextdoor/LinkedIn are manual-queue platforms (no write
+    // API path here, or none that's verified live — see the spec's §0 pre-flight).
+    socialLane: router({
+      status: protectedProcedure.query(async () => {
+        const [fbCreds, gbpCreds, laneState] = await Promise.all([
+          db.getAiVaCredentials("facebook"),
+          db.getAiVaCredentials("google_business"),
+          getSocialLaneState(),
+        ]);
+        const fbConnected = !!(fbCreds as Record<string, string>)?.accessToken;
+        const igConnected = fbConnected && !!(fbCreds as Record<string, string>)?.instagramAccountId;
+        const gbpConnected = !!(gbpCreds as Record<string, string>)?.accessToken;
+        return {
+          socialLaneEnabled: isSocialLaneEnabled(),
+          circuitBreakerPaused: laneState.circuitBreakerPaused,
+          circuitBreakerReason: laneState.circuitBreakerReason,
+          platforms: {
+            facebook: { mode: "connect" as const, connected: fbConnected },
+            instagram: { mode: "connect" as const, connected: igConnected, note: "Shares the Facebook connection above." },
+            google_business: {
+              mode: gbpConnected ? "connect" : "manual" as const,
+              connected: gbpConnected,
+              note: "Falls back to the manual queue until credentials are connected AND a verified successful local-post exists (no GBP local-post has ever run in production).",
+            },
+            nextdoor: { mode: "manual" as const, connected: false, note: "No public posting API — always manual queue." },
+            linkedin: { mode: "manual" as const, connected: false, note: "No company-page posting API for this use — always manual queue (copy generated, pasted by hand)." },
+          },
+        };
+      }),
+
+      // Admin-only: build the Meta OAuth URL for the "Connect" button. Reuses
+      // the SAME Meta app/token-exchange as the existing Meta Ads OAuth
+      // connection (server/metaAds.ts), with posting-scoped permissions and
+      // its own callback that saves under the "facebook" credential service.
+      connectUrl: adminProcedure
+        .input(z.object({ redirectUri: z.string().url() }))
+        .query(({ input }) => {
+          return { url: getMetaAuthUrl(input.redirectUri, SOCIAL_SCOPES) };
+        }),
+    }),
 
     listCallLogs: protectedProcedure
       .input(

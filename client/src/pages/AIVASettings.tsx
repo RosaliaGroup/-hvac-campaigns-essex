@@ -40,6 +40,14 @@ export default function AIVASettings() {
   const [activeTab, setActiveTab] = useState("vapi");
   const [gadsOauthLoading, setGadsOauthLoading] = useState(false);
   const gadsOauthTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [socialConnectLoading, setSocialConnectLoading] = useState(false);
+
+  // Social Lane status (docs/social-lane-spec.md, owner build instruction #5)
+  const { data: socialLaneStatus, refetch: refetchSocialLaneStatus } = trpc.aiVa.socialLane.status.useQuery();
+  const getSocialConnectUrl = trpc.aiVa.socialLane.connectUrl.useQuery(
+    { redirectUri: `${window.location.origin}/api/oauth/meta-social/callback` },
+    { enabled: false }
+  );
 
   // Google Ads connection status
   const { data: gadsConnStatus, refetch: refetchGadsConn } = trpc.googleAds.getConnectionStatus.useQuery();
@@ -57,7 +65,33 @@ export default function AIVASettings() {
       setActiveTab("google-ads");
       window.history.replaceState({}, "", window.location.pathname);
     }
+    if (params.get("social_connected") === "1") {
+      toast({ title: "Facebook/Instagram Connected", description: "Social Lane can now publish once SOCIAL_LANE_ENABLED is turned on." });
+      refetchSocialLaneStatus();
+      setActiveTab("facebook");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (params.get("social_error")) {
+      toast({ title: "Connection failed", description: "Could not connect Facebook/Instagram — try again.", variant: "destructive" });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, []);
+
+  async function handleConnectSocial() {
+    setSocialConnectLoading(true);
+    try {
+      const result = await getSocialConnectUrl.refetch();
+      if (result.error || !result.data?.url) {
+        toast({ title: "Connection failed", description: result.error?.message ?? "Could not generate a connect URL.", variant: "destructive" });
+        return;
+      }
+      window.location.href = result.data.url;
+    } catch (err: any) {
+      toast({ title: "Connection failed", description: err.message || "Failed to start Meta OAuth.", variant: "destructive" });
+    } finally {
+      setSocialConnectLoading(false);
+    }
+  }
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -348,6 +382,50 @@ export default function AIVASettings() {
 
           {/* Facebook/Instagram Tab */}
           <TabsContent value="facebook">
+            <Card className="mb-4">
+              <CardHeader>
+                <CardTitle>Social Lane Status</CardTitle>
+                <CardDescription>
+                  Automated posting status per platform.{" "}
+                  {socialLaneStatus?.socialLaneEnabled
+                    ? "SOCIAL_LANE_ENABLED is on."
+                    : "SOCIAL_LANE_ENABLED is off — nothing publishes to a real platform yet."}
+                  {socialLaneStatus?.circuitBreakerPaused && (
+                    <span className="block mt-1 font-medium text-amber-700">
+                      Paused: {socialLaneStatus.circuitBreakerReason}
+                    </span>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {socialLaneStatus && Object.entries(socialLaneStatus.platforms).map(([key, p]) => (
+                  <div key={key} className="flex items-center justify-between p-3 bg-slate-50 border rounded-lg">
+                    <div>
+                      <p className="font-medium text-sm capitalize">{key.replace("_", " ")}</p>
+                      {"note" in p && p.note && <p className="text-xs text-muted-foreground mt-0.5">{p.note}</p>}
+                    </div>
+                    {p.mode === "manual" ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 bg-slate-200 rounded-full px-3 py-1">
+                        Manual queue
+                      </span>
+                    ) : p.connected ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Connected
+                      </span>
+                    ) : key === "instagram" ? (
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
+                        <AlertCircle className="h-3.5 w-3.5" /> Not connected
+                      </span>
+                    ) : (
+                      <Button size="sm" className="gap-1.5 bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white" onClick={handleConnectSocial} disabled={socialConnectLoading}>
+                        {socialConnectLoading ? <><Loader2 className="h-3.5 w-3.5 animate-spin" />Connecting…</> : <><Link2 className="h-3.5 w-3.5" />Connect</>}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Facebook & Instagram Configuration</CardTitle>

@@ -231,8 +231,20 @@ export const socialPosts = mysqlTable("socialPosts", {
   postedAt: timestamp("postedAt"),
   postId: varchar("postId", { length: 255 }),
   engagement: text("engagement"), // JSON: {likes, comments, shares}
-  status: mysqlEnum("status", ["draft", "scheduled", "posted", "failed"]).default("draft").notNull(),
+  status: mysqlEnum("status", ["draft", "scheduled", "posted", "failed", "held", "vetoed", "reverted"]).default("draft").notNull(),
   errorMessage: text("errorMessage"),
+  // ── Social Lane (0076, ADDITIVE) ──
+  // Which of the §2 content-source rotation types generated this post
+  // (offer | blog | job_photo | review | seasonal | video | b2b). Null for
+  // posts created outside the rotation (e.g. manual/legacy).
+  contentSource: varchar("contentSource", { length: 50 }),
+  // When a "held" post becomes eligible for auto-publish absent a veto
+  // (now + SOCIAL_HOLD_HOURS). See server/services/social/holdAndPublish.ts.
+  holdUntil: timestamp("holdUntil"),
+  vetoedAt: timestamp("vetoedAt"),
+  revertedAt: timestamp("revertedAt"),
+  // The UTM campaign value applied to this post's link, e.g. "social_facebook".
+  utmCampaign: varchar("utmCampaign", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -259,6 +271,39 @@ export const socialInteractions = mysqlTable("socialInteractions", {
 
 export type SocialInteraction = typeof socialInteractions.$inferSelect;
 export type InsertSocialInteraction = typeof socialInteractions.$inferInsert;
+
+/**
+ * Social Lane state (0076) — singleton row (id=1), mirrors
+ * seoAutopublishState's pattern: the circuit-breaker flag the social lane
+ * reads/writes. See server/services/social/circuitBreaker.ts.
+ */
+export const socialLaneState = mysqlTable("socialLaneState", {
+  id: int("id").primaryKey(),
+  circuitBreakerPaused: boolean("circuitBreakerPaused").default(false).notNull(),
+  circuitBreakerReason: text("circuitBreakerReason"),
+  circuitBreakerPausedAt: timestamp("circuitBreakerPausedAt"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type SocialLaneStateRow = typeof socialLaneState.$inferSelect;
+
+/**
+ * Job Photos (0076) — before/after photos for a job, source data for the
+ * social lane's job-photo content type (§2.3). A photo may only be used in a
+ * social post when its job's `jobs.photoConsent` is true (checked at
+ * generation time, never cached here). No customer/address text is stored —
+ * captions are generated from the job's `jobType` only.
+ */
+export const jobPhotos = mysqlTable("jobPhotos", {
+  id: int("id").autoincrement().primaryKey(),
+  jobId: int("jobId").notNull(),
+  url: varchar("url", { length: 1024 }).notNull(),
+  category: mysqlEnum("category", ["before", "after"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type JobPhoto = typeof jobPhotos.$inferSelect;
+export type InsertJobPhoto = typeof jobPhotos.$inferInsert;
 
 /**
  * AI VA Analytics - Daily performance metrics
@@ -1270,6 +1315,11 @@ export const jobs = mysqlTable(
     ]),
     lifecycleReason: varchar("lifecycleReason", { length: 255 }),
     lifecycleUpdatedAt: timestamp("lifecycleUpdatedAt"),
+    // ── Social Lane (0076, ADDITIVE) ──
+    // Explicit per-job consent to use before/after photos of this job in social
+    // media content. Defaults false: no photo of a job may be used in a social
+    // post unless this is explicitly true. See server/services/social/contentSources.ts.
+    photoConsent: boolean("photoConsent").default(false).notNull(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },

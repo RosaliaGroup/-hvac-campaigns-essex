@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { exchangeCodeForTokens } from "../googleAds";
-import { exchangeCodeForToken, getLongLivedToken, getPageAccessToken } from "../metaAds";
+import { exchangeCodeForToken, getLongLivedToken, getPageAccessToken, getInstagramBusinessAccountId } from "../metaAds";
 import { saveAiVaCredentials } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
@@ -102,6 +102,54 @@ export function registerOAuthRoutes(app: Express) {
     } catch (error) {
       console.error("[Meta Ads] OAuth callback failed", error);
       res.redirect(302, "/facebook-campaigns?error=auth_failed");
+    }
+  });
+
+  // Social Lane "Connect Facebook/Instagram" (docs/social-lane-spec.md, owner
+  // build instruction #5) — reuses the SAME Meta OAuth app + token-exchange
+  // helpers as the Meta Ads callback above, just with the posting-scoped
+  // dialog URL and saved under the "facebook" aiVaCredentials service (the
+  // shape server/services/socialPublisher.ts's defaultPublishToPlatform
+  // already reads: accessToken/pageId/instagramAccountId).
+  app.get("/api/oauth/meta-social/callback", async (req: Request, res: Response) => {
+    const code = getQueryParam(req, "code");
+    const stateParam = getQueryParam(req, "state");
+
+    if (!code) {
+      res.redirect(302, "/ai-va-settings?social_error=missing_code");
+      return;
+    }
+
+    let redirectUri: string;
+    if (stateParam) {
+      try {
+        const decoded = Buffer.from(stateParam, "base64").toString("utf8");
+        redirectUri = decoded.startsWith("http") ? decoded : "https://mechanicalenterprise.com/api/oauth/meta-social/callback";
+      } catch {
+        redirectUri = "https://mechanicalenterprise.com/api/oauth/meta-social/callback";
+      }
+    } else {
+      redirectUri = "https://mechanicalenterprise.com/api/oauth/meta-social/callback";
+    }
+
+    try {
+      const shortToken = await exchangeCodeForToken(code, redirectUri);
+      const longUserToken = await getLongLivedToken(shortToken.access_token);
+
+      const PAGE_ID = "844109052114327"; // Mechanical Enterprise — same page as the Meta Ads connection
+      const pageToken = await getPageAccessToken(longUserToken, PAGE_ID);
+      const instagramAccountId = await getInstagramBusinessAccountId(pageToken, PAGE_ID).catch(() => null);
+
+      await saveAiVaCredentials("facebook", {
+        accessToken: pageToken,
+        pageId: PAGE_ID,
+        ...(instagramAccountId ? { instagramAccountId } : {}),
+      });
+      console.log("[Social Lane] Meta connect completed", { hasInstagram: !!instagramAccountId });
+      res.redirect(302, "/ai-va-settings?social_connected=1");
+    } catch (error) {
+      console.error("[Social Lane] Meta connect failed", error);
+      res.redirect(302, "/ai-va-settings?social_error=auth_failed");
     }
   });
 
