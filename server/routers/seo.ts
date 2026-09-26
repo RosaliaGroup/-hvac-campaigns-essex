@@ -451,7 +451,9 @@ export const seoRouter = router({
     }),
 
   /** "Discard all drafts" — resets every drafted page back to needs_review. Admin-only. */
-  discardAllDrafts: adminProcedure.mutation(async ({ ctx }) => discardAllDrafts(resolveTeamMemberId(ctx.user))),
+  discardAllDrafts: adminProcedure
+    .input(z.object({ excludePageIds: z.array(z.number().int().positive()) }).optional())
+    .mutation(async ({ input, ctx }) => discardAllDrafts(resolveTeamMemberId(ctx.user), input?.excludePageIds ?? [])),
 
   /** "Regenerate drafts (unlocked only)" — skips anything on the exclusion list. Admin-only. */
   regenerateUnlockedDrafts: adminProcedure

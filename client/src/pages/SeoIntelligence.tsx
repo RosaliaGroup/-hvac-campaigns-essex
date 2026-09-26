@@ -1438,7 +1438,6 @@ export default function SeoIntelligence() {
                 <ListChecks className="h-4 w-4 mr-1.5" />
                 Audit Log
               </Button>
-              <DiscardAllDraftsButton isAdmin={isAdmin} />
               <Button variant="outline" onClick={handleRefresh}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
@@ -1584,9 +1583,12 @@ export default function SeoIntelligence() {
                   <X className="h-3 w-3" /> Clear filters
                 </button>
               )}
-              <button onClick={selectDrafted} className="ml-auto inline-flex items-center gap-1 text-xs text-[#ff6b35] hover:underline">
-                <Sparkles className="h-3 w-3" /> Select Drafted
-              </button>
+              <div className="ml-auto flex items-center gap-3">
+                <button onClick={selectDrafted} className="inline-flex items-center gap-1 text-xs text-[#ff6b35] hover:underline">
+                  <Sparkles className="h-3 w-3" /> Select Drafted
+                </button>
+                <DiscardAllDraftsButton isAdmin={isAdmin} />
+              </div>
             </div>
           </CardHeader>
 
