@@ -1,4 +1,4 @@
--- Rollback for 0076_social_lane.sql. NOT applied by this change.
+-- Rollback for 0077_social_lane.sql. NOT applied by this change.
 DROP TABLE IF EXISTS `socialLaneState`;
 DROP INDEX `jobPhotos_jobId_idx` ON `jobPhotos`;
 DROP TABLE IF EXISTS `jobPhotos`;

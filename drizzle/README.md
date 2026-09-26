@@ -183,9 +183,9 @@ next person does not have to re-derive it.
   Restoring an unverified backup is not a rollback plan.
 - After any rollback, re-run validation and reconcile the tracker to the restored state.
 
-## Pending migration: 0076_social_lane
+## Pending migration: 0077_social_lane
 
-`0076_social_lane.sql` (+ `.down.sql`) — Social Lane (docs/social-lane-spec.md):
+`0077_social_lane.sql` (+ `.down.sql`) — Social Lane (docs/social-lane-spec.md):
 `socialPosts` status enum + hold/veto/revert/UTM columns, `jobs.photoConsent`,
 new `jobPhotos` and `socialLaneState` tables. **NOT applied anywhere.** Follow
 the approved manual procedure above before applying to production.

@@ -1,4 +1,4 @@
--- 0076: Social Lane (docs/social-lane-spec.md). Additive only.
+-- 0077: Social Lane (docs/social-lane-spec.md). Additive only.
 -- NOT APPLIED anywhere by this change — apply BY HAND per drizzle/README.md,
 -- after owner approval + a verified backup, same as every other prod migration.
 
