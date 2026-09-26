@@ -707,6 +707,19 @@ export default function MaintenanceSubscription() {
         </div>
       </section>
 
+      {/* 10-Year Coverage cross-link (docs/positioning-warranty-spec.md §4) */}
+      <section className="py-6 bg-[#f7f8fa] text-center">
+        <div className="container">
+          <p className="text-sm text-muted-foreground">
+            Have{" "}
+            <a href="/warranty" className="text-[#1e3a5f] font-medium underline hover:no-underline">
+              10-year parts &amp; labor coverage
+            </a>
+            ? Staying current on your maintenance plan is the easiest way to keep it in good standing, where the agreement requires it.
+          </p>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-br from-[#1e3a5f] to-[#2a5a8f] text-white">
         <div className="container">

@@ -35,6 +35,7 @@ export default function Footer() {
               <li><Link href="/ductless-mini-split-installation-nj" className="text-white/80 hover:text-white transition-colors">Ductless Mini-Split</Link></li>
               <li><Link href="/vrv-vrf-installation-nj" className="text-white/80 hover:text-white transition-colors">VRV/VRF Systems</Link></li>
               <li><Link href="/direct-install" className="text-white/80 hover:text-white transition-colors">Direct Install Program</Link></li>
+              <li><Link href="/warranty" className="text-white/80 hover:text-white transition-colors">10-Year Coverage</Link></li>
             </ul>
           </div>
 

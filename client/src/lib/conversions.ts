@@ -51,7 +51,10 @@ export type ConversionEvent =
   | "repair_request"
   | "installation_request"
   | "replacement_request"
-  | "maintenance_plan_inquiry";
+  | "maintenance_plan_inquiry"
+  | "warranty_quote_request"
+  | "membership_quote_request"
+  | "portfolio_pricing_request";
 
 /**
  * Google Ads conversion-label mapping — populated at build time from per-event
@@ -82,6 +85,9 @@ export const ADS_CONVERSION_LABELS: Record<ConversionEvent, string | null> = {
   installation_request: envLabel("VITE_ADS_LABEL_INSTALLATION_REQUEST"),
   replacement_request: envLabel("VITE_ADS_LABEL_REPLACEMENT_REQUEST"),
   maintenance_plan_inquiry: envLabel("VITE_ADS_LABEL_MAINTENANCE_PLAN_INQUIRY"),
+  warranty_quote_request: envLabel("VITE_ADS_LABEL_WARRANTY_QUOTE_REQUEST"),
+  membership_quote_request: envLabel("VITE_ADS_LABEL_MEMBERSHIP_QUOTE_REQUEST"),
+  portfolio_pricing_request: envLabel("VITE_ADS_LABEL_PORTFOLIO_PRICING_REQUEST"),
 };
 
 export type CustomerSegment = "residential" | "commercial";
@@ -264,6 +270,21 @@ export function mapServiceToConversion(service: string | undefined): ServiceMapp
   const s = (service ?? "").toLowerCase();
   const has = (...words: string[]) => words.some((w) => s.includes(w));
 
+  // Checked first so a warranty-quote CTA (e.g. defaultService="Warranty
+  // Coverage" from the /warranty page or an install-page CTA) always maps
+  // here regardless of what other service words happen to appear alongside it.
+  // Checked before the general warranty branch so a membership-specific
+  // defaultService (e.g. "Comfort Membership") doesn't fall into
+  // warranty_quote_request just because it also implies coverage.
+  if (has("membership")) {
+    return { event: "membership_quote_request", service_category: "membership", customer_segment: segmentFor(s) };
+  }
+  if (has("portfolio")) {
+    return { event: "portfolio_pricing_request", service_category: "portfolio", customer_segment: "commercial" };
+  }
+  if (has("warranty", "coverage")) {
+    return { event: "warranty_quote_request", service_category: "warranty", customer_segment: segmentFor(s) };
+  }
   if (has("replace")) {
     return { event: "replacement_request", service_category: "replacement", customer_segment: segmentFor(s) };
   }

@@ -196,4 +196,11 @@ describe("runNightlyDraftJob — auto-approve gate (addendum §A1)", () => {
     expect(result.ready).toBe(1); // the draft itself is unaffected
     expect(result.autoApproved).toBe(false);
   });
+
+  it("does not warn about stale price ranges today — VERIFIED_FACTS.priceRanges is empty (docs/positioning-warranty-spec.md §9b)", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await runNightlyDraftJob(NOW);
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("price range"));
+    warnSpy.mockRestore();
+  });
 });

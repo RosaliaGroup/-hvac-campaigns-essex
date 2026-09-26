@@ -110,6 +110,8 @@
   "/commercial-hvac-maintenance-nj",
   "/commercial-hvac-service-nj",
   "/commercial-rtu-service-nj",
+  "/commercial/hvac-service-contracts",
+  "/commercial/property-managers",
   "/contact",
   "/courses",
   "/direct-install",
@@ -306,5 +308,6 @@
   "/vs-gold-medal-service",
   "/vs-horizon-services",
   "/vs-hutchinson",
-  "/warehouse-hvac-nj"
+  "/warehouse-hvac-nj",
+  "/warranty"
 ]

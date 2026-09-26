@@ -6,6 +6,18 @@ import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
 import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
+import WarrantyCoverageSection from "@/components/WarrantyCoverageSection";
+import BuyFinanceMemberComparison from "@/components/BuyFinanceMemberComparison";
+import PriceRangeTable from "@/components/PriceRangeTable";
+import { VERIFIED_FACTS } from "@shared/verifiedFacts";
+
+// The exact 4 ServicePage-routed slugs named in docs/positioning-warranty-spec.md
+// §4 (the spec's 5th listed page, /residential, is a separate component).
+// Deliberately excludes commercial-hvac-installation-nj, vrv-vrf's commercial
+// sibling routes, hvac-system-replacement-nj, heat-pump-rebates-nj and
+// hvac-financing-nj — none of those are named in the spec, so they get no
+// warranty section (spec: "No change to ... locked pages").
+const WARRANTY_SECTION_SLUGS = new Set(["heat-pump-installation-nj", "central-ac-installation-nj", "ductless-mini-split-installation-nj", "vrv-vrf-installation-nj"]);
 
 // Pick the intent-aware variant from the service slug so a commercial/VRV page
 // surfaces the navy card, an emergency-repair page surfaces the red urgent card,
@@ -27,9 +39,15 @@ const PHONE_TEL = "tel:+18624239396";
 type ServicePageProps = { service: string; slug: string; description: string };
 
 export default function ServicePage({ service, slug, description }: ServicePageProps) {
+  const showWarrantySection = WARRANTY_SECTION_SLUGS.has(slug);
+  // docs/positioning-warranty-spec.md §9b — empty until the owner supplies a verified range for this page.
+  const priceRanges = VERIFIED_FACTS.priceRanges.filter((r) => r.page === `/${slug}`);
+
   useSEO({
     title: `${service} Installation NJ | Free Assessment & Rebates | Mechanical Enterprise`,
-    description: `${service} installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call ${PHONE}.`,
+    description: showWarrantySection
+      ? `${service} installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call ${PHONE}.`
+      : `${service} installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call ${PHONE}.`,
     ogUrl: `${BASE}/${slug}`,
   });
 
@@ -52,6 +70,8 @@ export default function ServicePage({ service, slug, description }: ServicePageP
         "areaServed": "New Jersey", "priceRange": "Free Assessment",
         "openingHours": "Mo-Su 00:00-23:59",
         "description": `${service} installation in NJ. Free assessments, NJ rebates up to $16,000.`,
+        // docs/positioning-warranty-spec.md §9b — Offer/priceRange schema, only emitted once a verified range exists for this page.
+        ...(priceRanges.length > 0 ? { makesOffer: priceRanges.map((r) => ({ "@type": "Offer", "itemOffered": r.item, "priceCurrency": "USD", "priceRange": `${r.low}-${r.high}` })) } : {}),
       }) }} />
       <Navigation />
 
@@ -140,6 +160,15 @@ export default function ServicePage({ service, slug, description }: ServicePageP
           </div>
         </div>
       </section>
+
+      {/* Typical installed price range (docs/positioning-warranty-spec.md §9b) — renders nothing until the owner supplies a verified range */}
+      <PriceRangeTable pagePath={`/${slug}`} />
+
+      {/* Protect the Investment — 10-Year Coverage (docs/positioning-warranty-spec.md §4) */}
+      {showWarrantySection && <WarrantyCoverageSection />}
+
+      {/* Buy / finance / member comparison (docs/positioning-warranty-spec.md §9a) */}
+      {showWarrantySection && <BuyFinanceMemberComparison />}
 
       {/* Why Choose Us */}
       <section className="py-16 bg-[#0a1628]">

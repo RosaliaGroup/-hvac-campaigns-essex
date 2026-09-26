@@ -44,7 +44,18 @@ export type LintOptions = {
    */
   existingTitles?: string[];
   existingMetas?: string[];
+  /**
+   * §9d/§9e fact-dependent checks (SLA-hour matching, "24/7 monitoring").
+   * Defaults to the unconfigured shape (responseHours: null, is24x7: false),
+   * so an SLA-hour or "24/7 monitoring" claim BLOCKs by default unless the
+   * caller passes the real, owner-set VERIFIED_FACTS values.
+   */
+  differentiationFacts?: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean } };
+  /** §9b price-range matching. Defaults to empty — any "$X installed" claim BLOCKs until the caller passes real VERIFIED_FACTS.priceRanges entries for this page. */
+  priceRanges?: Array<{ page: string; low: number; high: number }>;
 };
+
+const UNCONFIGURED_DIFFERENTIATION_FACTS = { portfolioSla: { responseHours: null }, monitoring: { is24x7: false } };
 
 /* ── Static rule tables ──────────────────────────────────────────────── */
 
@@ -166,6 +177,269 @@ function normalizePhone(raw: string): string {
 const PHONE_RE = /(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/g;
 const CANONICAL_PHONE_DIGITS = normalizePhone(PHONE_E164);
 
+/* ── Warranty claim rules (docs/positioning-warranty-spec.md §2) ────────
+ * Shared between shared/seoLinter.ts (title/meta, short strings) and
+ * shared/contentLinter.ts (body, long-form) — same reuse pattern as
+ * SUPERLATIVES/EXPIRED_INCENTIVES/etc. above. Returns a minimal
+ * {severity, code, message} shape; each caller wraps it into its own
+ * richer finding type. */
+
+export type WarrantyLintFinding = { severity: LintSeverity; code: string; message: string };
+
+const WARRANTY_INCLUSION_PHRASES = ["included", "free warranty", "comes with", "every install includes", "standard on all"];
+const WARRANTY_ABSOLUTE_CLAIMS = ["lifetime", "unlimited", "no questions asked", "guaranteed for life"];
+
+/**
+ * Populate once the owner discloses the administrator's legal name — the
+ * spec deliberately keeps that name out of marketing copy (named only in
+ * the written agreement and the /warranty terms disclosure line), so this
+ * starts empty. Empty means the rule has nothing to match yet, not that
+ * it's disabled — same convention as APPROVED_CERTIFICATION_PHRASES above.
+ */
+export const WARRANTY_ADMIN_BRAND_NAMES: string[] = [];
+
+const WARRANTY_WORD_RE = /\b(warranty|coverage)\b/gi;
+const WARRANTY_PROXIMITY_CHARS = 80;
+
+function nearWarrantyWord(text: string, idx: number): boolean {
+  WARRANTY_WORD_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = WARRANTY_WORD_RE.exec(text))) {
+    if (Math.abs(m.index - idx) <= WARRANTY_PROXIMITY_CHARS) return true;
+  }
+  return false;
+}
+
+/**
+ * Warranty-specific claim rules for marketing copy (title, meta, H1, body).
+ * `allowedOnTermsPage` should be true only for /warranty's own terms
+ * disclosure block — the one place the administrator's name is permitted.
+ */
+export function lintWarrantyClaims(text: string, opts: { allowedOnTermsPage?: boolean } = {}): WarrantyLintFinding[] {
+  const findings: WarrantyLintFinding[] = [];
+  if (!text) return findings;
+
+  for (const phrase of WARRANTY_INCLUSION_PHRASES) {
+    const re = new RegExp(phraseRegex(phrase).source, "gi");
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text))) {
+      if (nearWarrantyWord(text, m.index)) {
+        findings.push({
+          severity: "block",
+          code: "warranty_implies_included",
+          message: `"${phrase}" appears near "warranty"/"coverage" — it implies coverage is included/free, but it is a paid optional add-on.`,
+        });
+        break;
+      }
+    }
+  }
+
+  for (const phrase of WARRANTY_ABSOLUTE_CLAIMS) {
+    if (includesPhrase(text, phrase)) {
+      findings.push({
+        severity: "block",
+        code: "warranty_absolute_claim",
+        message: `"${phrase}" overstates the coverage — the verified term is 10 years, not lifetime/unlimited.`,
+      });
+    }
+  }
+
+  if (/manufacturer'?s warranty/i.test(text) && /\b(we|our)\b/i.test(text)) {
+    findings.push({
+      severity: "block",
+      code: "warranty_manufacturer_confusion",
+      message: `"manufacturer's warranty" appears alongside "we"/"our" — do not present the manufacturer's warranty as Mechanical Enterprise's own coverage.`,
+    });
+  }
+
+  const yearRe = /(\d+)[\s-]?year/gi;
+  let ym: RegExpExecArray | null;
+  while ((ym = yearRe.exec(text))) {
+    if (Number(ym[1]) === 10) continue;
+    if (nearWarrantyWord(text, ym.index)) {
+      findings.push({
+        severity: "block",
+        code: "warranty_wrong_year_count",
+        message: `"${ym[0]}" appears near "warranty"/"coverage" — the verified coverage term is 10 years.`,
+      });
+    }
+  }
+
+  if (!opts.allowedOnTermsPage) {
+    for (const brand of WARRANTY_ADMIN_BRAND_NAMES) {
+      if (includesPhrase(text, brand, { caseSensitive: true })) {
+        findings.push({
+          severity: "block",
+          code: "warranty_admin_named",
+          message: `Names the coverage administrator ("${brand}") outside the /warranty terms disclosure block.`,
+        });
+      }
+    }
+  }
+
+  const sentences = text.match(/[^.!?]+[.!?]*/g) ?? [text];
+  for (const sentence of sentences) {
+    if (/\bexisting (systems?|equipment|hvac)\b/i.test(sentence) && /\b(warranty|coverage)\b/i.test(sentence)) {
+      if (!/\beligib/i.test(sentence) && !/\bqualif/i.test(sentence)) {
+        findings.push({
+          severity: "block",
+          code: "warranty_existing_no_eligibility",
+          message: `Mentions existing-system coverage without "eligible"/"qualify" in the same sentence: "${sentence.trim()}".`,
+        });
+      }
+    }
+  }
+
+  const firstTenYear = /10-year/i.exec(text);
+  if (firstTenYear) {
+    const after = text.slice(firstTenYear.index, firstTenYear.index + firstTenYear[0].length + 40);
+    if (!/parts\s*(&|and)\s*labor/i.test(after)) {
+      findings.push({
+        severity: "warn",
+        code: "warranty_missing_parts_labor",
+        message: `First use of "10-year" on the page isn't followed by "parts & labor"/"parts and labor".`,
+      });
+    }
+  }
+
+  return findings;
+}
+
+/* ── Differentiation add-on rules (docs/positioning-warranty-spec.md §9) ─
+ * Same reuse pattern as lintWarrantyClaims above — shared between
+ * shared/seoLinter.ts and shared/contentLinter.ts. Split into a pure,
+ * facts-free function and a facts-dependent one so callers that don't have
+ * a VerifiedFacts handy (or don't need the fact-dependent checks) can still
+ * run the pure rules. */
+
+const MEMBERSHIP_FORBIDDEN_PHRASES = ["lease", "rent", "subscription includes the equipment", "$0 down for everything"];
+const NOT_OFFERED_FORBIDDEN_PHRASES = ["money-back", "refund if", "remove it and refund", "satisfaction guarantee"];
+const SLA_ABSOLUTE_CLAIMS = ["guaranteed uptime", "never fail"];
+const MONITORING_ABSOLUTE_CLAIMS = ["guaranteed detection"];
+
+/**
+ * Pure §9 rules that need no VerifiedFacts: 9a's membership/equipment-
+ * ownership phrases, the "explicitly NOT offered" comfort/refund-guarantee
+ * phrases, and 9d/9e's absolute SLA/monitoring claims.
+ */
+export function lintDifferentiationClaims(text: string): WarrantyLintFinding[] {
+  const findings: WarrantyLintFinding[] = [];
+  if (!text) return findings;
+
+  for (const phrase of MEMBERSHIP_FORBIDDEN_PHRASES) {
+    if (includesPhrase(text, phrase)) {
+      findings.push({
+        severity: "block",
+        code: "membership_equipment_ownership_implied",
+        message: `"${phrase}" implies Mechanical Enterprise owns/leases the equipment — the customer owns the system; membership is a coverage/service fee only.`,
+      });
+    }
+  }
+
+  for (const phrase of NOT_OFFERED_FORBIDDEN_PHRASES) {
+    if (includesPhrase(text, phrase)) {
+      findings.push({
+        severity: "block",
+        code: "comfort_refund_guarantee_not_offered",
+        message: `"${phrase}" — a comfort/refund guarantee is explicitly NOT offered (owner declined, docs/positioning-warranty-spec.md §9).`,
+      });
+    }
+  }
+
+  for (const phrase of SLA_ABSOLUTE_CLAIMS) {
+    if (includesPhrase(text, phrase)) {
+      findings.push({
+        severity: "block",
+        code: "sla_absolute_claim",
+        message: `"${phrase}" overstates the portfolio SLA — no uptime/failure guarantee is offered.`,
+      });
+    }
+  }
+
+  for (const phrase of MONITORING_ABSOLUTE_CLAIMS) {
+    if (includesPhrase(text, phrase)) {
+      findings.push({
+        severity: "block",
+        code: "monitoring_absolute_claim",
+        message: `"${phrase}" overstates proactive monitoring — detection is not guaranteed.`,
+      });
+    }
+  }
+
+  return findings;
+}
+
+/**
+ * §9 rules that need VerifiedFacts: 9d's SLA-hour matching and 9e's
+ * conditional "24/7 monitoring" claim. Takes the minimal shape needed
+ * (not the full VerifiedFacts type) so shared/seoLinter.ts doesn't have to
+ * import shared/verifiedFacts.ts's full surface.
+ */
+export function lintDifferentiationFactClaims(
+  text: string,
+  facts: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean } },
+): WarrantyLintFinding[] {
+  const findings: WarrantyLintFinding[] = [];
+  if (!text) return findings;
+
+  const slaHourRe = /(\d+)[\s-]?hour(?:s)?\s+response/gi;
+  let sm: RegExpExecArray | null;
+  while ((sm = slaHourRe.exec(text))) {
+    const claimed = Number(sm[1]);
+    if (facts.portfolioSla.responseHours === null || claimed !== facts.portfolioSla.responseHours) {
+      findings.push({
+        severity: "block",
+        code: "sla_hours_mismatch",
+        message:
+          facts.portfolioSla.responseHours === null
+            ? `"${sm[0]}" claims an SLA response time, but no response-hours figure has been verified yet (VERIFIED_FACTS.portfolioSla.responseHours is null).`
+            : `"${sm[0]}" doesn't match the verified SLA response time (${facts.portfolioSla.responseHours} hours).`,
+      });
+    }
+  }
+
+  if (/24\/7 monitoring/i.test(text) && !facts.monitoring.is24x7) {
+    findings.push({
+      severity: "block",
+      code: "monitoring_24x7_unverified",
+      message: `"24/7 monitoring" is claimed, but the owner hasn't confirmed 24/7 coverage (VERIFIED_FACTS.monitoring.is24x7 is false).`,
+    });
+  }
+
+  return findings;
+}
+
+/**
+ * §9b — "any $ figure on an install page must match a priceRanges entry
+ * within ±0". Scoped to explicit "installed" price language (e.g. "$5,000-
+ * $9,000 installed") so it never collides with the separate rebate-dollar
+ * checks above, which are about incentive claims, not installed-cost ranges.
+ */
+export function lintPriceRangeClaims(pagePath: string, text: string, priceRanges: Array<{ page: string; low: number; high: number }>): WarrantyLintFinding[] {
+  const findings: WarrantyLintFinding[] = [];
+  if (!text) return findings;
+
+  const installedPriceRe = /\$[\d,]+(?:\.\d+)?\s?[kK]?(?:\s*[-–—]\s*\$[\d,]+(?:\.\d+)?\s?[kK]?)?\s+installed\b/gi;
+  const pageRanges = priceRanges.filter((r) => r.page === pagePath);
+  let m: RegExpExecArray | null;
+  while ((m = installedPriceRe.exec(text))) {
+    const nums = Array.from(m[0].matchAll(/[\d,]+(?:\.\d+)?/g)).map((n) => parseFloat(n[0].replace(/,/g, "")));
+    const allMatch = nums.length > 0 && nums.every((n) => pageRanges.some((r) => r.low === n || r.high === n));
+    if (!allMatch) {
+      findings.push({
+        severity: "block",
+        code: "unverified_price_range",
+        message:
+          pageRanges.length === 0
+            ? `"${m[0]}" claims an installed price, but no verified price range exists yet for ${pagePath} (VERIFIED_FACTS.priceRanges).`
+            : `"${m[0]}" doesn't match a verified price range for ${pagePath}.`,
+      });
+    }
+  }
+
+  return findings;
+}
+
 function blockFinding(field: LintFinding["field"], code: string, message: string): LintFinding {
   return { severity: "block", field, code, message };
 }
@@ -228,6 +502,22 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
     if (includesPhrase(combined, brand, { caseSensitive: true })) {
       findings.push(blockFinding("both", "competitor_name", `Mentions competitor "${brand}".`));
     }
+  }
+
+  // Warranty claim rules (docs/positioning-warranty-spec.md §2)
+  for (const f of lintWarrantyClaims(combined, { allowedOnTermsPage: input.pagePath === "/warranty" })) {
+    findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
+  }
+
+  // Differentiation add-on rules (docs/positioning-warranty-spec.md §9)
+  for (const f of lintDifferentiationClaims(combined)) {
+    findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
+  }
+  for (const f of lintDifferentiationFactClaims(combined, opts.differentiationFacts ?? UNCONFIGURED_DIFFERENTIATION_FACTS)) {
+    findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
+  }
+  for (const f of lintPriceRangeClaims(input.pagePath, combined, opts.priceRanges ?? [])) {
+    findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
   }
 
   // "Limited time" / "expires" / "ends" with no date, or a past date

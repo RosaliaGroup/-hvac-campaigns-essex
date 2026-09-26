@@ -50,7 +50,16 @@ Hard rules. An automated linter checks every one of these; breaking any of them 
 - Title: at most 60 characters, never empty. Meta description: at most 155 characters, never empty.
 - Never reuse a title or meta description already used on another page.
 - If you mention a year, use the current year.
+- Warranty/coverage claims: never imply the optional 10-year parts & labor coverage is included, free, or standard — it is a paid add-on. Never say "lifetime", "unlimited", or "guaranteed for life". Never use a year count other than 10 next to "warranty"/"coverage". Never present a manufacturer's warranty as Mechanical Enterprise's own coverage. Never name the coverage administrator or insurer. Never mention existing-system coverage without "eligible"/"qualify" in the same sentence.
+- Comfort Membership: the customer owns the system — never say "lease", "rent", "subscription includes the equipment", or "$0 down for everything".
+- Never offer a comfort/refund guarantee: no "money-back", "refund if", "remove it and refund", or "satisfaction guarantee" — none of that is offered.
+- Never say "guaranteed uptime" or "never fail". Never state an SLA response-hour figure unless it matches VERIFIED_FACTS.portfolioSla.responseHours exactly. Never say "24/7 monitoring" unless VERIFIED_FACTS.monitoring.is24x7 is true. Never say "guaranteed detection".
+- Never state an installed-price figure unless it matches a VERIFIED_FACTS.priceRanges entry for this exact page.
 `.trim();
+
+// docs/positioning-warranty-spec.md §6 — verbatim positioning sentence, added to both the meta lane (here) and the content lane (contentDrafting.ts).
+const WARRANTY_POSITIONING_PROMPT =
+  "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Mention rebates only as a secondary benefit and only using figures from VERIFIED_FACTS. Never describe coverage as included or free.";
 
 function buildSystemPrompt(field: "title" | "metaDescription"): string {
   const what = field === "title" ? "a page <title>" : 'a page <meta name="description"> value';
@@ -59,6 +68,7 @@ function buildSystemPrompt(field: "title" | "metaDescription"): string {
     `Write ONLY ${what} — nothing else.`,
     `Canonical phone number (the only one you may ever use): ${PHONE_DISPLAY}.`,
     LINTER_RULES_PROMPT,
+    WARRANTY_POSITIONING_PROMPT,
     `Respond with ONLY the ${field === "title" ? "title" : "meta description"} text itself. No quotes, no markdown, no labels, no explanation — just the text.`,
   ].join("\n\n");
 }

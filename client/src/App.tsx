@@ -16,6 +16,8 @@ import RebateGuide from "./pages/RebateGuide";
 import ResidentialCampaigns from "./pages/ResidentialCampaigns";
 import CommercialCampaigns from "./pages/CommercialCampaigns";
 import MaintenanceSubscription from "./pages/MaintenanceSubscription";
+import Warranty from "./pages/Warranty";
+import PortfolioPricingPage from "./pages/PortfolioPricingPage";
 import Partnerships from "./pages/Partnerships";
 import Referral from "./pages/Referral";
 import Careers from "./pages/Careers";
@@ -149,6 +151,9 @@ function Router() {
       <Route path={"/residential"} component={ResidentialCampaigns} />
       <Route path={"/commercial"} component={CommercialCampaigns} />
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
+      <Route path={"/warranty"} component={Warranty} />
+      <Route path={"/commercial/property-managers"} component={() => <PortfolioPricingPage variant="property-managers" />} />
+      <Route path={"/commercial/hvac-service-contracts"} component={() => <PortfolioPricingPage variant="service-contracts" />} />
       <Route path={"/partnerships"} component={Partnerships} />
       <Route path={"/referral"} component={Referral} />
       <Route path={"/careers"} component={Careers} />

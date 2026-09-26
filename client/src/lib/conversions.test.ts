@@ -246,6 +246,10 @@ describe("mapServiceToConversion — non-PII classification", () => {
     ["VRF/VRV System", "commercial_quote_request", "commercial"],
     ["Residential HVAC", "residential_quote_request", "residential"],
     ["Rebate Consultation", "quote_request", "general"],
+    ["Warranty Coverage", "warranty_quote_request", "warranty"],
+    ["10-Year Coverage", "warranty_quote_request", "warranty"],
+    ["Comfort Membership", "membership_quote_request", "membership"],
+    ["Portfolio Pricing", "portfolio_pricing_request", "portfolio"],
     ["Other", "quote_request", "general"],
     ["", "quote_request", "general"],
   ];
@@ -401,9 +405,12 @@ describe("Fix 1/2 — confirmed-success firing is exactly-once and non-duplicati
     expect(gtag).toHaveBeenCalledTimes(2);
   });
 
-  it("missing Ads label does not block the GA4 contact/replacement events", () => {
+  it("missing Ads label does not block the GA4 contact/replacement/warranty events", () => {
     expect(ADS_CONVERSION_LABELS.contact_form_submit).toBeNull();
     expect(ADS_CONVERSION_LABELS.replacement_request).toBeNull();
+    expect(ADS_CONVERSION_LABELS.warranty_quote_request).toBeNull();
+    expect(ADS_CONVERSION_LABELS.membership_quote_request).toBeNull();
+    expect(ADS_CONVERSION_LABELS.portfolio_pricing_request).toBeNull();
     trackConversion("contact_form_submit", {}, { dedupeKey: "c-noads" });
     trackConversion("replacement_request", {}, { dedupeKey: "r-noads" });
     expect(gtag).toHaveBeenCalledTimes(2);
