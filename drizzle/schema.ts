@@ -2680,6 +2680,14 @@ export const seoApprovalBatches = mysqlTable(
     status: mysqlEnum("status", SEO_BATCH_STATUS).default("pr_open").notNull(),
     /** Set when this batch IS a revert — points at the batch it reverts. Null otherwise. */
     revertsBatchId: int("revertsBatchId"),
+    /**
+     * Autopublish hold-and-veto (addendum §A2). Null = a normal human-reviewed
+     * batch (merge happens via a human clicking Merge on GitHub — this app
+     * never touches it). Non-null = this batch is eligible for auto-merge by
+     * server/services/seo/autoMerge.ts once every other gate passes AND this
+     * timestamp has passed. Editing the draft resets it (server layer, not enforced here).
+     */
+    holdUntil: timestamp("holdUntil"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },
