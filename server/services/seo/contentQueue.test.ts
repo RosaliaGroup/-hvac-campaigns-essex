@@ -141,3 +141,41 @@ describe("listContentQueue", () => {
     expect(rows.length).toBe(1);
   });
 });
+
+describe("SEED_TOPICS — docs/positioning-warranty-spec.md §5", () => {
+  const WARRANTY_TITLES = [
+    "What a 10-Year HVAC Warranty Should Actually Cover",
+    "Extended Coverage for an Older HVAC System: When It's Worth It",
+    "How to Compare HVAC Installation Quotes in NJ",
+    "Heat Pump vs. Furnace Replacement: Total Cost of Ownership Over 10 Years",
+    "Why Compressor Failures Happen in Years 5-8 (and What Protects You)",
+  ];
+
+  const DIFFERENTIATION_TITLES = [
+    "What a Heat Pump Installation Costs in Essex County (Real Ranges, and What Changes Them)",
+    "Fixed Per-Unit HVAC Pricing for Apartment Portfolios: How It Works",
+    "What a 24-Hour HVAC Response SLA Should Actually Include",
+  ];
+
+  it("includes all 5 new installation/warranty topics", () => {
+    const titles = SEED_TOPICS.map((t) => t.title);
+    for (const title of WARRANTY_TITLES) expect(titles).toContain(title);
+  });
+
+  it("includes all 3 new §9 differentiation topics (price ranges + portfolio SLA)", () => {
+    const titles = SEED_TOPICS.map((t) => t.title);
+    for (const title of DIFFERENTIATION_TITLES) expect(titles).toContain(title);
+  });
+
+  it("keeps every pre-existing B2B topic, including the PTAC package", () => {
+    expect(SEED_TOPICS.some((t) => t.title === "PTAC Replacement for Condo Associations")).toBe(true);
+    expect(SEED_TOPICS.some((t) => t.title === "Multifamily HVAC Replacement Planning in Occupied Buildings")).toBe(true);
+  });
+
+  it("no topic's title or audience trips the residential/rebate refusal gate", async () => {
+    const { isResidentialOrRebateTopic } = await import("../../../shared/contentLinter");
+    for (const topic of SEED_TOPICS) {
+      expect(isResidentialOrRebateTopic(topic), topic.title).toBe(false);
+    }
+  });
+});

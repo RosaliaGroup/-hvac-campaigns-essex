@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { VERIFIED_FACTS, isFactsConfigured } from "./verifiedFacts";
+import { VERIFIED_FACTS, isFactsConfigured, isPriceRangeStale, type VerifiedPriceRange } from "./verifiedFacts";
+import { SERVICE_TYPES } from "./appointmentTypes";
 import { NJ_COUNTIES } from "../client/src/data/njCounties";
 
 const FORBIDDEN_TERMS = [
@@ -73,6 +74,65 @@ describe("VERIFIED_FACTS", () => {
         expect(allText).not.toContain(term);
       }
     });
+  });
+
+  it("warranty is exactly 10 years, parts and labor, not included, no deductible", () => {
+    expect(VERIFIED_FACTS.warranty.years).toBe(10);
+    expect(VERIFIED_FACTS.warranty.covers).toBe("parts and labor");
+    expect(VERIFIED_FACTS.warranty.included).toBe(false);
+    expect(VERIFIED_FACTS.warranty.deductible).toBe(0);
+    expect(VERIFIED_FACTS.warranty.verifiedOn).toBe("2026-09-26");
+  });
+
+  it("does not name a specific administrator or insurer — generic wording only", () => {
+    // The spec keeps the administrator/insurer's specific legal name out of
+    // marketing facts (named only in the written agreement + /warranty terms
+    // disclosure) — "A-rated insurers" is the allowed generic description.
+    expect(VERIFIED_FACTS.warranty.administration).toBe("third-party extended service agreement, backed by A-rated insurers");
+  });
+
+  describe("§9 differentiation add-ons — every owner-gated number stays null until set", () => {
+    it("membership has no price yet", () => {
+      expect(VERIFIED_FACTS.membership.priceText).toBeNull();
+      expect(VERIFIED_FACTS.membership.verifiedOn).toBeNull();
+      expect(VERIFIED_FACTS.membership.name).toBe("Comfort Membership");
+    });
+
+    it("priceRanges starts empty — nothing invented", () => {
+      expect(VERIFIED_FACTS.priceRanges).toEqual([]);
+    });
+
+    it("replacementCredit has no percentage or cap yet", () => {
+      expect(VERIFIED_FACTS.replacementCredit.percentOfPremiums).toBeNull();
+      expect(VERIFIED_FACTS.replacementCredit.cap).toBeNull();
+    });
+
+    it("portfolioSla has no response-hours claim yet", () => {
+      expect(VERIFIED_FACTS.portfolioSla.responseHours).toBeNull();
+    });
+
+    it("monitoring is not claimed as 24/7 and lists no thermostat brands yet", () => {
+      expect(VERIFIED_FACTS.monitoring.is24x7).toBe(false);
+      expect(VERIFIED_FACTS.monitoring.thermostatBrands).toEqual([]);
+    });
+  });
+});
+
+describe("isPriceRangeStale", () => {
+  function range(asOf: string): VerifiedPriceRange {
+    return { page: "/heat-pump-installation-nj", item: "Heat pump", low: 5000, high: 9000, asOf, notes: "" };
+  }
+
+  it("is false for a range confirmed recently", () => {
+    expect(isPriceRangeStale(range("2026-09-01"), new Date("2026-09-26"))).toBe(false);
+  });
+
+  it("is true for a range older than 180 days", () => {
+    expect(isPriceRangeStale(range("2025-01-01"), new Date("2026-09-26"))).toBe(true);
+  });
+
+  it("is true for an unparseable date", () => {
+    expect(isPriceRangeStale(range("not-a-date"), new Date("2026-09-26"))).toBe(true);
   });
 });
 

@@ -175,6 +175,41 @@ describe("bagOfWordsCosineSimilarity", () => {
   });
 });
 
+describe("lintContent — warranty claim rules (docs/positioning-warranty-spec.md §2)", () => {
+  it("blocks a lifetime-warranty claim in the body", () => {
+    const result = lintContent({ ...cleanInput, body: words(1000) + " We offer a lifetime warranty on every install." }, factsWithIncentive);
+    expect(result.findings.some((f) => f.code === "warranty_absolute_claim")).toBe(true);
+  });
+
+  it('blocks "included" near "warranty" in the body', () => {
+    const result = lintContent({ ...cleanInput, body: words(1000) + " A 10-year warranty is included with every install." }, factsWithIncentive);
+    expect(result.findings.some((f) => f.code === "warranty_implies_included")).toBe(true);
+  });
+});
+
+describe("lintContent — differentiation add-on rules (docs/positioning-warranty-spec.md §9)", () => {
+  it('blocks "lease" implying equipment ownership', () => {
+    const result = lintContent({ ...cleanInput, body: words(1000) + " Membership includes a lease on the equipment." }, factsWithIncentive);
+    expect(result.findings.some((f) => f.code === "membership_equipment_ownership_implied")).toBe(true);
+  });
+
+  it('blocks "satisfaction guarantee" — not offered', () => {
+    const result = lintContent({ ...cleanInput, body: words(1000) + " We back every install with a satisfaction guarantee." }, factsWithIncentive);
+    expect(result.findings.some((f) => f.code === "comfort_refund_guarantee_not_offered")).toBe(true);
+  });
+
+  it('blocks an unverified "24/7 monitoring" claim by default (facts.monitoring.is24x7 is false)', () => {
+    const result = lintContent({ ...cleanInput, body: words(1000) + " Enjoy 24/7 monitoring on your new system." }, factsWithIncentive);
+    expect(result.findings.some((f) => f.code === "monitoring_24x7_unverified")).toBe(true);
+  });
+
+  it("allows a 24/7 monitoring claim once facts.monitoring.is24x7 is true", () => {
+    const facts = { ...factsWithIncentive, monitoring: { ...factsWithIncentive.monitoring, is24x7: true } };
+    const result = lintContent({ ...cleanInput, body: words(1000) + " Enjoy 24/7 monitoring on your new system." }, facts);
+    expect(result.findings.some((f) => f.code === "monitoring_24x7_unverified")).toBe(false);
+  });
+});
+
 describe("isResidentialOrRebateTopic", () => {
   it("flags residential/rebate/homeowner topics", () => {
     expect(isResidentialOrRebateTopic({ title: "NJ Heat Pump Rebates 2026" })).toBe(true);

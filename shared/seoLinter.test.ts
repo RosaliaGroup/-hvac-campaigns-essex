@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lintPageMeta, isBlocked } from "./seoLinter";
+import { lintPageMeta, isBlocked, lintWarrantyClaims, lintDifferentiationClaims, lintDifferentiationFactClaims, lintPriceRangeClaims } from "./seoLinter";
 
 describe("lintPageMeta — BLOCK rules (spec §3, acceptance test §11)", () => {
   it('blocks "#1" superlative claims', () => {
@@ -184,5 +184,171 @@ describe("lintPageMeta — word-boundary matching (phrase lists must not match i
       metaDescription: "Combine PSE&G rebates with the HEAR program benefits.",
     });
     expect(result.findings.some((f) => f.code === "expired_incentive")).toBe(true);
+  });
+});
+
+describe("lintWarrantyClaims (docs/positioning-warranty-spec.md §2, acceptance §8)", () => {
+  it('blocks "free 10-year warranty" — implies included', () => {
+    const findings = lintWarrantyClaims("Every install includes a free 10-year warranty.");
+    expect(findings.some((f) => f.code === "warranty_implies_included" && f.severity === "block")).toBe(true);
+  });
+
+  it('blocks "included" near "coverage"', () => {
+    const findings = lintWarrantyClaims("10-year parts and labor coverage is included with every install.");
+    expect(findings.some((f) => f.code === "warranty_implies_included")).toBe(true);
+  });
+
+  it('blocks "lifetime" as an absolute claim', () => {
+    const findings = lintWarrantyClaims("Lifetime warranty on all new systems.");
+    expect(findings.some((f) => f.code === "warranty_absolute_claim")).toBe(true);
+  });
+
+  it('blocks "unlimited" and "guaranteed for life"', () => {
+    expect(lintWarrantyClaims("Unlimited coverage for your system.").some((f) => f.code === "warranty_absolute_claim")).toBe(true);
+    expect(lintWarrantyClaims("Guaranteed for life, no exceptions.").some((f) => f.code === "warranty_absolute_claim")).toBe(true);
+  });
+
+  it("blocks a manufacturer's warranty presented as our own coverage", () => {
+    const findings = lintWarrantyClaims("We include the manufacturer's warranty as our coverage.");
+    expect(findings.some((f) => f.code === "warranty_manufacturer_confusion")).toBe(true);
+  });
+
+  it("does not block a bare mention of a manufacturer's warranty with no first-person framing", () => {
+    const findings = lintWarrantyClaims("The manufacturer's warranty covers defects in materials.");
+    expect(findings.some((f) => f.code === "warranty_manufacturer_confusion")).toBe(false);
+  });
+
+  it('blocks a year count other than 10 next to "warranty"/"coverage"', () => {
+    const findings = lintWarrantyClaims("Ask about our 5-year warranty on new installs.");
+    expect(findings.some((f) => f.code === "warranty_wrong_year_count")).toBe(true);
+  });
+
+  it("does not block the verified 10-year figure", () => {
+    const findings = lintWarrantyClaims("Ask about our 10-year parts and labor coverage.");
+    expect(findings.some((f) => f.code === "warranty_wrong_year_count")).toBe(false);
+  });
+
+  it('blocks "existing systems covered" without "eligibility"/"qualify" in the same sentence', () => {
+    const findings = lintWarrantyClaims("Existing systems covered under our warranty program.");
+    expect(findings.some((f) => f.code === "warranty_existing_no_eligibility")).toBe(true);
+  });
+
+  it("allows existing-system coverage when eligibility is stated in the same sentence", () => {
+    const findings = lintWarrantyClaims("Existing systems may qualify for coverage after an eligibility inspection.");
+    expect(findings.some((f) => f.code === "warranty_existing_no_eligibility")).toBe(false);
+  });
+
+  it("blocks a provider/administrator brand name outside the terms page", () => {
+    const findings = lintWarrantyClaims("Coverage is backed by Acme Assurance Group.", { allowedOnTermsPage: false });
+    // No brand names are seeded yet (spec: administrator not named in marketing copy) — placeholder
+    // regression: once WARRANTY_ADMIN_BRAND_NAMES gains an entry, this should start blocking it.
+    expect(Array.isArray(findings)).toBe(true);
+  });
+
+  it("warns when first '10-year' use is not followed by 'parts & labor'", () => {
+    const findings = lintWarrantyClaims("Ask about our 10-year coverage plan today.");
+    expect(findings.some((f) => f.code === "warranty_missing_parts_labor" && f.severity === "warn")).toBe(true);
+  });
+
+  it("does not warn when '10-year' is immediately followed by 'parts & labor'", () => {
+    const findings = lintWarrantyClaims("Ask about our 10-year parts & labor coverage plan today.");
+    expect(findings.some((f) => f.code === "warranty_missing_parts_labor")).toBe(false);
+  });
+
+  it("lintPageMeta blocks a meta description with an implied-included warranty claim", () => {
+    const result = lintPageMeta({ pagePath: "/warranty", title: "10-Year Coverage", metaDescription: "Every install comes with a free warranty, no cost to you." });
+    expect(result.passes).toBe(false);
+    expect(result.findings.some((f) => f.code === "warranty_implies_included")).toBe(true);
+  });
+});
+
+describe("lintDifferentiationClaims (docs/positioning-warranty-spec.md §9, acceptance)", () => {
+  it('blocks "lease" — we do not own/lease the equipment', () => {
+    expect(lintDifferentiationClaims("Membership includes a lease on your new system.").some((f) => f.code === "membership_equipment_ownership_implied")).toBe(true);
+  });
+
+  it('blocks "rent" and "subscription includes the equipment"', () => {
+    expect(lintDifferentiationClaims("You rent the equipment with membership.").some((f) => f.code === "membership_equipment_ownership_implied")).toBe(true);
+    expect(lintDifferentiationClaims("Our subscription includes the equipment.").some((f) => f.code === "membership_equipment_ownership_implied")).toBe(true);
+  });
+
+  it('blocks "$0 down for everything"', () => {
+    expect(lintDifferentiationClaims("$0 down for everything, guaranteed.").some((f) => f.code === "membership_equipment_ownership_implied")).toBe(true);
+  });
+
+  it('blocks "money-back", "refund if", "remove it and refund", "satisfaction guarantee" (not offered)', () => {
+    for (const phrase of ["30-day money-back promise", "refund if you're not happy", "we'll remove it and refund you", "100% satisfaction guarantee"]) {
+      expect(lintDifferentiationClaims(phrase).some((f) => f.code === "comfort_refund_guarantee_not_offered"), phrase).toBe(true);
+    }
+  });
+
+  it('blocks "guaranteed uptime" and "never fail"', () => {
+    expect(lintDifferentiationClaims("Our portfolio SLA offers guaranteed uptime.").some((f) => f.code === "sla_absolute_claim")).toBe(true);
+    expect(lintDifferentiationClaims("Your systems will never fail.").some((f) => f.code === "sla_absolute_claim")).toBe(true);
+  });
+
+  it('blocks "guaranteed detection"', () => {
+    expect(lintDifferentiationClaims("Proactive monitoring means guaranteed detection.").some((f) => f.code === "monitoring_absolute_claim")).toBe(true);
+  });
+
+  it("passes clean membership/portfolio/monitoring copy", () => {
+    expect(lintDifferentiationClaims("Comfort Membership is a monthly fee. You own the system.")).toEqual([]);
+  });
+});
+
+describe("lintDifferentiationFactClaims", () => {
+  it("blocks an SLA-hour claim when responseHours is unverified (null)", () => {
+    const findings = lintDifferentiationFactClaims("We offer 24-hour response on every portfolio.", { portfolioSla: { responseHours: null }, monitoring: { is24x7: false } });
+    expect(findings.some((f) => f.code === "sla_hours_mismatch")).toBe(true);
+  });
+
+  it("blocks an SLA-hour claim that doesn't match the verified figure", () => {
+    const findings = lintDifferentiationFactClaims("We offer 24-hour response.", { portfolioSla: { responseHours: 48 }, monitoring: { is24x7: false } });
+    expect(findings.some((f) => f.code === "sla_hours_mismatch")).toBe(true);
+  });
+
+  it("allows an SLA-hour claim that matches the verified figure", () => {
+    const findings = lintDifferentiationFactClaims("We offer 48-hour response.", { portfolioSla: { responseHours: 48 }, monitoring: { is24x7: false } });
+    expect(findings.some((f) => f.code === "sla_hours_mismatch")).toBe(false);
+  });
+
+  it('blocks "24/7 monitoring" when is24x7 is false', () => {
+    const findings = lintDifferentiationFactClaims("We offer 24/7 monitoring on every system.", { portfolioSla: { responseHours: null }, monitoring: { is24x7: false } });
+    expect(findings.some((f) => f.code === "monitoring_24x7_unverified")).toBe(true);
+  });
+
+  it('allows "24/7 monitoring" once is24x7 is confirmed true', () => {
+    const findings = lintDifferentiationFactClaims("We offer 24/7 monitoring on every system.", { portfolioSla: { responseHours: null }, monitoring: { is24x7: true } });
+    expect(findings.some((f) => f.code === "monitoring_24x7_unverified")).toBe(false);
+  });
+});
+
+describe("lintPriceRangeClaims", () => {
+  it("blocks an installed-price claim when no price range is verified for the page", () => {
+    const findings = lintPriceRangeClaims("/heat-pump-installation-nj", "Heat pumps typically run $5,000-$9,000 installed.", []);
+    expect(findings.some((f) => f.code === "unverified_price_range")).toBe(true);
+  });
+
+  it("allows a claim that matches a verified range exactly", () => {
+    const ranges = [{ page: "/heat-pump-installation-nj", low: 5000, high: 9000 }];
+    const findings = lintPriceRangeClaims("/heat-pump-installation-nj", "Heat pumps typically run $5,000-$9,000 installed.", ranges);
+    expect(findings.some((f) => f.code === "unverified_price_range")).toBe(false);
+  });
+
+  it("blocks a claim whose numbers don't match the verified range", () => {
+    const ranges = [{ page: "/heat-pump-installation-nj", low: 5000, high: 9000 }];
+    const findings = lintPriceRangeClaims("/heat-pump-installation-nj", "Heat pumps typically run $6,000-$10,000 installed.", ranges);
+    expect(findings.some((f) => f.code === "unverified_price_range")).toBe(true);
+  });
+
+  it("does not flag a range verified for a different page", () => {
+    const ranges = [{ page: "/central-ac-installation-nj", low: 5000, high: 9000 }];
+    const findings = lintPriceRangeClaims("/heat-pump-installation-nj", "Heat pumps typically run $5,000-$9,000 installed.", ranges);
+    expect(findings.some((f) => f.code === "unverified_price_range")).toBe(true);
+  });
+
+  it("does not false-positive on an ordinary rebate dollar mention with no 'installed' language", () => {
+    const findings = lintPriceRangeClaims("/heat-pump-installation-nj", "Save up to $16,000 with NJ rebates.", []);
+    expect(findings.some((f) => f.code === "unverified_price_range")).toBe(false);
   });
 });

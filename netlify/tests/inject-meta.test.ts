@@ -1,6 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { getRouteStatus, injectMeta } from "../edge-functions/inject-meta";
 import { CUSTOMER_FACING_SEND_TARGETS } from "../../shared/seoLockedRoutes";
+import routesManifest from "../edge-functions/routes-manifest.json";
+
+/** Minimal HTML skeleton injectMeta() expects — matches the fixture used elsewhere in this file. */
+const HTML_SKELETON = `<html><head><title>x</title><meta name="description" content="x" /></head><body></body></html>`;
+
+function titleFor(path: string): string {
+  const out = injectMeta(HTML_SKELETON, path);
+  const m = out.match(/<title>([^<]*)<\/title>/);
+  return m ? m[1] : "(none)";
+}
 
 // PR-1 item A: real 404s for unregistered routes, without breaking any
 // registered route — public, internal/CRM, or public-dynamic.
@@ -112,5 +122,43 @@ describe("injectMeta — unregistered slug no longer gets fabricated city metada
     const html = `<html><head><title>x</title><meta name="description" content="x" /></head><body></body></html>`;
     const out = injectMeta(html, "/hvac-newark-nj");
     expect(out).toContain("Newark NJ HVAC Contractor");
+  });
+});
+
+describe("injectMeta — no two public pages share a title", () => {
+  it("every registered, non-internal route in routes-manifest.json resolves to a unique <title>", () => {
+    const titleToPaths = new Map<string, string[]>();
+    for (const path of routesManifest as string[]) {
+      const status = getRouteStatus(path);
+      if (!status.isRegistered || status.isInternalOrDynamic) continue;
+      const title = titleFor(path);
+      if (!titleToPaths.has(title)) titleToPaths.set(title, []);
+      titleToPaths.get(title)!.push(path);
+    }
+
+    const duplicates = Array.from(titleToPaths.entries()).filter(([, paths]) => paths.length > 1);
+    expect(duplicates, `Duplicate titles found:\n${duplicates.map(([t, paths]) => `  "${t}": ${paths.join(", ")}`).join("\n")}`).toEqual([]);
+  });
+
+  it("the ServicePage-routed slugs each keep their own title, not the homepage's", () => {
+    const homeTitle = titleFor("/");
+    for (const path of [
+      "/heat-pump-installation-nj",
+      "/central-ac-installation-nj",
+      "/ductless-mini-split-installation-nj",
+      "/vrv-vrf-installation-nj",
+      "/hvac-system-replacement-nj",
+      "/commercial-hvac-installation-nj",
+      "/heat-pump-rebates-nj",
+      "/hvac-financing-nj",
+      "/promos",
+    ]) {
+      expect(titleFor(path), path).not.toBe(homeTitle);
+    }
+  });
+
+  it("/hvac-financing-nj and /hvac-system-replacement-nj no longer get a fabricated city title (they match the city-page regex but are registered static pages)", () => {
+    expect(titleFor("/hvac-financing-nj")).not.toContain("NJ HVAC Contractor");
+    expect(titleFor("/hvac-system-replacement-nj")).not.toContain("NJ HVAC Contractor");
   });
 });
