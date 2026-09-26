@@ -109,7 +109,8 @@ describe("runWeeklyContentJob", () => {
 
   it("refuses to draft when facts aren't configured", async () => {
     vi.mocked(nextTopicToProcess).mockResolvedValue(topic);
-    const result = await runWeeklyContentJob(VERIFIED_FACTS); // empty incentives
+    const unconfiguredFacts = { ...VERIFIED_FACTS, incentives: [] };
+    const result = await runWeeklyContentJob(unconfiguredFacts);
     expect(result).toEqual({ status: "facts_not_configured" });
     expect(draftContentPost).not.toHaveBeenCalled();
   });
