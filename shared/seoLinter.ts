@@ -48,19 +48,22 @@ export type LintOptions = {
 
 /* ── Static rule tables ──────────────────────────────────────────────── */
 
-const SUPERLATIVES = [
+// Exported: server/services/seo/contentLinter.ts reuses these same word lists
+// for the extended body-content linter (docs/seo-automation-spec.md Part 2 —
+// "same rules as title/meta plus...") so the two never drift apart.
+export const SUPERLATIVES = [
   "#1", "number one", "best", "top-rated", "top rated", "award-winning",
   "guaranteed", "lowest price", "cheapest",
 ];
 
-const EXPIRED_INCENTIVES = [
+export const EXPIRED_INCENTIVES = [
   "federal tax credit", "tax credit", "25c", "ira credit", "$2,000 credit",
   "$2k", "rebate received", "hear", "homes rebate",
 ];
 
-const CERTIFICATION_WORDS = ["certified", "mwbe", "wmbe", "sbe", "sedb", "dbe"];
+export const CERTIFICATION_WORDS = ["certified", "mwbe", "wmbe", "sbe", "sedb", "dbe"];
 
-const COMPETITOR_BRANDS = ["A.J. Perri", "Gold Medal", "Horizon", "Hutchinson"];
+export const COMPETITOR_BRANDS = ["A.J. Perri", "Gold Medal", "Horizon", "Hutchinson"];
 
 /**
  * Approved certification phrases — seeded empty until certifications are
@@ -119,7 +122,7 @@ function phraseRegex(phrase: string, opts: { caseSensitive?: boolean } = {}): Re
   return new RegExp(`${left}${escaped}${right}`, opts.caseSensitive ? "" : "i");
 }
 
-function includesPhrase(text: string, phrase: string, opts?: { caseSensitive?: boolean }): boolean {
+export function includesPhrase(text: string, phrase: string, opts?: { caseSensitive?: boolean }): boolean {
   return phraseRegex(phrase, opts).test(text);
 }
 
