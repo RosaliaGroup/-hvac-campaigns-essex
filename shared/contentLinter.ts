@@ -53,8 +53,17 @@ const DUPLICATE_SIMILARITY_THRESHOLD = 0.85;
 const FLESCH_MIN = 50;
 const FLESCH_MAX = 65;
 
-/** e.g. "for John Smith," / "client Jane Doe" — a documented heuristic, not real NER. */
-const CLIENT_NAME_RE = /\b(?:for|client|customer)\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/;
+/**
+ * e.g. "our client John Smith" / "customer Jane Doe" — a documented heuristic,
+ * not real NER. Deliberately does NOT trigger on a bare "for [Capitalized]
+ * [Capitalized]" — ordinary B2B titles/headlines constantly take that shape
+ * ("... for Multifamily Retrofits", "... for Property Managers") with zero
+ * client-naming intent, so requiring the "client"/"customer" word keeps this
+ * from false-positiving on nearly every headline. Trade-off: also won't catch
+ * "we did this for John Smith" without that word — under-blocking is the
+ * safer failure mode for a heuristic like this.
+ */
+const CLIENT_NAME_RE = /\b(?:client|customer)\s+[A-Z][a-z]+\s+[A-Z][a-z]+\b/;
 const PROJECT_COUNT_RE = /\bwe(?:'ve| have)\s+completed\s+\d+/i;
 const DOLLAR_FIGURE_RE = /\$[0-9][\d,]*(?:\.\d+)?\s?[kK]?/g;
 const B2B_PATH_PATTERNS = [/^\/commercial/];

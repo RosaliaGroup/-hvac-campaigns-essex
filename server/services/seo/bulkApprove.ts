@@ -76,10 +76,13 @@ export class MockProviderError extends Error {
   }
 }
 
+/** YYYYMMDD for today — shared date format for both lanes' daily branch names (pr-seo-meta-*, pr-content-*). */
+export function yyyymmdd(d: Date = new Date()): string {
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function branchForToday(): string {
-  const d = new Date();
-  const yyyymmdd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  return `pr-seo-meta-${yyyymmdd}`;
+  return `pr-seo-meta-${yyyymmdd()}`;
 }
 
 /**

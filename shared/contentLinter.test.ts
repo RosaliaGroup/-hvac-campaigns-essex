@@ -68,8 +68,13 @@ describe("lintContent â€” extended body-specific rules (spec Part 2 / addendum Â
   });
 
   it("blocks a named-client heuristic match", () => {
-    const result = lintContent({ ...cleanInput, body: words(1000) + " We recently finished this for John Smith in Newark." }, factsWithIncentive);
+    const result = lintContent({ ...cleanInput, body: words(1000) + " We recently finished this for client John Smith in Newark." }, factsWithIncentive);
     expect(result.findings.some((f) => f.code === "named_client")).toBe(true);
+  });
+
+  it("does NOT false-positive on ordinary B2B title/headline grammar ('for [Capitalized] [Capitalized]')", () => {
+    const result = lintContent({ ...cleanInput, title: "PTAC vs Mini-Split vs VRF for Multifamily Retrofits", body: words(1000) + " This guide is written for Property Managers and Apartment Owners." }, factsWithIncentive);
+    expect(result.findings.some((f) => f.code === "named_client")).toBe(false);
   });
 
   it("blocks a dollar figure not present in verified incentives", () => {
