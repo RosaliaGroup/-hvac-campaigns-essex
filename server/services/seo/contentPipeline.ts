@@ -1,13 +1,21 @@
 /**
  * Weekly B2B content pipeline orchestration (docs/seo-automation-spec.md
- * Part 2). runWeeklyContentJob() drafts ONE post from the queue, lints it
+ * Part 2, extended by docs/seo-automation-addendum-autopublish.md's auto-lane
+ * decision). runWeeklyContentJob() drafts ONE post from the queue, lints it
  * (title/meta + the extended body linter + the critic pass), and stores the
- * result — it never opens a PR itself (spec: publish is a separate,
- * reviewer-triggered step). approveContentToPR() is that separate step,
- * reusing the SAME seoApprovalBatches table and GitHub-PR machinery the
- * meta lane uses (laneForBatch() already tells them apart by branch prefix),
- * so veto/revert/refresh-status/warm-up all work uniformly across both lanes
+ * result. approveContentToPR() is the separate publish step, reusing the
+ * SAME seoApprovalBatches table and GitHub-PR machinery the meta lane uses
+ * (laneForBatch() already tells them apart by branch prefix), so
+ * veto/revert/refresh-status/warm-up all work uniformly across both lanes
  * with no additional code.
+ *
+ * Auto-lane resolution (owner decision, 2026-09-26): once SEO_AUTOPUBLISH_ENABLED
+ * is "true" AND the content lane is warmed up AND the circuit breaker is
+ * clear, runWeeklyContentJob calls approveContentToPR itself (label
+ * "auto-YYYYMMDD" — matching the meta lane's nightly job and, importantly,
+ * circuitBreaker.ts's lastTwoAutoLaneNetlifyStates(), which identifies
+ * "auto-lane" batches by that label prefix) and arms the hold. Otherwise it
+ * stages only — the original Part-2 behavior.
  *
  * The draft itself is stored as a seoAuditLog `draft_generated` row's `after`
  * JSON (lane: "content") rather than a new column — findLatestContentDraft()
@@ -30,7 +38,11 @@ import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { logAudit, listAuditLog } from "./auditLog";
 import { isGithubConfigured, GithubNotConfiguredError, ensureBranch, getFileContent, putFileContent, openOrGetPR } from "./github";
 import { yyyymmdd } from "./bulkApprove";
-import { msUntilNextRun } from "../../../shared/cronTiming";
+import { isWarmedUp } from "./warmupGate";
+import { armHold } from "./autoMerge";
+import { msUntilNextRun, parseCronToSchedule, type ScheduleSpec } from "../../../shared/cronTiming";
+
+const DEFAULT_CONTENT_SCHEDULE: ScheduleSpec = { hour: 6, minute: 0, timeZone: "America/New_York", weekdays: [3] };
 
 const BLOG_POSTS_PATH = "client/src/data/blogPosts.ts";
 
@@ -52,9 +64,20 @@ export type ContentDraftOutcome =
   | { status: "circuit_paused"; reason: string | null }
   | { status: "facts_not_configured" }
   | { status: "refused_residential_rebate"; topicId: number }
-  | { status: "drafted"; topicId: number; passes: boolean; post: BlogPostData; metaLint: LintResult; contentLint: ContentLintResult; critic: CriticVerdict };
+  | {
+      status: "drafted";
+      topicId: number;
+      passes: boolean;
+      post: BlogPostData;
+      metaLint: LintResult;
+      contentLint: ContentLintResult;
+      critic: CriticVerdict;
+      /** True iff the content lane was warmed up + circuit-clear and this run auto-approved the draft to a PR. False = staged only. */
+      autoApproved: boolean;
+      batchId?: number;
+    };
 
-/** Draft (never publish) the next eligible topic. Safe to call repeatedly — no-ops when there's nothing to draft. */
+/** Draft (and, once warmed up, auto-approve) the next eligible topic. Safe to call repeatedly — no-ops when there's nothing to draft. */
 export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
   const breaker = await checkCircuitBreakerConditions();
   if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
@@ -104,7 +127,25 @@ export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS)
     lintResult: null,
   });
 
-  return { status: "drafted", topicId: topic.id, passes, post, metaLint, contentLint, critic };
+  let autoApproved = false;
+  let batchId: number | undefined;
+  if (passes && process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
+    const warmedUp = await isWarmedUp("content");
+    if (warmedUp && !breaker.shouldPause) {
+      try {
+        const approved = await approveContentToPR(topic.id, null, `auto-${yyyymmdd()}`);
+        await armHold(approved.batchId);
+        autoApproved = true;
+        batchId = approved.batchId;
+      } catch (err) {
+        // The draft is already stored — a human can still approve it by hand
+        // even if auto-approval itself failed (e.g. GitHub transiently down).
+        console.error("[SEO] weekly content auto-approve failed (draft remains staged for manual approval):", (err as Error).message);
+      }
+    }
+  }
+
+  return { status: "drafted", topicId: topic.id, passes, post, metaLint, contentLint, critic, autoApproved, ...(batchId !== undefined ? { batchId } : {}) };
 }
 
 export type StoredContentDraft = {
@@ -148,7 +189,7 @@ export type ApproveContentResult = { batchId: number; prUrl: string; prNumber: n
  * "pr-content-" prefix, so veto/revert/refresh-status/warm-up all apply
  * uniformly. Never merges (same hard rule as the meta lane).
  */
-export async function approveContentToPR(topicId: number, actorId: number | null): Promise<ApproveContentResult> {
+export async function approveContentToPR(topicId: number, actorId: number | null, label?: string): Promise<ApproveContentResult> {
   if (!isGithubConfigured()) throw new GithubNotConfiguredError();
   const draft = await findLatestContentDraft(topicId);
   if (!draft) throw new ContentNotReadyError("no draft has been generated for this topic yet.");
@@ -179,7 +220,7 @@ export async function approveContentToPR(topicId: number, actorId: number | null
   const pr = await openOrGetPR(branch, `SEO content batch — ${yyyymmdd()}`, prBody);
 
   const inserted = await db.insert(seoApprovalBatches).values({
-    label: draft.post.title,
+    label: label ?? draft.post.title,
     pages: [`/blog/${draft.post.slug}`],
     diff: [{ pagePath: `/blog/${draft.post.slug}`, pageId: topicId, before: { title: null, description: null }, after: { title: draft.post.title, description: draft.post.metaDescription }, hasBodyChanges: true, lint: draft.metaLint }],
     actorId,
@@ -198,21 +239,54 @@ export async function approveContentToPR(topicId: number, actorId: number | null
   return { batchId, prUrl: pr.url, prNumber: pr.number };
 }
 
-/** In-process scheduler — Wednesday 06:00 America/New_York (spec Part 2), gated behind SEO_CONTENT_PIPELINE_ENABLED (default off). */
+/**
+ * Approve-to-PR wrapper (content lane, mirrors bulkApprove.ts's
+ * approveMetaBatchWithAutopublish) that additionally arms the autopublish
+ * hold when the content lane is warmed up. Used by the router's human-
+ * triggered "Approve to PR" button. Lives here (not autoMerge.ts) because
+ * autoMerge.ts already depends on this file's armHold-adjacent needs would
+ * otherwise create a circular import — see autoMerge.ts's comment on the
+ * same topic.
+ */
+export async function approveContentToPRWithAutopublish(topicId: number, actorId: number | null): Promise<ApproveContentResult> {
+  const result = await approveContentToPR(topicId, actorId);
+  if (await isWarmedUp("content")) await armHold(result.batchId);
+  return result;
+}
+
+/**
+ * The weekly content schedule as a standard 5-field cron string (minute hour
+ * day-of-month month day-of-week — see shared/cronTiming.ts's
+ * parseCronToSchedule for the supported subset). Lets the cadence change
+ * without a code change. Defaults to Wednesdays 06:00 America/New_York
+ * (spec Part 2) when unset or invalid.
+ */
+function contentSchedule(): ScheduleSpec {
+  const raw = process.env.SEO_CONTENT_SCHEDULE?.trim();
+  if (!raw) return DEFAULT_CONTENT_SCHEDULE;
+  try {
+    return parseCronToSchedule(raw, DEFAULT_CONTENT_SCHEDULE.timeZone);
+  } catch (err) {
+    console.error(`[SEO] SEO_CONTENT_SCHEDULE is invalid, falling back to the default (Wed 06:00 ET): ${(err as Error).message}`);
+    return DEFAULT_CONTENT_SCHEDULE;
+  }
+}
+
+/** In-process scheduler — Wednesday 06:00 America/New_York by default (spec Part 2), overridable via SEO_CONTENT_SCHEDULE, gated behind SEO_CONTENT_PIPELINE_ENABLED (default off). */
 export function startWeeklyContentScheduler(): void {
   if (process.env.SEO_CONTENT_PIPELINE_ENABLED !== "true") {
     console.log("[SEO] Weekly content pipeline disabled (set SEO_CONTENT_PIPELINE_ENABLED=true to enable)");
     return;
   }
   const arm = () => {
-    const delay = msUntilNextRun({ hour: 6, minute: 0, timeZone: "America/New_York", weekdays: [3] });
+    const delay = msUntilNextRun(contentSchedule());
     setTimeout(() => {
       runWeeklyContentJob()
-        .then((outcome) => console.log(`[SEO] weekly content job: ${outcome.status}`))
+        .then((outcome) => console.log(`[SEO] weekly content job: ${outcome.status}${outcome.status === "drafted" && outcome.autoApproved ? `, auto-approved to batch #${outcome.batchId}` : ""}`))
         .catch((err) => console.error("[SEO] weekly content job error:", err))
         .finally(arm);
     }, delay);
   };
-  console.log("[SEO] Weekly content pipeline scheduled — Wednesdays 06:00 America/New_York");
+  console.log(`[SEO] Weekly content pipeline scheduled — ${process.env.SEO_CONTENT_SCHEDULE?.trim() || "Wednesdays 06:00 America/New_York (default)"}`);
   arm();
 }

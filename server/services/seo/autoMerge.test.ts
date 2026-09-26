@@ -56,7 +56,6 @@ describe("evaluateAutoMergeReadiness (pure)", () => {
 
 vi.mock("../../db", () => ({ getDb: vi.fn() }));
 vi.mock("./bulkApprove", () => ({ laneForBatch: vi.fn(() => "meta"), refreshBatchStatus: vi.fn(), approveBatchToPR: vi.fn() }));
-vi.mock("./contentPipeline", () => ({ approveContentToPR: vi.fn() }));
 vi.mock("./warmupGate", () => ({ isWarmedUp: vi.fn(), advanceWarmup: vi.fn() }));
 vi.mock("./circuitBreaker", () => ({ checkCircuitBreakerConditions: vi.fn() }));
 vi.mock("./github", () => ({ getNetlifyCheckState: vi.fn(), hasAnyPRComments: vi.fn(), mergePR: vi.fn() }));
@@ -66,13 +65,12 @@ vi.mock("../emailService", () => ({ sendEmail: vi.fn(async () => true) }));
 
 import { getDb } from "../../db";
 import { approveBatchToPR } from "./bulkApprove";
-import { approveContentToPR } from "./contentPipeline";
 import { isWarmedUp, advanceWarmup } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { getNetlifyCheckState, hasAnyPRComments, mergePR } from "./github";
 import { logAudit } from "./auditLog";
 import { sendEmail } from "../emailService";
-import { armHold, checkAndMergeIfReady, publishNow, approveMetaBatchWithAutopublish, approveContentWithAutopublish } from "./autoMerge";
+import { armHold, checkAndMergeIfReady, publishNow, approveMetaBatchWithAutopublish } from "./autoMerge";
 
 function makeDb(batch: Record<string, any>) {
   const row = { ...batch };
@@ -94,6 +92,7 @@ beforeEach(() => {
   vi.mocked(logAudit).mockReset();
   vi.mocked(sendEmail).mockReset().mockResolvedValue(true);
   process.env.SEO_ALERT_EMAIL = "ana@example.com";
+  process.env.SEO_AUTOPUBLISH_ENABLED = "true";
 });
 
 describe("checkAndMergeIfReady", () => {
@@ -149,6 +148,15 @@ describe("armHold", () => {
     await armHold(1);
     expect(sendEmail).not.toHaveBeenCalled();
   });
+
+  it("is the addendum §A5 master switch: no-ops entirely (no hold, no email) when SEO_AUTOPUBLISH_ENABLED isn't \"true\"", async () => {
+    process.env.SEO_AUTOPUBLISH_ENABLED = "false";
+    const { db, row } = makeDb({ id: 1, status: "pr_open", holdUntil: null, commitSha: "abc", prNumber: 5, branch: "pr-seo-meta-20260926", label: "batch-1" });
+    vi.mocked(getDb).mockResolvedValue(db);
+    await armHold(1);
+    expect(row.holdUntil).toBeNull();
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
 });
 
 describe("publishNow", () => {
@@ -194,19 +202,5 @@ describe("approveMetaBatchWithAutopublish", () => {
     await approveMetaBatchWithAutopublish({ pageIds: [1], label: "x", actorId: 1 });
 
     expect(row.holdUntil).toBeNull();
-  });
-});
-
-describe("approveContentWithAutopublish", () => {
-  it("arms the hold when the content lane is warmed up", async () => {
-    vi.mocked(approveContentToPR).mockResolvedValue({ batchId: 20, prUrl: "url", prNumber: 3 });
-    vi.mocked(isWarmedUp).mockResolvedValue(true);
-    const { db, row } = makeDb({ id: 20, status: "pr_open", holdUntil: null, commitSha: "abc", prNumber: 3, branch: "pr-content-20260926", label: "post title" });
-    vi.mocked(getDb).mockResolvedValue(db);
-
-    await approveContentWithAutopublish(5, 1);
-
-    expect(isWarmedUp).toHaveBeenCalledWith("content");
-    expect(row.holdUntil).toBeInstanceOf(Date);
   });
 });

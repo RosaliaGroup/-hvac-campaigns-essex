@@ -84,3 +84,60 @@ export function isAllowedWeekday(date: Date, timeZone: string, weekdays: Weekday
   const { weekday } = wallClockParts(makeFormatter(timeZone), date);
   return weekdays.includes(weekday);
 }
+
+export class InvalidCronScheduleError extends Error {
+  constructor(cron: string, reason: string) {
+    super(`Invalid schedule "${cron}": ${reason}`);
+    this.name = "InvalidCronScheduleError";
+  }
+}
+
+function parseCronField(raw: string, min: number, max: number, fieldName: string, cron: string): number[] | "*" {
+  if (raw === "*") return "*";
+  const values = raw.split(",").map((part) => {
+    const n = Number(part);
+    if (!Number.isInteger(n) || n < min || n > max) {
+      throw new InvalidCronScheduleError(cron, `${fieldName} "${part}" must be an integer between ${min} and ${max} (step/range syntax like */5 or 1-5 is not supported).`);
+    }
+    return n;
+  });
+  return values;
+}
+
+/**
+ * Parse a standard 5-field cron string ("minute hour day-of-month month
+ * day-of-week") into a ScheduleSpec, so the schedule can be changed via an
+ * env var without a code change. Deliberately narrow: minute and hour must
+ * each be a single exact value (not "*", a list, or step syntax) since this
+ * scheduler model is "once at a specific time," not a repeating-every-N-
+ * minutes poller; day-of-month and month must be "*" (this model has no
+ * concept of a specific calendar date); day-of-week may be "*" or a
+ * comma-separated list of 0-6 (0 = Sunday, matching Date#getDay() — see
+ * Weekday above). Throws InvalidCronScheduleError with a specific reason
+ * rather than silently ignoring an unsupported field.
+ */
+export function parseCronToSchedule(cron: string, timeZone: string): ScheduleSpec {
+  const fields = cron.trim().split(/\s+/);
+  if (fields.length !== 5) {
+    throw new InvalidCronScheduleError(cron, `expected 5 space-separated fields (minute hour day-of-month month day-of-week), got ${fields.length}.`);
+  }
+  const [minuteRaw, hourRaw, domRaw, monthRaw, dowRaw] = fields;
+
+  const minute = parseCronField(minuteRaw, 0, 59, "minute", cron);
+  if (minute === "*" || minute.length !== 1) throw new InvalidCronScheduleError(cron, `minute must be a single exact value, not "${minuteRaw}".`);
+
+  const hour = parseCronField(hourRaw, 0, 23, "hour", cron);
+  if (hour === "*" || hour.length !== 1) throw new InvalidCronScheduleError(cron, `hour must be a single exact value, not "${hourRaw}".`);
+
+  if (domRaw !== "*") throw new InvalidCronScheduleError(cron, `day-of-month must be "*" — this scheduler has no concept of a specific calendar date.`);
+  if (monthRaw !== "*") throw new InvalidCronScheduleError(cron, `month must be "*" — this scheduler has no concept of a specific month.`);
+
+  const dow = parseCronField(dowRaw, 0, 6, "day-of-week", cron);
+
+  return {
+    hour: hour[0],
+    minute: minute[0],
+    timeZone,
+    weekdays: dow === "*" ? undefined : (dow as Weekday[]),
+  };
+}

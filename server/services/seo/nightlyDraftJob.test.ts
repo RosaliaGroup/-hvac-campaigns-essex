@@ -1,5 +1,29 @@
-import { describe, it, expect } from "vitest";
-import { selectNightlyDraftCandidates, MAX_NIGHTLY_DRAFTS, type NightlyCandidatePage } from "./nightlyDraftJob";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("../../db", () => ({ getDb: vi.fn() }));
+vi.mock("../../seo/lockedPages", () => ({ findLockedPages: vi.fn(async () => new Map()) }));
+vi.mock("./bulkApprove", () => ({
+  isInPendingBatch: vi.fn(async () => false),
+  approveBatchToPR: vi.fn(),
+  yyyymmdd: (d: Date = new Date()) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`,
+}));
+vi.mock("./draftManagement", () => ({ regenerateUnlockedDrafts: vi.fn() }));
+vi.mock("./tags", () => ({ addTag: vi.fn(async () => {}) }));
+vi.mock("./auditLog", () => ({ logAudit: vi.fn() }));
+vi.mock("../emailService", () => ({ sendEmail: vi.fn(async () => true) }));
+vi.mock("./warmupGate", () => ({ isWarmedUp: vi.fn() }));
+vi.mock("./circuitBreaker", () => ({ checkCircuitBreakerConditions: vi.fn() }));
+vi.mock("./autoMerge", () => ({ armHold: vi.fn() }));
+
+import { getDb } from "../../db";
+import { findLockedPages } from "../../seo/lockedPages";
+import { isInPendingBatch, approveBatchToPR } from "./bulkApprove";
+import { regenerateUnlockedDrafts } from "./draftManagement";
+import { isWarmedUp } from "./warmupGate";
+import { checkCircuitBreakerConditions } from "./circuitBreaker";
+import { armHold } from "./autoMerge";
+import { selectNightlyDraftCandidates, runNightlyDraftJob, MAX_NIGHTLY_DRAFTS, type NightlyCandidatePage } from "./nightlyDraftJob";
+import { seoPages, seoAiDrafts } from "../../../drizzle/schema";
 
 const NOW = new Date("2026-09-26T06:00:00Z");
 
@@ -81,5 +105,95 @@ describe("selectNightlyDraftCandidates (spec Part 1 acceptance tests)", () => {
     const result = selectNightlyDraftCandidates(pages, { lockedPaths: new Set(), pendingBatchPaths: new Set(), now: NOW });
     // /under-1pct is genuinely tier 1 (ranks first); /exactly-1pct falls to tier 2 (ranks second) despite higher impressions ordering not mattering here.
     expect(result.map((r) => r.pagePath)).toEqual(["/under-1pct", "/exactly-1pct"]);
+  });
+});
+
+describe("runNightlyDraftJob — auto-approve gate (addendum §A1)", () => {
+  const pageRow = { id: 1, page: "/hvac-newark-nj", impressions: 500, position: 15, ctr: 0.02 };
+
+  function makeDb() {
+    return {
+      select: () => ({
+        from: (table: unknown) => Promise.resolve(table === seoPages ? [pageRow] : table === seoAiDrafts ? [] : []),
+      }),
+    };
+  }
+
+  beforeEach(() => {
+    vi.mocked(getDb).mockReset().mockResolvedValue(makeDb() as never);
+    vi.mocked(findLockedPages).mockReset().mockResolvedValue(new Map());
+    vi.mocked(isInPendingBatch).mockReset().mockResolvedValue(false);
+    vi.mocked(regenerateUnlockedDrafts).mockReset().mockResolvedValue({
+      results: [{ pageId: 1, ok: true, draft: null }],
+      skippedLocked: [],
+    });
+    vi.mocked(isWarmedUp).mockReset().mockResolvedValue(false);
+    vi.mocked(checkCircuitBreakerConditions).mockReset().mockResolvedValue({ shouldPause: false, reason: null });
+    vi.mocked(approveBatchToPR).mockReset().mockResolvedValue({ batch: { id: 99 } as never, prUrl: "url", prNumber: 1 });
+    vi.mocked(armHold).mockReset().mockResolvedValue(undefined);
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+  });
+
+  it("stages only (does not call approveBatchToPR) when the meta lane is NOT warmed up", async () => {
+    const result = await runNightlyDraftJob(NOW);
+    expect(result.ready).toBe(1);
+    expect(result.autoApproved).toBe(false);
+    expect(result.batchId).toBeUndefined();
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+    expect(armHold).not.toHaveBeenCalled();
+  });
+
+  it("stages only when warmed up but the circuit breaker is paused", async () => {
+    vi.mocked(isWarmedUp).mockResolvedValue(true);
+    vi.mocked(checkCircuitBreakerConditions).mockResolvedValue({ shouldPause: true, reason: "veto" });
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(false);
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+  });
+
+  it("stages only when warmed up + circuit clear but SEO_AUTOPUBLISH_ENABLED isn't \"true\" (addendum §A5 master switch)", async () => {
+    process.env.SEO_AUTOPUBLISH_ENABLED = "false";
+    vi.mocked(isWarmedUp).mockResolvedValue(true);
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(false);
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+    expect(isWarmedUp).not.toHaveBeenCalled(); // the flag is checked first
+  });
+
+  it("calls approveBatchToPR with label auto-YYYYMMDD and arms the hold when warmed up AND the circuit is clear", async () => {
+    vi.mocked(isWarmedUp).mockResolvedValue(true);
+    vi.mocked(checkCircuitBreakerConditions).mockResolvedValue({ shouldPause: false, reason: null });
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(true);
+    expect(result.batchId).toBe(99);
+    expect(approveBatchToPR).toHaveBeenCalledWith({ pageIds: [1], label: "auto-20260926", actorId: null });
+    expect(armHold).toHaveBeenCalledWith(99);
+  });
+
+  it("does not auto-approve when there are no ready (clean) drafts, even if warmed up", async () => {
+    vi.mocked(isWarmedUp).mockResolvedValue(true);
+    vi.mocked(regenerateUnlockedDrafts).mockResolvedValue({ results: [{ pageId: 1, ok: false, error: "lint blocked" }], skippedLocked: [] });
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.ready).toBe(0);
+    expect(result.autoApproved).toBe(false);
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+  });
+
+  it("degrades to staged (does not throw) when the auto-approve call itself fails", async () => {
+    vi.mocked(isWarmedUp).mockResolvedValue(true);
+    vi.mocked(approveBatchToPR).mockRejectedValue(new Error("GitHub is down"));
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.ready).toBe(1); // the draft itself is unaffected
+    expect(result.autoApproved).toBe(false);
   });
 });

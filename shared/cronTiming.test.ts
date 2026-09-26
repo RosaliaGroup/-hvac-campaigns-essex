@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { msUntilNextRun, isAllowedWeekday } from "./cronTiming";
+import { msUntilNextRun, isAllowedWeekday, parseCronToSchedule, InvalidCronScheduleError } from "./cronTiming";
 
 const NY = "America/New_York";
 
@@ -62,5 +62,53 @@ describe("isAllowedWeekday", () => {
     const date = new Date("2026-01-15T02:00:00Z");
     expect(isAllowedWeekday(date, NY, [3])).toBe(true); // Wednesday
     expect(isAllowedWeekday(date, NY, [4])).toBe(false); // not Thursday locally
+  });
+});
+
+describe("parseCronToSchedule", () => {
+  it("parses a specific weekday + time (the default weekly content schedule: Wed 06:00)", () => {
+    expect(parseCronToSchedule("0 6 * * 3", NY)).toEqual({ hour: 6, minute: 0, timeZone: NY, weekdays: [3] });
+  });
+
+  it("parses a comma-separated weekday list (Mon-Sat, the nightly job's days)", () => {
+    expect(parseCronToSchedule("0 2 * * 1,2,3,4,5,6", NY)).toEqual({ hour: 2, minute: 0, timeZone: NY, weekdays: [1, 2, 3, 4, 5, 6] });
+  });
+
+  it("day-of-week '*' means every day (weekdays undefined)", () => {
+    expect(parseCronToSchedule("30 14 * * *", NY)).toEqual({ hour: 14, minute: 30, timeZone: NY, weekdays: undefined });
+  });
+
+  it("rejects a wrong number of fields", () => {
+    expect(() => parseCronToSchedule("0 6 * *", NY)).toThrow(InvalidCronScheduleError);
+    expect(() => parseCronToSchedule("0 6 * * * *", NY)).toThrow(InvalidCronScheduleError);
+  });
+
+  it("rejects '*' or a list for minute/hour — this scheduler runs once at a specific time, not repeatedly", () => {
+    expect(() => parseCronToSchedule("* 6 * * 3", NY)).toThrow(InvalidCronScheduleError);
+    expect(() => parseCronToSchedule("0 * * * 3", NY)).toThrow(InvalidCronScheduleError);
+    expect(() => parseCronToSchedule("0,30 6 * * 3", NY)).toThrow(InvalidCronScheduleError);
+  });
+
+  it("rejects step syntax (not supported)", () => {
+    expect(() => parseCronToSchedule("*/15 6 * * 3", NY)).toThrow(InvalidCronScheduleError);
+  });
+
+  it("rejects a non-wildcard day-of-month or month — no concept of a specific calendar date", () => {
+    expect(() => parseCronToSchedule("0 6 15 * 3", NY)).toThrow(InvalidCronScheduleError);
+    expect(() => parseCronToSchedule("0 6 * 9 3", NY)).toThrow(InvalidCronScheduleError);
+  });
+
+  it("rejects an out-of-range value", () => {
+    expect(() => parseCronToSchedule("0 25 * * 3", NY)).toThrow(InvalidCronScheduleError);
+    expect(() => parseCronToSchedule("0 6 * * 9", NY)).toThrow(InvalidCronScheduleError);
+  });
+
+  it("the parsed schedule round-trips correctly through msUntilNextRun", () => {
+    const spec = parseCronToSchedule("0 6 * * 3", NY);
+    const now = new Date("2026-09-24T05:00:00Z"); // Thursday 01:00 ET
+    const ms = msUntilNextRun(spec, now);
+    const result = new Date(now.getTime() + ms);
+    expect(isAllowedWeekday(result, NY, [3])).toBe(true);
+    expect(result.getTime()).toBeGreaterThan(now.getTime());
   });
 });

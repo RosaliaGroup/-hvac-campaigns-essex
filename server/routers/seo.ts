@@ -48,8 +48,9 @@ import { isWarmedUp, warmupRemaining, WARMUP_DEFAULTS, type AutopublishLane } fr
 import { checkCircuitBreakerConditions, resumeCircuitBreaker, CircuitBreakerNoteRequiredError } from "../services/seo/circuitBreaker";
 import { getAutopublishState } from "../services/seo/autopublishStateRepo";
 import { listContentQueue, proposeTopic, updateQueueStatus as updateContentQueueStatus } from "../services/seo/contentQueue";
-import { runWeeklyContentJob, findLatestContentDraft, ContentNotReadyError } from "../services/seo/contentPipeline";
-import { approveMetaBatchWithAutopublish, approveContentWithAutopublish, publishNow } from "../services/seo/autoMerge";
+import { runWeeklyContentJob, findLatestContentDraft, approveContentToPRWithAutopublish, ContentNotReadyError } from "../services/seo/contentPipeline";
+import { approveMetaBatchWithAutopublish, publishNow } from "../services/seo/autoMerge";
+import { runNightlyDraftJob } from "../services/seo/nightlyDraftJob";
 import { eq } from "drizzle-orm";
 
 /** Map the bulk-approve service's typed errors to the right tRPC/HTTP status. */
@@ -532,8 +533,11 @@ export const seoRouter = router({
       return { ok: true };
     }),
 
-  /** Manually trigger the weekly content job now (for review/testing rather than waiting for Wednesday). Admin-only. */
+  /** "Run now" for the weekly content pipeline — same job the scheduler calls, run on demand. Admin-only. */
   runContentJobNow: adminProcedure.mutation(async () => runWeeklyContentJob()),
+
+  /** "Run now" for the nightly meta draft job — same job the scheduler calls, run on demand. Admin-only. */
+  runNightlyDraftJobNow: adminProcedure.mutation(async () => runNightlyDraftJob()),
 
   /** The latest draft (if any) for a content-queue topic, with its lint/critic results. */
   getContentDraft: protectedProcedure
@@ -545,7 +549,7 @@ export const seoRouter = router({
     .input(z.object({ topicId: z.number().int().positive() }))
     .mutation(async ({ input, ctx }) => {
       try {
-        return await approveContentWithAutopublish(input.topicId, resolveTeamMemberId(ctx.user));
+        return await approveContentToPRWithAutopublish(input.topicId, resolveTeamMemberId(ctx.user));
       } catch (err) {
         toTRPCError(err);
       }

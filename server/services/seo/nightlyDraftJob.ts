@@ -1,23 +1,35 @@
 /**
- * Nightly title/meta draft job (docs/seo-automation-spec.md Part 1). Trigger:
- * a Railway cron / in-process scheduler at 02:00 America/New_York, Mon-Sat
- * (see startNightlyDraftScheduler() at the bottom). Env flag
- * SEO_NIGHTLY_DRAFTS_ENABLED=true to turn on; default off.
+ * Nightly title/meta draft job (docs/seo-automation-spec.md Part 1, extended
+ * by docs/seo-automation-addendum-autopublish.md's auto-lane decision).
+ * Trigger: a Railway cron / in-process scheduler at 02:00 America/New_York,
+ * Mon-Sat (see startNightlyDraftScheduler() at the bottom, or SEO_NIGHTLY_DRAFTS_ENABLED=true).
  *
  * selectNightlyDraftCandidates() is the pure ranking/filtering logic — cheap
- * to unit-test exhaustively against the spec's own acceptance tests. Never
- * calls approveBatchToPR (Phase 1 is staging-only, per spec: "the job does
- * NOT call approveBatchToPR").
+ * to unit-test exhaustively against the spec's own acceptance tests.
+ *
+ * Auto-lane resolution (owner decision, 2026-09-26): once SEO_AUTOPUBLISH_ENABLED
+ * is "true" AND the meta lane is warmed up (server/services/seo/warmupGate.ts)
+ * AND the circuit breaker is clear, this job calls approveBatchToPR itself
+ * (label "auto-YYYYMMDD") for every cleanly-drafted page, which arms the
+ * hold-and-veto auto-merge path (server/services/seo/autoMerge.ts). Otherwise
+ * (the default, pre-trust state) it stages only — exactly the original
+ * Phase-1 behavior ("the job does NOT call approveBatchToPR"). A failure in
+ * the auto-approve step is caught and logged, not thrown — the drafts are
+ * already staged and tagged, so a human can still approve them by hand even
+ * if auto-approval itself failed (e.g. GitHub transiently down).
  */
 import { getDb } from "../../db";
 import { seoPages, seoAiDrafts } from "../../../drizzle/schema";
 import { findLockedPages } from "../../seo/lockedPages";
-import { isInPendingBatch } from "./bulkApprove";
+import { isInPendingBatch, approveBatchToPR, yyyymmdd } from "./bulkApprove";
 import { regenerateUnlockedDrafts } from "./draftManagement";
 import { addTag } from "./tags";
 import { logAudit } from "./auditLog";
 import { sendEmail } from "../emailService";
 import { msUntilNextRun, type Weekday } from "../../../shared/cronTiming";
+import { isWarmedUp } from "./warmupGate";
+import { checkCircuitBreakerConditions } from "./circuitBreaker";
+import { armHold } from "./autoMerge";
 
 export const MAX_NIGHTLY_DRAFTS = 20;
 const MIN_IMPRESSIONS_90D = 20;
@@ -82,12 +94,16 @@ export type NightlyJobSummary = {
   lintBlocked: number;
   skippedLocked: number;
   totalConsidered: number;
+  /** True iff the meta lane was warmed up + circuit-clear and this run auto-approved the ready drafts to a PR. False = staged only (the default, pre-trust behavior). */
+  autoApproved: boolean;
+  /** Set only when autoApproved is true. */
+  batchId?: number;
 };
 
-/** Real I/O: fetch pages + locks + pending batches, select, draft, tag, log, summarize. Never calls approveBatchToPR. */
+/** Real I/O: fetch pages + locks + pending batches, select, draft, tag, log, summarize; auto-approve to PR if the meta lane is warmed up and the circuit is clear (see file header), else stage only. */
 export async function runNightlyDraftJob(now: Date = new Date()): Promise<NightlyJobSummary> {
   const db = await getDb();
-  if (!db) return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: 0 };
+  if (!db) return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: 0, autoApproved: false };
 
   const pages = await db.select().from(seoPages);
   const drafts = await db.select().from(seoAiDrafts);
@@ -115,17 +131,19 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
   });
 
   if (selected.length === 0) {
-    return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: candidates.length };
+    return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: candidates.length, autoApproved: false };
   }
 
   const { results, skippedLocked } = await regenerateUnlockedDrafts(selected.map((s) => s.pageId));
   let ready = 0;
   let lintBlocked = 0;
+  const readyPageIds: number[] = [];
 
   for (const r of results) {
     const page = selected.find((s) => s.pageId === r.pageId);
     if (r.ok) {
       ready++;
+      readyPageIds.push(r.pageId);
       if (page) {
         await addTag({ pagePath: page.pagePath, tag: "nightly-candidate", note: null, actorId: null }).catch(() => {
           // Best-effort — a tagging failure shouldn't drop an otherwise-good draft.
@@ -147,7 +165,25 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
 
   await sendNightlySummaryEmail({ ready, lintBlocked: lintBlocked, skippedLocked: skippedLocked.length });
 
-  return { ready, lintBlocked, skippedLocked: skippedLocked.length, totalConsidered: candidates.length };
+  let autoApproved = false;
+  let batchId: number | undefined;
+  if (readyPageIds.length > 0 && process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
+    const [warmedUp, breaker] = await Promise.all([isWarmedUp("meta"), checkCircuitBreakerConditions()]);
+    if (warmedUp && !breaker.shouldPause) {
+      try {
+        const approved = await approveBatchToPR({ pageIds: readyPageIds, label: `auto-${yyyymmdd(now)}`, actorId: null });
+        await armHold(approved.batch.id);
+        autoApproved = true;
+        batchId = approved.batch.id;
+      } catch (err) {
+        // The drafts are already staged/tagged — a human can still approve
+        // them by hand even if auto-approval itself failed.
+        console.error("[SEO] nightly auto-approve failed (drafts remain staged for manual approval):", (err as Error).message);
+      }
+    }
+  }
+
+  return { ready, lintBlocked, skippedLocked: skippedLocked.length, totalConsidered: candidates.length, autoApproved, ...(batchId !== undefined ? { batchId } : {}) };
 }
 
 async function sendNightlySummaryEmail(counts: { ready: number; lintBlocked: number; skippedLocked: number }): Promise<void> {
@@ -173,7 +209,7 @@ export function startNightlyDraftScheduler(): void {
     const delay = msUntilNextRun({ hour: 2, minute: 0, timeZone: "America/New_York", weekdays: MON_TO_SAT });
     setTimeout(() => {
       runNightlyDraftJob()
-        .then((s) => console.log(`[SEO] nightly draft job: ${s.ready} ready, ${s.lintBlocked} lint-blocked, ${s.skippedLocked} skipped (locked), ${s.totalConsidered} considered`))
+        .then((s) => console.log(`[SEO] nightly draft job: ${s.ready} ready, ${s.lintBlocked} lint-blocked, ${s.skippedLocked} skipped (locked), ${s.totalConsidered} considered${s.autoApproved ? `, auto-approved to batch #${s.batchId}` : ""}`))
         .catch((err) => console.error("[SEO] nightly draft job error:", err))
         .finally(arm);
     }, delay);

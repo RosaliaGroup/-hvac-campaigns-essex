@@ -20,7 +20,6 @@ import { eq, and, isNotNull } from "drizzle-orm";
 import { getDb } from "../../db";
 import { seoApprovalBatches, type SeoApprovalBatchRow } from "../../../drizzle/schema";
 import { laneForBatch, refreshBatchStatus, approveBatchToPR, type ApproveBatchInput, type ApproveBatchResult } from "./bulkApprove";
-import { approveContentToPR, type ApproveContentResult } from "./contentPipeline";
 import { isWarmedUp, advanceWarmup } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { getNetlifyCheckState, hasAnyPRComments, mergePR } from "./github";
@@ -37,8 +36,18 @@ function holdHours(): number {
   return Math.max(MIN_HOLD_HOURS, raw);
 }
 
-/** Arm the hold on a freshly-approved batch and notify. Call only when isWarmedUp(lane) is true. */
+/**
+ * Arm the hold on a freshly-approved batch and notify. Call only when
+ * isWarmedUp(lane) is true. No-ops (leaves the batch as a normal PR with no
+ * hold — a human merges it on GitHub) when SEO_AUTOPUBLISH_ENABLED isn't
+ * "true": the single choke point for the addendum §A5 master switch
+ * ("SEO_AUTOPUBLISH_ENABLED=false kills both lanes immediately") — every
+ * caller (both jobs' auto-approve gate, both lanes' human-triggered "Approve
+ * to PR" wrapper) goes through this function to arm a hold, so the flag is
+ * enforced in exactly one place rather than duplicated at each call site.
+ */
 export async function armHold(batchId: number): Promise<void> {
+  if (process.env.SEO_AUTOPUBLISH_ENABLED !== "true") return;
   const db = await getDb();
   if (!db) return;
   const holdUntil = new Date(Date.now() + holdHours() * 60 * 60 * 1000);
@@ -159,23 +168,26 @@ export async function publishNow(batchId: number, actorId: number | null): Promi
 }
 
 /**
- * Approve-to-PR wrappers that additionally arm the autopublish hold when the
- * lane is warmed up. bulkApprove.ts/contentPipeline.ts stay free of any
+ * Approve-to-PR wrapper (meta lane) that additionally arms the autopublish
+ * hold when the lane is warmed up. bulkApprove.ts stays free of any
  * dependency on this file (avoids a circular import — this file already
- * depends on both of them) — callers (the tRPC router) use these wrappers
- * instead of the raw approve functions so warm-up is checked in exactly one
- * place. A lane that ISN'T warmed up behaves identically to before this file
- * existed: a normal PR with no hold, merged by a human on GitHub.
+ * depends on it) — callers (the tRPC router) use this wrapper instead of the
+ * raw approve function so warm-up is checked in exactly one place. A lane
+ * that ISN'T warmed up behaves identically to before this file existed: a
+ * normal PR with no hold, merged by a human on GitHub.
+ *
+ * The content-lane equivalent (approveContentToPRWithAutopublish) lives in
+ * contentPipeline.ts itself, NOT here — this file already depends on
+ * contentPipeline.ts's sibling module bulkApprove.ts is fine (one-way), but
+ * contentPipeline.ts ALSO needs to call armHold() (below) for its own
+ * job-triggered auto-approve path (see runWeeklyContentJob), which would
+ * make this file depend on contentPipeline.ts AND vice versa — a real cycle.
+ * Keeping the content wrapper in contentPipeline.ts (which already has
+ * approveContentToPR in scope) avoids that entirely.
  */
 export async function approveMetaBatchWithAutopublish(input: ApproveBatchInput): Promise<ApproveBatchResult> {
   const result = await approveBatchToPR(input);
   if (await isWarmedUp("meta")) await armHold(result.batch.id);
-  return result;
-}
-
-export async function approveContentWithAutopublish(topicId: number, actorId: number | null): Promise<ApproveContentResult> {
-  const result = await approveContentToPR(topicId, actorId);
-  if (await isWarmedUp("content")) await armHold(result.batchId);
   return result;
 }
 
