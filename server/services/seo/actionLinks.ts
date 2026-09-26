@@ -146,3 +146,57 @@ export async function consumeActionLink(token: string): Promise<ActionLinkPayloa
   });
   return payload;
 }
+
+/* ── Social Lane reuse (docs/social-lane-spec.md §1/§7) ─────────────────────
+ * The Social Lane's hold-and-veto flow reuses this module's exact HMAC
+ * signing scheme (same secret, same base64url(payload).base64url(hmac) shape,
+ * same timing-safe verify) rather than duplicating the crypto elsewhere. It
+ * does NOT reuse `signActionLink`/`verifyActionLink`/`consumeActionLink`
+ * directly because those are hard-typed to the SEO payload shape
+ * (`batchId` + literal action "veto") and record consumption in
+ * `seoAuditLog`, which is an SEO-domain table a social post has no business
+ * writing to. Instead, consumption for a social link is checked against the
+ * socialPosts row's own state (idempotent: a post that's already
+ * vetoed/reverted/posted just no-ops), which is simpler and keeps this an
+ * additive extension — none of the SEO exports above changed.
+ */
+export type SocialActionKind = "social_veto" | "social_revert";
+export type SocialActionPayload = { postId: number; action: SocialActionKind; exp: number };
+
+/** Sign a single-use link for a socialPosts row (veto a held post, or revert a posted one). */
+export function signSocialActionLink(
+  postId: number,
+  action: SocialActionKind,
+  ttlMs: number = ACTION_LINK_TTL_MS,
+): string {
+  const payload: SocialActionPayload = { postId, action, exp: Date.now() + ttlMs };
+  const payloadB64 = Buffer.from(JSON.stringify(payload), "utf-8").toString("base64url");
+  return `${payloadB64}.${hmacOf(payloadB64)}`;
+}
+
+/** Verify signature + shape + expiry for a Social Lane action link. Does not check consumption. */
+export function verifySocialActionLink(token: string): SocialActionPayload {
+  const parts = String(token ?? "").split(".");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) throw new InvalidActionLinkError();
+  const [payloadB64, sig] = parts;
+
+  const expectedSig = hmacOf(payloadB64);
+  const provided = Buffer.from(sig);
+  const expected = Buffer.from(expectedSig);
+  if (provided.length !== expected.length || !crypto.timingSafeEqual(provided, expected)) {
+    throw new InvalidActionLinkError();
+  }
+
+  let payload: unknown;
+  try {
+    payload = JSON.parse(Buffer.from(payloadB64, "base64url").toString("utf-8"));
+  } catch {
+    throw new InvalidActionLinkError();
+  }
+  const p = payload as Partial<SocialActionPayload>;
+  if (typeof p.postId !== "number" || typeof p.exp !== "number" || (p.action !== "social_veto" && p.action !== "social_revert")) {
+    throw new InvalidActionLinkError();
+  }
+  if (Date.now() > p.exp) throw new ExpiredActionLinkError();
+  return { postId: p.postId, action: p.action, exp: p.exp };
+}

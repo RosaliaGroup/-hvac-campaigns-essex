@@ -140,6 +140,33 @@ export async function deleteFacebookPost(
 }
 
 /**
+ * Delete a published Instagram media object by its id (the value stored in
+ * socialPosts.postId). Used by the Social Lane revert path (§7).
+ *
+ * CAVEAT: as of the Instagram Content Publishing API, Meta does not
+ * generally support deleting an already-published IG media object via the
+ * Graph API the way it supports Facebook post deletion — this call is
+ * best-effort and may return an error from Meta even with valid
+ * credentials. Callers should treat an Instagram revert failure as
+ * "un-revertible via API" and fall back to the manual queue's "remove"
+ * semantics (surface it to the owner rather than retrying indefinitely).
+ */
+export async function deleteInstagramPost(
+  credentials: FacebookCredentials,
+  mediaId: string
+): Promise<void> {
+  const { accessToken } = credentials;
+  if (!accessToken) throw new Error("Missing Instagram credentials");
+
+  const url = `https://graph.facebook.com/v18.0/${mediaId}?access_token=${encodeURIComponent(accessToken)}`;
+  const response = await fetch(url, { method: "DELETE" });
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Instagram delete error (Meta does not guarantee delete support for published media): ${error}`);
+  }
+}
+
+/**
  * Get Facebook Page insights
  */
 export async function getFacebookInsights(
