@@ -27,7 +27,6 @@ import { findLockedPages } from "../seo/lockedPages";
 import { lintPageMeta } from "../../shared/seoLinter";
 import {
   buildBatchDiff,
-  approveBatchToPR,
   revertBatch,
   refreshBatchStatus,
   assertReindexAllowed,
@@ -43,6 +42,14 @@ import { listAuditLog, auditLogToCsv } from "../services/seo/auditLog";
 import { discardAllDrafts, regenerateUnlockedDrafts, expireStaleDrafts } from "../services/seo/draftManagement";
 import { getDb } from "../db";
 import { seoApprovalBatches, seoPages } from "../../drizzle/schema";
+import { isFactsConfigured, VERIFIED_FACTS } from "../../shared/verifiedFacts";
+import { isActionLinksConfigured } from "../services/seo/actionLinks";
+import { isWarmedUp, warmupRemaining, WARMUP_DEFAULTS, type AutopublishLane } from "../services/seo/warmupGate";
+import { checkCircuitBreakerConditions, resumeCircuitBreaker, CircuitBreakerNoteRequiredError } from "../services/seo/circuitBreaker";
+import { getAutopublishState } from "../services/seo/autopublishStateRepo";
+import { listContentQueue, proposeTopic, updateQueueStatus as updateContentQueueStatus } from "../services/seo/contentQueue";
+import { runWeeklyContentJob, findLatestContentDraft, ContentNotReadyError } from "../services/seo/contentPipeline";
+import { approveMetaBatchWithAutopublish, approveContentWithAutopublish, publishNow } from "../services/seo/autoMerge";
 import { eq } from "drizzle-orm";
 
 /** Map the bulk-approve service's typed errors to the right tRPC/HTTP status. */
@@ -67,6 +74,12 @@ function toTRPCError(err: unknown): never {
   }
   if (err instanceof TagNoteRequiredError) {
     throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+  }
+  if (err instanceof CircuitBreakerNoteRequiredError) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
+  }
+  if (err instanceof ContentNotReadyError) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
   }
   if (err instanceof Error) {
     throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: err.message });
@@ -374,7 +387,7 @@ export const seoRouter = router({
     .input(z.object({ pageIds: z.array(z.number().int().positive()).min(1).max(20), label: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       try {
-        return await approveBatchToPR({ pageIds: input.pageIds, label: input.label, actorId: resolveTeamMemberId(ctx.user) });
+        return await approveMetaBatchWithAutopublish({ pageIds: input.pageIds, label: input.label, actorId: resolveTeamMemberId(ctx.user) });
       } catch (err) {
         toTRPCError(err);
       }
@@ -462,4 +475,79 @@ export const seoRouter = router({
 
   /** Manual trigger for the 30-day soft-expiry sweep (spec §8) — not wired to a cron yet. Admin-only. */
   expireStaleDrafts: adminProcedure.mutation(async () => expireStaleDrafts()),
+
+  /* ── Autopublish (docs/seo-automation-addendum-autopublish.md) ─────────── */
+
+  /** Overall autopublish configuration/state — drives the CRM's status panel. */
+  autopublishStatus: protectedProcedure.query(async () => {
+    const state = await getAutopublishState();
+    const [metaRemaining, contentRemaining] = await Promise.all([warmupRemaining("meta"), warmupRemaining("content")]);
+    return {
+      githubConfigured: isGithubConfigured(),
+      actionLinksConfigured: isActionLinksConfigured(),
+      factsConfigured: isFactsConfigured(VERIFIED_FACTS),
+      autopublishEnabled: process.env.SEO_AUTOPUBLISH_ENABLED === "true",
+      circuitBreakerPaused: state.circuitBreakerPaused,
+      circuitBreakerReason: state.circuitBreakerReason,
+      warmup: {
+        meta: { remaining: metaRemaining, default: WARMUP_DEFAULTS.meta },
+        content: { remaining: contentRemaining, default: WARMUP_DEFAULTS.content },
+      },
+    };
+  }),
+
+  /** Re-run the circuit-breaker checks now (rather than waiting for the next autopublish event). */
+  checkCircuitBreaker: adminProcedure.mutation(async () => checkCircuitBreakerConditions()),
+
+  /** "Resume auto-publish" — requires a note, logged. Admin-only. */
+  resumeCircuitBreaker: adminProcedure
+    .input(z.object({ note: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        await resumeCircuitBreaker(input.note, resolveTeamMemberId(ctx.user));
+        return { ok: true };
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
+
+  /** Skip the hold for one pending auto-publish batch. Admin-only. Still requires a green preview. */
+  publishNow: adminProcedure
+    .input(z.object({ batchId: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => publishNow(input.batchId, resolveTeamMemberId(ctx.user))),
+
+  /** Weekly content pipeline's topic backlog. */
+  listContentQueue: protectedProcedure.query(async () => listContentQueue()),
+
+  /** A human (or, later, a model) adding a new candidate topic — always lands as "proposed", never self-selected. */
+  proposeContentTopic: adminProcedure
+    .input(z.object({ title: z.string().min(1), audience: z.string().nullable().optional(), targetQuery: z.string().nullable().optional(), brief: z.string().nullable().optional() }))
+    .mutation(async ({ input }) => proposeTopic(input)),
+
+  /** Promote a "proposed" topic to "queued" (or any other manual status change). Admin-only. */
+  updateContentQueueStatus: adminProcedure
+    .input(z.object({ id: z.number().int().positive(), status: z.enum(["queued", "proposed", "drafted", "in_review", "pr_open", "published", "refresh_due"]) }))
+    .mutation(async ({ input }) => {
+      await updateContentQueueStatus(input.id, input.status);
+      return { ok: true };
+    }),
+
+  /** Manually trigger the weekly content job now (for review/testing rather than waiting for Wednesday). Admin-only. */
+  runContentJobNow: adminProcedure.mutation(async () => runWeeklyContentJob()),
+
+  /** The latest draft (if any) for a content-queue topic, with its lint/critic results. */
+  getContentDraft: protectedProcedure
+    .input(z.object({ topicId: z.number().int().positive() }))
+    .query(async ({ input }) => findLatestContentDraft(input.topicId)),
+
+  /** Publish step for a clean content draft — commits to blogPosts.ts and opens a PR. Admin-only. */
+  approveContentToPR: adminProcedure
+    .input(z.object({ topicId: z.number().int().positive() }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        return await approveContentWithAutopublish(input.topicId, resolveTeamMemberId(ctx.user));
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
 });
