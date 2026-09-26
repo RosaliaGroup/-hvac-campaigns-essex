@@ -1059,6 +1059,174 @@ const BATCH_STATUS_STYLE: Record<string, string> = {
   failed: "bg-red-100 text-red-800 border-red-200",
 };
 
+/* ── Autopublish (docs/seo-automation-addendum-autopublish.md) ───────────── */
+
+function ConfigPill({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`} />
+      {label}
+    </span>
+  );
+}
+
+function WarmupBar({ label, remaining, total }: { label: string; remaining: number; total: number }) {
+  const done = total - remaining;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 100;
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="font-medium text-[#1e3a5f]">{label}</span>
+        <span className="text-muted-foreground">{remaining === 0 ? "Auto-merge active" : `${remaining} manual approval${remaining === 1 ? "" : "s"} left`}</span>
+      </div>
+      <Progress value={pct} className="h-1.5" />
+    </div>
+  );
+}
+
+const CONTENT_QUEUE_STATUS_STYLE: Record<string, string> = {
+  queued: "bg-slate-100 text-slate-700 border-slate-200",
+  proposed: "bg-purple-100 text-purple-800 border-purple-200",
+  drafted: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  in_review: "bg-amber-100 text-amber-800 border-amber-200",
+  pr_open: "bg-blue-100 text-blue-800 border-blue-200",
+  published: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  refresh_due: "bg-orange-100 text-orange-800 border-orange-200",
+};
+
+function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
+  const utils = trpc.useUtils();
+  const statusQ = trpc.seo.autopublishStatus.useQuery();
+  const queueQ = trpc.seo.listContentQueue.useQuery();
+  const [resumeNote, setResumeNote] = useState("");
+  const [resumeOpen, setResumeOpen] = useState(false);
+  const [draftingTopicId, setDraftingTopicId] = useState<number | null>(null);
+
+  const invalidate = () => {
+    utils.seo.autopublishStatus.invalidate();
+    utils.seo.listContentQueue.invalidate();
+  };
+
+  const resume = trpc.seo.resumeCircuitBreaker.useMutation({
+    onSuccess: () => { toast.success("Autopublish resumed"); setResumeOpen(false); setResumeNote(""); invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const runNow = trpc.seo.runContentJobNow.useMutation({
+    onSuccess: (res) => {
+      if (res.status === "drafted") toast.success(res.passes ? "Draft ready for review" : "Drafted, but has lint/critic findings");
+      else toast.message(`No draft this time: ${res.status.replace(/_/g, " ")}`);
+      invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const approveContent = trpc.seo.approveContentToPR.useMutation({
+    onSuccess: (res) => { toast.success(`PR #${res.prNumber} opened`); invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const status = statusQ.data;
+  const queue = queueQ.data ?? [];
+
+  return (
+    <Card className="mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base text-[#1e3a5f]">
+          <RotateCw className="h-4 w-4 text-[#ff6b35]" /> Autopublish
+        </CardTitle>
+        <CardDescription>Nightly meta drafts + weekly B2B posts, hold-and-veto merge. Every PR still shows here and on GitHub before it goes live.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {status && (
+          <>
+            <div className="flex flex-wrap gap-2">
+              <ConfigPill label="GitHub" ok={status.githubConfigured} />
+              <ConfigPill label="Facts" ok={status.factsConfigured} />
+              <ConfigPill label="Veto links" ok={status.actionLinksConfigured} />
+              <ConfigPill label={status.autopublishEnabled ? "Autopublish ON" : "Autopublish OFF"} ok={status.autopublishEnabled} />
+            </div>
+            {!status.factsConfigured && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800">
+                <ShieldAlert className="h-4 w-4 shrink-0" /> Facts not configured — no incentive has a verified date yet, so neither lane will draft or auto-merge content mentioning pricing.
+              </div>
+            )}
+            {status.circuitBreakerPaused && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 p-2.5 text-sm text-red-800">
+                <span><b>Circuit breaker paused:</b> {status.circuitBreakerReason}</span>
+                {isAdmin && (
+                  <AlertDialog open={resumeOpen} onOpenChange={setResumeOpen}>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="outline">Resume auto-publish</Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Resume auto-publish?</AlertDialogTitle>
+                        <AlertDialogDescription>Requires a note explaining why it's safe to resume — logged to the audit trail.</AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <Textarea rows={3} value={resumeNote} onChange={(e) => setResumeNote(e.target.value)} placeholder="e.g. confirmed the click-drop was a GSC reporting lag, not real" />
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <Button disabled={!resumeNote.trim() || resume.isPending} onClick={() => resume.mutate({ note: resumeNote })}>
+                          {resume.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null} Resume
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
+            )}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <WarmupBar label="Meta lane" remaining={status.warmup.meta.remaining} total={status.warmup.meta.default} />
+              <WarmupBar label="Content lane" remaining={status.warmup.content.remaining} total={status.warmup.content.default} />
+            </div>
+          </>
+        )}
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Weekly Content Queue</p>
+          {isAdmin && (
+            <Button size="sm" variant="outline" disabled={runNow.isPending} onClick={() => runNow.mutate()}>
+              {runNow.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />} Draft next topic now
+            </Button>
+          )}
+        </div>
+
+        {queueQ.isLoading ? (
+          <p className="py-3 text-center text-sm text-muted-foreground">Loading…</p>
+        ) : queue.length === 0 ? (
+          <p className="py-3 text-center text-sm text-muted-foreground">No topics in the queue yet.</p>
+        ) : (
+          <ul className="divide-y">
+            {queue.map((t) => (
+              <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
+                <div>
+                  <p className="font-medium text-[#1e3a5f]">{t.title}</p>
+                  <p className="text-xs text-muted-foreground">{t.audience}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className={`text-xs ${CONTENT_QUEUE_STATUS_STYLE[t.status] ?? ""}`}>{t.status.replace(/_/g, " ")}</Badge>
+                  {isAdmin && (t.status === "drafted" || t.status === "in_review") && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={approveContent.isPending}
+                      onClick={() => { setDraftingTopicId(t.id); approveContent.mutate({ topicId: t.id }); }}
+                    >
+                      {approveContent.isPending && draftingTopicId === t.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="mr-1.5 h-3.5 w-3.5" />}
+                      Approve to PR
+                    </Button>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function BatchHistoryPanel() {
   const utils = trpc.useUtils();
   const batchesQ = trpc.seo.listBatches.useQuery();
@@ -1540,6 +1708,9 @@ export default function SeoIntelligence() {
 
         {/* Projected business impact (transparent estimates) */}
         <BusinessImpactPanel data={businessImpact.data} loading={businessImpact.isLoading} />
+
+        {/* Autopublish (addendum): config status, circuit breaker, warm-up, content queue */}
+        <AutopublishPanel isAdmin={isAdmin} />
 
         {/* Bulk-approve batch history + revert (spec §5, §6) */}
         <BatchHistoryPanel />
