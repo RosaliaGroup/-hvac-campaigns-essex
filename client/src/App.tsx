@@ -58,6 +58,7 @@ import Qualify from "./pages/Qualify";
 import RebateCalculator from "./pages/RebateCalculator";
 import CommandCenter from "./pages/CommandCenter";
 import LeadDashboard from "./pages/LeadDashboard";
+import GrowthDashboard from "./pages/growth/GrowthDashboard";
 import LeadDetail from "./pages/LeadDetail";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
@@ -343,6 +344,7 @@ function Router() {
       <Route path={"/leads"} component={protect(LeadTracker)} />
       <Route path={"/leads/:id"} component={protect(LeadDetail)} />
       <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
+      <Route path={"/growth"} component={protect(GrowthDashboard)} />
       <Route path={"/customers"} component={protect(Customers)} />
       <Route path={"/contacts"} component={protect(Customers)} />
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />

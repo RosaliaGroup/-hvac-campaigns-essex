@@ -39,6 +39,8 @@ import { classifyInbound } from "./smsReplyKeywords";
 import { toE164 } from "./telnyxSms";
 import { authorizeTelnyxWebhook, resolveWebhookAuthMode } from "./telnyxSignature";
 import { eq, and, sql } from "drizzle-orm";
+import { stopCadenceOnReply } from "./growth/cadenceEngine";
+import { handleReviewReply } from "./growth/reviewEngine";
 
 type AnyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -263,6 +265,24 @@ export async function handleInboundReply(
     match,
     providerMessageId: args.providerMessageId,
   });
+
+  // Growth system (§2/§5) — best-effort, never blocks inbound message intake.
+  try {
+    if (intent === "stop") {
+      // Belt-and-suspenders: the dispatch-time compliance gate already re-checks
+      // STOP on every send, but cancel pending cadence tasks immediately too,
+      // mirroring followups.ts's terminal-block handling.
+      await stopCadenceOnReply(db, e164);
+    } else if (intent === "message") {
+      // A numeric 1-5 reply to a pending review request takes priority; if it
+      // doesn't match one, treat any other reply as "stop the lead cadence and
+      // flag for human" (spec §2: "Any reply -> Jessica or human picks up in-thread").
+      const wasReview = await handleReviewReply(db, e164, args.text);
+      if (!wasReview) await stopCadenceOnReply(db, e164);
+    }
+  } catch (err) {
+    console.error("[SMSWebhook] Growth-system reply handling failed:", err);
+  }
 
   return { intent, match };
 }

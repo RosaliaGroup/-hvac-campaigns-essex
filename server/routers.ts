@@ -48,6 +48,10 @@ import { executiveDashboardsRouter } from "./routers/executiveDashboards";
 import { gbpRouter } from "./routers/gbp";
 import { googleCalendarRouter } from "./routers/googleCalendar";
 import { portalRouter } from "./routers/portal";
+import { growthRouter } from "./routers/growth";
+import { enrollSpeedToLead } from "./services/growth/speedToLead";
+import { stopCadenceOnBooking } from "./services/growth/cadenceEngine";
+import { ensureReviewRequestForAppointment } from "./services/growth/reviewEngine";
 import { parsePreferredDateTime } from "./services/appointmentTime";
 import { sendAppointmentConfirmationSms } from "./services/appointmentSms";
 import {
@@ -112,6 +116,8 @@ export const appRouter = router({
   googleCalendar: googleCalendarRouter,
   // Customer-facing self-service portal (separate auth realm; see server/routers/portal).
   portal: portalRouter,
+  // Growth system (docs/growth-system-spec.md): §7 CSV import admin + §10 scoreboard.
+  growth: growthRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -159,7 +165,12 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ input }) => {
-        await db.createLead(input);
+        const leadInsert = await db.createLead(input);
+
+        // Growth system speed-to-lead (§1) — fire-and-forget, never blocks or fails
+        // lead creation. Mirrors enqueueLeadCustomerSync's convention just below.
+        const newLeadId = Number((leadInsert as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+        if (newLeadId > 0) void enrollSpeedToLead({ table: "leads", id: newLeadId });
 
         // Policy: every new lead becomes a QuickBooks customer. Fire-and-forget —
         // never blocks or fails lead creation (a `leads` row has exactly one of
@@ -298,7 +309,12 @@ export const appRouter = router({
           ...captureInput
         } = input;
 
-        await db.createLeadCapture({ ...captureInput, ...attribution });
+        const captureInsert = await db.createLeadCapture({ ...captureInput, ...attribution });
+
+        // Growth system speed-to-lead (§1) — fire-and-forget, never blocks or fails
+        // the public form submission.
+        const newCaptureId = Number((captureInsert as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+        if (newCaptureId > 0) void enrollSpeedToLead({ table: "leadCaptures", id: newCaptureId });
 
         // Policy: every new lead becomes a QuickBooks customer. Fire-and-forget —
         // never blocks or fails the public form submission. Guaranteed to have at
@@ -1172,6 +1188,9 @@ export const appRouter = router({
             invitesSent = true;
           }
         }
+        // Growth system (§2): a booking stops that contact's active lead cadence.
+        // Fire-and-forget, best-effort — never blocks or fails the booking.
+        void stopCadenceOnBooking(dbi, baseValues.phone).catch(() => {});
         return { id, customerId, propertyId: propertyId ?? null, smsSent, invitesSent };
       }),
 
@@ -1445,6 +1464,12 @@ export const appRouter = router({
         // Cancel the Google event / send cancellation ICS when cancelled (Task 8).
         if (input.status === "cancelled") {
           await syncAppointmentInvites({ appointmentId: input.id, cancel: true });
+        }
+        // Growth system review engine (§5) — trigger on appointment completion.
+        // Fire-and-forget, idempotent (UNIQUE appointmentId); never blocks this mutation.
+        if (input.status === "completed") {
+          const dbi = await db.getDb();
+          if (dbi) void ensureReviewRequestForAppointment(dbi, input.id);
         }
         return { success: true };
       }),

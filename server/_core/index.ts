@@ -26,6 +26,9 @@ import { seedContentQueue } from "../services/seo/contentQueue";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
 import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
+import { startGrowthCadencePoller } from "../services/growth/cadenceEngine";
+import { startReviewEnginePoller } from "../services/growth/reviewEngine";
+import { startImportReleaseSweep } from "../services/growth/contactImport";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -131,6 +134,12 @@ async function startServer() {
     startNightlyDraftScheduler();
     startWeeklyContentScheduler();
     startAutoMergeScheduler();
+    // Growth system (docs/growth-system-spec.md) — speed-to-lead's day-0 SMS
+    // dispatches inline at enrollment; this poller carries every later cadence
+    // step (day-0 call, day-1/3/7/14) plus the review engine + §7 import release.
+    startGrowthCadencePoller();
+    startReviewEnginePoller();
+    startImportReleaseSweep();
   });
 }
 

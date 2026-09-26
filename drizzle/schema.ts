@@ -48,6 +48,13 @@ export const leads = mysqlTable("leads", {
   // Customer conversion linkage (Phase 1)
   customerId: int("customerId"),
   convertedAt: timestamp("convertedAt"),
+  // ── Growth system (migration 0076) ──
+  // "customer"/"opt_in" allow automated SMS/call (spec §0/§11 DNC default-safe rule);
+  // "unknown" is email-only. Self-submitted leads default "opt_in" (a proactive
+  // inquiry is treated as an existing-relationship/inquiry-response basis for the
+  // reply itself — see shared/growthConsent.ts's documented judgment call);
+  // owner-imported cold contacts (§7) set this explicitly per row.
+  consentStatus: mysqlEnum("consentStatus", ["customer", "opt_in", "unknown"]).default("opt_in").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -99,6 +106,8 @@ export const leadCaptures = mysqlTable("leadCaptures", {
   // Customer conversion linkage (Phase 1)
   customerId: int("customerId"),
   convertedAt: timestamp("convertedAt"),
+  // ── Growth system (migration 0076) — see leads.consentStatus above for the rule. ──
+  consentStatus: mysqlEnum("consentStatus", ["customer", "opt_in", "unknown"]).default("opt_in").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
@@ -3438,3 +3447,205 @@ export const estimateLineItems = mysqlTable(
 );
 export type EstimateLineItem = typeof estimateLineItems.$inferSelect;
 export type InsertEstimateLineItem = typeof estimateLineItems.$inferInsert;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Growth system (docs/growth-system-spec.md, migration 0076) — speed-to-lead,
+// follow-up cadence, review engine, contact import, scoreboard.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * One row per lead enrolled in the §1/§2 speed-to-lead + follow-up cadence.
+ * References the source row by (leadTable, leadId) rather than a DB FK, matching
+ * this repo's app-level-relations convention — the two source tables have no
+ * shared key. `status` is the cadence lifecycle; a reply/booking/STOP moves it out
+ * of "active" and cancels any pending growthCadenceTasks (see the cadence engine).
+ */
+export const growthCadences = mysqlTable(
+  "growthCadences",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    leadTable: mysqlEnum("leadTable", ["leads", "leadCaptures", "imported"]).notNull(),
+    /** leads.id / leadCaptures.id / importedContacts.id depending on leadTable. */
+    leadId: int("leadId").notNull(),
+    contactPhone: varchar("contactPhone", { length: 50 }),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    firstName: varchar("firstName", { length: 255 }),
+    need: varchar("need", { length: 30 }).notNull().default("general"),
+    consentStatus: mysqlEnum("consentStatus", ["customer", "opt_in", "unknown"]).notNull(),
+    /** "lead_cadence" (§1/§2) today; segment keys for §4/§6 would extend this later. */
+    campaignType: varchar("campaignType", { length: 50 }).notNull().default("lead_cadence"),
+    status: mysqlEnum("status", ["active", "replied", "booked", "stopped", "nurture"]).default("active").notNull(),
+    /** Day marker of the last step materialized (0/1/3/7/14/30). */
+    currentStep: int("currentStep").default(0).notNull(),
+    stoppedReason: varchar("stoppedReason", { length: 255 }),
+    b2b: boolean("b2b").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    leadIdx: index("growthCadences_lead_idx").on(table.leadTable, table.leadId),
+    phoneIdx: index("growthCadences_phone_idx").on(table.contactPhone),
+    statusIdx: index("growthCadences_status_idx").on(table.status),
+  }),
+);
+export type GrowthCadence = typeof growthCadences.$inferSelect;
+export type InsertGrowthCadence = typeof growthCadences.$inferInsert;
+
+/**
+ * Materialized touch tasks for one cadence (mirrors opportunityTasks /
+ * shared/followupLoop.ts's pattern, generalized to leads). Created idempotently
+ * (ensureCadenceForLead is a no-op if tasks already exist for the cadence) and
+ * dispatched by the cadence engine's poll, which re-checks compliance at dispatch
+ * time so a STOP after scheduling is still honored (never trust the status at
+ * creation time — see server/services/growth/cadenceEngine.ts).
+ */
+export const growthCadenceTasks = mysqlTable(
+  "growthCadenceTasks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    cadenceId: int("cadenceId").notNull(),
+    /** Day offset this task belongs to: 0, 1, 3, 7, or 14 (30 is the terminal nurture marker, no task row). */
+    step: int("step").notNull(),
+    channel: mysqlEnum("channel", ["sms", "call", "email"]).notNull(),
+    dueAt: timestamp("dueAt").notNull(),
+    status: mysqlEnum("status", ["open", "gated", "held", "done", "cancelled", "failed"]).default("open").notNull(),
+    body: text("body"),
+    dispatchedAt: timestamp("dispatchedAt"),
+    lastError: varchar("lastError", { length: 500 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    cadenceIdx: index("growthCadenceTasks_cadenceId_idx").on(table.cadenceId),
+    dueIdx: index("growthCadenceTasks_due_idx").on(table.status, table.dueAt),
+  }),
+);
+export type GrowthCadenceTask = typeof growthCadenceTasks.$inferSelect;
+export type InsertGrowthCadenceTask = typeof growthCadenceTasks.$inferInsert;
+
+/**
+ * Append-only ledger of every growth-system outbound touch (call/sms/email),
+ * across ALL lanes (speed-to-lead, cadence, review engine). This is the single
+ * source used for: per-contact/per-campaign caps (§0/§11), 30-day cross-campaign
+ * suppression (§0/§4), the circuit breaker's complaint/bounce rates (§11), the
+ * email audit trail the build brief calls for ("emailLog-style table" — §1e), and
+ * §10's scoreboard (speed-to-lead median, cadence response rates, touch counts).
+ * SMS sends ALSO continue to write smsInboxMessages via the existing
+ * services/smsOutbound.ts path (unchanged) — this table is the cross-channel
+ * superset, not a replacement.
+ */
+export const growthTouches = mysqlTable(
+  "growthTouches",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    channel: mysqlEnum("channel", ["sms", "call", "email"]).notNull(),
+    contactPhone: varchar("contactPhone", { length: 50 }),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    leadTable: mysqlEnum("leadTable", ["leads", "leadCaptures", "imported", "customer"]),
+    leadId: int("leadId"),
+    /** e.g. "speed_to_lead", "lead_cadence", "review_engine". Drives per-campaign caps. */
+    campaignType: varchar("campaignType", { length: 50 }).notNull(),
+    cadenceId: int("cadenceId"),
+    step: int("step"),
+    status: mysqlEnum("status", ["sent", "failed", "blocked", "held"]).notNull(),
+    blockedReason: varchar("blockedReason", { length: 60 }),
+    subject: varchar("subject", { length: 255 }),
+    body: text("body"),
+    providerMessageId: varchar("providerMessageId", { length: 255 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    contactCampaignIdx: index("growthTouches_contactCampaign_idx").on(table.contactPhone, table.campaignType, table.createdAt),
+    emailCampaignIdx: index("growthTouches_emailCampaign_idx").on(table.contactEmail, table.campaignType, table.createdAt),
+    channelIdx: index("growthTouches_channel_idx").on(table.channel, table.createdAt),
+  }),
+);
+export type GrowthTouch = typeof growthTouches.$inferSelect;
+export type InsertGrowthTouch = typeof growthTouches.$inferInsert;
+
+/**
+ * Review engine (spec §5). One row per completed job/appointment. `status` tracks
+ * the T+2h ask → response → T+3d reminder lifecycle. `score` 1–5 is the reply to
+ * "How did we do?" — 4–5 gets the GBP link, 1–3 routes to the owner immediately
+ * (never public) and creates a follow-up-call task.
+ */
+export const reviewRequests = mysqlTable(
+  "reviewRequests",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    jobId: int("jobId"),
+    appointmentId: int("appointmentId"),
+    customerId: int("customerId"),
+    phone: varchar("phone", { length: 50 }).notNull(),
+    status: mysqlEnum("status", ["pending", "sent", "responded", "reminded", "done"]).default("pending").notNull(),
+    sentAt: timestamp("sentAt"),
+    score: int("score"),
+    respondedAt: timestamp("respondedAt"),
+    reminderSentAt: timestamp("reminderSentAt"),
+    /** Set when a 1–3 score creates a follow-up-call task for the owner (§5). */
+    ownerFollowupTaskCreatedAt: timestamp("ownerFollowupTaskCreatedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    jobIdx: uniqueIndex("reviewRequests_jobId_uq").on(table.jobId),
+    appointmentIdx: uniqueIndex("reviewRequests_appointmentId_uq").on(table.appointmentId),
+    phoneIdx: index("reviewRequests_phone_idx").on(table.phone),
+    statusIdx: index("reviewRequests_status_idx").on(table.status),
+  }),
+);
+export type ReviewRequest = typeof reviewRequests.$inferSelect;
+export type InsertReviewRequest = typeof reviewRequests.$inferInsert;
+
+/**
+ * §7 CSV contact import — one row per uploaded file. Supports the required
+ * 24-hour owner review window (`releaseAt`) and a full-batch rollback
+ * (`status = "rolled_back"` deactivates every row tagged with this batch).
+ */
+export const contactImportBatches = mysqlTable("contactImportBatches", {
+  id: int("id").autoincrement().primaryKey(),
+  filename: varchar("filename", { length: 255 }).notNull(),
+  importedById: int("importedById"),
+  rowCount: int("rowCount").default(0).notNull(),
+  status: mysqlEnum("status", ["pending_review", "released", "rolled_back"]).default("pending_review").notNull(),
+  /** 24h after upload — the earliest the release sweep may enroll rows into cadences. */
+  releaseAt: timestamp("releaseAt").notNull(),
+  releasedAt: timestamp("releasedAt"),
+  rolledBackAt: timestamp("rolledBackAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type ContactImportBatch = typeof contactImportBatches.$inferSelect;
+export type InsertContactImportBatch = typeof contactImportBatches.$inferInsert;
+
+/**
+ * One imported contact row (§7 columns). Deduped on phone/email against
+ * customers/leads/leadCaptures at import time (see server/services/growth/
+ * contactImport.ts) — a duplicate is recorded with `mergedCustomerId` set and is
+ * never separately enrolled. `unknown` consent stays email-only forever unless the
+ * owner corrects it or a DNC scrub provider is later wired.
+ */
+export const importedContacts = mysqlTable(
+  "importedContacts",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    batchId: int("batchId").notNull(),
+    name: varchar("name", { length: 255 }),
+    phone: varchar("phone", { length: 50 }),
+    email: varchar("email", { length: 320 }),
+    company: varchar("company", { length: 255 }),
+    address: varchar("address", { length: 500 }),
+    type: mysqlEnum("type", ["residential", "commercial", "pm", "gc"]).default("residential").notNull(),
+    lastJobDate: date("lastJobDate"),
+    notes: text("notes"),
+    consent: mysqlEnum("consent", ["customer", "opt_in", "unknown"]).default("unknown").notNull(),
+    status: mysqlEnum("status", ["pending_review", "active", "removed", "rolled_back"]).default("pending_review").notNull(),
+    mergedCustomerId: int("mergedCustomerId"),
+    cadenceId: int("cadenceId"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    batchIdx: index("importedContacts_batchId_idx").on(table.batchId),
+    phoneIdx: index("importedContacts_phone_idx").on(table.phone),
+    emailIdx: index("importedContacts_email_idx").on(table.email),
+  }),
+);
+export type ImportedContact = typeof importedContacts.$inferSelect;
+export type InsertImportedContact = typeof importedContacts.$inferInsert;

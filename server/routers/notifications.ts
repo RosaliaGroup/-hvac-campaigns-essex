@@ -16,6 +16,7 @@ import { getDb } from "../db";
 import { notifications, pushSubscriptions, teamMembers } from "../../drizzle/schema";
 import { sendEmail } from "../services/emailService";
 import { sendPushToMembers, vapidPublicKey } from "../services/webPush";
+import { sendTelnyxSms, toE164 } from "../services/telnyxSms";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
@@ -39,8 +40,39 @@ export type NotifyInput = {
 /** Alert types that ALSO send an email — inbox-worthy pings, never routine chatter. */
 const EMAILED_TYPES = new Set(["mentioned", "task_assigned", "bid_created", "task_due", "bid_due", "job_created", "job_paid"]);
 
+/**
+ * Growth-system owner SMS alert channel (docs/growth-system-spec.md §1.5/§5).
+ * Fires for: commercial/bid/portfolio leads and "quote from another company"
+ * mentions (§1.5), and negative review scores routed to the owner (§5's "route to
+ * owner immediately"). §6 B2B-reply alerting is NOT wired — no B2B reply path
+ * exists in this codebase yet (§6 is out of scope for this build); add its type
+ * here once that path exists.
+ *
+ * Deliberately bypasses the customer opt-out/SMS-compliance gate
+ * (server/services/growth/compliance.ts / smsCompliance.ts) — the owner is not a
+ * customer being marketed to, they are staff receiving an operational alert.
+ */
+const OWNER_SMS_ALERT_TYPES = new Set(["growth_b2b_lead", "growth_competitor_mention", "growth_review_negative"]);
+
+/** The owner's phone for growth-system SMS alerts (§1.5/§5). Unset = channel is a no-op. */
+function ownerAlertPhone(): string | null {
+  return toE164(process.env.OWNER_ALERT_PHONE ?? "");
+}
+
 export async function notify(db: Db, input: NotifyInput): Promise<number> {
   try {
+    // Owner SMS alert (growth-system §1.5/§5) — checked BEFORE the in-app-recipient
+    // early return below, since this channel deliberately has no teamMemberIds (it
+    // targets OWNER_ALERT_PHONE, not a team member row). See OWNER_SMS_ALERT_TYPES doc.
+    if (OWNER_SMS_ALERT_TYPES.has(input.type)) {
+      const phone = ownerAlertPhone();
+      if (phone) {
+        void sendTelnyxSms(phone, `${input.title}${input.body ? ` — ${input.body}` : ""}`.slice(0, 480)).catch((e) =>
+          console.warn("[notify] owner SMS alert channel failed:", (e as Error).message),
+        );
+      }
+    }
+
     const seen = new Set<number>();
     for (const id of input.teamMemberIds) {
       if (id == null) continue;
