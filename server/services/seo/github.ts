@@ -10,10 +10,14 @@
  * check the router/UI use to show a clear state instead of a confusing
  * failure when the token hasn't been provisioned yet.
  *
- * Hard rule (spec §0 / §5 step 5): this file NEVER merges a PR, NEVER pushes
- * to `main`, and has no function that could. Every write here targets a
- * `pr-seo-meta-*` or `revert-*` branch; the only main-adjacent read is
- * fetching main's current tip SHA to branch FROM.
+ * Hard rule (spec §0 / §5 step 5): every WRITE here targets a `pr-seo-meta-*`
+ * or `revert-*` branch; the only main-adjacent read is fetching main's current
+ * tip SHA to branch FROM. This file never pushes to `main` directly — no
+ * function here can. The one deliberate exception to "never merges a PR" is
+ * `mergePR()` below, added for the autopublish auto-lane
+ * (docs/seo-automation-addendum-autopublish.md §A2): it is gated behind every
+ * hold/veto/warm-up check in server/services/seo/autoMerge.ts and must never
+ * be called from the human-reviewed bulk-approve flow.
  */
 
 const REPO_OWNER = "RosaliaGroup";
@@ -156,4 +160,46 @@ export async function getDeployPreviewUrl(prNumber: number, headSha: string): Pr
   const netlify = data.statuses?.find((s) => s.context.toLowerCase().includes("netlify") && s.state === "success");
   void prNumber; // kept in the signature for callers that want to log which PR this was for
   return netlify?.target_url ?? null;
+}
+
+/** Raw Netlify check state for a commit (auto-merge gate + circuit-breaker's "2 failures in a row" check). */
+export async function getNetlifyCheckState(headSha: string): Promise<"success" | "failure" | "pending" | "unknown"> {
+  const res = await gh(`/commits/${headSha}/status`);
+  const data = (await res.json()) as { statuses?: Array<{ context: string; state: string }> };
+  const netlify = data.statuses?.find((s) => s.context.toLowerCase().includes("netlify"));
+  if (!netlify) return "unknown";
+  if (netlify.state === "success" || netlify.state === "failure" || netlify.state === "pending") return netlify.state;
+  return "unknown";
+}
+
+/** Any issue/review comment on the PR — the auto-merge hold's "no open review comment" gate (addendum §A2). */
+export async function hasAnyPRComments(prNumber: number): Promise<boolean> {
+  const res = await gh(`/issues/${prNumber}/comments`);
+  const data = (await res.json()) as unknown[];
+  return Array.isArray(data) && data.length > 0;
+}
+
+/**
+ * Close a PR WITHOUT merging (the veto action, addendum §A2). Distinct from
+ * mergePR below — a veto must never merge.
+ */
+export async function closePR(prNumber: number): Promise<void> {
+  await gh(`/pulls/${prNumber}`, { method: "PATCH", body: JSON.stringify({ state: "closed" }) });
+}
+
+/**
+ * ⚠️ MERGES a PR. This is the ONE deliberate, spec-mandated exception to this
+ * file's original "never merges a PR" rule — used ONLY by the auto-lane
+ * (server/services/seo/autoMerge.ts) after EVERY gate has passed: hold expired,
+ * Netlify green, no veto, no comments, warm-up satisfied. Never call this from
+ * the regular human-reviewed bulk-approve flow (approveBatchToPR/revertBatch
+ * never call it, and must not start).
+ */
+export async function mergePR(prNumber: number): Promise<{ merged: boolean; sha: string | null }> {
+  const res = await gh(`/pulls/${prNumber}/merge`, {
+    method: "PUT",
+    body: JSON.stringify({ merge_method: "squash" }),
+  });
+  const data = (await res.json()) as { merged: boolean; sha: string | null };
+  return { merged: data.merged, sha: data.sha ?? null };
 }
