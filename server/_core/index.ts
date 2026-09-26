@@ -18,6 +18,11 @@ import { registerVapiToolRoutes } from "../services/vapiSendForm";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
 import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
+import { registerActionLinkRoutes } from "../services/seo/actionLinkRoutes";
+import { startNightlyDraftScheduler } from "../services/seo/nightlyDraftJob";
+import { startWeeklyContentScheduler } from "../services/seo/contentPipeline";
+import { startAutoMergeScheduler } from "../services/seo/autoMerge";
+import { seedContentQueue } from "../services/seo/contentQueue";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
 import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
@@ -66,6 +71,8 @@ async function startServer() {
   registerGoogleCalendarRoutes(app);
   // SEO Intelligence — Search Console sync (POST /api/seo/sync)
   registerSeoSyncRoutes(app);
+  // SEO autopublish — unauthenticated veto link (GET/POST /api/seo/action)
+  registerActionLinkRoutes(app);
   // GA4 Analytics — Analytics Data API sync (POST /api/analytics/ga4/sync)
   registerGa4SyncRoutes(app);
   // Local SEO — Google Business Profile sync (POST /api/gbp/sync)
@@ -117,6 +124,13 @@ async function startServer() {
     startGa4SyncScheduler();
     // Start daily Business Profile → cache sync for Local SEO
     startGbpSyncScheduler();
+    // SEO autopublish (docs/seo-automation-addendum-autopublish.md) — all
+    // gated off by default via their own env flags; seeding the content queue
+    // is always safe (idempotent, by-title check).
+    seedContentQueue().catch((err) => console.error("[SEO] content queue seed failed:", err));
+    startNightlyDraftScheduler();
+    startWeeklyContentScheduler();
+    startAutoMergeScheduler();
   });
 }
 

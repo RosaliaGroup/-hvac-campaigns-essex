@@ -30,6 +30,7 @@ import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { logAudit, listAuditLog } from "./auditLog";
 import { isGithubConfigured, GithubNotConfiguredError, ensureBranch, getFileContent, putFileContent, openOrGetPR } from "./github";
 import { yyyymmdd } from "./bulkApprove";
+import { msUntilNextRun } from "../../../shared/cronTiming";
 
 const BLOG_POSTS_PATH = "client/src/data/blogPosts.ts";
 
@@ -195,4 +196,23 @@ export async function approveContentToPR(topicId: number, actorId: number | null
   await logAudit({ actorId, action: "pr_opened", batchId, pagePath: null, before: null, after: { prUrl: pr.url, prNumber: pr.number }, lintResult: null });
 
   return { batchId, prUrl: pr.url, prNumber: pr.number };
+}
+
+/** In-process scheduler — Wednesday 06:00 America/New_York (spec Part 2), gated behind SEO_CONTENT_PIPELINE_ENABLED (default off). */
+export function startWeeklyContentScheduler(): void {
+  if (process.env.SEO_CONTENT_PIPELINE_ENABLED !== "true") {
+    console.log("[SEO] Weekly content pipeline disabled (set SEO_CONTENT_PIPELINE_ENABLED=true to enable)");
+    return;
+  }
+  const arm = () => {
+    const delay = msUntilNextRun({ hour: 6, minute: 0, timeZone: "America/New_York", weekdays: [3] });
+    setTimeout(() => {
+      runWeeklyContentJob()
+        .then((outcome) => console.log(`[SEO] weekly content job: ${outcome.status}`))
+        .catch((err) => console.error("[SEO] weekly content job error:", err))
+        .finally(arm);
+    }, delay);
+  };
+  console.log("[SEO] Weekly content pipeline scheduled — Wednesdays 06:00 America/New_York");
+  arm();
 }
