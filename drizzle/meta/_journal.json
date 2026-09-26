@@ -484,6 +484,27 @@
       "when": 1790300000000,
       "tag": "0072_seo_bulk_approve",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "5",
+      "when": 1790389426165,
+      "tag": "0073_seo_autopublish",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "5",
+      "when": 1790389500000,
+      "tag": "0074_seo_nightly_candidate_tag",
+      "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "5",
+      "when": 1790389600000,
+      "tag": "0075_seo_autopublish_hold",
+      "breakpoints": true
     }
   ]
 }

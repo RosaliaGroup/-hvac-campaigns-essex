@@ -88,6 +88,15 @@ vi.mock("./github", () => ({
     ghState.prs.set(branch, pr);
     return { url: pr.url, number: pr.number, created: true };
   }),
+  closePR: vi.fn(async () => {}),
+  getPRStatus: vi.fn(async () => ({ merged: false, state: "open" as const, mergeCommitSha: null })),
+}));
+
+// Warm-up gating is covered by warmupGate.test.ts; here it's a no-op so this
+// file stays focused on the PR/diff/lint/revert behavior it's already testing.
+vi.mock("./warmupGate", () => ({
+  advanceWarmup: vi.fn(async () => 0),
+  resetWarmupByHalf: vi.fn(async () => 0),
 }));
 
 import { getDb } from "../../db";
@@ -96,6 +105,9 @@ import {
   buildBatchDiff,
   approveBatchToPR,
   revertBatch,
+  vetoBatch,
+  laneForBatch,
+  refreshBatchStatus,
   isInPendingBatch,
   assertReindexAllowed,
   LockedPagesError,
@@ -105,7 +117,8 @@ import {
   MAX_BATCH_SIZE,
   MockProviderError,
 } from "./bulkApprove";
-import { GithubNotConfiguredError } from "./github";
+import { GithubNotConfiguredError, closePR, getPRStatus } from "./github";
+import { advanceWarmup, resetWarmupByHalf } from "./warmupGate";
 import { setAiOptimizationProvider, type AiOptimizationProvider } from "./ai/optimizationProvider";
 
 /** A non-mock stand-in so approveBatchToPR's happy-path tests aren't blocked by the new mock-provider gate; only `.model` is ever read by bulkApprove.ts. */
@@ -463,6 +476,119 @@ describe("revertBatch", () => {
 
     const approved = await approveBatchToPR({ pageIds: [1], label: "still-open", actorId: 1 });
     await expect(revertBatch(approved.batch.id, 1)).rejects.toThrow(/not "merged"/);
+  });
+
+  it("resets that lane's warm-up counter immediately on revert", async () => {
+    const { db, batches } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    const approved = await approveBatchToPR({ pageIds: [1], label: "batch-1", actorId: 1 });
+    batches.get(approved.batch.id)!.status = "merged";
+    vi.mocked(resetWarmupByHalf).mockClear();
+
+    await revertBatch(approved.batch.id, 9);
+
+    expect(resetWarmupByHalf).toHaveBeenCalledWith("meta", "revert", 9);
+  });
+});
+
+describe("laneForBatch", () => {
+  it("meta lane for pr-seo-meta-* branches", () => {
+    expect(laneForBatch("pr-seo-meta-20260926")).toBe("meta");
+  });
+  it("content lane for anything else (pr-content-*)", () => {
+    expect(laneForBatch("pr-content-20260926")).toBe("content");
+  });
+});
+
+describe("vetoBatch", () => {
+  it("closes the PR, marks the batch failed, logs 'vetoed', and resets warm-up", async () => {
+    const { db, batches, auditRows } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    const approved = await approveBatchToPR({ pageIds: [1], label: "veto-me", actorId: 1 });
+    vi.mocked(closePR).mockClear();
+    vi.mocked(resetWarmupByHalf).mockClear();
+
+    const result = await vetoBatch(approved.batch.id, 3);
+
+    expect(result.status).toBe("failed");
+    expect(batches.get(approved.batch.id)!.status).toBe("failed");
+    expect(closePR).toHaveBeenCalledWith(approved.batch.prNumber);
+    expect(resetWarmupByHalf).toHaveBeenCalledWith("meta", "veto", 3);
+    expect(auditRows.some((r) => r.action === "vetoed" && r.batchId === approved.batch.id)).toBe(true);
+  });
+
+  it("is idempotent — a batch already merged/failed is a no-op, not an error", async () => {
+    const { db, batches } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    const approved = await approveBatchToPR({ pageIds: [1], label: "already-merged", actorId: 1 });
+    batches.get(approved.batch.id)!.status = "merged";
+    vi.mocked(closePR).mockClear();
+
+    const result = await vetoBatch(approved.batch.id, 3);
+
+    expect(result.status).toBe("merged"); // unchanged
+    expect(closePR).not.toHaveBeenCalled();
+  });
+
+  it("throws for an unknown batch id", async () => {
+    const { db } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    await expect(vetoBatch(999)).rejects.toThrow(/not found/);
+  });
+});
+
+describe("refreshBatchStatus", () => {
+  it("advances warm-up on a clean (non-revert) merge detection", async () => {
+    const { db, batches } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    const approved = await approveBatchToPR({ pageIds: [1], label: "clean-merge", actorId: 1 });
+    vi.mocked(getPRStatus).mockResolvedValue({ merged: true, state: "closed", mergeCommitSha: "abc123" });
+    vi.mocked(advanceWarmup).mockClear();
+
+    const result = await refreshBatchStatus(approved.batch.id);
+
+    expect(result.changed).toBe(true);
+    expect(batches.get(approved.batch.id)!.status).toBe("merged");
+    expect(advanceWarmup).toHaveBeenCalledWith("meta", null);
+  });
+
+  it("does NOT advance warm-up for a revert batch's own merge — cascades the original to reverted instead", async () => {
+    const { db, batches } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    const approved = await approveBatchToPR({ pageIds: [1], label: "will-be-reverted", actorId: 1 });
+    batches.get(approved.batch.id)!.status = "merged";
+    const revert = await revertBatch(approved.batch.id, 1);
+
+    vi.mocked(getPRStatus).mockResolvedValue({ merged: true, state: "closed", mergeCommitSha: "def456" });
+    vi.mocked(advanceWarmup).mockClear();
+
+    await refreshBatchStatus(revert.batch.id);
+
+    expect(batches.get(revert.batch.id)!.status).toBe("merged");
+    expect(batches.get(approved.batch.id)!.status).toBe("reverted");
+    expect(advanceWarmup).not.toHaveBeenCalled();
+  });
+
+  it("marks the batch failed when the PR closed without merging", async () => {
+    const { db, batches } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    const approved = await approveBatchToPR({ pageIds: [1], label: "closed-unmerged", actorId: 1 });
+    vi.mocked(getPRStatus).mockResolvedValue({ merged: false, state: "closed", mergeCommitSha: null });
+
+    const result = await refreshBatchStatus(approved.batch.id);
+
+    expect(result.changed).toBe(true);
+    expect(batches.get(approved.batch.id)!.status).toBe("failed");
+  });
+
+  it("is a no-op for a batch that's already left pr_open", async () => {
+    const { db, batches } = makeDb([page({ id: 1 })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    const approved = await approveBatchToPR({ pageIds: [1], label: "already-done", actorId: 1 });
+    batches.get(approved.batch.id)!.status = "merged";
+
+    const result = await refreshBatchStatus(approved.batch.id);
+    expect(result.changed).toBe(false);
   });
 });
 
