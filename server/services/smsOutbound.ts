@@ -30,6 +30,7 @@ export type OutboundSource =
   | "rebate"
   | "vapi_booking"
   | "followup"      // opportunity 3-day close-loop touch
+  | "growth"        // growth-system speed-to-lead / cadence / review-engine touch
   | "other";
 
 /** Canonical AI-VA logging attributes — use these when an AI path sends SMS so

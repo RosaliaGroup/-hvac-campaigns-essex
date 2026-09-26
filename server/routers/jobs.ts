@@ -39,6 +39,7 @@ import {
 } from "./jobsLogic";
 import { toPatch } from "../_core/zodPatch";
 import { recordJobLifecycleSafe, backfillAllJobLifecycles, buildReconciliationReport } from "../services/jobLifecycle";
+import { ensureReviewRequestForJob } from "../services/growth/reviewEngine";
 import { resolveTeamMemberId } from "../../shared/fieldApp";
 import {
   TECHNICIAN_WORK_STATUSES,
@@ -892,6 +893,9 @@ export const jobsRouter = router({
       // Shadow: keep the canonical lifecycle fresh (best-effort; never blocks). OUTSIDE
       // the atomic transaction so it can never affect completion.
       await recordJobLifecycleSafe(input.jobId, { source: "completion", eventKey: `completion:${input.jobId}`, actorId: memberId ?? null, actorName: changedByName ?? null });
+      // Growth system review engine (§5) — trigger on job completion. Fire-and-forget,
+      // idempotent (UNIQUE jobId); never blocks the completion response.
+      void ensureReviewRequestForJob(db, input.jobId);
       return { success: true, completedAt: now };
     }),
 
