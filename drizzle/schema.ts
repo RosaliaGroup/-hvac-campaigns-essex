@@ -2626,7 +2626,7 @@ export type InsertSeoAiDraft = typeof seoAiDrafts.$inferInsert;
  *   - seoAuditLog: append-only trail of every action the workflow takes.
  * ────────────────────────────────────────────────────────────────────── */
 
-export const SEO_PAGE_TAGS = ["claims-review", "locked", "verified-project", "illustrative"] as const;
+export const SEO_PAGE_TAGS = ["claims-review", "locked", "verified-project", "illustrative", "nightly-candidate"] as const;
 
 export const seoPageTags = mysqlTable(
   "seoPageTags",

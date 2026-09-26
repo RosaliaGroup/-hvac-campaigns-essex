@@ -491,6 +491,13 @@
       "when": 1790389426165,
       "tag": "0073_seo_autopublish",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "5",
+      "when": 1790389500000,
+      "tag": "0074_seo_nightly_candidate_tag",
+      "breakpoints": true
     }
   ]
 }
