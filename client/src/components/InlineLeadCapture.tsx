@@ -34,6 +34,8 @@ import { toast } from "sonner";
 import { CheckCircle, Phone, DollarSign, Flame, ShieldCheck } from "lucide-react";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 
 export type InlineLeadVariant = "residential" | "commercial" | "emergency" | "rebate" | "warranty" | "membership";
 
@@ -251,6 +253,7 @@ export default function InlineLeadCapture({
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -371,14 +374,7 @@ export default function InlineLeadCapture({
           )}
         </Button>
 
-        <p className="text-[10px] text-center text-muted-foreground leading-tight">
-          By submitting, you agree to receive SMS/calls about your request. Msg &amp; data rates
-          may apply. Reply STOP to opt out.{" "}
-          <a href="/privacy" className="underline hover:text-foreground">
-            Privacy
-          </a>
-          .
-        </p>
+        <TcpaDisclosure />
       </form>
     </div>
   );

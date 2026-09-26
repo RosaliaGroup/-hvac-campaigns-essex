@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 import { CheckCircle, Phone, Star, Clock, Home, ArrowRight, DollarSign, Leaf } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
@@ -68,6 +70,7 @@ export default function LPFBResidential() {
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -125,7 +128,8 @@ export default function LPFBResidential() {
                   <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4">
                     {captureLead.isPending ? "Checking..." : "Check My Eligibility →"}
                   </Button>
-                </form>
+                <TcpaDisclosure />
+                  </form>
                 <p className="text-xs text-gray-400 text-center mt-3">We never sell your info. Unsubscribe anytime.</p>
               </>
             )}

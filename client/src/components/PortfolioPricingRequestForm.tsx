@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import { CheckCircle } from "lucide-react";
 import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
+import { TcpaDisclosure } from "@/components/TcpaDisclosure";
+import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 import { VERIFIED_FACTS } from "@shared/verifiedFacts";
 
 export interface PortfolioPricingRequestFormProps {
@@ -102,6 +104,7 @@ export default function PortfolioPricingRequestForm({ pageContext, className }: 
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
       cfTurnstileResponse: turnstileToken || undefined,
+      formVersion: TCPA_FORM_VERSION,
     });
   };
 
@@ -188,10 +191,7 @@ export default function PortfolioPricingRequestForm({ pageContext, className }: 
           {createCapture.isPending ? "Submitting..." : "Request Portfolio Pricing"}
         </Button>
 
-        <p className="text-[10px] text-center text-muted-foreground leading-tight">
-          By submitting, you agree to be contacted about your request.{" "}
-          <a href="/privacy" className="underline hover:text-foreground">Privacy</a>.
-        </p>
+        <TcpaDisclosure />
       </form>
     </div>
   );

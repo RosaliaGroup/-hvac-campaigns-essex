@@ -9,12 +9,20 @@
 --     needed despite the leads/leadCaptures union staying code-level — see the
 --     build report for why a DB view alone could not carry a new writable column
 --     on both source tables).
+--   - `leadCaptures.formVersion` added: web leads only get `consentStatus='opt_in'`
+--     when the submitting form's version matches shared/leadFormVersion.ts's
+--     TCPA_FORM_VERSION (i.e. it shipped the TCPA disclosure line) — computed in
+--     server/routers.ts's leadCaptures.create, NOT by this column's DB default.
+--     `leads` keeps its unconditional 'opt_in' default: that table has no form/UI
+--     of its own (phone/manual/CRM-side entries only), so no form-version gate
+--     applies there.
 --   - 6 new tables: growthCadences, growthCadenceTasks, growthTouches,
 --     reviewRequests, contactImportBatches, importedContacts.
 -- No existing table is dropped, renamed, or has a column removed. No backfill.
 
 ALTER TABLE `leads` ADD `consentStatus` enum('customer','opt_in','unknown') NOT NULL DEFAULT 'opt_in';--> statement-breakpoint
-ALTER TABLE `leadCaptures` ADD `consentStatus` enum('customer','opt_in','unknown') NOT NULL DEFAULT 'opt_in';--> statement-breakpoint
+ALTER TABLE `leadCaptures` ADD `consentStatus` enum('customer','opt_in','unknown') NOT NULL DEFAULT 'unknown';--> statement-breakpoint
+ALTER TABLE `leadCaptures` ADD `formVersion` varchar(32);--> statement-breakpoint
 
 CREATE TABLE `growthCadences` (
   `id` int AUTO_INCREMENT NOT NULL,
