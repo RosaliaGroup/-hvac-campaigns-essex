@@ -1,4 +1,4 @@
--- 0076: Daily Market Intelligence Report (docs/market-intel-spec.md).
+-- 0078: Daily Market Intelligence Report (docs/market-intel-spec.md).
 -- Additive: four new tables + widen seoAuditLog.action's enum (same pattern
 -- 0073_seo_autopublish.sql used for its own new actions). No other changes to
 -- any existing table. NOT applied anywhere — apply BY HAND per

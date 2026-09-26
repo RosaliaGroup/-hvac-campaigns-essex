@@ -2786,7 +2786,7 @@ export const SEO_AUDIT_ACTION = [
   "warmup_advanced",
   "warmup_reset",
   "topic_proposed",
-  // ── Market Intel (docs/market-intel-spec.md, migration 0076) ──
+  // ── Market Intel (docs/market-intel-spec.md, migration 0078) ──
   "market_intel_report_generated",
   "market_intel_item_executed",
   "market_intel_item_reverted",
@@ -3514,7 +3514,7 @@ export const estimateLineItems = mysqlTable(
 export type EstimateLineItem = typeof estimateLineItems.$inferSelect;
 
 /* ── Daily Market Intelligence Report (docs/market-intel-spec.md) ─────────
- * Additive, migration 0076 (NOT applied — hand-applied per drizzle/README.md).
+ * Additive, migration 0078 (NOT applied — hand-applied per drizzle/README.md).
  * seoIntelReports/Items mirror the seoApprovalBatches/seoAuditLog pattern:
  * one report row per day (or weekly roll-up), items are the individual
  * suggestions/executed-changes shown in the CRM tab and the email digest.
