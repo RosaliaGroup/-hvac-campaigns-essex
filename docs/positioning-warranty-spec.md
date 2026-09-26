@@ -99,3 +99,40 @@ New form_type `warranty_quote`; GA4 key event; CRM lead type. Report warranty qu
 - Homepage hero and five install pages show the warranty section; rebate content still present below.
 - No change to `/promos`, case studies, city pages, or locked pages.
 - Owner fills the two [CONFIRM] FAQ lines and the terms-disclosure line before merge; the PR is blocked with a checklist until they're filled.
+
+## 9. Differentiation add-ons (owner decisions 2026-09-26; all of these ship, no comfort/refund guarantee)
+
+### 9a. Comfort Membership (subscription feel, no equipment leasing)
+Customer owns the system (financed via existing OBR/financing partner). Membership is a monthly fee covering: parts & labor coverage for the chosen term (3/5/10), two maintenance visits/year, priority scheduling, and the replacement credit (9c). Two payments (loan + membership) unless the lender allows the service contract on the loan.
+- Facts block: `membership: { name: "Comfort Membership", includes: [...], billing: "monthly", priceText: null /* owner sets */, verifiedOn }`. No price appears on the site until `priceText` is set.
+- Site: third column "Member" in the buy / finance / member comparison on `/warranty`, the homepage, and the five install pages. Copy line: "One monthly payment. Coverage, maintenance, priority service."
+- Form type `membership_quote`. Jessica line for "do you have a monthly plan".
+- Linter: "lease", "rent", "subscription includes the equipment", "$0 down for everything" → BLOCK (we do not own the equipment; do not imply it).
+
+### 9b. Transparent installed-price ranges
+Publish a range table on `/heat-pump-installation-nj`, `/central-ac-installation-nj`, `/ductless-mini-split-installation-nj` (and `/vrv-vrf-installation-nj` if the owner supplies a range): system size/type → "typically $X–$Y installed in Essex/Hudson/Union counties, before rebates", with "what moves the price" bullets (ductwork, electrical, line-set length, permits, equipment tier).
+- Facts block: `priceRanges: [{ page, item, low, high, asOf, notes }]` — owner supplies; the model never invents or updates a number. Linter: any `$` figure on an install page must match a `priceRanges` entry within ±0.
+- Schema: `Offer` with `priceRange` on each install page's `Service`.
+- Refresh cadence: `asOf` older than 180 days → WARN in the nightly meta lane and a reminder in the weekly summary.
+- Content topic: "What a heat pump installation costs in Essex County (real ranges, and what changes them)".
+
+### 9c. Replacement credit
+"Coverage and membership payments count toward your next system with Mechanical Enterprise" — `replacementCredit: { percentOfPremiums: null /* owner sets */, cap: null, conditions: [...] }`. No percentage on the site until set. Appears on `/warranty` and the membership column.
+
+### 9d. B2B fixed per-unit portfolio pricing with SLA (PR-3 pages)
+On `/commercial/property-managers` and `/commercial/hvac-service-contracts` (and a teaser block on `/commercial` now): "Fixed annual price per unit (PTAC / mini-split / RTU / split), [N]-hour response, quarterly condition report, one point of contact, optional 3/5/10-year parts & labor on the whole portfolio."
+- Facts block: `portfolioSla: { responseHours: null, reportingCadence: "quarterly", unitTypes: [...], pricingBasis: "per unit per year, quoted by portfolio" }`. Response hours must be set by the owner before the SLA number appears anywhere.
+- Form type `portfolio_pricing_request` (fields: company, properties, unit counts by type, current maintenance arrangement, contract start).
+- Content topics: "Fixed per-unit HVAC pricing for apartment portfolios: how it works"; "What a 24-hour HVAC response SLA should actually include".
+- Linter: "guaranteed uptime", "never fail" → BLOCK; SLA hours must match `portfolioSla.responseHours`.
+
+### 9e. Proactive monitoring
+Where a smart thermostat is installed with the system: opt-in alerts for abnormal runtime/short-cycling → outreach before failure. Included in Comfort Membership; available to portfolio clients as an add-on.
+- Facts block: `monitoring: { thermostatBrands: [...], included: "membership", optIn: true }` — owner lists supported brands; the model can't name one that isn't listed.
+- Copy: "We watch for the early signs so you don't find out in July." Linter: "24/7 monitoring" only if the owner marks it true; "guaranteed detection" → BLOCK.
+
+### Explicitly NOT offered
+Comfort/refund guarantee ("if you're not comfortable we remove it and refund") — owner declined; linter BLOCKs "money-back", "refund if", "remove it and refund", "satisfaction guarantee" on install pages. Equipment leasing/subscription where Mechanical Enterprise owns the asset — not offered; see 9a linter.
+
+### Owner inputs required before these publish
+Membership price text; replacement-credit percentage and cap; installed-price ranges per page (low/high/asOf); portfolio SLA response hours; supported thermostat brands. Each is a facts-file entry; the PR checklist blocks merge on any that a page references while null.
