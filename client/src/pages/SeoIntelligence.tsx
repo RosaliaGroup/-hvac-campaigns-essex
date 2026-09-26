@@ -1070,7 +1070,19 @@ function ConfigPill({ label, ok }: { label: string; ok: boolean }) {
   );
 }
 
-function WarmupBar({ label, remaining, total }: { label: string; remaining: number; total: number }) {
+function WarmupBar({
+  label,
+  remaining,
+  total,
+  onRunNow,
+  runningNow,
+}: {
+  label: string;
+  remaining: number;
+  total: number;
+  onRunNow?: () => void;
+  runningNow?: boolean;
+}) {
   const done = total - remaining;
   const pct = total > 0 ? Math.round((done / total) * 100) : 100;
   return (
@@ -1080,6 +1092,16 @@ function WarmupBar({ label, remaining, total }: { label: string; remaining: numb
         <span className="text-muted-foreground">{remaining === 0 ? "Auto-merge active" : `${remaining} manual approval${remaining === 1 ? "" : "s"} left`}</span>
       </div>
       <Progress value={pct} className="h-1.5" />
+      {onRunNow && (
+        <button
+          type="button"
+          onClick={onRunNow}
+          disabled={runningNow}
+          className="mt-1.5 inline-flex items-center gap-1 text-xs text-[#ff6b35] hover:underline disabled:opacity-60"
+        >
+          {runningNow ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />} Run now
+        </button>
+      )}
     </div>
   );
 }
@@ -1113,9 +1135,20 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
   });
   const runNow = trpc.seo.runContentJobNow.useMutation({
     onSuccess: (res) => {
-      if (res.status === "drafted") toast.success(res.passes ? "Draft ready for review" : "Drafted, but has lint/critic findings");
-      else toast.message(`No draft this time: ${res.status.replace(/_/g, " ")}`);
+      if (res.status === "drafted") {
+        const auto = res.autoApproved ? ` — auto-approved to PR #${res.batchId}` : "";
+        toast.success((res.passes ? "Draft ready for review" : "Drafted, but has lint/critic findings") + auto);
+      } else toast.message(`No draft this time: ${res.status.replace(/_/g, " ")}`);
       invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const runMetaNow = trpc.seo.runNightlyDraftJobNow.useMutation({
+    onSuccess: (res) => {
+      const auto = res.autoApproved ? ` — auto-approved to PR #${res.batchId}` : "";
+      toast.success(`${res.ready} drafted, ${res.lintBlocked} lint-blocked, ${res.skippedLocked} skipped${auto}`);
+      invalidate();
+      utils.seo.getOpportunities.invalidate();
     },
     onError: (e) => toast.error(e.message),
   });
@@ -1175,7 +1208,13 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
               </div>
             )}
             <div className="grid gap-3 sm:grid-cols-2">
-              <WarmupBar label="Meta lane" remaining={status.warmup.meta.remaining} total={status.warmup.meta.default} />
+              <WarmupBar
+                label="Meta lane"
+                remaining={status.warmup.meta.remaining}
+                total={status.warmup.meta.default}
+                onRunNow={isAdmin ? () => runMetaNow.mutate() : undefined}
+                runningNow={runMetaNow.isPending}
+              />
               <WarmupBar label="Content lane" remaining={status.warmup.content.remaining} total={status.warmup.content.default} />
             </div>
           </>
