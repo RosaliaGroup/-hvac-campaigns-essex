@@ -102,6 +102,125 @@ const PAGE_META: Record<string, PageMeta> = {
     title: "HVAC Referral Partnerships | Mechanical Enterprise NJ",
     description: "Partner with Mechanical Enterprise for HVAC referrals in NJ. Real estate agents, contractors, property managers welcome.",
   },
+  // The 8 ServicePage-routed slugs (client/src/App.tsx) — title/description
+  // here MUST exactly mirror what ServicePage.tsx's useSEO() call produces
+  // for that slug, or the pre-render (crawler/social-share) value and the
+  // post-hydration client value would disagree. Previously these all fell
+  // through to DEFAULT_TITLE (the homepage's own title/description).
+  "/heat-pump-installation-nj": {
+    title: "Heat Pump Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
+    description: "Heat Pump installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call (862) 423-9396.",
+  },
+  "/central-ac-installation-nj": {
+    title: "Central AC Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
+    description: "Central AC installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call (862) 423-9396.",
+  },
+  "/ductless-mini-split-installation-nj": {
+    title: "Ductless Mini-Split Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
+    description: "Ductless Mini-Split installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call (862) 423-9396.",
+  },
+  "/vrv-vrf-installation-nj": {
+    title: "VRV/VRF System Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
+    description: "VRV/VRF System installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call (862) 423-9396.",
+  },
+  "/hvac-system-replacement-nj": {
+    title: "Full HVAC System Replacement Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
+    description: "Full HVAC System Replacement installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call (862) 423-9396.",
+  },
+  "/commercial-hvac-installation-nj": {
+    title: "Commercial HVAC Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
+    description: "Commercial HVAC installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call (862) 423-9396.",
+  },
+  "/heat-pump-rebates-nj": {
+    title: "Heat Pump Rebates NJ Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
+    description: "Heat Pump Rebates NJ installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call (862) 423-9396.",
+  },
+  "/hvac-financing-nj": {
+    title: "HVAC Financing Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
+    description: "HVAC Financing installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call (862) 423-9396.",
+  },
+  // Mirrors client/src/pages/PromosLanding.tsx, which has no useSEO() call
+  // of its own — this is the only title/description this page gets, so it
+  // is authoritative rather than mirroring anything.
+  "/promos": {
+    title: "NJ HVAC Upgrade Promotions | Mechanical Enterprise",
+    description: "Residential HVAC upgrade promotions and real project examples for NJ homeowners — rebates, financing, and case studies.",
+  },
+  // Mirrors client/src/pages/Privacy.tsx / Terms.tsx / Referral.tsx / CompetitorPage.tsx's own useSEO() calls exactly.
+  "/privacy": {
+    title: "Privacy Policy | Mechanical Enterprise",
+    description: "Privacy policy for Mechanical Enterprise LLC — how we collect, use, and protect your personal information, including SMS/text messaging.",
+  },
+  "/terms": {
+    title: "Terms of Service | Mechanical Enterprise",
+    description: "Terms of service for Mechanical Enterprise LLC — conditions for using our website, HVAC services, and SMS/text messaging program.",
+  },
+  "/referral": {
+    title: "Referral Program — Earn $500 Per Referral | Mechanical Enterprise",
+    description: "Know someone who needs HVAC work? Send them our way. Earn $500 when they book. No cap. Open to everyone. Newark NJ.",
+  },
+  "/vs-aj-perri": {
+    title: "A.J. Perri Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise",
+    description: "Looking for an alternative to A.J. Perri in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call (862) 423-9396.",
+  },
+  "/vs-gold-medal-service": {
+    title: "Gold Medal Service Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise",
+    description: "Looking for an alternative to Gold Medal Service in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call (862) 423-9396.",
+  },
+  "/vs-horizon-services": {
+    title: "Horizon Services Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise",
+    description: "Looking for an alternative to Horizon Services in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call (862) 423-9396.",
+  },
+  "/vs-hutchinson": {
+    title: "Hutchinson Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise",
+    description: "Looking for an alternative to Hutchinson in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call (862) 423-9396.",
+  },
+  // /qualify and /assessment both route to client/src/pages/Qualify.tsx (no
+  // useSEO() call of its own) — distinct titles since a shared exact title
+  // would violate netlify/tests/inject-meta.test.ts's uniqueness check.
+  "/qualify": {
+    title: "See If You Qualify for NJ HVAC Rebates | Mechanical Enterprise",
+    description: "Enter your home details to see your NJ HVAC rebate amount and out-of-pocket cost before booking your free assessment.",
+  },
+  "/assessment": {
+    title: "Free HVAC Assessment NJ | Mechanical Enterprise",
+    description: "Book a free HVAC assessment in NJ. See your rebate amount and out-of-pocket cost before you commit to anything.",
+  },
+  // /rebate-calc renders the identical RebateCalculator component as
+  // /rebate-calculator — same precedent as /lp/rebate-guide vs /rebate-guide
+  // above (a similar-but-distinct title, not an exact duplicate).
+  "/rebate-calc": {
+    title: "HVAC Rebate Calculator NJ | Mechanical Enterprise",
+    description: "Quickly estimate your NJ heat pump rebate. PSE&G rebates up to $16K. Free assessment, no obligation.",
+  },
+  // NOINDEX_NOFOLLOW_PATHS already (shared/seoLockedRoutes.ts) — titles here
+  // are for direct-visit/social-share correctness only, not indexing.
+  "/courses": {
+    title: "HVAC Training Courses | Mechanical Enterprise",
+    description: "HVAC training and certification courses from Mechanical Enterprise.",
+  },
+  "/estimating": {
+    title: "Takeoff & Estimating | Mechanical Enterprise",
+    description: "Internal takeoff and estimating tool for Mechanical Enterprise commercial bids.",
+  },
+  "/presentation-2026": {
+    title: "2026 Presentation | Mechanical Enterprise",
+    description: "Mechanical Enterprise 2026 presentation materials.",
+  },
+  // Auth/portal utility pages — not marketing content, but still need a
+  // real, distinct title so a direct visit or shared link isn't mislabeled.
+  "/team-login": {
+    title: "Team Login | Mechanical Enterprise",
+    description: "Sign in to the Mechanical Enterprise team portal.",
+  },
+  "/accept-invite": {
+    title: "Accept Team Invite | Mechanical Enterprise",
+    description: "Accept your invitation to join the Mechanical Enterprise team portal.",
+  },
+  "/reset-password": {
+    title: "Reset Your Password | Mechanical Enterprise",
+    description: "Reset your Mechanical Enterprise team portal password.",
+  },
 };
 
 // ── SEO landing pages (repair/service intent) ──────────────────────────────
@@ -234,6 +353,22 @@ function getMetaForPath(urlPath: string): PageMeta & { canonical: string } {
     }
   }
 
+  // Known static page and SEO landing pages are checked BEFORE the city-page
+  // regex below — a registered static route like /hvac-financing-nj or
+  // /hvac-system-replacement-nj would otherwise match "/^\/hvac-[a-z-]+-nj$/"
+  // and get a FABRICATED city page for a nonexistent town ("Financing, NJ").
+  // Exact-key lookups here can never false-positive against a real city slug
+  // (no city page is ever also a PAGE_META/SEO_LANDING_META key), so moving
+  // them first is a pure bugfix with no new ambiguity.
+  const landing = SEO_LANDING_META[clean];
+  if (landing) {
+    return { title: landing.title, description: landing.description, canonical: `${BASE}${clean}` };
+  }
+  const known = PAGE_META[clean];
+  if (known) {
+    return { ...known, canonical: `${BASE}${clean === "/" ? "" : clean}` };
+  }
+
   // City page (hvac-*-nj pattern)
   if (clean.match(/^\/hvac-[a-z-]+-nj$/)) {
     return getCityMeta(clean.slice(1));
@@ -249,18 +384,6 @@ function getMetaForPath(urlPath: string): PageMeta & { canonical: string } {
   if (clean.startsWith("/lp/")) {
     const slug = clean.replace("/lp/", "");
     return getLandingPageMeta(slug);
-  }
-
-  // SEO landing page (repair/service intent)
-  const landing = SEO_LANDING_META[clean];
-  if (landing) {
-    return { title: landing.title, description: landing.description, canonical: `${BASE}${clean}` };
-  }
-
-  // Known static page
-  const known = PAGE_META[clean];
-  if (known) {
-    return { ...known, canonical: `${BASE}${clean === "/" ? "" : clean}` };
   }
 
   // Fallback

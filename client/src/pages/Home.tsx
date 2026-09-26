@@ -121,6 +121,29 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Existing-system coverage card (docs/positioning-warranty-spec.md §4 — "also available as standalone coverage for existing systems subject to eligibility") */}
+      <section className="py-16 bg-white">
+        <div className="container">
+          <Card className="max-w-3xl mx-auto border-2 border-[#1e3a5f]/20">
+            <CardContent className="p-8 flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+              <Shield className="h-12 w-12 text-[#1e3a5f] flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-[#0a1628] mb-2">Already Have a System?</h3>
+                <p className="text-sm text-muted-foreground">
+                  Existing systems may qualify for the same optional 10-year parts &amp; labor coverage, subject to an
+                  eligibility inspection.
+                </p>
+              </div>
+              <a href="/warranty#existing">
+                <Button className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white whitespace-nowrap">
+                  Check Eligibility <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </a>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* Buy / finance / member comparison (docs/positioning-warranty-spec.md §9a) */}
       <BuyFinanceMemberComparison />
 

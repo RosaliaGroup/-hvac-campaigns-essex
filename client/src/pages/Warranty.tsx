@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Phone, ArrowRight, ShieldCheck } from "lucide-react";
+import { Phone, ArrowRight, ShieldCheck, AlertTriangle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import InlineLeadCapture from "@/components/InlineLeadCapture";
@@ -32,10 +32,17 @@ export default function Warranty() {
 
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  const faqs = [
-    { q: "Is coverage required?", a: "No. It's an optional add-on, quoted with your installation or after an eligibility inspection." },
+  // These two answers are NOT collapsed into the accordion below — a
+  // [CONFIRM] placeholder hidden behind a click is a placeholder the owner
+  // could miss entirely. Rendered always-visible instead (spec §8: "the PR
+  // is blocked with a checklist until they're filled").
+  const pendingConfirmations = [
     { q: "Does coverage transfer if I sell the property?", a: "[CONFIRM WITH PROVIDER TERMS — typical programs allow one transfer.]" },
     { q: "Is maintenance required?", a: "[CONFIRM — if the program requires annual maintenance, state it here.]" },
+  ];
+
+  const faqs = [
+    { q: "Is coverage required?", a: "No. It's an optional add-on, quoted with your installation or after an eligibility inspection." },
     { q: "How do I file a claim?", a: `Call Mechanical Enterprise at ${PHONE}. We diagnose the issue, confirm coverage with the administrator, and complete the repair.` },
   ];
 
@@ -84,13 +91,13 @@ export default function Warranty() {
               </p>
             </div>
 
-            <div>
+            <div id="who-can-enroll">
               <h2 className="text-2xl font-bold text-[#0a1628] mb-4">Who can enroll</h2>
               <p className="text-gray-600 leading-relaxed mb-4">
                 <strong>New installations.</strong> Any system installed by Mechanical Enterprise can add coverage at
                 the time of installation or within the enrollment window stated in your agreement.
               </p>
-              <p className="text-gray-600 leading-relaxed">
+              <p id="existing" className="text-gray-600 leading-relaxed scroll-mt-24">
                 <strong>Existing systems.</strong> Coverage may be available for equipment we didn't install, subject
                 to an eligibility inspection. Systems must be in good working condition and meet the program's age
                 and maintenance criteria. We'll tell you at the inspection whether the system qualifies and what the
@@ -133,6 +140,26 @@ export default function Warranty() {
               defaultService="Comfort Membership"
               formType="membership_quote"
             />
+          </div>
+        </div>
+      </section>
+
+      {/* Pending owner confirmations — always visible, never collapsed (spec §8) */}
+      <section className="py-10 bg-amber-50 border-y-2 border-amber-300">
+        <div className="container">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center gap-2 mb-4 text-amber-800">
+              <AlertTriangle className="h-5 w-5" />
+              <h2 className="text-lg font-bold">Pending Owner Confirmation</h2>
+            </div>
+            <div className="space-y-4">
+              {pendingConfirmations.map((item, i) => (
+                <div key={i} className="bg-white rounded-lg border-2 border-amber-300 p-4">
+                  <p className="font-semibold text-[#0a1628] mb-1">{item.q}</p>
+                  <p className="text-sm text-amber-900 font-medium">{item.a}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -181,13 +208,16 @@ export default function Warranty() {
         </div>
       </section>
 
-      {/* Terms disclosure */}
-      <section className="py-8 bg-[#f7f8fa] border-t">
+      {/* Terms disclosure — pending owner confirmation, always visible (spec §8) */}
+      <section className="py-8 bg-amber-50 border-t-2 border-amber-300">
         <div className="container">
-          <p className="max-w-2xl mx-auto text-xs text-gray-500 text-center leading-relaxed">
-            Terms disclosure: Extended service agreements are administered by [PROVIDER LEGAL NAME] and underwritten
-            by [INSURER(S) AS STATED IN THE AGREEMENT]. Full terms: [link to provider terms PDF].
-          </p>
+          <div className="max-w-2xl mx-auto bg-white rounded-lg border-2 border-amber-300 p-4 flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-800 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-900 font-medium text-left leading-relaxed">
+              Terms disclosure: Extended service agreements are administered by [PROVIDER LEGAL NAME] and underwritten
+              by [INSURER(S) AS STATED IN THE AGREEMENT]. Full terms: [link to provider terms PDF].
+            </p>
+          </div>
         </div>
       </section>
 
