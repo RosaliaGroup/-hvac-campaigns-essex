@@ -14,7 +14,6 @@
  * at least one entry with a `verifiedOn` date.
  */
 import { PHONE_DISPLAY, PHONE_E164 } from "./business";
-import { SERVICE_TYPES } from "./appointmentTypes";
 
 /**
  * Mirrors the county keys in client/src/data/njCounties.ts (the city-page
@@ -72,7 +71,7 @@ export type VerifiedFacts = {
   };
   /** Owner-maintained. Empty until the owner verifies at least one current incentive figure. */
   incentives: VerifiedIncentive[];
-  /** What the business actually sells, from shared/appointmentTypes.ts's SERVICE_TYPES (the booking form's own service list) — excludes the "General"/"Other" catch-alls. */
+  /** The live, individually-routed service pages (client/src/App.tsx's ServicePage routes) — excludes the two rebate/financing landing pages on the same template ("Heat Pump Rebates NJ", "HVAC Financing"), which describe incentives, not a service performed. */
   services: string[];
   /** Empty until certification documentation is provided (spec: "all certification wording BLOCKS" until then). */
   certifications: VerifiedCertification[];
@@ -86,6 +85,10 @@ export const VERIFIED_FACTS: VerifiedFacts = {
     legalName: "Mechanical Enterprise LLC",
     // shared/business.ts — the single canonical number (two were in use; this is the correct, live one).
     phone: PHONE_DISPLAY,
+    // shared/business.ts has no address field — no verified street address exists
+    // anywhere in this codebase (see the field comment above). Stays null; this
+    // was asked to be sourced from shared/business.ts alongside phone, but that
+    // file only has phone constants — flagging the mismatch rather than inventing one.
     address: null,
     serviceCounties: CITY_REGISTRY_COUNTIES,
     // client/src/pages/About.tsx, Services.tsx, MaintenanceSubscription.tsx all say "over 20 years"
@@ -93,8 +96,40 @@ export const VERIFIED_FACTS: VerifiedFacts = {
     yearsInBusiness: 20,
     founded: null,
   },
-  incentives: [],
-  services: SERVICE_TYPES.map((t) => t.label).filter((label) => label !== "General" && label !== "Other"),
+  // Owner-attested as factual on 2026-09-26, standardized site-wide by commit
+  // 1b8bf71 ("Standardize rebate claims: $16K residential, 80% commercial,
+  // remove expired federal credit") and consistently stated across
+  // AIAssistantPrompts.tsx, CityPage.tsx, and the blog. Deliberately excludes:
+  // the federal 25C credit and HEAR/HOMES rebates (both named in 1b8bf71 as
+  // expired/unverified — the whole point of that commit), the $18,000
+  // income-qualified/LMI tier (not requested here — only the standard $16K
+  // tier), and every illustrative worked-example figure ($23,500/$29,800/
+  // case-study numbers in blogPosts.ts) — those are hypotheticals, not facts.
+  incentives: [
+    {
+      program: "PSE&G / NJ Clean Energy residential HVAC rebate",
+      amountText: "Up to $16,000",
+      verifiedOn: "2026-09-26",
+      source: "owner-attested; site copy",
+    },
+    {
+      program: "PSE&G Direct Install (commercial)",
+      amountText: "Up to 80% of project cost covered",
+      verifiedOn: "2026-09-26",
+      source: "owner-attested; site copy",
+    },
+    {
+      program: "PSE&G On-Bill Repayment (OBR)",
+      amountText: "0% interest financing for the remaining balance after rebates, repaid through the monthly utility bill",
+      verifiedOn: "2026-09-26",
+      source: "owner-attested; site copy",
+    },
+  ],
+  // client/src/App.tsx's ServicePage routes — the live, individually-indexed
+  // service pages (/heat-pump-installation-nj, etc.). "Heat Pump Rebates NJ"
+  // and "HVAC Financing" use the same page template but describe incentives,
+  // not a service performed, so they're excluded here.
+  services: ["Heat Pump", "Central AC", "Ductless Mini-Split", "Full HVAC System Replacement", "Commercial HVAC", "VRV/VRF System"],
   certifications: [],
   projects: [],
 };

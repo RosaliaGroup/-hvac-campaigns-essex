@@ -88,7 +88,8 @@ describe("lintContent â€” extended body-specific rules (spec Part 2 / addendum Â
   });
 
   it("blocks any dollar figure at all when facts aren't configured yet", () => {
-    const result = lintContent({ ...cleanInput, body: words(1000) + " Save $500 today." }, VERIFIED_FACTS); // empty incentives
+    const unconfiguredFacts = { ...VERIFIED_FACTS, incentives: [] };
+    const result = lintContent({ ...cleanInput, body: words(1000) + " Save $500 today." }, unconfiguredFacts);
     expect(result.findings.some((f) => f.code === "facts_not_configured")).toBe(true);
   });
 
