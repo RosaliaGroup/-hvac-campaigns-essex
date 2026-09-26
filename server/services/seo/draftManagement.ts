@@ -17,12 +17,18 @@ const DRAFT_EXPIRY_DAYS = 30;
  * every affected seoPages row back to "needs_review". Nothing is deleted —
  * this is a content reset, not a row delete, so history/audit stays intact
  * and the page can be regenerated. Logs one draft_discarded row per page.
+ *
+ * `excludePageIds` skips specific pages entirely — e.g. pages that already
+ * carry a real (non-mock) draft genuinely awaiting review, which a blanket
+ * discard would otherwise wipe right alongside the stale placeholder backlog.
  */
-export async function discardAllDrafts(actorId: number | null): Promise<{ discarded: number }> {
+export async function discardAllDrafts(actorId: number | null, excludePageIds: number[] = []): Promise<{ discarded: number }> {
   const db = await getDb();
   if (!db) return { discarded: 0 };
 
-  const drafts = await db.select().from(seoAiDrafts);
+  const exclude = new Set(excludePageIds);
+  const allDrafts = await db.select().from(seoAiDrafts);
+  const drafts = allDrafts.filter((d) => !exclude.has(d.pageId));
   if (drafts.length === 0) return { discarded: 0 };
 
   const pageIds = drafts.map((d) => d.pageId);
