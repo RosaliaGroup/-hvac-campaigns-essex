@@ -67,11 +67,25 @@ export async function listContentQueue(): Promise<SeoContentQueueRow[]> {
   return db.select().from(seoContentQueue).orderBy(asc(seoContentQueue.createdAt));
 }
 
-/** Model-proposed topic — status "proposed", requires a human to promote it to "queued" before the job will draft it. */
-export async function proposeTopic(input: { title: string; audience?: string | null; targetQuery?: string | null; brief?: string | null }): Promise<SeoContentQueueRow> {
+/**
+ * Model-proposed topic — status "proposed", requires a human to promote it to
+ * "queued" before the job will draft it. `source` defaults to "proposed"
+ * (original behavior); callers that want a distinguishable provenance (e.g.
+ * the market-intel job) may pass their own. `refreshesSlug` marks this as a
+ * refresh-candidate proposal for an existing post/page rather than a new one.
+ */
+export async function proposeTopic(input: {
+  title: string;
+  audience?: string | null;
+  targetQuery?: string | null;
+  brief?: string | null;
+  source?: string;
+  refreshesSlug?: string | null;
+}): Promise<SeoContentQueueRow> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
-  await db.insert(seoContentQueue).values({ ...input, status: "proposed", source: "proposed" });
+  const { source, ...rest } = input;
+  await db.insert(seoContentQueue).values({ ...rest, status: "proposed", source: source ?? "proposed" });
   const [row] = await db.select().from(seoContentQueue).where(eq(seoContentQueue.title, input.title)).limit(1);
   await logAudit({ actorId: null, action: "topic_proposed", batchId: null, pagePath: null, before: null, after: { title: input.title }, lintResult: null });
   return row;

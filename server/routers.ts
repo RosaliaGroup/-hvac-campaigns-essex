@@ -47,6 +47,7 @@ import { commercialOpportunitiesRouter } from "./routers/commercialOpportunities
 import { bidAssistantRouter } from "./routers/bidAssistant";
 import { estimatesRouter } from "./routers/estimates";
 import { seoRouter } from "./routers/seo";
+import { marketIntelRouter } from "./routers/marketIntel";
 import { attributionRouter } from "./routers/attribution";
 import { analyticsRouter } from "./routers/analytics";
 import { executiveDashboardsRouter } from "./routers/executiveDashboards";
@@ -114,6 +115,7 @@ export const appRouter = router({
   bidAssistant: bidAssistantRouter,
   estimates: estimatesRouter,
   seo: seoRouter,
+  marketIntel: marketIntelRouter,
   attribution: attributionRouter,
   analytics: analyticsRouter,
   executiveDashboards: executiveDashboardsRouter,

@@ -21,6 +21,7 @@ import {
   Megaphone,
   MessageSquare,
   Plug,
+  Radar,
   Receipt,
   RefreshCw,
   Ruler,
@@ -38,7 +39,7 @@ import {
 export const NAV_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   AlertTriangle, BarChart3, Bot, Briefcase, CalendarCheck, CalendarClock,
   Calculator, Facebook, FileText, Home, Inbox, LayoutDashboard, LineChart, MapPin,
-  Megaphone, MessageSquare, Plug, Receipt, RefreshCw, Ruler, Search, Settings,
+  Megaphone, MessageSquare, Plug, Radar, Receipt, RefreshCw, Ruler, Search, Settings,
   ShieldCheck, Star, Target, TrendingUp, UserRound, Users, Zap,
 };
 

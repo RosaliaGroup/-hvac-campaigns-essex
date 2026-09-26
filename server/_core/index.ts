@@ -23,6 +23,7 @@ import { startNightlyDraftScheduler } from "../services/seo/nightlyDraftJob";
 import { startWeeklyContentScheduler } from "../services/seo/contentPipeline";
 import { startAutoMergeScheduler } from "../services/seo/autoMerge";
 import { seedContentQueue } from "../services/seo/contentQueue";
+import { startMarketIntelScheduler } from "../services/seo/intel/job";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
 import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
@@ -143,6 +144,9 @@ async function startServer() {
     startGrowthCadencePoller();
     startReviewEnginePoller();
     startImportReleaseSweep();
+    // Daily Market Intelligence Report (docs/market-intel-spec.md) — gated
+    // off by default via SEO_INTEL_ENABLED.
+    startMarketIntelScheduler();
   });
 }
 

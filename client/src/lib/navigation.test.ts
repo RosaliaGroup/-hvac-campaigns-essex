@@ -31,6 +31,7 @@ const KNOWN_ROUTES = new Set<string>([
   "/marketing-dashboard",
   "/marketing/analytics",
   "/seo-intelligence",
+  "/market-intel",
   "/revenue-attribution",
   "/local-seo",
   "/sms-campaigns",
@@ -321,6 +322,7 @@ describe("getVisibleDepartments", () => {
     expect(itemLabels("marketing", "marketing")).toEqual([
       "Marketing Dashboard",
       "SEO Intelligence",
+      "Market Intel",
       "Revenue Attribution",
       "SMS Campaigns",
       "Campaign Performance",

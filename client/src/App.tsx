@@ -25,6 +25,7 @@ import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import MarketingDashboard from "./pages/MarketingDashboard";
 import SeoIntelligence from "./pages/SeoIntelligence";
+import MarketIntel from "./pages/MarketIntel";
 import RevenueAttribution from "./pages/RevenueAttribution";
 import MarketingAnalytics from "./pages/MarketingAnalytics";
 import LocalSeo from "./pages/LocalSeo";
@@ -338,6 +339,7 @@ function Router() {
       <Route path={"/marketing-autopilot"} component={protect(MarketingAutopilot)} />
       <Route path={"/marketing-dashboard"} component={protect(MarketingDashboard)} />
       <Route path={"/seo-intelligence"} component={protect(SeoIntelligence)} />
+      <Route path={"/market-intel"} component={protect(MarketIntel)} />
       <Route path={"/revenue-attribution"} component={protect(RevenueAttribution)} />
       <Route path={"/marketing/analytics"} component={protect(MarketingAnalytics)} />
       <Route path={"/local-seo"} component={protect(LocalSeo)} />
