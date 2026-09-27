@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { evaluateAutoMergeReadiness } from "./autoMerge";
 
-const NOW = new Date("2026-09-26T12:00:00Z");
-const PAST = new Date("2026-09-26T00:00:00Z");
-const FUTURE = new Date("2026-09-27T00:00:00Z");
+// Relative to the real clock, not a hardcoded date: NOW is also used as the
+// `now` fed into checkAndMergeIfReady's real (non-injected) Date.now() checks
+// further below, so PAST/FUTURE must stay past/future of the actual wall
+// clock whenever this suite runs, not just of the fixed NOW constant.
+const NOW = new Date();
+const PAST = new Date(NOW.getTime() - 24 * 60 * 60 * 1000);
+const FUTURE = new Date(NOW.getTime() + 24 * 60 * 60 * 1000);
 
 const cleanBatch = { status: "pr_open" as const, holdUntil: PAST, commitSha: "abc123", prNumber: 5 };
 const cleanSignals = { batch: cleanBatch, now: NOW, isWarmedUp: true, circuitPaused: false, netlifyState: "success" as const, hasComments: false };
