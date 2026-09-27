@@ -257,6 +257,39 @@ the unique constraint instead of the composite — same full-value uniqueness
 guarantee, no truncation, compact key. Applied and verified 2026-09-26; both
 `0078` and `0079` are now in the tracker and journal.
 
+### ⚠️ `0078_seo_intel` — PARTIALLY APPLIED 2026-09-26, blocked on a real schema bug
+
+Applied via `scripts/apply-migration-0078.ts` (dry-run first, matched the committed
+`.sql` exactly). Backup: logical row dump of `seoAuditLog` (the only existing table
+touched — 246 rows, `SHOW CREATE TABLE` captured), since no `mysqldump` binary was
+available (locally or via `railway run`, which only injects env vars into a local
+process, not a remote shell). Verified non-empty, row count matched.
+
+**10 of 12 statements applied clean:**
+- `seoAuditLog.action` enum widened (11 new values, all 9 existing kept) ✓
+- `seoIntelReports`, `seoIntelItems`, `seoIntelCompetitorSnapshots` — fully created with all their indexes ✓
+- `seoIntelQuerySnapshots` — table created ✓, plus its single-column `seoIntelQuerySnapshots_date_idx` (applied separately, unaffected by the bug below) ✓
+
+**Statement 11/12 FAILED and was not retried:**
+`CREATE UNIQUE INDEX seoIntelQuerySnapshots_site_query_date_uq ON seoIntelQuerySnapshots (siteUrl, query, snapshotDate)`
+→ `ER_TOO_LONG_KEY`: "Specified key was too long; max key length is 3072 bytes".
+`siteUrl varchar(512)` + `query varchar(512)` + `snapshotDate varchar(10)` under
+`utf8mb4` (4 bytes/char) = 4136 bytes — over the limit even with
+`innodb_large_prefix`. **This is a design bug in the committed migration file
+itself**, not an apply-process error — it was never going to succeed as written,
+regardless of care taken applying it. `seoIntelQuerySnapshots` has zero rows
+(brand-new table), so there is no data at risk; only the missing unique index
+blocks completion.
+
+**Not yet in the tracker.** No `__drizzle_migrations` row or journal entry for
+`0078` — inserting one now would misrepresent this file as fully applied when
+one of its 12 statements never ran. Do this only once the index is fixed and
+applied. Options to actually fix it (needs an owner decision, not a default):
+prefix index (`siteUrl(N), query(N)`) trades away true full-value uniqueness for
+long values; narrowing the varchars risks truncating genuinely long GSC
+queries/URLs; a derived hash column gives a correct, compact unique key but
+needs a matching app-code change to populate it on insert.
+
 ## Who owns approval
 
 The **owner** is the sole approver for any production schema/data change or
