@@ -195,10 +195,13 @@ export default function AIVASettings() {
   };
 
   const handleSaveGoogleAds = () => {
-    if (!gadsCustomerId || !gadsDeveloperToken || !gadsClientId || !gadsClientSecret) {
+    // Developer token is NOT required as of Google's 2026-09-09 policy change —
+    // API access is now approved per Google Cloud project, not per token. Left
+    // in the form for accounts that still have one on file, but optional.
+    if (!gadsCustomerId || !gadsClientId || !gadsClientSecret) {
       toast({
         title: "Missing fields",
-        description: "Please fill in all Google Ads credentials",
+        description: "Please fill in the Google Ads account ID and OAuth credentials",
         variant: "destructive",
       });
       return;
@@ -582,16 +585,18 @@ export default function AIVASettings() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="gads-developer-token">Developer Token</Label>
+                  <Label htmlFor="gads-developer-token">Developer Token (optional)</Label>
                   <Input
                     id="gads-developer-token"
                     type="password"
-                    placeholder="Enter your Google Ads API Developer Token"
+                    placeholder="No longer required — leave blank"
                     value={gadsDeveloperToken}
                     onChange={(e) => setGadsDeveloperToken(e.target.value)}
                   />
                   <p className="text-sm text-muted-foreground">
-                    Found in Google Ads → Tools & Settings → API Center
+                    As of Google's Sept 2026 change, API access is approved per Google Cloud
+                    project (see the project's Google Ads API Overview page), not per developer
+                    token — this field can be left blank.
                   </p>
                 </div>
 
