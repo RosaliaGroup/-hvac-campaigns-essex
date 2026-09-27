@@ -212,54 +212,50 @@ decide if it matters for their case.
   Restoring an unverified backup is not a rollback plan.
 - After any rollback, re-run validation and reconcile the tracker to the restored state.
 
-### Hand-applied 2026-09-26 (growth system + social lane)
+### Hand-applied 2026-09-26 (growth system + social lane + market intel)
 
-Both applied manually against prod `railway` (MySQL 9.4.0) via `scripts/apply-migration-0076.ts`
-and `scripts/apply-migration-0077.ts` (dry-run-by-default, require `--execute --yes-write`,
-tolerant of "already applied" errors 1050/1060/1061 for safe re-runs). **No backup
-file location was recorded for either apply** — unlike every prior hand-apply logged
-above, these joined the unrecorded-backup gap; if a restore is ever needed, treat both
-as effectively additive-only and reversible via their `.down.sql` files instead of a
-backup restore. Reconciled into the tracker and journal 2026-09-26 (see "Tracker
-reconciliation" above for the hash/created_at derivation).
+All four applied manually against prod `railway` (MySQL 9.4.0) via their matching
+`scripts/apply-migration-00NN.ts` (dry-run-by-default, require `--execute --yes-write`,
+tolerant of "already applied" errors for safe re-runs). **No backup file location was
+recorded for any of these four** — unlike every prior hand-apply logged above, they
+joined the unrecorded-backup gap (0078 is the one exception: see its incident note
+below, which did capture a logical row dump before touching the one pre-existing
+table it altered). If a restore is ever needed, treat all four as effectively
+additive-only and reversible via their `.down.sql` files instead of a backup restore.
+Reconciled into the tracker and journal 2026-09-26 (see "Tracker reconciliation"
+above for the hash/created_at derivation); 0078/0079 reconciled separately, once
+0079's fix confirmed 0078 was actually complete (see incident note below).
 
 | Migration | What | Backup | Validation at apply |
 |---|---|---|---|
 | `0076_growth_system` | `leads.consentStatus`, `leadCaptures.consentStatus`+`formVersion`, 6 new tables (`growthCadences`, `growthCadenceTasks`, `growthTouches`, `reviewRequests`, `contactImportBatches`, `importedContacts`) | **not recorded** | Confirmed via `information_schema` — all columns/tables present with expected types/defaults; all 6 tables at 0 rows (nothing writes until the growth pollers pick up leads) |
 | `0077_social_lane` | `socialPosts.status` enum widened (+`held`/`vetoed`/`reverted`) + `contentSource`/`holdUntil`/`vetoedAt`/`revertedAt`/`utmCampaign` columns, `jobs.photoConsent`, new `jobPhotos` + `socialLaneState` tables | **not recorded** | Confirmed via `information_schema` — enum, all 5 new columns, `photoConsent` (default `0`), both new tables present; `socialLaneState` singleton row seeded (`id=1`, `circuitBreakerPaused=false`) |
+| `0078_seo_intel` | `seoAuditLog.action` enum widened (11 new values), 4 new tables (`seoIntelReports`, `seoIntelItems`, `seoIntelCompetitorSnapshots`, `seoIntelQuerySnapshots`) | logical row dump of `seoAuditLog` (246 rows, `SHOW CREATE TABLE` captured) | Confirmed via `information_schema` 2026-09-26 (after 0079 landed) — enum has all 20 values, all 4 tables present. See incident note below: one statement failed on first apply and needed 0079 to complete. |
+| `0079_seo_intel_query_key` | Fixes 0078's bug — `seoIntelQuerySnapshots.snapshotKey` (derived hash, `varchar(64) NOT NULL`) + `seoIntelQuerySnapshots_key_uq` unique index on it, replacing the composite index that could never apply | not recorded (zero-row table, additive-only, no pre-existing data touched) | Confirmed via `information_schema` 2026-09-26 — `snapshotKey` column present (`varchar(64)`, `NOT NULL`) with a unique index on it; pre-existing `seoIntelQuerySnapshots_date_idx` untouched |
 
-### ⚠️ `0078_seo_intel` — PARTIALLY APPLIED 2026-09-26, blocked on a real schema bug
+### `0078_seo_intel` incident — RESOLVED by `0079` (2026-09-26)
 
-Applied via `scripts/apply-migration-0078.ts` (dry-run first, matched the committed
-`.sql` exactly). Backup: logical row dump of `seoAuditLog` (the only existing table
-touched — 246 rows, `SHOW CREATE TABLE` captured), since no `mysqldump` binary was
-available (locally or via `railway run`, which only injects env vars into a local
-process, not a remote shell). Verified non-empty, row count matched.
-
-**10 of 12 statements applied clean:**
-- `seoAuditLog.action` enum widened (11 new values, all 9 existing kept) ✓
-- `seoIntelReports`, `seoIntelItems`, `seoIntelCompetitorSnapshots` — fully created with all their indexes ✓
-- `seoIntelQuerySnapshots` — table created ✓, plus its single-column `seoIntelQuerySnapshots_date_idx` (applied separately, unaffected by the bug below) ✓
-
-**Statement 11/12 FAILED and was not retried:**
-`CREATE UNIQUE INDEX seoIntelQuerySnapshots_site_query_date_uq ON seoIntelQuerySnapshots (siteUrl, query, snapshotDate)`
-→ `ER_TOO_LONG_KEY`: "Specified key was too long; max key length is 3072 bytes".
+On first apply, 10 of 12 statements succeeded clean (the enum widen, all 4 tables,
+and `seoIntelQuerySnapshots_date_idx`). Statement 11/12 —
+`CREATE UNIQUE INDEX seoIntelQuerySnapshots_site_query_date_uq ON
+seoIntelQuerySnapshots (siteUrl, query, snapshotDate)` — failed with
+`ER_TOO_LONG_KEY`: "Specified key was too long; max key length is 3072 bytes".
 `siteUrl varchar(512)` + `query varchar(512)` + `snapshotDate varchar(10)` under
-`utf8mb4` (4 bytes/char) = 4136 bytes — over the limit even with
-`innodb_large_prefix`. **This is a design bug in the committed migration file
-itself**, not an apply-process error — it was never going to succeed as written,
-regardless of care taken applying it. `seoIntelQuerySnapshots` has zero rows
-(brand-new table), so there is no data at risk; only the missing unique index
-blocks completion.
+`utf8mb4` (4 bytes/char) = 4136 bytes, over the limit even with
+`innodb_large_prefix`. **This was a design bug in the committed migration file
+itself**, not an apply-process error — it was never going to succeed as written.
+`seoIntelQuerySnapshots` had zero rows at the time, so no data was ever at risk;
+only the missing unique index blocked completion, and the tracker/journal
+entries for `0078` were deliberately withheld until it was genuinely complete
+(inserting them at that point would have misrepresented a 10/12-statement apply
+as fully applied).
 
-**Not yet in the tracker.** No `__drizzle_migrations` row or journal entry for
-`0078` — inserting one now would misrepresent this file as fully applied when
-one of its 12 statements never ran. Do this only once the index is fixed and
-applied. Options to actually fix it (needs an owner decision, not a default):
-prefix index (`siteUrl(N), query(N)`) trades away true full-value uniqueness for
-long values; narrowing the varchars risks truncating genuinely long GSC
-queries/URLs; a derived hash column gives a correct, compact unique key but
-needs a matching app-code change to populate it on insert.
+Fixed by `0079_seo_intel_query_key`: a derived `snapshotKey` column
+(`sha256(siteUrl + "\n" + query + "\n" + snapshotDate)`, computed in
+`server/services/seo/intel/searchDemand.ts`'s `snapshotTodaysQueries`) carries
+the unique constraint instead of the composite — same full-value uniqueness
+guarantee, no truncation, compact key. Applied and verified 2026-09-26; both
+`0078` and `0079` are now in the tracker and journal.
 
 ## Who owns approval
 
