@@ -519,6 +519,20 @@
       "when": 1790400100000,
       "tag": "0077_social_lane",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "5",
+      "when": 1790400200000,
+      "tag": "0078_seo_intel",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "5",
+      "when": 1790400300000,
+      "tag": "0079_seo_intel_query_key",
+      "breakpoints": true
     }
   ]
 }

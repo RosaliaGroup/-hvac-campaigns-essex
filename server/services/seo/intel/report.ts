@@ -119,7 +119,15 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
     if (executedNow) { executed++; accepted++; }
 
     await db.insert(seoIntelItems).values({
-      reportId, kind: draft.kind as never, title: draft.title, evidence: draft.evidence as object,
+      reportId, kind: draft.kind as never,
+      // Titles embed raw external data (GSC query strings, competitor page
+      // text) with no upstream length cap — seen in production: a ~700-char
+      // "query" that was really scraped bio text overflowed this varchar(255)
+      // column (ER_DATA_TOO_LONG). Truncate defensively at the one insert
+      // site rather than each of adjustments.ts's ~10 title-construction call
+      // sites.
+      title: draft.title.length > 255 ? `${draft.title.slice(0, 252)}…` : draft.title,
+      evidence: draft.evidence as object,
       suggestion: draft.suggestion, targetQueue: draft.targetQueue, suggestionKey: key,
       status: executedNow ? "accepted" : "open",
       factsBlocked: draft.factsBlocked,
