@@ -257,40 +257,15 @@ the unique constraint instead of the composite — same full-value uniqueness
 guarantee, no truncation, compact key. Applied and verified 2026-09-26; both
 `0078` and `0079` are now in the tracker and journal.
 
-### `0078_seo_intel` + `0079_seo_intel_query_key` — RESOLVED 2026-09-27 (was partially applied)
-
-`0078_seo_intel.sql` shipped with a real bug: `CREATE UNIQUE INDEX
-seoIntelQuerySnapshots_site_query_date_uq ON seoIntelQuerySnapshots (siteUrl,
-query, snapshotDate)` exceeds MySQL's 3072-byte max key length under utf8mb4
-(4136 bytes) — `ER_TOO_LONG_KEY`, and it was never going to succeed as
-written, in any environment. 10 of 0078's 12 statements applied clean on
-first attempt (enum widen + 3 of 4 new tables + the 4th table's single-column
-date index); only that one composite unique index failed, with zero data at
-risk (the table was brand new, zero rows).
-
-Owner-decided fix (of three options weighed: prefix index / narrower columns
-/ derived hash column): **`0079_seo_intel_query_key.sql`** adds
-`seoIntelQuerySnapshots.snapshotKey` (`sha256(siteUrl + query + snapshotDate)`)
-and puts the unique index on that single compact column instead —
-`server/services/seo/intel/searchDemand.ts`'s `snapshotTodaysQueries` now
-computes and writes it on every insert. Both migrations are now **fully
-applied** (`information_schema`-verified: enum, all 4 tables + all their
-indexes including `seoIntelQuerySnapshots_key_uq`, present and correct).
-
-**No backup file location was recorded for either** (no `mysqldump` binary
-available locally or via `railway run`, which only injects env vars into a
-local process, not a remote shell; a logical row dump of `seoAuditLog` — the
-only *existing* table 0078 touched, 246 rows — was taken instead and
-verified). Reconciled into the tracker and journal 2026-09-27.
-
-⚠️ **Tracker hash correction:** the first attempt at reconciling these two
-into the tracker used a hash computed from the *local Windows checkout* of
-each `.sql` file, which `git`'s `autocrlf` had converted to CRLF — producing
-a hash that doesn't match the actual committed (LF) file. Caught and fixed
-by recomputing from the git blob directly (`git show <ref>:<path>`), per the
-"Tracker reconciliation" section above, which now says explicitly not to
-read the local checkout for this. Rows `id=60,61` (wrong) were deleted and
-replaced with `id=64,65` (correct hash, same `created_at`).
+⚠️ **Tracker hash correction (2026-09-27):** the tracker rows this section
+describes (`id=60,61`) were hashed from the *local Windows checkout* of each
+`.sql` file, which `git`'s `autocrlf` had converted to CRLF — producing a
+hash that doesn't match the actual committed (LF) file. Caught while
+reconciling `0073`/`0074`/`0075` below and fixed by recomputing from the git
+blob directly (`git show <ref>:<path>`), per the "Tracker reconciliation"
+section above, which now says explicitly not to read the local checkout for
+this. Rows `id=60,61` (wrong) were deleted and replaced with `id=64,65`
+(correct hash, same `created_at`).
 
 ### Hand-applied 2026-09-27 (0073/0074/0075 — SEO autopublish + nightly-candidate tag + hold column)
 
