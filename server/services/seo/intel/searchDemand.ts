@@ -16,6 +16,7 @@
  * already documents for its own "week-over-week" clicks check. Flagged here
  * and in the PR/build report rather than silently treated as exact.
  */
+import { createHash } from "node:crypto";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { seoPages, seoQueries, seoIntelQuerySnapshots, type SeoIntelQuerySnapshotRow } from "../../../../drizzle/schema";
@@ -172,7 +173,12 @@ export function classifySeasonality(series: MonthlyInterestSeries[], now: Date =
 
 /* ── Real I/O: snapshot + collect ────────────────────────────────────────── */
 
-/** Snapshot today's seoQueries into seoIntelQuerySnapshots (idempotent per siteUrl+query+day via the unique index). Call once per report run, before classifying. */
+/** sha256(siteUrl+query+date) — see drizzle/schema.ts's seoIntelQuerySnapshots.snapshotKey doc. */
+function querySnapshotKey(siteUrl: string, query: string, snapshotDate: string): string {
+  return createHash("sha256").update(`${siteUrl}\n${query}\n${snapshotDate}`).digest("hex");
+}
+
+/** Snapshot today's seoQueries into seoIntelQuerySnapshots (idempotent per siteUrl+query+day via snapshotKey's unique index). Call once per report run, before classifying. */
 export async function snapshotTodaysQueries(siteUrl: string, now: Date = new Date()): Promise<number> {
   const db = await getDb();
   if (!db) return 0;
@@ -185,6 +191,7 @@ export async function snapshotTodaysQueries(siteUrl: string, now: Date = new Dat
       .values({
         siteUrl, query: r.query, page: r.page, clicks: r.clicks, impressions: r.impressions,
         ctr: r.ctr, position: r.position, snapshotDate: today,
+        snapshotKey: querySnapshotKey(siteUrl, r.query, today),
       })
       .onDuplicateKeyUpdate({ set: { clicks: r.clicks, impressions: r.impressions, ctr: r.ctr, position: r.position, page: r.page } });
     count++;
