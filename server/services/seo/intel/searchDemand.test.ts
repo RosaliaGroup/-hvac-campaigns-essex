@@ -105,18 +105,18 @@ describe("classifyUnservedQueries (§3a bullet 2 acceptance)", () => {
 
 describe("classifyDecayingPages (§3a bullet 3 acceptance)", () => {
   it("flags a page down >=25% clicks", () => {
-    const result = classifyDecayingPages([{ page: "/warranty", clicks: 30, previousClicks: 40 }]); // -25%
+    const result = classifyDecayingPages([{ page: "/warranty", clicks: 30, previousClicks: 40, previousImpressions: 500 }]); // -25%
     expect(result).toHaveLength(1);
     expect(result[0].pctDown).toBeCloseTo(0.25, 5);
   });
 
   it("does not flag a page down less than 25%", () => {
-    const result = classifyDecayingPages([{ page: "/warranty", clicks: 31, previousClicks: 40 }]); // -22.5%
+    const result = classifyDecayingPages([{ page: "/warranty", clicks: 31, previousClicks: 40, previousImpressions: 500 }]); // -22.5%
     expect(result).toEqual([]);
   });
 
   it("ignores a page with no prior-window clicks (nothing to compare)", () => {
-    const result = classifyDecayingPages([{ page: "/new-page", clicks: 0, previousClicks: 0 }]);
+    const result = classifyDecayingPages([{ page: "/new-page", clicks: 0, previousClicks: 0, previousImpressions: 0 }]);
     expect(result).toEqual([]);
   });
 });

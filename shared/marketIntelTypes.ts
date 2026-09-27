@@ -46,6 +46,7 @@ export type DecayingPageFinding = {
   page: string;
   clicks: number;
   previousClicks: number;
+  previousImpressions: number;
   pctDown: number;
 };
 

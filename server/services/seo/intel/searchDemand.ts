@@ -114,7 +114,7 @@ export function classifyUnservedQueries(current: QueryDemandPoint[]): UnservedQu
 
 /* ── Decaying pages (§3a bullet 3) ───────────────────────────────────────── */
 
-export type PageClicksPoint = { page: string; clicks: number; previousClicks: number };
+export type PageClicksPoint = { page: string; clicks: number; previousClicks: number; previousImpressions: number };
 
 export function classifyDecayingPages(pages: PageClicksPoint[]): DecayingPageFinding[] {
   const findings: DecayingPageFinding[] = [];
@@ -122,7 +122,7 @@ export function classifyDecayingPages(pages: PageClicksPoint[]): DecayingPageFin
     if (p.previousClicks <= 0) continue;
     const pctDown = (p.previousClicks - p.clicks) / p.previousClicks;
     if (pctDown >= DECAY_PCT_THRESHOLD) {
-      findings.push({ page: p.page, clicks: p.clicks, previousClicks: p.previousClicks, pctDown });
+      findings.push({ page: p.page, clicks: p.clicks, previousClicks: p.previousClicks, previousImpressions: p.previousImpressions, pctDown });
     }
   }
   return findings;
@@ -239,7 +239,7 @@ export async function collectSearchDemand(siteUrl: string, now: Date = new Date(
 
   const rising = classifyRisingQueries({ current, priorWeekImpressions, seenInPriorMonth });
   const unserved = classifyUnservedQueries(current);
-  const decaying = classifyDecayingPages(pages.map((p) => ({ page: p.page, clicks: p.clicks, previousClicks: p.previousClicks })));
+  const decaying = classifyDecayingPages(pages.map((p) => ({ page: p.page, clicks: p.clicks, previousClicks: p.previousClicks, previousImpressions: p.previousImpressions })));
 
   // Cannibalization: which pages have held the "top page" slot for each query over the last 14 days.
   const recentRows = await snapshotsInRange(db, siteUrl, fmtDate(addDays(now, -14)), fmtDate(now));

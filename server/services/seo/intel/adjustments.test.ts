@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { buildItemDrafts, executeItem, emptyExecutionCounts } from "./adjustments";
+import type { RisingQueryFinding } from "../../../../shared/marketIntelTypes";
 
 const EMPTY = { rising: [], unserved: [], decaying: [], cannibalization: [], seasonality: [], competitorDiffs: [], differentiatorMatches: [], staleClaims: [] };
 
@@ -10,8 +11,75 @@ describe("buildItemDrafts (§3d suggestion routing)", () => {
   });
 
   it("routes a decaying page to the content queue (refresh lane), not the meta lane", () => {
-    const items = buildItemDrafts({ ...EMPTY, decaying: [{ page: "/warranty", clicks: 10, previousClicks: 20, pctDown: 0.5 }] });
+    const items = buildItemDrafts({ ...EMPTY, decaying: [{ page: "/warranty", clicks: 10, previousClicks: 20, previousImpressions: 0, pctDown: 0.5 }] });
     expect(items.find((i) => i.kind === "decaying_page")?.targetQueue).toBe("content_queue");
+  });
+
+  describe("§3a significance floor + section cap (decaying pages)", () => {
+    const decayingAt = (previousClicks: number, previousImpressions = 0) =>
+      ({ page: `/p-${previousClicks}-${previousImpressions}`, clicks: 1, previousClicks, previousImpressions, pctDown: 0.9 });
+
+    it("excludes a page below both the click and impression floor, and rolls it into one aggregate item", () => {
+      const items = buildItemDrafts({ ...EMPTY, decaying: [decayingAt(5, 50)] });
+      const decayingItems = items.filter((i) => i.kind === "decaying_page");
+      expect(decayingItems).toHaveLength(1);
+      expect(decayingItems[0].aggregate).toBe(true);
+      expect(decayingItems[0].title).toContain("1 low-traffic pages");
+      expect(decayingItems[0].targetQueue).toBe("report_only");
+    });
+
+    it("keeps a page that clears the click floor even with low impressions", () => {
+      const items = buildItemDrafts({ ...EMPTY, decaying: [decayingAt(10, 0)] });
+      const decayingItems = items.filter((i) => i.kind === "decaying_page");
+      expect(decayingItems).toHaveLength(1);
+      expect(decayingItems[0].aggregate).toBeUndefined();
+    });
+
+    it("keeps a page that clears the impression floor even with few clicks", () => {
+      const items = buildItemDrafts({ ...EMPTY, decaying: [decayingAt(1, 200)] });
+      const decayingItems = items.filter((i) => i.kind === "decaying_page");
+      expect(decayingItems).toHaveLength(1);
+      expect(decayingItems[0].aggregate).toBeUndefined();
+    });
+
+    it("caps individual items at 15, ranked by prior-window clicks, folding neither the excess nor the below-floor ones together", () => {
+      const significant = Array.from({ length: 20 }, (_, i) => decayingAt(20 + i)); // all clear the floor
+      const belowFloor = [decayingAt(3), decayingAt(4)];
+      const items = buildItemDrafts({ ...EMPTY, decaying: [...significant, ...belowFloor] });
+      const decayingItems = items.filter((i) => i.kind === "decaying_page");
+      const individual = decayingItems.filter((i) => !i.aggregate);
+      const aggregate = decayingItems.filter((i) => i.aggregate);
+      expect(individual).toHaveLength(15);
+      expect(aggregate).toHaveLength(1);
+      expect(aggregate[0].title).toContain("2 low-traffic pages"); // only the genuinely below-floor ones, not cap overflow
+      // Ranked highest-clicks-first: the top 15 of 20..39 previousClicks are 25..39.
+      expect((individual[0].evidence as { previousClicks: number }).previousClicks).toBe(39);
+      expect((individual[14].evidence as { previousClicks: number }).previousClicks).toBe(25);
+    });
+
+    it("never marks a real decaying-page item as aggregate, and never routes an aggregate item through execution", async () => {
+      const items = buildItemDrafts({ ...EMPTY, decaying: [decayingAt(2, 10)] });
+      const aggregateItem = items.find((i) => i.kind === "decaying_page" && i.aggregate)!;
+      expect(aggregateItem).toBeDefined();
+      const { result } = await executeItem(aggregateItem, { counts: emptyExecutionCounts(), metaWarmedUp: true, circuitClear: true });
+      expect(result.status).toBe("not_executable");
+    });
+  });
+
+  describe("§3a section cap (rising queries)", () => {
+    const risingAt = (impressions: number): RisingQueryFinding => ({
+      query: `q-${impressions}`, page: null, position: 5, impressions, impressionsPctChange: null, isNew: true, hasAnsweringPage: false,
+    });
+
+    it("caps rising_query and ads_keyword_suggestion items at 15 each, ranked by impressions", () => {
+      const rising = Array.from({ length: 20 }, (_, i) => risingAt(100 + i));
+      const items = buildItemDrafts({ ...EMPTY, rising });
+      expect(items.filter((i) => i.kind === "rising_query")).toHaveLength(15);
+      expect(items.filter((i) => i.kind === "ads_keyword_suggestion")).toHaveLength(15);
+      const risingItems = items.filter((i) => i.kind === "rising_query");
+      expect((risingItems[0].evidence as { impressions: number }).impressions).toBe(119);
+      expect((risingItems[14].evidence as { impressions: number }).impressions).toBe(105);
+    });
   });
 
   it("routes a stale-claims item to the meta lane", () => {
