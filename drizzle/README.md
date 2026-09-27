@@ -173,6 +173,35 @@ authoritative format before inserting, from:
 Once confirmed, record the exact command/source and hash derivation here so the
 next person does not have to re-derive it.
 
+**Derivation confirmed 2026-09-26** (for `0076`/`0077`, against the installed
+`drizzle-orm@0.44.7`): `node_modules/drizzle-orm/mysql-core/dialect.js`'s
+`migrate()` inserts `(hash, created_at)` = `(migration.hash, migration.folderMillis)`,
+where both come from `drizzle-orm/migrator.js`'s `readMigrationFiles()`:
+`created_at` is the migration's `meta/_journal.json` entry `when` (not the
+apply timestamp), and `hash` is `sha256(fs.readFileSync(<migrationsFolder>/<tag>.sql)).toString()).digest('hex')`
+— i.e. sha256 of the **exact committed `.sql` file bytes** (as stored in git;
+verify against the git blob, not a local Windows checkout, which may convert
+LF→CRLF and produce a different hash). `drizzle-kit@0.31.9`'s CLI has no
+separate migrate-apply/hashing implementation of its own to check — it
+delegates to whichever `drizzle-orm` `migrate()` the caller invokes, so the
+above is the only relevant source.
+
+Validated against production's oldest tracker rows (`id`=1–3, journal
+`0000_steady_khan`/`0001_quick_romulus`/`0002_jittery_martin_li`): `created_at`
+matches the journal's `when` **exactly** for all three. The `hash` values,
+however, do **not** match a fresh sha256 of those files' current committed
+content, even though `git log --follow` shows `0000_steady_khan.sql` has never
+been edited since its one authoring commit. Most likely explanation: those
+rows predate the currently-pinned `drizzle-orm`/`drizzle-kit` versions and were
+written under an earlier version with different hashing (this repo's tooling
+has changed versions multiple times per the drift documented above), not that
+today's derivation is wrong. Practical risk of an imprecise `hash` today is low
+regardless — nothing may ever run `drizzle-kit migrate` against production
+(forbidden by this policy either way), so the tracker's hash column has no
+live consumer; it exists for a human's future sanity check, not runtime safety.
+Flagging so the next person doesn't have to re-discover the mismatch and can
+decide if it matters for their case.
+
 ## Rollback / restore (from the verified backup)
 
 - **Prefer a forward reversing migration** when additive/cleanly reversible: apply
@@ -183,12 +212,21 @@ next person does not have to re-derive it.
   Restoring an unverified backup is not a rollback plan.
 - After any rollback, re-run validation and reconcile the tracker to the restored state.
 
-## Pending migration: 0077_social_lane
+### Hand-applied 2026-09-26 (growth system + social lane)
 
-`0077_social_lane.sql` (+ `.down.sql`) — Social Lane (docs/social-lane-spec.md):
-`socialPosts` status enum + hold/veto/revert/UTM columns, `jobs.photoConsent`,
-new `jobPhotos` and `socialLaneState` tables. **NOT applied anywhere.** Follow
-the approved manual procedure above before applying to production.
+Both applied manually against prod `railway` (MySQL 9.4.0) via `scripts/apply-migration-0076.ts`
+and `scripts/apply-migration-0077.ts` (dry-run-by-default, require `--execute --yes-write`,
+tolerant of "already applied" errors 1050/1060/1061 for safe re-runs). **No backup
+file location was recorded for either apply** — unlike every prior hand-apply logged
+above, these joined the unrecorded-backup gap; if a restore is ever needed, treat both
+as effectively additive-only and reversible via their `.down.sql` files instead of a
+backup restore. Reconciled into the tracker and journal 2026-09-26 (see "Tracker
+reconciliation" above for the hash/created_at derivation).
+
+| Migration | What | Backup | Validation at apply |
+|---|---|---|---|
+| `0076_growth_system` | `leads.consentStatus`, `leadCaptures.consentStatus`+`formVersion`, 6 new tables (`growthCadences`, `growthCadenceTasks`, `growthTouches`, `reviewRequests`, `contactImportBatches`, `importedContacts`) | **not recorded** | Confirmed via `information_schema` — all columns/tables present with expected types/defaults; all 6 tables at 0 rows (nothing writes until the growth pollers pick up leads) |
+| `0077_social_lane` | `socialPosts.status` enum widened (+`held`/`vetoed`/`reverted`) + `contentSource`/`holdUntil`/`vetoedAt`/`revertedAt`/`utmCampaign` columns, `jobs.photoConsent`, new `jobPhotos` + `socialLaneState` tables | **not recorded** | Confirmed via `information_schema` — enum, all 5 new columns, `photoConsent` (default `0`), both new tables present; `socialLaneState` singleton row seeded (`id=1`, `circuitBreakerPaused=false`) |
 
 ## Who owns approval
 
