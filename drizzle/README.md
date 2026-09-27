@@ -228,6 +228,39 @@ reconciliation" above for the hash/created_at derivation).
 | `0076_growth_system` | `leads.consentStatus`, `leadCaptures.consentStatus`+`formVersion`, 6 new tables (`growthCadences`, `growthCadenceTasks`, `growthTouches`, `reviewRequests`, `contactImportBatches`, `importedContacts`) | **not recorded** | Confirmed via `information_schema` — all columns/tables present with expected types/defaults; all 6 tables at 0 rows (nothing writes until the growth pollers pick up leads) |
 | `0077_social_lane` | `socialPosts.status` enum widened (+`held`/`vetoed`/`reverted`) + `contentSource`/`holdUntil`/`vetoedAt`/`revertedAt`/`utmCampaign` columns, `jobs.photoConsent`, new `jobPhotos` + `socialLaneState` tables | **not recorded** | Confirmed via `information_schema` — enum, all 5 new columns, `photoConsent` (default `0`), both new tables present; `socialLaneState` singleton row seeded (`id=1`, `circuitBreakerPaused=false`) |
 
+### ⚠️ `0078_seo_intel` — PARTIALLY APPLIED 2026-09-26, blocked on a real schema bug
+
+Applied via `scripts/apply-migration-0078.ts` (dry-run first, matched the committed
+`.sql` exactly). Backup: logical row dump of `seoAuditLog` (the only existing table
+touched — 246 rows, `SHOW CREATE TABLE` captured), since no `mysqldump` binary was
+available (locally or via `railway run`, which only injects env vars into a local
+process, not a remote shell). Verified non-empty, row count matched.
+
+**10 of 12 statements applied clean:**
+- `seoAuditLog.action` enum widened (11 new values, all 9 existing kept) ✓
+- `seoIntelReports`, `seoIntelItems`, `seoIntelCompetitorSnapshots` — fully created with all their indexes ✓
+- `seoIntelQuerySnapshots` — table created ✓, plus its single-column `seoIntelQuerySnapshots_date_idx` (applied separately, unaffected by the bug below) ✓
+
+**Statement 11/12 FAILED and was not retried:**
+`CREATE UNIQUE INDEX seoIntelQuerySnapshots_site_query_date_uq ON seoIntelQuerySnapshots (siteUrl, query, snapshotDate)`
+→ `ER_TOO_LONG_KEY`: "Specified key was too long; max key length is 3072 bytes".
+`siteUrl varchar(512)` + `query varchar(512)` + `snapshotDate varchar(10)` under
+`utf8mb4` (4 bytes/char) = 4136 bytes — over the limit even with
+`innodb_large_prefix`. **This is a design bug in the committed migration file
+itself**, not an apply-process error — it was never going to succeed as written,
+regardless of care taken applying it. `seoIntelQuerySnapshots` has zero rows
+(brand-new table), so there is no data at risk; only the missing unique index
+blocks completion.
+
+**Not yet in the tracker.** No `__drizzle_migrations` row or journal entry for
+`0078` — inserting one now would misrepresent this file as fully applied when
+one of its 12 statements never ran. Do this only once the index is fixed and
+applied. Options to actually fix it (needs an owner decision, not a default):
+prefix index (`siteUrl(N), query(N)`) trades away true full-value uniqueness for
+long values; narrowing the varchars risks truncating genuinely long GSC
+queries/URLs; a derived hash column gives a correct, compact unique key but
+needs a matching app-code change to populate it on insert.
+
 ## Who owns approval
 
 The **owner** is the sole approver for any production schema/data change or
