@@ -275,7 +275,7 @@ export default function GoogleAdsCampaigns() {
             >
               Click here to enable it &rarr;
             </a>
-            {" "}Then apply for Standard Access in the banner above.
+            {" "}Then apply for the appropriate access level in the banner above.
           </span>
         ),
         duration: 20000,
@@ -341,29 +341,31 @@ export default function GoogleAdsCampaigns() {
           </div>
         </div>
 
-        {/* Developer token upgrade notice — shown only when connected (Test Access) */}
+        {/* API access-level notice — shown only when connected (Test-account access) */}
         {connStatus?.connected && <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p className="font-semibold text-amber-900">Action required: Apply for Google Ads API Standard Access</p>
+            <p className="font-semibold text-amber-900">Action required: Apply for Google Ads API access in Google Cloud Console</p>
             <p className="text-amber-800 mt-1">
-              Your developer token is currently at <strong>Test Access</strong> level, which only works with test accounts.
-              To push campaigns to your live account (AW-17768263516), you need to apply for <strong>Standard Access</strong>.
+              As of Google's 2026-09-09 policy change, API access is approved per <strong>Google Cloud project</strong>,
+              not per developer token — the developer token is now optional and its value isn't checked. This project
+              currently shows <strong>test-account-only access</strong>. To push campaigns to your live account, apply
+              for <strong>Explorer, Basic, or Standard access</strong> for this Cloud project.
             </p>
             <ol className="mt-2 space-y-1 text-amber-800 list-decimal list-inside">
-              <li>Go to your Google Ads account → <strong>Tools &amp; Settings → API Center</strong></li>
-              <li>Click <strong>"Apply for Standard Access"</strong> and fill out the form</li>
+              <li>Open the Google Ads API page for this Cloud project (link below)</li>
+              <li>Find the <strong>access level</strong> section and apply for the level you need</li>
               <li>Describe use: <em>"Internal campaign management tool for our HVAC business"</em></li>
               <li>Google typically approves within <strong>1–2 business days</strong></li>
             </ol>
             <div className="mt-3 flex gap-3 flex-wrap">
               <a
-                href="https://ads.google.com/aw/apicenter"
+                href="https://console.developers.google.com/apis/api/googleads.googleapis.com/overview?project=408029125716"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-900 underline hover:text-amber-700"
               >
-                Open Google Ads API Center <ExternalLink className="h-3.5 w-3.5" />
+                Open Google Ads API in Cloud Console <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
           </div>
@@ -664,7 +666,7 @@ export default function GoogleAdsCampaigns() {
               Launch {confirmCampaign?.name}?
             </DialogTitle>
             <DialogDescription>
-              This will create the campaign in your Google Ads account (AW-17768263516) as <strong>paused</strong>.
+              This will create the campaign in your Google Ads account (332-572-0049) as <strong>paused</strong>.
               You enable it in Google Ads when you are ready to spend.
             </DialogDescription>
           </DialogHeader>

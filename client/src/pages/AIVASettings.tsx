@@ -522,7 +522,7 @@ export default function AIVASettings() {
                   )}
                 </CardTitle>
                 <CardDescription>
-                  Configure Google Ads API credentials and connect your account via OAuth. Account: AW-17768263516.
+                  Configure Google Ads API credentials and connect your account via OAuth. Account: 332-572-0049.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -647,8 +647,10 @@ export default function AIVASettings() {
                       <li>Enable the "Google Ads API"</li>
                       <li>Create OAuth 2.0 credentials (Web application type)</li>
                       <li>Add <code>{window.location.origin}/api/oauth/google-ads/callback</code> as an authorized redirect URI</li>
-                      <li>Get your Developer Token from Google Ads → Tools & Settings → API Center</li>
-                      <li>Apply for Standard Access if your token is still at Test level</li>
+                      <li>Developer Token is optional — Google approves API access per Cloud
+                        project now, not per token (as of Sept 2026)</li>
+                      <li>Apply for Explorer/Basic/Standard access for this Cloud project on the
+                        Google Ads API's page in Cloud Console if it's still test-account-only</li>
                     </ol>
                   </AlertDescription>
                 </Alert>
