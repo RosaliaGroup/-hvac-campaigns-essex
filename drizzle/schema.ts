@@ -3659,10 +3659,20 @@ export const seoIntelQuerySnapshots = mysqlTable(
     position: decimal("position", { precision: 6, scale: 2 }).default("0").notNull(),
     /** YYYY-MM-DD, America/New_York. */
     snapshotDate: varchar("snapshotDate", { length: 10 }).notNull(),
+    /**
+     * sha256(`${siteUrl}\n${query}\n${snapshotDate}`) hex digest. A unique
+     * index directly on (siteUrl, query, snapshotDate) exceeds MySQL's
+     * 3072-byte max key length under utf8mb4 given siteUrl/query's varchar(512)
+     * (0079_seo_intel_query_key.sql fixes this — see drizzle/README.md).
+     * Compact, deterministic stand-in for that composite key so
+     * onDuplicateKeyUpdate-based idempotency keeps working without truncating
+     * or narrowing siteUrl/query.
+     */
+    snapshotKey: varchar("snapshotKey", { length: 64 }).notNull(),
     capturedAt: timestamp("capturedAt").defaultNow().notNull(),
   },
   table => ({
-    siteQueryDateIdx: uniqueIndex("seoIntelQuerySnapshots_site_query_date_uq").on(table.siteUrl, table.query, table.snapshotDate),
+    keyUq: uniqueIndex("seoIntelQuerySnapshots_key_uq").on(table.snapshotKey),
     dateIdx: index("seoIntelQuerySnapshots_date_idx").on(table.snapshotDate),
   }),
 );
