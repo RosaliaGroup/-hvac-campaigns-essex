@@ -2786,6 +2786,11 @@ export const SEO_AUDIT_ACTION = [
   "warmup_advanced",
   "warmup_reset",
   "topic_proposed",
+  // ── Market Intel (docs/market-intel-spec.md, migration 0078) ──
+  "market_intel_report_generated",
+  "market_intel_item_executed",
+  "market_intel_item_reverted",
+  "market_intel_owner_decision_released",
 ] as const;
 
 export const seoAuditLog = mysqlTable(
@@ -3507,6 +3512,162 @@ export const estimateLineItems = mysqlTable(
   }),
 );
 export type EstimateLineItem = typeof estimateLineItems.$inferSelect;
+
+/* ── Daily Market Intelligence Report (docs/market-intel-spec.md) ─────────
+ * Additive, migration 0078 (NOT applied — hand-applied per drizzle/README.md).
+ * seoIntelReports/Items mirror the seoApprovalBatches/seoAuditLog pattern:
+ * one report row per day (or weekly roll-up), items are the individual
+ * suggestions/executed-changes shown in the CRM tab and the email digest.
+ * Every EXECUTED item carries executedBatchId (+ executedPrId) pointing at
+ * the seoApprovalBatches row the change actually landed in — Revert re-uses
+ * that batch's own revert path (meta lane) or this feature's own
+ * server/services/seo/intel/revert.ts (content-queue / page-PR items).
+ */
+export const SEO_INTEL_ITEM_KIND = [
+  "rising_query",
+  "unserved_query",
+  "decaying_page",
+  "cannibalization",
+  "seasonality",
+  "competitor_new_offer",
+  "competitor_price_change",
+  "competitor_warranty_change",
+  "competitor_new_page",
+  "competitor_service_area_change",
+  "competitor_messaging_change",
+  "positioning_match",
+  "positioning_counter",
+  "our_claims_stale",
+  "meta_change",
+  "internal_link_suggestion",
+  "new_post",
+  "refresh_post",
+  "new_page",
+  "jessica_prompt_gap",
+  "ads_keyword_suggestion",
+  "owner_decision",
+] as const;
+
+export const SEO_INTEL_ITEM_STATUS = ["open", "accepted", "dismissed", "expired"] as const;
+export const SEO_INTEL_DISMISS_REASON = ["wrong", "not_now", "off_brand", "already_done"] as const;
+
+export const seoIntelReports = mysqlTable(
+  "seoIntelReports",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** YYYY-MM-DD, America/New_York. */
+    date: varchar("date", { length: 10 }).notNull(),
+    windowKind: mysqlEnum("windowKind", ["daily", "weekly"]).default("daily").notNull(),
+    /** Full structured report — §2/§3 sections (search demand, competitor diffs, positioning, adjustments). */
+    sections: json("sections").notNull(),
+    /** One-paragraph, model-written-from-structured-items summary (§5.1) — no new facts. */
+    summary: text("summary"),
+    itemCount: int("itemCount").default(0).notNull(),
+    acceptedCount: int("acceptedCount").default(0).notNull(),
+    dismissedCount: int("dismissedCount").default(0).notNull(),
+    executedCount: int("executedCount").default(0).notNull(),
+    /** True if the circuit breaker was open when this report ran — "paused: suggestions only" (§4). */
+    circuitPaused: boolean("circuitPaused").default(false).notNull(),
+    /** True if GSC sync failed in the last 24h — §3a was skipped (§4's "reports why"). */
+    gscStale: boolean("gscStale").default(false).notNull(),
+    emailSent: boolean("emailSent").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  table => ({
+    dateKindIdx: uniqueIndex("seoIntelReports_date_kind_uq").on(table.date, table.windowKind),
+  }),
+);
+export type SeoIntelReportRow = typeof seoIntelReports.$inferSelect;
+export type InsertSeoIntelReport = typeof seoIntelReports.$inferInsert;
+
+export const seoIntelItems = mysqlTable(
+  "seoIntelItems",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    reportId: int("reportId").notNull(),
+    kind: mysqlEnum("kind", SEO_INTEL_ITEM_KIND).notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    /** Query/page evidence backing the suggestion — shape varies by kind. */
+    evidence: json("evidence"),
+    suggestion: text("suggestion"),
+    /** Which lane/queue this routes to: "meta_lane" | "content_queue" | "page_pr" | "pending_prompt_additions" | "owner_decision" | "report_only". */
+    targetQueue: varchar("targetQueue", { length: 64 }),
+    /** Stable hash of (kind + normalized title/target) — powers 90-day suppression (§3d dismiss/revert). */
+    suggestionKey: varchar("suggestionKey", { length: 255 }),
+    status: mysqlEnum("status", SEO_INTEL_ITEM_STATUS).default("open").notNull(),
+    dismissReason: mysqlEnum("dismissReason", SEO_INTEL_DISMISS_REASON),
+    /** seoApprovalBatches.id this item's execution landed in (meta/content/page-PR lane), when executed. */
+    executedBatchId: int("executedBatchId"),
+    executedPrId: varchar("executedPrId", { length: 64 }),
+    /** True for a §3d owner-decision item (price/offer/warranty/program figure) — never auto-published while ownerDecisionValue is null. */
+    factsBlocked: boolean("factsBlocked").default(false).notNull(),
+    /** The owner-supplied figure that releases a facts-blocked item through its normal lane. Null until supplied. */
+    ownerDecisionValue: varchar("ownerDecisionValue", { length: 255 }),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    reportIdx: index("seoIntelItems_reportId_idx").on(table.reportId),
+    suggestionKeyIdx: index("seoIntelItems_suggestionKey_idx").on(table.suggestionKey),
+    statusIdx: index("seoIntelItems_status_idx").on(table.status),
+  }),
+);
+export type SeoIntelItemRow = typeof seoIntelItems.$inferSelect;
+export type InsertSeoIntelItem = typeof seoIntelItems.$inferInsert;
+
+/** Daily snapshot of one watched competitor page (§2.2), diffed day-over-day by server/services/seo/intel/competitorWatch.ts. */
+export const seoIntelCompetitorSnapshots = mysqlTable(
+  "seoIntelCompetitorSnapshots",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    domain: varchar("domain", { length: 255 }).notNull(),
+    pagePath: varchar("pagePath", { length: 512 }).default("/").notNull(),
+    /** sha256 of the normalized snapshot text — cheap same-day dedupe / cosmetic-vs-material short-circuit. */
+    contentHash: varchar("contentHash", { length: 64 }).notNull(),
+    title: text("title"),
+    metaDescription: text("metaDescription"),
+    /** string[] of H1/H2 text. */
+    headings: json("headings"),
+    /** Normalized visible offers/prices/warranty terms/CTAs — string[]. */
+    offers: json("offers"),
+    capturedAt: timestamp("capturedAt").defaultNow().notNull(),
+  },
+  table => ({
+    domainPageIdx: index("seoIntelCompetitorSnapshots_domain_page_idx").on(table.domain, table.pagePath, table.capturedAt),
+  }),
+);
+export type SeoIntelCompetitorSnapshotRow = typeof seoIntelCompetitorSnapshots.$inferSelect;
+export type InsertSeoIntelCompetitorSnapshot = typeof seoIntelCompetitorSnapshots.$inferInsert;
+
+/**
+ * Day-over-day history for seoQueries (server/services/seo/sync.ts), which the
+ * daily GSC sync fully REPLACES on every run and therefore has no memory of
+ * its own. The market-intel job snapshots seoQueries into this table once per
+ * day before classifying §3a's rising/new/decaying queries, which genuinely
+ * need a week-over-week comparison the base table can't provide.
+ */
+export const seoIntelQuerySnapshots = mysqlTable(
+  "seoIntelQuerySnapshots",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    siteUrl: varchar("siteUrl", { length: 512 }).notNull(),
+    query: varchar("query", { length: 512 }).notNull(),
+    page: varchar("page", { length: 1024 }),
+    clicks: int("clicks").default(0).notNull(),
+    impressions: int("impressions").default(0).notNull(),
+    ctr: decimal("ctr", { precision: 8, scale: 6 }).default("0").notNull(),
+    position: decimal("position", { precision: 6, scale: 2 }).default("0").notNull(),
+    /** YYYY-MM-DD, America/New_York. */
+    snapshotDate: varchar("snapshotDate", { length: 10 }).notNull(),
+    capturedAt: timestamp("capturedAt").defaultNow().notNull(),
+  },
+  table => ({
+    siteQueryDateIdx: uniqueIndex("seoIntelQuerySnapshots_site_query_date_uq").on(table.siteUrl, table.query, table.snapshotDate),
+    dateIdx: index("seoIntelQuerySnapshots_date_idx").on(table.snapshotDate),
+  }),
+);
+export type SeoIntelQuerySnapshotRow = typeof seoIntelQuerySnapshots.$inferSelect;
+export type InsertSeoIntelQuerySnapshot = typeof seoIntelQuerySnapshots.$inferInsert;
 export type InsertEstimateLineItem = typeof estimateLineItems.$inferInsert;
 
 // ═══════════════════════════════════════════════════════════════════════════

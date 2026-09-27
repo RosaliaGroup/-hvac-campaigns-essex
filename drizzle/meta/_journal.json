@@ -512,6 +512,13 @@
       "when": 1790400000000,
       "tag": "0076_growth_system",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "5",
+      "when": 1790400100000,
+      "tag": "0077_social_lane",
+      "breakpoints": true
     }
   ]
 }
