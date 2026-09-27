@@ -12,13 +12,28 @@ const ENV_CUSTOMER_ID = process.env.GOOGLE_ADS_CUSTOMER_ID ?? "";
 // Set GOOGLE_ADS_REDIRECT_URI in your environment to the production value.
 const ENV_REDIRECT_URI = process.env.GOOGLE_ADS_REDIRECT_URI ?? "";
 
+/**
+ * As of 2026-09-09 Google moved Google Ads API access approval from the
+ * developer token to the Google Cloud project behind the OAuth client
+ * (developers.google.com/google-ads/api/docs/api-policy/developer-token).
+ * A real, approved developer token is no longer required — but verified
+ * against production (2026-09-27): the `developer-token` header still can't
+ * be BLANK/omitted (Google rejects that with "developer-token parameter is
+ * missing"); any non-empty placeholder is accepted and its value is not
+ * validated. So the owner no longer needs to configure a real token, but the
+ * library (google-ads-api npm, which still types this field as required and
+ * always sends it — no version has added a token-less code path) still needs
+ * *some* string. This placeholder satisfies both.
+ */
+const PLACEHOLDER_DEVELOPER_TOKEN = "unused-post-2026-09-cloud-console-access";
+
 // Resolve credentials: DB (google_ads_config) first, env vars as fallback
 async function getConfig() {
   const dbCreds = await getAiVaCredentials("google_ads_config");
   return {
     clientId: dbCreds.clientId || ENV_CLIENT_ID,
     clientSecret: dbCreds.clientSecret || ENV_CLIENT_SECRET,
-    developerToken: dbCreds.developerToken || ENV_DEVELOPER_TOKEN,
+    developerToken: dbCreds.developerToken || ENV_DEVELOPER_TOKEN || PLACEHOLDER_DEVELOPER_TOKEN,
     customerId: (dbCreds.customerId || ENV_CUSTOMER_ID).replace(/-/g, ""),
   };
 }
