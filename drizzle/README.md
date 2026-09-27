@@ -257,38 +257,73 @@ the unique constraint instead of the composite — same full-value uniqueness
 guarantee, no truncation, compact key. Applied and verified 2026-09-26; both
 `0078` and `0079` are now in the tracker and journal.
 
-### ⚠️ `0078_seo_intel` — PARTIALLY APPLIED 2026-09-26, blocked on a real schema bug
+### `0078_seo_intel` + `0079_seo_intel_query_key` — RESOLVED 2026-09-27 (was partially applied)
 
-Applied via `scripts/apply-migration-0078.ts` (dry-run first, matched the committed
-`.sql` exactly). Backup: logical row dump of `seoAuditLog` (the only existing table
-touched — 246 rows, `SHOW CREATE TABLE` captured), since no `mysqldump` binary was
-available (locally or via `railway run`, which only injects env vars into a local
-process, not a remote shell). Verified non-empty, row count matched.
+`0078_seo_intel.sql` shipped with a real bug: `CREATE UNIQUE INDEX
+seoIntelQuerySnapshots_site_query_date_uq ON seoIntelQuerySnapshots (siteUrl,
+query, snapshotDate)` exceeds MySQL's 3072-byte max key length under utf8mb4
+(4136 bytes) — `ER_TOO_LONG_KEY`, and it was never going to succeed as
+written, in any environment. 10 of 0078's 12 statements applied clean on
+first attempt (enum widen + 3 of 4 new tables + the 4th table's single-column
+date index); only that one composite unique index failed, with zero data at
+risk (the table was brand new, zero rows).
 
-**10 of 12 statements applied clean:**
-- `seoAuditLog.action` enum widened (11 new values, all 9 existing kept) ✓
-- `seoIntelReports`, `seoIntelItems`, `seoIntelCompetitorSnapshots` — fully created with all their indexes ✓
-- `seoIntelQuerySnapshots` — table created ✓, plus its single-column `seoIntelQuerySnapshots_date_idx` (applied separately, unaffected by the bug below) ✓
+Owner-decided fix (of three options weighed: prefix index / narrower columns
+/ derived hash column): **`0079_seo_intel_query_key.sql`** adds
+`seoIntelQuerySnapshots.snapshotKey` (`sha256(siteUrl + query + snapshotDate)`)
+and puts the unique index on that single compact column instead —
+`server/services/seo/intel/searchDemand.ts`'s `snapshotTodaysQueries` now
+computes and writes it on every insert. Both migrations are now **fully
+applied** (`information_schema`-verified: enum, all 4 tables + all their
+indexes including `seoIntelQuerySnapshots_key_uq`, present and correct).
 
-**Statement 11/12 FAILED and was not retried:**
-`CREATE UNIQUE INDEX seoIntelQuerySnapshots_site_query_date_uq ON seoIntelQuerySnapshots (siteUrl, query, snapshotDate)`
-→ `ER_TOO_LONG_KEY`: "Specified key was too long; max key length is 3072 bytes".
-`siteUrl varchar(512)` + `query varchar(512)` + `snapshotDate varchar(10)` under
-`utf8mb4` (4 bytes/char) = 4136 bytes — over the limit even with
-`innodb_large_prefix`. **This is a design bug in the committed migration file
-itself**, not an apply-process error — it was never going to succeed as written,
-regardless of care taken applying it. `seoIntelQuerySnapshots` has zero rows
-(brand-new table), so there is no data at risk; only the missing unique index
-blocks completion.
+**No backup file location was recorded for either** (no `mysqldump` binary
+available locally or via `railway run`, which only injects env vars into a
+local process, not a remote shell; a logical row dump of `seoAuditLog` — the
+only *existing* table 0078 touched, 246 rows — was taken instead and
+verified). Reconciled into the tracker and journal 2026-09-27.
 
-**Not yet in the tracker.** No `__drizzle_migrations` row or journal entry for
-`0078` — inserting one now would misrepresent this file as fully applied when
-one of its 12 statements never ran. Do this only once the index is fixed and
-applied. Options to actually fix it (needs an owner decision, not a default):
-prefix index (`siteUrl(N), query(N)`) trades away true full-value uniqueness for
-long values; narrowing the varchars risks truncating genuinely long GSC
-queries/URLs; a derived hash column gives a correct, compact unique key but
-needs a matching app-code change to populate it on insert.
+⚠️ **Tracker hash correction:** the first attempt at reconciling these two
+into the tracker used a hash computed from the *local Windows checkout* of
+each `.sql` file, which `git`'s `autocrlf` had converted to CRLF — producing
+a hash that doesn't match the actual committed (LF) file. Caught and fixed
+by recomputing from the git blob directly (`git show <ref>:<path>`), per the
+"Tracker reconciliation" section above, which now says explicitly not to
+read the local checkout for this. Rows `id=60,61` (wrong) were deleted and
+replaced with `id=64,65` (correct hash, same `created_at`).
+
+### Hand-applied 2026-09-27 (0073/0074/0075 — SEO autopublish + nightly-candidate tag + hold column)
+
+Applied in order via `scripts/apply-migration-0073.ts`/`-0074.ts`/`-0075.ts`
+(same dry-run/`--execute --yes-write` pattern). Backup: logical row dump of
+`seoPageTags` (0 rows), `seoApprovalBatches` (1 row), and `seoAuditLog` (246
+rows, re-dumped for completeness though untouched by this batch) —
+`tmp/railway-pre0073-0074-0075.json`, verified non-empty/row-count-matched
+(container `/tmp` doesn't survive a restart; this one is also only local to
+whichever machine ran the script — see the standing note above about moving
+backups off-container).
+
+⚠️ **`0073` was applied with statement 1 deliberately skipped, not run
+as-committed.** `0073`'s own `ALTER TABLE seoAuditLog MODIFY COLUMN action`
+widens it to 16 values — but `0078` (applied to this database *out of
+numbering order*, earlier in the same reconciliation effort) had already
+widened the same column to a 20-value **superset** including all 16 of
+0073's plus 0078's own 4 `market_intel_*` values. Running 0073's narrower
+version here would have **narrowed** that column back to 16, dropping the 4
+`market_intel_*` values the intel job needs — re-introducing the exact bug
+`0079` just fixed. Verified first that zero rows use any of those 4 values
+(so no data would be lost either way), then skipped that one statement;
+`0073`'s other 4 statements (both new tables + the seed row) ran normally.
+**Because of this deviation, `0073` was deliberately left out of the
+tracker** — inserting a row under its file's hash would claim it ran
+byte-for-byte, which it didn't. `0074` and `0075` are unmodified, clean
+applies and are in the tracker normally.
+
+| Migration | What | Validation at apply |
+|---|---|---|
+| `0073_seo_autopublish` (statement 1 skipped — see above) | `seoContentQueue` + `seoAutopublishState` tables (warm-up counters, circuit breaker) | Both tables present; `seoAutopublishState` seed row `id=1, metaWarmupRemaining=2, contentWarmupRemaining=8, circuitBreakerPaused=false`; `seoAuditLog.action` enum unchanged at 20 values (confirmed NOT narrowed) |
+| `0074_seo_nightly_candidate_tag` | `seoPageTags.tag` enum widened (+`nightly-candidate`) | Enum now 5 values, all 4 existing kept |
+| `0075_seo_autopublish_hold` | `seoApprovalBatches.holdUntil` (nullable timestamp) | Column present, nullable |
 
 ## Who owns approval
 
