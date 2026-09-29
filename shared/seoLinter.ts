@@ -313,6 +313,18 @@ export function lintWarrantyClaims(text: string, opts: { allowedOnTermsPage?: bo
  * run the pure rules. */
 
 const MEMBERSHIP_FORBIDDEN_PHRASES = ["lease", "rent", "subscription includes the equipment", "$0 down for everything"];
+/** "lease"/"rent" are only a violation when asserted — a negated mention ("not a lease", "unlike a lease", "we don't rent") is the honest way to say the customer owns the system. */
+const NEGATABLE_MEMBERSHIP_PHRASES = new Set(["lease", "rent"]);
+const NEGATION_CUE_SRC = "\\b(?:not|no|never|neither|nor|without|unlike|isn't|isn’t|aren't|aren’t|doesn't|doesn’t|don't|don’t|won't|won’t)\\b|n['’]t\\b";
+const NEGATION_JUST_BEFORE_RE = new RegExp(`(?:${NEGATION_CUE_SRC})[^.!?;:,\n]{0,40}$`, "i");
+const SENTENCE_BREAKS = [".", "!", "?", ";", "\n"];
+
+/** True iff the mention at `index` is negated: a negation cue shortly before it in the same clause (no comma or sentence break between). */
+function isNegatedMention(text: string, index: number): boolean {
+  let start = 0;
+  for (const c of SENTENCE_BREAKS) start = Math.max(start, text.lastIndexOf(c, index - 1) + 1);
+  return NEGATION_JUST_BEFORE_RE.test(text.slice(start, index));
+}
 const NOT_OFFERED_FORBIDDEN_PHRASES = ["money-back", "refund if", "remove it and refund", "satisfaction guarantee"];
 const SLA_ABSOLUTE_CLAIMS = ["guaranteed uptime", "never fail"];
 const MONITORING_ABSOLUTE_CLAIMS = ["guaranteed detection"];
@@ -327,7 +339,10 @@ export function lintDifferentiationClaims(text: string): WarrantyLintFinding[] {
   if (!text) return findings;
 
   for (const phrase of MEMBERSHIP_FORBIDDEN_PHRASES) {
-    if (includesPhrase(text, phrase)) {
+    const asserted = NEGATABLE_MEMBERSHIP_PHRASES.has(phrase)
+      ? Array.from(text.matchAll(new RegExp(phraseRegex(phrase).source, "gi"))).some((m) => !isNegatedMention(text, m.index ?? 0))
+      : includesPhrase(text, phrase);
+    if (asserted) {
       findings.push({
         severity: "block",
         code: "membership_equipment_ownership_implied",
