@@ -51,6 +51,7 @@ import { listContentQueue, proposeTopic, updateQueueStatus as updateContentQueue
 import { runWeeklyContentJob, findLatestContentDraft, approveContentToPRWithAutopublish, ContentNotReadyError } from "../services/seo/contentPipeline";
 import { approveMetaBatchWithAutopublish, publishNow } from "../services/seo/autoMerge";
 import { runNightlyDraftJob } from "../services/seo/nightlyDraftJob";
+import { startLaneJob, getLaneJobStatus } from "../services/asyncLaneJob";
 import { eq } from "drizzle-orm";
 
 /** Map the bulk-approve service's typed errors to the right tRPC/HTTP status. */
@@ -533,11 +534,30 @@ export const seoRouter = router({
       return { ok: true };
     }),
 
-  /** "Run now" for the weekly content pipeline — same job the scheduler calls, run on demand. Admin-only. */
-  runContentJobNow: adminProcedure.mutation(async () => runWeeklyContentJob()),
+  /**
+   * "Run now" for the weekly content pipeline — same job the scheduler calls,
+   * run on demand. Fire-and-forget (see server/services/asyncLaneJob.ts): the
+   * AI-backed draft job can run past the proxy's request timeout, so this
+   * enqueues it and returns immediately instead of awaiting it — the client
+   * polls getLaneJobStatus for progress/completion. A click while a "content"
+   * job is already running is a no-op (`started: false`), not a duplicate.
+   * Admin-only.
+   */
+  runContentJobNow: adminProcedure.mutation(async () => {
+    const { started } = startLaneJob("content", () => runWeeklyContentJob());
+    return { started, status: getLaneJobStatus("content") };
+  }),
 
-  /** "Run now" for the nightly meta draft job — same job the scheduler calls, run on demand. Admin-only. */
-  runNightlyDraftJobNow: adminProcedure.mutation(async () => runNightlyDraftJob()),
+  /** Same fire-and-forget treatment for the nightly meta draft job's "Run now". Admin-only. */
+  runNightlyDraftJobNow: adminProcedure.mutation(async () => {
+    const { started } = startLaneJob("meta", () => runNightlyDraftJob());
+    return { started, status: getLaneJobStatus("meta") };
+  }),
+
+  /** Poll target for runContentJobNow / runNightlyDraftJobNow's progress. */
+  getLaneJobStatus: adminProcedure
+    .input(z.object({ lane: z.enum(["content", "meta"]) }))
+    .query(({ input }) => getLaneJobStatus(input.lane)),
 
   /** The latest draft (if any) for a content-queue topic, with its lint/critic results. */
   getContentDraft: protectedProcedure
