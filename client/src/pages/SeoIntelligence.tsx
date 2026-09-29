@@ -88,7 +88,7 @@ import { Textarea } from "@/components/ui/textarea";
 import InternalNav from "@/components/InternalNav";
 import DashboardFooter from "@/components/DashboardFooter";
 import { getLoginUrl } from "@/const";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import {
@@ -1099,7 +1099,7 @@ function WarmupBar({
           disabled={runningNow}
           className="mt-1.5 inline-flex items-center gap-1 text-xs text-[#ff6b35] hover:underline disabled:opacity-60"
         >
-          {runningNow ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />} Run now
+          {runningNow ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />} {runningNow ? "Running… this can take a few minutes" : "Run now"}
         </button>
       )}
     </div>
@@ -1133,25 +1133,70 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => { toast.success("Autopublish resumed"); setResumeOpen(false); setResumeNote(""); invalidate(); },
     onError: (e) => toast.error(e.message),
   });
-  const runNow = trpc.seo.runContentJobNow.useMutation({
-    onSuccess: (res) => {
-      if (res.status === "drafted") {
+  // ── Draft next topic now / meta lane Run now — fire-and-forget + poll ────
+  // These jobs are AI-backed and can run past the proxy's request timeout, so
+  // the mutation only enqueues them (server/services/asyncLaneJob.ts) and
+  // returns immediately; the actual "drafted" / "lint-blocked" outcome comes
+  // back through polling getLaneJobStatus, not the mutation's own response.
+  const contentJobStatusQ = trpc.seo.getLaneJobStatus.useQuery(
+    { lane: "content" },
+    { refetchInterval: (query) => (query.state.data?.status === "running" ? 2000 : false) },
+  );
+  const metaJobStatusQ = trpc.seo.getLaneJobStatus.useQuery(
+    { lane: "meta" },
+    { refetchInterval: (query) => (query.state.data?.status === "running" ? 2000 : false) },
+  );
+  const lastContentFinish = useRef<number | null>(null);
+  useEffect(() => {
+    const s = contentJobStatusQ.data;
+    if (!s || s.status === "running" || !s.finishedAt || s.finishedAt === lastContentFinish.current) return;
+    lastContentFinish.current = s.finishedAt;
+    if (s.status === "done") {
+      const res = s.result as { status: string; passes?: boolean; autoApproved?: boolean; batchId?: number } | null;
+      if (res?.status === "drafted") {
         const auto = res.autoApproved ? ` — auto-approved to PR #${res.batchId}` : "";
         toast.success((res.passes ? "Draft ready for review" : "Drafted, but has lint/critic findings") + auto);
-      } else toast.message(`No draft this time: ${res.status.replace(/_/g, " ")}`);
+      } else if (res?.status) {
+        toast.message(`No draft this time: ${res.status.replace(/_/g, " ")}`);
+      }
       invalidate();
+    } else if (s.status === "error") {
+      toast.error(s.error ?? "Draft job failed");
+    }
+  }, [contentJobStatusQ.data]);
+  const lastMetaFinish = useRef<number | null>(null);
+  useEffect(() => {
+    const s = metaJobStatusQ.data;
+    if (!s || s.status === "running" || !s.finishedAt || s.finishedAt === lastMetaFinish.current) return;
+    lastMetaFinish.current = s.finishedAt;
+    if (s.status === "done") {
+      const res = s.result as { ready: number; lintBlocked: number; skippedLocked: number; autoApproved?: boolean; batchId?: number } | null;
+      if (res) {
+        const auto = res.autoApproved ? ` — auto-approved to PR #${res.batchId}` : "";
+        toast.success(`${res.ready} drafted, ${res.lintBlocked} lint-blocked, ${res.skippedLocked} skipped${auto}`);
+      }
+      invalidate();
+      utils.seo.getOpportunities.invalidate();
+    } else if (s.status === "error") {
+      toast.error(s.error ?? "Meta draft job failed");
+    }
+  }, [metaJobStatusQ.data]);
+  const runNow = trpc.seo.runContentJobNow.useMutation({
+    onSuccess: (res) => {
+      if (!res.started) toast.message("A content draft job is already running.");
+      contentJobStatusQ.refetch();
     },
     onError: (e) => toast.error(e.message),
   });
   const runMetaNow = trpc.seo.runNightlyDraftJobNow.useMutation({
     onSuccess: (res) => {
-      const auto = res.autoApproved ? ` — auto-approved to PR #${res.batchId}` : "";
-      toast.success(`${res.ready} drafted, ${res.lintBlocked} lint-blocked, ${res.skippedLocked} skipped${auto}`);
-      invalidate();
-      utils.seo.getOpportunities.invalidate();
+      if (!res.started) toast.message("A meta draft job is already running.");
+      metaJobStatusQ.refetch();
     },
     onError: (e) => toast.error(e.message),
   });
+  const contentJobRunning = contentJobStatusQ.data?.status === "running";
+  const metaJobRunning = metaJobStatusQ.data?.status === "running";
   const approveContent = trpc.seo.approveContentToPR.useMutation({
     onSuccess: (res) => { toast.success(`PR #${res.prNumber} opened`); invalidate(); },
     onError: (e) => toast.error(e.message),
@@ -1213,7 +1258,7 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
                 remaining={status.warmup.meta.remaining}
                 total={status.warmup.meta.default}
                 onRunNow={isAdmin ? () => runMetaNow.mutate() : undefined}
-                runningNow={runMetaNow.isPending}
+                runningNow={runMetaNow.isPending || metaJobRunning}
               />
               <WarmupBar label="Content lane" remaining={status.warmup.content.remaining} total={status.warmup.content.default} />
             </div>
@@ -1225,8 +1270,9 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Weekly Content Queue</p>
           {isAdmin && (
-            <Button size="sm" variant="outline" disabled={runNow.isPending} onClick={() => runNow.mutate()}>
-              {runNow.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />} Draft next topic now
+            <Button size="sm" variant="outline" disabled={runNow.isPending || contentJobRunning} onClick={() => runNow.mutate()}>
+              {runNow.isPending || contentJobRunning ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
+              {contentJobRunning ? "Drafting… this can take a few minutes" : "Draft next topic now"}
             </Button>
           )}
         </div>

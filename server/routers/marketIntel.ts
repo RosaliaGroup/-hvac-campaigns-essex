@@ -10,6 +10,7 @@ import { dismissItem, revertItem, revertAllFromReport, ItemNotFoundError } from 
 import { submitOwnerDecisionValue, OwnerDecisionValueRequiredError } from "../services/seo/intel/ownerDecision";
 import { openPagePR } from "../services/seo/intel/pagePr";
 import { GithubNotConfiguredError } from "../services/seo/github";
+import { startLaneJob, getLaneJobStatus } from "../services/asyncLaneJob";
 
 function toTRPCError(err: unknown): never {
   if (err instanceof ItemNotFoundError) throw new TRPCError({ code: "NOT_FOUND", message: err.message });
@@ -51,14 +52,22 @@ export const marketIntelRouter = router({
     return { report, items };
   }),
 
-  /** "Run now" button (§1). */
+  /**
+   * "Run now" button (§1). Fire-and-forget (see server/services/asyncLaneJob.ts):
+   * the report can run past the proxy's request timeout (competitor fetches +
+   * model calls), so this enqueues it and returns immediately — the client
+   * polls getJobStatus. A click while a report is already running is a no-op
+   * (`started: false`) instead of racing a duplicate report for the same day
+   * (2026-09-28 incident: a retried click produced two identical daily
+   * reports before this fix).
+   */
   runNow: protectedProcedure.mutation(async () => {
-    try {
-      return await runMarketIntelReport({ windowKind: "daily" });
-    } catch (err) {
-      toTRPCError(err);
-    }
+    const { started } = startLaneJob("marketIntel", () => runMarketIntelReport({ windowKind: "daily" }));
+    return { started, status: getLaneJobStatus("marketIntel") };
   }),
+
+  /** Poll target for runNow's progress. */
+  getJobStatus: protectedProcedure.query(() => getLaneJobStatus("marketIntel")),
 
   dismissItem: protectedProcedure.input(z.object({ itemId: z.number(), reason: DISMISS_REASON })).mutation(async ({ input, ctx }) => {
     try {

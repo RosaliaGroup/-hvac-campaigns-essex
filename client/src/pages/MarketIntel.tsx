@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,15 +24,38 @@ export default function MarketIntel() {
 
   const active = selectedReportId !== null ? selectedQuery.data : latestQuery.data;
 
-  const runNow = trpc.marketIntel.runNow.useMutation({
-    onSuccess: (result) => {
-      if (result && "skipped" in result) {
+  // Fire-and-forget + poll (server/services/asyncLaneJob.ts): the report can
+  // run past the proxy's request timeout (competitor fetches + model calls),
+  // so runNow only enqueues it and returns immediately — the actual outcome
+  // comes back through polling getJobStatus, not the mutation's response. A
+  // click while a report is already running is a no-op, not a duplicate
+  // (2026-09-28 incident: a retried click produced two identical reports).
+  const jobStatusQ = trpc.marketIntel.getJobStatus.useQuery(undefined, {
+    refetchInterval: (query) => (query.state.data?.status === "running" ? 2000 : false),
+  });
+  const jobRunning = jobStatusQ.data?.status === "running";
+  const lastFinish = useRef<number | null>(null);
+  useEffect(() => {
+    const s = jobStatusQ.data;
+    if (!s || s.status === "running" || !s.finishedAt || s.finishedAt === lastFinish.current) return;
+    lastFinish.current = s.finishedAt;
+    if (s.status === "done") {
+      const result = s.result as { skipped?: boolean; reason?: string } | null;
+      if (result && "skipped" in result && result.skipped) {
         toast.info(`Not run: ${result.reason}`);
       } else {
         toast.success("Market intel report generated.");
       }
       utils.marketIntel.listReports.invalidate();
       utils.marketIntel.getLatestReport.invalidate();
+    } else if (s.status === "error") {
+      toast.error(s.error ?? "Market intel report failed");
+    }
+  }, [jobStatusQ.data]);
+  const runNow = trpc.marketIntel.runNow.useMutation({
+    onSuccess: (res) => {
+      if (!res.started) toast.message("A market intel report is already running.");
+      jobStatusQ.refetch();
     },
     onError: (err) => toast.error(err.message),
   });
@@ -71,9 +94,9 @@ export default function MarketIntel() {
           <h1 className="text-2xl font-semibold">Market Intel</h1>
           <p className="text-sm text-muted-foreground">Daily search demand, competitor, and positioning report (docs/market-intel-spec.md).</p>
         </div>
-        <Button onClick={() => runNow.mutate()} disabled={runNow.isPending}>
-          {runNow.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-          Run now
+        <Button onClick={() => runNow.mutate()} disabled={runNow.isPending || jobRunning}>
+          {runNow.isPending || jobRunning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+          {jobRunning ? "Running… this can take a few minutes" : "Run now"}
         </Button>
       </div>
 
