@@ -86,6 +86,7 @@ function parseContentDraftResponse(text: string): BlogPostData {
 }
 
 /** Draft a complete post for `topic`. Throws ContentDraftUnavailableError/ContentDraftParseError rather than returning a partial/invalid post. */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function draftContentPost(topic: SeoContentQueueRow, facts: VerifiedFacts): Promise<BlogPostData> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) throw new ContentDraftUnavailableError();

@@ -83,9 +83,11 @@ export async function discardAllDrafts(actorId: number | null, excludePageIds: n
  * (now re-gated) "Optimize Selected" button. Locked pages are skipped and
  * reported separately rather than silently dropped.
  */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function regenerateUnlockedDrafts(
   pageIds: number[],
   concurrency: number = DEFAULT_BULK_CONCURRENCY,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<{ results: BulkJobResult[]; skippedLocked: string[] }> {
   const db = await getDb();
   if (!db) return { results: [], skippedLocked: [] };
@@ -103,7 +105,7 @@ export async function regenerateUnlockedDrafts(
     else unlockedIds.push(id);
   }
 
-  const results = await runBulkOptimization(unlockedIds, "optimize_everything", concurrency);
+  const results = await runBulkOptimization(unlockedIds, "optimize_everything", concurrency, onProgress);
   return { results, skippedLocked };
 }
 

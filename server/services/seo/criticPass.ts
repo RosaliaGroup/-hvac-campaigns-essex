@@ -66,6 +66,7 @@ function parseCriticResponse(text: string): string[] {
  * complete thing, not the drafting prompt). Never throws; a hard failure of
  * any kind fails closed (passes: false).
  */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function runCriticPass(postText: string, facts: VerifiedFacts = VERIFIED_FACTS): Promise<CriticVerdict> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) {

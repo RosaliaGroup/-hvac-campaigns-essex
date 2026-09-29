@@ -123,6 +123,7 @@ export async function getPage(pageId: number): Promise<SeoPageRow | null> {
  * "optimizing" workflow status. Returns the refreshed draft, or null if the
  * page/DB is unavailable. request_reindex generates nothing (no draft change).
  */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function generateOptimization(
   pageId: number,
   action: SeoAction,
