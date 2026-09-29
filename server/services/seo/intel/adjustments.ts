@@ -40,7 +40,7 @@ import { getDb } from "../../../db";
 import { seoPages } from "../../../../drizzle/schema";
 import { regenerateUnlockedDrafts } from "../draftManagement";
 import { approveBatchToPR, yyyymmdd } from "../bulkApprove";
-import { proposeTopic } from "../contentQueue";
+import { proposeTopic, hasExistingProposal } from "../contentQueue";
 import {
   DAILY_CAPS,
   withinDailyCaps,
@@ -62,6 +62,19 @@ import type {
 } from "../../../../shared/marketIntelTypes";
 import type { DifferentiatorMatch, OurStaleClaim } from "./positioning";
 
+/**
+ * §3a significance floor + section cap, on top of (not instead of) each
+ * classifier's own spec-defined threshold in searchDemand.ts. A page or
+ * query that clears the classifier's bar (25% decline; 20/10-impression
+ * rising floor) can still be too low-volume to be worth a person's
+ * attention individually — this trims the report to what's actually
+ * actionable, rather than flooding it with noise from a long tail of
+ * single-digit-click pages / borderline queries.
+ */
+const DECAY_SIGNIFICANCE_MIN_CLICKS = 10;
+const DECAY_SIGNIFICANCE_MIN_IMPRESSIONS = 200;
+const SECTION_ITEM_CAP = 15;
+
 export type ItemDraft = {
   kind: string;
   title: string;
@@ -69,6 +82,14 @@ export type ItemDraft = {
   suggestion: string;
   targetQueue: "meta_lane" | "content_queue" | "page_pr_backlog" | "pending_prompt_additions" | "owner_decision" | "report_only";
   factsBlocked: boolean;
+  /**
+   * A synthetic rollup item ("N low-traffic pages... not individually
+   * actionable") standing in for everything a section's significance floor
+   * excluded — never a real finding, never executable. Must short-circuit
+   * executionKindFor() regardless of `kind`, since e.g. `kind: "decaying_page"`
+   * is normally auto-executable and its evidence here has no real `page`.
+   */
+  aggregate?: boolean;
 };
 
 /** Pure — build the full set of candidate items from every classified finding, before suppression/caps/execution. */
@@ -84,7 +105,12 @@ export function buildItemDrafts(input: {
 }): ItemDraft[] {
   const items: ItemDraft[] = [];
 
-  for (const r of input.rising) {
+  // Rising queries already clear searchDemand.ts's own impressions floor
+  // (>=20 established / >=10 new, per spec) before reaching here — nothing
+  // below that floor exists in `input.rising` to aggregate. Only the section
+  // cap applies: top SECTION_ITEM_CAP by prior-window volume (impressions).
+  const rankedRising = [...input.rising].sort((a, b) => b.impressions - a.impressions).slice(0, SECTION_ITEM_CAP);
+  for (const r of rankedRising) {
     items.push({
       kind: "rising_query", title: `Rising query: "${r.query}"`, evidence: r,
       suggestion: r.hasAnsweringPage
@@ -112,11 +138,27 @@ export function buildItemDrafts(input: {
     });
   }
 
-  for (const d of input.decaying) {
+  const significantDecaying = input.decaying.filter(
+    (d) => d.previousClicks >= DECAY_SIGNIFICANCE_MIN_CLICKS || d.previousImpressions >= DECAY_SIGNIFICANCE_MIN_IMPRESSIONS,
+  );
+  const belowFloorDecayingCount = input.decaying.length - significantDecaying.length;
+  const rankedDecaying = [...significantDecaying]
+    .sort((a, b) => b.previousClicks - a.previousClicks || b.previousImpressions - a.previousImpressions)
+    .slice(0, SECTION_ITEM_CAP);
+  for (const d of rankedDecaying) {
     items.push({
       kind: "decaying_page", title: `Decaying page: ${d.page}`, evidence: d,
       suggestion: `${d.page} clicks down ${(d.pctDown * 100).toFixed(0)}% vs the prior window (${d.previousClicks} → ${d.clicks}) — refresh candidate in the content queue.`,
       targetQueue: "content_queue", factsBlocked: false,
+    });
+  }
+  if (belowFloorDecayingCount > 0) {
+    items.push({
+      kind: "decaying_page",
+      title: `${belowFloorDecayingCount} low-traffic pages with fewer than ${DECAY_SIGNIFICANCE_MIN_CLICKS} prior clicks — not individually actionable`,
+      evidence: { belowFloorCount: belowFloorDecayingCount, minClicks: DECAY_SIGNIFICANCE_MIN_CLICKS, minImpressions: DECAY_SIGNIFICANCE_MIN_IMPRESSIONS },
+      suggestion: `${belowFloorDecayingCount} page(s) declined ≥25% but stayed under both the ${DECAY_SIGNIFICANCE_MIN_CLICKS}-click and ${DECAY_SIGNIFICANCE_MIN_IMPRESSIONS}-impression significance floor — too low-volume to prioritize individually. No refresh queued for any of them.`,
+      targetQueue: "report_only", factsBlocked: false, aggregate: true,
     });
   }
 
@@ -180,6 +222,7 @@ export function buildItemDrafts(input: {
 export type ExecutedResult = { status: "executed"; batchId: number; prUrl?: string; prNumber?: number } | { status: "staged"; reason: string } | { status: "not_executable" };
 
 function executionKindFor(item: ItemDraft): ExecutionKind | null {
+  if (item.aggregate) return null;
   if (item.targetQueue === "meta_lane") return "meta_change";
   if (item.kind === "decaying_page") return "refresh_post";
   return null;
@@ -233,13 +276,23 @@ export async function executeItem(
 
   if (item.kind === "decaying_page") {
     const evidence = item.evidence as DecayingPageFinding;
+    const refreshesSlug = evidence.page.replace(/^\//, "");
+    const source = "market-intel:decaying_page"; // encodes (page, kind) — see hasExistingProposal's doc
     try {
+      // The intel job re-finds the SAME decaying page on every run until it's
+      // actually refreshed — without this check, a page proposed once when
+      // "Optimize Everything" caps 30 pages runs, then found decaying again
+      // tomorrow, gets re-proposed forever, piling up duplicate seoContentQueue
+      // rows for the exact same (page, kind) that a human has to de-dup by hand.
+      if (await hasExistingProposal(refreshesSlug, source)) {
+        return { result: { status: "staged", reason: `already proposed for ${evidence.page} — not re-queued` }, counts: recordExecution(ctx.counts, kind) };
+      }
       await proposeTopic({
         title: `Refresh: ${evidence.page}`,
         targetQuery: undefined,
         brief: `Decaying page (${(evidence.pctDown * 100).toFixed(0)}% down) — market-intel refresh candidate.`,
-        refreshesSlug: evidence.page.replace(/^\//, ""),
-        source: "market-intel",
+        refreshesSlug,
+        source,
       });
       // Queued, not published — see file header. Counted against the refresh cap either way (§4 caps intent).
       return { result: { status: "staged", reason: "queued to the content lane (proposed) — requires promotion to \"queued\" before drafting" }, counts: recordExecution(ctx.counts, kind) };

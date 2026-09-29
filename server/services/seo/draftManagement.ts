@@ -1,6 +1,7 @@
 /**
  * Draft management (docs/seo-bulk-approve-spec.md §8): discard-all, regenerate
- * unlocked-only, and 30-day soft-expiry. All logged to seoAuditLog.
+ * unlocked-only, 30-day soft-expiry, and the stale-"optimizing" sweep. All
+ * logged to seoAuditLog.
  */
 import { eq, lt, and, ne } from "drizzle-orm";
 import { getDb } from "../../db";
@@ -10,6 +11,7 @@ import { runBulkOptimization, DEFAULT_BULK_CONCURRENCY, type BulkJobResult } fro
 import { logAudit } from "./auditLog";
 
 const DRAFT_EXPIRY_DAYS = 30;
+const STALE_OPTIMIZING_MINUTES = 30;
 
 /**
  * Clear the 247-draft backlog (or however many exist): resets every
@@ -155,4 +157,66 @@ export async function expireStaleDrafts(now: Date = new Date()): Promise<{ expir
   }
 
   return { expired: stale.length };
+}
+
+/**
+ * Reset pages stuck in "optimizing" for more than STALE_OPTIMIZING_MINUTES
+ * back to "needs_review" — the same reset optimizations.ts's rejectDraft()
+ * performs for a manual reject (workflow status only; the generated draft
+ * content is NOT wiped, unlike discardAllDrafts/expireStaleDrafts above, so
+ * a reviewer can still see what was generated). `seoPages.updatedAt` is
+ * `onUpdateNow()`, so it reliably marks the moment a page last entered
+ * "optimizing" — no need to touch seoAiDrafts to find staleness.
+ *
+ * generateOptimization() only ever sets status:"optimizing" AFTER a
+ * successful generation (see its own comment) — this isn't recovering a
+ * job that crashed mid-run; it's recovering a page whose completed draft
+ * was never picked up for review (a stuck "Optimize Selected" batch, a
+ * deploy that landed between generation and the review page loading it,
+ * etc.). Logged as draft_discarded (closest existing audit action) with a
+ * `reason` distinguishing an automated sweep from a human reject/expiry.
+ */
+export async function sweepStaleOptimizingPages(now: Date = new Date()): Promise<{ reset: number }> {
+  const db = await getDb();
+  if (!db) return { reset: 0 };
+
+  const cutoff = new Date(now.getTime() - STALE_OPTIMIZING_MINUTES * 60 * 1000);
+  const stale = await db
+    .select()
+    .from(seoPages)
+    .where(and(eq(seoPages.status, "optimizing"), lt(seoPages.updatedAt, cutoff)));
+
+  if (stale.length === 0) return { reset: 0 };
+
+  for (const page of stale) {
+    await db.insert(seoAiDrafts).values({ pageId: page.id, siteUrl: page.siteUrl, status: "draft" }).onDuplicateKeyUpdate({ set: { status: "draft" } });
+    await db.update(seoPages).set({ status: "needs_review" }).where(eq(seoPages.id, page.id));
+
+    await logAudit({
+      actorId: null,
+      action: "draft_discarded",
+      batchId: null,
+      pagePath: page.page,
+      before: { status: "optimizing", reason: "stale-optimizing sweep", staleMinutes: Math.round((now.getTime() - page.updatedAt.getTime()) / 60_000) },
+      after: null,
+      lintResult: null,
+    });
+  }
+
+  return { reset: stale.length };
+}
+
+/** In-process scheduler for sweepStaleOptimizingPages() — every 10 minutes, so nothing sits "optimizing" past ~40 min. */
+export function startStaleOptimizingSweep(): void {
+  const run = async () => {
+    try {
+      const { reset } = await sweepStaleOptimizingPages();
+      if (reset > 0) console.log(`[SEO] reset ${reset} page(s) stuck in "optimizing" past ${STALE_OPTIMIZING_MINUTES}min back to needs_review`);
+    } catch (e) {
+      console.warn("[SEO] stale-optimizing sweep failed:", (e as Error).message);
+    }
+  };
+  setTimeout(run, 20_000);
+  setInterval(run, 10 * 60_000);
+  console.log(`[SEO] stale-optimizing sweep scheduled (every 10min, threshold ${STALE_OPTIMIZING_MINUTES}min)`);
 }

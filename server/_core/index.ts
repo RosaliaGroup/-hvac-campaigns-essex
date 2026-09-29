@@ -23,6 +23,7 @@ import { startNightlyDraftScheduler } from "../services/seo/nightlyDraftJob";
 import { startWeeklyContentScheduler } from "../services/seo/contentPipeline";
 import { startAutoMergeScheduler } from "../services/seo/autoMerge";
 import { seedContentQueue } from "../services/seo/contentQueue";
+import { startStaleOptimizingSweep } from "../services/seo/draftManagement";
 import { startMarketIntelScheduler } from "../services/seo/intel/job";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
@@ -138,6 +139,10 @@ async function startServer() {
     startNightlyDraftScheduler();
     startWeeklyContentScheduler();
     startAutoMergeScheduler();
+    // Recovery sweep: a page can't be permanently stuck showing "optimizing"
+    // in SEO Opportunities — anything past 30min gets kicked back to
+    // needs_review (content preserved) with an audit row.
+    startStaleOptimizingSweep();
     // Growth system (docs/growth-system-spec.md) — speed-to-lead's day-0 SMS
     // dispatches inline at enrollment; this poller carries every later cadence
     // step (day-0 call, day-1/3/7/14) plus the review engine + §7 import release.
