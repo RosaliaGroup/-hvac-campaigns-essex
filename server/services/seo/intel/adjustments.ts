@@ -40,7 +40,7 @@ import { getDb } from "../../../db";
 import { seoPages } from "../../../../drizzle/schema";
 import { regenerateUnlockedDrafts } from "../draftManagement";
 import { approveBatchToPR, yyyymmdd } from "../bulkApprove";
-import { proposeTopic } from "../contentQueue";
+import { proposeTopic, hasExistingProposal } from "../contentQueue";
 import {
   DAILY_CAPS,
   withinDailyCaps,
@@ -276,13 +276,23 @@ export async function executeItem(
 
   if (item.kind === "decaying_page") {
     const evidence = item.evidence as DecayingPageFinding;
+    const refreshesSlug = evidence.page.replace(/^\//, "");
+    const source = "market-intel:decaying_page"; // encodes (page, kind) — see hasExistingProposal's doc
     try {
+      // The intel job re-finds the SAME decaying page on every run until it's
+      // actually refreshed — without this check, a page proposed once when
+      // "Optimize Everything" caps 30 pages runs, then found decaying again
+      // tomorrow, gets re-proposed forever, piling up duplicate seoContentQueue
+      // rows for the exact same (page, kind) that a human has to de-dup by hand.
+      if (await hasExistingProposal(refreshesSlug, source)) {
+        return { result: { status: "staged", reason: `already proposed for ${evidence.page} — not re-queued` }, counts: recordExecution(ctx.counts, kind) };
+      }
       await proposeTopic({
         title: `Refresh: ${evidence.page}`,
         targetQuery: undefined,
         brief: `Decaying page (${(evidence.pctDown * 100).toFixed(0)}% down) — market-intel refresh candidate.`,
-        refreshesSlug: evidence.page.replace(/^\//, ""),
-        source: "market-intel",
+        refreshesSlug,
+        source,
       });
       // Queued, not published — see file header. Counted against the refresh cap either way (§4 caps intent).
       return { result: { status: "staged", reason: "queued to the content lane (proposed) — requires promotion to \"queued\" before drafting" }, counts: recordExecution(ctx.counts, kind) };

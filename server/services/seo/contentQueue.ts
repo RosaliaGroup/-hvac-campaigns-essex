@@ -6,7 +6,7 @@
  * up "queued" or "refresh_due" rows, which requires a human to promote a
  * proposed topic first.
  */
-import { asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, or } from "drizzle-orm";
 import { getDb } from "../../db";
 import { seoContentQueue, type SeoContentQueueRow } from "../../../drizzle/schema";
 import { logAudit } from "./auditLog";
@@ -89,6 +89,25 @@ export async function proposeTopic(input: {
   const [row] = await db.select().from(seoContentQueue).where(eq(seoContentQueue.title, input.title)).limit(1);
   await logAudit({ actorId: null, action: "topic_proposed", batchId: null, pagePath: null, before: null, after: { title: input.title }, lintResult: null });
   return row;
+}
+
+/**
+ * True if a proposal for this exact (page, kind) already exists — any status,
+ * not just "proposed" (a re-proposal shouldn't stack even on a queued/drafted/
+ * published one). `kind` disambiguates proposal TYPES for the same page (e.g.
+ * a decaying-page refresh vs. some other future automated proposal kind) —
+ * encoded into `source` as `${sourcePrefix}:${kind}` since seoContentQueue has
+ * no dedicated kind column, rather than adding one for a single caller.
+ */
+export async function hasExistingProposal(refreshesSlug: string, source: string): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const [row] = await db
+    .select({ id: seoContentQueue.id })
+    .from(seoContentQueue)
+    .where(and(eq(seoContentQueue.refreshesSlug, refreshesSlug), eq(seoContentQueue.source, source)))
+    .limit(1);
+  return !!row;
 }
 
 export async function updateQueueStatus(id: number, status: SeoContentQueueRow["status"], contentBatchId?: number | null): Promise<void> {

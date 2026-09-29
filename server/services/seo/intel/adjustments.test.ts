@@ -1,6 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { buildItemDrafts, executeItem, emptyExecutionCounts } from "./adjustments";
-import type { RisingQueryFinding } from "../../../../shared/marketIntelTypes";
+import type { RisingQueryFinding, DecayingPageFinding } from "../../../../shared/marketIntelTypes";
+
+vi.mock("../contentQueue", () => ({
+  proposeTopic: vi.fn().mockResolvedValue({}),
+  hasExistingProposal: vi.fn().mockResolvedValue(false),
+}));
+import { proposeTopic, hasExistingProposal } from "../contentQueue";
 
 const EMPTY = { rising: [], unserved: [], decaying: [], cannibalization: [], seasonality: [], competitorDiffs: [], differentiatorMatches: [], staleClaims: [] };
 
@@ -147,5 +153,29 @@ describe("executeItem guardrail short-circuits", () => {
       { counts, metaWarmedUp: true, circuitClear: true },
     );
     expect(result).toEqual({ status: "staged", reason: "daily execution cap reached" });
+  });
+});
+
+describe("executeItem: decaying_page proposes a refresh, deduped on (page, kind)", () => {
+  const decayingItem = (page: string): { kind: string; title: string; evidence: DecayingPageFinding; suggestion: string; targetQueue: "content_queue"; factsBlocked: boolean } => ({
+    kind: "decaying_page", title: `Decaying page: ${page}`,
+    evidence: { page, clicks: 1, previousClicks: 20, previousImpressions: 0, pctDown: 0.9 },
+    suggestion: "x", targetQueue: "content_queue", factsBlocked: false,
+  });
+
+  it("proposes a refresh when none exists yet for this (page, kind)", async () => {
+    vi.mocked(hasExistingProposal).mockResolvedValueOnce(false);
+    const { result } = await executeItem(decayingItem("/warranty"), { counts: emptyExecutionCounts(), metaWarmedUp: true, circuitClear: true });
+    expect(result.status).toBe("staged");
+    expect(proposeTopic).toHaveBeenCalledWith(expect.objectContaining({ refreshesSlug: "warranty", source: "market-intel:decaying_page" }));
+    expect(hasExistingProposal).toHaveBeenCalledWith("warranty", "market-intel:decaying_page");
+  });
+
+  it("does not re-propose when one already exists for this (page, kind) — no duplicate row", async () => {
+    vi.mocked(hasExistingProposal).mockResolvedValueOnce(true);
+    vi.mocked(proposeTopic).mockClear();
+    const { result } = await executeItem(decayingItem("/warranty"), { counts: emptyExecutionCounts(), metaWarmedUp: true, circuitClear: true });
+    expect(result).toEqual({ status: "staged", reason: "already proposed for /warranty — not re-queued" });
+    expect(proposeTopic).not.toHaveBeenCalled();
   });
 });
