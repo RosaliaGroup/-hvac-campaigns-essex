@@ -26,11 +26,6 @@ export default function AIVASettings() {
   const [facebookAppSecret, setFacebookAppSecret] = useState("");
   const [facebookAccessToken, setFacebookAccessToken] = useState("");
 
-  // Google Business credentials
-  const [googleApiKey, setGoogleApiKey] = useState("");
-  const [googleClientId, setGoogleClientId] = useState("");
-  const [googleClientSecret, setGoogleClientSecret] = useState("");
-
   // Google Ads credentials
   const [gadsCustomerId, setGadsCustomerId] = useState("");
   const [gadsDeveloperToken, setGadsDeveloperToken] = useState("");
@@ -170,26 +165,6 @@ export default function AIVASettings() {
         appId: facebookAppId,
         appSecret: facebookAppSecret,
         accessToken: facebookAccessToken,
-      },
-    });
-  };
-
-  const handleSaveGoogle = () => {
-    if (!googleApiKey || !googleClientId || !googleClientSecret) {
-      toast({
-        title: "Missing fields",
-        description: "Please fill in all Google Business credentials",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    saveCredentialsMutation.mutate({
-      service: "google_business",
-      credentials: {
-        apiKey: googleApiKey,
-        clientId: googleClientId,
-        clientSecret: googleClientSecret,
       },
     });
   };
@@ -656,77 +631,47 @@ export default function AIVASettings() {
             </Card>
           </TabsContent>
 
-          {/* Google Business Tab */}
+          {/* Google Business Tab — LEGACY (2026-09-29): this form saved
+              {apiKey, clientId, clientSecret} under the "google_business"
+              credential, but server/services/socialPublisher.ts's GBP posting
+              path reads {accessToken, accountId, locationId} from that SAME
+              key — a shape this form never wrote, so it could never have
+              worked. Google Business Profile actually authenticates through
+              the ONE shared Google connection (Calendar/Search Console/GA4/
+              GBP all share it — server/integrations/google/calendar.ts),
+              managed at /settings/integrations. Redirecting here instead of
+              deleting the tab outright so a bookmarked link still lands
+              somewhere useful. */}
           <TabsContent value="google">
             <Card>
               <CardHeader>
-                <CardTitle>Google Business Profile Configuration</CardTitle>
+                <CardTitle>Google Business Profile</CardTitle>
                 <CardDescription>
-                  Configure Google My Business API for posting updates to your business profile.
+                  This tab is legacy and no longer used.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="google-api-key">API Key</Label>
-                  <Input
-                    id="google-api-key"
-                    type="password"
-                    placeholder="Enter your Google API Key"
-                    value={googleApiKey}
-                    onChange={(e) => setGoogleApiKey(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="google-client-id">Client ID</Label>
-                  <Input
-                    id="google-client-id"
-                    placeholder="Enter your OAuth 2.0 Client ID"
-                    value={googleClientId}
-                    onChange={(e) => setGoogleClientId(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="google-client-secret">Client Secret</Label>
-                  <Input
-                    id="google-client-secret"
-                    type="password"
-                    placeholder="Enter your OAuth 2.0 Client Secret"
-                    value={googleClientSecret}
-                    onChange={(e) => setGoogleClientSecret(e.target.value)}
-                  />
-                </div>
-
-                <Button
-                  onClick={handleSaveGoogle}
-                  disabled={saveCredentialsMutation.isPending}
-                  className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                >
-                  {saveCredentialsMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Save Google Credentials
-                    </>
-                  )}
-                </Button>
-
                 <Alert>
-                  <AlertDescription className="text-sm">
-                    <strong>Setup Guide:</strong>
-                    <ol className="list-decimal list-inside mt-2 space-y-1">
-                      <li>Go to console.cloud.google.com and create a new project</li>
-                      <li>Enable "Google My Business API"</li>
-                      <li>Create OAuth 2.0 credentials</li>
-                      <li>Add authorized redirect URIs for this application</li>
-                    </ol>
+                  <AlertDescription className="text-sm space-y-2">
+                    <p>
+                      Google Business Profile shares ONE Google connection with Calendar, Search
+                      Console, and GA4 — there's no separate API key/Client ID/Secret to enter here.
+                      Manage the shared connection (connect, reconnect, disconnect) from Settings →
+                      Integrations.
+                    </p>
+                    <p className="text-muted-foreground">
+                      If Local SEO or Business Profile posting isn't working, the fix is almost always
+                      a <strong>Reconnect</strong> there (Google scopes are additive — a connection
+                      made before the Business Profile scope was added needs to re-consent once), not
+                      credentials entered on this page.
+                    </p>
                   </AlertDescription>
                 </Alert>
+                <Link href="/settings/integrations">
+                  <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90">
+                    Go to Settings → Integrations
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
           </TabsContent>
