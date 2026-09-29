@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("../../db", () => ({ getDb: vi.fn() }));
 vi.mock("fs", () => ({ default: { readFileSync: vi.fn(() => "export const blogPosts = [];") } }));
 vi.mock("./contentQueue", () => ({ nextTopicToProcess: vi.fn(), updateQueueStatus: vi.fn() }));
-vi.mock("./contentDrafting", () => ({ draftContentPost: vi.fn() }));
+vi.mock("./contentDrafting", () => ({ draftContentPost: vi.fn(), ContentDraftParseError: class ContentDraftParseError extends Error {} }));
 vi.mock("./criticPass", () => ({ runCriticPass: vi.fn() }));
 vi.mock("./circuitBreaker", () => ({ checkCircuitBreakerConditions: vi.fn() }));
 vi.mock("./auditLog", () => ({ logAudit: vi.fn(), listAuditLog: vi.fn() }));
@@ -21,7 +21,7 @@ vi.mock("./autoMerge", () => ({ armHold: vi.fn() }));
 
 import { getDb } from "../../db";
 import { nextTopicToProcess, updateQueueStatus } from "./contentQueue";
-import { draftContentPost } from "./contentDrafting";
+import { draftContentPost, ContentDraftParseError } from "./contentDrafting";
 import { runCriticPass } from "./criticPass";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { logAudit, listAuditLog } from "./auditLog";
@@ -281,5 +281,113 @@ describe("approveContentToPRWithAutopublish (the router's human-triggered 'Appro
     await approveContentToPRWithAutopublish(5, 1);
 
     expect(armHold).not.toHaveBeenCalled();
+  });
+});
+
+describe("runWeeklyContentJob — findings retry (max 2 retries, then set aside and move on)", () => {
+  const shortPost = { ...goodPost, sections: [{ type: "intro", content: paragraphOf(50) }, { type: "cta_box", content: "Talk to us.", buttonText: "Get a Quote", buttonUrl: "https://mechanicalenterprise.com/commercial" }] };
+  const topicB: SeoContentQueueRow = { ...topic, id: 6, title: "Preventive Maintenance Checklist for Building Owners" };
+  const criticOk = { passes: true, unsupportedClaims: [], model: "claude-opus-4-8" };
+
+  it("retries a failing draft with its findings fed back, and stops at the first passing attempt", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValue(topic);
+    vi.mocked(draftContentPost).mockResolvedValueOnce(shortPost as never).mockResolvedValueOnce(goodPost as never);
+    vi.mocked(runCriticPass).mockResolvedValue(criticOk);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(draftContentPost).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(draftContentPost).mock.calls[0][2]).toEqual([]);
+    expect((vi.mocked(draftContentPost).mock.calls[1][2] as string[]).some((f) => f.startsWith("word_count:"))).toBe(true);
+    expect(result.status).toBe("drafted");
+    if (result.status === "drafted") {
+      expect(result.passes).toBe(true);
+      expect(result.attempts).toBe(2);
+      expect(result.blockedTopicIds).toEqual([]);
+    }
+    expect(logAudit).toHaveBeenCalledTimes(1); // only the final attempt is stored
+    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ after: expect.objectContaining({ passes: true, attempts: 2 }) }));
+  });
+
+  it("feeds critic claims back too", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValue(topic);
+    vi.mocked(draftContentPost).mockResolvedValue(goodPost as never);
+    vi.mocked(runCriticPass).mockResolvedValueOnce({ passes: false, unsupportedClaims: ["we serve all of NJ"], model: "m" }).mockResolvedValueOnce(criticOk);
+
+    await runWeeklyContentJob(factsWithIncentive);
+
+    expect((vi.mocked(draftContentPost).mock.calls[1][2] as string[]).some((f) => f.includes("we serve all of NJ"))).toBe(true);
+  });
+
+  it("makes at most 1 + 2 draft attempts per topic, then sets it aside (blocked: true) and moves on to the next topic", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValueOnce(topic).mockResolvedValueOnce(topicB);
+    vi.mocked(draftContentPost)
+      .mockResolvedValueOnce(shortPost as never).mockResolvedValueOnce(shortPost as never).mockResolvedValueOnce(shortPost as never) // topic A: all 3 fail
+      .mockResolvedValueOnce(goodPost as never); // topic B passes first try
+    vi.mocked(runCriticPass).mockResolvedValue(criticOk);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(draftContentPost).toHaveBeenCalledTimes(4);
+    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ after: expect.objectContaining({ topicId: 5, passes: false, blocked: true, attempts: 3 }) }));
+    expect(updateQueueStatus).toHaveBeenCalledWith(5, "drafted"); // stays out of the queued/refresh_due pool
+    expect(result.status).toBe("drafted");
+    if (result.status === "drafted") {
+      expect(result.topicId).toBe(6);
+      expect(result.passes).toBe(true);
+      expect(result.blockedTopicIds).toEqual([5]);
+    }
+  });
+
+  it("never auto-approves or opens a PR for a blocked topic, even when warmed up", async () => {
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+    vi.mocked(nextTopicToProcess).mockResolvedValueOnce(topic).mockResolvedValueOnce(null);
+    vi.mocked(draftContentPost).mockResolvedValue(shortPost as never);
+    vi.mocked(runCriticPass).mockResolvedValue(criticOk);
+    vi.mocked(isWarmedUp).mockResolvedValue(true);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(result.status).toBe("drafted");
+    if (result.status === "drafted") {
+      expect(result.passes).toBe(false);
+      expect(result.autoApproved).toBe(false);
+      expect(result.blockedTopicIds).toEqual([5]);
+    }
+    expect(armHold).not.toHaveBeenCalled();
+    expect(ensureBranch).not.toHaveBeenCalled();
+    delete process.env.SEO_AUTOPUBLISH_ENABLED;
+  });
+
+  it("stops after MAX_BLOCKED_TOPICS_PER_RUN blocked topics", async () => {
+    vi.mocked(nextTopicToProcess)
+      .mockResolvedValueOnce({ ...topic, id: 11 }).mockResolvedValueOnce({ ...topic, id: 12 }).mockResolvedValueOnce({ ...topic, id: 13 }).mockResolvedValueOnce({ ...topic, id: 14 });
+    vi.mocked(draftContentPost).mockResolvedValue(shortPost as never);
+    vi.mocked(runCriticPass).mockResolvedValue(criticOk);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(draftContentPost).toHaveBeenCalledTimes(9); // 3 topics x 3 attempts, never a 4th topic
+    expect(result.status).toBe("drafted");
+    if (result.status === "drafted") expect(result.blockedTopicIds).toEqual([11, 12, 13]);
+  });
+
+  it("treats an unparseable draft as a failed attempt and retries", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValue(topic);
+    vi.mocked(draftContentPost).mockRejectedValueOnce(new ContentDraftParseError("garbage")).mockResolvedValueOnce(goodPost as never);
+    vi.mocked(runCriticPass).mockResolvedValue(criticOk);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(result.status === "drafted" && result.passes && result.attempts).toBe(2);
+    expect((vi.mocked(draftContentPost).mock.calls[1][2] as string[]).some((f) => f.startsWith("invalid_json"))).toBe(true);
+  });
+
+  it("does NOT swallow non-parse errors (e.g. API out of credits) — the job fails loudly and the topic stays queued", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValue(topic);
+    vi.mocked(draftContentPost).mockRejectedValue(new Error("Content drafting call failed: out of credits"));
+
+    await expect(runWeeklyContentJob(factsWithIncentive)).rejects.toThrow(/out of credits/);
+    expect(updateQueueStatus).not.toHaveBeenCalled();
   });
 });

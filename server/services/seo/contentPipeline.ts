@@ -32,7 +32,7 @@ import { lintContent, isResidentialOrRebateTopic, type ContentLintResult } from 
 import { countPostStructure, renderPostPlainText, extractInternalLinkPaths, extractExistingTitles, insertBlogPostIntoSource } from "../../../shared/blogPostRendering";
 import type { BlogPostData } from "../../../client/src/data/blogPosts";
 import { nextTopicToProcess, updateQueueStatus } from "./contentQueue";
-import { draftContentPost } from "./contentDrafting";
+import { draftContentPost, ContentDraftParseError } from "./contentDrafting";
 import { runCriticPass, type CriticVerdict } from "./criticPass";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { logAudit, listAuditLog } from "./auditLog";
@@ -72,6 +72,10 @@ export type ContentDraftOutcome =
       metaLint: LintResult;
       contentLint: ContentLintResult;
       critic: CriticVerdict;
+      /** Draft attempts used for this topic (1 = first draft, up to 1 + MAX_CONTENT_RETRIES). */
+      attempts: number;
+      /** Topics that failed every retry earlier in THIS run and were set aside (they stay status "drafted" so the queue skips them; their audit row carries blocked: true). */
+      blockedTopicIds: number[];
       /** True iff the content lane was warmed up + circuit-clear and this run auto-approved the draft to a PR. False = staged only. */
       autoApproved: boolean;
       batchId?: number;
@@ -86,25 +90,14 @@ function warnOnStalePriceRanges(facts: VerifiedFacts, now: Date): void {
   }
 }
 
-/** Draft (and, once warmed up, auto-approve) the next eligible topic. Safe to call repeatedly — no-ops when there's nothing to draft. */
-/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
-export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
-  warnOnStalePriceRanges(facts, new Date());
+/** Retries after the first draft when it fails lint/critic, each fed the previous attempt's findings (so at most 1 + 2 = 3 drafts per topic). */
+export const MAX_CONTENT_RETRIES = 2;
+/** Cap on topics set aside per run, bounding API spend when several queued topics keep failing. */
+export const MAX_BLOCKED_TOPICS_PER_RUN = 3;
 
-  const breaker = await checkCircuitBreakerConditions();
-  if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
+type EvaluatedDraft = { post: BlogPostData; metaLint: LintResult; contentLint: ContentLintResult; critic: CriticVerdict; passes: boolean };
 
-  const topic = await nextTopicToProcess();
-  if (!topic) return { status: "no_topic" };
-
-  if (isResidentialOrRebateTopic(topic)) {
-    return { status: "refused_residential_rebate", topicId: topic.id };
-  }
-  if (!isFactsConfigured(facts)) {
-    return { status: "facts_not_configured" };
-  }
-
-  const post = await draftContentPost(topic, facts);
+async function evaluateDraft(post: BlogPostData, facts: VerifiedFacts): Promise<EvaluatedDraft> {
   const pagePath = `/blog/${post.slug}`;
   const structure = countPostStructure(post);
   const body = renderPostPlainText(post);
@@ -125,39 +118,112 @@ export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS)
     facts,
   );
   const critic = await runCriticPass(body, facts);
+  return { post, metaLint, contentLint, critic, passes: metaLint.passes && contentLint.passes && critic.passes };
+}
 
-  const passes = metaLint.passes && contentLint.passes && critic.passes;
+/** Blocking (non-warn) findings from every gate, phrased as instructions for the next draft attempt. */
+export function collectBlockingFindings(e: Pick<EvaluatedDraft, "metaLint" | "contentLint" | "critic">): string[] {
+  return [
+    ...e.metaLint.findings.filter((f) => f.severity !== "warn").map((f) => `${f.code}: ${f.message}`),
+    ...e.contentLint.findings.filter((f) => f.severity !== "warn").map((f) => `${f.code}: ${f.message}`),
+    ...e.critic.unsupportedClaims.map((c) => `unsupported_claim (remove it or replace it with a VERIFIED FACT): ${c}`),
+  ];
+}
 
-  await updateQueueStatus(topic.id, "drafted");
-  await logAudit({
-    actorId: null,
-    action: "draft_generated",
-    batchId: null,
-    pagePath,
-    before: null,
-    after: { lane: "content", topicId: topic.id, post, metaLint, contentLint, criticBlocked: !critic.passes, criticClaims: critic.unsupportedClaims, passes },
-    lintResult: null,
-  });
+/** First draft + up to MAX_CONTENT_RETRIES retries, stopping at the first passing draft. Never weakens a gate — a topic that never passes is reported, not forced. */
+async function draftUntilPassing(topic: SeoContentQueueRow, facts: VerifiedFacts): Promise<EvaluatedDraft & { attempts: number }> {
+  let findings: string[] = [];
+  let last: EvaluatedDraft | null = null;
+  let parseError: unknown = null;
+  for (let attempt = 1; attempt <= 1 + MAX_CONTENT_RETRIES; attempt++) {
+    let post: BlogPostData;
+    try {
+      post = await draftContentPost(topic, facts, findings);
+    } catch (err) {
+      if (!(err instanceof ContentDraftParseError)) throw err;
+      parseError = err;
+      findings = [...findings, "invalid_json: your previous response was not the required JSON object — respond with ONLY that JSON object."];
+      continue;
+    }
+    last = await evaluateDraft(post, facts);
+    if (last.passes) return { ...last, attempts: attempt };
+    findings = collectBlockingFindings(last);
+  }
+  if (!last) throw parseError; // every attempt was unparseable — nothing to store; the topic stays queued
+  return { ...last, attempts: 1 + MAX_CONTENT_RETRIES };
+}
 
-  let autoApproved = false;
-  let batchId: number | undefined;
-  if (passes && process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
-    const warmedUp = await isWarmedUp("content");
-    if (warmedUp && !breaker.shouldPause) {
-      try {
-        const approved = await approveContentToPR(topic.id, null, `auto-${yyyymmdd()}`);
-        await armHold(approved.batchId);
-        autoApproved = true;
-        batchId = approved.batchId;
-      } catch (err) {
-        // The draft is already stored — a human can still approve it by hand
-        // even if auto-approval itself failed (e.g. GitHub transiently down).
-        console.error("[SEO] weekly content auto-approve failed (draft remains staged for manual approval):", (err as Error).message);
+/**
+ * Draft (and, once warmed up, auto-approve) the next eligible topic. Safe to
+ * call repeatedly — no-ops when there's nothing to draft. A draft that fails
+ * lint/critic is retried up to MAX_CONTENT_RETRIES times with its findings fed
+ * back; a topic that still fails is set aside (audit row blocked: true, queue
+ * status stays "drafted" so nextTopicToProcess skips it) and the run moves on
+ * to the next topic, up to MAX_BLOCKED_TOPICS_PER_RUN.
+ */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
+export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
+  warnOnStalePriceRanges(facts, new Date());
+
+  const breaker = await checkCircuitBreakerConditions();
+  if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
+
+  const blockedTopicIds: number[] = [];
+  let lastBlocked: ContentDraftOutcome | null = null;
+
+  while (blockedTopicIds.length < MAX_BLOCKED_TOPICS_PER_RUN) {
+    const topic = await nextTopicToProcess();
+    if (!topic || blockedTopicIds.includes(topic.id)) return lastBlocked ?? { status: "no_topic" };
+
+    if (isResidentialOrRebateTopic(topic)) {
+      return { status: "refused_residential_rebate", topicId: topic.id };
+    }
+    if (!isFactsConfigured(facts)) {
+      return { status: "facts_not_configured" };
+    }
+
+    const { post, metaLint, contentLint, critic, passes, attempts } = await draftUntilPassing(topic, facts);
+    const pagePath = `/blog/${post.slug}`;
+
+    await updateQueueStatus(topic.id, "drafted");
+    await logAudit({
+      actorId: null,
+      action: "draft_generated",
+      batchId: null,
+      pagePath,
+      before: null,
+      after: { lane: "content", topicId: topic.id, post, metaLint, contentLint, criticBlocked: !critic.passes, criticClaims: critic.unsupportedClaims, passes, attempts, ...(passes ? {} : { blocked: true }) },
+      lintResult: null,
+    });
+
+    if (!passes) {
+      console.warn(`[SEO] content topic #${topic.id} blocked after ${attempts} attempts — set aside, moving on.`);
+      blockedTopicIds.push(topic.id);
+      lastBlocked = { status: "drafted", topicId: topic.id, passes, post, metaLint, contentLint, critic, attempts, blockedTopicIds: [...blockedTopicIds], autoApproved: false };
+      continue;
+    }
+
+    let autoApproved = false;
+    let batchId: number | undefined;
+    if (process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
+      const warmedUp = await isWarmedUp("content");
+      if (warmedUp && !breaker.shouldPause) {
+        try {
+          const approved = await approveContentToPR(topic.id, null, `auto-${yyyymmdd()}`);
+          await armHold(approved.batchId);
+          autoApproved = true;
+          batchId = approved.batchId;
+        } catch (err) {
+          // The draft is already stored — a human can still approve it by hand
+          // even if auto-approval itself failed (e.g. GitHub transiently down).
+          console.error("[SEO] weekly content auto-approve failed (draft remains staged for manual approval):", (err as Error).message);
+        }
       }
     }
-  }
 
-  return { status: "drafted", topicId: topic.id, passes, post, metaLint, contentLint, critic, autoApproved, ...(batchId !== undefined ? { batchId } : {}) };
+    return { status: "drafted", topicId: topic.id, passes, post, metaLint, contentLint, critic, attempts, blockedTopicIds, autoApproved, ...(batchId !== undefined ? { batchId } : {}) };
+  }
+  return lastBlocked ?? { status: "no_topic" };
 }
 
 export type StoredContentDraft = {
@@ -168,6 +234,9 @@ export type StoredContentDraft = {
   criticBlocked: boolean;
   criticClaims: string[];
   passes: boolean;
+  /** True iff every retry failed and the topic was set aside (see runWeeklyContentJob). */
+  blocked?: boolean;
+  attempts?: number;
   generatedAt: Date;
 };
 
@@ -180,7 +249,7 @@ export async function findLatestContentDraft(topicId: number): Promise<StoredCon
   });
   if (!match) return null;
   const after = match.after as {
-    post: BlogPostData; metaLint: LintResult; contentLint: ContentLintResult; criticBlocked: boolean; criticClaims: string[]; passes: boolean;
+    post: BlogPostData; metaLint: LintResult; contentLint: ContentLintResult; criticBlocked: boolean; criticClaims: string[]; passes: boolean; blocked?: boolean; attempts?: number;
   };
   return { topicId, ...after, generatedAt: match.ts instanceof Date ? match.ts : new Date(match.ts) };
 }
