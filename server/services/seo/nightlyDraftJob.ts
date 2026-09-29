@@ -111,6 +111,7 @@ export type NightlyJobSummary = {
 };
 
 /** Real I/O: fetch pages + locks + pending batches, select, draft, tag, log, summarize; auto-approve to PR if the meta lane is warmed up and the circuit is clear (see file header), else stage only. */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function runNightlyDraftJob(now: Date = new Date()): Promise<NightlyJobSummary> {
   warnOnStalePriceRanges(now);
 

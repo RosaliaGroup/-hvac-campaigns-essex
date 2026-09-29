@@ -91,6 +91,13 @@ import { getLoginUrl } from "@/const";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useSeoJob } from "@/hooks/useSeoJob";
+import type {
+  OptimizeJobResult,
+  BulkOptimizeJobResult,
+  RegenerateDraftsJobResult,
+  SeoSyncJobResult,
+} from "@shared/seoJobs";
 import {
   SEO_FILTERS,
   applySeoFilters,
@@ -399,13 +406,36 @@ function DraftWorkspace({ opportunity, isAdmin }: { opportunity: SeoOpportunity;
     utils.seo.getBusinessImpact.invalidate();
   };
 
+  // Generate / Regenerate are async jobs (server/services/asyncLaneJob.ts): the
+  // mutations only start the job and return; completion comes from polling.
+  const [activeGen, setActiveGen] = useState<{ kind: "generate" | "regenerate"; action: SeoAction } | null>(null);
+  const optimizeJob = useSeoJob<OptimizeJobResult>({
+    kind: "optimize",
+    key: `optimize:${pageId}`,
+    enabled: isAdmin,
+    onDone: () => {
+      setDirty(false);
+      afterWrite();
+      toast.success(activeGen?.kind === "regenerate" ? "Draft regenerated" : "Draft generated");
+      setActiveGen(null);
+    },
+    onError: (message) => {
+      afterWrite();
+      toast.error(message);
+      setActiveGen(null);
+    },
+  });
+  const onJobStarted = (job: { jobId: string; started: boolean }) => {
+    if (!job.started) toast.message("This page is already being optimized — following that run.");
+    optimizeJob.start(job);
+  };
   const generate = trpc.seo.generateOptimization.useMutation({
-    onSuccess: () => { setDirty(false); afterWrite(); toast.success("Draft generated"); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: onJobStarted,
+    onError: (e) => { setActiveGen(null); toast.error(e.message); },
   });
   const regenerate = trpc.seo.regenerateOptimization.useMutation({
-    onSuccess: () => { setDirty(false); afterWrite(); toast.success("Draft regenerated"); },
-    onError: (e) => toast.error(e.message),
+    onSuccess: onJobStarted,
+    onError: (e) => { setActiveGen(null); toast.error(e.message); },
   });
   const save = trpc.seo.updateOptimizationDraft.useMutation({
     onSuccess: () => { setDirty(false); afterWrite(); toast.success("Edits saved"); },
@@ -420,10 +450,10 @@ function DraftWorkspace({ opportunity, isAdmin }: { opportunity: SeoOpportunity;
     onError: (e) => toast.error(e.message),
   });
 
-  const busy =
-    generate.isPending || regenerate.isPending || save.isPending || approve.isPending || reject.isPending;
-  const genAction = generate.isPending ? generate.variables?.action : undefined;
-  const regenAction = regenerate.isPending ? regenerate.variables?.action : undefined;
+  const optimizing = generate.isPending || regenerate.isPending || optimizeJob.running;
+  const busy = optimizing || save.isPending || approve.isPending || reject.isPending;
+  const genAction = optimizing && activeGen?.kind === "generate" ? activeGen.action : undefined;
+  const regenAction = optimizing && activeGen?.kind === "regenerate" ? activeGen.action : undefined;
   const writeDisabled = !isAdmin || busy;
 
   const hasDraft =
@@ -438,8 +468,14 @@ function DraftWorkspace({ opportunity, isAdmin }: { opportunity: SeoOpportunity;
       draft.schema
     );
 
-  const doGenerate = (action: SeoAction) => generate.mutate({ id: pageId, action });
-  const doRegenerate = (action: SeoAction) => regenerate.mutate({ id: pageId, action });
+  const doGenerate = (action: SeoAction) => {
+    setActiveGen({ kind: "generate", action });
+    generate.mutate({ id: pageId, action });
+  };
+  const doRegenerate = (action: SeoAction) => {
+    setActiveGen({ kind: "regenerate", action });
+    regenerate.mutate({ id: pageId, action });
+  };
 
   const onSave = () => {
     if (!edit) return;
@@ -1526,8 +1562,14 @@ export default function SeoIntelligence() {
     utils.seo.getBusinessImpact.invalidate();
   };
 
-  const sync = trpc.seo.sync.useMutation({
-    onSuccess: (res) => {
+  // Sync / Optimize Selected / Regenerate Drafts are async jobs — each mutation
+  // only starts the job (server/services/asyncLaneJob.ts); the outcome arrives by
+  // polling, so none of them can 504 the request. useSeoJob also re-attaches to a
+  // job still running after a page reload.
+  const syncJob = useSeoJob<SeoSyncJobResult>({
+    kind: "seoSync",
+    enabled: isAdmin,
+    onDone: (res) => {
       if (res.ok) {
         toast.success(`Synced ${res.pagesSynced} pages from Search Console`);
       } else if (res.reason === "unavailable") {
@@ -1542,26 +1584,50 @@ export default function SeoIntelligence() {
       invalidate();
       utils.seo.getSyncStatus.invalidate();
     },
+    onError: (message) => toast.error(message),
+  });
+  const sync = trpc.seo.sync.useMutation({
+    onSuccess: (job) => {
+      if (!job.started) toast.message("A sync is already running — following it.");
+      syncJob.start(job);
+    },
     onError: (err) => toast.error(err.message),
   });
+  const syncBusy = sync.isPending || syncJob.running;
 
-  const bulkGenerate = trpc.seo.bulkGenerateOptimization.useMutation({
-    onSuccess: (res, vars) => {
+  const [bulkAction, setBulkAction] = useState<SeoAction | null>(null);
+  const bulkJob = useSeoJob<BulkOptimizeJobResult>({
+    kind: "bulkOptimize",
+    enabled: isAdmin,
+    onDone: (res) => {
       invalidate();
       setBulkResult({
         succeeded: res.succeeded,
         failed: res.failed,
         failures: res.results.filter((r) => !r.ok).map((r) => ({ pageId: r.pageId, error: !r.ok ? r.error : "" })),
       });
-      const label = SEO_ACTION_LABELS[vars.action];
+      const label = SEO_ACTION_LABELS[bulkAction ?? "optimize_everything"];
       if (res.failed === 0) {
         toast.success(`${label} · ${res.succeeded} page${res.succeeded === 1 ? "" : "s"} drafted`);
       } else {
         toast.message(`${label} · ${res.succeeded} drafted, ${res.failed} failed`);
       }
+      setBulkAction(null);
     },
-    onError: (err) => toast.error(err.message),
+    onError: (message) => {
+      invalidate();
+      setBulkAction(null);
+      toast.error(message);
+    },
   });
+  const bulkGenerate = trpc.seo.bulkGenerateOptimization.useMutation({
+    onSuccess: (job) => {
+      if (!job.started) toast.message("This exact selection is already running — following it.");
+      bulkJob.start(job);
+    },
+    onError: (err) => { setBulkAction(null); toast.error(err.message); },
+  });
+  const bulkBusy = bulkGenerate.isPending || bulkJob.running;
 
   const setStatus = trpc.seo.setStatus.useMutation({
     onSuccess: ({ updated }) => {
@@ -1571,8 +1637,10 @@ export default function SeoIntelligence() {
     onError: (err) => toast.error(err.message),
   });
 
-  const regenerateUnlocked = trpc.seo.regenerateUnlockedDrafts.useMutation({
-    onSuccess: (res) => {
+  const regenerateJob = useSeoJob<RegenerateDraftsJobResult>({
+    kind: "regenerateDrafts",
+    enabled: isAdmin,
+    onDone: (res) => {
       invalidate();
       const ok = res.results.filter((r) => r.ok).length;
       const failed = res.results.length - ok;
@@ -1581,8 +1649,16 @@ export default function SeoIntelligence() {
         `Regenerated ${ok} draft${ok === 1 ? "" : "s"}${failed > 0 ? `, ${failed} failed` : ""}${skipped > 0 ? `, ${skipped} skipped (locked)` : ""}`,
       );
     },
+    onError: (message) => { invalidate(); toast.error(message); },
+  });
+  const regenerateUnlocked = trpc.seo.regenerateUnlockedDrafts.useMutation({
+    onSuccess: (job) => {
+      if (!job.started) toast.message("This exact selection is already regenerating — following it.");
+      regenerateJob.start(job);
+    },
     onError: (err) => toast.error(err.message),
   });
+  const regenBusy = regenerateUnlocked.isPending || regenerateJob.running;
 
   if (loading) {
     return (
@@ -1640,10 +1716,12 @@ export default function SeoIntelligence() {
     // Selection stays put (unlike the other bulk actions below) — these are
     // exactly the rows a reviewer wants to go straight from drafting into
     // "Approve to PR" for, without re-selecting them.
+    setBulkAction("optimize_everything");
     bulkGenerate.mutate({ ids: toIds(selectedVisible), action: "optimize_everything" });
   };
   const bulkReindex = () => {
     setBulkResult(null);
+    setBulkAction("request_reindex");
     bulkGenerate.mutate({ ids: toIds(selectedVisible), action: "request_reindex" });
     clearSelection();
   };
@@ -1695,8 +1773,8 @@ export default function SeoIntelligence() {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
-              <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={sync.isPending} onClick={() => sync.mutate()}>
-                {sync.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <DownloadCloud className="h-4 w-4 mr-2" />}
+              <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={syncBusy} onClick={() => sync.mutate()}>
+                {syncBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <DownloadCloud className="h-4 w-4 mr-2" />}
                 Sync from Google
               </Button>
             </div>
@@ -1854,13 +1932,13 @@ export default function SeoIntelligence() {
               <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#ff6b35]/30 bg-[#ff6b35]/5 p-2.5">
                 <span className="text-sm font-medium text-[#1e3a5f] px-1">{selectedVisible.length} selected</span>
                 <div className="flex flex-wrap gap-2">
-                  <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkOptimize}>
-                    {bulkGenerate.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />} Optimize Selected
+                  <Button size="sm" className="bg-[#ff6b35] hover:bg-[#ff6b35]/90" disabled={!isAdmin || bulkBusy || regenBusy} onClick={bulkOptimize}>
+                    {bulkBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />} Optimize Selected
                   </Button>
-                  <Button size="sm" variant="outline" disabled={!isAdmin || regenerateUnlocked.isPending} onClick={bulkRegenerateUnlocked}>
-                    {regenerateUnlocked.isPending ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1.5" />} Regenerate Drafts
+                  <Button size="sm" variant="outline" disabled={!isAdmin || regenBusy || bulkBusy} onClick={bulkRegenerateUnlocked}>
+                    {regenBusy ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-1.5" />} Regenerate Drafts
                   </Button>
-                  <Button size="sm" variant="outline" disabled={!isAdmin || bulkGenerate.isPending} onClick={bulkReindex}>
+                  <Button size="sm" variant="outline" disabled={!isAdmin || bulkBusy || regenBusy} onClick={bulkReindex}>
                     <RotateCw className="h-4 w-4 mr-1.5" /> Request Reindex
                   </Button>
                   <Button size="sm" variant="outline" disabled={!isAdmin || setStatus.isPending} onClick={bulkComplete}>
@@ -1913,11 +1991,22 @@ export default function SeoIntelligence() {
             )}
 
             {/* Bulk run progress + per-page failures */}
-            {bulkGenerate.isPending && (
-              <div className="mb-3 flex items-center gap-2 rounded-lg border bg-slate-50 p-2.5 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Generating drafts with bounded concurrency — this runs a few pages at a time.
-              </div>
-            )}
+            {(bulkBusy || regenBusy) && (() => {
+              const progress = bulkJob.progress ?? regenerateJob.progress;
+              return (
+                <div className="mb-3 flex items-center gap-3 rounded-lg border bg-slate-50 p-2.5 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                  <span>
+                    {regenBusy && !bulkBusy ? "Regenerating drafts" : "Generating drafts"}
+                    {progress ? ` — ${progress.done} of ${progress.total} pages` : " — starting…"}
+                    {" "}(runs a few pages at a time; safe to leave this page)
+                  </span>
+                  {progress && progress.total > 0 && (
+                    <Progress value={(progress.done / progress.total) * 100} className="h-1.5 w-40" />
+                  )}
+                </div>
+              );
+            })()}
             {bulkResult && (
               <div className={`mb-3 rounded-lg border p-2.5 text-sm ${bulkResult.failed > 0 ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
                 <div className="flex items-center justify-between gap-2">

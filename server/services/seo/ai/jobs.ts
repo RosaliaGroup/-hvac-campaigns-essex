@@ -61,6 +61,7 @@ export function _resetJobs(): void {
  * (generateOptimization sets the "optimizing" status only after a successful
  * generation, so a failed job leaves the page's prior status untouched).
  */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function runOptimizationJob(
   pageId: number,
   action: SeoAction,
@@ -113,19 +114,28 @@ export const DEFAULT_BULK_CONCURRENCY = 3;
  * runOptimizationJob (so duplicate-active protection still applies per page),
  * and a failure on one page is captured as `{ ok: false }` without aborting the
  * rest of the batch. Duplicate ids are collapsed so a page is optimized once.
+ * `onProgress(done, total)` (optional) fires once up front (done = 0) and after
+ * each page settles, success or failure — it drives the async-job progress bar.
  */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function runBulkOptimization(
   ids: number[],
   action: SeoAction,
   concurrency: number = DEFAULT_BULK_CONCURRENCY,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<BulkJobResult[]> {
   const uniqueIds = Array.from(new Set(ids));
+  let done = 0;
+  onProgress?.(0, uniqueIds.length);
   return mapWithConcurrency(uniqueIds, concurrency, async (pageId): Promise<BulkJobResult> => {
     try {
       const draft = await runOptimizationJob(pageId, action);
       return { pageId, ok: true, draft };
     } catch (err) {
       return { pageId, ok: false, error: err instanceof Error ? err.message : String(err) };
+    } finally {
+      done += 1;
+      onProgress?.(done, uniqueIds.length);
     }
   });
 }

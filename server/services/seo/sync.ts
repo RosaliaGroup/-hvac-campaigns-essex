@@ -84,6 +84,7 @@ const defaultLockFactory = () =>
  *     deploy or multi-replica deployment can never run two syncs at once).
  * Records a seoSyncHistory row for the whole lifecycle and never throws.
  */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function runSeoSync(
   opts: { trigger?: string; lockConnectionFactory?: () => Promise<LockConnection> } = {}
 ): Promise<SyncResult> {

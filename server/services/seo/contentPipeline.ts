@@ -87,6 +87,7 @@ function warnOnStalePriceRanges(facts: VerifiedFacts, now: Date): void {
 }
 
 /** Draft (and, once warmed up, auto-approve) the next eligible topic. Safe to call repeatedly — no-ops when there's nothing to draft. */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
   warnOnStalePriceRanges(facts, new Date());
 

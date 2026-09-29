@@ -18,7 +18,6 @@ import {
 import {
   runOptimizationJob,
   runBulkOptimization,
-  DuplicateJobError,
   DEFAULT_BULK_CONCURRENCY,
 } from "../services/seo/ai/jobs";
 import { getAiOptimizationProvider, isMockProvider } from "../services/seo/ai/optimizationProvider";
@@ -51,7 +50,17 @@ import { listContentQueue, proposeTopic, updateQueueStatus as updateContentQueue
 import { runWeeklyContentJob, findLatestContentDraft, approveContentToPRWithAutopublish, ContentNotReadyError } from "../services/seo/contentPipeline";
 import { approveMetaBatchWithAutopublish, publishNow } from "../services/seo/autoMerge";
 import { runNightlyDraftJob } from "../services/seo/nightlyDraftJob";
-import { startLaneJob, getLaneJobStatus } from "../services/asyncLaneJob";
+import { startLaneJob, getLaneJobStatus, startJob, getJob, listRunningJobs } from "../services/asyncLaneJob";
+import { SEO_JOB_KINDS } from "../../shared/seoJobs";
+import type {
+  OptimizeJobResult,
+  BulkOptimizeJobResult,
+  RegenerateDraftsJobResult,
+  SeoJobPoll,
+  SeoPageJobOutcome,
+  SeoSyncJobResult,
+} from "../../shared/seoJobs";
+import type { BulkJobResult } from "../services/seo/ai/jobs";
 import { eq } from "drizzle-orm";
 
 /** Map the bulk-approve service's typed errors to the right tRPC/HTTP status. */
@@ -88,6 +97,13 @@ function toTRPCError(err: unknown): never {
   }
   throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: String(err) });
 }
+
+/** Strip draft bodies from bulk results — the poll payload carries outcomes only; the client refetches drafts. */
+function toOutcomes(results: BulkJobResult[]): SeoPageJobOutcome[] {
+  return results.map((r) => (r.ok ? { pageId: r.pageId, ok: true as const } : { pageId: r.pageId, ok: false as const, error: r.error }));
+}
+
+const sortedKey = (ids: number[]) => Array.from(new Set(ids)).sort((a, b) => a - b).join(",");
 
 /** True if this page can't be reindexed right now (title/meta sitting in an open PR). */
 async function isReindexBlocked(pageId: number): Promise<boolean> {
@@ -169,8 +185,33 @@ export const seoRouter = router({
    * quota. Never throws — returns a typed result the UI can surface.
    */
   sync: adminProcedure.mutation(async () => {
-    return runSeoSync({ trigger: "manual" });
+    // Async job (a full GSC sync outlasts the gateway timeout) — see
+    // asyncLaneJob.ts. Poll getJobStatus for the SyncResult.
+    return startJob({
+      kind: "seoSync",
+      key: "seoSync",
+      fn: async (): Promise<SeoSyncJobResult> => {
+        const r = await runSeoSync({ trigger: "manual" });
+        return r.ok ? { ok: true, pagesSynced: r.pagesSynced, queriesSynced: r.queriesSynced } : r;
+      },
+    });
   }),
+
+  /**
+   * Poll target for every job-starting mutation below (generateOptimization,
+   * regenerateOptimization, bulkGenerateOptimization, regenerateUnlockedDrafts,
+   * sync). Returns { status: "unknown" } when the server no longer has the id
+   * (restart, or pruned an hour after finishing) so the UI can say so instead
+   * of spinning forever. Admin-only, like the mutations.
+   */
+  getJobStatus: adminProcedure
+    .input(z.object({ jobId: z.string().min(1) }))
+    .query(({ input }): SeoJobPoll => getJob(input.jobId) ?? { status: "unknown" }),
+
+  /** Jobs still running (optionally one kind) — lets a reloaded page re-attach after a 504/refresh. Admin-only. */
+  getActiveJobs: adminProcedure
+    .input(z.object({ kind: z.enum(SEO_JOB_KINDS).optional() }).optional())
+    .query(({ input }) => listRunningJobs(input?.kind)),
 
   /* ── AI SEO Optimization Engine (PR #23) ──────────────────────────────── */
 
@@ -193,19 +234,20 @@ export const seoRouter = router({
     .input(z.object({ id: z.number().int().positive(), action: z.enum(SEO_ACTION) }))
     .mutation(async ({ input }) => {
       if (input.action === "request_reindex") await assertReindexAllowed(input.id).catch(toTRPCError);
-      try {
-        const draft = await runOptimizationJob(input.id, input.action);
-        if (input.action === "request_reindex") {
-          await setWorkflowStatus([input.id], "waiting_for_indexing");
-        }
-        return { draft };
-      } catch (err) {
-        if (err instanceof DuplicateJobError) {
-          throw new TRPCError({ code: "CONFLICT", message: err.message });
-        }
-        if (err instanceof AiDraftLintFailedError) toTRPCError(err);
-        throw err;
-      }
+      // Async job — the AI call outlasts the gateway timeout. A second click
+      // while this page's job runs attaches to it (started: false) rather
+      // than the old CONFLICT error. Lint failures surface as the job error.
+      return startJob({
+        kind: "optimize",
+        key: `optimize:${input.id}`,
+        fn: async (): Promise<OptimizeJobResult> => {
+          await runOptimizationJob(input.id, input.action);
+          if (input.action === "request_reindex") {
+            await setWorkflowStatus([input.id], "waiting_for_indexing");
+          }
+          return { pageId: input.id, action: input.action };
+        },
+      });
     }),
 
   /**
@@ -218,16 +260,15 @@ export const seoRouter = router({
     .input(z.object({ id: z.number().int().positive(), action: z.enum(SEO_ACTION) }))
     .mutation(async ({ input }) => {
       if (input.action === "request_reindex") await assertReindexAllowed(input.id).catch(toTRPCError);
-      try {
-        const draft = await runOptimizationJob(input.id, input.action);
-        return { draft };
-      } catch (err) {
-        if (err instanceof DuplicateJobError) {
-          throw new TRPCError({ code: "CONFLICT", message: err.message });
-        }
-        if (err instanceof AiDraftLintFailedError) toTRPCError(err);
-        throw err;
-      }
+      // Same key as generateOptimization: the two can never run against one page at once.
+      return startJob({
+        kind: "optimize",
+        key: `optimize:${input.id}`,
+        fn: async (): Promise<OptimizeJobResult> => {
+          await runOptimizationJob(input.id, input.action);
+          return { pageId: input.id, action: input.action };
+        },
+      });
     }),
 
   /**
@@ -245,30 +286,42 @@ export const seoRouter = router({
       }),
     )
     .mutation(async ({ input }) => {
-      let ids = input.ids;
-      let blockedByPendingBatch: number[] = [];
-      if (input.action === "request_reindex") {
-        const checks = await Promise.all(
-          ids.map(async (id) => [id, await isReindexBlocked(id)] as const),
-        );
-        blockedByPendingBatch = checks.filter(([, blocked]) => blocked).map(([id]) => id);
-        ids = checks.filter(([, blocked]) => !blocked).map(([id]) => id);
-      }
-      const results = await runBulkOptimization(
-        ids,
-        input.action,
-        input.concurrency ?? DEFAULT_BULK_CONCURRENCY,
-      );
-      if (input.action === "request_reindex") {
-        const ok = results.filter((r) => r.ok).map((r) => r.pageId);
-        if (ok.length > 0) await setWorkflowStatus(ok, "waiting_for_indexing");
-      }
-      return {
-        results,
-        succeeded: results.filter((r) => r.ok).length,
-        failed: results.filter((r) => !r.ok).length,
-        skippedPendingBatch: blockedByPendingBatch,
-      };
+      // Async job with per-page progress. Everything (including the per-page
+      // reindex pre-checks, N DB round-trips) runs inside the job.
+      return startJob({
+        kind: "bulkOptimize",
+        key: `bulkOptimize:${input.action}:${sortedKey(input.ids)}`,
+        fn: async (ctx): Promise<BulkOptimizeJobResult> => {
+          let ids = input.ids;
+          let blockedByPendingBatch: number[] = [];
+          if (input.action === "request_reindex") {
+            const checks = await Promise.all(
+              ids.map(async (id) => [id, await isReindexBlocked(id)] as const),
+            );
+            blockedByPendingBatch = checks.filter(([, blocked]) => blocked).map(([id]) => id);
+            ids = checks.filter(([, blocked]) => !blocked).map(([id]) => id);
+          }
+          const results = await runBulkOptimization(
+            ids,
+            input.action,
+            input.concurrency ?? DEFAULT_BULK_CONCURRENCY,
+            (done, total) => {
+              ctx.setTotal(total);
+              if (done > 0) ctx.tick();
+            },
+          );
+          if (input.action === "request_reindex") {
+            const ok = results.filter((r) => r.ok).map((r) => r.pageId);
+            if (ok.length > 0) await setWorkflowStatus(ok, "waiting_for_indexing");
+          }
+          return {
+            results: toOutcomes(results),
+            succeeded: results.filter((r) => r.ok).length,
+            failed: results.filter((r) => !r.ok).length,
+            skippedPendingBatch: blockedByPendingBatch,
+          };
+        },
+      });
     }),
 
   /** Persist human edits to a draft — everything stays editable (Phase 7). */
@@ -473,7 +526,19 @@ export const seoRouter = router({
   /** "Regenerate drafts (unlocked only)" — skips anything on the exclusion list. Admin-only. */
   regenerateUnlockedDrafts: adminProcedure
     .input(z.object({ ids: z.array(z.number().int().positive()).min(1), concurrency: z.number().int().min(1).max(16).optional() }))
-    .mutation(async ({ input }) => regenerateUnlockedDrafts(input.ids, input.concurrency)),
+    .mutation(async ({ input }) =>
+      startJob({
+        kind: "regenerateDrafts",
+        key: `regenerateDrafts:${sortedKey(input.ids)}`,
+        fn: async (ctx): Promise<RegenerateDraftsJobResult> => {
+          const { results, skippedLocked } = await regenerateUnlockedDrafts(input.ids, input.concurrency, (done, total) => {
+            ctx.setTotal(total);
+            if (done > 0) ctx.tick();
+          });
+          return { results: toOutcomes(results), skippedLocked };
+        },
+      }),
+    ),
 
   /** Manual trigger for the 30-day soft-expiry sweep (spec §8) — not wired to a cron yet. Admin-only. */
   expireStaleDrafts: adminProcedure.mutation(async () => expireStaleDrafts()),

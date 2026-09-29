@@ -32,6 +32,7 @@ export type RunReportOptions = { windowKind?: "daily" | "weekly"; now?: Date };
 export type RunReportResult = { report: SeoIntelReportRow; items: number; executed: number; emailSent: boolean };
 
 /** The single entry point the cron/"Run now" trigger calls. */
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise<RunReportResult | { skipped: true; reason: string }> {
   if (process.env.SEO_INTEL_ENABLED !== "true") {
     return { skipped: true, reason: "SEO_INTEL_ENABLED is not \"true\" — market-intel is off." };
