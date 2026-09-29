@@ -82,6 +82,10 @@ import {
   History,
   Download,
   MoreVertical,
+  ChevronDown,
+  ChevronUp,
+  ShieldOff,
+  Quote,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -876,7 +880,7 @@ function OpportunityDrawer({
 
 /* ── Bulk-approve modal (spec §5) ───────────────────────────────────────── */
 
-function LintFindingList({ findings }: { findings: { severity: "block" | "warn"; code: string; message: string; field: string }[] }) {
+function LintFindingList({ findings }: { findings: { severity: "block" | "warn"; code: string; message: string; field?: string }[] }) {
   if (findings.length === 0) return <span className="text-xs text-emerald-700">Clean</span>;
   return (
     <ul className="space-y-1.5">
@@ -885,7 +889,7 @@ function LintFindingList({ findings }: { findings: { severity: "block" | "warn";
           <div className="flex flex-wrap items-center gap-1">
             <span>{f.severity === "block" ? "⛔" : "⚠️"}</span>
             <code className="rounded bg-black/5 px-1 py-0.5 font-mono text-[10px]">{f.code}</code>
-            <span className="rounded-full border border-current/30 px-1.5 py-0 text-[10px] uppercase tracking-wide opacity-80">{f.field}</span>
+            {f.field && <span className="rounded-full border border-current/30 px-1.5 py-0 text-[10px] uppercase tracking-wide opacity-80">{f.field}</span>}
           </div>
           <p className="mt-0.5">{f.message}</p>
         </li>
@@ -1123,6 +1127,7 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
   const [resumeNote, setResumeNote] = useState("");
   const [resumeOpen, setResumeOpen] = useState(false);
   const [draftingTopicId, setDraftingTopicId] = useState<number | null>(null);
+  const [expandedTopicId, setExpandedTopicId] = useState<number | null>(null);
 
   const invalidate = () => {
     utils.seo.autopublishStatus.invalidate();
@@ -1283,32 +1288,206 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
           <p className="py-3 text-center text-sm text-muted-foreground">No topics in the queue yet.</p>
         ) : (
           <ul className="divide-y">
-            {queue.map((t) => (
-              <li key={t.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
-                <div>
-                  <p className="font-medium text-[#1e3a5f]">{t.title}</p>
-                  <p className="text-xs text-muted-foreground">{t.audience}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className={`text-xs ${CONTENT_QUEUE_STATUS_STYLE[t.status] ?? ""}`}>{t.status.replace(/_/g, " ")}</Badge>
-                  {isAdmin && (t.status === "drafted" || t.status === "in_review") && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={approveContent.isPending}
-                      onClick={() => { setDraftingTopicId(t.id); approveContent.mutate({ topicId: t.id }); }}
-                    >
-                      {approveContent.isPending && draftingTopicId === t.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="mr-1.5 h-3.5 w-3.5" />}
-                      Approve to PR
-                    </Button>
+            {queue.map((t) => {
+              const hasDraft = t.status === "drafted" || t.status === "in_review";
+              const isExpanded = expandedTopicId === t.id;
+              return (
+                <li key={t.id} className="py-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <div>
+                      <p className="font-medium text-[#1e3a5f]">{t.title}</p>
+                      <p className="text-xs text-muted-foreground">{t.audience}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className={`text-xs ${CONTENT_QUEUE_STATUS_STYLE[t.status] ?? ""}`}>{t.status.replace(/_/g, " ")}</Badge>
+                      {hasDraft && (
+                        <Button size="sm" variant="ghost" onClick={() => setExpandedTopicId(isExpanded ? null : t.id)}>
+                          {isExpanded ? <ChevronUp className="mr-1.5 h-3.5 w-3.5" /> : <ChevronDown className="mr-1.5 h-3.5 w-3.5" />}
+                          Findings
+                        </Button>
+                      )}
+                      {isAdmin && hasDraft && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={approveContent.isPending}
+                          onClick={() => { setDraftingTopicId(t.id); approveContent.mutate({ topicId: t.id }); }}
+                        >
+                          {approveContent.isPending && draftingTopicId === t.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="mr-1.5 h-3.5 w-3.5" />}
+                          Approve to PR
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {isExpanded && hasDraft && (
+                    <ContentDraftPanel topicId={t.id} isAdmin={isAdmin} onApproved={invalidate} />
                   )}
-                </div>
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** Section types whose text is editable inline. checklist/numbered_list items are shown read-only in v1 — out of scope for this pass. */
+const EDITABLE_SECTION_TYPES = new Set(["intro", "h2", "paragraph", "stat_box", "cta_box"]);
+
+/**
+ * Content review panel (issue: "no way to see or resolve findings" for a
+ * drafted post). Shown inline under a "drafted"/"in_review" content-queue
+ * row: every meta-lint, content-lint, and critic finding; inline editing of
+ * the draft body's text sections with a Re-check that re-runs lint + critic
+ * against the edit; and an admin override (required note, logged) that lets
+ * a still-failing draft through to Approve to PR anyway.
+ */
+function ContentDraftPanel({ topicId, isAdmin, onApproved }: { topicId: number; isAdmin: boolean; onApproved: () => void }) {
+  const utils = trpc.useUtils();
+  const draftQ = trpc.seo.getContentDraft.useQuery({ topicId });
+  const [editedSections, setEditedSections] = useState<Array<Record<string, unknown>> | null>(null);
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [overrideNote, setOverrideNote] = useState("");
+
+  const invalidate = () => { utils.seo.getContentDraft.invalidate({ topicId }); onApproved(); };
+
+  const recheck = trpc.seo.recheckContentDraft.useMutation({
+    onSuccess: (res) => {
+      toast[res.passes ? "success" : "message"](res.passes ? "Re-check passed — no outstanding findings" : "Re-check ran — findings below");
+      invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const override = trpc.seo.overrideContentFinding.useMutation({
+    onSuccess: () => { toast.success("Override logged — Approve to PR is now unblocked for this draft"); setOverrideOpen(false); setOverrideNote(""); invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+  const approveContent = trpc.seo.approveContentToPR.useMutation({
+    onSuccess: (res) => { toast.success(`PR #${res.prNumber} opened`); invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
+
+  if (draftQ.isLoading) return <p className="py-3 text-xs text-muted-foreground">Loading findings…</p>;
+  const draft = draftQ.data;
+  if (!draft) return <p className="py-3 text-xs text-muted-foreground">No draft generated for this topic yet.</p>;
+
+  const sections = editedSections ?? (draft.post.sections as Array<Record<string, unknown>>);
+  const dirty = editedSections !== null;
+  const criticFindings = draft.criticClaims.map((claim) => ({ severity: "block" as const, code: "unsupported_claim", message: "Not supported by verified facts (shared/verifiedFacts.ts) — the critic pass flagged this exact sentence.", claim }));
+
+  return (
+    <div className="mt-3 space-y-4 rounded-lg border bg-slate-50/60 p-3">
+      <div className={`flex items-center gap-1.5 text-xs font-semibold ${draft.passes ? "text-emerald-700" : "text-red-700"}`}>
+        {draft.passes ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+        {draft.passes ? "No outstanding findings" : "Has unresolved findings — fix, re-check, or override before publishing"}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Title / meta</p>
+          <LintFindingList findings={draft.metaLint.findings} />
+        </div>
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Body content</p>
+          <LintFindingList findings={draft.contentLint.findings} />
+        </div>
+        <div>
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Critic (unsupported claims)</p>
+          {criticFindings.length === 0 ? (
+            <span className="text-xs text-emerald-700">Clean</span>
+          ) : (
+            <ul className="space-y-1.5">
+              {criticFindings.map((f, i) => (
+                <li key={i} className="text-xs text-red-700">
+                  <div className="flex items-center gap-1">
+                    <Quote className="h-3 w-3 shrink-0" />
+                    <code className="rounded bg-black/5 px-1 py-0.5 font-mono text-[10px]">{f.code}</code>
+                  </div>
+                  <p className="mt-0.5 italic">"{f.claim}"</p>
+                  <p className="mt-0.5 not-italic text-red-700/80">{f.message}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {isAdmin && (
+        <div className="space-y-2 border-t pt-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Body (editable)</p>
+          {sections.map((s, i) => {
+            const type = s.type as string;
+            if (!EDITABLE_SECTION_TYPES.has(type)) {
+              return (
+                <p key={i} className="text-xs text-muted-foreground">
+                  <Badge variant="outline" className="mr-1.5 text-[10px]">{type}</Badge>
+                  {Array.isArray(s.items) ? (s.items as string[]).join(" · ") : "(not editable here)"}
+                </p>
+              );
+            }
+            return (
+              <div key={i}>
+                <Badge variant="outline" className="mb-1 text-[10px]">{type}</Badge>
+                <Textarea
+                  rows={type === "h2" ? 1 : 3}
+                  value={s.content as string}
+                  onChange={(e) => {
+                    const next = sections.map((sec, j) => (j === i ? { ...sec, content: e.target.value } : sec));
+                    setEditedSections(next);
+                  }}
+                  className="text-xs"
+                />
+              </div>
+            );
+          })}
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={!dirty || recheck.isPending}
+              onClick={() => recheck.mutate({ topicId, sections: sections as never })}
+            >
+              {recheck.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
+              Re-check
+            </Button>
+            {dirty && (
+              <Button size="sm" variant="ghost" onClick={() => setEditedSections(null)}>Discard edits</Button>
+            )}
+            {!draft.passes && (
+              <AlertDialog open={overrideOpen} onOpenChange={setOverrideOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline">
+                    <ShieldOff className="mr-1.5 h-3.5 w-3.5" /> Override finding
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Override this draft's findings?</AlertDialogTitle>
+                    <AlertDialogDescription>Requires a note explaining why it's safe to publish anyway — logged to the audit trail. A future re-check on this topic will need its own override.</AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <Textarea rows={3} value={overrideNote} onChange={(e) => setOverrideNote(e.target.value)} placeholder="e.g. confirmed the certification claim against the license doc on file" />
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <Button disabled={!overrideNote.trim() || override.isPending} onClick={() => override.mutate({ topicId, note: overrideNote })}>
+                      {override.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null} Override
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+            <Button
+              size="sm"
+              disabled={approveContent.isPending}
+              onClick={() => approveContent.mutate({ topicId })}
+            >
+              {approveContent.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="mr-1.5 h-3.5 w-3.5" />}
+              Approve to PR
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

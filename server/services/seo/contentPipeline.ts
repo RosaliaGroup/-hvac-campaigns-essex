@@ -86,25 +86,12 @@ function warnOnStalePriceRanges(facts: VerifiedFacts, now: Date): void {
   }
 }
 
-/** Draft (and, once warmed up, auto-approve) the next eligible topic. Safe to call repeatedly — no-ops when there's nothing to draft. */
-export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
-  warnOnStalePriceRanges(facts, new Date());
-
-  const breaker = await checkCircuitBreakerConditions();
-  if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
-
-  const topic = await nextTopicToProcess();
-  if (!topic) return { status: "no_topic" };
-
-  if (isResidentialOrRebateTopic(topic)) {
-    return { status: "refused_residential_rebate", topicId: topic.id };
-  }
-  if (!isFactsConfigured(facts)) {
-    return { status: "facts_not_configured" };
-  }
-
-  const post = await draftContentPost(topic, facts);
-  const pagePath = `/blog/${post.slug}`;
+/** The same title/meta lint + body lint + critic pass every draft (fresh or re-checked) goes through. */
+async function lintAndCritique(
+  post: BlogPostData,
+  facts: VerifiedFacts,
+  pagePath: string,
+): Promise<{ metaLint: LintResult; contentLint: ContentLintResult; critic: CriticVerdict; passes: boolean }> {
   const structure = countPostStructure(post);
   const body = renderPostPlainText(post);
 
@@ -125,7 +112,29 @@ export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS)
   );
   const critic = await runCriticPass(body, facts);
 
-  const passes = metaLint.passes && contentLint.passes && critic.passes;
+  return { metaLint, contentLint, critic, passes: metaLint.passes && contentLint.passes && critic.passes };
+}
+
+/** Draft (and, once warmed up, auto-approve) the next eligible topic. Safe to call repeatedly — no-ops when there's nothing to draft. */
+export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
+  warnOnStalePriceRanges(facts, new Date());
+
+  const breaker = await checkCircuitBreakerConditions();
+  if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
+
+  const topic = await nextTopicToProcess();
+  if (!topic) return { status: "no_topic" };
+
+  if (isResidentialOrRebateTopic(topic)) {
+    return { status: "refused_residential_rebate", topicId: topic.id };
+  }
+  if (!isFactsConfigured(facts)) {
+    return { status: "facts_not_configured" };
+  }
+
+  const post = await draftContentPost(topic, facts);
+  const pagePath = `/blog/${post.slug}`;
+  const { metaLint, contentLint, critic, passes } = await lintAndCritique(post, facts, pagePath);
 
   await updateQueueStatus(topic.id, "drafted");
   await logAudit({
@@ -184,6 +193,72 @@ export async function findLatestContentDraft(topicId: number): Promise<StoredCon
   return { topicId, ...after, generatedAt: match.ts instanceof Date ? match.ts : new Date(match.ts) };
 }
 
+/**
+ * Re-run lint + critic against an EDITED body (sections only — title/meta/
+ * excerpt are left as drafted; editing those isn't in scope here) and store
+ * it as a new draft_generated row, exactly like a fresh draft. Becomes the
+ * new "latest" draft for the topic (findLatestContentDraft reads newest
+ * first), so a stale override from a previous draft can't carry over to
+ * this one — see hasOverrideForDraft.
+ */
+export async function recheckContentDraft(
+  topicId: number,
+  sections: BlogPostData["sections"],
+  facts: VerifiedFacts = VERIFIED_FACTS,
+): Promise<StoredContentDraft> {
+  const draft = await findLatestContentDraft(topicId);
+  if (!draft) throw new ContentNotReadyError("no draft has been generated for this topic yet.");
+
+  const post: BlogPostData = { ...draft.post, sections };
+  const pagePath = `/blog/${post.slug}`;
+  const { metaLint, contentLint, critic, passes } = await lintAndCritique(post, facts, pagePath);
+
+  const generatedAt = new Date();
+  await logAudit({
+    actorId: null,
+    action: "draft_generated",
+    batchId: null,
+    pagePath,
+    before: null,
+    after: { lane: "content", topicId, post, metaLint, contentLint, criticBlocked: !critic.passes, criticClaims: critic.unsupportedClaims, passes },
+    lintResult: null,
+  });
+
+  return { topicId, post, metaLint, contentLint, criticBlocked: !critic.passes, criticClaims: critic.unsupportedClaims, passes, generatedAt };
+}
+
+/** True iff the CURRENT draft (identified by its exact generatedAt) has already been overridden — a fresh re-check invalidates any prior override on purpose. */
+async function hasOverrideForDraft(topicId: number, generatedAt: Date): Promise<boolean> {
+  const rows = await listAuditLog({ action: "vetoed", limit: 200 });
+  return rows.some((r) => {
+    const after = r.after as { topicId?: number; overriddenDraftAt?: string } | null;
+    return after?.topicId === topicId && after.overriddenDraftAt === generatedAt.toISOString();
+  });
+}
+
+/**
+ * Admin override: let a draft with unresolved lint/critic findings proceed to
+ * "Approve to PR" anyway, with a required note logged to the audit trail
+ * (docs' recurring "requires a note, logged" pattern — same as
+ * resumeCircuitBreaker). Scoped to the CURRENT draft snapshot (its exact
+ * generatedAt), not the topic in general: a subsequent Re-check produces a
+ * new draft that needs its own override.
+ */
+export async function overrideContentFinding(topicId: number, note: string, actorId: number | null): Promise<void> {
+  const draft = await findLatestContentDraft(topicId);
+  if (!draft) throw new ContentNotReadyError("no draft has been generated for this topic yet.");
+
+  await logAudit({
+    actorId,
+    action: "vetoed",
+    batchId: null,
+    pagePath: `/blog/${draft.post.slug}`,
+    before: { metaLint: draft.metaLint.findings, contentLint: draft.contentLint.findings, criticClaims: draft.criticClaims },
+    after: { topicId, note, overriddenDraftAt: draft.generatedAt.toISOString() },
+    lintResult: null,
+  });
+}
+
 export class ContentNotReadyError extends Error {
   constructor(reason: string) {
     super(`This content draft isn't ready to publish: ${reason}`);
@@ -204,7 +279,9 @@ export async function approveContentToPR(topicId: number, actorId: number | null
   if (!isGithubConfigured()) throw new GithubNotConfiguredError();
   const draft = await findLatestContentDraft(topicId);
   if (!draft) throw new ContentNotReadyError("no draft has been generated for this topic yet.");
-  if (!draft.passes) throw new ContentNotReadyError("it has unresolved lint or critic findings.");
+  if (!draft.passes && !(await hasOverrideForDraft(topicId, draft.generatedAt))) {
+    throw new ContentNotReadyError("it has unresolved lint or critic findings — override them first, with a note, if you want to publish anyway.");
+  }
 
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");

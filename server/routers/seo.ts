@@ -48,7 +48,14 @@ import { isWarmedUp, warmupRemaining, WARMUP_DEFAULTS, type AutopublishLane } fr
 import { checkCircuitBreakerConditions, resumeCircuitBreaker, CircuitBreakerNoteRequiredError } from "../services/seo/circuitBreaker";
 import { getAutopublishState } from "../services/seo/autopublishStateRepo";
 import { listContentQueue, proposeTopic, updateQueueStatus as updateContentQueueStatus } from "../services/seo/contentQueue";
-import { runWeeklyContentJob, findLatestContentDraft, approveContentToPRWithAutopublish, ContentNotReadyError } from "../services/seo/contentPipeline";
+import {
+  runWeeklyContentJob,
+  findLatestContentDraft,
+  approveContentToPRWithAutopublish,
+  recheckContentDraft,
+  overrideContentFinding,
+  ContentNotReadyError,
+} from "../services/seo/contentPipeline";
 import { approveMetaBatchWithAutopublish, publishNow } from "../services/seo/autoMerge";
 import { runNightlyDraftJob } from "../services/seo/nightlyDraftJob";
 import { startLaneJob, getLaneJobStatus } from "../services/asyncLaneJob";
@@ -88,6 +95,17 @@ function toTRPCError(err: unknown): never {
   }
   throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: String(err) });
 }
+
+/** Mirrors client/src/data/blogPosts.ts's BlogSection discriminated union. */
+const blogSectionSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("intro"), content: z.string() }),
+  z.object({ type: z.literal("h2"), content: z.string() }),
+  z.object({ type: z.literal("paragraph"), content: z.string() }),
+  z.object({ type: z.literal("stat_box"), content: z.string() }),
+  z.object({ type: z.literal("checklist"), items: z.array(z.string()) }),
+  z.object({ type: z.literal("numbered_list"), items: z.array(z.string()) }),
+  z.object({ type: z.literal("cta_box"), content: z.string(), buttonText: z.string(), buttonUrl: z.string() }),
+]);
 
 /** True if this page can't be reindexed right now (title/meta sitting in an open PR). */
 async function isReindexBlocked(pageId: number): Promise<boolean> {
@@ -563,6 +581,29 @@ export const seoRouter = router({
   getContentDraft: protectedProcedure
     .input(z.object({ topicId: z.number().int().positive() }))
     .query(async ({ input }) => findLatestContentDraft(input.topicId)),
+
+  /** Edit the draft body (sections) and re-run lint + critic. Admin-only. Stores a new draft snapshot. */
+  recheckContentDraft: adminProcedure
+    .input(z.object({ topicId: z.number().int().positive(), sections: z.array(blogSectionSchema).min(1) }))
+    .mutation(async ({ input }) => {
+      try {
+        return await recheckContentDraft(input.topicId, input.sections);
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
+
+  /** Let a draft with unresolved lint/critic findings proceed to Approve to PR anyway. Requires a note, logged. Admin-only. */
+  overrideContentFinding: adminProcedure
+    .input(z.object({ topicId: z.number().int().positive(), note: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      try {
+        await overrideContentFinding(input.topicId, input.note, resolveTeamMemberId(ctx.user));
+        return { ok: true };
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
 
   /** Publish step for a clean content draft — commits to blogPosts.ts and opens a PR. Admin-only. */
   approveContentToPR: adminProcedure

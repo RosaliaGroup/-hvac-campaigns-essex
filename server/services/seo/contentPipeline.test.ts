@@ -28,7 +28,15 @@ import { logAudit, listAuditLog } from "./auditLog";
 import { isGithubConfigured, ensureBranch, getFileContent, putFileContent, openOrGetPR } from "./github";
 import { isWarmedUp } from "./warmupGate";
 import { armHold } from "./autoMerge";
-import { runWeeklyContentJob, findLatestContentDraft, approveContentToPR, approveContentToPRWithAutopublish, ContentNotReadyError } from "./contentPipeline";
+import {
+  runWeeklyContentJob,
+  findLatestContentDraft,
+  approveContentToPR,
+  approveContentToPRWithAutopublish,
+  recheckContentDraft,
+  overrideContentFinding,
+  ContentNotReadyError,
+} from "./contentPipeline";
 import { VERIFIED_FACTS } from "../../../shared/verifiedFacts";
 import type { SeoContentQueueRow } from "../../../drizzle/schema";
 
@@ -253,6 +261,105 @@ describe("approveContentToPR", () => {
     expect(ensureBranch).toHaveBeenCalledWith("pr-content-20260926");
     expect(putFileContent).toHaveBeenCalledWith("client/src/data/blogPosts.ts", expect.any(String), expect.stringContaining(goodPost.slug), expect.any(String), "sha1");
     expect(updateQueueStatus).toHaveBeenCalledWith(5, "pr_open", 42);
+  });
+});
+
+describe("recheckContentDraft", () => {
+  it("throws ContentNotReadyError when no draft exists yet for the topic", async () => {
+    vi.mocked(listAuditLog).mockResolvedValue([]);
+    await expect(recheckContentDraft(5, goodPost.sections as never)).rejects.toThrow(ContentNotReadyError);
+  });
+
+  it("re-lints the edited sections and stores a new draft, leaving title/meta/excerpt as originally drafted", async () => {
+    vi.mocked(listAuditLog).mockResolvedValue([
+      { id: 1, ts: new Date(), actorId: null, action: "draft_generated", batchId: null, pagePath: null, before: null, after: { lane: "content", topicId: 5, post: goodPost, metaLint: { passes: true, findings: [] }, contentLint: { passes: true, findings: [] }, criticBlocked: false, criticClaims: [], passes: true }, lintResult: null } as never,
+    ]);
+    vi.mocked(runCriticPass).mockResolvedValue({ passes: true, unsupportedClaims: [], model: "claude-opus-4-8" });
+
+    const editedSections = goodPost.sections.map((s) => (s.type === "intro" ? { ...s, content: "Edited intro paragraph text." } : s));
+    const result = await recheckContentDraft(5, editedSections as never, factsWithIncentive);
+
+    expect(result.post.title).toBe(goodPost.title); // title/meta/excerpt untouched
+    expect(result.post.sections[0]).toEqual(editedSections[0]);
+    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({
+      action: "draft_generated",
+      after: expect.objectContaining({ lane: "content", topicId: 5, post: expect.objectContaining({ sections: editedSections }) }),
+    }));
+  });
+
+  it("can turn a failing draft into a passing one after an edit fixes the flagged content", async () => {
+    vi.mocked(listAuditLog).mockResolvedValue([
+      { id: 1, ts: new Date(), actorId: null, action: "draft_generated", batchId: null, pagePath: null, before: null, after: { lane: "content", topicId: 5, post: goodPost, metaLint: { passes: true, findings: [] }, contentLint: { passes: true, findings: [] }, criticBlocked: true, criticClaims: ["fabricated stat"], passes: false }, lintResult: null } as never,
+    ]);
+    vi.mocked(runCriticPass).mockResolvedValue({ passes: true, unsupportedClaims: [], model: "claude-opus-4-8" }); // the "re-check" run, post-edit
+
+    const result = await recheckContentDraft(5, goodPost.sections as never, factsWithIncentive);
+
+    expect(result.passes).toBe(true);
+    expect(result.criticClaims).toEqual([]);
+  });
+});
+
+describe("overrideContentFinding", () => {
+  it("throws ContentNotReadyError when no draft exists yet for the topic", async () => {
+    vi.mocked(listAuditLog).mockResolvedValue([]);
+    await expect(overrideContentFinding(5, "confirmed accurate against the source doc", 1)).rejects.toThrow(ContentNotReadyError);
+  });
+
+  it("logs a vetoed audit row with the note and the overridden findings, scoped to this exact draft", async () => {
+    const generatedAt = new Date("2026-09-29T12:00:00Z");
+    vi.mocked(listAuditLog).mockResolvedValue([
+      { id: 1, ts: generatedAt, actorId: null, action: "draft_generated", batchId: null, pagePath: null, before: null, after: { lane: "content", topicId: 5, post: goodPost, metaLint: { passes: true, findings: [] }, contentLint: { passes: false, findings: [{ severity: "block", code: "too_short", message: "Body under word count." }] }, criticBlocked: false, criticClaims: [], passes: false }, lintResult: null } as never,
+    ]);
+
+    await overrideContentFinding(5, "reviewed manually, word count is fine for this format", 7);
+
+    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({
+      actorId: 7,
+      action: "vetoed",
+      pagePath: `/blog/${goodPost.slug}`,
+      before: expect.objectContaining({ contentLint: [{ severity: "block", code: "too_short", message: "Body under word count." }] }),
+      after: { topicId: 5, note: "reviewed manually, word count is fine for this format", overriddenDraftAt: generatedAt.toISOString() },
+    }));
+  });
+});
+
+describe("approveContentToPR: override gate", () => {
+  const failingDraftRow = {
+    id: 1, ts: new Date("2026-09-29T12:00:00Z"), actorId: null, action: "draft_generated", batchId: null, pagePath: null,
+    before: null,
+    after: { lane: "content", topicId: 5, post: goodPost, metaLint: { passes: true, findings: [] }, contentLint: { passes: false, findings: [] }, criticBlocked: false, criticClaims: [], passes: false },
+    lintResult: null,
+  } as never;
+
+  it("still throws when no override has been logged for this draft", async () => {
+    vi.mocked(listAuditLog).mockResolvedValue([failingDraftRow]);
+    await expect(approveContentToPR(5, 1)).rejects.toThrow(ContentNotReadyError);
+  });
+
+  it("proceeds once an override matching this exact draft's timestamp has been logged", async () => {
+    vi.mocked(getDb).mockResolvedValue({ insert: () => ({ values: () => Promise.resolve([{ insertId: 99 }]) }) } as never);
+    const overrideRow = {
+      id: 2, ts: new Date(), actorId: 1, action: "vetoed", batchId: null, pagePath: `/blog/${goodPost.slug}`,
+      before: null, after: { topicId: 5, note: "reviewed, fine", overriddenDraftAt: new Date("2026-09-29T12:00:00Z").toISOString() },
+      lintResult: null,
+    } as never;
+    vi.mocked(listAuditLog).mockResolvedValue([failingDraftRow, overrideRow]);
+
+    const result = await approveContentToPR(5, 1);
+
+    expect(result.batchId).toBe(99);
+  });
+
+  it("does NOT let an override for a DIFFERENT (older) draft carry over to the current one", async () => {
+    const overrideForOlderDraft = {
+      id: 2, ts: new Date(), actorId: 1, action: "vetoed", batchId: null, pagePath: `/blog/${goodPost.slug}`,
+      before: null, after: { topicId: 5, note: "reviewed, fine", overriddenDraftAt: new Date("2026-09-01T00:00:00Z").toISOString() }, // stale
+      lintResult: null,
+    } as never;
+    vi.mocked(listAuditLog).mockResolvedValue([failingDraftRow, overrideForOlderDraft]);
+
+    await expect(approveContentToPR(5, 1)).rejects.toThrow(ContentNotReadyError);
   });
 });
 
