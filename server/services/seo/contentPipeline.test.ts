@@ -134,19 +134,80 @@ describe("runWeeklyContentJob", () => {
     expect(armHold).not.toHaveBeenCalled();
   });
 
-  it("marks the draft as not passing when the critic blocks it, and never auto-approves a failing draft even if warmed up", async () => {
-    vi.mocked(nextTopicToProcess).mockResolvedValue(topic);
+  it("regenerates once with the critic's findings fed back, then marks it blocked (not drafted) if still failing, and never auto-approves it", async () => {
+    // Only this one topic is ever queued — after it's marked "blocked" a real
+    // DB would stop returning it (nextTopicToProcess filters on queued/refresh_due),
+    // so the mock reflects that: present once, then the queue is empty.
+    vi.mocked(nextTopicToProcess).mockResolvedValueOnce(topic).mockResolvedValue(null);
     vi.mocked(draftContentPost).mockResolvedValue(goodPost as never);
     vi.mocked(runCriticPass).mockResolvedValue({ passes: false, unsupportedClaims: ["some claim"], model: "claude-opus-4-8" });
     vi.mocked(isWarmedUp).mockResolvedValue(true);
 
     const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(result.status).toBe("all_blocked");
+    if (result.status === "all_blocked") expect(result.blockedTopicIds).toEqual([topic.id]);
+    // Initial attempt + exactly one regenerate-with-feedback retry, not more.
+    expect(draftContentPost).toHaveBeenCalledTimes(2);
+    expect(draftContentPost).toHaveBeenNthCalledWith(1, topic, factsWithIncentive, undefined);
+    expect(draftContentPost).toHaveBeenNthCalledWith(2, topic, factsWithIncentive, expect.stringContaining("some claim"));
+    expect(updateQueueStatus).toHaveBeenCalledWith(topic.id, "blocked");
+    expect(updateQueueStatus).not.toHaveBeenCalledWith(topic.id, "drafted");
+    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({
+      action: "draft_blocked",
+      after: expect.objectContaining({ lane: "content", topicId: topic.id, regenerated: true }),
+    }));
+    expect(armHold).not.toHaveBeenCalled();
+  });
+
+  it("regenerates once, and if the retry passes, drafts normally with regenerated: true", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValue(topic);
+    vi.mocked(draftContentPost).mockResolvedValue(goodPost as never);
+    vi.mocked(runCriticPass)
+      .mockResolvedValueOnce({ passes: false, unsupportedClaims: ["bad claim"], model: "claude-opus-4-8" })
+      .mockResolvedValueOnce({ passes: true, unsupportedClaims: [], model: "claude-opus-4-8" });
+    vi.mocked(isWarmedUp).mockResolvedValue(false);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(draftContentPost).toHaveBeenCalledTimes(2);
     expect(result.status).toBe("drafted");
     if (result.status === "drafted") {
-      expect(result.passes).toBe(false);
-      expect(result.autoApproved).toBe(false);
+      expect(result.passes).toBe(true);
+      expect(result.regenerated).toBe(true);
     }
-    expect(armHold).not.toHaveBeenCalled();
+    expect(updateQueueStatus).toHaveBeenCalledWith(topic.id, "drafted");
+  });
+
+  it("moves on to the next queued topic in the same run after one is blocked", async () => {
+    const topicB: SeoContentQueueRow = { ...topic, id: 6, title: "Other topic" };
+    vi.mocked(nextTopicToProcess).mockResolvedValueOnce(topic).mockResolvedValueOnce(topicB);
+    vi.mocked(draftContentPost).mockResolvedValue(goodPost as never);
+    // topic (id 5) always fails critic; topicB (id 6) passes clean.
+    vi.mocked(runCriticPass)
+      .mockResolvedValueOnce({ passes: false, unsupportedClaims: ["x"], model: "m" }) // topic, attempt 1
+      .mockResolvedValueOnce({ passes: false, unsupportedClaims: ["x"], model: "m" }) // topic, retry
+      .mockResolvedValueOnce({ passes: true, unsupportedClaims: [], model: "m" }); // topicB, attempt 1
+    vi.mocked(isWarmedUp).mockResolvedValue(false);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(updateQueueStatus).toHaveBeenCalledWith(topic.id, "blocked");
+    expect(updateQueueStatus).toHaveBeenCalledWith(topicB.id, "drafted");
+    expect(result.status).toBe("drafted");
+    if (result.status === "drafted") expect(result.topicId).toBe(topicB.id);
+  });
+
+  it("gives up after MAX_TOPICS_PER_RUN consecutive blocked topics rather than draining the whole queue", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValue(topic); // same topic every call — worst case
+    vi.mocked(draftContentPost).mockResolvedValue(goodPost as never);
+    vi.mocked(runCriticPass).mockResolvedValue({ passes: false, unsupportedClaims: ["x"], model: "m" });
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(result.status).toBe("all_blocked");
+    // 5 topics x 2 draft attempts (initial + retry) each = 10, not unbounded.
+    expect(vi.mocked(draftContentPost).mock.calls.length).toBe(10);
   });
 
   it("auto-approves to PR with label 'auto-YYYYMMDD' and arms the hold when the content lane IS warmed up and the circuit is clear", async () => {

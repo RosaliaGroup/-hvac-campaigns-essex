@@ -528,7 +528,7 @@ export const seoRouter = router({
 
   /** Promote a "proposed" topic to "queued" (or any other manual status change). Admin-only. */
   updateContentQueueStatus: adminProcedure
-    .input(z.object({ id: z.number().int().positive(), status: z.enum(["queued", "proposed", "drafted", "in_review", "pr_open", "published", "refresh_due"]) }))
+    .input(z.object({ id: z.number().int().positive(), status: z.enum(["queued", "proposed", "drafted", "in_review", "pr_open", "published", "refresh_due", "blocked"]) }))
     .mutation(async ({ input }) => {
       await updateContentQueueStatus(input.id, input.status);
       return { ok: true };

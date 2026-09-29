@@ -2791,6 +2791,8 @@ export const SEO_AUDIT_ACTION = [
   "market_intel_item_executed",
   "market_intel_item_reverted",
   "market_intel_owner_decision_released",
+  // ── Content pipeline regenerate-then-advance (migration 0080) ──
+  "draft_blocked",
 ] as const;
 
 export const seoAuditLog = mysqlTable(
@@ -2828,7 +2830,7 @@ export type InsertSeoAuditLog = typeof seoAuditLog.$inferInsert;
 
 /* ── SEO autopublish (docs/seo-automation-addendum-autopublish.md) ───────── */
 
-export const SEO_CONTENT_STATUS = ["queued", "proposed", "drafted", "in_review", "pr_open", "published", "refresh_due"] as const;
+export const SEO_CONTENT_STATUS = ["queued", "proposed", "drafted", "in_review", "pr_open", "published", "refresh_due", "blocked"] as const;
 
 /**
  * Weekly B2B content pipeline's topic backlog (spec Part 2). Seeded with the

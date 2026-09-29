@@ -7,12 +7,13 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../db";
 import { seoAutopublishState, type SeoAutopublishStateRow } from "../../../drizzle/schema";
+import { WARMUP_DEFAULTS } from "./warmupConfig";
 
 const ROW_ID = 1;
 
 const DEFAULTS: Omit<SeoAutopublishStateRow, "id" | "updatedAt"> = {
-  metaWarmupRemaining: 2,
-  contentWarmupRemaining: 8,
+  metaWarmupRemaining: WARMUP_DEFAULTS.meta,
+  contentWarmupRemaining: WARMUP_DEFAULTS.content,
   circuitBreakerPaused: false,
   circuitBreakerReason: null,
   circuitBreakerPausedAt: null,

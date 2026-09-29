@@ -1114,6 +1114,7 @@ const CONTENT_QUEUE_STATUS_STYLE: Record<string, string> = {
   pr_open: "bg-blue-100 text-blue-800 border-blue-200",
   published: "bg-emerald-100 text-emerald-800 border-emerald-200",
   refresh_due: "bg-orange-100 text-orange-800 border-orange-200",
+  blocked: "bg-red-100 text-red-800 border-red-200",
 };
 
 function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {

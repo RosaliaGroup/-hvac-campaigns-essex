@@ -2,22 +2,25 @@
  * Autopublish warm-up gate (owner decision, relayed 2026-09-26): each lane
  * starts requiring a manual "Publish now" click regardless of the enabled
  * flag, and only auto-merges once its warm-up counter reaches zero.
- *   - Meta lane: 2 manual batches (the very first bulk-approve batch already
- *     shipped under docs/seo-bulk-approve-spec.md counts as one of the two).
- *   - Content lane: 8 manual posts.
+ *   - Meta lane / content lane defaults: see warmupConfig.ts
+ *     (SEO_META_WARMUP_DEFAULT / SEO_CONTENT_WARMUP_DEFAULT — both default to
+ *     0 as of 2026-09-29, i.e. auto-merge-eligible immediately subject to
+ *     every other gate; originally hardcoded to meta=2/content=8).
  * A veto or a revert resets the counter back UP — interpreting the owner's
  * "resets the warm-up counter by half" as: add back half of the lane's
  * default requirement (capped at the default), i.e. a veto/revert costs you
  * half of the total trust you'd need to rebuild from scratch. This is a
  * documented judgment call, not spelled out numerically in the brief — flag
- * it if a different formula was intended.
+ * it if a different formula was intended. With the default now 0, half of 0
+ * is 0, so a veto/revert is a no-op on a lane still at its (0) default —
+ * this only has visible effect once a lane's default is configured above 0.
  */
 import { logAudit } from "./auditLog";
 import { getAutopublishState, updateAutopublishState } from "./autopublishStateRepo";
+import { WARMUP_DEFAULTS, type AutopublishLane } from "./warmupConfig";
 
-export type AutopublishLane = "meta" | "content";
-
-export const WARMUP_DEFAULTS: Record<AutopublishLane, number> = { meta: 2, content: 8 };
+export type { AutopublishLane };
+export { WARMUP_DEFAULTS };
 
 function fieldFor(lane: AutopublishLane): "metaWarmupRemaining" | "contentWarmupRemaining" {
   return lane === "meta" ? "metaWarmupRemaining" : "contentWarmupRemaining";

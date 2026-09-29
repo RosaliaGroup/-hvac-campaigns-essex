@@ -5,6 +5,11 @@ vi.mock("./autopublishStateRepo", () => ({
   getAutopublishState: vi.fn(),
   updateAutopublishState: vi.fn(),
 }));
+// This suite tests the reset-by-half-capped-at-default MATH, which is only
+// meaningful with non-zero defaults — the real defaults are 0 as of
+// 2026-09-29 (see warmupConfig.ts), so pin the historical 2/8 here rather
+// than have every "cap" assertion trivially pass against 0.
+vi.mock("./warmupConfig", () => ({ WARMUP_DEFAULTS: { meta: 2, content: 8 } }));
 
 import { logAudit } from "./auditLog";
 import { getAutopublishState, updateAutopublishState } from "./autopublishStateRepo";

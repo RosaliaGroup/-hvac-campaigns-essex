@@ -85,16 +85,28 @@ function parseContentDraftResponse(text: string): BlogPostData {
   return parsed as BlogPostData;
 }
 
-/** Draft a complete post for `topic`. Throws ContentDraftUnavailableError/ContentDraftParseError rather than returning a partial/invalid post. */
-export async function draftContentPost(topic: SeoContentQueueRow, facts: VerifiedFacts): Promise<BlogPostData> {
+/**
+ * Draft a complete post for `topic`. Throws ContentDraftUnavailableError/ContentDraftParseError
+ * rather than returning a partial/invalid post.
+ *
+ * `feedback` (optional): the prior attempt's blocking lint/critic findings,
+ * rendered as text (contentPipeline.ts's summarizeBlockingFindings) — fed
+ * back to the model on the regenerate-once retry so it can actually fix the
+ * specific issues rather than blindly rewriting from scratch.
+ */
+export async function draftContentPost(topic: SeoContentQueueRow, facts: VerifiedFacts, feedback?: string): Promise<BlogPostData> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) throw new ContentDraftUnavailableError();
+
+  const userMessage = feedback
+    ? `Draft the post now. Your previous attempt was rejected for these reasons — fix ALL of them in this rewrite:\n${feedback}`
+    : "Draft the post now.";
 
   const result = await callAnthropicModelChain({
     apiKey,
     models: modelChain(),
     system: buildContentSystemPrompt(topic, facts),
-    messages: [{ role: "user", content: "Draft the post now." }],
+    messages: [{ role: "user", content: userMessage }],
     maxTokens: 8000,
   });
 

@@ -72,9 +72,16 @@ export type ContentDraftOutcome =
       metaLint: LintResult;
       contentLint: ContentLintResult;
       critic: CriticVerdict;
+      /** True iff the regenerate-with-feedback retry was used (still counts as "drafted" since it passed on the retry). */
+      regenerated: boolean;
       /** True iff the content lane was warmed up + circuit-clear and this run auto-approved the draft to a PR. False = staged only. */
       autoApproved: boolean;
       batchId?: number;
+    }
+  | {
+      /** Every topic attempted this run was blocked by lint/critic findings even after one regenerate-with-feedback retry — the queue has nothing left to try (up to MAX_TOPICS_PER_RUN). Each is marked seoContentQueue.status="blocked" and logged (draft_blocked); a human needs to look at them. */
+      status: "all_blocked";
+      blockedTopicIds: number[];
     };
 
 /** docs/positioning-warranty-spec.md §9b — "reminder in the weekly summary". A no-op today: facts.priceRanges is empty until the owner supplies entries. */
@@ -87,23 +94,18 @@ function warnOnStalePriceRanges(facts: VerifiedFacts, now: Date): void {
 }
 
 /** Draft (and, once warmed up, auto-approve) the next eligible topic. Safe to call repeatedly — no-ops when there's nothing to draft. */
-export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
-  warnOnStalePriceRanges(facts, new Date());
+type TopicAttempt = {
+  post: BlogPostData;
+  pagePath: string;
+  metaLint: LintResult;
+  contentLint: ContentLintResult;
+  critic: CriticVerdict;
+  passes: boolean;
+};
 
-  const breaker = await checkCircuitBreakerConditions();
-  if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
-
-  const topic = await nextTopicToProcess();
-  if (!topic) return { status: "no_topic" };
-
-  if (isResidentialOrRebateTopic(topic)) {
-    return { status: "refused_residential_rebate", topicId: topic.id };
-  }
-  if (!isFactsConfigured(facts)) {
-    return { status: "facts_not_configured" };
-  }
-
-  const post = await draftContentPost(topic, facts);
+/** One draft + lint + critic pass for `topic`. `feedback`, when given, is fed back to the model as what to fix (the regenerate retry). */
+async function draftAndEvaluateTopic(topic: SeoContentQueueRow, facts: VerifiedFacts, feedback?: string): Promise<TopicAttempt> {
+  const post = await draftContentPost(topic, facts, feedback);
   const pagePath = `/blog/${post.slug}`;
   const structure = countPostStructure(post);
   const body = renderPostPlainText(post);
@@ -124,39 +126,122 @@ export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS)
     facts,
   );
   const critic = await runCriticPass(body, facts);
-
   const passes = metaLint.passes && contentLint.passes && critic.passes;
 
-  await updateQueueStatus(topic.id, "drafted");
-  await logAudit({
-    actorId: null,
-    action: "draft_generated",
-    batchId: null,
-    pagePath,
-    before: null,
-    after: { lane: "content", topicId: topic.id, post, metaLint, contentLint, criticBlocked: !critic.passes, criticClaims: critic.unsupportedClaims, passes },
-    lintResult: null,
-  });
+  return { post, pagePath, metaLint, contentLint, critic, passes };
+}
 
-  let autoApproved = false;
-  let batchId: number | undefined;
-  if (passes && process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
-    const warmedUp = await isWarmedUp("content");
-    if (warmedUp && !breaker.shouldPause) {
-      try {
-        const approved = await approveContentToPR(topic.id, null, `auto-${yyyymmdd()}`);
-        await armHold(approved.batchId);
-        autoApproved = true;
-        batchId = approved.batchId;
-      } catch (err) {
-        // The draft is already stored — a human can still approve it by hand
-        // even if auto-approval itself failed (e.g. GitHub transiently down).
-        console.error("[SEO] weekly content auto-approve failed (draft remains staged for manual approval):", (err as Error).message);
-      }
-    }
+/** Render an attempt's BLOCKING findings (severity "block" only — warnings still pass) as feedback text for the regenerate retry. */
+function summarizeBlockingFindings(attempt: TopicAttempt): string {
+  const lines: string[] = [];
+  for (const f of attempt.metaLint.findings) if (f.severity === "block") lines.push(`- [title/meta] ${f.message}`);
+  for (const f of attempt.contentLint.findings) if (f.severity === "block") lines.push(`- [content] ${f.message}`);
+  if (!attempt.critic.passes) for (const claim of attempt.critic.unsupportedClaims) lines.push(`- [critic — unsupported claim] ${claim}`);
+  return lines.join("\n");
+}
+
+/** Never leaves a bad draft queued forever, but never drains the whole backlog in one run either if the AI is having a bad day. */
+const MAX_TOPICS_PER_RUN = 5;
+
+/**
+ * Draft (and, once warmed up, auto-approve) topics from the queue.
+ *
+ * A topic blocked by lint/critic findings gets ONE regenerate retry with the
+ * findings fed back to the model. If it's STILL blocked after that, it's
+ * marked seoContentQueue.status="blocked" and logged (draft_blocked) — a
+ * human needs to look at it — and the run moves on to the next queued topic
+ * rather than stalling behind it (owner decision, 2026-09-29: "never wait
+ * for a human" — zero-review mode). Bounded by MAX_TOPICS_PER_RUN so a run of
+ * consistently-bad topics can't drain the whole backlog or the AI budget in
+ * one invocation; a "no_topic" / another call picks up where this left off.
+ */
+export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
+  warnOnStalePriceRanges(facts, new Date());
+
+  const breaker = await checkCircuitBreakerConditions();
+  if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
+
+  if (!isFactsConfigured(facts)) {
+    return { status: "facts_not_configured" };
   }
 
-  return { status: "drafted", topicId: topic.id, passes, post, metaLint, contentLint, critic, autoApproved, ...(batchId !== undefined ? { batchId } : {}) };
+  const blockedTopicIds: number[] = [];
+
+  for (let i = 0; i < MAX_TOPICS_PER_RUN; i++) {
+    const topic = await nextTopicToProcess();
+    if (!topic) {
+      return blockedTopicIds.length > 0 ? { status: "all_blocked", blockedTopicIds } : { status: "no_topic" };
+    }
+
+    if (isResidentialOrRebateTopic(topic)) {
+      return { status: "refused_residential_rebate", topicId: topic.id };
+    }
+
+    let attempt = await draftAndEvaluateTopic(topic, facts);
+    let regenerated = false;
+    if (!attempt.passes) {
+      const feedback = summarizeBlockingFindings(attempt);
+      attempt = await draftAndEvaluateTopic(topic, facts, feedback);
+      regenerated = true;
+    }
+
+    if (!attempt.passes) {
+      await updateQueueStatus(topic.id, "blocked");
+      await logAudit({
+        actorId: null,
+        action: "draft_blocked",
+        batchId: null,
+        pagePath: attempt.pagePath,
+        before: null,
+        after: {
+          lane: "content", topicId: topic.id, post: attempt.post, metaLint: attempt.metaLint, contentLint: attempt.contentLint,
+          criticBlocked: !attempt.critic.passes, criticClaims: attempt.critic.unsupportedClaims, regenerated,
+        },
+        lintResult: null,
+      });
+      blockedTopicIds.push(topic.id);
+      continue; // move on to the next queued topic in this same run
+    }
+
+    await updateQueueStatus(topic.id, "drafted");
+    await logAudit({
+      actorId: null,
+      action: "draft_generated",
+      batchId: null,
+      pagePath: attempt.pagePath,
+      before: null,
+      after: {
+        lane: "content", topicId: topic.id, post: attempt.post, metaLint: attempt.metaLint, contentLint: attempt.contentLint,
+        criticBlocked: !attempt.critic.passes, criticClaims: attempt.critic.unsupportedClaims, passes: true, regenerated,
+      },
+      lintResult: null,
+    });
+
+    let autoApproved = false;
+    let batchId: number | undefined;
+    if (process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
+      const warmedUp = await isWarmedUp("content");
+      if (warmedUp && !breaker.shouldPause) {
+        try {
+          const approved = await approveContentToPR(topic.id, null, `auto-${yyyymmdd()}`);
+          await armHold(approved.batchId);
+          autoApproved = true;
+          batchId = approved.batchId;
+        } catch (err) {
+          // The draft is already stored — a human can still approve it by hand
+          // even if auto-approval itself failed (e.g. GitHub transiently down).
+          console.error("[SEO] weekly content auto-approve failed (draft remains staged for manual approval):", (err as Error).message);
+        }
+      }
+    }
+
+    return {
+      status: "drafted", topicId: topic.id, passes: true, post: attempt.post, metaLint: attempt.metaLint, contentLint: attempt.contentLint,
+      critic: attempt.critic, regenerated, autoApproved, ...(batchId !== undefined ? { batchId } : {}),
+    };
+  }
+
+  return { status: "all_blocked", blockedTopicIds };
 }
 
 export type StoredContentDraft = {
