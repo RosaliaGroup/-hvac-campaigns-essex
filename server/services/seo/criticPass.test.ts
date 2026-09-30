@@ -79,3 +79,40 @@ describe("runCriticPass", () => {
     expect(call.messages).toEqual([{ role: "user", content: "THE_POST_TEXT_MARKER" }]);
   });
 });
+
+describe("critic prompt — facts-file values are SUPPORTED, real unsupported claims still are not", () => {
+  const systemFor = async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok("[]"));
+    await runCriticPass("body text", VERIFIED_FACTS);
+    return (vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system;
+  };
+
+  it("says a paraphrase of any verified-facts field is supported, naming the fields the critic wrongly flagged (#6 paid add-on, #16 /warranty)", async () => {
+    const s = await systemFor();
+    expect(s).toContain("restates or paraphrases ANY field of the verified facts");
+    expect(s).toContain("warranty.included=false");
+    expect(s).toContain("OPTIONAL PAID add-on");
+    expect(s).toContain("warranty.termsUrl");
+    expect(s).toContain("/warranty page");
+    expect(s).toContain("with or without the mechanicalenterprise.com domain");
+  });
+
+  it("still defines a claim NOT in the facts as unsupported, with the #18 example (a general statistic with a number)", async () => {
+    const s = await systemFor();
+    expect(s).toContain("Claims that are NOT in the facts are still unsupported");
+    expect(s).toContain("two service visits a year");
+  });
+
+  it("the verified facts it is told to rely on really do contain the values it is told to accept", () => {
+    expect(VERIFIED_FACTS.warranty.included).toBe(false);
+    expect(VERIFIED_FACTS.warranty.termsUrl).toBe("/warranty");
+    expect(VERIFIED_FACTS.warranty.availableFor.join(" ")).toMatch(/new HVAC installations/);
+  });
+
+  it("the unsupported-claim verdict from the model is still reported (nothing was loosened in the parsing)", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok('["most portfolios benefit from at least two scheduled maintenance visits per year"]'));
+    const r = await runCriticPass("body text", VERIFIED_FACTS);
+    expect(r.passes).toBe(false);
+    expect(r.unsupportedClaims).toEqual(["most portfolios benefit from at least two scheduled maintenance visits per year"]);
+  });
+});

@@ -121,3 +121,30 @@ describe("draftContentPost — findings feedback + budget", () => {
     expect((vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system).not.toContain("PREVIOUS DRAFT");
   });
 });
+
+describe("draftContentPost — length limits the linter enforces are in the prompt (they were missing, so 9 of 16 topics blocked on title_too_long)", () => {
+  const systemFor = async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(validPost)));
+    await draftContentPost(topic, VERIFIED_FACTS);
+    return (vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system;
+  };
+
+  it("tells the model the title is AT MOST 60 characters and that the topic text is a subject, not the title", async () => {
+    const s = await systemFor();
+    expect(s).toContain("AT MOST 60 characters");
+    expect(s).toContain("a SUBJECT, not the title");
+  });
+
+  it("tells the model the meta description is AT MOST 155 characters (aim 140-150)", async () => {
+    const s = await systemFor();
+    expect(s).toContain("AT MOST 155 characters");
+    expect(s).toContain("140-150");
+  });
+
+  it("asks for 1,000-1,250 words, inside the linter's 900-1400 window rather than at its edge", async () => {
+    const s = await systemFor();
+    expect(s).toContain("1,000-1,250 words");
+    expect(s).toContain("under 900 or over 1,400");
+    expect(s).not.toContain("- 900-1400 words total");
+  });
+});

@@ -36,7 +36,7 @@ function sectionText(s: BlogSection): string {
       return s.content;
     case "checklist":
     case "numbered_list":
-      return s.items.join(" ");
+      return s.items.join("\n");
     case "cta_box":
       return s.content;
   }
@@ -48,7 +48,9 @@ export function renderPostPlainText(post: BlogPostData): string {
   if (post.faqSchema) {
     for (const f of post.faqSchema) parts.push(f.question, f.answer);
   }
-  return parts.join(" ");
+  // Newline-separated so every heading, paragraph, checklist item and FAQ entry is its own unit: the claims linters split
+  // sentences on newlines too, so an unpunctuated "What to send us" list can no longer be glued into one giant "sentence".
+  return parts.join("\n");
 }
 
 const MD_LINK_RE = /\[[^\]]+\]\(([^)]+)\)/g;

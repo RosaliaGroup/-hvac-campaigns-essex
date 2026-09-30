@@ -11,6 +11,7 @@
  */
 import { PHONE_DISPLAY, PHONE_E164 } from "./business";
 import { VERIFIED_FACTS } from "./verifiedFacts";
+import { splitSentences, isQuestion, hasNegation, OPTIONAL_COVERAGE_RE, isQuotedAt, clauseBefore, stripFalseNegations } from "./claimContext";
 
 export type LintSeverity = "block" | "warn";
 
@@ -69,6 +70,15 @@ export const SUPERLATIVES = [
   "#1", "number one", "best", "top-rated", "top rated", "award-winning",
   "guaranteed", "lowest price", "cheapest",
 ];
+
+/**
+ * "guaranteed" is a superlative only when it is ASSERTED ("guaranteed savings"). In a question ("Are rebate amounts
+ * guaranteed?") or a disclaimer ("outcomes are never guaranteed", "not a guaranteed outcome") it is the honest thing
+ * to say, so those sentences don't trip the rule.
+ */
+export function isGuaranteeAsserted(text: string): boolean {
+  return splitSentences(text).some((s) => /\bguaranteed\b/i.test(s) && !isQuestion(s) && !hasNegation(s));
+}
 
 export const EXPIRED_INCENTIVES = [
   "federal tax credit", "tax credit", "25c", "ira credit", "$2,000 credit",
@@ -222,18 +232,21 @@ export function lintWarrantyClaims(text: string, opts: { allowedOnTermsPage?: bo
   const findings: WarrantyLintFinding[] = [];
   if (!text) return findings;
 
+  // Sentence-level: a sentence that ASSERTS inclusion ("A 10-year warranty is included with every install").
+  // A question ("Does the coverage come included?"), a negation ("a paid add-on rather than something included")
+  // or a sentence that calls the coverage optional/paid/separate says the opposite and is not flagged.
+  const sentenceList = splitSentences(text);
   for (const phrase of WARRANTY_INCLUSION_PHRASES) {
-    const re = new RegExp(phraseRegex(phrase).source, "gi");
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(text))) {
-      if (nearWarrantyWord(text, m.index)) {
-        findings.push({
-          severity: "block",
-          code: "warranty_implies_included",
-          message: `"${phrase}" appears near "warranty"/"coverage" — it implies coverage is included/free, but it is a paid optional add-on.`,
-        });
-        break;
-      }
+    const re = phraseRegex(phrase);
+    const asserted = sentenceList.some(
+      (s) => re.test(s) && /\b(?:warranty|coverage)\b/i.test(s) && !isQuestion(s) && !hasNegation(s) && !OPTIONAL_COVERAGE_RE.test(s),
+    );
+    if (asserted) {
+      findings.push({
+        severity: "block",
+        code: "warranty_implies_included",
+        message: `"${phrase}" appears in a sentence with "warranty"/"coverage" — it implies coverage is included/free, but it is a paid optional add-on.`,
+      });
     }
   }
 
@@ -247,7 +260,18 @@ export function lintWarrantyClaims(text: string, opts: { allowedOnTermsPage?: bo
     }
   }
 
-  if (/manufacturer'?s warranty/i.test(text) && /\b(we|our)\b/i.test(text)) {
+  // Same sentence only (it used to be "anywhere in the post"), and not when the sentence contrasts the two
+  // ("the manufacturer's warranty is separate from anything a contractor offers") or asks a question.
+  if (
+    sentenceList.some(
+      (s) =>
+        /manufacturer'?s warranty/i.test(s) &&
+        /\b(?:we|our|us)\b/i.test(s) &&
+        !isQuestion(s) &&
+        !hasNegation(s) &&
+        !/\b(?:separate|distinct|independent|different|apart from)\b/i.test(s),
+    )
+  ) {
     findings.push({
       severity: "block",
       code: "warranty_manufacturer_confusion",
@@ -255,15 +279,21 @@ export function lintWarrantyClaims(text: string, opts: { allowedOnTermsPage?: bo
     });
   }
 
-  const yearRe = /(\d+)[\s-]?year/gi;
-  let ym: RegExpExecArray | null;
-  while ((ym = yearRe.exec(text))) {
-    if (Number(ym[1]) === 10) continue;
-    if (nearWarrantyWord(text, ym.index)) {
+  // A year count counts only when it is attached to the coverage term — "a 12-year warranty", "20 year parts and labor",
+  // "coverage for 15 years" — and is not one end of a range ("the 5-8 year window" is an equipment age, not a term).
+  const yearAttachedRes = [
+    /(?<![\d]\s*[-–—]\s*)(?<!\bto\s)\b(\d+)[\s-]?years?[\s-]+(?:of\s+)?(?:parts|labor|warranty|coverage|extended|protection|service\s+(?:agreement|plan|contract))/gi,
+    /\b(?:warranty|coverage)\b[^.!?\n]{0,30}?\b(?:for|lasts?|of|term of|runs? for|up to)\s+(\d+)\s*(?:-|\s)?years?\b/gi,
+  ];
+  const yearSeen = new Set<string>();
+  for (const yre of yearAttachedRes) {
+    for (const ym of Array.from(text.matchAll(yre))) {
+      if (Number(ym[1]) === 10 || yearSeen.has(ym[1])) continue;
+      yearSeen.add(ym[1]);
       findings.push({
         severity: "block",
         code: "warranty_wrong_year_count",
-        message: `"${ym[0]}" appears near "warranty"/"coverage" — the verified coverage term is 10 years.`,
+        message: `"${ym[0].trim()}" attaches a ${ym[1]}-year term to warranty/coverage — the verified coverage term is 10 years.`,
       });
     }
   }
@@ -280,8 +310,10 @@ export function lintWarrantyClaims(text: string, opts: { allowedOnTermsPage?: bo
     }
   }
 
-  const sentences = text.match(/[^.!?]+[.!?]*/g) ?? [text];
-  for (const sentence of sentences) {
+  // Segmented on newlines as well (checklist items / headings are their own sentences), and a QUESTION ("Is coverage
+  // available on existing equipment?") is not a claim — its answer is judged on its own.
+  for (const sentence of sentenceList) {
+    if (isQuestion(sentence)) continue;
     if (/\bexisting (systems?|equipment|hvac)\b/i.test(sentence) && /\b(warranty|coverage)\b/i.test(sentence)) {
       if (!/\beligib/i.test(sentence) && !/\bqualif/i.test(sentence)) {
         findings.push({
@@ -322,11 +354,25 @@ const NEGATION_CUE_SRC = "\\b(?:not|no|never|neither|nor|without|unlike|isn't|is
 const NEGATION_JUST_BEFORE_RE = new RegExp(`(?:${NEGATION_CUE_SRC})[^.!?;:,\n]{0,40}$`, "i");
 const SENTENCE_BREAKS = [".", "!", "?", ";", "\n"];
 
+/**
+ * True when "lease"/"rent" is about a TENANT's lease, not leasing equipment to the customer:
+ * "lease renewal", "lease term", "lease expiration", "rent roll", or a sentence that talks about tenants/landlords.
+ */
+function isTenancyContext(text: string, index: number, length: number): boolean {
+  const after = text.slice(index + length);
+  if (/^[-\s]*(?:renewals?|terms?|expirations?|expiry|expires?|agreements?|negotiations?|clauses?|obligations?|incentives?|rolls?|increases?|control|concessions?|collections?|payments?)\b/i.test(after)) return true;
+  let start = 0;
+  for (const c of SENTENCE_BREAKS) start = Math.max(start, text.lastIndexOf(c, index - 1) + 1);
+  const ends = SENTENCE_BREAKS.map((c) => text.indexOf(c, index + length)).filter((i) => i >= 0);
+  const end = ends.length ? Math.min(...ends) : text.length;
+  return /\b(?:tenants?|landlords?|lessors?|lessees?)\b/i.test(text.slice(start, end));
+}
+
 /** True iff the mention at `index` is negated: a negation cue shortly before it in the same clause (no comma or sentence break between). */
 function isNegatedMention(text: string, index: number): boolean {
   let start = 0;
   for (const c of SENTENCE_BREAKS) start = Math.max(start, text.lastIndexOf(c, index - 1) + 1);
-  return NEGATION_JUST_BEFORE_RE.test(text.slice(start, index));
+  return NEGATION_JUST_BEFORE_RE.test(stripFalseNegations(text.slice(start, index)));
 }
 const NOT_OFFERED_FORBIDDEN_PHRASES = ["money-back", "refund if", "remove it and refund", "satisfaction guarantee"];
 const SLA_ABSOLUTE_CLAIMS = ["guaranteed uptime", "never fail"];
@@ -343,7 +389,7 @@ export function lintDifferentiationClaims(text: string): WarrantyLintFinding[] {
 
   for (const phrase of MEMBERSHIP_FORBIDDEN_PHRASES) {
     const asserted = NEGATABLE_MEMBERSHIP_PHRASES.has(phrase)
-      ? Array.from(text.matchAll(new RegExp(phraseRegex(phrase).source, "gi"))).some((m) => !isNegatedMention(text, m.index ?? 0))
+      ? Array.from(text.matchAll(new RegExp(phraseRegex(phrase).source, "gi"))).some((m) => !isNegatedMention(text, m.index ?? 0) && !isTenancyContext(text, m.index ?? 0, m[0].length))
       : includesPhrase(text, phrase);
     if (asserted) {
       findings.push({
@@ -393,6 +439,14 @@ export function lintDifferentiationClaims(text: string): WarrantyLintFinding[] {
  * (not the full VerifiedFacts type) so shared/seoLinter.ts doesn't have to
  * import shared/verifiedFacts.ts's full surface.
  */
+/** First match of `re` that is neither quoted nor negated ("don't assume 24/7", "'24-hour response'"), or null. */
+function firstAssertedMatch(text: string, re: RegExp): RegExpMatchArray | null {
+  for (const m of Array.from(text.matchAll(new RegExp(re.source, "gi")))) {
+    if (!isQuotedAt(text, m.index ?? 0) && !isNegatedMention(text, m.index ?? 0)) return m;
+  }
+  return null;
+}
+
 export function lintDifferentiationFactClaims(
   text: string,
   facts: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean }; serviceHours?: { emergency24x7: boolean; sameDay: boolean } },
@@ -403,6 +457,8 @@ export function lintDifferentiationFactClaims(
   const slaHourRe = /(\d+)[\s-]?hour(?:s)?\s+response/gi;
   let sm: RegExpExecArray | null;
   while ((sm = slaHourRe.exec(text))) {
+    // A quoted ('24-hour response') or negated mention is discussing the phrase, not claiming it.
+    if (isQuotedAt(text, sm.index) || isNegatedMention(text, sm.index)) continue;
     const claimed = Number(sm[1]);
     if (facts.portfolioSla.responseHours === null || claimed !== facts.portfolioSla.responseHours) {
       findings.push({
@@ -429,7 +485,7 @@ export function lintDifferentiationFactClaims(
   const hours = facts.serviceHours ?? { emergency24x7: false, sameDay: false };
   const withoutMonitoring = text.replace(/24\s*(?:\/|x)\s*7\s+monitoring/gi, " ");
   if (!hours.emergency24x7) {
-    const m = withoutMonitoring.match(/\b24\s*(?:\/|x)\s*7\b|\baround[\s-]the[\s-]clock\b/i);
+    const m = firstAssertedMatch(withoutMonitoring, /\b24\s*(?:\/|x)\s*7\b|\baround[\s-]the[\s-]clock\b/i);
     if (m) {
       findings.push({
         severity: "block",
@@ -439,7 +495,7 @@ export function lintDifferentiationFactClaims(
     }
   }
   if (!hours.sameDay) {
-    const m = text.match(/\bsame[\s-]day\b/i);
+    const m = firstAssertedMatch(text, /\bsame[\s-]day\b/i);
     if (m) {
       findings.push({
         severity: "block",
@@ -462,7 +518,12 @@ export function lintDollarRanges(text: string, priceRanges: Array<{ page: string
   const findings: WarrantyLintFinding[] = [];
   if (!text) return findings;
   const num = "[\\d,]+(?:\\.\\d+)?";
-  const re = new RegExp(`\\$\\s?(${num})\\s?([kK])?\\s*(?:[-–—]|to)\\s*\\$?\\s?(${num})\\s?([kK])?(?!\\d)`, "gi");
+  const rangeRes = [
+    new RegExp(`\\$\\s?(${num})\\s?([kK])?\\s*(?:[-–—]|to)\\s*\\$?\\s?(${num})\\s?([kK])?(?!\\d)`, "gi"),
+    // "between $8,000 and $15,000" — the same range in words.
+    new RegExp(`\\bbetween\\s+\\$\\s?(${num})\\s?([kK])?\\s+and\\s+\\$?\\s?(${num})\\s?([kK])?(?!\\d)`, "gi"),
+  ];
+  for (const re of rangeRes) {
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
     if (/^\s*installed\b/i.test(text.slice(m.index + m[0].length))) continue;
@@ -480,6 +541,7 @@ export function lintDollarRanges(text: string, priceRanges: Array<{ page: string
             : `"${m[0].trim()}" doesn't match any verified price range (VERIFIED_FACTS.priceRanges).`,
       });
     }
+  }
   }
   return findings;
 }
@@ -531,11 +593,16 @@ const NOT_RATE = "(?<!\\b(?:in|of|per|every|each|out\\s+of)\\s)";
 const ADJ = "(?:(?:happy|satisfied|local|nj|repeat|new|residential|commercial|completed|successful|finished|hvac|installation)\\s+)*";
 const PEOPLE = "(?:customers|clients|homeowners|families|households|property managers|building owners)";
 const WORK = "(?:projects|installations|installs|jobs)";
-const NUMERIC_CLAIM_RULES: Array<{ kind: string; re: RegExp; verified?: (f: NumericClaimFacts) => number | null }> = [
+const FIRST_PERSON_RE = /\b(?:we|our|us|ours|mechanical enterprise)\b/i;
+/** Exempt a count that is about the READER's own situation ("your portfolio spanning 3 counties", "a crew of 3 technicians", "if you have 5 projects a year"), never one that is about us. */
+const readerContext = (cue: RegExp) => (before: string) => cue.test(before) && !FIRST_PERSON_RE.test(before);
+
+const NUMERIC_CLAIM_RULES: Array<{ kind: string; re: RegExp; verified?: (f: NumericClaimFacts) => number | null; exempt?: (clauseBefore: string) => boolean }> = [
   {
     kind: "county count",
     re: new RegExp(NUM + "\\+?[-\\s]*(?:(?:nj|new jersey|northern|north jersey|surrounding|neighboring)\\s+)*counties\\b", "gi"),
     verified: (f) => f.business.serviceCounties.length,
+    exempt: readerContext(/\b(?:spanning|spans?|span|your|portfolios?|properties (?:in|across)|buildings (?:in|across)|located in|if you)\b/i),
   },
   {
     kind: "years in business",
@@ -548,11 +615,13 @@ const NUMERIC_CLAIM_RULES: Array<{ kind: string; re: RegExp; verified?: (f: Nume
     verified: (f) => f.business.yearsInBusiness,
   },
   { kind: "customer count", re: new RegExp(NOT_RATE + NUM + "\\+?\\s+" + ADJ + PEOPLE + "\\b", "gi") },
-  { kind: "project count", re: new RegExp(NOT_RATE + NUM + "\\+?\\s+" + ADJ + WORK + "\\b", "gi") },
-  { kind: "technician count", re: new RegExp(NUM + "\\+?\\s+(?:licensed\\s+|certified\\s+|expert\\s+|trained\\s+|skilled\\s+|full-time\\s+)?(?:technicians|techs|installers|team members|employees|crew members)\\b", "gi") },
+  { kind: "project count", re: new RegExp(NOT_RATE + NUM + "\\+?\\s+" + ADJ + WORK + "\\b", "gi"), exempt: readerContext(/\b(?:you|you've|you're|your|if you|bidding|planning|per year|a year)\b/i) },
+  { kind: "technician count", re: new RegExp(NUM + "\\+?\\s+(?:licensed\\s+|certified\\s+|expert\\s+|trained\\s+|skilled\\s+|full-time\\s+)?(?:technicians|techs|installers|team members|employees|crew members)\\b", "gi"), exempt: readerContext(/\b(?:crew of|team of|sends?|dispatch(?:es)?|assigned?|on[- ]site|per (?:visit|job)|will (?:send|arrive))\b/i) },
   { kind: "review count", re: new RegExp(NUM + "\\+?\\s+(?:five[- ]star\\s+|5[- ]star\\s+|verified\\s+|google\\s+)?(?:reviews|ratings|testimonials)\\b", "gi") },
   { kind: "star rating", re: /(?<![A-Za-z0-9.])(\d(?:\.\d)?)[\s-]*stars?\b/gi },
-  { kind: "star rating", re: /\b(\d(?:\.\d)?)\s*\/\s*5\b/g },
+  // "4.9/5" is a rating only with rating context ("rated 4.9/5", "4.9/5 stars") and not as part of "3/5/10" or "a 4/5 step process".
+  // A decimal (4.9/5) is always a rating; a whole number (4/5) only with rating context. Never part of "3/5/10".
+  { kind: "star rating", re: /\b(?:rated|rating|ratings|reviews?|scores?|scored)\s*(?:of|at|:)?\s*(\d(?:\.\d)?)\s*\/\s*5\b(?!\s*\/\s*\d)|(?<![\d\/.])(\d\.\d)\s*\/\s*5\b(?!\s*\/\s*\d)|(?<![\d\/.])(\d)\s*\/\s*5\s*(?:stars?|rating|rated|reviews?|on\s+(?:google|yelp|facebook|angi|bbb)|by\s+(?:our\s+)?(?:customers|clients))\b/gi },
   { kind: "vague quantity", re: new RegExp("\\b(?:hundreds|thousands|dozens|scores)\\s+of\\s+(?:happy\\s+|satisfied\\s+)?(?:customers|clients|homeowners|families|property managers|building owners|projects|installations|jobs|reviews)\\b", "gi") },
 ];
 
@@ -572,6 +641,7 @@ export function lintNumericClaims(text: string, facts: NumericClaimFacts): Warra
       }
       const verified = rule.verified ? rule.verified(facts) : null;
       if (verified !== null && Number.isFinite(claimed) && claimed === verified) continue;
+      if (rule.exempt?.(clauseBefore(text, m.index ?? 0))) continue;
       const key = rule.kind + "|" + m[0].toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
@@ -684,9 +754,9 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
     findings.push(blockFinding("metaDescription", "meta_too_long", `Meta description is ${meta.length} characters (max 155).`));
   }
 
-  // Superlatives / unsupported claims
+  // Superlatives / unsupported claims ("guaranteed" only when asserted — see isGuaranteeAsserted)
   for (const phrase of SUPERLATIVES) {
-    if (includesPhrase(combined, phrase)) {
+    if (phrase === "guaranteed" ? isGuaranteeAsserted(combined) : includesPhrase(combined, phrase)) {
       findings.push(blockFinding("both", "superlative", `Unsupported superlative claim: "${phrase}".`));
     }
   }
