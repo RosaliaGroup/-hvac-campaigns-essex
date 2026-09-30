@@ -62,7 +62,7 @@ vi.mock("../../db", () => ({ getDb: vi.fn() }));
 vi.mock("./bulkApprove", () => ({ laneForBatch: vi.fn(() => "meta"), refreshBatchStatus: vi.fn(), approveBatchToPR: vi.fn() }));
 vi.mock("./warmupGate", () => ({ isWarmedUp: vi.fn(), advanceWarmup: vi.fn() }));
 vi.mock("./circuitBreaker", () => ({ checkCircuitBreakerConditions: vi.fn() }));
-vi.mock("./github", () => ({ getNetlifyCheckState: vi.fn(), hasAnyPRComments: vi.fn(), mergePR: vi.fn() }));
+vi.mock("./github", () => ({ getNetlifyCheckState: vi.fn(), hasAnyPRComments: vi.fn(), mergePR: vi.fn(), setHoldStatus: vi.fn() }));
 vi.mock("./actionLinks", () => ({ signActionLink: vi.fn(() => "fake-token") }));
 vi.mock("./auditLog", () => ({ logAudit: vi.fn() }));
 vi.mock("../emailService", () => ({ sendEmail: vi.fn(async () => true) }));
@@ -71,10 +71,10 @@ import { getDb } from "../../db";
 import { approveBatchToPR, refreshBatchStatus } from "./bulkApprove";
 import { isWarmedUp, advanceWarmup } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
-import { getNetlifyCheckState, hasAnyPRComments, mergePR } from "./github";
+import { getNetlifyCheckState, hasAnyPRComments, mergePR, setHoldStatus } from "./github";
 import { logAudit } from "./auditLog";
 import { sendEmail } from "../emailService";
-import { armHold, checkAndMergeIfReady, publishNow, approveMetaBatchWithAutopublish, runAutoMergeTick, AUTO_MERGE_POLL_MS, minHoldHours, holdHours } from "./autoMerge";
+import { holdStatusFor, syncHoldStatus, armHold, checkAndMergeIfReady, publishNow, approveMetaBatchWithAutopublish, runAutoMergeTick, AUTO_MERGE_POLL_MS, minHoldHours, holdHours } from "./autoMerge";
 
 function makeDb(batch: Record<string, any>) {
   const row = { ...batch };
@@ -93,6 +93,7 @@ beforeEach(() => {
   vi.mocked(getNetlifyCheckState).mockReset().mockResolvedValue("success");
   vi.mocked(hasAnyPRComments).mockReset().mockResolvedValue(false);
   vi.mocked(mergePR).mockReset().mockResolvedValue({ merged: true, sha: "merged-sha" });
+  vi.mocked(setHoldStatus).mockReset().mockResolvedValue("head-sha");
   vi.mocked(logAudit).mockReset();
   vi.mocked(sendEmail).mockReset().mockResolvedValue(true);
   process.env.SEO_ALERT_EMAIL = "ana@example.com";
@@ -397,5 +398,109 @@ describe("a batch can never auto-merge before holdUntil", () => {
     expect(gate(new Date(armedAt + 61 * 60 * 1000))).toEqual({ ready: true });
     delete process.env.SEO_AUTOPUBLISH_HOLD_HOURS;
     delete process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS;
+  });
+});
+
+describe("autopublish/hold commit status (makes the hold enforceable against a human merge)", () => {
+  const listDb = (rows: Array<Record<string, any>>) => {
+    const db: any = {
+      select: () => ({ from: () => ({ where: () => { const p: any = Promise.resolve(rows); p.limit = () => Promise.resolve(rows); return p; } }) }),
+      update: () => ({ set: (patch: Record<string, any>) => ({ where: () => { rows.forEach((r) => Object.assign(r, patch)); return Promise.resolve(); } }) }),
+    };
+    return db;
+  };
+  const open = (over: Record<string, any>) => ({ id: 7, status: "pr_open", holdUntil: PAST, commitSha: "abc", prNumber: 152, branch: "pr-seo-meta-20260930", revertsBatchId: null, label: "x", ...over });
+
+  describe("holdStatusFor", () => {
+    it("pending while the hold is in the future, and says when it ends", () => {
+      const s = holdStatusFor(new Date(NOW.getTime() + 60 * 60 * 1000), NOW);
+      expect(s.state).toBe("pending");
+      expect(s.description).toMatch(/hold until .* ET/);
+    });
+    it("success once the hold has passed, including exactly at holdUntil", () => {
+      expect(holdStatusFor(PAST, NOW).state).toBe("success");
+      expect(holdStatusFor(NOW, NOW).state).toBe("success");
+    });
+    it("success with no hold at all, so human-reviewed batch PRs are never stuck", () => {
+      expect(holdStatusFor(null, NOW)).toEqual({ state: "success", description: "No autopublish hold on this PR" });
+    });
+    it("fits GitHub's 140-char status description limit", () => {
+      expect(holdStatusFor(FUTURE, NOW).description.length).toBeLessThanOrEqual(140);
+    });
+  });
+
+  it("armHold posts PENDING on the batch's PR as soon as the hold is armed", async () => {
+    const rows = [open({ holdUntil: null })];
+    vi.mocked(getDb).mockResolvedValue(listDb(rows));
+    await armHold(7);
+    expect(setHoldStatus).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(setHoldStatus).mock.calls[0][0]).toBe(152);
+    expect(vi.mocked(setHoldStatus).mock.calls[0][1]).toBe("pending");
+  });
+
+  it("a GitHub failure while posting the status never breaks arming the hold", async () => {
+    vi.mocked(setHoldStatus).mockRejectedValue(new Error("GitHub down"));
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    const rows = [open({ holdUntil: null })];
+    vi.mocked(getDb).mockResolvedValue(listDb(rows));
+    await expect(armHold(7)).resolves.toBeUndefined();
+    expect(rows[0].holdUntil).toBeInstanceOf(Date);
+    err.mockRestore();
+  });
+
+  it("syncHoldStatus does nothing without a PR number", async () => {
+    await syncHoldStatus({ id: 1, prNumber: null, holdUntil: FUTURE });
+    expect(setHoldStatus).not.toHaveBeenCalled();
+  });
+
+  describe("poller tick", () => {
+    let log: ReturnType<typeof vi.spyOn>;
+    beforeEach(() => {
+      log = vi.spyOn(console, "log").mockImplementation(() => {});
+      vi.mocked(refreshBatchStatus).mockReset().mockResolvedValue(undefined as never);
+    });
+    afterEach(() => log.mockRestore());
+
+    it("flips to SUCCESS before merging once the hold has passed (a required status would otherwise reject the poller's own merge)", async () => {
+      vi.mocked(getDb).mockResolvedValue(listDb([open({ holdUntil: PAST })]));
+      await runAutoMergeTick();
+      expect(setHoldStatus).toHaveBeenCalledWith(152, "success", expect.any(String));
+      expect(mergePR).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(setHoldStatus).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(mergePR).mock.invocationCallOrder[0]);
+    });
+
+    it("keeps PENDING and does not merge while the hold is running (also re-asserts pending after an edit reset it)", async () => {
+      vi.mocked(getDb).mockResolvedValue(listDb([open({ holdUntil: new Date(Date.now() + 30 * 60 * 1000) })]));
+      await runAutoMergeTick();
+      expect(setHoldStatus).toHaveBeenCalledWith(152, "pending", expect.any(String));
+      expect(setHoldStatus).not.toHaveBeenCalledWith(152, "success", expect.any(String));
+      expect(mergePR).not.toHaveBeenCalled();
+    });
+
+    it("still tries the merge if posting the status fails", async () => {
+      vi.mocked(setHoldStatus).mockRejectedValue(new Error("GitHub down"));
+      const err = vi.spyOn(console, "error").mockImplementation(() => {});
+      vi.mocked(getDb).mockResolvedValue(listDb([open({ holdUntil: PAST })]));
+      const r = await runAutoMergeTick();
+      expect(r.checked).toBe(1);
+      expect(mergePR).toHaveBeenCalled();
+      err.mockRestore();
+    });
+
+    it("reports SUCCESS for open batch PRs that have no hold (human-reviewed lane), so the Merge button isn't stuck", async () => {
+      vi.mocked(getDb).mockResolvedValue(listDb([open({ id: 9, prNumber: 160, holdUntil: null, branch: "revert-x-1" })]));
+      await runAutoMergeTick();
+      expect(setHoldStatus).toHaveBeenCalledWith(160, "success", "No autopublish hold on this PR");
+      expect(mergePR).not.toHaveBeenCalled();
+    });
+  });
+
+  it("publishNow satisfies the required status BEFORE its merge (the deliberate override still works)", async () => {
+    const { db } = makeDb(open({ holdUntil: FUTURE }));
+    vi.mocked(getDb).mockResolvedValue(db);
+    const r = await publishNow(7, 1);
+    expect(r).toEqual({ merged: true, sha: "merged-sha" });
+    expect(setHoldStatus).toHaveBeenCalledWith(152, "success", expect.stringContaining("override"));
+    expect(vi.mocked(setHoldStatus).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(mergePR).mock.invocationCallOrder[0]);
   });
 });

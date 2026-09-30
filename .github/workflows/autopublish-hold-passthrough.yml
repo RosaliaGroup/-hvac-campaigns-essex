@@ -1,0 +1,25 @@
+# The `autopublish/hold` commit status is posted by the production server for SEO batch PRs
+# (pr-seo-meta-*, pr-content-*, revert-*): pending during the hold, success after.
+# If that status is a REQUIRED check in branch protection, every OTHER PR into main would wait on it
+# forever, so report success for any PR that is not a server-managed batch PR.
+name: autopublish-hold-passthrough
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  statuses: write
+jobs:
+  passthrough:
+    if: >-
+      ${{ !startsWith(github.head_ref, 'pr-seo-meta-') &&
+          !startsWith(github.head_ref, 'pr-content-') &&
+          !startsWith(github.head_ref, 'revert-') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report autopublish/hold=success (not an autopublish batch PR)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh api repos/${{ github.repository }}/statuses/${{ github.event.pull_request.head.sha }}
+          -f state=success -f context=autopublish/hold
+          -f description="Not an autopublish batch PR"
