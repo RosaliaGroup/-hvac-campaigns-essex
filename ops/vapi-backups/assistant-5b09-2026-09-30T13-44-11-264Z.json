@@ -1,0 +1,460 @@
+{
+  "exportedAt": "2026-09-30T13:44:13.124Z",
+  "note": "masked; secrets must be re-supplied on restore",
+  "assistant": {
+    "id": "0f768c27-dd34-4543-bc86-5d83f12d5b09",
+    "orgId": "c9050f68-b8d1-4d0c-b184-cbe0ef3bd45d",
+    "name": "Mechanical Outbound",
+    "voice": {
+      "voiceId": "Emma",
+      "provider": "vapi"
+    },
+    "createdAt": "2026-02-25T22:46:04.061Z",
+    "updatedAt": "2026-07-18T22:10:37.143Z",
+    "model": {
+      "model": "gpt-4.1",
+      "toolIds": [
+        "08028115-6bcf-4636-9c40-b0f9549ff6ef",
+        "ff6ced88-0d73-4e28-9f9f-ace61671f4c6",
+        "d29026de-9068-4a4d-9402-92361ebda489",
+        "f5b07d5f-2d95-43f1-927f-c97b75b42136",
+        "b6a8cf9f-ed31-465e-b017-72eba96714ad",
+        "6701913a-e3e2-475a-9bc2-9078bf88bc1f"
+      ],
+      "messages": [
+        {
+          "role": "system",
+          "content": "# Jessica — Mechanical Enterprise LLC Outbound Assistant\n\nYou are Jessica, an outbound sales representative for Mechanical Enterprise LLC — an HVAC company based in Newark, New Jersey serving 15 counties across NJ. Your goal is to book free consultations or assessments by pitching New Jersey rebate programs.\n\nTODAY'S DATE: {{now}}\n\n════════════════════════════════════════════\nCRITICAL RULES\n════════════════════════════════════════════\n- You are calling NJ HOMEOWNERS — always assume New Jersey, never mention any other state\n- Your name is JESSICA. Never say any other name.\n- NEVER read a URL out loud. Use sendForm to text the link.\n- NEVER say \"our team will confirm\" or \"we will contact you\" or \"within one business hour\"\n- If voicemail or IVR answers — end the call immediately, say nothing.\n- If asked if you are AI: \"I'm Jessica, Mechanical Enterprise's virtual assistant.\"\n\n════════════════════════════════════════════\nMAIN FLOW\n════════════════════════════════════════════\nIF THEY SAY YES / INTERESTED:\n1. Pitch: \"New Jersey has a rebate program where homeowners get up to $16,000 back on HVAC upgrades. PSE&G finances the rest at zero percent interest — no upfront cost. We offer a free 30-minute assessment to find out exactly what you qualify for.\"\n2. \"I'll text you the booking link right now — what's the best number to reach you?\"\n3. Call sendForm with: phone, name, property=\"Mechanical Enterprise\"\n4. Say: \"Just sent it! Go ahead and open it whenever you're ready — I'll stay on the line.\"\n5. Wait quietly. After silence, ask: \"Did you get the link okay?\"\n6. Wait again. If still silent after checking in once more, ask: \"Were you able to open it?\"\n7. IF they confirm they booked or submitted: \"Perfect, you're all set! Have a great day!\" → sendCallRecap outcome: booked → End Call\n8. IF they say they didn't get it, can't open it, or want to do it over the phone → go to PHONE BOOKING FLOW\n\n════════════════════════════════════════════\nHOMEOWNER / DECISION MAKER VERIFICATION\n════════════════════════════════════════════\nBefore booking, always ask: \"Are you the homeowner or the decision maker for this property?\"\nIf NO: say \"We work directly with homeowners and decision makers. Would you be able to have them available for the free assessment?\"\nIf they cannot arrange this: DO NOT book. Say \"No problem — feel free to have them call us at (862) 419-1763. Have a great day!\" → End Call\nIf YES or they can arrange it: proceed with booking.\n\n════════════════════════════════════════════\nPHONE BOOKING FLOW\n════════════════════════════════════════════\nIf SMS fails or they prefer phone — collect in order:\nA. \"Can I get your full name?\"\nB. \"And the property address?\"\nC. \"Is this a residential home or commercial property?\"\nD. \"What day and time works best? We need at least no same-day bookings.\"\n   - Convert to actual date using {{now}}, confirm: \"So that's [date] at [time] — does that work?\"\nE. Call bookHVAC with all fields\nF. \"You're all set! Have a great day!\"\n→ sendCallRecap outcome: booked → End Call\n\n════════════════════════════════════════════\nNOT INTERESTED\n════════════════════════════════════════════\n→ \"No problem at all — if you ever need HVAC service or want to check your rebate eligibility, call us at (862) 419-1763. Have a great day!\"\n→ sendCallRecap outcome: not_interested → End Call\n\n════════════════════════════════════════════\nno same-day bookings RULE\n════════════════════════════════════════════\nNever book same-day or today (not allowed). Calculate from {{now}}.\n\n════════════════════════════════════════════\nTOOLS\n════════════════════════════════════════════\n- sendForm: Send booking link SMS. Pass phone, name, property=\"Mechanical Enterprise\"\n- bookHVAC: Book appointment if they prefer phone booking\n- rescheduleHVAC: Reschedule existing appointment\n- sendCallRecap: ALWAYS call at end of every call before End Call\n- getCallerInfo: Look up caller history once per call\n\n════════════════════════════════════════════\nABOUT MECHANICAL ENTERPRISE\n════════════════════════════════════════════\n- Newark NJ | 15 NJ counties | 20+ years experience\n- WMBE/SBE certified minority-owned business\n- Phone: (862) 419-1763 | mechanicalenterprise.com\n- Residential rebates: up to $16,000 | Commercial: up to 80%\n- PSE&G financing at 0% interest, no upfront cost\n- Flat rate: $100 regular service | $175 emergency | FREE assessment\n- 24/7 emergency, 2-4 hour response\n\n════════════════════════════════════════════\nOBJECTION HANDLING\n════════════════════════════════════════════\nTOO EXPENSIVE: \"Zero upfront through PSE&G at 0% — most homeowners pay less per month after upgrading.\"\nNOT INTERESTED: \"Completely understand. (862) 419-1763 if you change your mind. Have a great day!\"\nALREADY HAVE HVAC: \"Perfect — we can check if your system qualifies for a free efficiency upgrade or rebates. 30 minutes, no obligation.\"\nBUSY: \"No problem — I'll text you the link now so you have it whenever you're ready.\"\nCALL BACK LATER: \"Of course — sending the link now. Book whenever works for you.\""
+        }
+      ],
+      "provider": "openai"
+    },
+    "firstMessage": "Hi, is this {{lead_name}}? This is Jessica calling from Mechanical Enterprise, a local New Jersey HVAC company. Your home qualifies for up to $16,000 in rebates on a new heating and cooling system. Do you have 60 seconds?",
+    "voicemailMessage": "Please call back when you're available.",
+    "endCallMessage": "Goodbye.",
+    "transcriber": {
+      "model": "flux-general-en",
+      "language": "en",
+      "provider": "deepgram"
+    },
+    "silenceTimeoutSeconds": 30,
+    "maxDurationSeconds": 600,
+    "analysisPlan": {
+      "summaryPlan": {
+        "enabled": false
+      },
+      "successEvaluationPlan": {
+        "enabled": false
+      }
+    },
+    "voicemailDetection": {
+      "enabled": true,
+      "provider": "twilio",
+      "machineDetectionTimeout": 30,
+      "voicemailDetectionTypes": [
+        "machine_end_beep",
+        "machine_end_silence",
+        "machine_end_other",
+        "machine_start",
+        "unknown"
+      ],
+      "machineDetectionSilenceTimeout": 5000,
+      "machineDetectionSpeechThreshold": 2400,
+      "machineDetectionSpeechEndThreshold": 1200
+    },
+    "backgroundDenoisingEnabled": true,
+    "artifactPlan": {
+      "structuredOutputIds": [
+        "a55aa424-c513-4e65-af69-08bfcd78cc0e",
+        "2fb4da8c-aeef-4f65-bbcb-866a3200580b",
+        "5e3ec207-476a-400e-9fb2-1074c71b1a84"
+      ]
+    },
+    "latestVersion": "v1",
+    "isServerUrlSecretSet": false
+  },
+  "tools": [
+    {
+      "id": "08028115-6bcf-4636-9c40-b0f9549ff6ef",
+      "createdAt": "2026-03-01T03:23:15.323Z",
+      "updatedAt": "2026-03-21T20:21:03.212Z",
+      "type": "apiRequest",
+      "function": {
+        "name": "getCallerInfo",
+        "description": "Call this at the START of every call to look up caller history. On OUTBOUND calls pass the customer phone number directly. On INBOUND calls pass the phone number the caller provides.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "phone": {
+              "description": "The phone number of the caller. On outbound calls use the customer phone number you called.",
+              "type": "string"
+            }
+          },
+          "required": [
+            "phone"
+          ]
+        }
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "blocking": false
+        }
+      ],
+      "orgId": "c9050f68-b8d1-4d0c-b184-cbe0ef3bd45d",
+      "name": "getCallerInfo",
+      "url": "https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/lookup",
+      "method": "POST",
+      "body": {
+        "type": "object",
+        "required": [
+          "phone"
+        ],
+        "properties": {
+          "phone": {
+            "description": "",
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "variableExtractionPlan": {
+        "schema": {
+          "type": "object",
+          "required": [],
+          "properties": {}
+        },
+        "aliases": []
+      },
+      "latestVersion": "v1"
+    },
+    {
+      "id": "ff6ced88-0d73-4e28-9f9f-ace61671f4c6",
+      "createdAt": "2026-03-17T02:07:24.466Z",
+      "updatedAt": "2026-03-24T14:55:56.641Z",
+      "type": "apiRequest",
+      "function": {
+        "name": "bookHVAC",
+        "description": "Book a new HVAC appointment. Call ONLY after collecting all required fields. NEVER call for reschedules."
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "blocking": false
+        }
+      ],
+      "orgId": "c9050f68-b8d1-4d0c-b184-cbe0ef3bd45d",
+      "name": "bookHVAC",
+      "url": "https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/book-hvac",
+      "method": "POST",
+      "body": {
+        "type": "object",
+        "required": [
+          "full_name",
+          "phone",
+          "email",
+          "property_address",
+          "property_type",
+          "appointment_type",
+          "preferred_date",
+          "issue_description"
+        ],
+        "properties": {
+          "email": {
+            "description": "Customer's email address",
+            "type": "string",
+            "default": ""
+          },
+          "phone": {
+            "description": "Customer's phone number in format +1XXXXXXXXXX",
+            "type": "string",
+            "default": ""
+          },
+          "full_name": {
+            "description": "Customer's full name",
+            "type": "string",
+            "default": ""
+          },
+          "property_type": {
+            "description": "Type of property. Options: residential, commercial",
+            "type": "string",
+            "default": "residential"
+          },
+          "preferred_date": {
+            "description": "Appointment date in format: March 22 2026",
+            "type": "string",
+            "default": ""
+          },
+          "preferred_time": {
+            "description": "Appointment time in format: 10:00 AM",
+            "type": "string",
+            "default": ""
+          },
+          "appointment_type": {
+            "description": "Type of appointment. Options: free_consultation, technician_dispatch, maintenance_plan, commercial_assessment",
+            "type": "string",
+            "default": "free_consultation"
+          },
+          "property_address": {
+            "description": "Full property address including city and state",
+            "type": "string",
+            "default": ""
+          },
+          "issue_description": {
+            "description": "Brief description of the HVAC issue or reason for appointment",
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "variableExtractionPlan": {
+        "schema": {
+          "type": "object",
+          "required": [],
+          "properties": {}
+        }
+      },
+      "latestVersion": "v1"
+    },
+    {
+      "id": "d29026de-9068-4a4d-9402-92361ebda489",
+      "createdAt": "2026-03-17T01:51:47.926Z",
+      "updatedAt": "2026-03-24T14:55:56.826Z",
+      "type": "apiRequest",
+      "function": {
+        "name": "rescheduleHVAC",
+        "description": "Reschedule an existing HVAC appointment. Call ONLY when caller wants to change/move an existing booking."
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "blocking": false
+        }
+      ],
+      "orgId": "c9050f68-b8d1-4d0c-b184-cbe0ef3bd45d",
+      "async": false,
+      "name": "rescheduleHVAC",
+      "url": "https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/reschedule-hvac",
+      "method": "POST",
+      "body": {
+        "type": "object",
+        "required": [
+          "phone",
+          "new_date",
+          "new_time",
+          "full_name"
+        ],
+        "properties": {
+          "phone": {
+            "description": "Customer's phone number in format +1XXXXXXXXXX",
+            "type": "string",
+            "default": ""
+          },
+          "new_date": {
+            "description": "New appointment date in format: March 22 2026",
+            "type": "string",
+            "default": ""
+          },
+          "new_time": {
+            "description": "New appointment time in format: 10:00 AM",
+            "type": "string",
+            "default": ""
+          },
+          "full_name": {
+            "description": "Customer's full name",
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "variableExtractionPlan": {
+        "schema": {
+          "type": "object",
+          "required": [],
+          "properties": {}
+        }
+      },
+      "latestVersion": "v1"
+    },
+    {
+      "id": "f5b07d5f-2d95-43f1-927f-c97b75b42136",
+      "createdAt": "2026-03-17T01:50:21.945Z",
+      "updatedAt": "2026-03-24T14:55:57.024Z",
+      "type": "apiRequest",
+      "function": {
+        "name": "sendCallRecap",
+        "description": "Send call summary to the sales team. Call at the END of EVERY call before End Call, regardless of outcome."
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "blocking": false
+        }
+      ],
+      "orgId": "c9050f68-b8d1-4d0c-b184-cbe0ef3bd45d",
+      "async": false,
+      "name": "sendCallRecap",
+      "url": "https://silver-ganache-1ee2ca.netlify.app/.netlify/functions/sendcallrecap",
+      "method": "POST",
+      "body": {
+        "type": "object",
+        "required": [
+          "caller_name",
+          "caller_phone",
+          "caller_email",
+          "appointment_type",
+          "appointment_date",
+          "appointment_time",
+          "call_summary",
+          "outcome"
+        ],
+        "properties": {
+          "outcome": {
+            "description": "Call outcome: booked, rescheduled, not_interested, needs_follow_up, info_only",
+            "type": "string",
+            "default": ""
+          },
+          "caller_name": {
+            "description": "Name of the caller",
+            "type": "string",
+            "default": ""
+          },
+          "call_summary": {
+            "description": "2-3 sentence summary of the call",
+            "type": "string",
+            "default": ""
+          },
+          "caller_email": {
+            "description": "Caller's email if collected",
+            "type": "string",
+            "default": ""
+          },
+          "caller_phone": {
+            "description": "Caller's phone number",
+            "type": "string",
+            "default": ""
+          },
+          "appointment_date": {
+            "description": "Appointment date if booked",
+            "type": "string",
+            "default": ""
+          },
+          "appointment_time": {
+            "description": "Appointment time if booked",
+            "type": "string",
+            "default": ""
+          },
+          "appointment_type": {
+            "description": "Type of appointment if booked",
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "variableExtractionPlan": {
+        "schema": {
+          "type": "object",
+          "required": [],
+          "properties": {}
+        }
+      },
+      "latestVersion": "v1"
+    },
+    {
+      "id": "b6a8cf9f-ed31-465e-b017-72eba96714ad",
+      "createdAt": "2026-05-11T12:17:17.327Z",
+      "updatedAt": "2026-05-11T12:17:27.617Z",
+      "type": "apiRequest",
+      "function": {
+        "name": "api_request_tool"
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "blocking": false
+        }
+      ],
+      "orgId": "c9050f68-b8d1-4d0c-b184-cbe0ef3bd45d",
+      "name": "sendReferralLink",
+      "url": "https://www.vapi.ai",
+      "method": "GET",
+      "variableExtractionPlan": {
+        "schema": {
+          "type": "object",
+          "required": [],
+          "properties": {}
+        }
+      },
+      "latestVersion": "v1"
+    },
+    {
+      "id": "6701913a-e3e2-475a-9bc2-9078bf88bc1f",
+      "createdAt": "2026-07-18T22:04:50.643Z",
+      "updatedAt": "2026-07-18T23:02:52.305Z",
+      "type": "apiRequest",
+      "function": {
+        "name": "api_request_tool",
+        "description": "Send the HVAC booking or reschedule link via SMS to the lead."
+      },
+      "messages": [
+        {
+          "type": "request-start",
+          "blocking": false
+        }
+      ],
+      "orgId": "c9050f68-b8d1-4d0c-b184-cbe0ef3bd45d",
+      "name": "MechanicalSendFormTelnyx",
+      "url": "https://mechanicalenterprise.com/api/webhooks/vapi/send-form",
+      "method": "POST",
+      "headers": {
+        "type": "***masked(len=6,…ct)***",
+        "properties": "***masked(len=15,…t])***"
+      },
+      "body": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "name": {
+            "description": "Lead first name",
+            "type": "string",
+            "default": ""
+          },
+          "type": {
+            "description": "Set to reschedule if rescheduling, omit otherwise",
+            "type": "string",
+            "default": ""
+          },
+          "phone": {
+            "description": "Lead phone number",
+            "type": "string",
+            "default": ""
+          },
+          "property": {
+            "description": "Always send: Mechanical Enterprise",
+            "type": "string",
+            "default": ""
+          },
+          "callerPhone": {
+            "description": "",
+            "type": "string",
+            "default": ""
+          }
+        }
+      },
+      "variableExtractionPlan": {
+        "schema": {
+          "type": "object",
+          "required": [],
+          "properties": {}
+        }
+      },
+      "parameters": [
+        {
+          "key": "callerPhone",
+          "value": "{{customer.number}}"
+        }
+      ],
+      "latestVersion": "v1"
+    }
+  ]
+}
