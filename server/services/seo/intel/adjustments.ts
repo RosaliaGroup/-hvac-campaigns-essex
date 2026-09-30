@@ -72,7 +72,6 @@ import type { DifferentiatorMatch, OurStaleClaim } from "./positioning";
  * single-digit-click pages / borderline queries.
  */
 const DECAY_SIGNIFICANCE_MIN_CLICKS = 10;
-const DECAY_SIGNIFICANCE_MIN_IMPRESSIONS = 200;
 const SECTION_ITEM_CAP = 15;
 
 export type ItemDraft = {
@@ -130,16 +129,20 @@ export function buildItemDrafts(input: {
       kind: "unserved_query", title: `Unserved query: "${u.query}"`, evidence: u,
       suggestion:
         u.reason === "no_page"
-          ? `No page currently answers "${u.query}" — routed to the PR-3 backlog (never auto-built).`
+          ? u.clusterTown
+            ? `${(u.clusterQueries ?? []).length} "{service} ${u.clusterTown}" queries (${u.impressions} impressions, top: "${u.query}") have no city page — routed to the PR-3 backlog (never auto-built).`
+            : `No page currently answers "${u.query}" — routed to the PR-3 backlog (never auto-built).`
           : u.reason === "intent_mismatch"
           ? `"${u.query}" looks commercial-intent but lands on ${u.page} — content-queue proposal or PR-3 backlog candidate.`
-          : `"${u.query}" lands on ${u.page} at position ${u.position.toFixed(1)} (worse than 20) — content-queue proposal candidate.`,
+          : u.clusterQueries && u.clusterQueries.length > 1
+          ? `${u.clusterQueries.length} "{service} ${u.clusterTown}" queries (${u.impressions} impressions, top: "${u.query}") cluster onto ${u.page}, which ranks worse than 30 for all of them — content-queue proposal candidate.`
+          : `"${u.query}" lands on ${u.page} at position ${u.position.toFixed(1)} (worse than 30) — content-queue proposal candidate.`,
       targetQueue: u.reason === "no_page" ? "page_pr_backlog" : "content_queue", factsBlocked: false,
     });
   }
 
   const significantDecaying = input.decaying.filter(
-    (d) => d.previousClicks >= DECAY_SIGNIFICANCE_MIN_CLICKS || d.previousImpressions >= DECAY_SIGNIFICANCE_MIN_IMPRESSIONS,
+    (d) => d.previousClicks >= DECAY_SIGNIFICANCE_MIN_CLICKS, // impressions alone never qualify (searchDemand.ts enforces the same floor upstream)
   );
   const belowFloorDecayingCount = input.decaying.length - significantDecaying.length;
   const rankedDecaying = [...significantDecaying]
@@ -156,8 +159,8 @@ export function buildItemDrafts(input: {
     items.push({
       kind: "decaying_page",
       title: `${belowFloorDecayingCount} low-traffic pages with fewer than ${DECAY_SIGNIFICANCE_MIN_CLICKS} prior clicks — not individually actionable`,
-      evidence: { belowFloorCount: belowFloorDecayingCount, minClicks: DECAY_SIGNIFICANCE_MIN_CLICKS, minImpressions: DECAY_SIGNIFICANCE_MIN_IMPRESSIONS },
-      suggestion: `${belowFloorDecayingCount} page(s) declined ≥25% but stayed under both the ${DECAY_SIGNIFICANCE_MIN_CLICKS}-click and ${DECAY_SIGNIFICANCE_MIN_IMPRESSIONS}-impression significance floor — too low-volume to prioritize individually. No refresh queued for any of them.`,
+      evidence: { belowFloorCount: belowFloorDecayingCount, minClicks: DECAY_SIGNIFICANCE_MIN_CLICKS },
+      suggestion: `${belowFloorDecayingCount} page(s) declined ≥25% but stayed under the ${DECAY_SIGNIFICANCE_MIN_CLICKS}-prior-click significance floor — too low-volume to prioritize individually. No refresh queued for any of them.`,
       targetQueue: "report_only", factsBlocked: false, aggregate: true,
     });
   }

@@ -20,6 +20,8 @@ import { createHash } from "node:crypto";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { seoPages, seoQueries, seoIntelQuerySnapshots, type SeoIntelQuerySnapshotRow } from "../../../../drizzle/schema";
+import { ALL_CITIES } from "../../../../client/src/data/njCounties";
+import { COMPETITOR_WATCHLIST } from "../../../../shared/competitorWatchlist";
 import type {
   QueryDemandPoint,
   RisingQueryFinding,
@@ -32,8 +34,12 @@ import type {
 const RISING_MIN_IMPRESSIONS = 20;
 const RISING_MIN_PCT_CHANGE = 0.4; // +40% WoW
 const NEW_QUERY_MIN_IMPRESSIONS = 10;
-const UNSERVED_POSITION_THRESHOLD = 20;
+/** A query is "served" if ANY of our pages ranks at or better than this. */
+const UNSERVED_RANK_EXCLUSION = 30;
+const UNSERVED_MIN_IMPRESSIONS = 20;
 const DECAY_PCT_THRESHOLD = 0.25; // down >= 25%
+/** Decay needs real prior traffic to fall from — impressions alone never qualify. */
+const DECAY_MIN_PRIOR_CLICKS = 10;
 
 function fmtDate(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -83,32 +89,133 @@ export function classifyRisingQueries(input: RisingQueryInput): RisingQueryFindi
 
 /* ── Unserved queries (§3a bullet 2) ─────────────────────────────────────── */
 
-const COMMERCIAL_INTENT_RE = /\b(commercial|multifamily|portfolio|property management|mwbe|subcontractor|bid|gc|general contractor)\b/i;
-const RESIDENTIAL_PAGE_RE = /^\/hvac-[a-z-]+-nj\/?$|^\/(residential|home)/i;
+const NEAR_ME_RE = /\bnear[\s-]*me\b/i;
 
-/** Heuristic intent-mismatch check (§3a: "a commercial query landing on a residential page"). Conservative — only flags an explicit commercial-intent query landing on an explicitly residential-shaped page path. */
-function isIntentMismatch(query: string, page: string | null): boolean {
-  if (!page) return false;
-  if (!COMMERCIAL_INTENT_RE.test(query)) return false;
-  if (page.includes("/commercial")) return false;
-  return RESIDENTIAL_PAGE_RE.test(page);
+/**
+ * Competitor brand terms. Never match a bare town or generic word (Springfield, Horizon): each term
+ * is a phrase that only a brand search would contain. The watchlist-coverage test fails if a
+ * watchlist competitor is added without a term here.
+ */
+export const COMPETITOR_BRAND_TERMS: Record<string, string[]> = {
+  "A.J. Perri": ["aj perri", "a j perri", "perri"],
+  "Gold Medal": ["gold medal"],
+  "Horizon": ["horizon services", "horizon hvac", "horizon heating"],
+  "Hutchinson": ["hutchinson"],
+  "Reiner Group": ["reiner group", "reiner"],
+  "Air2Cool": ["air2cool", "air 2 cool"],
+  "Springfield Heating & AC": ["springfield heating"],
+  "Echelon Services": ["echelon services", "echelon"],
+  "OM HVAC": ["om hvac"],
+};
+
+function normalizeText(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-export function classifyUnservedQueries(current: QueryDemandPoint[]): UnservedQueryFinding[] {
+function brandTermsFromWatchlist(): string[] {
+  const terms: string[] = [];
+  for (const c of COMPETITOR_WATCHLIST) terms.push(...(COMPETITOR_BRAND_TERMS[c.name] ?? []), normalizeText(c.name));
+  return Array.from(new Set(terms.map(normalizeText).filter((t) => t.length >= 4)));
+}
+
+function containsPhrase(normalizedQuery: string, normalizedPhrase: string): boolean {
+  return ` ${normalizedQuery} `.includes(` ${normalizedPhrase} `);
+}
+
+/** Service words that make a "{service} {town}" query. */
+const SERVICE_TERM_RE = /\b(hvac|ac|a c|air conditioning|air conditioner|furnace|heat pump|heating|cooling|boiler|ductless|mini split|repair|repairs|install|installation|installer|replacement|contractor|contractors|company|companies|service|services|maintenance|tune up|emergency)\b/;
+
+/** Longest-first so "west orange" wins over "orange". */
+const TOWN_PHRASES = ALL_CITIES.map((c) => ({ phrase: normalizeText(c.city), city: c.city, slug: c.slug })).sort((a, b) => b.phrase.length - a.phrase.length);
+
+/** The NJ town in a "{service} {town}" query, or null when the query isn't one. */
+export function townServiceMatch(query: string): { city: string; slug: string } | null {
+  const n = normalizeText(query);
+  if (!SERVICE_TERM_RE.test(n)) return null;
+  const hit = TOWN_PHRASES.find((t) => containsPhrase(n, t.phrase));
+  return hit ? { city: hit.city, slug: hit.slug } : null;
+}
+
+const pathOf = (p: string) => p.replace(/[?#].*$/, "").replace(/\/+$/, "") || "/";
+
+export type UnservedOptions = {
+  /** Paths of every page we have (seoPages.page). Omitted → the canonical /hvac-{town}-nj page is assumed to exist. */
+  cityPages?: Iterable<string>;
+  /** Override the competitor brand phrases (default: COMPETITOR_BRAND_TERMS via the watchlist). */
+  competitorBrands?: string[];
+};
+
+type QueryGroup = { query: string; rows: QueryDemandPoint[]; impressions: number; bestRankedRow: QueryDemandPoint | null; bestPosition: number | null };
+
+/**
+ * Unserved = we have no page that ranks in the top 30 for it, it has real demand, and it isn't a
+ * brand/near-me query we can't or shouldn't serve. "{service} {town}" queries cluster onto that
+ * town's city page (one finding per town, not one per phrasing).
+ */
+export function classifyUnservedQueries(current: QueryDemandPoint[], options: UnservedOptions = {}): UnservedQueryFinding[] {
+  const brands = (options.competitorBrands ?? brandTermsFromWatchlist()).map(normalizeText).filter(Boolean);
+  const pages = options.cityPages ? new Set(Array.from(options.cityPages, pathOf)) : null;
+
+  // 1) group rows by query (a query can have several landing pages)
+  const groups = new Map<string, QueryGroup>();
+  for (const r of current) {
+    const g = groups.get(r.query) ?? { query: r.query, rows: [], impressions: 0, bestRankedRow: null, bestPosition: null };
+    g.rows.push(r);
+    g.impressions += r.impressions;
+    // A row with no page attribution still carries the site's real position for the query (GSC query-only rows), so it counts toward "we rank".
+    if (Number.isFinite(r.position) && r.position > 0 && (g.bestPosition === null || r.position < g.bestPosition)) g.bestPosition = r.position;
+    if (r.page && (!g.bestRankedRow || r.position < g.bestRankedRow.position)) g.bestRankedRow = r;
+    groups.set(r.query, g);
+  }
+
+  // 2) exclusions that apply to every query, clustered or not
+  const eligible: QueryGroup[] = [];
+  groups.forEach((g) => {
+    if (NEAR_ME_RE.test(g.query)) return;
+    const nq = normalizeText(g.query);
+    if (brands.some((b) => containsPhrase(nq, b))) return;
+    if (g.bestPosition !== null && g.bestPosition <= UNSERVED_RANK_EXCLUSION) return; // the site already ranks top-30 for it (any page, attributed or not)
+    eligible.push(g);
+  });
+
   const findings: UnservedQueryFinding[] = [];
-  for (const q of current) {
-    if (!q.page) {
-      findings.push({ query: q.query, page: null, position: q.position, impressions: q.impressions, reason: "no_page" });
+  const clusters = new Map<string, { city: string; slug: string; members: QueryGroup[] }>();
+
+  for (const g of eligible) {
+    const town = townServiceMatch(g.query);
+    if (town) {
+      const c = clusters.get(town.slug) ?? { city: town.city, slug: town.slug, members: [] };
+      c.members.push(g);
+      clusters.set(town.slug, c);
       continue;
     }
-    if (q.position > UNSERVED_POSITION_THRESHOLD) {
-      findings.push({ query: q.query, page: q.page, position: q.position, impressions: q.impressions, reason: "position_over_20" });
-      continue;
-    }
-    if (isIntentMismatch(q.query, q.page)) {
-      findings.push({ query: q.query, page: q.page, position: q.position, impressions: q.impressions, reason: "intent_mismatch" });
+    if (g.impressions < UNSERVED_MIN_IMPRESSIONS) continue;
+    if (!g.bestRankedRow) {
+      findings.push({ query: g.query, page: null, position: g.bestPosition ?? g.rows[0].position, impressions: g.impressions, reason: "no_page" });
+    } else {
+      findings.push({ query: g.query, page: g.bestRankedRow.page, position: g.bestRankedRow.position, impressions: g.impressions, reason: "position_over_30" });
     }
   }
+
+  // 3) one finding per town cluster, anchored on the matching city page
+  clusters.forEach((c) => {
+    const total = c.members.reduce((s, m) => s + m.impressions, 0);
+    if (total < UNSERVED_MIN_IMPRESSIONS) return;
+    const members = [...c.members].sort((a, b) => b.impressions - a.impressions);
+    const cityPage = `/hvac-${c.slug}-nj`;
+    const hasPage = pages ? pages.has(cityPage) : true;
+    const positions = members.map((m) => m.bestPosition).filter((x): x is number => x !== null);
+    findings.push({
+      query: members[0].query,
+      page: hasPage ? cityPage : null,
+      position: positions.length ? Math.min(...positions) : members[0].rows[0].position,
+      impressions: total,
+      reason: hasPage ? "position_over_30" : "no_page",
+      clusterTown: c.city,
+      clusterQueries: members.map((m) => m.query).slice(0, 25),
+    });
+  });
+
   return findings;
 }
 
@@ -116,10 +223,11 @@ export function classifyUnservedQueries(current: QueryDemandPoint[]): UnservedQu
 
 export type PageClicksPoint = { page: string; clicks: number; previousClicks: number; previousImpressions: number };
 
+/** Decaying = at least 10 prior clicks AND clicks down at least 25%. Impressions alone never qualify. */
 export function classifyDecayingPages(pages: PageClicksPoint[]): DecayingPageFinding[] {
   const findings: DecayingPageFinding[] = [];
   for (const p of pages) {
-    if (p.previousClicks <= 0) continue;
+    if (p.previousClicks < DECAY_MIN_PRIOR_CLICKS) continue;
     const pctDown = (p.previousClicks - p.clicks) / p.previousClicks;
     if (pctDown >= DECAY_PCT_THRESHOLD) {
       findings.push({ page: p.page, clicks: p.clicks, previousClicks: p.previousClicks, previousImpressions: p.previousImpressions, pctDown });
@@ -238,7 +346,7 @@ export async function collectSearchDemand(siteUrl: string, now: Date = new Date(
   const seenInPriorMonth = new Set(priorMonthRows.map((r) => r.query));
 
   const rising = classifyRisingQueries({ current, priorWeekImpressions, seenInPriorMonth });
-  const unserved = classifyUnservedQueries(current);
+  const unserved = classifyUnservedQueries(current, { cityPages: pages.map((p) => p.page) });
   const decaying = classifyDecayingPages(pages.map((p) => ({ page: p.page, clicks: p.clicks, previousClicks: p.previousClicks, previousImpressions: p.previousImpressions })));
 
   // Cannibalization: which pages have held the "top page" slot for each query over the last 14 days.
