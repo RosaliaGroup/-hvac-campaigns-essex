@@ -190,11 +190,29 @@ export async function getNetlifyCheckState(headSha: string): Promise<"success" |
   return "unknown";
 }
 
-/** Any issue/review comment on the PR — the auto-merge hold's "no open review comment" gate (addendum §A2). */
+type GhComment = { user?: { login?: string; type?: string } | null };
+
+/**
+ * True for GitHub App / bot authors (netlify[bot], github-actions[bot], …).
+ * Automation chatter is not a human review comment: Netlify posts a "Deploy
+ * Preview ready" comment on every PR, and counting it made the auto-merge
+ * "no comments" gate impossible to pass (PR #141 had exactly that one comment
+ * and had to be merged by hand).
+ */
+export function isBotComment(c: GhComment): boolean {
+  return c.user?.type === "Bot" || /\[bot\]$/i.test(c.user?.login ?? "");
+}
+
+/** Number of HUMAN comments on the PR — issue comments plus inline review comments, bots excluded. */
+export async function countHumanPRComments(prNumber: number): Promise<number> {
+  const [issueRes, reviewRes] = await Promise.all([gh(`/issues/${prNumber}/comments?per_page=100`), gh(`/pulls/${prNumber}/comments?per_page=100`)]);
+  const [issue, review] = (await Promise.all([issueRes.json(), reviewRes.json()])) as [GhComment[], GhComment[]];
+  return [...(Array.isArray(issue) ? issue : []), ...(Array.isArray(review) ? review : [])].filter((c) => !isBotComment(c)).length;
+}
+
+/** Any HUMAN issue/review comment on the PR — the auto-merge hold's "nobody commented" gate (addendum §A2). Bot comments (Netlify's deploy-preview note) don't count. */
 export async function hasAnyPRComments(prNumber: number): Promise<boolean> {
-  const res = await gh(`/issues/${prNumber}/comments`);
-  const data = (await res.json()) as unknown[];
-  return Array.isArray(data) && data.length > 0;
+  return (await countHumanPRComments(prNumber)) > 0;
 }
 
 /**

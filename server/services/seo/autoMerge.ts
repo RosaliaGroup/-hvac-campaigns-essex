@@ -191,30 +191,68 @@ export async function approveMetaBatchWithAutopublish(input: ApproveBatchInput):
   return result;
 }
 
-/** In-process poller — every batch with an expired, unmerged hold. Mirrors the other SEO schedulers' pattern. */
-export function startAutoMergeScheduler(): void {
-  if (process.env.SEO_AUTOPUBLISH_ENABLED !== "true") {
-    console.log("[SEO] Autopublish auto-merge scheduler disabled (set SEO_AUTOPUBLISH_ENABLED=true to enable)");
-    return;
+export const AUTO_MERGE_POLL_MS = 15 * 60 * 1000;
+
+let tickRunning = false;
+
+/**
+ * One poll of the auto-merge gate: every pr_open batch that has a hold gets
+ * refreshed and, if every gate passes, merged. Logs a line per tick AND per
+ * batch (with the gate that blocked it), so a batch that is sitting unmerged is
+ * explainable from the logs — before this, only a successful merge logged
+ * anything and PR #141's silent has_comments block took a human to notice.
+ * Overlapping ticks are skipped rather than stacked.
+ */
+export async function runAutoMergeTick(): Promise<{ checked: number; merged: number; skipped?: true }> {
+  if (tickRunning) {
+    console.log("[SEO] auto-merge tick skipped — previous tick still running");
+    return { checked: 0, merged: 0, skipped: true };
   }
-  const POLL_MS = 15 * 60 * 1000; // 15 minutes — frequent enough that a merge lands promptly after its hold expires, without hammering GitHub.
-  const run = async () => {
+  tickRunning = true;
+  const startedAt = Date.now();
+  let checked = 0;
+  let merged = 0;
+  try {
     const db = await getDb();
-    if (!db) return;
+    if (!db) {
+      console.log("[SEO] auto-merge tick: database unavailable");
+      return { checked, merged };
+    }
     const dueBatches = await db.select().from(seoApprovalBatches).where(and(eq(seoApprovalBatches.status, "pr_open"), isNotNull(seoApprovalBatches.holdUntil)));
+    console.log(`[SEO] auto-merge tick: ${dueBatches.length} open batch(es) with a hold`);
     for (const batch of dueBatches) {
+      checked++;
       try {
         // refreshBatchStatus first so a batch someone already merged by hand on
         // GitHub is reflected before we'd otherwise try (and fail) to merge it again.
         await refreshBatchStatus(batch.id);
         const result = await checkAndMergeIfReady(batch.id);
-        if (result.merged) console.log(`[SEO] auto-merged batch ${batch.id} (${batch.label})`);
+        if (result.merged) {
+          merged++;
+          console.log(`[SEO] auto-merged batch ${batch.id} (${batch.label})`);
+        } else {
+          console.log(`[SEO] auto-merge batch ${batch.id} (${batch.label}) not merged: ${result.reason}${batch.holdUntil ? ` (hold until ${batch.holdUntil.toISOString()})` : ""}`);
+        }
       } catch (err) {
         console.error(`[SEO] auto-merge check failed for batch ${batch.id}:`, (err as Error).message);
       }
     }
-  };
+    return { checked, merged };
+  } finally {
+    tickRunning = false;
+    console.log(`[SEO] auto-merge tick done: checked ${checked}, merged ${merged}, ${Date.now() - startedAt}ms`);
+  }
+}
+
+/** In-process poller, every 15 minutes. Mirrors the other SEO schedulers' pattern. */
+export function startAutoMergeScheduler(): void {
+  if (process.env.SEO_AUTOPUBLISH_ENABLED !== "true") {
+    console.log("[SEO] Autopublish auto-merge scheduler disabled (set SEO_AUTOPUBLISH_ENABLED=true to enable)");
+    return;
+  }
   console.log("[SEO] Autopublish auto-merge scheduler started — polling every 15 minutes");
-  setInterval(run, POLL_MS);
-  run().catch((err) => console.error("[SEO] auto-merge scheduler initial run failed:", err));
+  setInterval(() => {
+    runAutoMergeTick().catch((err) => console.error("[SEO] auto-merge tick failed:", err));
+  }, AUTO_MERGE_POLL_MS);
+  runAutoMergeTick().catch((err) => console.error("[SEO] auto-merge scheduler initial run failed:", err));
 }

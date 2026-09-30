@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import {
   getNetlifyCheckState,
   hasAnyPRComments,
+  countHumanPRComments,
+  isBotComment,
   closePR,
   mergePR,
   isGithubConfigured,
@@ -91,5 +93,44 @@ describe("mergePR", () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toContain("/pulls/9/merge");
     expect(init.method).toBe("PUT");
+  });
+});
+
+describe("hasAnyPRComments — bot comments don't count (PR #141 regression)", () => {
+  const netlify = { id: 1, user: { login: "netlify[bot]", type: "Bot" } };
+  const human = { id: 2, user: { login: "RosaliaGroup", type: "User" } };
+
+  function mockFetch(issue: unknown[], review: unknown[] = []) {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => jsonResponse(String(url).includes("/pulls/") ? review : issue)) as unknown as typeof fetch;
+  }
+
+  it("ignores Netlify's deploy-preview comment — a PR whose only comment is the bot's has no human comments", async () => {
+    mockFetch([netlify]);
+    expect(await hasAnyPRComments(141)).toBe(false);
+    expect(await countHumanPRComments(141)).toBe(0);
+  });
+
+  it("ignores any [bot] login even if type is missing", async () => {
+    mockFetch([{ id: 3, user: { login: "github-actions[bot]" } }]);
+    expect(await hasAnyPRComments(5)).toBe(false);
+  });
+
+  it("still blocks on a human issue comment (the veto-by-comment gate)", async () => {
+    mockFetch([netlify, human]);
+    expect(await hasAnyPRComments(5)).toBe(true);
+    expect(await countHumanPRComments(5)).toBe(1);
+  });
+
+  it("counts inline review comments too (issue comments alone missed those)", async () => {
+    mockFetch([netlify], [human]);
+    expect(await hasAnyPRComments(5)).toBe(true);
+  });
+
+  it("isBotComment: type Bot or [bot] suffix; a missing user is treated as human (fail closed)", () => {
+    expect(isBotComment({ user: { login: "x", type: "Bot" } })).toBe(true);
+    expect(isBotComment({ user: { login: "dependabot[bot]" } })).toBe(true);
+    expect(isBotComment({ user: { login: "RosaliaGroup", type: "User" } })).toBe(false);
+    expect(isBotComment({ user: null })).toBe(false);
+    expect(isBotComment({})).toBe(false);
   });
 });
