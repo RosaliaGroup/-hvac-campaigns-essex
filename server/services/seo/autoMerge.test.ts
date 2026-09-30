@@ -74,7 +74,7 @@ import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { getNetlifyCheckState, hasAnyPRComments, mergePR } from "./github";
 import { logAudit } from "./auditLog";
 import { sendEmail } from "../emailService";
-import { armHold, checkAndMergeIfReady, publishNow, approveMetaBatchWithAutopublish, runAutoMergeTick, AUTO_MERGE_POLL_MS } from "./autoMerge";
+import { armHold, checkAndMergeIfReady, publishNow, approveMetaBatchWithAutopublish, runAutoMergeTick, AUTO_MERGE_POLL_MS, minHoldHours, holdHours } from "./autoMerge";
 
 function makeDb(batch: Record<string, any>) {
   const row = { ...batch };
@@ -289,5 +289,58 @@ describe("runAutoMergeTick — per-tick logging and the bot-comment regression (
     expect(r).toEqual({ checked: 1, merged: 0 });
     expect(err).toHaveBeenCalledWith(expect.stringContaining("batch 2"), "GitHub down");
     err.mockRestore();
+  });
+});
+
+describe("hold hours — 6h minimum unless SEO_AUTOPUBLISH_MIN_HOLD_HOURS deliberately lowers it", () => {
+  const saved = { hold: process.env.SEO_AUTOPUBLISH_HOLD_HOURS, min: process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS };
+  afterEach(() => {
+    for (const [k, v] of [["SEO_AUTOPUBLISH_HOLD_HOURS", saved.hold], ["SEO_AUTOPUBLISH_MIN_HOLD_HOURS", saved.min]] as const) {
+      if (v === undefined) delete process.env[k]; else process.env[k] = v;
+    }
+  });
+
+  it("defaults to 24h and ignores a stray short value: SEO_AUTOPUBLISH_HOLD_HOURS=1 alone is STILL clamped to 6h", () => {
+    delete process.env.SEO_AUTOPUBLISH_HOLD_HOURS;
+    delete process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS;
+    expect(holdHours()).toBe(24);
+    process.env.SEO_AUTOPUBLISH_HOLD_HOURS = "1";
+    expect(minHoldHours()).toBe(6);
+    expect(holdHours()).toBe(6);
+  });
+
+  it("honors a 1h hold only when BOTH vars are set", () => {
+    process.env.SEO_AUTOPUBLISH_HOLD_HOURS = "1";
+    process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS = "1";
+    expect(holdHours()).toBe(1);
+  });
+
+  it("the minimum override can't go below a 15-minute absolute floor, and a bad/zero/negative value falls back to 6h", () => {
+    process.env.SEO_AUTOPUBLISH_HOLD_HOURS = "0.01";
+    process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS = "0.01";
+    expect(minHoldHours()).toBe(0.25);
+    expect(holdHours()).toBe(0.25);
+    for (const bad of ["0", "-3", "abc", ""]) {
+      process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS = bad;
+      expect(minHoldHours(), bad).toBe(6);
+    }
+  });
+
+  it("a longer hold than the minimum is unchanged", () => {
+    process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS = "1";
+    process.env.SEO_AUTOPUBLISH_HOLD_HOURS = "12";
+    expect(holdHours()).toBe(12);
+  });
+
+  it("armHold writes holdUntil = now + the configured hold (1h when both vars say so)", async () => {
+    process.env.SEO_AUTOPUBLISH_HOLD_HOURS = "1";
+    process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS = "1";
+    const { db, row } = makeDb({ id: 1, status: "pr_open", holdUntil: null, commitSha: "abc", prNumber: 5, branch: "pr-seo-meta-20260930", revertsBatchId: null, label: "x" });
+    vi.mocked(getDb).mockResolvedValue(db);
+    const before = Date.now();
+    await armHold(1);
+    const ms = (row.holdUntil as Date).getTime() - before;
+    expect(ms).toBeGreaterThanOrEqual(60 * 60 * 1000 - 1000);
+    expect(ms).toBeLessThan(60 * 60 * 1000 + 5000);
   });
 });

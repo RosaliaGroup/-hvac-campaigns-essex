@@ -686,3 +686,50 @@ describe("runNightlyDraftJob — ships a re-drafted page that an earlier batch a
     expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([1]);
   });
 });
+
+describe("runNightlyDraftJob — one open meta PR at a time", () => {
+  const recent = new Date(NOW.getTime() - 2 * 24 * 60 * 60 * 1000);
+  const pagesRows = [1, 2, 3].map((id) => ({ id, page: `/p${id}`, impressions: 1000 - id, position: 15, ctr: 0.02, title: null, metaDescription: null }));
+  const draftRows = [1, 2, 3].map((pageId) => ({ pageId, generatedTitle: `Title ${pageId} long enough`, generatedMetaDescription: `Meta ${pageId}.`, status: "draft", model: "anthropic-claude-sonnet-5", updatedAt: recent }));
+  let batchRows: Array<Record<string, unknown>>;
+
+  beforeEach(() => {
+    batchRows = [];
+    vi.mocked(getDb).mockReset().mockResolvedValue({ select: () => ({ from: (t: unknown) => Promise.resolve(t === seoPages ? pagesRows : t === seoAiDrafts ? draftRows : t === seoApprovalBatches ? batchRows : []) }) } as never);
+    vi.mocked(findLockedPages).mockReset().mockResolvedValue(new Map());
+    vi.mocked(isInPendingBatch).mockReset().mockResolvedValue(false);
+    vi.mocked(regenerateUnlockedDrafts).mockReset().mockResolvedValue({ results: [], skippedLocked: [] });
+    vi.mocked(isWarmedUp).mockReset().mockResolvedValue(true);
+    vi.mocked(checkCircuitBreakerConditions).mockReset().mockResolvedValue({ shouldPause: false, reason: null });
+    vi.mocked(approveBatchToPR).mockReset().mockResolvedValue({ batch: { id: 12 } as never, prUrl: "u", prNumber: 12 });
+    vi.mocked(buildBatchDiff).mockReset().mockImplementation((async (ids: number[]) => ids.map((id) => ({ pageId: id, lint: { passes: true, findings: [] } }))) as never);
+    vi.mocked(armHold).mockReset().mockResolvedValue(undefined);
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+  });
+
+  it("stages only (no new PR) while a meta batch is still pr_open", async () => {
+    batchRows = [{ id: 7, status: "pr_open", branch: "pr-seo-meta-20260926", prNumber: 143, pages: ["/other"], diff: [] }];
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(false);
+    expect(result.pickedUp).toBe(0);
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+    expect(log.mock.calls.some((c) => String(c[0]).includes("meta batch #7") && String(c[0]).includes("still open"))).toBe(true);
+    log.mockRestore();
+  });
+
+  it("proceeds once that batch has merged (or failed/reverted), and a pr_open CONTENT batch does not block the meta lane", async () => {
+    batchRows = [
+      { id: 7, status: "merged", branch: "pr-seo-meta-20260926", prNumber: 143, pages: ["/other"], diff: [] },
+      { id: 8, status: "pr_open", branch: "pr-content-20260926-t4", prNumber: 150, pages: ["/blog/x"], diff: [] },
+    ];
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(true);
+    expect(result.pickedUp).toBe(3);
+    expect(approveBatchToPR).toHaveBeenCalledTimes(1);
+  });
+});

@@ -38,6 +38,7 @@ import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { logAudit, listAuditLog } from "./auditLog";
 import { isGithubConfigured, GithubNotConfiguredError, ensureBranch, getFileContent, putFileContent, openOrGetPR } from "./github";
 import { yyyymmdd } from "./bulkApprove";
+import { uniqueBranchFor, findOpenBatchWithPrefix, CONTENT_BRANCH_PREFIX } from "./batchBranches";
 import { isWarmedUp } from "./warmupGate";
 import { armHold } from "./autoMerge";
 import { msUntilNextRun, parseCronToSchedule, type ScheduleSpec } from "../../../shared/cronTiming";
@@ -63,6 +64,8 @@ export type ContentDraftOutcome =
   | { status: "no_topic" }
   | { status: "circuit_paused"; reason: string | null }
   | { status: "facts_not_configured" }
+  /** The lane would auto-publish but a content PR is still open: drafting waits, so two PRs never edit the same blogPosts.ts anchor and conflict. */
+  | { status: "open_pr"; batchId: number; prNumber: number | null }
   | { status: "refused_residential_rebate"; topicId: number }
   | {
       status: "drafted";
@@ -167,6 +170,15 @@ export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS)
 
   const breaker = await checkCircuitBreakerConditions();
   if (breaker.shouldPause) return { status: "circuit_paused", reason: breaker.reason };
+
+  // One open content PR at a time (each post inserts into the same blogPosts.ts anchor, so concurrent PRs conflict). Only when this lane would auto-publish.
+  if (process.env.SEO_AUTOPUBLISH_ENABLED === "true" && (await isWarmedUp("content"))) {
+    const open = await findOpenBatchWithPrefix(CONTENT_BRANCH_PREFIX);
+    if (open) {
+      console.log(`[SEO] weekly content: batch #${open.id} (PR #${open.prNumber ?? "?"}) is still open — not drafting until it merges`);
+      return { status: "open_pr", batchId: open.id, prNumber: open.prNumber ?? null };
+    }
+  }
 
   const blockedTopicIds: number[] = [];
   let lastBlocked: ContentDraftOutcome | null = null;
@@ -279,7 +291,8 @@ export async function approveContentToPR(topicId: number, actorId: number | null
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
 
-  const branch = `pr-content-${yyyymmdd()}`;
+  // One PR per topic (pr-content-YYYYMMDD-t<topicId>), never appended to another topic's PR.
+  const branch = await uniqueBranchFor(`pr-content-${yyyymmdd()}-t${topicId}`);
   await ensureBranch(branch);
   const { content: currentSource, sha } = await getFileContent(BLOG_POSTS_PATH, branch);
   const updatedSource = insertBlogPostIntoSource(currentSource, draft.post);

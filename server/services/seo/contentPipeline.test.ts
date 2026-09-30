@@ -16,6 +16,11 @@ vi.mock("./github", () => ({
   openOrGetPR: vi.fn(),
 }));
 vi.mock("./bulkApprove", () => ({ yyyymmdd: () => "20260926" }));
+vi.mock("./batchBranches", () => ({
+  uniqueBranchFor: vi.fn(async (base: string) => base),
+  findOpenBatchWithPrefix: vi.fn(async () => null),
+  CONTENT_BRANCH_PREFIX: "pr-content-",
+}));
 vi.mock("./warmupGate", () => ({ isWarmedUp: vi.fn() }));
 vi.mock("./autoMerge", () => ({ armHold: vi.fn() }));
 
@@ -27,6 +32,7 @@ import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { logAudit, listAuditLog } from "./auditLog";
 import { isGithubConfigured, ensureBranch, getFileContent, putFileContent, openOrGetPR } from "./github";
 import { isWarmedUp } from "./warmupGate";
+import { uniqueBranchFor, findOpenBatchWithPrefix } from "./batchBranches";
 import { armHold } from "./autoMerge";
 import { runWeeklyContentJob, findLatestContentDraft, approveContentToPR, approveContentToPRWithAutopublish, ContentNotReadyError } from "./contentPipeline";
 import { VERIFIED_FACTS } from "../../../shared/verifiedFacts";
@@ -83,6 +89,8 @@ beforeEach(() => {
   vi.mocked(openOrGetPR).mockReset().mockResolvedValue({ url: "https://github.com/x/pull/1", number: 1, created: true });
   vi.mocked(isWarmedUp).mockReset().mockResolvedValue(false);
   vi.mocked(armHold).mockReset().mockResolvedValue(undefined);
+  vi.mocked(uniqueBranchFor).mockReset().mockImplementation(async (base: string) => base);
+  vi.mocked(findOpenBatchWithPrefix).mockReset().mockResolvedValue(null);
   process.env.SEO_AUTOPUBLISH_ENABLED = "true";
 });
 
@@ -168,7 +176,7 @@ describe("runWeeklyContentJob", () => {
       expect(result.autoApproved).toBe(true);
       expect(result.batchId).toBe(77);
     }
-    expect(ensureBranch).toHaveBeenCalledWith(expect.stringMatching(/^pr-content-\d{8}$/));
+    expect(ensureBranch).toHaveBeenCalledWith(expect.stringMatching(/^pr-content-\d{8}-t5$/));
     expect(armHold).toHaveBeenCalledWith(77);
     // The label must be "auto-YYYYMMDD" — circuitBreaker.ts's lastTwoAutoLaneNetlifyStates()
     // identifies auto-lane batches by that prefix, for both lanes.
@@ -250,7 +258,7 @@ describe("approveContentToPR", () => {
     const result = await approveContentToPR(5, 3);
 
     expect(result).toEqual({ batchId: 42, prUrl: "https://github.com/x/pull/1", prNumber: 1 });
-    expect(ensureBranch).toHaveBeenCalledWith("pr-content-20260926");
+    expect(ensureBranch).toHaveBeenCalledWith("pr-content-20260926-t5");
     expect(putFileContent).toHaveBeenCalledWith("client/src/data/blogPosts.ts", expect.any(String), expect.stringContaining(goodPost.slug), expect.any(String), "sha1");
     expect(updateQueueStatus).toHaveBeenCalledWith(5, "pr_open", 42);
   });
@@ -389,5 +397,55 @@ describe("runWeeklyContentJob — findings retry (max 2 retries, then set aside 
 
     await expect(runWeeklyContentJob(factsWithIncentive)).rejects.toThrow(/out of credits/);
     expect(updateQueueStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe("one PR per topic, one open content PR at a time", () => {
+  it("each topic gets its own branch name (pr-content-YYYYMMDD-t<topicId>), asked through uniqueBranchFor so a reused name gets a suffix", async () => {
+    vi.mocked(uniqueBranchFor).mockResolvedValue("pr-content-20260926-t5-2");
+    vi.mocked(listAuditLog).mockResolvedValue([
+      { id: 1, ts: new Date(), actorId: null, action: "draft_generated", batchId: null, pagePath: null, before: null, after: { lane: "content", topicId: 5, post: goodPost, metaLint: { passes: true, findings: [] }, contentLint: { passes: true, findings: [] }, criticBlocked: false, criticClaims: [], passes: true }, lintResult: null } as never,
+    ]);
+    vi.mocked(getDb).mockResolvedValue({ insert: () => ({ values: () => Promise.resolve([{ insertId: 3 }]) }) } as never);
+
+    await approveContentToPR(5, 1);
+
+    expect(uniqueBranchFor).toHaveBeenCalledWith("pr-content-20260926-t5");
+    expect(ensureBranch).toHaveBeenCalledWith("pr-content-20260926-t5-2");
+  });
+
+  it("does not draft (returns open_pr) while a content PR is open and the lane would auto-publish", async () => {
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+    vi.mocked(isWarmedUp).mockResolvedValue(true);
+    vi.mocked(findOpenBatchWithPrefix).mockResolvedValue({ id: 9, prNumber: 150, branch: "pr-content-20260926-t4" } as never);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(result).toEqual({ status: "open_pr", batchId: 9, prNumber: 150 });
+    expect(nextTopicToProcess).not.toHaveBeenCalled();
+    expect(draftContentPost).not.toHaveBeenCalled();
+    delete process.env.SEO_AUTOPUBLISH_ENABLED;
+  });
+
+  it("the open-PR guard does not apply when the lane would not auto-publish (manual 'Draft next topic now' still works)", async () => {
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+    vi.mocked(isWarmedUp).mockResolvedValue(false);
+    vi.mocked(findOpenBatchWithPrefix).mockResolvedValue({ id: 9, prNumber: 150, branch: "pr-content-20260926-t4" } as never);
+    vi.mocked(nextTopicToProcess).mockResolvedValue(null);
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(result.status).toBe("no_topic");
+    expect(findOpenBatchWithPrefix).not.toHaveBeenCalled();
+    delete process.env.SEO_AUTOPUBLISH_ENABLED;
+  });
+
+  it("drafts normally when no content PR is open", async () => {
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+    vi.mocked(isWarmedUp).mockResolvedValue(true);
+    vi.mocked(nextTopicToProcess).mockResolvedValue(null);
+    expect((await runWeeklyContentJob(factsWithIncentive)).status).toBe("no_topic");
+    expect(findOpenBatchWithPrefix).toHaveBeenCalledWith("pr-content-");
+    delete process.env.SEO_AUTOPUBLISH_ENABLED;
   });
 });
