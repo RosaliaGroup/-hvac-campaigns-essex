@@ -23,6 +23,106 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "date": "September 26, 2026",
+    "slug": "commercial-hvac-response-sla-checklist",
+    "title": "What a Commercial HVAC Response SLA Should Include",
+    "excerpt": "A usable HVAC service SLA is built around installation quality, a defined response window, escalation steps, and regular reporting — not a marketing number. Here's what NJ property managers should require before signing.",
+    "category": "Commercial HVAC",
+    "readTime": "7 min read",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "When a rooftop unit fails at an office or multifamily property in Bergen County, the contract language matters as much as the phone call. A vendor agreement that only promises 'fast response' without defining what that means, who gets escalated to, and how outcomes are reported isn't an SLA — it's a sales pitch. This piece breaks down the components a commercial HVAC response agreement should actually contain, and what to ask any bidder before you sign."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality Is the Real SLA Foundation"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before response-time language even matters, the equipment underneath it has to be sized and installed correctly. A poorly matched system — wrong tonnage for the space, ductwork that wasn't rebalanced, refrigerant charge that's off — generates far more service calls than a well-installed one ever will. Mechanical Enterprise LLC has spent 20 years serving commercial and multifamily properties across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, and the first question we ask isn't 'what's your response window' — it's 'is the system right for the load.' Every new installation we perform is eligible for an optional 10-year parts and labor coverage plan, administered as a separate service agreement and available for new installs or for existing systems that pass an eligibility inspection. This is a paid add-on, not something bundled into the base installation cost, and it's worth pricing out separately when you're comparing bids."
+      },
+      {
+        "type": "h2",
+        "content": "Response Window: What Should Be in Writing"
+      },
+      {
+        "type": "paragraph",
+        "content": "A response window should state the exact clock start (call placed, ticket logged, or technician dispatched), the exact number of hours before a technician is on-site, and what counts as an exception (parts backorder, weather, access restrictions). If a vendor won't put a specific number in writing, tied to your unit count and portfolio complexity, treat any verbal promise as marketing language. Response commitments should be quoted per portfolio, not applied as a blanket number across every building type, since a PTAC-heavy multifamily property and a rooftop-unit office building carry different service logistics."
+      },
+      {
+        "type": "h2",
+        "content": "Escalation: Who Gets Called When the Vendor Misses"
+      },
+      {
+        "type": "paragraph",
+        "content": "Escalation is the part most SLAs skip. A workable agreement names a second point of contact if the first technician doesn't respond in the committed window, states how quickly that escalation triggers, and identifies who on the vendor side owns portfolio-wide accountability — not just a dispatch queue. Ask for a named escalation contact and a direct line, not a general office number, before you sign anything covering more than a handful of buildings."
+      },
+      {
+        "type": "h2",
+        "content": "Reporting Cadence and Unit-Level Visibility"
+      },
+      {
+        "type": "paragraph",
+        "content": "A response commitment without reporting is unverifiable. Portfolio SLA structures should specify how often you receive a status report — quarterly is a reasonable baseline for most multifamily and commercial portfolios — and what that report actually covers: unit-by-unit service history, open tickets, and recurring failure patterns across PTAC, mini-split, RTU, and split systems."
+      },
+      {
+        "type": "stat_box",
+        "content": "Portfolio SLA structure at a glance: reporting delivered quarterly, covering PTAC, mini-split, RTU, and split unit types, priced per unit per year and quoted by portfolio size."
+      },
+      {
+        "type": "h2",
+        "content": "Coverage Options: Optional Parts & Labor Add-On"
+      },
+      {
+        "type": "paragraph",
+        "content": "Separate from response-time terms, some property managers ask whether ongoing parts and labor exposure can be reduced. The optional 10-year parts and labor coverage plan is a paid, third-party-administered service agreement backed by A-rated insurers — it applies to new installations by Mechanical Enterprise, and to existing systems only if they qualify through an eligibility inspection. It is not bundled into an SLA and it is not a substitute for one; it addresses repair cost exposure, while the SLA governs how fast a technician shows up. Our Comfort Membership plan, billed monthly, is a separate offering built around a 3, 5, or 10-year coverage term, two maintenance visits per year, priority scheduling, and a replacement credit toward a future system — worth understanding as a distinct line item from your response SLA, not a replacement for it."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us / What to Ask Any Bidder"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Current unit count by type (PTAC, mini-split, RTU, split) and building addresses by county",
+          "Existing maintenance records or service history, if available",
+          "Current escalation contact list and after-hours procedures on file",
+          "Whether the bidder will quote response commitments per portfolio, in writing, with a defined clock start",
+          "Reporting format and cadence the bidder can commit to",
+          "Whether optional parts and labor coverage is priced separately from the base service contract",
+          "For commercial properties, whether the project may qualify for PSE&G Direct Install or On-Bill Repayment financing"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "On the incentive side, commercial properties in our NJ service area may be able to reduce project cost through PSE&G Direct Install, which has covered up to 80% of eligible project cost, with the remaining balance available through PSE&G On-Bill Repayment at 0% interest, repaid via the monthly utility bill. These programs are separate from any SLA or coverage discussion and should be confirmed directly with the utility program at the time of your project."
+      },
+      {
+        "type": "cta_box",
+        "content": "Building or reviewing a commercial HVAC service SLA? Send us your unit count and portfolio details for a response-window and reporting proposal.",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial",
+        "buttonText": "Request a Portfolio SLA Quote"
+      }
+    ],
+    "faqSchema": [
+      {
+        "answer": "Response windows should be defined in writing and quoted based on your specific portfolio size and unit mix rather than assumed as a standard number. Ask any bidder to specify their commitment in the contract, including the clock start and exceptions.",
+        "question": "What response time should a commercial HVAC SLA guarantee?"
+      },
+      {
+        "answer": "No. An SLA governs response time, escalation, and reporting. Cost exposure on parts and labor is addressed separately through an optional coverage plan, which is priced and administered independently of the response agreement.",
+        "question": "Does a response SLA include equipment replacement costs?"
+      },
+      {
+        "answer": "Quarterly reporting is a reasonable baseline for most commercial and multifamily portfolios, covering unit-by-unit service history and open tickets across PTAC, mini-split, RTU, and split systems.",
+        "question": "How often should SLA reporting be delivered?"
+      }
+    ],
+    "metaDescription": "What a real commercial HVAC SLA should specify: response window, escalation path, reporting cadence, and portfolio coverage in NJ."
+  },
+
+  {
     title: "NJ Heat Pump Rebates 2026: Complete Guide to Getting Up to $16,000",
     slug: "nj-heat-pump-rebates-2026",
     date: "March 31, 2026",
