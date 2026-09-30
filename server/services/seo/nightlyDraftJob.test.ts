@@ -24,7 +24,7 @@ import { regenerateUnlockedDrafts } from "./draftManagement";
 import { isWarmedUp } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { armHold } from "./autoMerge";
-import { selectNightlyDraftCandidates, selectCleanDraftPickups, runNightlyDraftJob, MAX_NIGHTLY_DRAFTS, type NightlyCandidatePage, type PickupCandidate } from "./nightlyDraftJob";
+import { selectNightlyDraftCandidates, selectCleanDraftPickups, runNightlyDraftJob, MAX_NIGHTLY_DRAFTS, PINNED_PRIORITY_PATHS, pinIndex, type NightlyCandidatePage, type PickupCandidate } from "./nightlyDraftJob";
 import { seoPages, seoAiDrafts } from "../../../drizzle/schema";
 
 const NOW = new Date("2026-09-26T06:00:00Z");
@@ -382,5 +382,111 @@ describe("runNightlyDraftJob — backlog pickup", () => {
 
     expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([1, 2, 3, 4]);
     expect(result.pickedUp).toBe(4);
+  });
+});
+
+describe("pinned priority pages (owner decision 2026-09-29)", () => {
+  const ctx0 = { lockedPaths: new Set<string>(), pendingBatchPaths: new Set<string>(), now: NOW };
+
+  it("lists exactly the nine positioning pages, in the owner's order", () => {
+    expect([...PINNED_PRIORITY_PATHS]).toEqual([
+      "/heat-pump-installation-nj", "/central-ac-installation-nj", "/ductless-mini-split-installation-nj", "/vrv-vrf-installation-nj",
+      "/residential", "/commercial", "/warranty", "/commercial/property-managers", "/commercial/hvac-service-contracts",
+    ]);
+    expect(pinIndex("/warranty/")).toBe(6); // trailing slash tolerated
+    expect(pinIndex("/blog/warranty")).toBe(-1);
+  });
+
+  it("selectNightlyDraftCandidates: a pinned page bypasses the impressions floor and ranks first, in list order, ahead of far-higher-impression pages", () => {
+    const pages = [
+      page({ pageId: 1, pagePath: "/hvac-newark-nj", impressions: 5000, position: 12 }),
+      page({ pageId: 2, pagePath: "/central-ac-installation-nj", impressions: 9 }),
+      page({ pageId: 3, pagePath: "/heat-pump-installation-nj", impressions: 4 }),
+      page({ pageId: 4, pagePath: "/low-traffic-unpinned", impressions: 9 }),
+    ];
+    const result = selectNightlyDraftCandidates(pages, ctx0);
+    expect(result.map((r) => r.pagePath)).toEqual(["/heat-pump-installation-nj", "/central-ac-installation-nj", "/hvac-newark-nj"]);
+  });
+
+  it("selectNightlyDraftCandidates: pinning does NOT bypass locks, open batches, or the 14-day cooldown", () => {
+    const recent = new Date(NOW.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const pages = [
+      page({ pageId: 1, pagePath: "/warranty", impressions: 0 }),
+      page({ pageId: 2, pagePath: "/commercial", impressions: 0 }),
+      page({ pageId: 3, pagePath: "/residential", impressions: 0, draftUpdatedAt: recent }),
+      page({ pageId: 4, pagePath: "/vrv-vrf-installation-nj", impressions: 0 }),
+    ];
+    const result = selectNightlyDraftCandidates(pages, { ...ctx0, lockedPaths: new Set(["/warranty"]), pendingBatchPaths: new Set(["/commercial"]) });
+    expect(result.map((r) => r.pagePath)).toEqual(["/vrv-vrf-installation-nj"]);
+  });
+
+  it("selectNightlyDraftCandidates: pinned pages count toward the 20 cap", () => {
+    const pages = [
+      ...PINNED_PRIORITY_PATHS.map((path, i) => page({ pageId: 100 + i, pagePath: path, impressions: 0 })),
+      ...Array.from({ length: 30 }, (_, i) => page({ pageId: i + 1, pagePath: `/p${i + 1}`, impressions: 500 + i })),
+    ];
+    const result = selectNightlyDraftCandidates(pages, ctx0);
+    expect(result).toHaveLength(MAX_NIGHTLY_DRAFTS);
+    expect(result.slice(0, 9).map((r) => r.pagePath)).toEqual([...PINNED_PRIORITY_PATHS]);
+  });
+
+  it("selectCleanDraftPickups: pinned pages bypass the floor and come first in list order; other exclusions still apply", () => {
+    const base = { title: "T", metaDescription: "M", draftStatus: "draft", model: "anthropic-claude-sonnet-5" };
+    const out = selectCleanDraftPickups(
+      [
+        { ...base, pageId: 1, pagePath: "/blog/big", impressions: 3000 },
+        { ...base, pageId: 2, pagePath: "/central-ac-installation-nj", impressions: 9 },
+        { ...base, pageId: 3, pagePath: "/heat-pump-installation-nj", impressions: 4 },
+        { ...base, pageId: 4, pagePath: "/warranty", impressions: 0, draftStatus: "approved" }, // already shipped
+        { ...base, pageId: 5, pagePath: "/commercial", impressions: 0, model: "mock-v1" }, // mock
+        { ...base, pageId: 6, pagePath: "/residential", impressions: 0, title: null }, // no draft title
+        { ...base, pageId: 7, pagePath: "/blog/tiny", impressions: 9 }, // unpinned, under the floor
+      ],
+      { lockedPaths: new Set(), pendingBatchPaths: new Set(), excludePageIds: new Set() },
+    );
+    expect(out.map((c) => c.pagePath)).toEqual(["/heat-pump-installation-nj", "/central-ac-installation-nj", "/blog/big"]);
+  });
+});
+
+describe("runNightlyDraftJob — pinned pages lead every batch", () => {
+  const recent = new Date(NOW.getTime() - 2 * 24 * 60 * 60 * 1000);
+  const old = new Date(NOW.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const mk = (id: number, path: string, impressions: number) => ({ id, page: path, impressions, position: 15, ctr: 0.02 });
+  const dr = (pageId: number, over: Record<string, unknown> = {}) => ({ pageId, generatedTitle: `T${pageId}`, generatedMetaDescription: `M${pageId}`, status: "draft", model: "anthropic-claude-sonnet-5", updatedAt: recent, ...over });
+
+  beforeEach(() => {
+    vi.mocked(findLockedPages).mockReset().mockResolvedValue(new Map());
+    vi.mocked(isInPendingBatch).mockReset().mockResolvedValue(false);
+    vi.mocked(isWarmedUp).mockReset().mockResolvedValue(true);
+    vi.mocked(checkCircuitBreakerConditions).mockReset().mockResolvedValue({ shouldPause: false, reason: null });
+    vi.mocked(approveBatchToPR).mockReset().mockResolvedValue({ batch: { id: 7 } as never, prUrl: "u", prNumber: 1 });
+    vi.mocked(buildBatchDiff).mockReset().mockImplementation((async (ids: number[]) => ids.map((id) => ({ pageId: id, lint: { passes: true, findings: [] } }))) as never);
+    vi.mocked(armHold).mockReset().mockResolvedValue(undefined);
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+  });
+
+  it("batch order: pinned fresh, pinned backlog, other fresh, other backlog — pinned pages with 4-9 impressions included", async () => {
+    const pagesRows = [mk(1, "/blog/top", 3000), mk(2, "/hvac-newark-nj", 900), mk(3, "/central-ac-installation-nj", 9), mk(4, "/heat-pump-installation-nj", 4), mk(5, "/warranty", 0), mk(6, "/blog/fresh-other", 800)];
+    // 5 and 6 are out of cooldown -> re-drafted fresh; 1-4 are existing clean drafts (backlog).
+    const draftRows = [dr(1), dr(2), dr(3), dr(4), dr(5, { updatedAt: old }), dr(6, { updatedAt: old })];
+    vi.mocked(getDb).mockReset().mockResolvedValue({ select: () => ({ from: (t: unknown) => Promise.resolve(t === seoPages ? pagesRows : t === seoAiDrafts ? draftRows : []) }) } as never);
+    vi.mocked(regenerateUnlockedDrafts).mockReset().mockResolvedValue({ results: [5, 6].map((pageId) => ({ pageId, ok: true, draft: null })), skippedLocked: [] } as never);
+
+    await runNightlyDraftJob(NOW);
+
+    // fresh pinned (/warranty=5) -> backlog pinned in list order (heat-pump=4, central-ac=3) -> other fresh (6) -> other backlog by impressions (1, 2)
+    expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([5, 4, 3, 6, 1, 2]);
+  });
+
+  it("a pinned page that now fails the diff-level lint is dropped, not forced", async () => {
+    const pagesRows = [mk(1, "/heat-pump-installation-nj", 4), mk(2, "/central-ac-installation-nj", 9), mk(3, "/blog/x", 500)];
+    const draftRows = [dr(1), dr(2), dr(3)];
+    vi.mocked(getDb).mockReset().mockResolvedValue({ select: () => ({ from: (t: unknown) => Promise.resolve(t === seoPages ? pagesRows : t === seoAiDrafts ? draftRows : []) }) } as never);
+    vi.mocked(regenerateUnlockedDrafts).mockReset().mockResolvedValue({ results: [], skippedLocked: [] });
+    vi.mocked(buildBatchDiff).mockImplementation((async (ids: number[]) => ids.map((id) => ({ pageId: id, lint: { passes: id !== 1, findings: [] } }))) as never);
+
+    await runNightlyDraftJob(NOW);
+
+    expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([2, 3]);
   });
 });

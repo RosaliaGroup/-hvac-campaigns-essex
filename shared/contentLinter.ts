@@ -24,6 +24,7 @@ import {
   lintWarrantyClaims,
   lintDifferentiationClaims,
   lintDifferentiationFactClaims,
+  lintDollarRanges,
 } from "./seoLinter";
 import { isFactsConfigured, type VerifiedFacts } from "./verifiedFacts";
 
@@ -175,6 +176,9 @@ export function lintContent(input: ContentLintInput, facts: VerifiedFacts): Cont
     findings.push({ severity: f.severity, code: f.code, message: f.message });
   }
   for (const f of lintDifferentiationFactClaims(body, facts)) {
+    findings.push({ severity: f.severity, code: f.code, message: f.message });
+  }
+  for (const f of lintDollarRanges(body, facts.priceRanges)) {
     findings.push({ severity: f.severity, code: f.code, message: f.message });
   }
 

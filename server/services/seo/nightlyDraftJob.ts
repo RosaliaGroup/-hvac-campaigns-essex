@@ -50,6 +50,31 @@ function warnOnStalePriceRanges(now: Date): void {
 }
 
 export const MAX_NIGHTLY_DRAFTS = 20;
+
+/**
+ * Owner-pinned positioning pages (2026-09-29). They bypass the 20-impression
+ * floor and go FIRST in every nightly batch, in this order — impressions don't
+ * matter for them yet. Everything else that gates a page still applies: locked,
+ * in an open batch, the 14-day re-draft cooldown, an already-approved draft,
+ * mock drafts, and the linter.
+ */
+export const PINNED_PRIORITY_PATHS: readonly string[] = [
+  "/heat-pump-installation-nj",
+  "/central-ac-installation-nj",
+  "/ductless-mini-split-installation-nj",
+  "/vrv-vrf-installation-nj",
+  "/residential",
+  "/commercial",
+  "/warranty",
+  "/commercial/property-managers",
+  "/commercial/hvac-service-contracts",
+];
+
+/** Position in PINNED_PRIORITY_PATHS (0 = first), or -1 if the page isn't pinned. Ignores a trailing slash. */
+export function pinIndex(pagePath: string): number {
+  const norm = pagePath.length > 1 ? pagePath.replace(/\/+$/, "") : pagePath;
+  return PINNED_PRIORITY_PATHS.indexOf(norm);
+}
 const MIN_IMPRESSIONS_90D = 20;
 const REFRESH_QUERY_IMPRESSIONS = 100;
 const LOW_CTR = 0.01;
@@ -92,6 +117,7 @@ function rankTier(p: NightlyCandidatePage): 0 | 1 | 2 {
 
 /**
  * Pure selection (spec Part 1 "Selection", max 20/night):
+ *   0. Pinned priority pages (PINNED_PRIORITY_PATHS) bypass the impressions floor and rank first, in list order.
  *   1. Skip < 20 impressions (90d) entirely — insufficient data to justify drafting.
  *   2. Exclude locked pages, pages in a pr_open batch, and pages drafted < 14 days ago.
  *   3. Rank: (tier 0) impressions>=100 & position 8-20 > (tier 1) impressions>=100
@@ -104,7 +130,7 @@ export function selectNightlyDraftCandidates(
   const cooldownCutoff = ctx.now.getTime() - DRAFT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 
   const eligible = pages.filter((p) => {
-    if (p.impressions < MIN_IMPRESSIONS_90D) return false;
+    if (p.impressions < MIN_IMPRESSIONS_90D && pinIndex(p.pagePath) < 0) return false;
     if (ctx.lockedPaths.has(p.pagePath)) return false;
     if (ctx.pendingBatchPaths.has(p.pagePath)) return false;
     if (p.draftUpdatedAt && p.draftUpdatedAt.getTime() > cooldownCutoff) return false;
@@ -112,6 +138,8 @@ export function selectNightlyDraftCandidates(
   });
 
   eligible.sort((a, b) => {
+    const pa = pinIndex(a.pagePath), pb = pinIndex(b.pagePath);
+    if (pa >= 0 || pb >= 0) return pa >= 0 && pb >= 0 ? pa - pb : pa >= 0 ? -1 : 1; // pinned first, in list order
     const tierDiff = rankTier(a) - rankTier(b);
     if (tierDiff !== 0) return tierDiff;
     return b.impressions - a.impressions;
@@ -123,10 +151,10 @@ export function selectNightlyDraftCandidates(
 /**
  * Pure backlog selection: existing drafts that are eligible to ship without
  * being re-generated. Same floor/exclusions as selectNightlyDraftCandidates
- * (>= 20 impressions, not locked, not in an open batch) minus the cooldown,
+ * (>= 20 impressions unless pinned, not locked, not in an open batch) minus the cooldown,
  * plus: has both a title and a meta description, not already approved, not a
  * mock draft, and not already chosen for this batch. Ranked by impressions
- * desc; NOT capped and NOT lint-checked — the caller lints at diff level and
+ * desc after the pinned pages (which come first, in list order); NOT capped and NOT lint-checked — the caller lints at diff level and
  * takes as many as fit under the 20 cap.
  */
 export function selectCleanDraftPickups(
@@ -138,40 +166,62 @@ export function selectCleanDraftPickups(
       if (!c.title?.trim() || !c.metaDescription?.trim()) return false;
       if (c.draftStatus === "approved") return false;
       if (isMockProvider(c.model)) return false;
-      if (c.impressions < MIN_IMPRESSIONS_90D) return false;
+      if (c.impressions < MIN_IMPRESSIONS_90D && pinIndex(c.pagePath) < 0) return false;
       if (ctx.lockedPaths.has(c.pagePath) || ctx.pendingBatchPaths.has(c.pagePath)) return false;
       if (ctx.excludePageIds.has(c.pageId)) return false;
       return true;
     })
-    .sort((a, b) => b.impressions - a.impressions);
+    .sort((a, b) => {
+      const pa = pinIndex(a.pagePath), pb = pinIndex(b.pagePath);
+      if (pa >= 0 || pb >= 0) return pa >= 0 && pb >= 0 ? pa - pb : pa >= 0 ? -1 : 1; // pinned first, in list order
+      return b.impressions - a.impressions;
+    });
 }
 
 /** Max candidates re-linted per run while filling the batch — bounds the GitHub reads buildBatchDiff makes per page. */
 const MAX_PICKUP_LINT_CHECKS = 60;
 
 /**
- * The page ids to approve this run: this run's fresh clean drafts first, then
- * backlog pickups, all under MAX_NIGHTLY_DRAFTS and all passing the diff-level
- * lint that approveBatchToPR enforces (which rejects the WHOLE batch on one block).
+ * The page ids to approve this run, in batch order: pinned pages first (this
+ * run's fresh drafts, then pinned backlog), then this run's other fresh drafts,
+ * then the rest of the backlog by impressions. Capped at MAX_NIGHTLY_DRAFTS and
+ * every page must pass the diff-level lint that approveBatchToPR enforces
+ * (which rejects the WHOLE batch on one block) — failures are dropped and the
+ * next candidate takes the slot.
  */
-async function assembleBatch(freshIds: number[], pool: PickupCandidate[]): Promise<{ pageIds: number[]; pickedUp: number }> {
-  const clean = async (ids: number[]): Promise<number[]> => {
-    if (ids.length === 0) return [];
+async function assembleBatch(fresh: Array<{ pageId: number; pagePath: string }>, pool: PickupCandidate[]): Promise<{ pageIds: number[]; pickedUp: number }> {
+  type Entry = { id: number; fresh: boolean };
+  const byPin = (a: { pagePath: string }, b: { pagePath: string }) => pinIndex(a.pagePath) - pinIndex(b.pagePath);
+  const isPinned = (x: { pagePath: string }) => pinIndex(x.pagePath) >= 0;
+  const asFresh = (f: { pageId: number }): Entry => ({ id: f.pageId, fresh: true });
+  const asPick = (c: { pageId: number }): Entry => ({ id: c.pageId, fresh: false });
+  const ordered: Entry[] = [
+    ...fresh.filter(isPinned).sort(byPin).map(asFresh),
+    ...pool.filter(isPinned).sort(byPin).map(asPick),
+    ...fresh.filter((f) => !isPinned(f)).map(asFresh),
+    ...pool.filter((c) => !isPinned(c)).map(asPick),
+  ];
+
+  const clean = async (ids: number[]): Promise<Set<number>> => {
+    if (ids.length === 0) return new Set();
     const rows = await buildBatchDiff(ids);
-    return rows.filter((r) => r.lint.passes).map((r) => r.pageId);
+    return new Set(rows.filter((r) => r.lint.passes).map((r) => r.pageId));
   };
 
-  const chosen = await clean(freshIds.slice(0, MAX_NIGHTLY_DRAFTS));
+  const chosen: number[] = [];
   let pickedUp = 0;
   let idx = 0;
-  const limit = Math.min(pool.length, MAX_PICKUP_LINT_CHECKS);
+  const limit = Math.min(ordered.length, Math.max(MAX_PICKUP_LINT_CHECKS, fresh.length));
   while (chosen.length < MAX_NIGHTLY_DRAFTS && idx < limit) {
     const room = MAX_NIGHTLY_DRAFTS - chosen.length;
-    const chunk = pool.slice(idx, Math.min(idx + room, limit)).map((c) => c.pageId);
+    const chunk = ordered.slice(idx, Math.min(idx + room, limit));
     idx += chunk.length;
-    const ok = await clean(chunk);
-    chosen.push(...ok);
-    pickedUp += ok.length;
+    const ok = await clean(chunk.map((e) => e.id));
+    for (const e of chunk) {
+      if (!ok.has(e.id)) continue;
+      chosen.push(e.id);
+      if (!e.fresh) pickedUp++;
+    }
   }
   return { pageIds: chosen, pickedUp };
 }
@@ -270,7 +320,7 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
           }),
           { lockedPaths: new Set(lockedMap.keys()), pendingBatchPaths, excludePageIds: new Set(readyPageIds) },
         );
-        const batch = await assembleBatch(readyPageIds, pickupPool);
+        const batch = await assembleBatch(selected.filter((s) => readyPageIds.includes(s.pageId)), pickupPool);
         if (batch.pageIds.length > 0) {
           const approved = await approveBatchToPR({ pageIds: batch.pageIds, label: `auto-${yyyymmdd(now)}`, actorId: null });
           await armHold(approved.batch.id);

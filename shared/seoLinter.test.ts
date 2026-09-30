@@ -124,12 +124,13 @@ describe("lintPageMeta — WARN rules (approvable, not blocking)", () => {
     expect(result.findings.some((f) => f.code === "free_without_context")).toBe(false);
   });
 
-  it("warns on same-day/24-7/emergency-off-topic and stale years without blocking", () => {
+  it("warns on emergency-off-topic and stale years, and BLOCKS 24/7 + same-day (owner has not confirmed them)", () => {
     const result = lintPageMeta({ pagePath: "/hvac-newark-nj", title: "24/7 same-day emergency service, 2024", metaDescription: "meta" }, { now: new Date("2026-09-25") });
-    expect(result.passes).toBe(true);
-    expect(result.findings.map((f) => f.code)).toEqual(
-      expect.arrayContaining(["same_day_claim", "24_7_claim", "stale_year"]),
-    );
+    expect(result.passes).toBe(false);
+    const codes = result.findings.map((f) => f.code);
+    expect(codes).toEqual(expect.arrayContaining(["service_hours_24x7_unverified", "service_hours_same_day_unverified", "stale_year"]));
+    expect(codes).not.toContain("same_day_claim"); // the old WARNs were superseded, not duplicated
+    expect(codes).not.toContain("24_7_claim");
   });
 
   it("does not warn emergency wording on an actual emergency page", () => {
@@ -374,5 +375,80 @@ describe("lintDifferentiationClaims — negated lease/rent (calibration)", () =>
 
   it('other membership phrases are unaffected by negation ("subscription includes the equipment")', () => {
     expect(blocked("Not cheap: our subscription includes the equipment.")).toBe(true);
+  });
+});
+
+describe("lintPageMeta — dollar ranges, service hours, rebate-leading titles (owner decisions 2026-09-29)", () => {
+  const meta = (title: string, metaDescription: string, pagePath = "/blog/x", opts = {}) => lintPageMeta({ pagePath, title, metaDescription }, opts);
+  const codes = (r: ReturnType<typeof lintPageMeta>) => r.findings.map((f) => f.code);
+
+  it.each([
+    "Replacement costs $8,000–$15,000 depending on size.",
+    "Costs run $100-$200 per pound.",
+    "Budget $5K to $9K for a mini-split.",
+    "About $8,000 — $15,000 all in.",
+  ])("BLOCKS an unverified dollar range: %s", (t) => {
+    const r = meta("HVAC guide", t);
+    expect(codes(r)).toContain("unverified_dollar_range");
+    expect(r.passes).toBe(false);
+  });
+
+  it("allows a range that exactly matches a verified priceRanges entry (any page), including K notation", () => {
+    const opts = { priceRanges: [{ page: "/a", low: 8000, high: 15000 }] };
+    expect(codes(meta("HVAC guide", "Costs $8,000–$15,000 typically.", "/blog/x", opts))).not.toContain("unverified_dollar_range");
+    expect(codes(meta("HVAC guide", "Costs $8K-$15K typically.", "/blog/x", opts))).not.toContain("unverified_dollar_range");
+    expect(codes(meta("HVAC guide", "Costs $8,000–$16,000 typically.", "/blog/x", opts))).toContain("unverified_dollar_range");
+  });
+
+  it("does not treat a single figure or 'up to $16K' as a range, and leaves 'installed' ranges to the page-specific rule", () => {
+    expect(codes(meta("HVAC guide", "PSE&G rebates up to $16K may apply."))).not.toContain("unverified_dollar_range");
+    const installed = meta("HVAC guide", "Systems run $5,000-$9,000 installed.");
+    expect(codes(installed)).toContain("unverified_price_range");
+    expect(codes(installed)).not.toContain("unverified_dollar_range");
+  });
+
+  it.each(["24/7 emergency help", "Service around the clock", "Around-the-clock repair", "Same-day installs", "same day service", "24x7 support"])(
+    'BLOCKS an unverified service-hours claim: "%s"',
+    (t) => {
+      const r = meta("HVAC guide", t);
+      expect(r.passes).toBe(false);
+      expect(codes(r).some((c) => c.startsWith("service_hours_"))).toBe(true);
+    },
+  );
+
+  it("allows 24/7 and same-day only when the serviceHours fact says so", () => {
+    const yes = { differentiationFacts: { portfolioSla: { responseHours: null }, monitoring: { is24x7: false }, serviceHours: { emergency24x7: true, sameDay: true } } };
+    expect(codes(meta("HVAC guide", "24/7 emergency help, same-day installs", "/blog/x", yes)).some((c) => c.startsWith("service_hours_"))).toBe(false);
+    const only24 = { differentiationFacts: { portfolioSla: { responseHours: null }, monitoring: { is24x7: false }, serviceHours: { emergency24x7: true, sameDay: false } } };
+    const r = meta("HVAC guide", "24/7 emergency help, same-day installs", "/blog/x", only24);
+    expect(codes(r)).toContain("service_hours_same_day_unverified");
+    expect(codes(r)).not.toContain("service_hours_24x7_unverified");
+  });
+
+  it('"24/7 monitoring" is reported once, by the monitoring rule, not twice', () => {
+    const c = codes(meta("HVAC guide", "Enjoy 24/7 monitoring on your system."));
+    expect(c).toContain("monitoring_24x7_unverified");
+    expect(c).not.toContain("service_hours_24x7_unverified");
+  });
+
+  it("WARNS (does not block) when an installation or city page title LEADS with rebates or a dollar figure", () => {
+    for (const [path, title] of [
+      ["/hvac-union-nj", "Up to $16K PSE&G Rebates | Union NJ HVAC Installation"],
+      ["/hvac-newark-nj", "NJ Rebates for HVAC Installation in Newark"],
+      ["/heat-pump-installation-nj", "$16K Rebates on Heat Pump Installation"],
+      ["/central-ac-installation-nj", "PSE&G Incentives: Central AC Installation"],
+    ]) {
+      const r = meta(title, "Quality installation with optional 10-year parts & labor coverage.", path);
+      expect(codes(r), title).toContain("title_leads_with_rebate");
+      expect(r.findings.find((f) => f.code === "title_leads_with_rebate")?.severity).toBe("warn");
+      expect(r.passes, title).toBe(true);
+    }
+  });
+
+  it("does NOT warn when rebates are a later clause, on blog posts, or on /direct-install pages", () => {
+    const meta2 = "Quality installation with optional 10-year parts & labor coverage.";
+    expect(codes(meta("Short Hills NJ HVAC Installation | Up to $16K Rebates", meta2, "/hvac-short-hills-nj"))).not.toContain("title_leads_with_rebate");
+    expect(codes(meta("PSE&G Instant Rebate Program for HVAC", meta2, "/blog/pseg-instant-rebate-program-nj"))).not.toContain("title_leads_with_rebate");
+    expect(codes(meta("Free Lighting & HVAC Rebates for Bakeries", meta2, "/direct-install/bakeries-nj"))).not.toContain("title_leads_with_rebate");
   });
 });

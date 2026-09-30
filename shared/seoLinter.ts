@@ -50,7 +50,7 @@ export type LintOptions = {
    * so an SLA-hour or "24/7 monitoring" claim BLOCKs by default unless the
    * caller passes the real, owner-set VERIFIED_FACTS values.
    */
-  differentiationFacts?: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean } };
+  differentiationFacts?: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean }; serviceHours?: { emergency24x7: boolean; sameDay: boolean } };
   /** §9b price-range matching. Defaults to empty — any "$X installed" claim BLOCKs until the caller passes real VERIFIED_FACTS.priceRanges entries for this page. */
   priceRanges?: Array<{ page: string; low: number; high: number }>;
 };
@@ -392,7 +392,7 @@ export function lintDifferentiationClaims(text: string): WarrantyLintFinding[] {
  */
 export function lintDifferentiationFactClaims(
   text: string,
-  facts: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean } },
+  facts: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean }; serviceHours?: { emergency24x7: boolean; sameDay: boolean } },
 ): WarrantyLintFinding[] {
   const findings: WarrantyLintFinding[] = [];
   if (!text) return findings;
@@ -421,7 +421,86 @@ export function lintDifferentiationFactClaims(
     });
   }
 
+  // Service-hours claims: "24/7", "24x7", "around the clock" and "same-day" need an explicit owner-set fact.
+  // "24/7 monitoring" is governed by the monitoring rule above, so it is stripped here to avoid a duplicate finding.
+  const hours = facts.serviceHours ?? { emergency24x7: false, sameDay: false };
+  const withoutMonitoring = text.replace(/24\s*(?:\/|x)\s*7\s+monitoring/gi, " ");
+  if (!hours.emergency24x7) {
+    const m = withoutMonitoring.match(/\b24\s*(?:\/|x)\s*7\b|\baround[\s-]the[\s-]clock\b/i);
+    if (m) {
+      findings.push({
+        severity: "block",
+        code: "service_hours_24x7_unverified",
+        message: `"${m[0]}" claims round-the-clock service, but the owner hasn't confirmed it (VERIFIED_FACTS.serviceHours.emergency24x7 is false).`,
+      });
+    }
+  }
+  if (!hours.sameDay) {
+    const m = text.match(/\bsame[\s-]day\b/i);
+    if (m) {
+      findings.push({
+        severity: "block",
+        code: "service_hours_same_day_unverified",
+        message: `"${m[0]}" claims same-day service, but the owner hasn't confirmed it (VERIFIED_FACTS.serviceHours.sameDay is false).`,
+      });
+    }
+  }
+
   return findings;
+}
+
+/**
+ * Any dollar RANGE ("$8,000–$15,000", "$100-$200", "$5K to $9K") must match a
+ * VERIFIED_FACTS.priceRanges entry exactly (low and high). With priceRanges
+ * empty (today) every range BLOCKs. Ranges immediately followed by "installed"
+ * are left to lintPriceRangeClaims (page-specific) so they aren't double-reported.
+ */
+export function lintDollarRanges(text: string, priceRanges: Array<{ page: string; low: number; high: number }>): WarrantyLintFinding[] {
+  const findings: WarrantyLintFinding[] = [];
+  if (!text) return findings;
+  const num = "[\\d,]+(?:\\.\\d+)?";
+  const re = new RegExp(`\\$\\s?(${num})\\s?([kK])?\\s*(?:[-–—]|to)\\s*\\$?\\s?(${num})\\s?([kK])?(?!\\d)`, "gi");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    if (/^\s*installed\b/i.test(text.slice(m.index + m[0].length))) continue;
+    const toNum = (raw: string, k?: string) => parseFloat(raw.replace(/,/g, "")) * (k ? 1000 : 1);
+    const lo = toNum(m[1], m[2] ?? (m[4] && !m[2] ? m[4] : undefined));
+    const hi = toNum(m[3], m[4]);
+    const verified = priceRanges.some((r) => r.low === lo && r.high === hi);
+    if (!verified) {
+      findings.push({
+        severity: "block",
+        code: "unverified_dollar_range",
+        message:
+          priceRanges.length === 0
+            ? `"${m[0].trim()}" is a dollar range, but no price range has been verified yet (VERIFIED_FACTS.priceRanges is empty).`
+            : `"${m[0].trim()}" doesn't match any verified price range (VERIFIED_FACTS.priceRanges).`,
+      });
+    }
+  }
+  return findings;
+}
+
+/** True for installation and city pages — where the positioning is installation-led and a rebate-first title is off-message. Blog posts and /direct-install/* (a rebate program) are exempt. */
+function isInstallationOrCityPage(pagePath: string): boolean {
+  if (pagePath.startsWith("/blog/") || pagePath.startsWith("/direct-install")) return false;
+  return cityPageSlug(pagePath) !== null || /install/i.test(pagePath);
+}
+
+/** WARN: a title whose first clause leads with rebates / a dollar figure on an installation or city page. */
+export function lintRebateLeadingTitle(pagePath: string, title: string): WarrantyLintFinding[] {
+  if (!title || !isInstallationOrCityPage(pagePath)) return [];
+  const lead = title.split(/\s*[|:–—]\s*|\s+-\s+/)[0] ?? title;
+  if (/\b(?:rebates?|incentives?)\b|\$\s?\d|\bup to \$/i.test(lead)) {
+    return [
+      {
+        severity: "warn",
+        code: "title_leads_with_rebate",
+        message: `Title leads with rebates/a dollar figure ("${lead.trim()}") on an installation or city page — lead with installation quality and the 10-year parts & labor coverage; rebates are secondary.`,
+      },
+    ];
+  }
+  return [];
 }
 
 /**
@@ -531,6 +610,12 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
   for (const f of lintDifferentiationFactClaims(combined, opts.differentiationFacts ?? UNCONFIGURED_DIFFERENTIATION_FACTS)) {
     findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
   }
+  for (const f of lintDollarRanges(combined, opts.priceRanges ?? [])) {
+    findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
+  }
+  for (const f of lintRebateLeadingTitle(input.pagePath, title)) {
+    findings.push({ severity: f.severity, field: "title", code: f.code, message: f.message });
+  }
   for (const f of lintPriceRangeClaims(input.pagePath, combined, opts.priceRanges ?? [])) {
     findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
   }
@@ -578,8 +663,7 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
   if (/\bfree\b/i.test(combined) && !/free (assessment|estimate|quote|consultation|in-home)/i.test(combined)) {
     findings.push(warn("both", "free_without_context", `"free" is used without saying what's free.`));
   }
-  if (/same-day/i.test(combined)) findings.push(warn("both", "same_day_claim", `"same-day" claim — confirm this is actually offered on this page's service area.`));
-  if (/24\/7/i.test(combined)) findings.push(warn("both", "24_7_claim", `"24/7" claim — confirm emergency service is actually offered.`));
+  // "same-day" and "24/7" are BLOCK rules now (service_hours_*_unverified, in lintDifferentiationFactClaims) — they superseded the old WARNs here.
   if (/emergency/i.test(combined) && !/emergency/i.test(input.pagePath)) {
     findings.push(warn("both", "emergency_off_topic", `"emergency" wording on a page that isn't an emergency-service page.`));
   }
