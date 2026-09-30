@@ -122,3 +122,24 @@ Limits: GSC data ends 09-29 and lags ~2 days, so nothing here says anything abou
 3. **Add a crawl-time monitor:** a daily Googlebot-UA fetch of ~20 key URLs that alerts on any non-200 or unexpected redirect, so a repeat is caught in a day, not a quarter.
 4. **Review the templated city pages for doorway/scaled-content risk** (near-identical body with the town name swapped), whatever step 1 shows. That is the risk H1 points at, and 90 such pages exist.
 5. **Look for out-of-band changes** around 06-30 → 07-05: Netlify domain/DNS audit log, Cloudflare or registrar changes, Search Console property or sitemap changes. The Netlify API doesn't expose these.
+
+## Re-indexing test: design and status (added 2026-09-30)
+
+Approved: request re-indexing for a subset of the "Page with redirect" pages, leave the rest as controls, read after 14 days, hold all rewrites of the 15 flagged pages until then. Config lives in `shared/seoExperiment.ts`; the readout is in `server/services/seo/intel/experiment.ts`.
+
+**Groups (4 treatment, 4 control), stratified by template and volume:**
+
+| Group | Pages |
+|---|---|
+| Treatment (request indexing) | `/hvac-linden-nj`, `/hvac-millburn-nj`, `/blog/nj-heat-pump-rebates-2026`, `/blog/warehouse-hvac-nj` |
+| Control (leave alone) | `/hvac-north-bergen-nj`, `/hvac-jersey-city-nj`, `/hvac-ridgefield-nj`, `/blog` |
+
+**Excluded from both groups, on purpose (4 of the 12):**
+- `/blog/hvac-contractor-newark-nj`: a genuine 301 since 2026-09-08, so Google is right about it.
+- `heat-pump-vs-gas-furnace-nj-2026`, `heat-pump-installation-nj-guide`, `nj-clean-heat-program-2026`: their titles/metas were changed by the 2026-09-30 batches (#143, #149, #150), which would confound the read.
+
+**Not done yet:** the request itself. Google's URL Inspection API is read-only and there is no supported API to request indexing (the Indexing API is only for job-posting and livestream pages). "Request indexing" is a button in the Search Console UI; the inspection links in the report open each page there. `startedAt` in `shared/seoExperiment.ts` stays `null` until it has been done; set it to that date and the readout runs at +16 days (14 days plus GSC's ~2-day lag).
+
+**Hold:** all 15 flagged pages are locked against title/meta/content rewrites until 2026-10-22, through the existing lock gate (nightly meta job, bulk approve) and market-intel's refresh queueing.
+
+**Readout:** per page, whether Google re-crawled it since the request, whether it is indexed again, and impressions in the 14 days before vs after. The conclusion is a labeled heuristic (crawl-fault / quality-demotion / inconclusive); the raw numbers are always shown.

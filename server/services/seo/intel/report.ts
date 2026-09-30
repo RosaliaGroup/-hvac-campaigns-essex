@@ -6,6 +6,8 @@
  * "each degrades gracefully if unavailable").
  */
 import { loadReportNotes } from "./notes";
+import { collectCrawlCheck } from "./crawlCheck";
+import { collectExperimentReadout } from "./experiment";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { seoIntelReports, seoIntelItems, type SeoIntelReportRow } from "../../../../drizzle/schema";
@@ -18,7 +20,7 @@ import { detectDifferentiatorMatches, auditOurStaleClaims } from "./positioning"
 import { buildItemDrafts, executeItem, emptyExecutionCounts, suggestionKeyFor, isSuppressed, laneReadyForAutoExecution, type ItemDraft } from "./adjustments";
 import { checkCircuitBreakerConditions, checkMarketIntelCircuit, isGscFreshEnough } from "./guardrails";
 import { logAudit } from "../auditLog";
-import { sendDailyDigest } from "./email";
+import { sendDailyDigest, sendCrawlCheckAlert } from "./email";
 import type { MarketIntelSections } from "../../../../shared/marketIntelTypes";
 
 function fmtDate(d: Date): string {
@@ -86,8 +88,12 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
 
   // Persist the report row first (items need reportId).
   const notes = loadReportNotes(date);
+  // Independent of GSC freshness; both are best-effort and never throw.
+  const [crawlCheck, experiment] = await Promise.all([collectCrawlCheck(now), collectExperimentReadout(now)]);
   const sections: MarketIntelSections = {
     ...(notes.length ? { notes } : {}),
+    ...(crawlCheck ? { crawlCheck } : {}),
+    ...(experiment ? { experiment } : {}),
     searchDemand, competitors: { diffs: competitors.diffs, skippedDomains: competitors.skippedDomains },
     positioning: { theirClaims: differentiatorMatches, ourStaleClaims: staleClaims },
     serp, trends,
@@ -149,6 +155,8 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
     .where(eq(seoIntelReports.id, reportId));
 
   await logAudit({ actorId: null, action: "market_intel_report_generated", batchId: null, pagePath: null, before: null, after: { reportId, itemCount: itemsCreated, executed }, lintResult: null });
+
+  if (crawlCheck && crawlCheck.anomalies.length > 0) await sendCrawlCheckAlert({ reportId, date, result: crawlCheck }).catch(() => false);
 
   const emailSent = await sendDailyDigest({ reportId, date, itemCount: itemsCreated, executed, summary, circuitClear, possiblyDeindexed: searchDemand.possiblyDeindexed?.length ?? 0 });
   if (emailSent) await db.update(seoIntelReports).set({ emailSent: true }).where(eq(seoIntelReports.id, reportId));

@@ -134,6 +134,50 @@ export default function MarketIntel() {
             </CardContent>
           </Card>
 
+          {(() => {
+            const sec = active.report.sections as MarketIntelSections | null;
+            const cc = sec?.crawlCheck;
+            const ex = sec?.experiment;
+            return (
+              <>
+                {cc && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Crawl check ({cc.anomalies.length === 0 ? "all clear" : `${cc.anomalies.length} issue${cc.anomalies.length === 1 ? "" : "s"}`})</CardTitle>
+                      <CardDescription>{cc.checked} URLs fetched as Googlebot and as a browser on {new Date(cc.checkedAt).toLocaleString()}. From our server, so it cannot see anything done only for Google’s real crawler.</CardDescription>
+                    </CardHeader>
+                    {cc.anomalies.length > 0 && (
+                      <CardContent className="space-y-1 text-sm">
+                        {cc.anomalies.map((a, i) => (
+                          <div key={i}><Badge variant="destructive" className="mr-2">{a.kind}</Badge><a href={a.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{new URL(a.url).pathname}</a> <span className="text-muted-foreground">{a.detail}</span></div>
+                        ))}
+                      </CardContent>
+                    )}
+                  </Card>
+                )}
+                {ex && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Re-indexing test</CardTitle>
+                      <CardDescription>
+                        {ex.phase === "not_started" && ex.note}
+                        {ex.phase === "running" && `Started ${ex.startedAt}; reads in ${ex.daysUntilRead} day${ex.daysUntilRead === 1 ? "" : "s"}. Rewrites of the 15 flagged pages stay on hold.`}
+                        {ex.phase === "read" && `Started ${ex.startedAt}. ${ex.summary}`}
+                      </CardDescription>
+                    </CardHeader>
+                    {ex.phase === "read" && (
+                      <CardContent className="space-y-1 text-sm">
+                        {ex.pages.map((p) => (
+                          <div key={p.path}><Badge variant={p.group === "treatment" ? "default" : "outline"} className="mr-2">{p.group}</Badge><span className="font-medium">{p.path}</span> <span className="text-muted-foreground">{p.coverageState ?? "not inspected"}{p.recrawledSinceStart ? ", re-crawled" : ""}, impressions {p.impressionsBefore} → {p.impressionsAfter}</span></div>
+                        ))}
+                      </CardContent>
+                    )}
+                  </Card>
+                )}
+              </>
+            );
+          })()}
+
           {((active.report.sections as MarketIntelSections | null)?.notes ?? []).map((n) => (
             <Card key={n.id}>
               <CardHeader>

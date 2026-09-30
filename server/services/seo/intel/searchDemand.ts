@@ -388,7 +388,7 @@ export type SearchDemandCollection = {
 };
 
 /** Best-effort read of the repo's own netlify.toml; an unreadable file just means no redirect annotations. */
-function loadNetlifyRedirects(): Map<string, string> {
+export function loadNetlifyRedirects(): Map<string, string> {
   try {
     const file = resolveRepoPath("netlify.toml");
     return file ? parseNetlifyRedirects(readFileSync(file, "utf8")) : new Map();
