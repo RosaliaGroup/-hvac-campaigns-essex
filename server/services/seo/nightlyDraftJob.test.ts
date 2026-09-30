@@ -25,7 +25,7 @@ import { isWarmedUp } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { armHold } from "./autoMerge";
 import { selectNightlyDraftCandidates, selectCleanDraftPickups, runNightlyDraftJob, MAX_NIGHTLY_DRAFTS, PINNED_PRIORITY_PATHS, pinIndex, type NightlyCandidatePage, type PickupCandidate } from "./nightlyDraftJob";
-import { seoPages, seoAiDrafts } from "../../../drizzle/schema";
+import { seoPages, seoAiDrafts, seoApprovalBatches } from "../../../drizzle/schema";
 
 const NOW = new Date("2026-09-26T06:00:00Z");
 
@@ -488,5 +488,136 @@ describe("runNightlyDraftJob — pinned pages lead every batch", () => {
     await runNightlyDraftJob(NOW);
 
     expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([2, 3]);
+  });
+});
+
+describe("selectCleanDraftPickups — never-batched and no-op checks", () => {
+  const cand = (o: Partial<PickupCandidate> & { pageId: number }): PickupCandidate => ({
+    pagePath: `/p${o.pageId}`, impressions: 100, title: "New title", metaDescription: "New meta", draftStatus: "draft", model: "anthropic-claude-sonnet-5", ...o,
+  });
+  const base = { lockedPaths: new Set<string>(), pendingBatchPaths: new Set<string>(), excludePageIds: new Set<number>() };
+
+  it("excludes pages that are in ANY batch (open, merged or reverted) via batchedPaths, not just open ones", () => {
+    const out = selectCleanDraftPickups([cand({ pageId: 1 }), cand({ pageId: 2 }), cand({ pageId: 3 })], { ...base, batchedPaths: new Set(["/p1", "/p3"]) });
+    expect(out.map((c) => c.pageId)).toEqual([2]);
+  });
+
+  it("batchedPaths is optional — callers that don't pass it behave exactly as before", () => {
+    expect(selectCleanDraftPickups([cand({ pageId: 1 })], base)).toHaveLength(1);
+  });
+
+  it("skips a draft identical to the live title AND meta, ignoring surrounding whitespace", () => {
+    const out = selectCleanDraftPickups(
+      [cand({ pageId: 1, title: "Same", metaDescription: "Same meta", pageTitle: "  Same ", pageMeta: "Same meta\n" })],
+      base,
+    );
+    expect(out).toEqual([]);
+  });
+
+  it("keeps a draft that changes only the title, or only the meta description", () => {
+    const out = selectCleanDraftPickups(
+      [
+        cand({ pageId: 1, title: "New", metaDescription: "Same meta", pageTitle: "Old", pageMeta: "Same meta" }),
+        cand({ pageId: 2, title: "Same", metaDescription: "New meta", pageTitle: "Same", pageMeta: "Old meta" }),
+      ],
+      base,
+    );
+    expect(out.map((c) => c.pageId)).toEqual([1, 2]);
+  });
+
+  it("keeps a draft for a page with NO live title/meta (null) — that's a real change, not a no-op", () => {
+    expect(selectCleanDraftPickups([cand({ pageId: 1, pageTitle: null, pageMeta: null })], base)).toHaveLength(1);
+  });
+
+  it("does not run the no-op check when the live values weren't provided (undefined)", () => {
+    expect(selectCleanDraftPickups([cand({ pageId: 1, title: "Same", metaDescription: "Same", pageTitle: undefined, pageMeta: undefined })], base)).toHaveLength(1);
+    // one side missing is not enough to conclude "identical"
+    expect(selectCleanDraftPickups([cand({ pageId: 2, title: "Same", metaDescription: "Same", pageTitle: "Same" })], base)).toHaveLength(1);
+  });
+
+  it("applies to pinned pages too (a pinned no-op or already-batched page is still skipped)", () => {
+    const pinned = PINNED_PRIORITY_PATHS[0];
+    const out = selectCleanDraftPickups(
+      [cand({ pageId: 1, pagePath: pinned, impressions: 0, title: "Same", metaDescription: "Same", pageTitle: "Same", pageMeta: "Same" })],
+      base,
+    );
+    expect(out).toEqual([]);
+    expect(selectCleanDraftPickups([cand({ pageId: 2, pagePath: pinned, impressions: 0 })], { ...base, batchedPaths: new Set([pinned]) })).toEqual([]);
+  });
+});
+
+describe("runNightlyDraftJob — backlog pickup skips batched pages and no-op drafts", () => {
+  const recent = new Date(NOW.getTime() - 2 * 24 * 60 * 60 * 1000); // inside the 14-day cooldown: nothing is re-drafted
+  const mkPage = (id: number, over: Record<string, unknown> = {}) => ({ id, page: `/p${id}`, impressions: 1000 - id, position: 15, ctr: 0.02, title: `Live title ${id}`, metaDescription: `Live meta ${id}`, ...over });
+  const mkDraft = (pageId: number, over: Record<string, unknown> = {}) => ({ pageId, generatedTitle: `New title ${pageId}`, generatedMetaDescription: `New meta ${pageId}`, status: "draft", model: "anthropic-claude-sonnet-5", updatedAt: recent, ...over });
+  let pagesRows: ReturnType<typeof mkPage>[];
+  let draftRows: ReturnType<typeof mkDraft>[];
+  let batchRows: Array<{ status: string; pages: string[] }>;
+
+  beforeEach(() => {
+    pagesRows = [1, 2, 3, 4, 5, 6].map((id) => mkPage(id));
+    draftRows = pagesRows.map((p) => mkDraft(p.id));
+    batchRows = [];
+    vi.mocked(getDb).mockReset().mockResolvedValue({
+      select: () => ({
+        from: (t: unknown) => Promise.resolve(t === seoPages ? pagesRows : t === seoAiDrafts ? draftRows : t === seoApprovalBatches ? batchRows : []),
+      }),
+    } as never);
+    vi.mocked(findLockedPages).mockReset().mockResolvedValue(new Map());
+    vi.mocked(isInPendingBatch).mockReset().mockResolvedValue(false);
+    vi.mocked(regenerateUnlockedDrafts).mockReset().mockResolvedValue({ results: [], skippedLocked: [] });
+    vi.mocked(isWarmedUp).mockReset().mockResolvedValue(true);
+    vi.mocked(checkCircuitBreakerConditions).mockReset().mockResolvedValue({ shouldPause: false, reason: null });
+    vi.mocked(approveBatchToPR).mockReset().mockResolvedValue({ batch: { id: 77 } as never, prUrl: "url", prNumber: 1 });
+    vi.mocked(buildBatchDiff).mockReset().mockImplementation((async (ids: number[]) => ids.map((id) => ({ pageId: id, lint: { passes: true, findings: [] } }))) as never);
+    vi.mocked(armHold).mockReset().mockResolvedValue(undefined);
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+  });
+
+  it("does not re-ship a page whose earlier batch MERGED or was REVERTED (the draft row stays 'draft', so status alone can't tell)", async () => {
+    batchRows = [
+      { status: "merged", pages: ["/p1", "/p2"] },
+      { status: "reverted", pages: ["/p3"] },
+    ];
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([4, 5, 6]);
+    expect(result.pickedUp).toBe(3);
+  });
+
+  it("skips a draft that is identical to the live title and meta, but ships one that differs in either", async () => {
+    draftRows = [
+      mkDraft(1, { generatedTitle: "Live title 1", generatedMetaDescription: "Live meta 1" }), // pure no-op
+      mkDraft(2, { generatedTitle: " Live title 2 ", generatedMetaDescription: "Live meta 2\n" }), // no-op modulo whitespace
+      mkDraft(3, { generatedTitle: "Live title 3" }), // meta differs -> real change
+      mkDraft(4, { generatedMetaDescription: "Live meta 4" }), // title differs -> real change
+      mkDraft(5),
+      mkDraft(6),
+    ];
+
+    await runNightlyDraftJob(NOW);
+
+    expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([3, 4, 5, 6]);
+  });
+
+  it("treats a page with no live title/meta (null in the DB) as a real change", async () => {
+    pagesRows = [mkPage(1, { title: null, metaDescription: null })];
+    draftRows = [mkDraft(1)];
+
+    await runNightlyDraftJob(NOW);
+
+    expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([1]);
+  });
+
+  it("opens NO PR when every candidate is batched or a no-op", async () => {
+    batchRows = [{ status: "merged", pages: ["/p1", "/p2", "/p3"] }];
+    draftRows = draftRows.map((d) => (d.pageId >= 4 ? { ...d, generatedTitle: `Live title ${d.pageId}`, generatedMetaDescription: `Live meta ${d.pageId}` } : d));
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+    expect(armHold).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ autoApproved: false, pickedUp: 0 });
   });
 });

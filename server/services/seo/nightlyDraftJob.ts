@@ -26,7 +26,7 @@
  * if auto-approval itself failed (e.g. GitHub transiently down).
  */
 import { getDb } from "../../db";
-import { seoPages, seoAiDrafts } from "../../../drizzle/schema";
+import { seoPages, seoAiDrafts, seoApprovalBatches } from "../../../drizzle/schema";
 import { findLockedPages } from "../../seo/lockedPages";
 import { isInPendingBatch, approveBatchToPR, buildBatchDiff, yyyymmdd } from "./bulkApprove";
 import { isMockProvider } from "./ai/optimizationProvider";
@@ -101,7 +101,17 @@ export type PickupCandidate = {
   draftStatus: string;
   /** seoAiDrafts.model — "mock-v1" placeholders must never ship. */
   model: string;
+  /**
+   * The page's currently observed title / meta description. When BOTH are
+   * provided (null = "the page has none"), a draft identical to them is a no-op
+   * and is skipped — it would burn a batch slot to change nothing. Leaving
+   * either undefined disables the check for that candidate.
+   */
+  pageTitle?: string | null;
+  pageMeta?: string | null;
 };
+
+const normText = (s: string | null | undefined) => (s ?? "").trim();
 
 export type NightlySelectionContext = {
   lockedPaths: Set<string>;
@@ -153,13 +163,15 @@ export function selectNightlyDraftCandidates(
  * being re-generated. Same floor/exclusions as selectNightlyDraftCandidates
  * (>= 20 impressions unless pinned, not locked, not in an open batch) minus the cooldown,
  * plus: has both a title and a meta description, not already approved, not a
- * mock draft, and not already chosen for this batch. Ranked by impressions
+ * mock draft, not already chosen for this batch, NEVER batched before (any
+ * batch status — open, merged or reverted; `batchedPaths`), and not a no-op
+ * against the live title/meta (`pageTitle`/`pageMeta`). Ranked by impressions
  * desc after the pinned pages (which come first, in list order); NOT capped and NOT lint-checked — the caller lints at diff level and
  * takes as many as fit under the 20 cap.
  */
 export function selectCleanDraftPickups(
   cands: PickupCandidate[],
-  ctx: { lockedPaths: Set<string>; pendingBatchPaths: Set<string>; excludePageIds: Set<number> },
+  ctx: { lockedPaths: Set<string>; pendingBatchPaths: Set<string>; excludePageIds: Set<number>; batchedPaths?: Set<string> },
 ): PickupCandidate[] {
   return cands
     .filter((c) => {
@@ -168,7 +180,17 @@ export function selectCleanDraftPickups(
       if (isMockProvider(c.model)) return false;
       if (c.impressions < MIN_IMPRESSIONS_90D && pinIndex(c.pagePath) < 0) return false;
       if (ctx.lockedPaths.has(c.pagePath) || ctx.pendingBatchPaths.has(c.pagePath)) return false;
+      // "Unbatched" means never batched: a merged batch already shipped this page (its draft just wasn't re-flagged), and a reverted one was rolled back on purpose.
+      if (ctx.batchedPaths?.has(c.pagePath)) return false;
       if (ctx.excludePageIds.has(c.pageId)) return false;
+      if (
+        c.pageTitle !== undefined &&
+        c.pageMeta !== undefined &&
+        normText(c.title) === normText(c.pageTitle) &&
+        normText(c.metaDescription) === normText(c.pageMeta)
+      ) {
+        return false; // identical to what's live — would change nothing
+      }
       return true;
     })
     .sort((a, b) => {
@@ -313,12 +335,24 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
     const [warmedUp, breaker] = await Promise.all([isWarmedUp("meta"), checkCircuitBreakerConditions()]);
     if (warmedUp && !breaker.shouldPause) {
       try {
+        const batches = await db.select().from(seoApprovalBatches);
+        const batchedPaths = new Set<string>(batches.flatMap((b) => (b.pages as string[] | null) ?? []));
         const pickupPool = selectCleanDraftPickups(
           pages.map((p) => {
             const d = draftByPageId.get(p.id);
-            return { pageId: p.id, pagePath: p.page, impressions: p.impressions, title: d?.generatedTitle ?? null, metaDescription: d?.generatedMetaDescription ?? null, draftStatus: d?.status ?? "draft", model: d?.model ?? "mock-v1" };
+            return {
+              pageId: p.id,
+              pagePath: p.page,
+              impressions: p.impressions,
+              title: d?.generatedTitle ?? null,
+              metaDescription: d?.generatedMetaDescription ?? null,
+              draftStatus: d?.status ?? "draft",
+              model: d?.model ?? "mock-v1",
+              pageTitle: p.title ?? null,
+              pageMeta: p.metaDescription ?? null,
+            };
           }),
-          { lockedPaths: new Set(lockedMap.keys()), pendingBatchPaths, excludePageIds: new Set(readyPageIds) },
+          { lockedPaths: new Set(lockedMap.keys()), pendingBatchPaths, excludePageIds: new Set(readyPageIds), batchedPaths },
         );
         const batch = await assembleBatch(selected.filter((s) => readyPageIds.includes(s.pageId)), pickupPool);
         if (batch.pageIds.length > 0) {
