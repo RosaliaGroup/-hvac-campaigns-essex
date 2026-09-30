@@ -26,8 +26,25 @@ import { pageHash } from "./sync";
 /** Real routes that are app/auth surfaces, not marketing pages — never registered as SEO pages. */
 export const NON_MARKETING_ROUTES: ReadonlySet<string> = new Set(["/accept-invite", "/reset-password", "/team-login", "/portal"]);
 
+const MANIFEST_REL = "netlify/edge-functions/routes-manifest.json";
+
+/**
+ * A repo-relative file's location under BOTH layouts this server runs in:
+ *  - dev / tsx / tests run the source (server/services/seo/*.ts), so the repo root is three directories up;
+ *  - production runs the esbuild bundle (dist/index.js; see the "build" script), where import.meta.dirname is
+ *    <repo>/dist, so "../../.." points OUTSIDE the repo (server/_core/vite.ts serves dist/public from the same
+ *    assumption). The app is started from the repo root, so process.cwd() finds it there.
+ * First candidate that exists wins; if none does, the first is returned so the ENOENT names a sensible path.
+ * Before this, the registry resolved only the source layout: in production it threw ENOENT every night (caught and
+ * logged by runNightlyDraftJob) and never registered a new route.
+ */
+export function resolveRepoFile(rel: string, dirname: string = import.meta.dirname, cwd: string = process.cwd(), exists: (p: string) => boolean = fs.existsSync): string {
+  const candidates = [path.resolve(dirname, "../../..", rel), path.resolve(cwd, rel)];
+  return candidates.find((c) => exists(c)) ?? candidates[0];
+}
+
 export function manifestPath(): string {
-  return path.resolve(import.meta.dirname, "../../../netlify/edge-functions/routes-manifest.json");
+  return resolveRepoFile(MANIFEST_REL);
 }
 
 export function loadRoutesManifest(file: string = manifestPath()): string[] {
