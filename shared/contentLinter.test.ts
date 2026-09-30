@@ -220,3 +220,50 @@ describe("isResidentialOrRebateTopic", () => {
     expect(isResidentialOrRebateTopic({ title: "PTAC vs Mini-Split vs VRF for Multifamily Retrofits", audience: "property managers" })).toBe(false);
   });
 });
+
+describe("lintContent — deductible calibration", () => {
+  const codes = (body: string, facts = factsWithIncentive) => lintContent({ ...cleanInput, body: words(1000) + " " + body }, facts).findings.map((f) => f.code);
+
+  it('allows "$0 deductible" when facts.warranty.deductible is 0', () => {
+    expect(VERIFIED_FACTS.warranty.deductible).toBe(0);
+    expect(codes("Eligible coverage carries a $0 deductible on covered repairs.")).not.toContain("unverified_dollar_figure");
+    expect(codes("Eligible coverage carries a $0 deductible on covered repairs.")).not.toContain("deductible_unverified");
+  });
+
+  it('allows "no deductible" when facts.warranty.deductible is 0', () => {
+    expect(codes("There is no deductible on covered repairs.")).not.toContain("deductible_unverified");
+  });
+
+  it('still blocks "$0" that is not a deductible (e.g. "$0 down")', () => {
+    expect(codes("Get started with $0 down today.")).toContain("unverified_dollar_figure");
+  });
+
+  it("blocks a no/$0-deductible claim when the facts deductible is not 0", () => {
+    const facts = { ...factsWithIncentive, warranty: { ...factsWithIncentive.warranty, deductible: 100 } };
+    expect(codes("There is no deductible on covered repairs.", facts)).toContain("deductible_unverified");
+    expect(codes("Coverage has a $0 deductible.", facts)).toContain("deductible_unverified");
+    expect(codes("Coverage has a $0 deductible.", facts)).toContain("unverified_dollar_figure");
+  });
+});
+
+describe("lintContent — negated lease/rent calibration", () => {
+  const codes = (body: string) => lintContent({ ...cleanInput, body: words(1000) + " " + body }, factsWithIncentive).findings.map((f) => f.code);
+
+  it.each([
+    "Membership is not a lease.",
+    "Unlike a lease, you own the system.",
+    "We don't rent equipment; you own it.",
+    "You own the system, so there is no lease to worry about.",
+  ])('allows negated mention: "%s"', (s) => {
+    expect(codes(s)).not.toContain("membership_equipment_ownership_implied");
+  });
+
+  it.each([
+    "Membership includes a lease on the equipment.",
+    "You rent the equipment with membership.",
+    "You own the system, and we lease the equipment back to you.",
+    "It is not cheap, and you lease the unit.",
+  ])('still blocks asserted mention: "%s"', (s) => {
+    expect(codes(s)).toContain("membership_equipment_ownership_implied");
+  });
+});

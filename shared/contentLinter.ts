@@ -185,7 +185,16 @@ export function lintContent(input: ContentLintInput, facts: VerifiedFacts): Cont
   if (CLIENT_NAME_RE.test(body)) {
     findings.push(blockFinding("named_client", `Body appears to name a specific client/customer — heuristic match: "${body.match(CLIENT_NAME_RE)?.[0]}".`));
   }
-  const dollarMatches = body.match(DOLLAR_FIGURE_RE) ?? [];
+  // "$0 deductible" is a verified claim when facts.warranty.deductible is 0; "$0" anywhere else (e.g. "$0 down") stays unverified.
+  const dollarMatches: string[] = [];
+  for (const m of Array.from(body.matchAll(DOLLAR_FIGURE_RE))) {
+    const isVerifiedZeroDeductible =
+      facts.warranty.deductible === 0 && Number(m[0].replace(/[^\d.]/g, "")) === 0 && /^\s*deductible/i.test(body.slice((m.index ?? 0) + m[0].length));
+    if (!isVerifiedZeroDeductible) dollarMatches.push(m[0]);
+  }
+  if (facts.warranty.deductible !== 0 && /\b(?:no|zero)\s+deductible\b|\$0\s+deductible\b/i.test(body)) {
+    findings.push(blockFinding("deductible_unverified", `Body claims no/$0 deductible, but VERIFIED_FACTS.warranty.deductible is ${facts.warranty.deductible}.`));
+  }
   const verifiedAmounts = facts.incentives.map((i) => i.amountText.toLowerCase());
   for (const raw of dollarMatches) {
     const found = verifiedAmounts.some((amt) => amt.includes(raw.toLowerCase()) || raw.toLowerCase().includes(amt));

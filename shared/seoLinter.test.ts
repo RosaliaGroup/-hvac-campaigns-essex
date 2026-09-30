@@ -352,3 +352,27 @@ describe("lintPriceRangeClaims", () => {
     expect(findings.some((f) => f.code === "unverified_price_range")).toBe(false);
   });
 });
+
+describe("lintDifferentiationClaims — negated lease/rent (calibration)", () => {
+  const blocked = (t: string) => lintDifferentiationClaims(t).some((f) => f.code === "membership_equipment_ownership_implied");
+
+  it('allows "not a lease", "unlike a lease", "we don\'t rent", and ownership-plus-negation sentences', () => {
+    for (const t of ["This is not a lease.", "Unlike a lease, you own it.", "We don't rent equipment.", "You own the system — there is no lease.", "Never a rent-to-own deal."]) {
+      expect(blocked(t), t).toBe(false);
+    }
+  });
+
+  it("still blocks asserted lease/rent, including after an unrelated negation or an ownership claim", () => {
+    for (const t of ["Membership includes a lease.", "You rent the equipment.", "It is not cheap, and you lease the unit.", "You own the system, and we lease the equipment back."]) {
+      expect(blocked(t), t).toBe(true);
+    }
+  });
+
+  it("a negated mention does not mask a separate asserted one", () => {
+    expect(blocked("This is not a lease. Our membership includes a lease.")).toBe(true);
+  });
+
+  it('other membership phrases are unaffected by negation ("subscription includes the equipment")', () => {
+    expect(blocked("Not cheap: our subscription includes the equipment.")).toBe(true);
+  });
+});
