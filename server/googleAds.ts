@@ -110,6 +110,16 @@ async function getClient(refreshToken: string) {
   });
 }
 
+/**
+ * google-ads-api returns enum fields as numbers (2 = ENABLED, 3 = PAUSED, …). The CRM page compares
+ * status to "ENABLED" and renders it, so hand it the enum NAME. Already-a-string values pass through.
+ */
+export function enumName(e: Record<number, string>, v: unknown): string {
+  if (typeof v === "string") return v;
+  if (typeof v === "number" && e[v]) return e[v];
+  return "UNKNOWN";
+}
+
 // Get campaign performance metrics
 export async function getCampaignPerformance(refreshToken: string) {
   const customer = await getClient(refreshToken);
@@ -134,8 +144,8 @@ export async function getCampaignPerformance(refreshToken: string) {
   return campaigns.map((row: any) => ({
     id: String(row.campaign.id),
     name: row.campaign.name,
-    status: row.campaign.status,
-    channelType: row.campaign.advertising_channel_type,
+    status: enumName(enums.CampaignStatus as any, row.campaign.status),
+    channelType: enumName(enums.AdvertisingChannelType as any, row.campaign.advertising_channel_type),
     impressions: Number(row.metrics.impressions || 0),
     clicks: Number(row.metrics.clicks || 0),
     costMicros: Number(row.metrics.cost_micros || 0),
