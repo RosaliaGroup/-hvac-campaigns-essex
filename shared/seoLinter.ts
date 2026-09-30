@@ -491,18 +491,52 @@ export function lintDollarRanges(text: string, priceRanges: Array<{ page: string
  * a number like this may appear ONLY if it exists in VERIFIED_FACTS. Today that
  * means the county count (business.serviceCounties.length) and
  * business.yearsInBusiness; there are no verified customer, project,
- * technician or review figures, so ANY such claim blocks. Digits only, plus the
- * vague-quantity forms ("hundreds of customers"); spelled-out numbers are not
- * detected (documented gap). Coverage terms ("10-year parts & labor") and
+ * technician or review figures, so ANY such claim blocks. Reads digits ("1,200", "2k"),
+ * spelled-out numbers ("fifteen counties") and the vague-quantity forms ("hundreds of
+ * customers"); skips dollar amounts, rates ("1 in 3 homeowners"), calendar years and a bare "one". Coverage terms ("10-year parts & labor") and
  * equipment ages ("over 10 years old") are deliberately not matched — only
  * tenure/count phrasings are.
  */
 export type NumericClaimFacts = { business: { serviceCounties: string[]; yearsInBusiness: number } };
 
-// Not glued to a preceding letter/digit/dot — "HSPF2 ratings" and "SEER2 rating" are efficiency ratings, not "2 ratings".
-const NUM = "(?<![A-Za-z0-9.])(\\d[\\d,]*(?:\\.\\d+)?)";
+// Spelled-out numbers ("fifteen counties", "thirty years serving NJ") are claims too — digits alone let them through.
+const UNIT_WORDS: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13,
+  fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+};
+const TENS_WORDS: Record<string, number> = { twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+const WORD_NUM = `(?:(?:${Object.keys(TENS_WORDS).join("|")})(?:[-\\s](?:one|two|three|four|five|six|seven|eight|nine))?|${Object.keys(UNIT_WORDS).join("|")}|hundred|dozen)`;
+
+/** Numeric value of a matched number token: digits ("1,200", "2.5"), K notation ("2k"), or a number word. NaN if unreadable. */
+function numberValue(raw: string): number {
+  const t = raw.trim().toLowerCase();
+  if (/^\d/.test(t)) {
+    const k = /k$/.test(t);
+    const n = parseFloat(t.replace(/[,\s]|k$/g, ""));
+    return k ? n * 1000 : n;
+  }
+  if (t === "hundred") return 100;
+  if (t === "dozen") return 12;
+  const [head, tail] = t.split(/[-\s]/);
+  if (head in TENS_WORDS) return TENS_WORDS[head] + (tail ? (UNIT_WORDS[tail] ?? 0) : 0);
+  return UNIT_WORDS[head] ?? NaN;
+}
+
+// Not glued to a preceding letter/digit/dot — "HSPF2 ratings" and "SEER2 rating" are efficiency ratings, not "2 ratings" —
+// and not a dollar amount ("Up to $16K HVAC installation" is a price, not a count of installations).
+// Reads digits (optionally with a K suffix: "2k clients") or a number word.
+const NUM = "(?<![A-Za-z0-9.$])(?<!\\$\\s)(\\d[\\d,]*(?:\\.\\d+)?\\s?[kK]?(?![A-Za-z0-9])|" + WORD_NUM + ")";
+// A share or a rate, not a count of OUR customers/projects: "1 in 3 homeowners", "every 3 homeowners", "2 of 5 families".
+const NOT_RATE = "(?<!\\b(?:in|of|per|every|each|out\\s+of)\\s)";
+const ADJ = "(?:(?:happy|satisfied|local|nj|repeat|new|residential|commercial|completed|successful|finished|hvac|installation)\\s+)*";
+const PEOPLE = "(?:customers|clients|homeowners|families|households|property managers|building owners)";
+const WORK = "(?:projects|installations|installs|jobs)";
 const NUMERIC_CLAIM_RULES: Array<{ kind: string; re: RegExp; verified?: (f: NumericClaimFacts) => number | null }> = [
-  { kind: "county count", re: new RegExp(NUM + "\\+?\\s*(?:nj\\s+|new jersey\\s+)?counties\\b", "gi"), verified: (f) => f.business.serviceCounties.length },
+  {
+    kind: "county count",
+    re: new RegExp(NUM + "\\+?[-\\s]*(?:(?:nj|new jersey|northern|north jersey|surrounding|neighboring)\\s+)*counties\\b", "gi"),
+    verified: (f) => f.business.serviceCounties.length,
+  },
   {
     kind: "years in business",
     re: new RegExp(NUM + "\\+?[\\s-]*years?\\s+(?:in business|of experience|experience|of service|serving|in the (?:hvac )?(?:business|industry))\\b", "gi"),
@@ -513,14 +547,17 @@ const NUMERIC_CLAIM_RULES: Array<{ kind: string; re: RegExp; verified?: (f: Nume
     re: new RegExp("\\b(?:in business for|serving\\s+[\\w\\s,&.'-]{0,30}?\\s+for)\\s+(?:over\\s+|more than\\s+|nearly\\s+|almost\\s+)?" + NUM + "\\+?\\s+years\\b", "gi"),
     verified: (f) => f.business.yearsInBusiness,
   },
-  { kind: "customer count", re: new RegExp(NUM + "\\+?\\s+(?:happy\\s+|satisfied\\s+|local\\s+|nj\\s+|repeat\\s+)?(?:customers|clients|homeowners|families|households)\\b", "gi") },
-  { kind: "project count", re: new RegExp(NUM + "\\+?\\s+(?:(?:completed|successful|finished)\\s+(?:projects|installs|installations|jobs)|projects)\\b", "gi") },
+  { kind: "customer count", re: new RegExp(NOT_RATE + NUM + "\\+?\\s+" + ADJ + PEOPLE + "\\b", "gi") },
+  { kind: "project count", re: new RegExp(NOT_RATE + NUM + "\\+?\\s+" + ADJ + WORK + "\\b", "gi") },
   { kind: "technician count", re: new RegExp(NUM + "\\+?\\s+(?:licensed\\s+|certified\\s+|expert\\s+|trained\\s+|skilled\\s+|full-time\\s+)?(?:technicians|techs|installers|team members|employees|crew members)\\b", "gi") },
   { kind: "review count", re: new RegExp(NUM + "\\+?\\s+(?:five[- ]star\\s+|5[- ]star\\s+|verified\\s+|google\\s+)?(?:reviews|ratings|testimonials)\\b", "gi") },
   { kind: "star rating", re: /(?<![A-Za-z0-9.])(\d(?:\.\d)?)[\s-]*stars?\b/gi },
   { kind: "star rating", re: /\b(\d(?:\.\d)?)\s*\/\s*5\b/g },
-  { kind: "vague quantity", re: /\b(?:hundreds|thousands|dozens)\s+of\s+(?:happy\s+|satisfied\s+)?(?:customers|clients|homeowners|families|projects|installations|jobs|reviews)\b/gi },
+  { kind: "vague quantity", re: new RegExp("\\b(?:hundreds|thousands|dozens|scores)\\s+of\\s+(?:happy\\s+|satisfied\\s+)?(?:customers|clients|homeowners|families|property managers|building owners|projects|installations|jobs|reviews)\\b", "gi") },
 ];
+
+/** Kinds that are COUNTS of people/things (a bare "one", or a calendar year in a title, is not a claim about how many). */
+const COUNT_KINDS = new Set(["county count", "customer count", "project count", "technician count", "review count"]);
 
 export function lintNumericClaims(text: string, facts: NumericClaimFacts): WarrantyLintFinding[] {
   const findings: WarrantyLintFinding[] = [];
@@ -528,7 +565,11 @@ export function lintNumericClaims(text: string, facts: NumericClaimFacts): Warra
   const seen = new Set<string>();
   for (const rule of NUMERIC_CLAIM_RULES) {
     for (const m of Array.from(text.matchAll(rule.re))) {
-      const claimed = parseFloat((m[1] ?? "").replace(/,/g, ""));
+      const claimed = numberValue(m[1] ?? "");
+      if (COUNT_KINDS.has(rule.kind)) {
+        if (Number.isFinite(claimed) && claimed <= 1) continue; // singular use ("one installation")
+        if (/^\d{4}$/.test((m[1] ?? "").trim()) && claimed >= 2015 && claimed <= 2035) continue; // a calendar year in a title ("2026 Homeowner's Guide"), not a count
+      }
       const verified = rule.verified ? rule.verified(facts) : null;
       if (verified !== null && Number.isFinite(claimed) && claimed === verified) continue;
       const key = rule.kind + "|" + m[0].toLowerCase();
