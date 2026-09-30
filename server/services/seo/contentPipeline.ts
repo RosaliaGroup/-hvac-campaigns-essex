@@ -145,7 +145,7 @@ async function draftUntilPassing(topic: SeoContentQueueRow, facts: VerifiedFacts
     } catch (err) {
       if (!(err instanceof ContentDraftParseError)) throw err;
       parseError = err;
-      findings = [...findings, "invalid_json: your previous response was not the required JSON object — respond with ONLY that JSON object."];
+      findings = [...findings, `invalid_json: your previous response was not the required JSON object (${(err as Error).message.replace(/^Content draft response was not parseable as the expected JSON shape:\s*/, "").slice(0, 200)}) — respond with ONLY that JSON object, every section complete.`];
       continue;
     }
     last = await evaluateDraft(post, facts);

@@ -449,3 +449,20 @@ describe("one PR per topic, one open content PR at a time", () => {
     delete process.env.SEO_AUTOPUBLISH_ENABLED;
   });
 });
+
+describe("runWeeklyContentJob — a malformed-section draft is a failed attempt that is retried with the reason, not a crash", () => {
+  it("retries after a shape error and feeds the reason back to the model", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValue(topic);
+    vi.mocked(draftContentPost)
+      .mockRejectedValueOnce(new ContentDraftParseError('section 4 (paragraph) is missing its "content" string'))
+      .mockResolvedValueOnce(goodPost as never);
+    vi.mocked(runCriticPass).mockResolvedValue({ passes: true, unsupportedClaims: [], model: "claude-opus-4-8" });
+
+    const result = await runWeeklyContentJob(factsWithIncentive);
+
+    expect(result.status === "drafted" && result.passes && result.attempts).toBe(2);
+    const feedback = (vi.mocked(draftContentPost).mock.calls[1][2] as string[]).find((f) => f.startsWith("invalid_json"));
+    expect(feedback).toContain('section 4 (paragraph) is missing its "content" string');
+    expect(feedback).toContain("every section complete");
+  });
+});

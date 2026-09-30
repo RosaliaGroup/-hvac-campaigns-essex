@@ -28,17 +28,22 @@ export function countPostStructure(post: BlogPostData): PostStructureCounts {
 }
 
 function sectionText(s: BlogSection): string {
+  // Defensive: a model-drafted section can be missing its text (or use an unknown type). That must never crash the
+  // pipeline with a TypeError ("Cannot read properties of undefined (reading 'matchAll')" took a content drain down) —
+  // contentDrafting.parseContentDraftResponse rejects such drafts as a retryable parse error, and this is the backstop.
+  const x = s as { content?: unknown; items?: unknown };
   switch (s.type) {
     case "intro":
     case "h2":
     case "paragraph":
     case "stat_box":
-      return s.content;
+    case "cta_box":
+      return typeof x.content === "string" ? x.content : "";
     case "checklist":
     case "numbered_list":
-      return s.items.join("\n");
-    case "cta_box":
-      return s.content;
+      return Array.isArray(x.items) ? x.items.filter((i): i is string => typeof i === "string").join("\n") : "";
+    default:
+      return "";
   }
 }
 
@@ -46,7 +51,7 @@ function sectionText(s: BlogSection): string {
 export function renderPostPlainText(post: BlogPostData): string {
   const parts = [post.title, post.excerpt, ...post.sections.map(sectionText)];
   if (post.faqSchema) {
-    for (const f of post.faqSchema) parts.push(f.question, f.answer);
+    for (const f of post.faqSchema) parts.push(String(f?.question ?? ""), String(f?.answer ?? ""));
   }
   // Newline-separated so every heading, paragraph, checklist item and FAQ entry is its own unit: the claims linters split
   // sentences on newlines too, so an unpunctuated "What to send us" list can no longer be glued into one giant "sentence".
@@ -59,7 +64,7 @@ const MD_LINK_RE = /\[[^\]]+\]\(([^)]+)\)/g;
 export function extractInternalLinkPaths(post: BlogPostData): string[] {
   const urls: string[] = [];
   for (const s of post.sections) {
-    if (s.type === "cta_box") urls.push(s.buttonUrl);
+    if (s.type === "cta_box" && typeof s.buttonUrl === "string") urls.push(s.buttonUrl);
     const text = sectionText(s);
     for (const m of Array.from(text.matchAll(MD_LINK_RE))) urls.push(m[1]);
   }

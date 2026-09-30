@@ -148,3 +148,45 @@ describe("draftContentPost — length limits the linter enforces are in the prom
     expect(s).not.toContain("- 900-1400 words total");
   });
 });
+
+describe("parseContentDraftResponse — structurally broken sections are a retryable parse error, not a crash (a missing 'content' took a drain down with a TypeError)", () => {
+  const withSections = (sections: unknown[], extra: Record<string, unknown> = {}) => ok(JSON.stringify({ ...validPost, sections, ...extra }));
+
+  it.each([
+    ["an intro with no content", [{ type: "intro" }]],
+    ["an h2 with an empty content", [{ type: "h2", content: "   " }]],
+    ["a checklist with no items", [{ type: "checklist" }]],
+    ["a checklist with a non-string item", [{ type: "checklist", items: ["ok", 3] }]],
+    ["a numbered_list with an empty items array", [{ type: "numbered_list", items: [] }]],
+    ["a cta_box with no buttonUrl", [{ type: "cta_box", content: "Talk to us", buttonText: "Go" }]],
+    ["an unknown section type", [{ type: "image", content: "x" }]],
+    ["a section that is not an object", ["just a string"]],
+    ["an empty sections array", []],
+  ])("rejects %s with ContentDraftParseError naming the section", async (_label, sections) => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(withSections(sections as unknown[]));
+    await expect(draftContentPost(topic, VERIFIED_FACTS)).rejects.toBeInstanceOf(ContentDraftParseError);
+  });
+
+  it("the error says WHICH section and what is missing, so the retry can be told", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(withSections([{ type: "intro", content: "fine" }, { type: "paragraph" }]));
+    await expect(draftContentPost(topic, VERIFIED_FACTS)).rejects.toThrow(/section 1 \(paragraph\) is missing its "content"/);
+  });
+
+  it("rejects a missing/empty metaDescription or excerpt, and a malformed faqSchema", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify({ ...validPost, metaDescription: "" })));
+    await expect(draftContentPost(topic, VERIFIED_FACTS)).rejects.toThrow(/metaDescription/);
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify({ ...validPost, faqSchema: [{ question: "Q only" }] })));
+    await expect(draftContentPost(topic, VERIFIED_FACTS)).rejects.toThrow(/faqSchema\[0\]/);
+  });
+
+  it("still accepts a well-formed post with every section type and an FAQ", async () => {
+    const sections = [
+      { type: "intro", content: "Hello." }, { type: "h2", content: "Heading" }, { type: "paragraph", content: "Body." },
+      { type: "stat_box", content: "A fact." }, { type: "checklist", items: ["a", "b"] }, { type: "numbered_list", items: ["1", "2"] },
+      { type: "cta_box", content: "Call.", buttonText: "Quote", buttonUrl: "https://mechanicalenterprise.com/commercial" },
+    ];
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(withSections(sections, { faqSchema: [{ question: "Q?", answer: "A." }] }));
+    const post = await draftContentPost(topic, VERIFIED_FACTS);
+    expect(post.sections).toHaveLength(7);
+  });
+});
