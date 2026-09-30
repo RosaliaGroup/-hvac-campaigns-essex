@@ -134,6 +134,13 @@ export type VerifiedFacts = {
     yearsInBusiness: number;
     /** Deliberately null: no verified founding year exists anywhere in the codebase. Owner-supplied only. */
     founded: number | null;
+    /**
+     * Owner-supplied only. While null, ANY "N customers/clients/homeowners" claim BLOCKs
+     * (shared/numericClaimsLinter.ts) — there is nothing verified to match it against.
+     */
+    customersServed?: number | null;
+    /** Owner-supplied only. While null, ANY "N projects/installations" claim BLOCKs. */
+    projectsCompleted?: number | null;
   };
   /** Owner-maintained. Empty until the owner verifies at least one current incentive figure. */
   incentives: VerifiedIncentive[];
@@ -180,6 +187,8 @@ export const VERIFIED_FACTS: VerifiedFacts = {
     // of combined/team HVAC experience — this is team experience, not a company founding date.
     yearsInBusiness: 20,
     founded: null,
+    customersServed: null,
+    projectsCompleted: null,
   },
   // Owner-attested as factual on 2026-09-26, standardized site-wide by commit
   // 1b8bf71 ("Standardize rebate claims: $16K residential, 80% commercial,

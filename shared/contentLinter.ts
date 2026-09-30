@@ -27,6 +27,7 @@ import {
   lintDollarRanges,
 } from "./seoLinter";
 import { isFactsConfigured, type VerifiedFacts } from "./verifiedFacts";
+import { lintNumericClaims, numericFactsFrom } from "./numericClaimsLinter";
 
 export type ContentLintSeverity = "block" | "warn";
 export type ContentLintFinding = { severity: ContentLintSeverity; code: string; message: string };
@@ -180,6 +181,12 @@ export function lintContent(input: ContentLintInput, facts: VerifiedFacts): Cont
   }
   for (const f of lintDollarRanges(body, facts.priceRanges)) {
     findings.push({ severity: f.severity, code: f.code, message: f.message });
+  }
+  // Counts about the business (counties / years in business / customers / projects) must match a VERIFIED_FACTS figure exactly.
+  const projectCountAlreadyBlocked = PROJECT_COUNT_RE.test(body);
+  for (const f of lintNumericClaims(body, numericFactsFrom(facts))) {
+    if (f.code === "unverified_project_count" && projectCountAlreadyBlocked) continue; // "we've completed N …" is already reported as project_count_claim below
+    findings.push(blockFinding(f.code, f.message));
   }
 
   // ── Extended, body-specific rules (spec Part 2 / addendum §A4) ──

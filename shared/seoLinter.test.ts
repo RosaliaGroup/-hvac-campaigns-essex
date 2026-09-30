@@ -452,3 +452,39 @@ describe("lintPageMeta — dollar ranges, service hours, rebate-leading titles (
     expect(codes(meta("Free Lighting & HVAC Rebates for Bakeries", meta2, "/direct-install/bakeries-nj"))).not.toContain("title_leads_with_rebate");
   });
 });
+
+describe("lintPageMeta — verified numeric claims (counties / years / customers / projects)", () => {
+  const lint = (title: string, metaDescription: string, opts = {}) => lintPageMeta({ pagePath: "/blog/x", title, metaDescription }, opts);
+  const codes = (r: ReturnType<typeof lintPageMeta>) => r.findings.map((f) => f.code);
+  const ok = "Quality installation with optional 10-year parts & labor coverage.";
+
+  it("BLOCKS the unbacked '15 counties' figure in a meta description", () => {
+    const r = lint("HVAC Installation in NJ", "Serving 15 counties across New Jersey. " + ok);
+    expect(codes(r)).toContain("unverified_county_count");
+    expect(r.passes).toBe(false);
+    expect(r.findings.find((f) => f.code === "unverified_county_count")).toMatchObject({ severity: "block", field: "both" });
+  });
+
+  it("scans the TITLE too", () => {
+    const r = lint("500+ Happy Customers | NJ HVAC", ok);
+    expect(codes(r)).toContain("unverified_customer_count");
+    expect(r.passes).toBe(false);
+  });
+
+  it("uses the real VERIFIED_FACTS by default: 20+ years and 9 counties pass, 25 years does not", () => {
+    expect(codes(lint("NJ HVAC Installation", "20+ years of experience serving 9 counties. " + ok))).not.toEqual(expect.arrayContaining(["unverified_years_claim", "unverified_county_count"]));
+    expect(lint("NJ HVAC Installation", "20+ years of experience serving 9 counties. " + ok).passes).toBe(true);
+    expect(codes(lint("NJ HVAC Installation", "25 years of experience. " + ok))).toContain("unverified_years_claim");
+  });
+
+  it("checks against the figures a caller passes (numericFacts override)", () => {
+    const nf = { serviceCounties: 15, yearsInBusiness: 20, customersServed: 500, projectsCompleted: null };
+    expect(codes(lint("NJ HVAC", "Serving 15 counties with 500 customers. " + ok, { numericFacts: nf }))).not.toEqual(expect.arrayContaining(["unverified_county_count", "unverified_customer_count"]));
+    expect(codes(lint("NJ HVAC", "Over 300 completed projects. " + ok, { numericFacts: nf }))).toContain("unverified_project_count");
+  });
+
+  it("leaves warranty terms and other numbers to their own rules — '10-year parts & labor' is not a years-in-business claim", () => {
+    const r = lint("Heat Pump Installation NJ | 10-Year Parts & Labor", "Optional 10-year parts & labor coverage on new installations by our team.");
+    for (const c of ["unverified_years_claim", "unverified_county_count", "unverified_customer_count", "unverified_project_count"]) expect(codes(r)).not.toContain(c);
+  });
+});

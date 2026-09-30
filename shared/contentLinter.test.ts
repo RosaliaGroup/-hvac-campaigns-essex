@@ -291,3 +291,34 @@ describe("lintContent — dollar ranges and service hours (owner decisions 2026-
     expect(codes("24/7 emergency service and same-day installs.", facts).some((c) => c.startsWith("service_hours_"))).toBe(false);
   });
 });
+
+describe("lintContent — verified numeric claims (counties / years / customers / projects)", () => {
+  const codes = (body: string, facts = factsWithIncentive) => lintContent({ ...cleanInput, body: words(1000) + " " + body }, facts).findings.map((f) => f.code);
+
+  it("BLOCKS '15 counties', an unverified years figure, and customer/project counts in the body", () => {
+    expect(codes("We serve 15 counties across New Jersey.")).toContain("unverified_county_count");
+    expect(codes("With 30 years of experience, we know NJ buildings.")).toContain("unverified_years_claim");
+    expect(codes("We have served 500 customers.")).toContain("unverified_customer_count");
+    expect(codes("Hundreds of happy property managers trust us.")).toContain("unverified_customer_count");
+  });
+
+  it("allows the verified figures from the facts it is given (9 counties, 20 years)", () => {
+    expect(codes("We serve 9 counties with 20+ years of experience.")).not.toEqual(expect.arrayContaining(["unverified_county_count", "unverified_years_claim"]));
+  });
+
+  it("checks against the facts passed in (owner-supplied customer count)", () => {
+    const facts = { ...factsWithIncentive, business: { ...factsWithIncentive.business, customersServed: 500 } };
+    expect(codes("We have served 500 customers.", facts)).not.toContain("unverified_customer_count");
+    expect(codes("We have served 900 customers.", facts)).toContain("unverified_customer_count");
+  });
+
+  it("does not double-report 'we've completed N projects' — project_count_claim already says it", () => {
+    const c = codes("We've completed 300 projects for property managers.");
+    expect(c).toContain("project_count_claim");
+    expect(c).not.toContain("unverified_project_count");
+  });
+
+  it("still reports a project count phrased another way (no 'we've completed')", () => {
+    expect(codes("Over 1,000 installations across the state.")).toContain("unverified_project_count");
+  });
+});

@@ -10,6 +10,8 @@
  * fixed or deselected. WARN findings are shown but do not block approval.
  */
 import { PHONE_DISPLAY, PHONE_E164 } from "./business";
+import { VERIFIED_FACTS } from "./verifiedFacts";
+import { lintNumericClaims, numericFactsFrom, type NumericFacts } from "./numericClaimsLinter";
 
 export type LintSeverity = "block" | "warn";
 
@@ -50,6 +52,13 @@ export type LintOptions = {
    * so an SLA-hour or "24/7 monitoring" claim BLOCKs by default unless the
    * caller passes the real, owner-set VERIFIED_FACTS values.
    */
+  /**
+   * The verified figures a count claim (counties / years / customers / projects) is
+   * checked against. Defaults to the real VERIFIED_FACTS — unlike the fail-closed
+   * differentiation defaults below, because every production caller omits it and a
+   * fail-closed default would block VERIFIED claims like "20+ years". Tests override it.
+   */
+  numericFacts?: NumericFacts;
   differentiationFacts?: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean }; serviceHours?: { emergency24x7: boolean; sameDay: boolean } };
   /** §9b price-range matching. Defaults to empty — any "$X installed" claim BLOCKs until the caller passes real VERIFIED_FACTS.priceRanges entries for this page. */
   priceRanges?: Array<{ page: string; low: number; high: number }>;
@@ -608,6 +617,9 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
     findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
   }
   for (const f of lintDifferentiationFactClaims(combined, opts.differentiationFacts ?? UNCONFIGURED_DIFFERENTIATION_FACTS)) {
+    findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
+  }
+  for (const f of lintNumericClaims(combined, opts.numericFacts ?? numericFactsFrom(VERIFIED_FACTS))) {
     findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
   }
   for (const f of lintDollarRanges(combined, opts.priceRanges ?? [])) {
