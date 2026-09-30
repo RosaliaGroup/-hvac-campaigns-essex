@@ -267,3 +267,50 @@ describe("lintContent — negated lease/rent calibration", () => {
     expect(codes(s)).toContain("membership_equipment_ownership_implied");
   });
 });
+
+describe("lintContent — dollar ranges and service hours (owner decisions 2026-09-29)", () => {
+  const codes = (body: string, facts: typeof factsWithIncentive = factsWithIncentive) => lintContent({ ...cleanInput, body: words(1000) + " " + body }, facts).findings.map((f) => f.code);
+
+  it("blocks any dollar range while VERIFIED_FACTS.priceRanges is empty", () => {
+    expect(VERIFIED_FACTS.priceRanges).toEqual([]);
+    expect(codes("Expect to pay $8,000–$15,000 for a full replacement.")).toContain("unverified_dollar_range");
+  });
+
+  it("allows a range that matches a verified priceRanges entry", () => {
+    const facts = { ...factsWithIncentive, priceRanges: [{ page: "/x", item: "system", low: 8000, high: 15000, asOf: "2026-09-26", source: "owner" }] } as typeof factsWithIncentive;
+    expect(codes("Expect to pay $8,000–$15,000.", facts)).not.toContain("unverified_dollar_range");
+  });
+
+  it.each(["We offer 24/7 emergency service.", "Available around the clock.", "We can install same-day."])("blocks %s (serviceHours facts are false)", (t) => {
+    expect(VERIFIED_FACTS.serviceHours).toEqual({ emergency24x7: false, sameDay: false });
+    expect(codes(t).some((c) => c.startsWith("service_hours_"))).toBe(true);
+  });
+
+  it("allows them when the serviceHours facts are true", () => {
+    const facts = { ...factsWithIncentive, serviceHours: { emergency24x7: true, sameDay: true } };
+    expect(codes("24/7 emergency service and same-day installs.", facts).some((c) => c.startsWith("service_hours_"))).toBe(false);
+  });
+});
+
+describe("lintContent — unverified numeric claims (owner decision 2026-09-30)", () => {
+  const codes = (body: string) => lintContent({ ...cleanInput, body: words(1000) + " " + body }, factsWithIncentive).findings.map((f) => f.code);
+
+  it("blocks counties/years/customers/projects/technicians/reviews numbers that aren't in VERIFIED_FACTS", () => {
+    for (const t of ["We serve 15 counties.", "Over 30 years in business.", "We have 500 customers.", "After 300 projects.", "With 12 technicians.", "Backed by 250 reviews."]) {
+      expect(codes(t), t).toContain("unverified_numeric_claim");
+    }
+  });
+
+  it("allows the verified 9 counties and 20 years", () => {
+    expect(VERIFIED_FACTS.business.serviceCounties).toHaveLength(9);
+    expect(VERIFIED_FACTS.business.yearsInBusiness).toBe(20);
+    expect(codes("We serve 9 counties with 20 years of experience.")).not.toContain("unverified_numeric_claim");
+  });
+
+  it("uses the facts passed in, not a hardcoded figure", () => {
+    const facts = { ...factsWithIncentive, business: { ...factsWithIncentive.business, serviceCounties: ["A", "B"], yearsInBusiness: 5 } };
+    const c = (b: string) => lintContent({ ...cleanInput, body: words(1000) + " " + b }, facts).findings.map((f) => f.code);
+    expect(c("Serving 2 counties.")).not.toContain("unverified_numeric_claim");
+    expect(c("Serving 9 counties.")).toContain("unverified_numeric_claim");
+  });
+});

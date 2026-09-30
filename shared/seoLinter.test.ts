@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lintPageMeta, isBlocked, lintWarrantyClaims, lintDifferentiationClaims, lintDifferentiationFactClaims, lintPriceRangeClaims } from "./seoLinter";
+import { lintPageMeta, isBlocked, lintWarrantyClaims, lintDifferentiationClaims, lintDifferentiationFactClaims, lintPriceRangeClaims, lintNumericClaims } from "./seoLinter";
 
 describe("lintPageMeta — BLOCK rules (spec §3, acceptance test §11)", () => {
   it('blocks "#1" superlative claims', () => {
@@ -114,7 +114,7 @@ describe("lintPageMeta — BLOCK rules (spec §3, acceptance test §11)", () => 
 
 describe("lintPageMeta — WARN rules (approvable, not blocking)", () => {
   it('warns (does not block) on "free" without context', () => {
-    const result = lintPageMeta({ pagePath: "/x", title: "title", metaDescription: "Something free here." });
+    const result = lintPageMeta({ pagePath: "/x", title: "Something Free Page Title", metaDescription: "Something free here." });
     expect(result.passes).toBe(true);
     expect(result.findings.some((f) => f.code === "free_without_context" && f.severity === "warn")).toBe(true);
   });
@@ -124,12 +124,13 @@ describe("lintPageMeta — WARN rules (approvable, not blocking)", () => {
     expect(result.findings.some((f) => f.code === "free_without_context")).toBe(false);
   });
 
-  it("warns on same-day/24-7/emergency-off-topic and stale years without blocking", () => {
+  it("warns on emergency-off-topic and stale years, and BLOCKS 24/7 + same-day (owner has not confirmed them)", () => {
     const result = lintPageMeta({ pagePath: "/hvac-newark-nj", title: "24/7 same-day emergency service, 2024", metaDescription: "meta" }, { now: new Date("2026-09-25") });
-    expect(result.passes).toBe(true);
-    expect(result.findings.map((f) => f.code)).toEqual(
-      expect.arrayContaining(["same_day_claim", "24_7_claim", "stale_year"]),
-    );
+    expect(result.passes).toBe(false);
+    const codes = result.findings.map((f) => f.code);
+    expect(codes).toEqual(expect.arrayContaining(["service_hours_24x7_unverified", "service_hours_same_day_unverified", "stale_year"]));
+    expect(codes).not.toContain("same_day_claim"); // the old WARNs were superseded, not duplicated
+    expect(codes).not.toContain("24_7_claim");
   });
 
   it("does not warn emergency wording on an actual emergency page", () => {
@@ -374,5 +375,196 @@ describe("lintDifferentiationClaims — negated lease/rent (calibration)", () =>
 
   it('other membership phrases are unaffected by negation ("subscription includes the equipment")', () => {
     expect(blocked("Not cheap: our subscription includes the equipment.")).toBe(true);
+  });
+});
+
+describe("lintPageMeta — dollar ranges, service hours, rebate-leading titles (owner decisions 2026-09-29)", () => {
+  const meta = (title: string, metaDescription: string, pagePath = "/blog/x", opts = {}) => lintPageMeta({ pagePath, title, metaDescription }, opts);
+  const codes = (r: ReturnType<typeof lintPageMeta>) => r.findings.map((f) => f.code);
+
+  it.each([
+    "Replacement costs $8,000–$15,000 depending on size.",
+    "Costs run $100-$200 per pound.",
+    "Budget $5K to $9K for a mini-split.",
+    "About $8,000 — $15,000 all in.",
+  ])("BLOCKS an unverified dollar range: %s", (t) => {
+    const r = meta("HVAC guide", t);
+    expect(codes(r)).toContain("unverified_dollar_range");
+    expect(r.passes).toBe(false);
+  });
+
+  it("allows a range that exactly matches a verified priceRanges entry (any page), including K notation", () => {
+    const opts = { priceRanges: [{ page: "/a", low: 8000, high: 15000 }] };
+    expect(codes(meta("HVAC guide", "Costs $8,000–$15,000 typically.", "/blog/x", opts))).not.toContain("unverified_dollar_range");
+    expect(codes(meta("HVAC guide", "Costs $8K-$15K typically.", "/blog/x", opts))).not.toContain("unverified_dollar_range");
+    expect(codes(meta("HVAC guide", "Costs $8,000–$16,000 typically.", "/blog/x", opts))).toContain("unverified_dollar_range");
+  });
+
+  it("does not treat a single figure or 'up to $16K' as a range, and leaves 'installed' ranges to the page-specific rule", () => {
+    expect(codes(meta("HVAC guide", "PSE&G rebates up to $16K may apply."))).not.toContain("unverified_dollar_range");
+    const installed = meta("HVAC guide", "Systems run $5,000-$9,000 installed.");
+    expect(codes(installed)).toContain("unverified_price_range");
+    expect(codes(installed)).not.toContain("unverified_dollar_range");
+  });
+
+  it.each(["24/7 emergency help", "Service around the clock", "Around-the-clock repair", "Same-day installs", "same day service", "24x7 support"])(
+    'BLOCKS an unverified service-hours claim: "%s"',
+    (t) => {
+      const r = meta("HVAC guide", t);
+      expect(r.passes).toBe(false);
+      expect(codes(r).some((c) => c.startsWith("service_hours_"))).toBe(true);
+    },
+  );
+
+  it("allows 24/7 and same-day only when the serviceHours fact says so", () => {
+    const yes = { differentiationFacts: { portfolioSla: { responseHours: null }, monitoring: { is24x7: false }, serviceHours: { emergency24x7: true, sameDay: true } } };
+    expect(codes(meta("HVAC guide", "24/7 emergency help, same-day installs", "/blog/x", yes)).some((c) => c.startsWith("service_hours_"))).toBe(false);
+    const only24 = { differentiationFacts: { portfolioSla: { responseHours: null }, monitoring: { is24x7: false }, serviceHours: { emergency24x7: true, sameDay: false } } };
+    const r = meta("HVAC guide", "24/7 emergency help, same-day installs", "/blog/x", only24);
+    expect(codes(r)).toContain("service_hours_same_day_unverified");
+    expect(codes(r)).not.toContain("service_hours_24x7_unverified");
+  });
+
+  it('"24/7 monitoring" is reported once, by the monitoring rule, not twice', () => {
+    const c = codes(meta("HVAC guide", "Enjoy 24/7 monitoring on your system."));
+    expect(c).toContain("monitoring_24x7_unverified");
+    expect(c).not.toContain("service_hours_24x7_unverified");
+  });
+
+  it("WARNS (does not block) when an installation or city page title LEADS with rebates or a dollar figure", () => {
+    for (const [path, title] of [
+      ["/hvac-union-nj", "Up to $16K PSE&G Rebates | Union NJ HVAC Installation"],
+      ["/hvac-newark-nj", "NJ Rebates for HVAC Installation in Newark"],
+      ["/heat-pump-installation-nj", "$16K Rebates on Heat Pump Installation"],
+      ["/central-ac-installation-nj", "PSE&G Incentives: Central AC Installation"],
+    ]) {
+      const r = meta(title, "Quality installation with optional 10-year parts & labor coverage.", path);
+      expect(codes(r), title).toContain("title_leads_with_rebate");
+      expect(r.findings.find((f) => f.code === "title_leads_with_rebate")?.severity).toBe("warn");
+      expect(r.passes, title).toBe(true);
+    }
+  });
+
+  it("does NOT warn when rebates are a later clause, on blog posts, or on /direct-install pages", () => {
+    const meta2 = "Quality installation with optional 10-year parts & labor coverage.";
+    expect(codes(meta("Short Hills NJ HVAC Installation | Up to $16K Rebates", meta2, "/hvac-short-hills-nj"))).not.toContain("title_leads_with_rebate");
+    expect(codes(meta("PSE&G Instant Rebate Program for HVAC", meta2, "/blog/pseg-instant-rebate-program-nj"))).not.toContain("title_leads_with_rebate");
+    expect(codes(meta("Free Lighting & HVAC Rebates for Bakeries", meta2, "/direct-install/bakeries-nj"))).not.toContain("title_leads_with_rebate");
+  });
+});
+
+describe("lintNumericClaims — unverified numeric business claims (owner decision 2026-09-30)", () => {
+  const facts = { business: { serviceCounties: ["Essex", "Hudson", "Bergen", "Passaic", "Union", "Middlesex", "Morris", "Sussex", "Somerset"], yearsInBusiness: 20 } };
+  const blocked = (t: string, f = facts) => lintNumericClaims(t, f).length > 0;
+
+  it.each([
+    "Serving homeowners across 15 counties.",
+    "Trusted in 12 NJ counties.",
+    "Over 25 years in business.",
+    "30+ years of experience you can trust.",
+    "Proudly serving Essex County for 35 years.",
+    "We have served 500+ happy customers.",
+    "More than 2,000 homeowners helped.",
+    "Over 300 completed projects.",
+    "Our 12 licensed technicians are ready.",
+    "Read our 250 five-star reviews.",
+    "A 4.9-star rated contractor.",
+    "Rated 5/5 by clients.",
+    "Hundreds of satisfied customers choose us.",
+  ])("BLOCKS: %s", (t) => {
+    const r = lintNumericClaims(t, facts);
+    expect(r.length, t).toBeGreaterThan(0);
+    expect(r.every((f) => f.code === "unverified_numeric_claim" && f.severity === "block")).toBe(true);
+  });
+
+  it("allows the verified county count (9) and the verified years figure (20) — any other number still blocks", () => {
+    expect(blocked("Serving 9 NJ counties.")).toBe(false);
+    expect(blocked("20 years of experience on our team.")).toBe(false);
+    expect(blocked("Serving homeowners for 20 years.")).toBe(false);
+    expect(blocked("Serving 10 counties.")).toBe(true);
+    expect(blocked("21 years in business.")).toBe(true);
+  });
+
+  it("follows the facts: a different verified county count / years figure is what's allowed", () => {
+    const other = { business: { serviceCounties: ["A", "B", "C"], yearsInBusiness: 7 } };
+    expect(blocked("Serving 3 counties.", other)).toBe(false);
+    expect(blocked("Serving 9 counties.", other)).toBe(true);
+    expect(blocked("7 years in business.", other)).toBe(false);
+    expect(blocked("20 years in business.", other)).toBe(true);
+  });
+
+  it("customer/project/technician/review numbers have NO verified source, so they always block", () => {
+    expect(blocked("500 customers", facts)).toBe(true);
+    expect(blocked("12 projects", facts)).toBe(true);
+    expect(blocked("8 technicians", facts)).toBe(true);
+    expect(blocked("100 reviews", facts)).toBe(true);
+  });
+
+  it.each([
+    "Optional 10-year parts & labor coverage.",
+    "Is your AC over 10 years old?",
+    "Compressor failures cluster in years 5-8.",
+    "A 10-year parts and labor agreement covers repairs.",
+    "PSE&G rebates up to $16K may apply.",
+    "Call (862) 423-9396 for a free assessment.",
+    "We install heat pumps, ductless systems and VRF for NJ homes and buildings.",
+    "Three steps to a proper installation.",
+    "Serving Essex, Hudson and Bergen counties.",
+  ])("does NOT block ordinary copy: %s", (t) => {
+    expect(blocked(t), t).toBe(false);
+  });
+
+  it("reports each distinct claim once", () => {
+    expect(lintNumericClaims("15 counties. 15 counties again.", facts)).toHaveLength(1);
+    expect(lintNumericClaims("15 counties and 500 customers", facts)).toHaveLength(2);
+  });
+});
+
+describe("lintPageMeta / lintContent wire in numeric claims", () => {
+  it("lintPageMeta BLOCKS '15 counties' in the meta (defaults to VERIFIED_FACTS) but allows the verified 9", () => {
+    const bad = lintPageMeta({ pagePath: "/residential", title: "Residential HVAC", metaDescription: "Installation across 15 NJ counties. Call (862) 423-9396." });
+    expect(bad.passes).toBe(false);
+    expect(bad.findings.map((f) => f.code)).toContain("unverified_numeric_claim");
+    const ok = lintPageMeta({ pagePath: "/residential", title: "Residential HVAC", metaDescription: "Installation across 9 NJ counties. Call (862) 423-9396." });
+    expect(ok.findings.map((f) => f.code)).not.toContain("unverified_numeric_claim");
+  });
+
+  it("lintPageMeta BLOCKS a star-rating or customer-count claim in the title", () => {
+    expect(lintPageMeta({ pagePath: "/contact", title: "5-Star HVAC Contractor NJ", metaDescription: "Call (862) 423-9396." }).passes).toBe(false);
+    expect(lintPageMeta({ pagePath: "/contact", title: "500+ Customers Served", metaDescription: "Call (862) 423-9396." }).passes).toBe(false);
+  });
+}
+);
+
+describe("numeric-claim false positives and truncated titles (found in the pre-run dry run)", () => {
+  const facts = { business: { serviceCounties: ["a", "b", "c", "d", "e", "f", "g", "h", "i"], yearsInBusiness: 20 } };
+
+  it.each([
+    "Learn how SEER2 and HSPF2 ratings affect efficiency.",
+    "Compare SEER2 ratings before you buy.",
+    "A 16 SEER2 rating is common.",
+    "Look for the Energy Star label and HSPF2 ratings.",
+  ])("does NOT treat an efficiency rating as a review/rating count: %s", (t) => {
+    expect(lintNumericClaims(t, facts), t).toEqual([]);
+  });
+
+  it("still blocks a real review/rating count and a detached star rating", () => {
+    expect(lintNumericClaims("Read our 250 ratings.", facts)).toHaveLength(1);
+    expect(lintNumericClaims("Over 100 reviews.", facts)).toHaveLength(1);
+    expect(lintNumericClaims("A 4.9-star contractor.", facts)).toHaveLength(1);
+    expect(lintNumericClaims("a 5 star experience", facts)).toHaveLength(1);
+  });
+
+  it("BLOCKS a truncated title like \"P\" (which used to sail through: it is short, not long)", () => {
+    const r = lintPageMeta({ pagePath: "/blog/pseg-rebate-application-process", title: "P", metaDescription: "Learn the PSE&G HVAC rebate application steps. Call (862) 423-9396 to start." });
+    expect(r.passes).toBe(false);
+    expect(r.findings.map((f) => f.code)).toContain("title_too_short");
+  });
+
+  it("a 10+ character title is not flagged as too short; an empty title keeps its own empty_title finding only", () => {
+    expect(lintPageMeta({ pagePath: "/contact", title: "Contact Us Now", metaDescription: "Call (862) 423-9396." }).findings.map((f) => f.code)).not.toContain("title_too_short");
+    const empty = lintPageMeta({ pagePath: "/contact", title: "", metaDescription: "Call (862) 423-9396." }).findings.map((f) => f.code);
+    expect(empty).toContain("empty_title");
+    expect(empty).not.toContain("title_too_short");
   });
 });

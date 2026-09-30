@@ -7,6 +7,13 @@
  * selectNightlyDraftCandidates() is the pure ranking/filtering logic — cheap
  * to unit-test exhaustively against the spec's own acceptance tests.
  *
+ * Backlog pickup: the 14-day cooldown above only stops a page being RE-drafted,
+ * so drafts that already exist, lint clean, and never reached a PR would sit
+ * forever. When the auto-lane is going to approve anyway, the batch is topped
+ * up (to the 20-page cap, ranked by impressions) with those existing drafts —
+ * see selectCleanDraftPickups(). Every page in the batch is re-linted at its
+ * diff level first, so one now-blocked draft can't sink the whole batch.
+ *
  * Auto-lane resolution (owner decision, 2026-09-26): once SEO_AUTOPUBLISH_ENABLED
  * is "true" AND the meta lane is warmed up (server/services/seo/warmupGate.ts)
  * AND the circuit breaker is clear, this job calls approveBatchToPR itself
@@ -19,9 +26,11 @@
  * if auto-approval itself failed (e.g. GitHub transiently down).
  */
 import { getDb } from "../../db";
-import { seoPages, seoAiDrafts } from "../../../drizzle/schema";
+import { seoPages, seoAiDrafts, seoApprovalBatches } from "../../../drizzle/schema";
 import { findLockedPages } from "../../seo/lockedPages";
-import { isInPendingBatch, approveBatchToPR, yyyymmdd } from "./bulkApprove";
+import { isInPendingBatch, approveBatchToPR, buildBatchDiff, yyyymmdd } from "./bulkApprove";
+import { isMockProvider } from "./ai/optimizationProvider";
+import { registerManifestRoutes } from "./routeRegistry";
 import { regenerateUnlockedDrafts } from "./draftManagement";
 import { addTag } from "./tags";
 import { logAudit } from "./auditLog";
@@ -42,6 +51,31 @@ function warnOnStalePriceRanges(now: Date): void {
 }
 
 export const MAX_NIGHTLY_DRAFTS = 20;
+
+/**
+ * Owner-pinned positioning pages (2026-09-29). They bypass the 20-impression
+ * floor and go FIRST in every nightly batch, in this order — impressions don't
+ * matter for them yet. Everything else that gates a page still applies: locked,
+ * in an open batch, the 14-day re-draft cooldown, an already-approved draft,
+ * mock drafts, and the linter.
+ */
+export const PINNED_PRIORITY_PATHS: readonly string[] = [
+  "/heat-pump-installation-nj",
+  "/central-ac-installation-nj",
+  "/ductless-mini-split-installation-nj",
+  "/vrv-vrf-installation-nj",
+  "/residential",
+  "/commercial",
+  "/warranty",
+  "/commercial/property-managers",
+  "/commercial/hvac-service-contracts",
+];
+
+/** Position in PINNED_PRIORITY_PATHS (0 = first), or -1 if the page isn't pinned. Ignores a trailing slash. */
+export function pinIndex(pagePath: string): number {
+  const norm = pagePath.length > 1 ? pagePath.replace(/\/+$/, "") : pagePath;
+  return PINNED_PRIORITY_PATHS.indexOf(norm);
+}
 const MIN_IMPRESSIONS_90D = 20;
 const REFRESH_QUERY_IMPRESSIONS = 100;
 const LOW_CTR = 0.01;
@@ -57,6 +91,32 @@ export type NightlyCandidatePage = {
   draftUpdatedAt: Date | null;
 };
 
+/** An existing draft row joined to its page, for backlog pickup. */
+export type PickupCandidate = {
+  pageId: number;
+  pagePath: string;
+  impressions: number;
+  title: string | null;
+  metaDescription: string | null;
+  /** seoAiDrafts.status: "draft" | "edited" | "approved". "approved" means it already went to a PR (merged, open, or vetoed) — never re-pick it. */
+  draftStatus: string;
+  /** seoAiDrafts.model — "mock-v1" placeholders must never ship. */
+  model: string;
+  /**
+   * The page's currently observed title / meta description. When BOTH are
+   * provided (null = "the page has none"), a draft identical to them is a no-op
+   * and is skipped — it would burn a batch slot to change nothing. Leaving
+   * either undefined disables the check for that candidate.
+   */
+  pageTitle?: string | null;
+  pageMeta?: string | null;
+};
+
+const normText = (s: string | null | undefined) => (s ?? "").trim();
+
+/** Whitespace-insensitive identity of a title+meta pair — the key used to tell a re-drafted page's NEW copy from copy a batch already shipped. */
+export const contentKey = (title: string | null | undefined, meta: string | null | undefined) => `${normText(title)}\n${normText(meta)}`;
+
 export type NightlySelectionContext = {
   lockedPaths: Set<string>;
   pendingBatchPaths: Set<string>;
@@ -71,6 +131,7 @@ function rankTier(p: NightlyCandidatePage): 0 | 1 | 2 {
 
 /**
  * Pure selection (spec Part 1 "Selection", max 20/night):
+ *   0. Pinned priority pages (PINNED_PRIORITY_PATHS) bypass the impressions floor and rank first, in list order.
  *   1. Skip < 20 impressions (90d) entirely — insufficient data to justify drafting.
  *   2. Exclude locked pages, pages in a pr_open batch, and pages drafted < 14 days ago.
  *   3. Rank: (tier 0) impressions>=100 & position 8-20 > (tier 1) impressions>=100
@@ -83,7 +144,7 @@ export function selectNightlyDraftCandidates(
   const cooldownCutoff = ctx.now.getTime() - DRAFT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 
   const eligible = pages.filter((p) => {
-    if (p.impressions < MIN_IMPRESSIONS_90D) return false;
+    if (p.impressions < MIN_IMPRESSIONS_90D && pinIndex(p.pagePath) < 0) return false;
     if (ctx.lockedPaths.has(p.pagePath)) return false;
     if (ctx.pendingBatchPaths.has(p.pagePath)) return false;
     if (p.draftUpdatedAt && p.draftUpdatedAt.getTime() > cooldownCutoff) return false;
@@ -91,12 +152,115 @@ export function selectNightlyDraftCandidates(
   });
 
   eligible.sort((a, b) => {
+    const pa = pinIndex(a.pagePath), pb = pinIndex(b.pagePath);
+    if (pa >= 0 || pb >= 0) return pa >= 0 && pb >= 0 ? pa - pb : pa >= 0 ? -1 : 1; // pinned first, in list order
     const tierDiff = rankTier(a) - rankTier(b);
     if (tierDiff !== 0) return tierDiff;
     return b.impressions - a.impressions;
   });
 
   return eligible.slice(0, MAX_NIGHTLY_DRAFTS);
+}
+
+/**
+ * Pure backlog selection: existing drafts that are eligible to ship without
+ * being re-generated. Same floor/exclusions as selectNightlyDraftCandidates
+ * (>= 20 impressions unless pinned, not locked, not in an open batch) minus the cooldown,
+ * plus: has both a title and a meta description, not already approved, not a
+ * mock draft, not already chosen for this batch, NEVER batched before (any
+ * batch status — open, merged or reverted; `batchedPaths`), and not a no-op
+ * against the live title/meta (`pageTitle`/`pageMeta`). Ranked by impressions
+ * desc after the pinned pages (which come first, in list order); NOT capped and NOT lint-checked — the caller lints at diff level and
+ * takes as many as fit under the 20 cap.
+ */
+export function selectCleanDraftPickups(
+  cands: PickupCandidate[],
+  ctx: {
+    lockedPaths: Set<string>;
+    pendingBatchPaths: Set<string>;
+    excludePageIds: Set<number>;
+    batchedPaths?: Set<string>;
+    /** path -> contentKey()s of every title/meta a prior batch put on that page. A batched page is eligible again only when its current draft differs from ALL of them (it was re-drafted since). Omitted = a batched page is never re-picked. */
+    batchedContent?: Map<string, Set<string>>;
+  },
+): PickupCandidate[] {
+  return cands
+    .filter((c) => {
+      if (!c.title?.trim() || !c.metaDescription?.trim()) return false;
+      if (c.draftStatus === "approved") return false;
+      if (isMockProvider(c.model)) return false;
+      if (c.impressions < MIN_IMPRESSIONS_90D && pinIndex(c.pagePath) < 0) return false;
+      if (ctx.lockedPaths.has(c.pagePath) || ctx.pendingBatchPaths.has(c.pagePath)) return false;
+      // "Unbatched" means never batched: a merged batch already shipped this page (its draft just wasn't re-flagged), and a reverted one was rolled back on purpose.
+      if (ctx.batchedPaths?.has(c.pagePath)) {
+        // ...unless the page was RE-DRAFTED since: new copy that differs from everything any batch shipped is a genuine new proposal.
+        const shipped = ctx.batchedContent?.get(c.pagePath);
+        if (!shipped || shipped.has(contentKey(c.title, c.metaDescription))) return false;
+      }
+      if (ctx.excludePageIds.has(c.pageId)) return false;
+      if (
+        c.pageTitle !== undefined &&
+        c.pageMeta !== undefined &&
+        normText(c.title) === normText(c.pageTitle) &&
+        normText(c.metaDescription) === normText(c.pageMeta)
+      ) {
+        return false; // identical to what's live — would change nothing
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const pa = pinIndex(a.pagePath), pb = pinIndex(b.pagePath);
+      if (pa >= 0 || pb >= 0) return pa >= 0 && pb >= 0 ? pa - pb : pa >= 0 ? -1 : 1; // pinned first, in list order
+      return b.impressions - a.impressions;
+    });
+}
+
+/** Max candidates re-linted per run while filling the batch — bounds the GitHub reads buildBatchDiff makes per page. */
+const MAX_PICKUP_LINT_CHECKS = 60;
+
+/**
+ * The page ids to approve this run, in batch order: pinned pages first (this
+ * run's fresh drafts, then pinned backlog), then this run's other fresh drafts,
+ * then the rest of the backlog by impressions. Capped at MAX_NIGHTLY_DRAFTS and
+ * every page must pass the diff-level lint that approveBatchToPR enforces
+ * (which rejects the WHOLE batch on one block) — failures are dropped and the
+ * next candidate takes the slot.
+ */
+async function assembleBatch(fresh: Array<{ pageId: number; pagePath: string }>, pool: PickupCandidate[]): Promise<{ pageIds: number[]; pickedUp: number }> {
+  type Entry = { id: number; fresh: boolean };
+  const byPin = (a: { pagePath: string }, b: { pagePath: string }) => pinIndex(a.pagePath) - pinIndex(b.pagePath);
+  const isPinned = (x: { pagePath: string }) => pinIndex(x.pagePath) >= 0;
+  const asFresh = (f: { pageId: number }): Entry => ({ id: f.pageId, fresh: true });
+  const asPick = (c: { pageId: number }): Entry => ({ id: c.pageId, fresh: false });
+  const ordered: Entry[] = [
+    ...fresh.filter(isPinned).sort(byPin).map(asFresh),
+    ...pool.filter(isPinned).sort(byPin).map(asPick),
+    ...fresh.filter((f) => !isPinned(f)).map(asFresh),
+    ...pool.filter((c) => !isPinned(c)).map(asPick),
+  ];
+
+  const clean = async (ids: number[]): Promise<Set<number>> => {
+    if (ids.length === 0) return new Set();
+    const rows = await buildBatchDiff(ids);
+    return new Set(rows.filter((r) => r.lint.passes).map((r) => r.pageId));
+  };
+
+  const chosen: number[] = [];
+  let pickedUp = 0;
+  let idx = 0;
+  const limit = Math.min(ordered.length, Math.max(MAX_PICKUP_LINT_CHECKS, fresh.length));
+  while (chosen.length < MAX_NIGHTLY_DRAFTS && idx < limit) {
+    const room = MAX_NIGHTLY_DRAFTS - chosen.length;
+    const chunk = ordered.slice(idx, Math.min(idx + room, limit));
+    idx += chunk.length;
+    const ok = await clean(chunk.map((e) => e.id));
+    for (const e of chunk) {
+      if (!ok.has(e.id)) continue;
+      chosen.push(e.id);
+      if (!e.fresh) pickedUp++;
+    }
+  }
+  return { pageIds: chosen, pickedUp };
 }
 
 export type NightlyJobSummary = {
@@ -106,6 +270,8 @@ export type NightlyJobSummary = {
   totalConsidered: number;
   /** True iff the meta lane was warmed up + circuit-clear and this run auto-approved the ready drafts to a PR. False = staged only (the default, pre-trust behavior). */
   autoApproved: boolean;
+  /** Existing clean, unbatched drafts added to this run's batch (backlog pickup). 0 unless autoApproved. */
+  pickedUp: number;
   /** Set only when autoApproved is true. */
   batchId?: number;
 };
@@ -115,8 +281,14 @@ export type NightlyJobSummary = {
 export async function runNightlyDraftJob(now: Date = new Date()): Promise<NightlyJobSummary> {
   warnOnStalePriceRanges(now);
 
+  // Make sure every public route (e.g. the pinned /warranty, /commercial/*) has a seoPages row before selection, even if GSC hasn't reported it yet. Insert-only; best-effort.
+  await registerManifestRoutes().then(
+    (r) => { if (r.inserted > 0) console.log(`[SEO] registered ${r.inserted} manifest route(s) as zero-impression seoPages rows`); },
+    (err) => console.error("[SEO] manifest route registration failed (continuing):", (err as Error).message),
+  );
+
   const db = await getDb();
-  if (!db) return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: 0, autoApproved: false };
+  if (!db) return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: 0, autoApproved: false, pickedUp: 0 };
 
   const pages = await db.select().from(seoPages);
   const drafts = await db.select().from(seoAiDrafts);
@@ -143,11 +315,10 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
     now,
   });
 
-  if (selected.length === 0) {
-    return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: candidates.length, autoApproved: false };
-  }
-
-  const { results, skippedLocked } = await regenerateUnlockedDrafts(selected.map((s) => s.pageId));
+  // Nothing new to draft is no longer "nothing to do": the backlog pickup below may still have clean drafts to ship.
+  const { results, skippedLocked } = selected.length > 0
+    ? await regenerateUnlockedDrafts(selected.map((s) => s.pageId))
+    : { results: [], skippedLocked: [] as string[] };
   let ready = 0;
   let lintBlocked = 0;
   const readyPageIds: number[] = [];
@@ -176,18 +347,51 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
     });
   }
 
-  await sendNightlySummaryEmail({ ready, lintBlocked: lintBlocked, skippedLocked: skippedLocked.length });
+  if (selected.length > 0) await sendNightlySummaryEmail({ ready, lintBlocked: lintBlocked, skippedLocked: skippedLocked.length });
 
   let autoApproved = false;
   let batchId: number | undefined;
-  if (readyPageIds.length > 0 && process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
+  let pickedUp = 0;
+  if (process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
     const [warmedUp, breaker] = await Promise.all([isWarmedUp("meta"), checkCircuitBreakerConditions()]);
     if (warmedUp && !breaker.shouldPause) {
       try {
-        const approved = await approveBatchToPR({ pageIds: readyPageIds, label: `auto-${yyyymmdd(now)}`, actorId: null });
-        await armHold(approved.batch.id);
-        autoApproved = true;
-        batchId = approved.batch.id;
+        const batches = await db.select().from(seoApprovalBatches);
+        const batchedPaths = new Set<string>(batches.flatMap((b) => (b.pages as string[] | null) ?? []));
+        const batchedContent = new Map<string, Set<string>>();
+        for (const b of batches) {
+          for (const row of ((b.diff as Array<{ pagePath: string; after?: { title?: string | null; description?: string | null } }> | null) ?? [])) {
+            if (!row?.pagePath || !row.after) continue;
+            const set = batchedContent.get(row.pagePath) ?? new Set<string>();
+            set.add(contentKey(row.after.title, row.after.description));
+            batchedContent.set(row.pagePath, set);
+          }
+        }
+        const pickupPool = selectCleanDraftPickups(
+          pages.map((p) => {
+            const d = draftByPageId.get(p.id);
+            return {
+              pageId: p.id,
+              pagePath: p.page,
+              impressions: p.impressions,
+              title: d?.generatedTitle ?? null,
+              metaDescription: d?.generatedMetaDescription ?? null,
+              draftStatus: d?.status ?? "draft",
+              model: d?.model ?? "mock-v1",
+              pageTitle: p.title ?? null,
+              pageMeta: p.metaDescription ?? null,
+            };
+          }),
+          { lockedPaths: new Set(lockedMap.keys()), pendingBatchPaths, excludePageIds: new Set(readyPageIds), batchedPaths, batchedContent },
+        );
+        const batch = await assembleBatch(selected.filter((s) => readyPageIds.includes(s.pageId)), pickupPool);
+        if (batch.pageIds.length > 0) {
+          const approved = await approveBatchToPR({ pageIds: batch.pageIds, label: `auto-${yyyymmdd(now)}`, actorId: null });
+          await armHold(approved.batch.id);
+          autoApproved = true;
+          batchId = approved.batch.id;
+          pickedUp = batch.pickedUp;
+        }
       } catch (err) {
         // The drafts are already staged/tagged — a human can still approve
         // them by hand even if auto-approval itself failed.
@@ -196,7 +400,7 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
     }
   }
 
-  return { ready, lintBlocked, skippedLocked: skippedLocked.length, totalConsidered: candidates.length, autoApproved, ...(batchId !== undefined ? { batchId } : {}) };
+  return { ready, lintBlocked, skippedLocked: skippedLocked.length, totalConsidered: candidates.length, autoApproved, pickedUp, ...(batchId !== undefined ? { batchId } : {}) };
 }
 
 async function sendNightlySummaryEmail(counts: { ready: number; lintBlocked: number; skippedLocked: number }): Promise<void> {
@@ -222,7 +426,7 @@ export function startNightlyDraftScheduler(): void {
     const delay = msUntilNextRun({ hour: 2, minute: 0, timeZone: "America/New_York", weekdays: MON_TO_SAT });
     setTimeout(() => {
       runNightlyDraftJob()
-        .then((s) => console.log(`[SEO] nightly draft job: ${s.ready} ready, ${s.lintBlocked} lint-blocked, ${s.skippedLocked} skipped (locked), ${s.totalConsidered} considered${s.autoApproved ? `, auto-approved to batch #${s.batchId}` : ""}`))
+        .then((s) => console.log(`[SEO] nightly draft job: ${s.ready} ready, ${s.lintBlocked} lint-blocked, ${s.skippedLocked} skipped (locked), ${s.totalConsidered} considered${s.autoApproved ? `, auto-approved to batch #${s.batchId} (${s.pickedUp} picked up from backlog)` : ""}`))
         .catch((err) => console.error("[SEO] nightly draft job error:", err))
         .finally(arm);
     }, delay);

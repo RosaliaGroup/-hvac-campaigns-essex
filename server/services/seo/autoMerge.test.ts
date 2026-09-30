@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { evaluateAutoMergeReadiness } from "./autoMerge";
 
 // Relative to the real clock, not a hardcoded date: NOW is also used as the
@@ -68,13 +68,13 @@ vi.mock("./auditLog", () => ({ logAudit: vi.fn() }));
 vi.mock("../emailService", () => ({ sendEmail: vi.fn(async () => true) }));
 
 import { getDb } from "../../db";
-import { approveBatchToPR } from "./bulkApprove";
+import { approveBatchToPR, refreshBatchStatus } from "./bulkApprove";
 import { isWarmedUp, advanceWarmup } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { getNetlifyCheckState, hasAnyPRComments, mergePR } from "./github";
 import { logAudit } from "./auditLog";
 import { sendEmail } from "../emailService";
-import { armHold, checkAndMergeIfReady, publishNow, approveMetaBatchWithAutopublish } from "./autoMerge";
+import { armHold, checkAndMergeIfReady, publishNow, approveMetaBatchWithAutopublish, runAutoMergeTick, AUTO_MERGE_POLL_MS } from "./autoMerge";
 
 function makeDb(batch: Record<string, any>) {
   const row = { ...batch };
@@ -206,5 +206,88 @@ describe("approveMetaBatchWithAutopublish", () => {
     await approveMetaBatchWithAutopublish({ pageIds: [1], label: "x", actorId: 1 });
 
     expect(row.holdUntil).toBeNull();
+  });
+});
+
+describe("runAutoMergeTick — per-tick logging and the bot-comment regression (PR #141)", () => {
+  function makeListDb(batch: Record<string, any> | null) {
+    const row = batch ? { ...batch } : null;
+    const rows = () => (row ? [row] : []);
+    const db: any = {
+      select: () => ({ from: () => ({ where: () => { const p: any = Promise.resolve(rows()); p.limit = () => Promise.resolve(rows()); return p; } }) }),
+      update: () => ({ set: (patch: Record<string, any>) => ({ where: () => { if (row) Object.assign(row, patch); return Promise.resolve(); } }) }),
+    };
+    return { db, row };
+  }
+  const batch = { id: 2, status: "pr_open", holdUntil: PAST, commitSha: "abc", prNumber: 141, branch: "pr-seo-meta-20260929", revertsBatchId: null, label: "auto-20260929" };
+  let log: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    log = vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(refreshBatchStatus).mockReset().mockResolvedValue(undefined as never);
+  });
+  afterEach(() => log.mockRestore());
+
+  const lines = () => log.mock.calls.map((c) => String(c[0]));
+
+  it("polls every 15 minutes", () => {
+    expect(AUTO_MERGE_POLL_MS).toBe(15 * 60 * 1000);
+  });
+
+  it("logs a start line, a line per blocked batch naming the gate, and a done line — so an unmerged batch is explainable from the logs", async () => {
+    vi.mocked(hasAnyPRComments).mockResolvedValue(true);
+    vi.mocked(getDb).mockResolvedValue(makeListDb(batch).db);
+
+    const r = await runAutoMergeTick();
+
+    expect(r).toEqual({ checked: 1, merged: 0 });
+    expect(lines().some((l) => l.includes("auto-merge tick: 1 open batch(es) with a hold"))).toBe(true);
+    expect(lines().some((l) => l.includes("batch 2 (auto-20260929) not merged: has_comments"))).toBe(true);
+    expect(lines().some((l) => l.includes("auto-merge tick done: checked 1, merged 0"))).toBe(true);
+    expect(mergePR).not.toHaveBeenCalled();
+  });
+
+  it("merges and logs the merge when every gate passes", async () => {
+    vi.mocked(getDb).mockResolvedValue(makeListDb(batch).db);
+
+    const r = await runAutoMergeTick();
+
+    expect(r).toEqual({ checked: 1, merged: 1 });
+    expect(mergePR).toHaveBeenCalledWith(141);
+    expect(lines().some((l) => l.includes("auto-merged batch 2 (auto-20260929)"))).toBe(true);
+  });
+
+  it("still logs a tick line when there is nothing to do", async () => {
+    vi.mocked(getDb).mockResolvedValue(makeListDb(null).db);
+    expect(await runAutoMergeTick()).toEqual({ checked: 0, merged: 0 });
+    expect(lines().some((l) => l.includes("0 open batch(es)"))).toBe(true);
+  });
+
+  it("skips (and logs) an overlapping tick instead of stacking it", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((res) => { release = res; });
+    vi.mocked(refreshBatchStatus).mockImplementation((() => gate) as never);
+    vi.mocked(getDb).mockResolvedValue(makeListDb(batch).db);
+
+    const first = runAutoMergeTick();
+    await new Promise((r) => setTimeout(r, 0));
+    const second = await runAutoMergeTick();
+    expect(second).toEqual({ checked: 0, merged: 0, skipped: true });
+    expect(lines().some((l) => l.includes("tick skipped"))).toBe(true);
+
+    release();
+    await first;
+  });
+
+  it("a thrown check for one batch is logged and does not abort the tick", async () => {
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(refreshBatchStatus).mockRejectedValue(new Error("GitHub down"));
+    vi.mocked(getDb).mockResolvedValue(makeListDb(batch).db);
+
+    const r = await runAutoMergeTick();
+
+    expect(r).toEqual({ checked: 1, merged: 0 });
+    expect(err).toHaveBeenCalledWith(expect.stringContaining("batch 2"), "GitHub down");
+    err.mockRestore();
   });
 });

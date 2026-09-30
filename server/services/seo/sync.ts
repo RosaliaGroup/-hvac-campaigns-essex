@@ -62,7 +62,7 @@ export function computeSyncWindows(now: Date): SyncWindows {
   };
 }
 
-function pageHash(siteUrl: string, path: string): string {
+export function pageHash(siteUrl: string, path: string): string {
   return crypto.createHash("sha256").update(`${siteUrl}\n${path}`).digest("hex");
 }
 

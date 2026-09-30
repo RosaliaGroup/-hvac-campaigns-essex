@@ -17,6 +17,7 @@ import { AnthropicOptimizationProvider, AiDraftLintFailedError } from "./anthrop
 import { MockAiOptimizationProvider } from "./optimizationProvider";
 import type { PageContext } from "./optimizationProvider";
 import { PHONE_DISPLAY } from "@shared/business";
+import { lintPageMeta } from "@shared/seoLinter";
 
 function ok(text: string) {
   return { ok: true as const, text, model: "claude-sonnet-5" };
@@ -170,5 +171,63 @@ describe("AnthropicOptimizationProvider — everything outside title/meta delega
     expect(await p.generateSchema(c)).toEqual(await mock.generateSchema(c));
     expect(await p.expandContent(c)).toBe(await mock.expandContent(c));
     expect(callAnthropicModelChain).not.toHaveBeenCalled();
+  });
+});
+
+describe("AnthropicOptimizationProvider — output budget and owner rules in the prompt", () => {
+  it("requests a token budget large enough that thinking tokens can't truncate or empty the title/meta (300 did)", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok("Clean Title"));
+    const p = new AnthropicOptimizationProvider("key");
+    await p.generateTitle(ctx());
+    await p.generateMetaDescription(ctx());
+    for (const [opts] of vi.mocked(callAnthropicModelChain).mock.calls) expect((opts as { maxTokens: number }).maxTokens).toBeGreaterThanOrEqual(1000);
+  });
+
+  it("tells the model the range / 24-7 / same-day rules and that rebates are never the first clause of a title", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValueOnce(ok("Clean Title"));
+    await new AnthropicOptimizationProvider("key").generateTitle(ctx());
+    const system = (vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system;
+    expect(system).toContain("Never write a dollar range");
+    expect(system).toContain("24/7");
+    expect(system).toContain("same-day");
+    expect(system).toContain("never the first clause of a title");
+  });
+});
+
+describe("AnthropicOptimizationProvider — install-page titles carry the 10-year coverage when it fits (owner decision 2026-09-30)", () => {
+  const userPrompt = () => String((vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { messages: Array<{ content: string }> }).messages[0].content);
+
+  it("asks for \"10-Year Parts & Labor\" in the title of an installation page, only if it fits in 60 chars, never implying it's included", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValueOnce(ok("Heat Pump Installation NJ | 10-Year Parts & Labor"));
+    await new AnthropicOptimizationProvider("key").generateTitle(ctx({ page: "/heat-pump-installation-nj" }));
+    expect(userPrompt()).toContain('"10-Year Parts & Labor"');
+    expect(userPrompt()).toContain("within 60 characters");
+    expect(userPrompt()).toContain("leave the phrase out");
+    expect(userPrompt()).toContain("included or free");
+  });
+
+  it("does not add the hint for the meta description, blog posts, city pages, or /direct-install pages", async () => {
+    const p = new AnthropicOptimizationProvider("key");
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok("Clean Title"));
+    await p.generateMetaDescription(ctx({ page: "/heat-pump-installation-nj" }));
+    expect(userPrompt()).not.toContain("10-Year Parts & Labor");
+    for (const page of ["/blog/heat-pump-installation-nj-guide", "/hvac-newark-nj", "/direct-install/bakeries-nj", "/contact"]) {
+      vi.mocked(callAnthropicModelChain).mockClear();
+      await p.generateTitle(ctx({ page }));
+      expect(userPrompt(), page).not.toContain("10-Year Parts & Labor");
+    }
+  });
+
+  it("the prompt also forbids numeric claims about counties / years / customers / reviews", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValueOnce(ok("Clean Title"));
+    await new AnthropicOptimizationProvider("key").generateTitle(ctx());
+    const system = (vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system;
+    expect(system).toContain("Never state a number of counties served");
+  });
+
+  it("a title with the phrase passes the linter for an installation page", () => {
+    const r = lintPageMeta({ pagePath: "/heat-pump-installation-nj", title: "Heat Pump Installation NJ | 10-Year Parts & Labor", metaDescription: "Quality heat pump installation in NJ with proper sizing. Call (862) 423-9396." });
+    expect(r.passes).toBe(true);
+    expect("Heat Pump Installation NJ | 10-Year Parts & Labor".length).toBeLessThanOrEqual(60);
   });
 });
