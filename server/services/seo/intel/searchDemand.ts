@@ -18,9 +18,9 @@
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import path from "node:path";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "../../../db";
+import { resolveRepoPath } from "../repoPath";
 import { getSiteOrigin } from "../../../integrations/searchConsole";
 import { seoPages, seoQueries, seoIntelQuerySnapshots, type SeoIntelQuerySnapshotRow } from "../../../../drizzle/schema";
 import { ALL_CITIES } from "../../../../client/src/data/njCounties";
@@ -390,7 +390,8 @@ export type SearchDemandCollection = {
 /** Best-effort read of the repo's own netlify.toml; an unreadable file just means no redirect annotations. */
 function loadNetlifyRedirects(): Map<string, string> {
   try {
-    return parseNetlifyRedirects(readFileSync(path.resolve(import.meta.dirname, "../../../../netlify.toml"), "utf8"));
+    const file = resolveRepoPath("netlify.toml");
+    return file ? parseNetlifyRedirects(readFileSync(file, "utf8")) : new Map();
   } catch {
     return new Map();
   }

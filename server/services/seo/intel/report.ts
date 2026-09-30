@@ -5,6 +5,7 @@
  * seoIntelItems. Never throws — degrades section-by-section (§2's own
  * "each degrades gracefully if unavailable").
  */
+import { loadReportNotes } from "./notes";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { seoIntelReports, seoIntelItems, type SeoIntelReportRow } from "../../../../drizzle/schema";
@@ -84,7 +85,9 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
   const circuitReason = sharedBreaker.reason ?? ownBreaker.reason;
 
   // Persist the report row first (items need reportId).
+  const notes = loadReportNotes(date);
   const sections: MarketIntelSections = {
+    ...(notes.length ? { notes } : {}),
     searchDemand, competitors: { diffs: competitors.diffs, skippedDomains: competitors.skippedDomains },
     positioning: { theirClaims: differentiatorMatches, ourStaleClaims: staleClaims },
     serp, trends,

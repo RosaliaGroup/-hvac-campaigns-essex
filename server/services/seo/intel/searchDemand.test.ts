@@ -12,6 +12,7 @@ import {
   parseNetlifyRedirects,
   type PageIndexPoint,
 } from "./searchDemand";
+import { resolveRepoPath } from "../repoPath";
 import { COMPETITOR_WATCHLIST } from "../../../../shared/competitorWatchlist";
 import type { QueryDemandPoint } from "../../../../shared/marketIntelTypes";
 
@@ -346,8 +347,9 @@ describe("possibly de-indexed flag", () => {
     });
     it("reads the repo's real netlify.toml and finds the Newark 301", async () => {
       const { readFileSync } = await import("node:fs");
-      const path = await import("node:path");
-      const real = parseNetlifyRedirects(readFileSync(path.resolve(import.meta.dirname, "../../../../netlify.toml"), "utf8"));
+      const file = resolveRepoPath("netlify.toml");
+      expect(file).not.toBeNull();
+      const real = parseNetlifyRedirects(readFileSync(file!, "utf8"));
       expect(real.get("/blog/hvac-contractor-newark-nj")).toBe("/hvac-newark-nj");
     });
   });

@@ -134,6 +134,15 @@ export default function MarketIntel() {
             </CardContent>
           </Card>
 
+          {((active.report.sections as MarketIntelSections | null)?.notes ?? []).map((n) => (
+            <Card key={n.id}>
+              <CardHeader>
+                <CardTitle className="text-base">{n.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm whitespace-pre-wrap">{n.markdown}</CardContent>
+            </Card>
+          ))}
+
           {(() => {
             const flagged = (active.report.sections as MarketIntelSections | null)?.searchDemand?.possiblyDeindexed ?? [];
             if (flagged.length === 0) return null;

@@ -101,7 +101,12 @@ export type CompetitorDiffFinding = {
   field: "title" | "meta" | "heading" | "offer";
 };
 
+/** A dated hand-written note published into one day's report (docs/intel-notes, server/services/seo/intel/notes.ts). */
+export type ReportNote = { id: string; title: string; markdown: string };
+
 export type MarketIntelSections = {
+  /** Absent on reports with no note scheduled for their date. */
+  notes?: ReportNote[];
   searchDemand: {
     rising: RisingQueryFinding[];
     unserved: UnservedQueryFinding[];
