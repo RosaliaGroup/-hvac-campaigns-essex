@@ -499,7 +499,8 @@ export function lintDollarRanges(text: string, priceRanges: Array<{ page: string
  */
 export type NumericClaimFacts = { business: { serviceCounties: string[]; yearsInBusiness: number } };
 
-const NUM = "(\\d[\\d,]*(?:\\.\\d+)?)";
+// Not glued to a preceding letter/digit/dot — "HSPF2 ratings" and "SEER2 rating" are efficiency ratings, not "2 ratings".
+const NUM = "(?<![A-Za-z0-9.])(\\d[\\d,]*(?:\\.\\d+)?)";
 const NUMERIC_CLAIM_RULES: Array<{ kind: string; re: RegExp; verified?: (f: NumericClaimFacts) => number | null }> = [
   { kind: "county count", re: new RegExp(NUM + "\\+?\\s*(?:nj\\s+|new jersey\\s+)?counties\\b", "gi"), verified: (f) => f.business.serviceCounties.length },
   {
@@ -516,7 +517,7 @@ const NUMERIC_CLAIM_RULES: Array<{ kind: string; re: RegExp; verified?: (f: Nume
   { kind: "project count", re: new RegExp(NUM + "\\+?\\s+(?:(?:completed|successful|finished)\\s+(?:projects|installs|installations|jobs)|projects)\\b", "gi") },
   { kind: "technician count", re: new RegExp(NUM + "\\+?\\s+(?:licensed\\s+|certified\\s+|expert\\s+|trained\\s+|skilled\\s+|full-time\\s+)?(?:technicians|techs|installers|team members|employees|crew members)\\b", "gi") },
   { kind: "review count", re: new RegExp(NUM + "\\+?\\s+(?:five[- ]star\\s+|5[- ]star\\s+|verified\\s+|google\\s+)?(?:reviews|ratings|testimonials)\\b", "gi") },
-  { kind: "star rating", re: /\b(\d(?:\.\d)?)[\s-]*stars?\b/gi },
+  { kind: "star rating", re: /(?<![A-Za-z0-9.])(\d(?:\.\d)?)[\s-]*stars?\b/gi },
   { kind: "star rating", re: /\b(\d(?:\.\d)?)\s*\/\s*5\b/g },
   { kind: "vague quantity", re: /\b(?:hundreds|thousands|dozens)\s+of\s+(?:happy\s+|satisfied\s+)?(?:customers|clients|homeowners|families|projects|installations|jobs|reviews)\b/gi },
 ];
@@ -614,6 +615,8 @@ function warn(field: LintFinding["field"], code: string, message: string): LintF
 
 /* ── Main entry point ────────────────────────────────────────────────── */
 
+export const MIN_TITLE_LENGTH = 10;
+
 export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResult {
   const findings: LintFinding[] = [];
   const now = opts.now ?? new Date();
@@ -626,6 +629,11 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
   // Empty title/meta
   if (!title.trim()) findings.push(blockFinding("title", "empty_title", "Title is empty."));
   if (!meta.trim()) findings.push(blockFinding("metaDescription", "empty_meta", "Meta description is empty."));
+
+  // A title this short is a truncated/garbled generation (a 300-token cap once produced the title "P"), not a real title.
+  if (title.trim() && title.trim().length < MIN_TITLE_LENGTH) {
+    findings.push(blockFinding("title", "title_too_short", `Title is only ${title.trim().length} character(s) ("${title.trim()}") — it looks truncated (min ${MIN_TITLE_LENGTH}).`));
+  }
 
   // Length limits
   if (title.length > 60) {

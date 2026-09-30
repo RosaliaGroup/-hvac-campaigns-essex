@@ -114,7 +114,7 @@ describe("lintPageMeta — BLOCK rules (spec §3, acceptance test §11)", () => 
 
 describe("lintPageMeta — WARN rules (approvable, not blocking)", () => {
   it('warns (does not block) on "free" without context', () => {
-    const result = lintPageMeta({ pagePath: "/x", title: "title", metaDescription: "Something free here." });
+    const result = lintPageMeta({ pagePath: "/x", title: "Something Free Page Title", metaDescription: "Something free here." });
     expect(result.passes).toBe(true);
     expect(result.findings.some((f) => f.code === "free_without_context" && f.severity === "warn")).toBe(true);
   });
@@ -535,3 +535,36 @@ describe("lintPageMeta / lintContent wire in numeric claims", () => {
   });
 }
 );
+
+describe("numeric-claim false positives and truncated titles (found in the pre-run dry run)", () => {
+  const facts = { business: { serviceCounties: ["a", "b", "c", "d", "e", "f", "g", "h", "i"], yearsInBusiness: 20 } };
+
+  it.each([
+    "Learn how SEER2 and HSPF2 ratings affect efficiency.",
+    "Compare SEER2 ratings before you buy.",
+    "A 16 SEER2 rating is common.",
+    "Look for the Energy Star label and HSPF2 ratings.",
+  ])("does NOT treat an efficiency rating as a review/rating count: %s", (t) => {
+    expect(lintNumericClaims(t, facts), t).toEqual([]);
+  });
+
+  it("still blocks a real review/rating count and a detached star rating", () => {
+    expect(lintNumericClaims("Read our 250 ratings.", facts)).toHaveLength(1);
+    expect(lintNumericClaims("Over 100 reviews.", facts)).toHaveLength(1);
+    expect(lintNumericClaims("A 4.9-star contractor.", facts)).toHaveLength(1);
+    expect(lintNumericClaims("a 5 star experience", facts)).toHaveLength(1);
+  });
+
+  it("BLOCKS a truncated title like \"P\" (which used to sail through: it is short, not long)", () => {
+    const r = lintPageMeta({ pagePath: "/blog/pseg-rebate-application-process", title: "P", metaDescription: "Learn the PSE&G HVAC rebate application steps. Call (862) 423-9396 to start." });
+    expect(r.passes).toBe(false);
+    expect(r.findings.map((f) => f.code)).toContain("title_too_short");
+  });
+
+  it("a 10+ character title is not flagged as too short; an empty title keeps its own empty_title finding only", () => {
+    expect(lintPageMeta({ pagePath: "/contact", title: "Contact Us Now", metaDescription: "Call (862) 423-9396." }).findings.map((f) => f.code)).not.toContain("title_too_short");
+    const empty = lintPageMeta({ pagePath: "/contact", title: "", metaDescription: "Call (862) 423-9396." }).findings.map((f) => f.code);
+    expect(empty).toContain("empty_title");
+    expect(empty).not.toContain("title_too_short");
+  });
+});
