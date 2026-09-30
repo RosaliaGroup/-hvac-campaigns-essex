@@ -22,6 +22,7 @@ import { and, desc, eq, gte, like } from "drizzle-orm";
 import { getDb } from "../db";
 import { smsContacts, smsSends } from "../../drizzle/schema";
 import { sendTelnyxSms, telnyxConfigured, toE164 } from "./telnyxSms";
+import { VERIFIED_FACTS } from "../../shared/verifiedFacts";
 
 /** The one approved customer referral link — source of truth: /referral page. */
 export const CUSTOMER_REFERRAL_LINK = "https://mechanicalenterprise.com/referral";
@@ -42,7 +43,7 @@ export const REFERRAL_DEDUP_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
 export function buildReferralMessage(firstName?: string | null): string {
   const greeting = firstName && firstName.trim() ? `Hi ${firstName.trim()}! ` : "";
   return (
-    `${greeting}Earn $500 per referral with Mechanical Enterprise. ` +
+    `${greeting}Earn $${VERIFIED_FACTS.referralReward.amountUsd} per referral with Mechanical Enterprise. ` +
     `Know someone who needs HVAC work? Send them our way — we pay you when they book: ` +
     `${CUSTOMER_REFERRAL_LINK}\n\n` +
     `Questions? Call (862) 423-9396\n` +

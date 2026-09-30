@@ -112,6 +112,14 @@ export type VerifiedServiceHours = {
   sameDay: boolean;
 };
 
+export type VerifiedReferralReward = {
+  /** Whole US dollars paid to the referrer when the referred customer books. */
+  amountUsd: number;
+  /** ISO date the owner attested the figure is current. */
+  verifiedOn: string;
+  source: string;
+};
+
 export type VerifiedFacts = {
   business: {
     legalName: string;
@@ -162,6 +170,8 @@ export type VerifiedFacts = {
   monitoring: VerifiedMonitoring;
   /** Service-hours claims (24/7, around the clock, same-day) — all false until the owner confirms them. */
   serviceHours: VerifiedServiceHours;
+  /** Customer referral program payout — the only source for any "$N per referral" wording (Vapi tool reply, referral SMS, prompts). */
+  referralReward: VerifiedReferralReward;
 };
 
 export const VERIFIED_FACTS: VerifiedFacts = {
@@ -266,6 +276,13 @@ export const VERIFIED_FACTS: VerifiedFacts = {
   serviceHours: {
     emergency24x7: false,
     sameDay: false,
+  },
+  // Owner-attested 2026-09-30 (in chat): the customer referral program pays $500 when the referred customer books.
+  // Matches the live /referral page hero ("Earn $500 Per Referral").
+  referralReward: {
+    amountUsd: 500,
+    verifiedOn: "2026-09-30",
+    source: "owner-attested; matches the live /referral page hero",
   },
 };
 

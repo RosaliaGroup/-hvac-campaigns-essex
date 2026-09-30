@@ -10,6 +10,7 @@ import { lookupCallerInfo } from "./callerInfo";
 import { sendCustomerReferralLink } from "../services/referralSms";
 import { rescheduleForVapi, type RescheduleRequest } from "../services/rescheduleAppointment";
 import { handleBookHVAC } from "./vapiBookHvac";
+import { VERIFIED_FACTS } from "../../shared/verifiedFacts";
 
 export interface VapiToolCallPayload {
   message: {
@@ -144,7 +145,7 @@ async function handleSendReferralLink(args: Record<string, string>): Promise<str
       return JSON.stringify({
         success: true,
         message:
-          "I've just texted you our referral link. Share it with anyone who needs HVAC work — you earn $500 when they book.",
+          `I've just texted you our referral link. Share it with anyone who needs HVAC work — you earn $${VERIFIED_FACTS.referralReward.amountUsd} when they book.`,
       });
     case "duplicate":
       // Idempotent: a link was already sent for this call / retry. Report success

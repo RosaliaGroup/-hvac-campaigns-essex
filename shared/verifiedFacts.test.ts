@@ -13,6 +13,14 @@ const FORBIDDEN_TERMS = [
 ];
 
 describe("VERIFIED_FACTS", () => {
+  it("referralReward is the owner-attested $500 (2026-09-30)", () => {
+    expect(VERIFIED_FACTS.referralReward).toEqual({
+      amountUsd: 500,
+      verifiedOn: "2026-09-30",
+      source: "owner-attested; matches the live /referral page hero",
+    });
+  });
+
   it("has no fabricated address or founding year", () => {
     expect(VERIFIED_FACTS.business.address).toBeNull();
     expect(VERIFIED_FACTS.business.founded).toBeNull();
