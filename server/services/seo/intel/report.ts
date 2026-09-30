@@ -5,6 +5,7 @@
  * seoIntelItems. Never throws — degrades section-by-section (§2's own
  * "each degrades gracefully if unavailable").
  */
+import { loadReportNotes } from "./notes";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { seoIntelReports, seoIntelItems, type SeoIntelReportRow } from "../../../../drizzle/schema";
@@ -84,7 +85,9 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
   const circuitReason = sharedBreaker.reason ?? ownBreaker.reason;
 
   // Persist the report row first (items need reportId).
+  const notes = loadReportNotes(date);
   const sections: MarketIntelSections = {
+    ...(notes.length ? { notes } : {}),
     searchDemand, competitors: { diffs: competitors.diffs, skippedDomains: competitors.skippedDomains },
     positioning: { theirClaims: differentiatorMatches, ourStaleClaims: staleClaims },
     serp, trends,
@@ -147,7 +150,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
 
   await logAudit({ actorId: null, action: "market_intel_report_generated", batchId: null, pagePath: null, before: null, after: { reportId, itemCount: itemsCreated, executed }, lintResult: null });
 
-  const emailSent = await sendDailyDigest({ reportId, date, itemCount: itemsCreated, executed, summary, circuitClear });
+  const emailSent = await sendDailyDigest({ reportId, date, itemCount: itemsCreated, executed, summary, circuitClear, possiblyDeindexed: searchDemand.possiblyDeindexed?.length ?? 0 });
   if (emailSent) await db.update(seoIntelReports).set({ emailSent: true }).where(eq(seoIntelReports.id, reportId));
 
   const [finalReport] = await db.select().from(seoIntelReports).where(eq(seoIntelReports.id, reportId)).limit(1);

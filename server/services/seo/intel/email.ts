@@ -13,6 +13,8 @@ export type DigestInput = {
   executed: number;
   summary: string;
   circuitClear: boolean;
+  /** Pages flagged "possibly de-indexed" in this report. Informational — never makes an empty digest material. */
+  possiblyDeindexed?: number;
 };
 
 function siteUrl(): string {
@@ -34,6 +36,7 @@ export async function sendDailyDigest(input: DigestInput): Promise<boolean> {
   const html = [
     `<p>${input.summary}</p>`,
     input.circuitClear ? "" : `<p><b>Paused: suggestions only.</b></p>`,
+    input.possiblyDeindexed ? `<p><b>${input.possiblyDeindexed} page${input.possiblyDeindexed === 1 ? "" : "s"} possibly de-indexed</b> — URL Inspection links are in the full report.</p>` : "",
     `<p><a href="${link}">Full report in the CRM</a></p>`,
   ].join("");
 
