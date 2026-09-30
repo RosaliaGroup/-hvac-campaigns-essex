@@ -62,7 +62,8 @@ export function computeSyncWindows(now: Date): SyncWindows {
   };
 }
 
-function pageHash(siteUrl: string, path: string): string {
+/** The seoPages upsert key. Exported so manifest-route registration (manifestRoutes.ts) uses this exact function — the sync must find and update the rows it registers. */
+export function pageHash(siteUrl: string, path: string): string {
   return crypto.createHash("sha256").update(`${siteUrl}\n${path}`).digest("hex");
 }
 

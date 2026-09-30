@@ -23,6 +23,7 @@ import { startNightlyDraftScheduler } from "../services/seo/nightlyDraftJob";
 import { startWeeklyContentScheduler } from "../services/seo/contentPipeline";
 import { startAutoMergeScheduler } from "../services/seo/autoMerge";
 import { seedContentQueue } from "../services/seo/contentQueue";
+import { registerManifestRoutes } from "../services/seo/manifestRoutes";
 import { startStaleOptimizingSweep } from "../services/seo/draftManagement";
 import { startMarketIntelScheduler } from "../services/seo/intel/job";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
@@ -136,6 +137,9 @@ async function startServer() {
     // gated off by default via their own env flags; seeding the content queue
     // is always safe (idempotent, by-title check).
     seedContentQueue().catch((err) => console.error("[SEO] content queue seed failed:", err));
+    // Give brand-new public routes a seoPages row before Search Console reports
+    // them, so the pinned positioning pages can be drafted (insert-only, idempotent).
+    registerManifestRoutes().catch((err) => console.error("[SEO] manifest route registration failed:", err));
     startNightlyDraftScheduler();
     startWeeklyContentScheduler();
     startAutoMergeScheduler();
