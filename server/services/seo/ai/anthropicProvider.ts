@@ -117,7 +117,7 @@ async function draftField(field: "title" | "metaDescription", ctx: PageContext, 
       models: modelChain(),
       system: buildSystemPrompt(field),
       messages: [{ role: "user", content: buildUserPrompt(field, ctx, feedback) }],
-      maxTokens: 300,
+      maxTokens: 2000, // thinking tokens count against this; 300 truncated titles/metas mid-word (or returned empty)
     });
     if (!result.ok || result.text === undefined) {
       throw new Error(result.error ?? `Anthropic ${field} generation failed`);
