@@ -15,7 +15,7 @@
  * after these calls resolve, so a throw here means nothing is written.
  */
 import { PHONE_DISPLAY } from "@shared/business";
-import { lintPageMeta, type LintFinding } from "@shared/seoLinter";
+import { lintPageMeta, isInstallationOrCityPage, type LintFinding } from "@shared/seoLinter";
 import { callAnthropicModelChain } from "../../../_core/anthropic";
 import { MockAiOptimizationProvider, type AiOptimizationProvider, type PageContext } from "./optimizationProvider";
 import type { AiFaqItem, AiInternalLink } from "@shared/seo";
@@ -63,6 +63,16 @@ Hard rules. An automated linter checks every one of these; breaking any of them 
 const WARRANTY_POSITIONING_PROMPT =
   "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Mention rebates only as a secondary benefit and only using figures from VERIFIED_FACTS. Never describe coverage as included or free. Rebates are secondary and never the first clause of a title.";
 
+/** The coverage phrase an installation-page title should carry when it fits (positioning: installation quality + the optional 10-year parts & labor coverage). */
+export const INSTALL_TITLE_WARRANTY_PHRASE = "10-Year Parts & Labor";
+/** Shown to the model as the shape to aim for. A test pins that it is within 60 characters and lint-clean, so the prompt can't drift from the linter. */
+export const INSTALL_TITLE_EXAMPLE = "Heat Pump Installation NJ | 10-Year Parts & Labor";
+
+/** Page-specific (so it lives in the user prompt, not the system prompt) and title-only. "Install page" = isInstallationOrCityPage(), the linter's own definition. */
+const INSTALL_TITLE_INSTRUCTION =
+  `This is an installation page. If it fits within 60 characters, include the exact phrase "${INSTALL_TITLE_WARRANTY_PHRASE}" in the title — as the optional coverage offered on new installations (aim for a shape like "${INSTALL_TITLE_EXAMPLE}"), never as included, free or standard. ` +
+  `If including it would push the title past 60 characters, leave it out: never abbreviate or truncate the phrase and never exceed 60 characters. Prefer "Optional ${INSTALL_TITLE_WARRANTY_PHRASE}" when the limit allows.`;
+
 function buildSystemPrompt(field: "title" | "metaDescription"): string {
   const what = field === "title" ? "a page <title>" : 'a page <meta name="description"> value';
   return [
@@ -86,6 +96,7 @@ function buildUserPrompt(field: "title" | "metaDescription", ctx: PageContext, r
     `Top Search Console queries landing on this page: ${ctx.topQueries.length ? ctx.topQueries.join(", ") : "(none synced yet)"}`,
     `First ~800 words of the page's live body content, for grounding:\n${ctx.bodyExcerpt || "(unavailable — write from the fields above only)"}`,
     ``,
+    ...(field === "title" && isInstallationOrCityPage(ctx.page) ? [INSTALL_TITLE_INSTRUCTION, ``] : []),
     `Write a new ${field === "title" ? "title" : "meta description"} for this page.`,
   ];
   if (retryFeedback) {

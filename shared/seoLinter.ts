@@ -481,8 +481,11 @@ export function lintDollarRanges(text: string, priceRanges: Array<{ page: string
   return findings;
 }
 
-/** True for installation and city pages — where the positioning is installation-led and a rebate-first title is off-message. Blog posts and /direct-install/* (a rebate program) are exempt. */
-function isInstallationOrCityPage(pagePath: string): boolean {
+/**
+ * True for installation and city pages — where the positioning is installation-led and a rebate-first title is off-message. Blog posts and /direct-install/* (a rebate program) are exempt.
+ * Exported so the meta-lane drafting prompt (server/services/seo/ai/anthropicProvider.ts) uses this ONE definition of "install page".
+ */
+export function isInstallationOrCityPage(pagePath: string): boolean {
   if (pagePath.startsWith("/blog/") || pagePath.startsWith("/direct-install")) return false;
   return cityPageSlug(pagePath) !== null || /install/i.test(pagePath);
 }

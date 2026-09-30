@@ -13,7 +13,8 @@ vi.mock("../../../_core/anthropic", () => ({
 }));
 
 import { callAnthropicModelChain } from "../../../_core/anthropic";
-import { AnthropicOptimizationProvider, AiDraftLintFailedError } from "./anthropicProvider";
+import { AnthropicOptimizationProvider, AiDraftLintFailedError, INSTALL_TITLE_WARRANTY_PHRASE, INSTALL_TITLE_EXAMPLE } from "./anthropicProvider";
+import { lintPageMeta } from "@shared/seoLinter";
 import { MockAiOptimizationProvider } from "./optimizationProvider";
 import type { PageContext } from "./optimizationProvider";
 import { PHONE_DISPLAY } from "@shared/business";
@@ -190,5 +191,73 @@ describe("AnthropicOptimizationProvider — output budget and owner rules in the
     expect(system).toContain("24/7");
     expect(system).toContain("same-day");
     expect(system).toContain("never the first clause of a title");
+  });
+});
+
+describe("install-page titles carry '10-Year Parts & Labor' when it fits within 60 characters", () => {
+  const userPrompt = () => (vi.mocked(callAnthropicModelChain).mock.calls[0][0].messages[0] as { content: string }).content;
+  const titleFor = async (page: string) => {
+    vi.mocked(callAnthropicModelChain).mockReset().mockResolvedValueOnce(ok("Clean Title"));
+    await new AnthropicOptimizationProvider("key").generateTitle(ctx({ page, url: `https://mechanicalenterprise.com${page}` }));
+    return userPrompt();
+  };
+
+  it("tells the model to include the exact phrase, optionally, within 60 characters — and never as included/free", async () => {
+    const p = await titleFor("/heat-pump-installation-nj");
+    expect(p).toContain(INSTALL_TITLE_WARRANTY_PHRASE);
+    expect(p).toContain("If it fits within 60 characters");
+    expect(p).toContain("never exceed 60 characters");
+    expect(p).toContain("never as included, free or standard");
+    expect(p).toContain(INSTALL_TITLE_EXAMPLE);
+  });
+
+  it.each([
+    "/heat-pump-installation-nj", "/central-ac-installation-nj", "/ductless-mini-split-installation-nj", "/vrv-vrf-installation-nj",
+    "/commercial-hvac-installation-nj", "/hvac-union-nj", "/hvac-elizabeth-nj",
+  ])("applies on installation and city page %s", async (page) => {
+    expect(await titleFor(page)).toContain(INSTALL_TITLE_WARRANTY_PHRASE);
+  });
+
+  it.each([
+    "/blog/heat-pump-vs-furnace-total-cost-of-ownership-10-years", "/direct-install/bakeries-nj", "/about", "/contact", "/warranty",
+    "/residential", "/commercial", "/commercial/property-managers", "/ac-repair-nj", "/promos",
+  ])("does NOT apply on %s", async (page) => {
+    expect(await titleFor(page)).not.toContain(INSTALL_TITLE_WARRANTY_PHRASE);
+  });
+
+  it("is title-only: the meta-description prompt for an install page does not carry it", async () => {
+    vi.mocked(callAnthropicModelChain).mockReset().mockResolvedValueOnce(ok("Clean Meta Description Under The Limit."));
+    await new AnthropicOptimizationProvider("key").generateMetaDescription(ctx({ page: "/heat-pump-installation-nj" }));
+    expect(userPrompt()).not.toContain(INSTALL_TITLE_WARRANTY_PHRASE);
+  });
+
+  it("is page-specific, so it lives in the USER prompt and not the shared system prompt", async () => {
+    vi.mocked(callAnthropicModelChain).mockReset().mockResolvedValueOnce(ok("Clean Title"));
+    await new AnthropicOptimizationProvider("key").generateTitle(ctx({ page: "/heat-pump-installation-nj" }));
+    expect(vi.mocked(callAnthropicModelChain).mock.calls[0][0].system).not.toContain("This is an installation page");
+  });
+
+  it("is still present on the retry attempt, alongside the linter feedback", async () => {
+    vi.mocked(callAnthropicModelChain).mockReset().mockResolvedValueOnce(ok("#1 Heat Pump Installation NJ")).mockResolvedValueOnce(ok("Heat Pump Installation NJ | 10-Year Parts & Labor"));
+    const title = await new AnthropicOptimizationProvider("key").generateTitle(ctx({ page: "/heat-pump-installation-nj" }));
+    const retry = (vi.mocked(callAnthropicModelChain).mock.calls[1][0].messages[0] as { content: string }).content;
+    expect(title).toBe("Heat Pump Installation NJ | 10-Year Parts & Labor");
+    expect(retry).toContain(INSTALL_TITLE_WARRANTY_PHRASE);
+    expect(retry).toContain("REJECTED by the compliance linter");
+  });
+
+  it("the example the model is shown is itself within 60 characters and passes the linter with no findings — the prompt can't teach a title the linter would reject", () => {
+    expect(INSTALL_TITLE_EXAMPLE.length).toBeLessThanOrEqual(60);
+    expect(INSTALL_TITLE_EXAMPLE).toContain(INSTALL_TITLE_WARRANTY_PHRASE);
+    const r = lintPageMeta({ pagePath: "/heat-pump-installation-nj", title: INSTALL_TITLE_EXAMPLE, metaDescription: "Heat pump installation with proper system sizing and optional 10-year parts & labor coverage." });
+    expect(r.findings.filter((f) => f.severity === "block")).toEqual([]);
+    expect(r.findings.map((f) => f.code)).not.toContain("title_leads_with_rebate");
+  });
+
+  it("the 'Optional …' variant it suggests also passes the linter and fits", () => {
+    const t = `Heat Pump Installation NJ | Optional ${INSTALL_TITLE_WARRANTY_PHRASE}`;
+    expect(t.length).toBeLessThanOrEqual(60);
+    const r = lintPageMeta({ pagePath: "/heat-pump-installation-nj", title: t, metaDescription: "Heat pump installation with proper system sizing and optional 10-year parts & labor coverage." });
+    expect(r.findings.filter((f) => f.severity === "block")).toEqual([]);
   });
 });
