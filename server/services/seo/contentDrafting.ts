@@ -33,7 +33,10 @@ export class ContentDraftParseError extends Error {
   }
 }
 
-function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFacts): string {
+function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFacts, priorFindings: string[] = []): string {
+  const findingsBlock = priorFindings.length
+    ? ["", "A PREVIOUS DRAFT OF THIS TOPIC WAS BLOCKED FOR THE FOLLOWING FINDINGS. Your new draft MUST fix every one of them:", ...priorFindings.map((f) => `- ${f}`)]
+    : [];
   return [
     "You are an SEO content writer for Mechanical Enterprise LLC, a licensed HVAC contractor in New Jersey.",
     "Write B2B content for property managers, general contractors, or commercial/multifamily building owners — NEVER for homeowners, and NEVER about residential rebates.",
@@ -47,6 +50,7 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
     "",
     // docs/positioning-warranty-spec.md §6 — verbatim positioning sentence, added to both the content lane (here) and the meta lane (ai/anthropicProvider.ts).
     "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Mention rebates only as a secondary benefit and only using figures from VERIFIED_FACTS. Never describe coverage as included or free.",
+    ...findingsBlock,
     "",
     "Rules:",
     "- 900-1400 words total across all sections combined.",
@@ -87,16 +91,17 @@ function parseContentDraftResponse(text: string): BlogPostData {
 
 /** Draft a complete post for `topic`. Throws ContentDraftUnavailableError/ContentDraftParseError rather than returning a partial/invalid post. */
 /** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
-export async function draftContentPost(topic: SeoContentQueueRow, facts: VerifiedFacts): Promise<BlogPostData> {
+export async function draftContentPost(topic: SeoContentQueueRow, facts: VerifiedFacts, priorFindings: string[] = []): Promise<BlogPostData> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) throw new ContentDraftUnavailableError();
 
   const result = await callAnthropicModelChain({
     apiKey,
     models: modelChain(),
-    system: buildContentSystemPrompt(topic, facts),
+    system: buildContentSystemPrompt(topic, facts, priorFindings),
     messages: [{ role: "user", content: "Draft the post now." }],
-    maxTokens: 8000,
+    maxTokens: 16000, // thinking tokens count against this; 8000 could leave no room for the JSON
+    retry: { timeoutMs: 180_000 }, // a 900-1400 word JSON post can exceed the 60s default
   });
 
   if (!result.ok || result.text === undefined) {

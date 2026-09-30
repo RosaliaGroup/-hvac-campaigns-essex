@@ -96,3 +96,28 @@ describe("draftContentPost", () => {
     expect(call.system.toLowerCase()).toContain("lifetime");
   });
 });
+
+describe("draftContentPost — findings feedback + budget", () => {
+  it("requests the 16k token ceiling and a 180s per-attempt timeout (thinking tokens count against maxTokens)", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(validPost)));
+    await draftContentPost(topic, VERIFIED_FACTS);
+    const opts = vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { maxTokens: number; retry?: { timeoutMs?: number } };
+    expect(opts.maxTokens).toBe(16000);
+    expect(opts.retry?.timeoutMs).toBe(180_000);
+  });
+
+  it("puts prior findings in the system prompt as must-fix items", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(validPost)));
+    await draftContentPost(topic, VERIFIED_FACTS, ['warranty_wrong_year_count: "20 year" appears near coverage', "word_count: Body is 789 words"]);
+    const system = (vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system;
+    expect(system).toContain("PREVIOUS DRAFT OF THIS TOPIC WAS BLOCKED");
+    expect(system).toContain("- warranty_wrong_year_count");
+    expect(system).toContain("- word_count: Body is 789 words");
+  });
+
+  it("omits the findings block when there are no prior findings", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(validPost)));
+    await draftContentPost(topic, VERIFIED_FACTS);
+    expect((vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system).not.toContain("PREVIOUS DRAFT");
+  });
+});
