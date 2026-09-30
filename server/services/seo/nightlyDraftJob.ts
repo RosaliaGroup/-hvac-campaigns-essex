@@ -164,9 +164,10 @@ export function selectNightlyDraftCandidates(
 
 /**
  * Pure backlog selection: existing drafts that are eligible to ship without
- * being re-generated. Same floor/exclusions as selectNightlyDraftCandidates
- * (>= 20 impressions unless pinned, not locked, not in an open batch) minus the cooldown,
- * plus: has both a title and a meta description, not already approved, not a
+ * being re-generated. Same exclusions as selectNightlyDraftCandidates (not locked,
+ * not in an open batch) minus the cooldown AND minus the impressions floor (an
+ * existing draft has already been paid for; a page with 0 impressions still ships,
+ * just after everything with traffic), plus: has both a title and a meta description, not already approved, not a
  * mock draft, not already chosen for this batch, NEVER batched before (any
  * batch status — open, merged or reverted; `batchedPaths`), and not a no-op
  * against the live title/meta (`pageTitle`/`pageMeta`). Ranked by impressions
@@ -189,7 +190,7 @@ export function selectCleanDraftPickups(
       if (!c.title?.trim() || !c.metaDescription?.trim()) return false;
       if (c.draftStatus === "approved") return false;
       if (isMockProvider(c.model)) return false;
-      if (c.impressions < MIN_IMPRESSIONS_90D && pinIndex(c.pagePath) < 0) return false;
+      // No impressions floor for EXISTING drafts (owner decision 2026-09-30): the floor guards the cost/relevance of GENERATING a draft, and these already exist and lint clean. They are simply ranked by impressions.
       if (ctx.lockedPaths.has(c.pagePath) || ctx.pendingBatchPaths.has(c.pagePath)) return false;
       // "Unbatched" means never batched: a merged batch already shipped this page (its draft just wasn't re-flagged), and a reverted one was rolled back on purpose.
       if (ctx.batchedPaths?.has(c.pagePath)) {

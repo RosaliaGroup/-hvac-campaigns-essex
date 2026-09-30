@@ -228,13 +228,20 @@ describe("selectCleanDraftPickups (backlog pickup)", () => {
     ["no title", { title: null }],
     ["blank title", { title: "  " }],
     ["no meta description", { metaDescription: null }],
-    ["below the 20-impression floor", { impressions: 19 }],
   ])("excludes %s", (_label, over) => {
     expect(selectCleanDraftPickups([cand({ pageId: 1, ...over })], ctx)).toEqual([]);
   });
 
-  it("includes an edited draft and a page at exactly 20 impressions", () => {
+  it("includes an edited draft", () => {
     expect(selectCleanDraftPickups([cand({ pageId: 1, draftStatus: "edited", impressions: 20 })], ctx)).toHaveLength(1);
+  });
+
+  it("has NO impressions floor: drafts on pages with 19, 1 or 0 impressions are picked up, ranked by impressions after the busier pages", () => {
+    const out = selectCleanDraftPickups(
+      [cand({ pageId: 1, impressions: 0 }), cand({ pageId: 2, impressions: 19 }), cand({ pageId: 3, impressions: 500 }), cand({ pageId: 4, impressions: 1 })],
+      ctx,
+    );
+    expect(out.map((c) => c.pageId)).toEqual([3, 2, 4, 1]);
   });
 
   it("excludes locked pages, pages in an open batch, and ids already chosen for this batch", () => {
@@ -431,7 +438,7 @@ describe("pinned priority pages (owner decision 2026-09-29)", () => {
     expect(result.slice(0, 9).map((r) => r.pagePath)).toEqual([...PINNED_PRIORITY_PATHS]);
   });
 
-  it("selectCleanDraftPickups: pinned pages bypass the floor and come first in list order; other exclusions still apply", () => {
+  it("selectCleanDraftPickups: pinned pages come first in list order; other exclusions still apply", () => {
     const base = { title: "T", metaDescription: "M", draftStatus: "draft", model: "anthropic-claude-sonnet-5" };
     const out = selectCleanDraftPickups(
       [
@@ -441,11 +448,11 @@ describe("pinned priority pages (owner decision 2026-09-29)", () => {
         { ...base, pageId: 4, pagePath: "/warranty", impressions: 0, draftStatus: "approved" }, // already shipped
         { ...base, pageId: 5, pagePath: "/commercial", impressions: 0, model: "mock-v1" }, // mock
         { ...base, pageId: 6, pagePath: "/residential", impressions: 0, title: null }, // no draft title
-        { ...base, pageId: 7, pagePath: "/blog/tiny", impressions: 9 }, // unpinned, under the floor
+        { ...base, pageId: 7, pagePath: "/blog/tiny", impressions: 9 }, // unpinned, low traffic: no floor, so it ships — after the busier pages
       ],
       { lockedPaths: new Set(), pendingBatchPaths: new Set(), excludePageIds: new Set() },
     );
-    expect(out.map((c) => c.pagePath)).toEqual(["/heat-pump-installation-nj", "/central-ac-installation-nj", "/blog/big"]);
+    expect(out.map((c) => c.pagePath)).toEqual(["/heat-pump-installation-nj", "/central-ac-installation-nj", "/blog/big", "/blog/tiny"]);
   });
 });
 
