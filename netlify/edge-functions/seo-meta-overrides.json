@@ -2,5 +2,85 @@
   "/about": {
     "title": "About Mechanical Enterprise | NJ HVAC Contractor",
     "description": "Mechanical Enterprise brings 20+ years of NJ HVAC experience in VRV/VRF systems, smart buildings, and commercial installs. Call (862) 423-9396."
+  },
+  "/heat-pump-installation-nj": {
+    "title": "Heat Pump Installation in NJ | Mechanical Enterprise",
+    "description": "Quality heat pump installation in NJ with proper system sizing and optional 10-year parts and labor coverage. Call (862) 423-9396 for a free assessment."
+  },
+  "/central-ac-installation-nj": {
+    "title": "Central AC Installation NJ | Mechanical Enterprise",
+    "description": "Professional central AC installation across NJ with proper system sizing and optional 10-year parts & labor coverage. Free assessment: (862) 423-9396."
+  },
+  "/ductless-mini-split-installation-nj": {
+    "title": "Ductless Mini-Split Installation in NJ | (862) 423-9396",
+    "description": "Ductless mini-split installation across New Jersey. Licensed contractor, free assessment, rebate guidance. Call Mechanical Enterprise at (862) 423-9396."
+  },
+  "/vrv-vrf-installation-nj": {
+    "title": "VRV/VRF System Installation in NJ | Mechanical Enterprise",
+    "description": "Professional VRV/VRF installation for NJ commercial buildings, matched to your space, plus optional 10-year parts & labor coverage. Call (862) 423-9396."
+  },
+  "/residential": {
+    "title": "Residential HVAC Installation in NJ | Heat Pumps & AC",
+    "description": "Quality heat pump and AC installation for New Jersey homes, with optional 10-year parts and labor coverage. Call (862) 423-9396 for a consultation."
+  },
+  "/blog/central-ac-replacement-nj-cost": {
+    "title": "Central AC Replacement in NJ: Installation Quality & Cost",
+    "description": "Learn what affects central AC replacement costs in NJ, from system fit to efficiency ratings. Call Mechanical Enterprise at (862) 423-9396."
+  },
+  "/hvac-short-hills-nj": {
+    "title": "Short Hills NJ HVAC Installation | Up to $16K Rebates",
+    "description": "Short Hills HVAC installation focused on proper system fit and quality craftsmanship. PSE&G rebates up to $16K may apply. Call (862) 423-9396."
+  },
+  "/blog/pseg-on-bill-repayment-hvac": {
+    "title": "PSE&G On-Bill Repayment for HVAC: How It Works | NJ Guide",
+    "description": "Learn how PSE&G On-Bill Repayment spreads HVAC costs at 0% interest on your utility bill. Call Mechanical Enterprise at (862) 423-9396."
+  },
+  "/blog/hvac-permits-nj-guide": {
+    "title": "HVAC Permits in NJ: What Homeowners Need to Know",
+    "description": "Learn when NJ HVAC installs need permits, who pulls them, and how Mechanical Enterprise handles it all. Call (862) 423-9396 for details."
+  },
+  "/blog/hvac-financing-nj-options": {
+    "title": "HVAC Financing Options in NJ | Mechanical Enterprise",
+    "description": "Explore HVAC financing options for NJ homeowners, including 0% plans and PSE&G On-Bill Repayment. Call (862) 423-9396 for a free assessment."
+  },
+  "/blog/smart-thermostat-nj-rebates": {
+    "title": "Smart Thermostat Rebates in NJ 2026 | Mechanical Enterprise",
+    "description": "Smart thermostat rebates in NJ: what utilities offer, top models for heat pumps, and installation help. Call Mechanical Enterprise (862) 423-9396."
+  },
+  "/blog/r22-system-age-nj": {
+    "title": "Is Your NJ AC Over 10 Years Old? Check for R22 Refrigerant",
+    "description": "Is your NJ AC pre-2010? It may run on banned R22 refrigerant. Learn how to check and what it means for efficiency. Call (862) 423-9396."
+  },
+  "/hvac-union-nj": {
+    "title": "Union NJ HVAC Installation | Up to $16K PSE&G Rebates",
+    "description": "Union, NJ heat pump & AC installation with proper system sizing and optional 10-year coverage. PSE&G rebates up to $16K. Call (862) 423-9396."
+  },
+  "/blog/pseg-commercial-rebates-nj": {
+    "title": "PSE&G Commercial Rebates in NJ: Direct Install Guide",
+    "description": "Learn how PSE&G Direct Install can cover NJ commercial HVAC upgrades and lighting. Mechanical Enterprise handles paperwork. Call (862) 423-9396."
+  },
+  "/blog/r22-freon-cost-2026-nj": {
+    "title": "R22 Freon Cost in 2026: Why NJ Homeowners Replace Instead",
+    "description": "R22 recharge costs keep climbing in 2026. See why NJ homeowners are replacing aging systems instead. Call (862) 423-9396 for a free assessment."
+  },
+  "/hvac-weehawken-nj": {
+    "title": "Weehawken NJ HVAC Installation | Up to $16K Rebates",
+    "description": "Weehawken NJ HVAC installation with NJ rebates up to $16,000. Heat pumps, AC & ductless systems. Licensed contractor. Call (862) 423-9396."
+  },
+  "/blog/pseg-instant-rebate-program-nj": {
+    "title": "PSE&G Instant Rebate Program for HVAC in NJ | Up to $16K",
+    "description": "Learn how PSE&G instant rebates lower HVAC install costs upfront in NJ. Mechanical Enterprise handles paperwork—call (862) 423-9396 to check eligibility."
+  },
+  "/blog/free-energy-audit-nj-pseg-2026": {
+    "title": "Free Energy Audit NJ: PSE&G Home Assessment Guide 2026",
+    "description": "Free NJ home energy audit explained: what a PSE&G assessment covers and how it helps you find HVAC rebates. Call (862) 423-9396."
+  },
+  "/blog/pseg-clean-heat-program-nj": {
+    "title": "PSE&G Clean Heat Program NJ: Heat Pump Rebate Guide",
+    "description": "Learn how the PSE&G Clean Heat Program helps NJ homeowners fund heat pump installation. Call Mechanical Enterprise at (862) 423-9396 for a free assessment."
+  },
+  "/blog/geothermal-heat-pump-nj": {
+    "title": "Geothermal Heat Pumps in NJ: Worth the Investment?",
+    "description": "Geothermal heat pumps use stable ground temps for efficient NJ heating and cooling. Learn how they work and if one fits your home. Call (862) 423-9396."
   }
 }
