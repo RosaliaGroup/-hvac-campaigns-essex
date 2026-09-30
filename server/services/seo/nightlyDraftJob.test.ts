@@ -5,8 +5,10 @@ vi.mock("../../seo/lockedPages", () => ({ findLockedPages: vi.fn(async () => new
 vi.mock("./bulkApprove", () => ({
   isInPendingBatch: vi.fn(async () => false),
   approveBatchToPR: vi.fn(),
+  buildBatchDiff: vi.fn(async (ids: number[]) => ids.map((id) => ({ pageId: id, lint: { passes: true, findings: [] } }))),
   yyyymmdd: (d: Date = new Date()) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`,
 }));
+vi.mock("./ai/optimizationProvider", () => ({ isMockProvider: (m: string) => m.startsWith("mock") }));
 vi.mock("./draftManagement", () => ({ regenerateUnlockedDrafts: vi.fn() }));
 vi.mock("./tags", () => ({ addTag: vi.fn(async () => {}) }));
 vi.mock("./auditLog", () => ({ logAudit: vi.fn() }));
@@ -17,12 +19,12 @@ vi.mock("./autoMerge", () => ({ armHold: vi.fn() }));
 
 import { getDb } from "../../db";
 import { findLockedPages } from "../../seo/lockedPages";
-import { isInPendingBatch, approveBatchToPR } from "./bulkApprove";
+import { isInPendingBatch, approveBatchToPR, buildBatchDiff } from "./bulkApprove";
 import { regenerateUnlockedDrafts } from "./draftManagement";
 import { isWarmedUp } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { armHold } from "./autoMerge";
-import { selectNightlyDraftCandidates, runNightlyDraftJob, MAX_NIGHTLY_DRAFTS, type NightlyCandidatePage } from "./nightlyDraftJob";
+import { selectNightlyDraftCandidates, selectCleanDraftPickups, runNightlyDraftJob, MAX_NIGHTLY_DRAFTS, type NightlyCandidatePage, type PickupCandidate } from "./nightlyDraftJob";
 import { seoPages, seoAiDrafts } from "../../../drizzle/schema";
 
 const NOW = new Date("2026-09-26T06:00:00Z");
@@ -202,5 +204,183 @@ describe("runNightlyDraftJob — auto-approve gate (addendum §A1)", () => {
     await runNightlyDraftJob(NOW);
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("price range"));
     warnSpy.mockRestore();
+  });
+});
+
+describe("selectCleanDraftPickups (backlog pickup)", () => {
+  const ctx = { lockedPaths: new Set<string>(), pendingBatchPaths: new Set<string>(), excludePageIds: new Set<number>() };
+  const cand = (o: Partial<PickupCandidate> & { pageId: number }): PickupCandidate => ({
+    pagePath: `/p${o.pageId}`, impressions: 100, title: "A title", metaDescription: "A meta description", draftStatus: "draft", model: "anthropic-claude-sonnet-5", ...o,
+  });
+
+  it("ranks by impressions descending and does not cap (the caller lints, then caps)", () => {
+    const cands = Array.from({ length: 30 }, (_, i) => cand({ pageId: i + 1, impressions: 20 + i }));
+    const out = selectCleanDraftPickups(cands, ctx);
+    expect(out).toHaveLength(30);
+    expect(out[0].impressions).toBe(49);
+    expect(out[29].impressions).toBe(20);
+  });
+
+  it.each([
+    ["already approved (went to a PR, incl. a vetoed one)", { draftStatus: "approved" }],
+    ["a mock draft", { model: "mock-v1" }],
+    ["no title", { title: null }],
+    ["blank title", { title: "  " }],
+    ["no meta description", { metaDescription: null }],
+    ["below the 20-impression floor", { impressions: 19 }],
+  ])("excludes %s", (_label, over) => {
+    expect(selectCleanDraftPickups([cand({ pageId: 1, ...over })], ctx)).toEqual([]);
+  });
+
+  it("includes an edited draft and a page at exactly 20 impressions", () => {
+    expect(selectCleanDraftPickups([cand({ pageId: 1, draftStatus: "edited", impressions: 20 })], ctx)).toHaveLength(1);
+  });
+
+  it("excludes locked pages, pages in an open batch, and ids already chosen for this batch", () => {
+    const out = selectCleanDraftPickups(
+      [cand({ pageId: 1 }), cand({ pageId: 2 }), cand({ pageId: 3 }), cand({ pageId: 4 })],
+      { lockedPaths: new Set(["/p1"]), pendingBatchPaths: new Set(["/p2"]), excludePageIds: new Set([3]) },
+    );
+    expect(out.map((c) => c.pageId)).toEqual([4]);
+  });
+});
+
+describe("runNightlyDraftJob — backlog pickup", () => {
+  const recent = new Date(NOW.getTime() - 2 * 24 * 60 * 60 * 1000); // inside the 14-day cooldown
+  const pagesRows = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, page: `/p${i + 1}`, impressions: 1000 - i, position: 15, ctr: 0.02 }));
+  const draftRow = (pageId: number, over: Record<string, unknown> = {}) => ({
+    pageId, generatedTitle: `Title ${pageId}`, generatedMetaDescription: `Meta ${pageId}`, status: "draft", model: "anthropic-claude-sonnet-5", updatedAt: recent, ...over,
+  });
+  let draftRows: Array<ReturnType<typeof draftRow>>;
+  let failLint: Set<number>;
+
+  beforeEach(() => {
+    draftRows = pagesRows.map((p) => draftRow(p.id));
+    failLint = new Set();
+    vi.mocked(getDb).mockReset().mockResolvedValue({
+      select: () => ({ from: (t: unknown) => Promise.resolve(t === seoPages ? pagesRows : t === seoAiDrafts ? draftRows : []) }),
+    } as never);
+    vi.mocked(findLockedPages).mockReset().mockResolvedValue(new Map());
+    vi.mocked(isInPendingBatch).mockReset().mockResolvedValue(false);
+    vi.mocked(regenerateUnlockedDrafts).mockReset().mockResolvedValue({ results: [], skippedLocked: [] });
+    vi.mocked(isWarmedUp).mockReset().mockResolvedValue(true);
+    vi.mocked(checkCircuitBreakerConditions).mockReset().mockResolvedValue({ shouldPause: false, reason: null });
+    vi.mocked(approveBatchToPR).mockReset().mockResolvedValue({ batch: { id: 55 } as never, prUrl: "url", prNumber: 1 });
+    vi.mocked(buildBatchDiff).mockReset().mockImplementation((async (ids: number[]) => ids.map((id) => ({ pageId: id, lint: { passes: !failLint.has(id), findings: [] } }))) as never);
+    vi.mocked(armHold).mockReset().mockResolvedValue(undefined);
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+  });
+
+  it("ships existing clean drafts even when the cooldown leaves nothing to re-draft — top 20 by impressions, one batch, hold armed", async () => {
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(regenerateUnlockedDrafts).not.toHaveBeenCalled();
+    expect(result.ready).toBe(0);
+    expect(result.autoApproved).toBe(true);
+    expect(result.pickedUp).toBe(20);
+    expect(result.batchId).toBe(55);
+    const args = vi.mocked(approveBatchToPR).mock.calls[0][0];
+    expect(args.pageIds).toEqual(Array.from({ length: 20 }, (_, i) => i + 1)); // pages 1..20 have the highest impressions
+    expect(args.label).toBe("auto-20260926");
+    expect(armHold).toHaveBeenCalledWith(55);
+  });
+
+  it("puts this run's fresh drafts first and fills only the remaining room from the backlog (never over 20)", async () => {
+    draftRows = pagesRows.map((p) => draftRow(p.id, p.id <= 3 ? { updatedAt: new Date(NOW.getTime() - 30 * 24 * 60 * 60 * 1000) } : {}));
+    vi.mocked(regenerateUnlockedDrafts).mockResolvedValue({ results: [1, 2, 3].map((pageId) => ({ pageId, ok: true, draft: null })), skippedLocked: [] } as never);
+
+    const result = await runNightlyDraftJob(NOW);
+
+    const ids = vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds;
+    expect(ids.slice(0, 3)).toEqual([1, 2, 3]);
+    expect(ids).toHaveLength(20);
+    expect(new Set(ids).size).toBe(20); // no page twice
+    expect(result.ready).toBe(3);
+    expect(result.pickedUp).toBe(17);
+  });
+
+  it("skips a backlog draft that now fails the diff-level lint and takes the next-ranked one instead", async () => {
+    failLint = new Set([2, 5]);
+
+    await runNightlyDraftJob(NOW);
+
+    const ids = vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds;
+    expect(ids).toHaveLength(20);
+    expect(ids).not.toContain(2);
+    expect(ids).not.toContain(5);
+    expect(ids).toContain(21); // 1..20 minus {2,5} = 18, so 21 and 22 fill in
+    expect(ids).toContain(22);
+  });
+
+  it("drops a FRESH draft that fails the diff-level lint rather than letting it sink the whole batch", async () => {
+    draftRows = pagesRows.map((p) => draftRow(p.id, p.id === 1 ? { updatedAt: new Date(NOW.getTime() - 30 * 24 * 60 * 60 * 1000) } : {}));
+    vi.mocked(regenerateUnlockedDrafts).mockResolvedValue({ results: [{ pageId: 1, ok: true, draft: null }], skippedLocked: [] } as never);
+    failLint = new Set([1]);
+
+    await runNightlyDraftJob(NOW);
+
+    const ids = vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds;
+    expect(ids).not.toContain(1);
+    expect(ids).toHaveLength(20);
+  });
+
+  it("never re-picks an approved draft (already shipped or vetoed), a mock draft, or a page in an open batch", async () => {
+    draftRows = pagesRows.map((p) => draftRow(p.id, p.id === 1 ? { status: "approved" } : p.id === 2 ? { model: "mock-v1" } : {}));
+    vi.mocked(isInPendingBatch).mockImplementation(async (path: string) => path === "/p3");
+
+    await runNightlyDraftJob(NOW);
+
+    const ids = vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds;
+    for (const banned of [1, 2, 3]) expect(ids).not.toContain(banned);
+    expect(ids).toHaveLength(20);
+  });
+
+  it("does not touch the backlog (no lint reads, no approve) when the lane is not warmed up", async () => {
+    vi.mocked(isWarmedUp).mockResolvedValue(false);
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(false);
+    expect(result.pickedUp).toBe(0);
+    expect(buildBatchDiff).not.toHaveBeenCalled();
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+  });
+
+  it("does not touch the backlog when SEO_AUTOPUBLISH_ENABLED isn't \"true\"", async () => {
+    process.env.SEO_AUTOPUBLISH_ENABLED = "false";
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(false);
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+  });
+
+  it("does not approve anything when every backlog draft fails lint", async () => {
+    failLint = new Set(pagesRows.map((p) => p.id));
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(false);
+    expect(approveBatchToPR).not.toHaveBeenCalled();
+    expect(vi.mocked(buildBatchDiff).mock.calls.reduce((n, c) => n + c[0].length, 0)).toBeLessThanOrEqual(60); // bounded GitHub reads
+  });
+
+  it("degrades to staged (does not throw, pickedUp stays 0) when the approve call fails", async () => {
+    vi.mocked(approveBatchToPR).mockRejectedValue(new Error("GitHub is down"));
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(result.autoApproved).toBe(false);
+    expect(result.pickedUp).toBe(0);
+    expect(armHold).not.toHaveBeenCalled();
+  });
+
+  it("with a small backlog, takes just what exists", async () => {
+    draftRows = pagesRows.slice(0, 4).map((p) => draftRow(p.id));
+
+    const result = await runNightlyDraftJob(NOW);
+
+    expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([1, 2, 3, 4]);
+    expect(result.pickedUp).toBe(4);
   });
 });
