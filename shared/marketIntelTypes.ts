@@ -54,6 +54,19 @@ export type DecayingPageFinding = {
   pctDown: number;
 };
 
+/** Report-only flag: a page whose search visibility collapsed, or that URL Inspection reports as not indexed. Heuristic — points at where to look. */
+export type PossiblyDeindexedFinding = {
+  page: string;
+  previousImpressions: number;
+  impressions: number;
+  pctDown: number;
+  indexStatus: "indexed" | "crawled_not_indexed" | "discovered_not_indexed" | "excluded";
+  /** Search Console URL Inspection deep link for this page. */
+  inspectUrl: string;
+  /** Set when the page 301s elsewhere (netlify.toml), i.e. the loss is expected, not a de-index. */
+  redirectsTo: string | null;
+};
+
 /** A cannibalization finding (§3a bullet 4). */
 export type CannibalizationFinding = {
   query: string;
@@ -95,6 +108,8 @@ export type MarketIntelSections = {
     decaying: DecayingPageFinding[];
     cannibalization: CannibalizationFinding[];
     seasonality: SeasonalityFinding[];
+    /** Absent on reports generated before this field existed. */
+    possiblyDeindexed?: PossiblyDeindexedFinding[];
     skipped: boolean;
     skippedReason: string | null;
   };
