@@ -291,3 +291,26 @@ describe("lintContent — dollar ranges and service hours (owner decisions 2026-
     expect(codes("24/7 emergency service and same-day installs.", facts).some((c) => c.startsWith("service_hours_"))).toBe(false);
   });
 });
+
+describe("lintContent — unverified numeric claims (owner decision 2026-09-30)", () => {
+  const codes = (body: string) => lintContent({ ...cleanInput, body: words(1000) + " " + body }, factsWithIncentive).findings.map((f) => f.code);
+
+  it("blocks counties/years/customers/projects/technicians/reviews numbers that aren't in VERIFIED_FACTS", () => {
+    for (const t of ["We serve 15 counties.", "Over 30 years in business.", "We have 500 customers.", "After 300 projects.", "With 12 technicians.", "Backed by 250 reviews."]) {
+      expect(codes(t), t).toContain("unverified_numeric_claim");
+    }
+  });
+
+  it("allows the verified 9 counties and 20 years", () => {
+    expect(VERIFIED_FACTS.business.serviceCounties).toHaveLength(9);
+    expect(VERIFIED_FACTS.business.yearsInBusiness).toBe(20);
+    expect(codes("We serve 9 counties with 20 years of experience.")).not.toContain("unverified_numeric_claim");
+  });
+
+  it("uses the facts passed in, not a hardcoded figure", () => {
+    const facts = { ...factsWithIncentive, business: { ...factsWithIncentive.business, serviceCounties: ["A", "B"], yearsInBusiness: 5 } };
+    const c = (b: string) => lintContent({ ...cleanInput, body: words(1000) + " " + b }, facts).findings.map((f) => f.code);
+    expect(c("Serving 2 counties.")).not.toContain("unverified_numeric_claim");
+    expect(c("Serving 9 counties.")).toContain("unverified_numeric_claim");
+  });
+});

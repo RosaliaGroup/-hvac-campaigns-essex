@@ -10,6 +10,7 @@
  * fixed or deselected. WARN findings are shown but do not block approval.
  */
 import { PHONE_DISPLAY, PHONE_E164 } from "./business";
+import { VERIFIED_FACTS } from "./verifiedFacts";
 
 export type LintSeverity = "block" | "warn";
 
@@ -53,6 +54,8 @@ export type LintOptions = {
   differentiationFacts?: { portfolioSla: { responseHours: number | null }; monitoring: { is24x7: boolean }; serviceHours?: { emergency24x7: boolean; sameDay: boolean } };
   /** §9b price-range matching. Defaults to empty — any "$X installed" claim BLOCKs until the caller passes real VERIFIED_FACTS.priceRanges entries for this page. */
   priceRanges?: Array<{ page: string; low: number; high: number }>;
+  /** Numeric business claims (counties, years in business, customers…). Defaults to VERIFIED_FACTS.business. */
+  numericFacts?: NumericClaimFacts;
 };
 
 const UNCONFIGURED_DIFFERENTIATION_FACTS = { portfolioSla: { responseHours: null }, monitoring: { is24x7: false } };
@@ -481,6 +484,74 @@ export function lintDollarRanges(text: string, priceRanges: Array<{ page: string
   return findings;
 }
 
+
+/**
+ * Numeric business claims — county counts, years in business, customer /
+ * project / technician / review counts and ratings. The fact firewall's rule:
+ * a number like this may appear ONLY if it exists in VERIFIED_FACTS. Today that
+ * means the county count (business.serviceCounties.length) and
+ * business.yearsInBusiness; there are no verified customer, project,
+ * technician or review figures, so ANY such claim blocks. Digits only, plus the
+ * vague-quantity forms ("hundreds of customers"); spelled-out numbers are not
+ * detected (documented gap). Coverage terms ("10-year parts & labor") and
+ * equipment ages ("over 10 years old") are deliberately not matched — only
+ * tenure/count phrasings are.
+ */
+export type NumericClaimFacts = { business: { serviceCounties: string[]; yearsInBusiness: number } };
+
+const NUM = "(\\d[\\d,]*(?:\\.\\d+)?)";
+const NUMERIC_CLAIM_RULES: Array<{ kind: string; re: RegExp; verified?: (f: NumericClaimFacts) => number | null }> = [
+  { kind: "county count", re: new RegExp(NUM + "\\+?\\s*(?:nj\\s+|new jersey\\s+)?counties\\b", "gi"), verified: (f) => f.business.serviceCounties.length },
+  {
+    kind: "years in business",
+    re: new RegExp(NUM + "\\+?[\\s-]*years?\\s+(?:in business|of experience|experience|of service|serving|in the (?:hvac )?(?:business|industry))\\b", "gi"),
+    verified: (f) => f.business.yearsInBusiness,
+  },
+  {
+    kind: "years in business",
+    re: new RegExp("\\b(?:in business for|serving\\s+[\\w\\s,&.'-]{0,30}?\\s+for)\\s+(?:over\\s+|more than\\s+|nearly\\s+|almost\\s+)?" + NUM + "\\+?\\s+years\\b", "gi"),
+    verified: (f) => f.business.yearsInBusiness,
+  },
+  { kind: "customer count", re: new RegExp(NUM + "\\+?\\s+(?:happy\\s+|satisfied\\s+|local\\s+|nj\\s+|repeat\\s+)?(?:customers|clients|homeowners|families|households)\\b", "gi") },
+  { kind: "project count", re: new RegExp(NUM + "\\+?\\s+(?:(?:completed|successful|finished)\\s+(?:projects|installs|installations|jobs)|projects)\\b", "gi") },
+  { kind: "technician count", re: new RegExp(NUM + "\\+?\\s+(?:licensed\\s+|certified\\s+|expert\\s+|trained\\s+|skilled\\s+|full-time\\s+)?(?:technicians|techs|installers|team members|employees|crew members)\\b", "gi") },
+  { kind: "review count", re: new RegExp(NUM + "\\+?\\s+(?:five[- ]star\\s+|5[- ]star\\s+|verified\\s+|google\\s+)?(?:reviews|ratings|testimonials)\\b", "gi") },
+  { kind: "star rating", re: /\b(\d(?:\.\d)?)[\s-]*stars?\b/gi },
+  { kind: "star rating", re: /\b(\d(?:\.\d)?)\s*\/\s*5\b/g },
+  { kind: "vague quantity", re: /\b(?:hundreds|thousands|dozens)\s+of\s+(?:happy\s+|satisfied\s+)?(?:customers|clients|homeowners|families|projects|installations|jobs|reviews)\b/gi },
+];
+
+export function lintNumericClaims(text: string, facts: NumericClaimFacts): WarrantyLintFinding[] {
+  const findings: WarrantyLintFinding[] = [];
+  if (!text) return findings;
+  const seen = new Set<string>();
+  for (const rule of NUMERIC_CLAIM_RULES) {
+    for (const m of Array.from(text.matchAll(rule.re))) {
+      const claimed = parseFloat((m[1] ?? "").replace(/,/g, ""));
+      const verified = rule.verified ? rule.verified(facts) : null;
+      if (verified !== null && Number.isFinite(claimed) && claimed === verified) continue;
+      const key = rule.kind + "|" + m[0].toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      findings.push({
+        severity: "block",
+        code: "unverified_numeric_claim",
+        message:
+          verified !== null
+            ? `"${m[0].trim()}" is a ${rule.kind} claim that doesn't match VERIFIED_FACTS (verified: ${verified}).`
+            : `"${m[0].trim()}" is a ${rule.kind} claim, but no ${rule.kind} is in VERIFIED_FACTS — state no number.`,
+      });
+    }
+  }
+  return findings;
+}
+
+/** True for installation pages (the route says "install"): the positioning pages whose titles should carry the 10-year coverage. Blog posts and /direct-install/* (a rebate program) are not. */
+export function isInstallationPagePath(pagePath: string): boolean {
+  if (pagePath.startsWith("/blog/") || pagePath.startsWith("/direct-install")) return false;
+  return /install/i.test(pagePath);
+}
+
 /** True for installation and city pages — where the positioning is installation-led and a rebate-first title is off-message. Blog posts and /direct-install/* (a rebate program) are exempt. */
 function isInstallationOrCityPage(pagePath: string): boolean {
   if (pagePath.startsWith("/blog/") || pagePath.startsWith("/direct-install")) return false;
@@ -608,6 +679,9 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
     findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
   }
   for (const f of lintDifferentiationFactClaims(combined, opts.differentiationFacts ?? UNCONFIGURED_DIFFERENTIATION_FACTS)) {
+    findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
+  }
+  for (const f of lintNumericClaims(combined, opts.numericFacts ?? VERIFIED_FACTS)) {
     findings.push({ severity: f.severity, field: "both", code: f.code, message: f.message });
   }
   for (const f of lintDollarRanges(combined, opts.priceRanges ?? [])) {

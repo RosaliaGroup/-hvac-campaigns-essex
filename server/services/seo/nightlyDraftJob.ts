@@ -30,6 +30,7 @@ import { seoPages, seoAiDrafts, seoApprovalBatches } from "../../../drizzle/sche
 import { findLockedPages } from "../../seo/lockedPages";
 import { isInPendingBatch, approveBatchToPR, buildBatchDiff, yyyymmdd } from "./bulkApprove";
 import { isMockProvider } from "./ai/optimizationProvider";
+import { registerManifestRoutes } from "./routeRegistry";
 import { regenerateUnlockedDrafts } from "./draftManagement";
 import { addTag } from "./tags";
 import { logAudit } from "./auditLog";
@@ -113,6 +114,9 @@ export type PickupCandidate = {
 
 const normText = (s: string | null | undefined) => (s ?? "").trim();
 
+/** Whitespace-insensitive identity of a title+meta pair — the key used to tell a re-drafted page's NEW copy from copy a batch already shipped. */
+export const contentKey = (title: string | null | undefined, meta: string | null | undefined) => `${normText(title)}\n${normText(meta)}`;
+
 export type NightlySelectionContext = {
   lockedPaths: Set<string>;
   pendingBatchPaths: Set<string>;
@@ -171,7 +175,14 @@ export function selectNightlyDraftCandidates(
  */
 export function selectCleanDraftPickups(
   cands: PickupCandidate[],
-  ctx: { lockedPaths: Set<string>; pendingBatchPaths: Set<string>; excludePageIds: Set<number>; batchedPaths?: Set<string> },
+  ctx: {
+    lockedPaths: Set<string>;
+    pendingBatchPaths: Set<string>;
+    excludePageIds: Set<number>;
+    batchedPaths?: Set<string>;
+    /** path -> contentKey()s of every title/meta a prior batch put on that page. A batched page is eligible again only when its current draft differs from ALL of them (it was re-drafted since). Omitted = a batched page is never re-picked. */
+    batchedContent?: Map<string, Set<string>>;
+  },
 ): PickupCandidate[] {
   return cands
     .filter((c) => {
@@ -181,7 +192,11 @@ export function selectCleanDraftPickups(
       if (c.impressions < MIN_IMPRESSIONS_90D && pinIndex(c.pagePath) < 0) return false;
       if (ctx.lockedPaths.has(c.pagePath) || ctx.pendingBatchPaths.has(c.pagePath)) return false;
       // "Unbatched" means never batched: a merged batch already shipped this page (its draft just wasn't re-flagged), and a reverted one was rolled back on purpose.
-      if (ctx.batchedPaths?.has(c.pagePath)) return false;
+      if (ctx.batchedPaths?.has(c.pagePath)) {
+        // ...unless the page was RE-DRAFTED since: new copy that differs from everything any batch shipped is a genuine new proposal.
+        const shipped = ctx.batchedContent?.get(c.pagePath);
+        if (!shipped || shipped.has(contentKey(c.title, c.metaDescription))) return false;
+      }
       if (ctx.excludePageIds.has(c.pageId)) return false;
       if (
         c.pageTitle !== undefined &&
@@ -266,6 +281,12 @@ export type NightlyJobSummary = {
 export async function runNightlyDraftJob(now: Date = new Date()): Promise<NightlyJobSummary> {
   warnOnStalePriceRanges(now);
 
+  // Make sure every public route (e.g. the pinned /warranty, /commercial/*) has a seoPages row before selection, even if GSC hasn't reported it yet. Insert-only; best-effort.
+  await registerManifestRoutes().then(
+    (r) => { if (r.inserted > 0) console.log(`[SEO] registered ${r.inserted} manifest route(s) as zero-impression seoPages rows`); },
+    (err) => console.error("[SEO] manifest route registration failed (continuing):", (err as Error).message),
+  );
+
   const db = await getDb();
   if (!db) return { ready: 0, lintBlocked: 0, skippedLocked: 0, totalConsidered: 0, autoApproved: false, pickedUp: 0 };
 
@@ -337,6 +358,15 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
       try {
         const batches = await db.select().from(seoApprovalBatches);
         const batchedPaths = new Set<string>(batches.flatMap((b) => (b.pages as string[] | null) ?? []));
+        const batchedContent = new Map<string, Set<string>>();
+        for (const b of batches) {
+          for (const row of ((b.diff as Array<{ pagePath: string; after?: { title?: string | null; description?: string | null } }> | null) ?? [])) {
+            if (!row?.pagePath || !row.after) continue;
+            const set = batchedContent.get(row.pagePath) ?? new Set<string>();
+            set.add(contentKey(row.after.title, row.after.description));
+            batchedContent.set(row.pagePath, set);
+          }
+        }
         const pickupPool = selectCleanDraftPickups(
           pages.map((p) => {
             const d = draftByPageId.get(p.id);
@@ -352,7 +382,7 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
               pageMeta: p.metaDescription ?? null,
             };
           }),
-          { lockedPaths: new Set(lockedMap.keys()), pendingBatchPaths, excludePageIds: new Set(readyPageIds), batchedPaths },
+          { lockedPaths: new Set(lockedMap.keys()), pendingBatchPaths, excludePageIds: new Set(readyPageIds), batchedPaths, batchedContent },
         );
         const batch = await assembleBatch(selected.filter((s) => readyPageIds.includes(s.pageId)), pickupPool);
         if (batch.pageIds.length > 0) {

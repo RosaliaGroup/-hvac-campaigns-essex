@@ -15,7 +15,7 @@
  * after these calls resolve, so a throw here means nothing is written.
  */
 import { PHONE_DISPLAY } from "@shared/business";
-import { lintPageMeta, type LintFinding } from "@shared/seoLinter";
+import { lintPageMeta, isInstallationPagePath, type LintFinding } from "@shared/seoLinter";
 import { callAnthropicModelChain } from "../../../_core/anthropic";
 import { MockAiOptimizationProvider, type AiOptimizationProvider, type PageContext } from "./optimizationProvider";
 import type { AiFaqItem, AiInternalLink } from "@shared/seo";
@@ -56,12 +56,17 @@ Hard rules. An automated linter checks every one of these; breaking any of them 
 - Never say "guaranteed uptime" or "never fail". Never state an SLA response-hour figure unless it matches VERIFIED_FACTS.portfolioSla.responseHours exactly. Never say "24/7 monitoring" unless VERIFIED_FACTS.monitoring.is24x7 is true. Never say "guaranteed detection".
 - Never state an installed-price figure unless it matches a VERIFIED_FACTS.priceRanges entry for this exact page.
 - Never write a dollar range ("$8,000–$15,000", "$100-$200") — every range is blocked unless it matches a VERIFIED_FACTS.priceRanges entry, and none exist yet.
+- Never state a number of counties served, years in business, customers, projects, technicians, reviews, or a star rating ("15 counties", "500+ customers", "4.9-star") — the only numbers allowed are those in VERIFIED_FACTS; when in doubt, state no number.
 - Never say "24/7", "around the clock", or "same-day" — round-the-clock and same-day service are not confirmed (VERIFIED_FACTS.serviceHours).
 `.trim();
 
 // docs/positioning-warranty-spec.md §6 — verbatim positioning sentence, added to both the meta lane (here) and the content lane (contentDrafting.ts).
 const WARRANTY_POSITIONING_PROMPT =
   "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Mention rebates only as a secondary benefit and only using figures from VERIFIED_FACTS. Never describe coverage as included or free. Rebates are secondary and never the first clause of a title.";
+
+/** Installation-page titles carry the 10-year coverage when there is room (owner decision 2026-09-30). */
+const INSTALL_TITLE_HINT =
+  'This is an installation page. If it fits within 60 characters, include the exact phrase "10-Year Parts & Labor" in the title (for example "Heat Pump Installation NJ | 10-Year Parts & Labor"); if it does not fit, leave the phrase out rather than cutting other words. Never imply the coverage is included or free.';
 
 function buildSystemPrompt(field: "title" | "metaDescription"): string {
   const what = field === "title" ? "a page <title>" : 'a page <meta name="description"> value';
@@ -88,6 +93,9 @@ function buildUserPrompt(field: "title" | "metaDescription", ctx: PageContext, r
     ``,
     `Write a new ${field === "title" ? "title" : "meta description"} for this page.`,
   ];
+  if (field === "title" && isInstallationPagePath(ctx.page)) {
+    lines.push(``, INSTALL_TITLE_HINT);
+  }
   if (retryFeedback) {
     lines.push(``, `Your previous attempt was REJECTED by the compliance linter for: ${retryFeedback}. Fix exactly these issues and try again.`);
   }

@@ -9,6 +9,7 @@ vi.mock("./bulkApprove", () => ({
   yyyymmdd: (d: Date = new Date()) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`,
 }));
 vi.mock("./ai/optimizationProvider", () => ({ isMockProvider: (m: string) => m.startsWith("mock") }));
+vi.mock("./routeRegistry", () => ({ registerManifestRoutes: vi.fn(async () => ({ manifest: 0, registrable: 0, inserted: 0, existing: 0 })) }));
 vi.mock("./draftManagement", () => ({ regenerateUnlockedDrafts: vi.fn() }));
 vi.mock("./tags", () => ({ addTag: vi.fn(async () => {}) }));
 vi.mock("./auditLog", () => ({ logAudit: vi.fn() }));
@@ -24,7 +25,7 @@ import { regenerateUnlockedDrafts } from "./draftManagement";
 import { isWarmedUp } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { armHold } from "./autoMerge";
-import { selectNightlyDraftCandidates, selectCleanDraftPickups, runNightlyDraftJob, MAX_NIGHTLY_DRAFTS, PINNED_PRIORITY_PATHS, pinIndex, type NightlyCandidatePage, type PickupCandidate } from "./nightlyDraftJob";
+import { selectNightlyDraftCandidates, selectCleanDraftPickups, runNightlyDraftJob, MAX_NIGHTLY_DRAFTS, PINNED_PRIORITY_PATHS, pinIndex, contentKey, type NightlyCandidatePage, type PickupCandidate } from "./nightlyDraftJob";
 import { seoPages, seoAiDrafts, seoApprovalBatches } from "../../../drizzle/schema";
 
 const NOW = new Date("2026-09-26T06:00:00Z");
@@ -619,5 +620,69 @@ describe("runNightlyDraftJob — backlog pickup skips batched pages and no-op dr
     expect(approveBatchToPR).not.toHaveBeenCalled();
     expect(armHold).not.toHaveBeenCalled();
     expect(result).toMatchObject({ autoApproved: false, pickedUp: 0 });
+  });
+});
+
+describe("backlog pickup — a RE-DRAFTED batched page is eligible again (new copy only)", () => {
+  const base = { lockedPaths: new Set<string>(), pendingBatchPaths: new Set<string>(), excludePageIds: new Set<number>() };
+  const cand = (o: Partial<PickupCandidate> & { pageId: number }): PickupCandidate => ({
+    pagePath: `/p${o.pageId}`, impressions: 100, title: "New title", metaDescription: "New meta", draftStatus: "draft", model: "anthropic-claude-sonnet-5", ...o,
+  });
+  const shipped = (path: string, ...pairs: Array<[string, string]>) => new Map([[path, new Set(pairs.map(([t, m]) => contentKey(t, m)))]]);
+
+  it("a batched page whose draft DIFFERS from everything previously shipped is picked up", () => {
+    const out = selectCleanDraftPickups([cand({ pageId: 1 })], { ...base, batchedPaths: new Set(["/p1"]), batchedContent: shipped("/p1", ["Old title", "Old meta"]) });
+    expect(out.map((c) => c.pageId)).toEqual([1]);
+  });
+
+  it("a batched page whose draft equals what a batch shipped is NOT re-picked (whitespace-insensitive)", () => {
+    const out = selectCleanDraftPickups([cand({ pageId: 1, title: " New title ", metaDescription: "New meta\n" })], { ...base, batchedPaths: new Set(["/p1"]), batchedContent: shipped("/p1", ["New title", "New meta"]) });
+    expect(out).toEqual([]);
+  });
+
+  it("matching ANY earlier batch's content excludes it (e.g. a reverted batch being re-proposed unchanged)", () => {
+    const out = selectCleanDraftPickups([cand({ pageId: 1 })], { ...base, batchedPaths: new Set(["/p1"]), batchedContent: shipped("/p1", ["Older", "Older meta"], ["New title", "New meta"]) });
+    expect(out).toEqual([]);
+  });
+
+  it("a batched page with NO recorded content is never re-picked (conservative default)", () => {
+    expect(selectCleanDraftPickups([cand({ pageId: 1 })], { ...base, batchedPaths: new Set(["/p1"]) })).toEqual([]);
+    expect(selectCleanDraftPickups([cand({ pageId: 1 })], { ...base, batchedPaths: new Set(["/p1"]), batchedContent: new Map() })).toEqual([]);
+  });
+
+  it("an open batch still blocks a re-drafted page (pendingBatchPaths is untouched)", () => {
+    const out = selectCleanDraftPickups([cand({ pageId: 1 })], { ...base, pendingBatchPaths: new Set(["/p1"]), batchedPaths: new Set(["/p1"]), batchedContent: shipped("/p1", ["Old", "Old"]) });
+    expect(out).toEqual([]);
+  });
+});
+
+describe("runNightlyDraftJob — ships a re-drafted page that an earlier batch already shipped", () => {
+  const recent = new Date(NOW.getTime() - 2 * 24 * 60 * 60 * 1000);
+  const pagesRows = [1, 2, 3].map((id) => ({ id, page: `/p${id}`, impressions: 1000 - id, position: 15, ctr: 0.02, title: `Live ${id}`, metaDescription: `Live meta ${id}` }));
+  const mkDraft = (pageId: number, over: Record<string, unknown> = {}) => ({ pageId, generatedTitle: `T${pageId}`, generatedMetaDescription: `M${pageId}`, status: "draft", model: "anthropic-claude-sonnet-5", updatedAt: recent, ...over });
+
+  beforeEach(() => {
+    vi.mocked(findLockedPages).mockReset().mockResolvedValue(new Map());
+    vi.mocked(isInPendingBatch).mockReset().mockResolvedValue(false);
+    vi.mocked(regenerateUnlockedDrafts).mockReset().mockResolvedValue({ results: [], skippedLocked: [] });
+    vi.mocked(isWarmedUp).mockReset().mockResolvedValue(true);
+    vi.mocked(checkCircuitBreakerConditions).mockReset().mockResolvedValue({ shouldPause: false, reason: null });
+    vi.mocked(approveBatchToPR).mockReset().mockResolvedValue({ batch: { id: 9 } as never, prUrl: "u", prNumber: 1 });
+    vi.mocked(buildBatchDiff).mockReset().mockImplementation((async (ids: number[]) => ids.map((id) => ({ pageId: id, lint: { passes: true, findings: [] } }))) as never);
+    vi.mocked(armHold).mockReset().mockResolvedValue(undefined);
+    process.env.SEO_AUTOPUBLISH_ENABLED = "true";
+  });
+
+  it("re-picks page 1 (new copy), skips page 2 (same copy already shipped) and page 3 (merged batch with no content on record)", async () => {
+    const draftRows = [mkDraft(1, { generatedTitle: "Brand new title", generatedMetaDescription: "Brand new meta" }), mkDraft(2), mkDraft(3)];
+    const batchRows = [
+      { status: "merged", pages: ["/p1", "/p2"], diff: [{ pagePath: "/p1", after: { title: "Old title", description: "Old meta" } }, { pagePath: "/p2", after: { title: "T2", description: "M2" } }] },
+      { status: "merged", pages: ["/p3"], diff: null },
+    ];
+    vi.mocked(getDb).mockReset().mockResolvedValue({ select: () => ({ from: (t: unknown) => Promise.resolve(t === seoPages ? pagesRows : t === seoAiDrafts ? draftRows : t === seoApprovalBatches ? batchRows : []) }) } as never);
+
+    await runNightlyDraftJob(NOW);
+
+    expect(vi.mocked(approveBatchToPR).mock.calls[0][0].pageIds).toEqual([1]);
   });
 });

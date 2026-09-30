@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lintPageMeta, isBlocked, lintWarrantyClaims, lintDifferentiationClaims, lintDifferentiationFactClaims, lintPriceRangeClaims } from "./seoLinter";
+import { lintPageMeta, isBlocked, lintWarrantyClaims, lintDifferentiationClaims, lintDifferentiationFactClaims, lintPriceRangeClaims, lintNumericClaims } from "./seoLinter";
 
 describe("lintPageMeta — BLOCK rules (spec §3, acceptance test §11)", () => {
   it('blocks "#1" superlative claims', () => {
@@ -452,3 +452,86 @@ describe("lintPageMeta — dollar ranges, service hours, rebate-leading titles (
     expect(codes(meta("Free Lighting & HVAC Rebates for Bakeries", meta2, "/direct-install/bakeries-nj"))).not.toContain("title_leads_with_rebate");
   });
 });
+
+describe("lintNumericClaims — unverified numeric business claims (owner decision 2026-09-30)", () => {
+  const facts = { business: { serviceCounties: ["Essex", "Hudson", "Bergen", "Passaic", "Union", "Middlesex", "Morris", "Sussex", "Somerset"], yearsInBusiness: 20 } };
+  const blocked = (t: string, f = facts) => lintNumericClaims(t, f).length > 0;
+
+  it.each([
+    "Serving homeowners across 15 counties.",
+    "Trusted in 12 NJ counties.",
+    "Over 25 years in business.",
+    "30+ years of experience you can trust.",
+    "Proudly serving Essex County for 35 years.",
+    "We have served 500+ happy customers.",
+    "More than 2,000 homeowners helped.",
+    "Over 300 completed projects.",
+    "Our 12 licensed technicians are ready.",
+    "Read our 250 five-star reviews.",
+    "A 4.9-star rated contractor.",
+    "Rated 5/5 by clients.",
+    "Hundreds of satisfied customers choose us.",
+  ])("BLOCKS: %s", (t) => {
+    const r = lintNumericClaims(t, facts);
+    expect(r.length, t).toBeGreaterThan(0);
+    expect(r.every((f) => f.code === "unverified_numeric_claim" && f.severity === "block")).toBe(true);
+  });
+
+  it("allows the verified county count (9) and the verified years figure (20) — any other number still blocks", () => {
+    expect(blocked("Serving 9 NJ counties.")).toBe(false);
+    expect(blocked("20 years of experience on our team.")).toBe(false);
+    expect(blocked("Serving homeowners for 20 years.")).toBe(false);
+    expect(blocked("Serving 10 counties.")).toBe(true);
+    expect(blocked("21 years in business.")).toBe(true);
+  });
+
+  it("follows the facts: a different verified county count / years figure is what's allowed", () => {
+    const other = { business: { serviceCounties: ["A", "B", "C"], yearsInBusiness: 7 } };
+    expect(blocked("Serving 3 counties.", other)).toBe(false);
+    expect(blocked("Serving 9 counties.", other)).toBe(true);
+    expect(blocked("7 years in business.", other)).toBe(false);
+    expect(blocked("20 years in business.", other)).toBe(true);
+  });
+
+  it("customer/project/technician/review numbers have NO verified source, so they always block", () => {
+    expect(blocked("500 customers", facts)).toBe(true);
+    expect(blocked("12 projects", facts)).toBe(true);
+    expect(blocked("8 technicians", facts)).toBe(true);
+    expect(blocked("100 reviews", facts)).toBe(true);
+  });
+
+  it.each([
+    "Optional 10-year parts & labor coverage.",
+    "Is your AC over 10 years old?",
+    "Compressor failures cluster in years 5-8.",
+    "A 10-year parts and labor agreement covers repairs.",
+    "PSE&G rebates up to $16K may apply.",
+    "Call (862) 423-9396 for a free assessment.",
+    "We install heat pumps, ductless systems and VRF for NJ homes and buildings.",
+    "Three steps to a proper installation.",
+    "Serving Essex, Hudson and Bergen counties.",
+  ])("does NOT block ordinary copy: %s", (t) => {
+    expect(blocked(t), t).toBe(false);
+  });
+
+  it("reports each distinct claim once", () => {
+    expect(lintNumericClaims("15 counties. 15 counties again.", facts)).toHaveLength(1);
+    expect(lintNumericClaims("15 counties and 500 customers", facts)).toHaveLength(2);
+  });
+});
+
+describe("lintPageMeta / lintContent wire in numeric claims", () => {
+  it("lintPageMeta BLOCKS '15 counties' in the meta (defaults to VERIFIED_FACTS) but allows the verified 9", () => {
+    const bad = lintPageMeta({ pagePath: "/residential", title: "Residential HVAC", metaDescription: "Installation across 15 NJ counties. Call (862) 423-9396." });
+    expect(bad.passes).toBe(false);
+    expect(bad.findings.map((f) => f.code)).toContain("unverified_numeric_claim");
+    const ok = lintPageMeta({ pagePath: "/residential", title: "Residential HVAC", metaDescription: "Installation across 9 NJ counties. Call (862) 423-9396." });
+    expect(ok.findings.map((f) => f.code)).not.toContain("unverified_numeric_claim");
+  });
+
+  it("lintPageMeta BLOCKS a star-rating or customer-count claim in the title", () => {
+    expect(lintPageMeta({ pagePath: "/contact", title: "5-Star HVAC Contractor NJ", metaDescription: "Call (862) 423-9396." }).passes).toBe(false);
+    expect(lintPageMeta({ pagePath: "/contact", title: "500+ Customers Served", metaDescription: "Call (862) 423-9396." }).passes).toBe(false);
+  });
+}
+);
