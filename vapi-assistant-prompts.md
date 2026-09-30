@@ -418,7 +418,7 @@ What's your email address?"
 To use this in your Vapi assistant:
 
 1. Go to [Vapi Dashboard](https://dashboard.vapi.ai)
-2. Click on your Assistant (ID: 8cf657a7-9b9a-4060-89bd-0d8ae4a5249a)
+2. Click on the right Mechanical assistant: **Mechanical Inbound** (…2894) for inbound calls or **Mechanical Outbound** (…5b09) for outbound calls. (ID `…249a` is "Riley", the Wellness Partners assistant — NOT Mechanical; do not edit it.)
 3. Click "Edit"
 4. Paste the **Master AI Assistant Prompt** section (top of this document) into the "System Prompt" field
 5. Add the specific scenario scripts as "Knowledge Base" or "Examples"

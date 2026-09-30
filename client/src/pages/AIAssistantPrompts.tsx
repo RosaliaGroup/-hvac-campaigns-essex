@@ -391,7 +391,7 @@ Silence Timeout: 30 seconds`;
           <CardContent>
             <ol className="list-decimal list-inside space-y-2 text-sm">
               <li>Go to your <a href="https://dashboard.vapi.ai" target="_blank" rel="noopener noreferrer" className="text-[#ff6b35] hover:underline inline-flex items-center gap-1">Vapi Dashboard <ExternalLink className="h-3 w-3" /></a></li>
-              <li>Open your Assistant (ID: 8cf657a7-9b9a-4060-89bd-0d8ae4a5249a) — rename it to <strong>Jessica</strong></li>
+              <li>Open <strong>Mechanical Inbound</strong> (ID ending …2894) or <strong>Mechanical Outbound</strong> (ID ending …5b09) — both use the persona <strong>Jessica</strong></li>
               <li>Paste the <strong>Inbound Prompt</strong> into the System Prompt field for your inbound assistant</li>
               <li>Create a second assistant for outbound calls and paste the <strong>Outbound Prompt</strong></li>
               <li>Add all 4 tools from the <strong>Vapi Tools</strong> tab — these enable appointment booking</li>

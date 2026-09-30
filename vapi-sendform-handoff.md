@@ -77,8 +77,8 @@ Behavior:
 
 ## Required Vapi dashboard change (owner action — manual)
 
-In the Vapi dashboard for assistant **Jessica** (`8cf657a7-9b9a-4060-89bd-0d8ae4a5249a`,
-org `c9050f68-…`), edit the **`sendForm`** tool:
+In the Vapi dashboard for the Mechanical assistants — **Mechanical Inbound** (`…2894`) and
+**Mechanical Outbound** (`…5b09`), org `c9050f68-…` (the tool object is shared by both; edit it once) — edit the **`sendForm`** tool:
 
 1. **Server URL** → `https://mechanicalenterprise.com/api/webhooks/vapi/send-form`
    (replace whatever it currently points to — see verification below).
