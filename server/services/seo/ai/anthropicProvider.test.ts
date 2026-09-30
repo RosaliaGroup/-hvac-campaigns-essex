@@ -172,3 +172,23 @@ describe("AnthropicOptimizationProvider — everything outside title/meta delega
     expect(callAnthropicModelChain).not.toHaveBeenCalled();
   });
 });
+
+describe("AnthropicOptimizationProvider — output budget and owner rules in the prompt", () => {
+  it("requests a token budget large enough that thinking tokens can't truncate or empty the title/meta (300 did)", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok("Clean Title"));
+    const p = new AnthropicOptimizationProvider("key");
+    await p.generateTitle(ctx());
+    await p.generateMetaDescription(ctx());
+    for (const [opts] of vi.mocked(callAnthropicModelChain).mock.calls) expect((opts as { maxTokens: number }).maxTokens).toBeGreaterThanOrEqual(1000);
+  });
+
+  it("tells the model the range / 24-7 / same-day rules and that rebates are never the first clause of a title", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValueOnce(ok("Clean Title"));
+    await new AnthropicOptimizationProvider("key").generateTitle(ctx());
+    const system = (vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system;
+    expect(system).toContain("Never write a dollar range");
+    expect(system).toContain("24/7");
+    expect(system).toContain("same-day");
+    expect(system).toContain("never the first clause of a title");
+  });
+});

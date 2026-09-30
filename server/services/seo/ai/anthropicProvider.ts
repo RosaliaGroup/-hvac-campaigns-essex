@@ -55,11 +55,13 @@ Hard rules. An automated linter checks every one of these; breaking any of them 
 - Never offer a comfort/refund guarantee: no "money-back", "refund if", "remove it and refund", or "satisfaction guarantee" — none of that is offered.
 - Never say "guaranteed uptime" or "never fail". Never state an SLA response-hour figure unless it matches VERIFIED_FACTS.portfolioSla.responseHours exactly. Never say "24/7 monitoring" unless VERIFIED_FACTS.monitoring.is24x7 is true. Never say "guaranteed detection".
 - Never state an installed-price figure unless it matches a VERIFIED_FACTS.priceRanges entry for this exact page.
+- Never write a dollar range ("$8,000–$15,000", "$100-$200") — every range is blocked unless it matches a VERIFIED_FACTS.priceRanges entry, and none exist yet.
+- Never say "24/7", "around the clock", or "same-day" — round-the-clock and same-day service are not confirmed (VERIFIED_FACTS.serviceHours).
 `.trim();
 
 // docs/positioning-warranty-spec.md §6 — verbatim positioning sentence, added to both the meta lane (here) and the content lane (contentDrafting.ts).
 const WARRANTY_POSITIONING_PROMPT =
-  "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Mention rebates only as a secondary benefit and only using figures from VERIFIED_FACTS. Never describe coverage as included or free.";
+  "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Mention rebates only as a secondary benefit and only using figures from VERIFIED_FACTS. Never describe coverage as included or free. Rebates are secondary and never the first clause of a title.";
 
 function buildSystemPrompt(field: "title" | "metaDescription"): string {
   const what = field === "title" ? "a page <title>" : 'a page <meta name="description"> value';
@@ -115,7 +117,7 @@ async function draftField(field: "title" | "metaDescription", ctx: PageContext, 
       models: modelChain(),
       system: buildSystemPrompt(field),
       messages: [{ role: "user", content: buildUserPrompt(field, ctx, feedback) }],
-      maxTokens: 300,
+      maxTokens: 2000, // thinking tokens count against this; 300 truncated titles/metas mid-word (or returned empty)
     });
     if (!result.ok || result.text === undefined) {
       throw new Error(result.error ?? `Anthropic ${field} generation failed`);

@@ -267,3 +267,27 @@ describe("lintContent — negated lease/rent calibration", () => {
     expect(codes(s)).toContain("membership_equipment_ownership_implied");
   });
 });
+
+describe("lintContent — dollar ranges and service hours (owner decisions 2026-09-29)", () => {
+  const codes = (body: string, facts: typeof factsWithIncentive = factsWithIncentive) => lintContent({ ...cleanInput, body: words(1000) + " " + body }, facts).findings.map((f) => f.code);
+
+  it("blocks any dollar range while VERIFIED_FACTS.priceRanges is empty", () => {
+    expect(VERIFIED_FACTS.priceRanges).toEqual([]);
+    expect(codes("Expect to pay $8,000–$15,000 for a full replacement.")).toContain("unverified_dollar_range");
+  });
+
+  it("allows a range that matches a verified priceRanges entry", () => {
+    const facts = { ...factsWithIncentive, priceRanges: [{ page: "/x", item: "system", low: 8000, high: 15000, asOf: "2026-09-26", source: "owner" }] } as typeof factsWithIncentive;
+    expect(codes("Expect to pay $8,000–$15,000.", facts)).not.toContain("unverified_dollar_range");
+  });
+
+  it.each(["We offer 24/7 emergency service.", "Available around the clock.", "We can install same-day."])("blocks %s (serviceHours facts are false)", (t) => {
+    expect(VERIFIED_FACTS.serviceHours).toEqual({ emergency24x7: false, sameDay: false });
+    expect(codes(t).some((c) => c.startsWith("service_hours_"))).toBe(true);
+  });
+
+  it("allows them when the serviceHours facts are true", () => {
+    const facts = { ...factsWithIncentive, serviceHours: { emergency24x7: true, sameDay: true } };
+    expect(codes("24/7 emergency service and same-day installs.", facts).some((c) => c.startsWith("service_hours_"))).toBe(false);
+  });
+});

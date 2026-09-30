@@ -105,6 +105,13 @@ export type VerifiedMonitoring = {
   is24x7: boolean;
 };
 
+export type VerifiedServiceHours = {
+  /** "24/7", "around the clock" emergency service may only be claimed once the owner sets this true. */
+  emergency24x7: boolean;
+  /** "same-day" service may only be claimed once the owner sets this true. */
+  sameDay: boolean;
+};
+
 export type VerifiedFacts = {
   business: {
     legalName: string;
@@ -153,6 +160,8 @@ export type VerifiedFacts = {
   portfolioSla: VerifiedPortfolioSla;
   /** docs/positioning-warranty-spec.md §9e. */
   monitoring: VerifiedMonitoring;
+  /** Service-hours claims (24/7, around the clock, same-day) — all false until the owner confirms them. */
+  serviceHours: VerifiedServiceHours;
 };
 
 export const VERIFIED_FACTS: VerifiedFacts = {
@@ -252,6 +261,11 @@ export const VERIFIED_FACTS: VerifiedFacts = {
     included: "membership",
     optIn: true,
     is24x7: false,
+  },
+  // Owner has NOT confirmed 24/7 emergency or same-day service — every such claim BLOCKs until they do.
+  serviceHours: {
+    emergency24x7: false,
+    sameDay: false,
   },
 };
 
