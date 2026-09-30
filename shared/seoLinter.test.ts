@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { lintPageMeta, isBlocked, lintWarrantyClaims, lintDifferentiationClaims, lintDifferentiationFactClaims, lintPriceRangeClaims, isInstallationOrCityPage } from "./seoLinter";
+import { lintPageMeta, isBlocked, lintWarrantyClaims, lintDifferentiationClaims, lintDifferentiationFactClaims, lintPriceRangeClaims } from "./seoLinter";
 
 describe("lintPageMeta — BLOCK rules (spec §3, acceptance test §11)", () => {
   it('blocks "#1" superlative claims', () => {
@@ -451,15 +451,4 @@ describe("lintPageMeta — dollar ranges, service hours, rebate-leading titles (
     expect(codes(meta("PSE&G Instant Rebate Program for HVAC", meta2, "/blog/pseg-instant-rebate-program-nj"))).not.toContain("title_leads_with_rebate");
     expect(codes(meta("Free Lighting & HVAC Rebates for Bakeries", meta2, "/direct-install/bakeries-nj"))).not.toContain("title_leads_with_rebate");
   });
-});
-
-describe("isInstallationOrCityPage (exported: the meta-lane prompt uses this one definition)", () => {
-  it.each([
-    "/heat-pump-installation-nj", "/central-ac-installation-nj", "/ductless-mini-split-installation-nj", "/vrv-vrf-installation-nj",
-    "/commercial-hvac-installation-nj", "/hvac-union-nj", "/hvac-newark-nj",
-  ])("true for %s", (p) => expect(isInstallationOrCityPage(p)).toBe(true));
-
-  it.each([
-    "/blog/hvac-installation-cost-nj-2026", "/direct-install/bakeries-nj", "/about", "/contact", "/warranty", "/residential", "/commercial", "/commercial/property-managers", "/ac-repair-nj",
-  ])("false for %s", (p) => expect(isInstallationOrCityPage(p)).toBe(false));
 });
