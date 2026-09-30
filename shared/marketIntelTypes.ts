@@ -54,6 +54,19 @@ export type DecayingPageFinding = {
   pctDown: number;
 };
 
+/** Report-only flag: a page whose search visibility collapsed, or that URL Inspection reports as not indexed. Heuristic — points at where to look. */
+export type PossiblyDeindexedFinding = {
+  page: string;
+  previousImpressions: number;
+  impressions: number;
+  pctDown: number;
+  indexStatus: "indexed" | "crawled_not_indexed" | "discovered_not_indexed" | "excluded";
+  /** Search Console URL Inspection deep link for this page. */
+  inspectUrl: string;
+  /** Set when the page 301s elsewhere (netlify.toml), i.e. the loss is expected, not a de-index. */
+  redirectsTo: string | null;
+};
+
 /** A cannibalization finding (§3a bullet 4). */
 export type CannibalizationFinding = {
   query: string;
@@ -88,13 +101,48 @@ export type CompetitorDiffFinding = {
   field: "title" | "meta" | "heading" | "offer";
 };
 
+/** One thing the daily Googlebot-style crawl check found wrong with a URL (server/services/seo/intel/crawlCheck.ts). */
+export type CrawlAnomaly = {
+  url: string;
+  kind: "unexpected_redirect" | "http_error" | "fetch_failed" | "noindex" | "canonical_mismatch" | "no_title" | "tiny_body" | "bot_diverges";
+  detail: string;
+};
+export type CrawlCheckResult = { checkedAt: string; checked: number; anomalies: CrawlAnomaly[] };
+
+/** Readout of the redirect re-indexing test (shared/seoExperiment.ts, server/services/seo/intel/experiment.ts). */
+export type ExperimentPageRead = {
+  path: string;
+  group: "treatment" | "control";
+  coverageState: string | null;
+  verdict: string | null;
+  lastCrawlTime: string | null;
+  recrawledSinceStart: boolean;
+  impressionsBefore: number;
+  impressionsAfter: number;
+};
+export type ExperimentReadout =
+  | { phase: "not_started"; note: string }
+  | { phase: "running"; startedAt: string; daysUntilRead: number }
+  | { phase: "read"; startedAt: string; pages: ExperimentPageRead[]; conclusion: "supports_crawl_fault" | "supports_quality_demotion" | "inconclusive"; summary: string };
+
+/** A dated hand-written note published into one day's report (docs/intel-notes, server/services/seo/intel/notes.ts). */
+export type ReportNote = { id: string; title: string; markdown: string };
+
 export type MarketIntelSections = {
+  /** Absent on reports with no note scheduled for their date. */
+  notes?: ReportNote[];
+  /** Daily Googlebot-style fetch check of the top URLs. Absent if the check couldn't run. */
+  crawlCheck?: CrawlCheckResult;
+  /** Re-indexing test status/readout. */
+  experiment?: ExperimentReadout;
   searchDemand: {
     rising: RisingQueryFinding[];
     unserved: UnservedQueryFinding[];
     decaying: DecayingPageFinding[];
     cannibalization: CannibalizationFinding[];
     seasonality: SeasonalityFinding[];
+    /** Absent on reports generated before this field existed. */
+    possiblyDeindexed?: PossiblyDeindexedFinding[];
     skipped: boolean;
     skippedReason: string | null;
   };

@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Loader2, RotateCcw, Ban } from "lucide-react";
+import { RefreshCw, Loader2, RotateCcw, Ban, ExternalLink } from "lucide-react";
 import DashboardFooter from "@/components/DashboardFooter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import type { MarketIntelSections } from "@shared/marketIntelTypes";
 
 const DISMISS_REASONS = ["wrong", "not_now", "off_brand", "already_done"] as const;
 
@@ -132,6 +133,86 @@ export default function MarketIntel() {
               )}
             </CardContent>
           </Card>
+
+          {(() => {
+            const sec = active.report.sections as MarketIntelSections | null;
+            const cc = sec?.crawlCheck;
+            const ex = sec?.experiment;
+            return (
+              <>
+                {cc && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Crawl check ({cc.anomalies.length === 0 ? "all clear" : `${cc.anomalies.length} issue${cc.anomalies.length === 1 ? "" : "s"}`})</CardTitle>
+                      <CardDescription>{cc.checked} URLs fetched as Googlebot and as a browser on {new Date(cc.checkedAt).toLocaleString()}. From our server, so it cannot see anything done only for Google’s real crawler.</CardDescription>
+                    </CardHeader>
+                    {cc.anomalies.length > 0 && (
+                      <CardContent className="space-y-1 text-sm">
+                        {cc.anomalies.map((a, i) => (
+                          <div key={i}><Badge variant="destructive" className="mr-2">{a.kind}</Badge><a href={a.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">{new URL(a.url).pathname}</a> <span className="text-muted-foreground">{a.detail}</span></div>
+                        ))}
+                      </CardContent>
+                    )}
+                  </Card>
+                )}
+                {ex && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Re-indexing test</CardTitle>
+                      <CardDescription>
+                        {ex.phase === "not_started" && ex.note}
+                        {ex.phase === "running" && `Started ${ex.startedAt}; reads in ${ex.daysUntilRead} day${ex.daysUntilRead === 1 ? "" : "s"}. Rewrites of the 15 flagged pages stay on hold.`}
+                        {ex.phase === "read" && `Started ${ex.startedAt}. ${ex.summary}`}
+                      </CardDescription>
+                    </CardHeader>
+                    {ex.phase === "read" && (
+                      <CardContent className="space-y-1 text-sm">
+                        {ex.pages.map((p) => (
+                          <div key={p.path}><Badge variant={p.group === "treatment" ? "default" : "outline"} className="mr-2">{p.group}</Badge><span className="font-medium">{p.path}</span> <span className="text-muted-foreground">{p.coverageState ?? "not inspected"}{p.recrawledSinceStart ? ", re-crawled" : ""}, impressions {p.impressionsBefore} → {p.impressionsAfter}</span></div>
+                        ))}
+                      </CardContent>
+                    )}
+                  </Card>
+                )}
+              </>
+            );
+          })()}
+
+          {((active.report.sections as MarketIntelSections | null)?.notes ?? []).map((n) => (
+            <Card key={n.id}>
+              <CardHeader>
+                <CardTitle className="text-base">{n.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm whitespace-pre-wrap">{n.markdown}</CardContent>
+            </Card>
+          ))}
+
+          {(() => {
+            const flagged = (active.report.sections as MarketIntelSections | null)?.searchDemand?.possiblyDeindexed ?? [];
+            if (flagged.length === 0) return null;
+            return (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Possibly de-indexed ({flagged.length})</CardTitle>
+                  <CardDescription>Pages that lost almost all search visibility (or that Google reports as not indexed). A pointer to check, not a verdict — open URL Inspection to confirm.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {flagged.map((f) => (
+                    <div key={f.page} className="flex items-start justify-between gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">{f.page}</span>
+                        <span className="ml-2 text-muted-foreground">{f.previousImpressions.toLocaleString()} → {f.impressions.toLocaleString()} impressions ({(f.pctDown * 100).toFixed(0)}% down){f.indexStatus !== "indexed" ? `, Google: ${f.indexStatus.replace(/_/g, " ")}` : ""}</span>
+                        {f.redirectsTo && <Badge variant="outline" className="ml-2">301 → {f.redirectsTo} (expected)</Badge>}
+                      </div>
+                      <a href={f.inspectUrl} target="_blank" rel="noreferrer" className="shrink-0 inline-flex items-center gap-1 text-primary hover:underline">
+                        URL Inspection <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           <div className="space-y-3">
             {active.items.map((item) => (

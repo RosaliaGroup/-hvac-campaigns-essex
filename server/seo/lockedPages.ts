@@ -18,6 +18,7 @@ import { getDb } from "../db";
 import { seoPageTags } from "../../drizzle/schema";
 import { eq, and } from "drizzle-orm";
 import crypto from "node:crypto";
+import { isHeldForExperiment, REINDEX_EXPERIMENT } from "../../shared/seoExperiment";
 
 /**
  * sha256(pagePath) — the indexed lookup/uniqueness key for seoPageTags (and
@@ -68,6 +69,7 @@ export type LockReason =
   | { kind: "noindex_nofollow" }
   | { kind: "internal_route" }
   | { kind: "claims_review"; note: string | null }
+  | { kind: "experiment_hold"; until: string }
   | { kind: "customer_facing_send_target"; sentBy: string };
 
 export type LockCheckResult =
@@ -112,6 +114,10 @@ export function isStaticallyLocked(path: string): LockCheckResult {
   }
   if (SEEDED_CLAIMS_REVIEW_PATHS.has(clean)) {
     return { locked: true, reason: { kind: "claims_review", note: null }, message: `${clean} is flagged claims-review (25C/expired-incentive audit) — remove the tag (with a note) before bulk-approving.` };
+  }
+
+  if (isHeldForExperiment(clean)) {
+    return { locked: true, reason: { kind: "experiment_hold", until: REINDEX_EXPERIMENT.holdUntil }, message: `${clean} is on hold until ${REINDEX_EXPERIMENT.holdUntil} while the re-indexing test reads (docs/pr1/july-collapse.md) — no title/meta/content rewrites.` };
   }
 
   return { locked: false };

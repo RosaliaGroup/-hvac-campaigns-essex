@@ -35,6 +35,7 @@
  * invocation from this daily job is withheld, per the safer reading of the
  * spec's own internal tension.
  */
+import { isHeldForExperiment } from "../../../../shared/seoExperiment";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { seoPages } from "../../../../drizzle/schema";
@@ -281,6 +282,9 @@ export async function executeItem(
     const evidence = item.evidence as DecayingPageFinding;
     const refreshesSlug = evidence.page.replace(/^\//, "");
     const source = "market-intel:decaying_page"; // encodes (page, kind) — see hasExistingProposal's doc
+    if (isHeldForExperiment(evidence.page, ctx.now)) {
+      return { result: { status: "staged", reason: `held: ${evidence.page} is inside the re-indexing test hold (docs/pr1/july-collapse.md) — no refresh queued` }, counts: ctx.counts };
+    }
     try {
       // The intel job re-finds the SAME decaying page on every run until it's
       // actually refreshed — without this check, a page proposed once when

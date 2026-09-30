@@ -180,3 +180,33 @@ describe("executeItem: decaying_page proposes a refresh, deduped on (page, kind)
     expect(proposeTopic).not.toHaveBeenCalled();
   });
 });
+
+describe("executeItem: decaying_page respects the re-indexing test hold", () => {
+  const decaying = (page: string) => ({
+    kind: "decaying_page" as const, title: `Decaying page: ${page}`, suggestion: "x", targetQueue: "content_queue" as const, factsBlocked: false,
+    evidence: { page, clicks: 1, previousClicks: 28, previousImpressions: 2719, pctDown: 0.96 } satisfies DecayingPageFinding,
+  });
+  const ctx = (now: string) => ({ counts: emptyExecutionCounts(), metaWarmedUp: true, circuitClear: true, now: new Date(now) });
+
+  it("queues NO refresh for a held page (2026-10-05 is inside the hold)", async () => {
+    vi.mocked(proposeTopic).mockClear();
+    const { result } = await executeItem(decaying("/blog/nj-heat-pump-rebates-2026"), ctx("2026-10-05T12:00:00Z"));
+    expect(result.status).toBe("staged");
+    expect("reason" in result && result.reason).toContain("held");
+    expect(proposeTopic).not.toHaveBeenCalled();
+  });
+
+  it("still queues a refresh for a page that is not held", async () => {
+    vi.mocked(proposeTopic).mockClear();
+    vi.mocked(hasExistingProposal).mockResolvedValueOnce(false);
+    await executeItem(decaying("/blog/some-other-post"), ctx("2026-10-05T12:00:00Z"));
+    expect(proposeTopic).toHaveBeenCalledTimes(1);
+  });
+
+  it("resumes queueing for a held page once the hold has ended", async () => {
+    vi.mocked(proposeTopic).mockClear();
+    vi.mocked(hasExistingProposal).mockResolvedValueOnce(false);
+    await executeItem(decaying("/blog/nj-heat-pump-rebates-2026"), ctx("2026-10-23T00:00:00Z"));
+    expect(proposeTopic).toHaveBeenCalledTimes(1);
+  });
+});
