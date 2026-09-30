@@ -111,3 +111,25 @@ describe("insertBlogPostIntoSource / extractExistingTitles", () => {
     expect(extractExistingTitles(fakeSource)).toEqual(["Existing Post One"]);
   });
 });
+
+describe("renderPostPlainText / extractInternalLinkPaths never throw on a malformed section (regression: TypeError reading 'matchAll' of undefined)", () => {
+  const base = { title: "T", slug: "s", date: "d", readTime: "r", category: "c", metaDescription: "m", excerpt: "e" };
+  const bad = (sections: unknown[], faq?: unknown[]) => ({ ...base, sections, ...(faq ? { faqSchema: faq } : {}) }) as unknown as BlogPostData;
+
+  it("survives sections missing content / items / buttonUrl, unknown types, and a half-filled FAQ", () => {
+    const post = bad(
+      [{ type: "intro" }, { type: "checklist" }, { type: "cta_box", content: "x" }, { type: "image", content: "y" }, { type: "paragraph", content: "ok [a](/hvac-newark-nj)" }],
+      [{ question: "only a question" }, null],
+    );
+    expect(() => renderPostPlainText(post)).not.toThrow();
+    expect(() => extractInternalLinkPaths(post)).not.toThrow();
+    expect(() => countPostStructure(post)).not.toThrow();
+    expect(extractInternalLinkPaths(post)).toEqual(["/hvac-newark-nj"]);
+  });
+
+  it("still reads a well-formed section exactly as before", () => {
+    const post = bad([{ type: "checklist", items: ["one", "two"] }, { type: "cta_box", content: "go", buttonText: "b", buttonUrl: "https://mechanicalenterprise.com/commercial" }]);
+    expect(renderPostPlainText(post)).toContain("one\ntwo");
+    expect(extractInternalLinkPaths(post)).toEqual(["/commercial"]);
+  });
+});

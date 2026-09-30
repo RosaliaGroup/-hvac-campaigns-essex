@@ -53,7 +53,9 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
     ...findingsBlock,
     "",
     "Rules:",
-    "- 900-1400 words total across all sections combined.",
+    "- `title`: AT MOST 60 characters including spaces. The topic above is a SUBJECT, not the title — write a new, shorter page title; never paste the topic text as the title if it is longer than 60 characters.",
+    "- `metaDescription`: AT MOST 155 characters including spaces (aim for 140-150).",
+    "- 1,000-1,250 words total across all sections combined (the linter rejects anything under 900 or over 1,400, so don't aim at either edge).",
     "- The `title` field IS the page's one H1 — do not repeat it as a section.",
     "- At most 6 `h2` sections. No sub-headings beyond h2 (the format has no h3).",
     "- Include exactly one `cta_box` section linking to a B2B page (buttonUrl must start with https://mechanicalenterprise.com/commercial).",
@@ -86,7 +88,45 @@ function parseContentDraftResponse(text: string): BlogPostData {
   if (typeof p.title !== "string" || typeof p.slug !== "string" || !Array.isArray(p.sections)) {
     throw new ContentDraftParseError(trimmed);
   }
+  const problem = describeShapeProblem(p);
+  if (problem) throw new ContentDraftParseError(problem);
   return parsed as BlogPostData;
+}
+
+const TEXT_SECTION_TYPES = new Set(["intro", "h2", "paragraph", "stat_box", "cta_box"]);
+const LIST_SECTION_TYPES = new Set(["checklist", "numbered_list"]);
+const isNonEmptyString = (v: unknown): v is string => typeof v === "string" && v.trim().length > 0;
+
+/**
+ * Structural check of a parsed draft beyond "it is JSON": every section must have the fields its type needs. A section
+ * with no `content` used to reach the renderer and crash the run (TypeError on undefined); now it is reported as a
+ * retryable parse error naming the problem, so the next attempt is told exactly what to fix. Returns null when sound.
+ */
+export function describeShapeProblem(p: Partial<BlogPostData>): string | null {
+  if (!isNonEmptyString(p.title)) return '"title" is missing or empty';
+  if (!isNonEmptyString(p.slug)) return '"slug" is missing or empty';
+  if (!isNonEmptyString(p.metaDescription)) return '"metaDescription" is missing or empty';
+  if (!isNonEmptyString(p.excerpt)) return '"excerpt" is missing or empty';
+  const sections = p.sections as unknown[];
+  if (sections.length === 0) return '"sections" is empty';
+  for (let i = 0; i < sections.length; i++) {
+    const s = sections[i] as Record<string, unknown> | null;
+    if (!s || typeof s !== "object") return `section ${i} is not an object`;
+    const type = s.type;
+    if (typeof type !== "string" || !(TEXT_SECTION_TYPES.has(type) || LIST_SECTION_TYPES.has(type))) return `section ${i} has an unknown type (${JSON.stringify(type)})`;
+    if (TEXT_SECTION_TYPES.has(type) && !isNonEmptyString(s.content)) return `section ${i} (${type}) is missing its "content" string`;
+    if (LIST_SECTION_TYPES.has(type) && !(Array.isArray(s.items) && s.items.length > 0 && s.items.every((x) => typeof x === "string"))) return `section ${i} (${type}) is missing its "items" array of strings`;
+    if (type === "cta_box" && !(isNonEmptyString(s.buttonText) && isNonEmptyString(s.buttonUrl))) return `section ${i} (cta_box) is missing "buttonText" or "buttonUrl"`;
+  }
+  if (p.faqSchema !== undefined) {
+    if (!Array.isArray(p.faqSchema)) return '"faqSchema" is not an array';
+    const faq = p.faqSchema as unknown[];
+    for (let i = 0; i < faq.length; i++) {
+      const q = faq[i] as Record<string, unknown> | null;
+      if (!q || !isNonEmptyString(q.question) || !isNonEmptyString(q.answer)) return `faqSchema[${i}] needs a "question" and an "answer" string`;
+    }
+  }
+  return null;
 }
 
 /** Draft a complete post for `topic`. Throws ContentDraftUnavailableError/ContentDraftParseError rather than returning a partial/invalid post. */

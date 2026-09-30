@@ -40,6 +40,8 @@ function buildCriticSystemPrompt(facts: VerifiedFacts): string {
     "Your ONLY job: list every factual claim in the text below that is NOT directly supported by the JSON of verified facts given to you.",
     "A factual claim is any number, dollar figure, date, program name, certification, credential, years-in-business figure, service offered, phone number, address, county/area served, or client/project reference.",
     "General marketing language with no checkable fact in it (tone, calls to action, generic benefit statements) is not a claim.",
+    "A claim that restates or paraphrases ANY field of the verified facts JSON below is SUPPORTED, however it is worded. That includes: warranty.included=false (the 10-year parts & labor coverage is an OPTIONAL PAID add-on and is NOT included), warranty.availableFor (new installations by Mechanical Enterprise, and existing systems that pass an eligibility inspection), warranty.years / covers / deductible, warranty.termsUrl (the /warranty page, written with or without the mechanicalenterprise.com domain), business.phone, serviceCounties, yearsInBusiness, and the portfolioSla / monitoring descriptions. Never flag a supported claim just because its wording differs.",
+    "Claims that are NOT in the facts are still unsupported — for example a general industry recommendation or statistic containing a number (\"most portfolios benefit from at least two service visits a year\").",
     "",
     "VERIFIED FACTS (the ONLY source of truth — anything not derivable from this is unsupported):",
     JSON.stringify(facts, null, 2),

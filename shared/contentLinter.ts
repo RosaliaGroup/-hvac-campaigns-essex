@@ -26,6 +26,7 @@ import {
   lintDifferentiationFactClaims,
   lintDollarRanges,
   lintNumericClaims,
+  isGuaranteeAsserted,
 } from "./seoLinter";
 import { isFactsConfigured, type VerifiedFacts } from "./verifiedFacts";
 
@@ -157,7 +158,9 @@ export function lintContent(input: ContentLintInput, facts: VerifiedFacts): Cont
 
   // ── Same BLOCK rules as title/meta, applied to the body ──
   for (const phrase of SUPERLATIVES) {
-    if (includesPhrase(body, phrase)) findings.push(blockFinding("superlative", `Unsupported superlative claim in body: "${phrase}".`));
+    // "guaranteed" is only a violation when asserted; in a question or a disclaimer ("never guaranteed") it is allowed.
+    const hit = phrase === "guaranteed" ? isGuaranteeAsserted(body) : includesPhrase(body, phrase);
+    if (hit) findings.push(blockFinding("superlative", `Unsupported superlative claim in body: "${phrase}".`));
   }
   for (const phrase of EXPIRED_INCENTIVES) {
     if (includesPhrase(body, phrase)) findings.push(blockFinding("expired_incentive", `Expired or unverified incentive claim in body: "${phrase}".`));
