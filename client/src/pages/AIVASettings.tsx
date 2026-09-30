@@ -8,10 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Phone, Share2, CheckCircle2, AlertCircle, Loader2, FileText, Target, Link2, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { getLoginUrl } from "@/const";
+import { SHARED_GOOGLE_CONNECTION_PATH } from "@/lib/sharedGoogleConnection";
 
 export default function AIVASettings() {
   const { user, loading: authLoading } = useAuth();
@@ -303,6 +305,9 @@ export default function AIVASettings() {
             <TabsTrigger value="google">
               <Share2 className="h-4 w-4 mr-2" />
               Google Business
+              <Badge variant="secondary" className="ml-2 px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-amber-700 bg-amber-100">
+                Legacy
+              </Badge>
             </TabsTrigger>
             <TabsTrigger value="google-ads">
               <Target className="h-4 w-4 mr-2" />
@@ -660,12 +665,32 @@ export default function AIVASettings() {
           <TabsContent value="google">
             <Card>
               <CardHeader>
-                <CardTitle>Google Business Profile Configuration</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  Google Business Profile Configuration
+                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium uppercase tracking-wide text-amber-700 bg-amber-100">
+                    Legacy
+                  </Badge>
+                </CardTitle>
                 <CardDescription>
-                  Configure Google My Business API for posting updates to your business profile.
+                  Older Google My Business API credentials for posting updates to your business profile.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <Alert className="border-amber-300 bg-amber-50" data-testid="google-business-legacy-notice">
+                  <AlertCircle className="h-4 w-4 text-amber-700" />
+                  <AlertDescription className="text-sm text-amber-900">
+                    <strong>Legacy.</strong> Google Business Profile data (reviews, insights, Local SEO) now comes through the
+                    shared Google connection — the same Google sign-in used for Calendar, Search Console and GA4. The API key and
+                    OAuth credentials below are kept only for the older posting path. To connect, reconnect or disconnect Google,
+                    use the shared connection control in{" "}
+                    <Link href={SHARED_GOOGLE_CONNECTION_PATH} className="font-medium underline underline-offset-2 inline-flex items-center gap-1">
+                      Settings → Integrations
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                    .
+                  </AlertDescription>
+                </Alert>
+
                 <div className="space-y-2">
                   <Label htmlFor="google-api-key">API Key</Label>
                   <Input
