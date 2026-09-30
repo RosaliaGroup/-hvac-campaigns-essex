@@ -5,15 +5,17 @@
  */
 import fs from "fs";
 import path from "path";
+import { extractBlogSlugs, extractBlogTitles, extractBlogMetaDescriptions } from "../shared/blogSource";
 
 const blogSrc = fs.readFileSync(
   path.resolve(import.meta.dirname, "..", "client", "src", "data", "blogPosts.ts"),
   "utf-8"
 );
 
-const slugs = Array.from(blogSrc.matchAll(/slug:\s*"([^"]+)"/g)).map(m => m[1]);
-const titles = Array.from(blogSrc.matchAll(/title:\s*"([^"]+)"/g)).map(m => m[1]);
-const metas = Array.from(blogSrc.matchAll(/metaDescription:\s*"([^"]+)"/g)).map(m => m[1]);
+// Tolerant of quoted keys: content-lane posts are JSON-serialized ("slug": "…"). See shared/blogSource.ts.
+const slugs = extractBlogSlugs(blogSrc);
+const titles = extractBlogTitles(blogSrc);
+const metas = extractBlogMetaDescriptions(blogSrc);
 
 const posts = slugs.map((slug, i) => ({
   slug,
