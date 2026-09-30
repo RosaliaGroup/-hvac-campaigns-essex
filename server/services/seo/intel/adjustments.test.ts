@@ -25,7 +25,7 @@ describe("buildItemDrafts (§3d suggestion routing)", () => {
     const decayingAt = (previousClicks: number, previousImpressions = 0) =>
       ({ page: `/p-${previousClicks}-${previousImpressions}`, clicks: 1, previousClicks, previousImpressions, pctDown: 0.9 });
 
-    it("excludes a page below both the click and impression floor, and rolls it into one aggregate item", () => {
+    it("excludes a page below the click floor, and rolls it into one aggregate item", () => {
       const items = buildItemDrafts({ ...EMPTY, decaying: [decayingAt(5, 50)] });
       const decayingItems = items.filter((i) => i.kind === "decaying_page");
       expect(decayingItems).toHaveLength(1);
@@ -41,11 +41,12 @@ describe("buildItemDrafts (§3d suggestion routing)", () => {
       expect(decayingItems[0].aggregate).toBeUndefined();
     });
 
-    it("keeps a page that clears the impression floor even with few clicks", () => {
-      const items = buildItemDrafts({ ...EMPTY, decaying: [decayingAt(1, 200)] });
+    it("does NOT keep a page on impressions alone: high impressions with few clicks still rolls into the aggregate", () => {
+      const items = buildItemDrafts({ ...EMPTY, decaying: [decayingAt(1, 200), decayingAt(7, 50000)] });
       const decayingItems = items.filter((i) => i.kind === "decaying_page");
       expect(decayingItems).toHaveLength(1);
-      expect(decayingItems[0].aggregate).toBeUndefined();
+      expect(decayingItems[0].aggregate).toBe(true);
+      expect(decayingItems[0].title).toContain("2 low-traffic pages");
     });
 
     it("caps individual items at 15, ranked by prior-window clicks, folding neither the excess nor the below-floor ones together", () => {

@@ -38,7 +38,11 @@ export type UnservedQueryFinding = {
   page: string | null;
   position: number;
   impressions: number;
-  reason: "position_over_20" | "intent_mismatch" | "no_page";
+  /** "position_over_20" / "intent_mismatch" only appear on findings stored before the 2026-09 calibration. */
+  reason: "position_over_30" | "position_over_20" | "intent_mismatch" | "no_page";
+  /** Set when several "{service} {town}" queries were clustered onto one city page. */
+  clusterTown?: string;
+  clusterQueries?: string[];
 };
 
 /** A decaying-page finding (§3a bullet 3). */
