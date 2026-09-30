@@ -13,7 +13,8 @@
  */
 import { eq } from "drizzle-orm";
 import { getDb } from "../server/db";
-import { seoApprovalBatches } from "../drizzle/schema";
+import { seoApprovalBatches, seoAuditLog } from "../drizzle/schema";
+import { mergedBeforeHold, mergeModeFromAudit } from "../server/services/seo/drainGuards";
 import { runNightlyDraftJob } from "../server/services/seo/nightlyDraftJob";
 import { runWeeklyContentJob } from "../server/services/seo/contentPipeline";
 import { findOpenBatchWithPrefix, META_BRANCH_PREFIX, CONTENT_BRANCH_PREFIX } from "../server/services/seo/batchBranches";
@@ -27,7 +28,7 @@ const et = (d: Date | null | undefined) => (d ? new Date(d).toLocaleString("en-U
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const log = (...a: unknown[]) => console.log(`[${et(new Date())}]`, ...a);
 
-type Batch = { id: number; label: string; prNumber: number | null; prUrl: string | null; holdUntil: string | null; pages: number; mergedAt?: string | null; finalStatus?: string };
+type Batch = { id: number; label: string; prNumber: number | null; prUrl: string | null; holdUntil: string | null; pages: number; mergedAt?: string | null; finalStatus?: string; mergeMode?: string; earlyMerge?: boolean };
 const batches: Batch[] = [];
 const stopReasons: string[] = [];
 
@@ -72,24 +73,50 @@ async function record(batchId: number, pages: number) {
   entry.finalStatus = await waitForMerge(b.id);
   const after = await batchRow(b.id);
   entry.mergedAt = entry.finalStatus === "merged" ? new Date(after.updatedAt).toISOString() : null;
+  if (entry.finalStatus === "merged") {
+    const db = (await getDb())!;
+    const audit = await db.select().from(seoAuditLog).where(eq(seoAuditLog.batchId, b.id)).orderBy(seoAuditLog.ts);
+    entry.mergeMode = mergeModeFromAudit(audit);
+    entry.earlyMerge = mergedBeforeHold(after.holdUntil ? new Date(after.holdUntil) : null, new Date(after.updatedAt));
+    if (entry.earlyMerge || entry.mergeMode !== "auto") {
+      log(`!! batch ${b.id} (PR #${b.prNumber}) merged mergeMode=${entry.mergeMode}${entry.earlyMerge ? ` BEFORE its hold (${et(b.holdUntil)})` : ""} — not merged by the poller on schedule; stopping this lane.`);
+    }
+  }
   console.log("BATCH " + JSON.stringify(entry));
   log(`batch ${b.id} (PR #${b.prNumber}): ${entry.finalStatus}${entry.mergedAt ? " at " + et(after.updatedAt) : ""}`);
   return entry;
 }
 
 async function drainMeta() {
+  let blockedRetries = 0;
   for (let i = 1; i <= MAX; i++) {
     await waitForNoOpenBatch(META_BRANCH_PREFIX);
     log(`meta run ${i}/${MAX}`);
     const s = await runNightlyDraftJob();
     log("meta result", JSON.stringify(s));
     if (!s.autoApproved || !s.batchId) {
+      // The job only stages (0 ready / 0 picked up) when a meta PR opened between our open-batch check and its own —
+      // that is NOT an empty backlog. Wait for that batch and retry instead of reporting "nothing eligible".
+      const openNow = await findOpenBatchWithPrefix(META_BRANCH_PREFIX);
+      if (openNow && blockedRetries++ < 3) {
+        log(`meta run ${i} was blocked by open batch ${openNow.id} (PR #${openNow.prNumber}) opened concurrently — waiting for it, then retrying`);
+        i--;
+        continue;
+      }
+      if (openNow) {
+        stopReasons.push(`meta: still blocked by open batch ${openNow.id} (PR #${openNow.prNumber}) after ${blockedRetries - 1} retries — another process is opening meta PRs`);
+        return;
+      }
       stopReasons.push(s.pickedUp === 0 && s.ready === 0 ? `meta: nothing eligible and clean remains (run ${i})` : `meta: run ${i} did not open a PR (not warmed up / breaker / open batch / lint)`);
       return;
     }
     const e = await record(s.batchId, s.ready + s.pickedUp);
     if (e.finalStatus !== "merged") {
       stopReasons.push(`meta: batch ${e.id} ended ${e.finalStatus} — stopping`);
+      return;
+    }
+    if (e.earlyMerge || e.mergeMode !== "auto") {
+      stopReasons.push(`meta: batch ${e.id} merged mergeMode=${e.mergeMode}${e.earlyMerge ? " before its hold" : ""} — not by the auto-merge poller; stopping`);
       return;
     }
   }
@@ -114,12 +141,21 @@ async function drainContent() {
       continue; // every retried topic this run was lint-blocked; the next run takes the next queued topic
     }
     if (!r.autoApproved || r.batchId === undefined) {
+      const openNow = await findOpenBatchWithPrefix(CONTENT_BRANCH_PREFIX);
+      if (openNow) {
+        log(`content run was blocked by open batch ${openNow.id} (PR #${openNow.prNumber}) opened concurrently — waiting for it, then retrying`);
+        continue;
+      }
       stopReasons.push(`content: topic ${r.topicId} passed but was NOT auto-approved to a PR (lane not warmed up / autopublish off / GitHub error) — staged only`);
       return;
     }
     const e = await record(r.batchId, 1);
     if (e.finalStatus !== "merged") {
       stopReasons.push(`content: batch ${e.id} ended ${e.finalStatus} — stopping`);
+      return;
+    }
+    if (e.earlyMerge || e.mergeMode !== "auto") {
+      stopReasons.push(`content: batch ${e.id} merged mergeMode=${e.mergeMode}${e.earlyMerge ? " before its hold" : ""} — not by the auto-merge poller; stopping`);
       return;
     }
     shipped++;

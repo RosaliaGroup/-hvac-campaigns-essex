@@ -281,6 +281,7 @@ describe("runAutoMergeTick — per-tick logging and the bot-comment regression (
 
   it("a thrown check for one batch is logged and does not abort the tick", async () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(refreshBatchStatus).mockReset().mockResolvedValue(undefined as never);
     vi.mocked(refreshBatchStatus).mockRejectedValue(new Error("GitHub down"));
     vi.mocked(getDb).mockResolvedValue(makeListDb(batch).db);
 
@@ -342,5 +343,59 @@ describe("hold hours — 6h minimum unless SEO_AUTOPUBLISH_MIN_HOLD_HOURS delibe
     const ms = (row.holdUntil as Date).getTime() - before;
     expect(ms).toBeGreaterThanOrEqual(60 * 60 * 1000 - 1000);
     expect(ms).toBeLessThan(60 * 60 * 1000 + 5000);
+  });
+});
+
+describe("a batch can never auto-merge before holdUntil", () => {
+  // Every OTHER gate is green (warmed up, breaker clear, Netlify success, no comments, has a sha): the hold alone must block.
+  const holdCases: Array<[string, number]> = [
+    ["24h left", 24 * 60 * 60 * 1000],
+    ["the 1h minimum-hold window, 1 minute in", 59 * 60 * 1000],
+    ["1 second left", 1000],
+  ];
+  for (const [name, msLeft] of holdCases) {
+    it(`blocks with ${name}: no GitHub merge, no row change, no audit, no warm-up credit`, async () => {
+      const { db, row } = makeDb({ id: 1, status: "pr_open", holdUntil: new Date(Date.now() + msLeft), commitSha: "abc", prNumber: 5, branch: "pr-seo-meta-20260926", revertsBatchId: null, label: "x" });
+      vi.mocked(getDb).mockResolvedValue(db);
+      expect(await checkAndMergeIfReady(1)).toEqual({ merged: false, reason: "hold_not_expired" });
+      expect(mergePR).not.toHaveBeenCalled();
+      expect(row.status).toBe("pr_open");
+      expect(logAudit).not.toHaveBeenCalled();
+      expect(advanceWarmup).not.toHaveBeenCalled();
+    });
+  }
+
+  it("the poller tick leaves a not-yet-due batch alone and logs the hold gate", async () => {
+    const holdUntil = new Date(Date.now() + 30 * 60 * 1000);
+    const batch = { id: 1, status: "pr_open", holdUntil, commitSha: "abc", prNumber: 5, branch: "pr-seo-meta-20260926", revertsBatchId: null, label: "x" };
+    const { db } = makeDb(batch);
+    db.select = () => ({ from: () => ({ where: () => Object.assign(Promise.resolve([batch]), { limit: () => Promise.resolve([batch]) }) }) });
+    vi.mocked(getDb).mockResolvedValue(db);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(refreshBatchStatus).mockReset().mockResolvedValue(undefined as never);
+    const res = await runAutoMergeTick();
+    expect(err.mock.calls).toEqual([]);
+    expect(res).toEqual({ checked: 1, merged: 0 });
+    expect(mergePR).not.toHaveBeenCalled();
+    expect(log.mock.calls.flat().join("\n")).toContain("not merged: hold_not_expired");
+    expect(err).not.toHaveBeenCalled();
+    log.mockRestore();
+    err.mockRestore();
+  });
+
+  it("the lowered 1h hold is still a real hold: armHold sets holdUntil ~1h out, and evaluateAutoMergeReadiness refuses until then", async () => {
+    process.env.SEO_AUTOPUBLISH_HOLD_HOURS = "1";
+    process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS = "1";
+    const { db, row } = makeDb({ id: 1, status: "pr_open", holdUntil: null, commitSha: "abc", prNumber: 5, branch: "pr-seo-meta-20260926", label: "x" });
+    vi.mocked(getDb).mockResolvedValue(db);
+    await armHold(1);
+    const armedAt = Date.now();
+    const hold = row.holdUntil as Date;
+    const gate = (now: Date) => evaluateAutoMergeReadiness({ ...cleanSignals, batch: { ...cleanBatch, holdUntil: hold }, now });
+    expect(gate(new Date(armedAt + 59 * 60 * 1000))).toEqual({ ready: false, reason: "hold_not_expired" });
+    expect(gate(new Date(armedAt + 61 * 60 * 1000))).toEqual({ ready: true });
+    delete process.env.SEO_AUTOPUBLISH_HOLD_HOURS;
+    delete process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS;
   });
 });
