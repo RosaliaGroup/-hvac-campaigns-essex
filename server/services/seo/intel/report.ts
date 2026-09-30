@@ -147,7 +147,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
 
   await logAudit({ actorId: null, action: "market_intel_report_generated", batchId: null, pagePath: null, before: null, after: { reportId, itemCount: itemsCreated, executed }, lintResult: null });
 
-  const emailSent = await sendDailyDigest({ reportId, date, itemCount: itemsCreated, executed, summary, circuitClear });
+  const emailSent = await sendDailyDigest({ reportId, date, itemCount: itemsCreated, executed, summary, circuitClear, possiblyDeindexed: searchDemand.possiblyDeindexed?.length ?? 0 });
   if (emailSent) await db.update(seoIntelReports).set({ emailSent: true }).where(eq(seoIntelReports.id, reportId));
 
   const [finalReport] = await db.select().from(seoIntelReports).where(eq(seoIntelReports.id, reportId)).limit(1);

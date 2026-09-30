@@ -7,6 +7,10 @@ import {
   classifySeasonality,
   townServiceMatch,
   COMPETITOR_BRAND_TERMS,
+  classifyPossiblyDeindexed,
+  buildInspectUrl,
+  parseNetlifyRedirects,
+  type PageIndexPoint,
 } from "./searchDemand";
 import { COMPETITOR_WATCHLIST } from "../../../../shared/competitorWatchlist";
 import type { QueryDemandPoint } from "../../../../shared/marketIntelTypes";
@@ -251,5 +255,100 @@ describe("classifySeasonality", () => {
     const monthlyInterest = new Array(12).fill(50);
     const result = classifySeasonality([{ query: "flat query", monthlyInterest }], now);
     expect(result).toEqual([]);
+  });
+});
+
+describe("possibly de-indexed flag", () => {
+  const ctx = { siteUrl: "https://mechanicalenterprise.com/", origin: "https://mechanicalenterprise.com" };
+  const pt = (page: string, impressions: number, previousImpressions: number, indexStatus: PageIndexPoint["indexStatus"] = "indexed"): PageIndexPoint => ({ page, impressions, previousImpressions, indexStatus });
+
+  it("flags a page that lost >=95% of prior impressions (>=200 prior)", () => {
+    const r = classifyPossiblyDeindexed([pt("/blog/a", 10, 200)], ctx); // exactly 5% left
+    expect(r).toHaveLength(1);
+    expect(r[0].pctDown).toBeCloseTo(0.95, 5);
+  });
+
+  it("does not flag a page that kept more than 5%, or that never had 200 impressions", () => {
+    expect(classifyPossiblyDeindexed([pt("/blog/a", 11, 200)], ctx)).toEqual([]);
+    expect(classifyPossiblyDeindexed([pt("/blog/a", 0, 199)], ctx)).toEqual([]);
+  });
+
+  it("flags a page URL Inspection reports as not indexed once it had >=50 prior impressions, regardless of the drop", () => {
+    for (const status of ["crawled_not_indexed", "discovered_not_indexed", "excluded"] as const) {
+      expect(classifyPossiblyDeindexed([pt("/blog/a", 60, 80, status)], ctx), status).toHaveLength(1);
+    }
+    expect(classifyPossiblyDeindexed([pt("/blog/a", 0, 49, "excluded")], ctx)).toEqual([]);
+    expect(classifyPossiblyDeindexed([pt("/blog/a", 60, 80, "indexed")], ctx)).toEqual([]);
+  });
+
+  it("the real 2026-09 pages: the three collapsed ones flag; the complete guide (still trickling, 20% left) does not", () => {
+    const real = [
+      pt("/blog/heat-pump-vs-gas-furnace-nj-2026", 66, 2719),
+      pt("/blog/nj-heat-pump-rebates-2026", 18, 3490),
+      pt("/blog/nj-hvac-rebates-2026-complete-guide", 254, 1248),
+      pt("/blog/hvac-contractor-newark-nj", 21, 1552),
+    ];
+    expect(classifyPossiblyDeindexed(real, ctx).map((f) => f.page)).toEqual([
+      "/blog/nj-heat-pump-rebates-2026",
+      "/blog/heat-pump-vs-gas-furnace-nj-2026",
+      "/blog/hvac-contractor-newark-nj",
+    ]); // ordered by prior impressions, highest first
+  });
+
+  it("marks a page that 301s elsewhere instead of calling it lost", () => {
+    const redirects = new Map([["/blog/hvac-contractor-newark-nj", "/hvac-newark-nj"]]);
+    const r = classifyPossiblyDeindexed([pt("/blog/hvac-contractor-newark-nj", 21, 1552), pt("/blog/x", 1, 900)], { ...ctx, redirects });
+    expect(r.find((f) => f.page === "/blog/hvac-contractor-newark-nj")?.redirectsTo).toBe("/hvac-newark-nj");
+    expect(r.find((f) => f.page === "/blog/x")?.redirectsTo).toBeNull();
+  });
+
+  it("caps the report at 15 pages", () => {
+    const many = Array.from({ length: 20 }, (_, i) => pt(`/p${i}`, 0, 1000 + i));
+    expect(classifyPossiblyDeindexed(many, ctx)).toHaveLength(15);
+  });
+
+  it("buildInspectUrl deep-links URL Inspection for the exact page, encoding property and URL", () => {
+    expect(buildInspectUrl("https://mechanicalenterprise.com/", "https://mechanicalenterprise.com/", "/blog/a b?x=1")).toBe(
+      "https://search.google.com/search-console/inspect?resource_id=https%3A%2F%2Fmechanicalenterprise.com%2F&id=" + encodeURIComponent("https://mechanicalenterprise.com/blog/a b?x=1"),
+    );
+    expect(classifyPossiblyDeindexed([pt("/blog/a", 0, 500)], ctx)[0].inspectUrl).toContain("inspect?resource_id=");
+  });
+
+  describe("parseNetlifyRedirects", () => {
+    const toml = `
+[[redirects]]
+  from = "/blog/hvac-contractor-newark-nj"
+  to = "/hvac-newark-nj"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/old/*"
+  to = "/new/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://example.com/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/plain/"
+  to = "/dest"
+`;
+    it("keeps exact 3xx rules, drops wildcard/splat and non-redirect (200) rules, defaults status to 301, normalizes trailing slash", () => {
+      const m = parseNetlifyRedirects(toml);
+      expect(m.get("/blog/hvac-contractor-newark-nj")).toBe("/hvac-newark-nj");
+      expect(m.get("/plain")).toBe("/dest");
+      expect(m.has("/old/*")).toBe(false);
+      expect(m.has("/api/*")).toBe(false);
+      expect(m.size).toBe(2);
+    });
+    it("reads the repo's real netlify.toml and finds the Newark 301", async () => {
+      const { readFileSync } = await import("node:fs");
+      const path = await import("node:path");
+      const real = parseNetlifyRedirects(readFileSync(path.resolve(import.meta.dirname, "../../../../netlify.toml"), "utf8"));
+      expect(real.get("/blog/hvac-contractor-newark-nj")).toBe("/hvac-newark-nj");
+    });
   });
 });

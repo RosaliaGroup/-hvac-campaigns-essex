@@ -17,8 +17,11 @@
  * and in the PR/build report rather than silently treated as exact.
  */
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { getDb } from "../../../db";
+import { getSiteOrigin } from "../../../integrations/searchConsole";
 import { seoPages, seoQueries, seoIntelQuerySnapshots, type SeoIntelQuerySnapshotRow } from "../../../../drizzle/schema";
 import { ALL_CITIES } from "../../../../client/src/data/njCounties";
 import { COMPETITOR_WATCHLIST } from "../../../../shared/competitorWatchlist";
@@ -27,6 +30,7 @@ import type {
   RisingQueryFinding,
   UnservedQueryFinding,
   DecayingPageFinding,
+  PossiblyDeindexedFinding,
   CannibalizationFinding,
   SeasonalityFinding,
 } from "../../../../shared/marketIntelTypes";
@@ -236,6 +240,67 @@ export function classifyDecayingPages(pages: PageClicksPoint[]): DecayingPageFin
   return findings;
 }
 
+/* ── Possibly de-indexed (report-only; no item, no lane) ─────────────────── */
+
+const DEINDEX_MIN_PRIOR_IMPRESSIONS = 200;
+const DEINDEX_MAX_REMAINING_FRACTION = 0.05; // >=95% of prior impressions gone
+const DEINDEX_INSPECTED_MIN_PRIOR_IMPRESSIONS = 50;
+const DEINDEX_REPORT_CAP = 15;
+
+export type PageIndexPoint = {
+  page: string;
+  impressions: number;
+  previousImpressions: number;
+  indexStatus: "indexed" | "crawled_not_indexed" | "discovered_not_indexed" | "excluded";
+};
+
+/** Deep link into Search Console's URL Inspection for one URL of the property. */
+export function buildInspectUrl(siteUrl: string, origin: string, page: string): string {
+  const full = `${origin.replace(/\/+$/, "")}${page.startsWith("/") ? page : `/${page}`}`;
+  return `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent(siteUrl)}&id=${encodeURIComponent(full)}`;
+}
+
+/** `from` → `to` for every exact-path redirect rule in a netlify.toml (wildcard/splat rules are skipped). */
+export function parseNetlifyRedirects(toml: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const block of toml.split(/^\s*\[\[redirects\]\]\s*$/m).slice(1)) {
+    const from = /^\s*from\s*=\s*"([^"]+)"/m.exec(block)?.[1];
+    const to = /^\s*to\s*=\s*"([^"]+)"/m.exec(block)?.[1];
+    const status = Number(/^\s*status\s*=\s*(\d+)/m.exec(block)?.[1] ?? 301);
+    if (!from || !to || from.includes("*") || from.includes(":") || status < 300 || status >= 400) continue;
+    map.set(pathOf(from), to);
+  }
+  return map;
+}
+
+/**
+ * A page that had real demand and now shows almost none — or that URL Inspection already reports as
+ * not indexed — is flagged "possibly de-indexed" with a URL Inspection link. A page that 301s
+ * elsewhere is still listed but marked (redirectsTo) so it isn't mistaken for a lost page.
+ * Heuristic only: GSC gives no daily "was deindexed" signal, so this points at where to look.
+ */
+export function classifyPossiblyDeindexed(
+  pages: PageIndexPoint[],
+  ctx: { siteUrl: string; origin: string; redirects?: Map<string, string> },
+): PossiblyDeindexedFinding[] {
+  const findings: PossiblyDeindexedFinding[] = [];
+  for (const p of pages) {
+    const collapsed = p.previousImpressions >= DEINDEX_MIN_PRIOR_IMPRESSIONS && p.impressions <= p.previousImpressions * DEINDEX_MAX_REMAINING_FRACTION;
+    const inspectedNotIndexed = p.indexStatus !== "indexed" && p.previousImpressions >= DEINDEX_INSPECTED_MIN_PRIOR_IMPRESSIONS;
+    if (!collapsed && !inspectedNotIndexed) continue;
+    findings.push({
+      page: p.page,
+      previousImpressions: p.previousImpressions,
+      impressions: p.impressions,
+      pctDown: p.previousImpressions > 0 ? (p.previousImpressions - p.impressions) / p.previousImpressions : 0,
+      indexStatus: p.indexStatus,
+      inspectUrl: buildInspectUrl(ctx.siteUrl, ctx.origin, p.page),
+      redirectsTo: ctx.redirects?.get(pathOf(p.page)) ?? null,
+    });
+  }
+  return findings.sort((a, b) => b.previousImpressions - a.previousImpressions).slice(0, DEINDEX_REPORT_CAP);
+}
+
 /* ── Cannibalization (§3a bullet 4) ──────────────────────────────────────── */
 
 /** history: query -> distinct pages that have held the "top page" slot for it across recent snapshots. */
@@ -318,13 +383,23 @@ export type SearchDemandCollection = {
   rising: RisingQueryFinding[];
   unserved: UnservedQueryFinding[];
   decaying: DecayingPageFinding[];
+  possiblyDeindexed: PossiblyDeindexedFinding[];
   cannibalization: CannibalizationFinding[];
 };
+
+/** Best-effort read of the repo's own netlify.toml; an unreadable file just means no redirect annotations. */
+function loadNetlifyRedirects(): Map<string, string> {
+  try {
+    return parseNetlifyRedirects(readFileSync(path.resolve(import.meta.dirname, "../../../../netlify.toml"), "utf8"));
+  } catch {
+    return new Map();
+  }
+}
 
 /** Real I/O: read seoPages/seoQueries + the snapshot history and run every §3a classifier. */
 export async function collectSearchDemand(siteUrl: string, now: Date = new Date()): Promise<SearchDemandCollection> {
   const db = await getDb();
-  if (!db) return { rising: [], unserved: [], decaying: [], cannibalization: [] };
+  if (!db) return { rising: [], unserved: [], decaying: [], possiblyDeindexed: [], cannibalization: [] };
 
   const pages = await db.select().from(seoPages).where(eq(seoPages.siteUrl, siteUrl));
   const queries = await db.select().from(seoQueries).where(eq(seoQueries.siteUrl, siteUrl));
@@ -349,6 +424,11 @@ export async function collectSearchDemand(siteUrl: string, now: Date = new Date(
   const unserved = classifyUnservedQueries(current, { cityPages: pages.map((p) => p.page) });
   const decaying = classifyDecayingPages(pages.map((p) => ({ page: p.page, clicks: p.clicks, previousClicks: p.previousClicks, previousImpressions: p.previousImpressions })));
 
+  const possiblyDeindexed = classifyPossiblyDeindexed(
+    pages.map((p) => ({ page: p.page, impressions: p.impressions, previousImpressions: p.previousImpressions, indexStatus: p.indexStatus })),
+    { siteUrl, origin: getSiteOrigin(), redirects: loadNetlifyRedirects() },
+  );
+
   // Cannibalization: which pages have held the "top page" slot for each query over the last 14 days.
   const recentRows = await snapshotsInRange(db, siteUrl, fmtDate(addDays(now, -14)), fmtDate(now));
   const history = new Map<string, Set<string>>();
@@ -359,5 +439,5 @@ export async function collectSearchDemand(siteUrl: string, now: Date = new Date(
   }
   const cannibalization = classifyCannibalization(history);
 
-  return { rising, unserved, decaying, cannibalization };
+  return { rising, unserved, decaying, possiblyDeindexed, cannibalization };
 }
