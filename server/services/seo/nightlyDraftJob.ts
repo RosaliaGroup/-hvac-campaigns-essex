@@ -384,7 +384,10 @@ export async function runNightlyDraftJob(now: Date = new Date()): Promise<Nightl
           }),
           { lockedPaths: new Set(lockedMap.keys()), pendingBatchPaths, excludePageIds: new Set(readyPageIds), batchedPaths, batchedContent },
         );
-        const batch = await assembleBatch(selected.filter((s) => readyPageIds.includes(s.pageId)), pickupPool);
+        // One open meta PR at a time: every meta PR rewrites the same overrides JSON, so a second concurrent PR would conflict when the first merges.
+        const openMeta = batches.find((b) => b.status === "pr_open" && b.branch.startsWith("pr-seo-meta-"));
+        if (openMeta) console.log(`[SEO] nightly: meta batch #${openMeta.id} (PR #${openMeta.prNumber ?? "?"}) is still open — staging only until it merges`);
+        const batch = openMeta ? { pageIds: [] as number[], pickedUp: 0 } : await assembleBatch(selected.filter((s) => readyPageIds.includes(s.pageId)), pickupPool);
         if (batch.pageIds.length > 0) {
           const approved = await approveBatchToPR({ pageIds: batch.pageIds, label: `auto-${yyyymmdd(now)}`, actorId: null });
           await armHold(approved.batch.id);

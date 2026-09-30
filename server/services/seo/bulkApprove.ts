@@ -29,6 +29,7 @@ import {
   closePR,
 } from "./github";
 import { logAudit } from "./auditLog";
+import { uniqueBranchFor } from "./batchBranches";
 import { advanceWarmup, resetWarmupByHalf, type AutopublishLane } from "./warmupGate";
 
 /** Meta-lane branches are "pr-seo-meta-*" (branchForToday() below); everything else non-revert is content-lane ("pr-content-*"). */
@@ -216,7 +217,8 @@ export async function approveBatchToPR(input: ApproveBatchInput): Promise<Approv
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
 
-  const branch = branchForToday();
+  // One PR per batch: the first batch of the day keeps pr-seo-meta-YYYYMMDD, later ones get -2, -3, … instead of silently appending to an earlier PR.
+  const branch = await uniqueBranchFor(branchForToday());
   await ensureBranch(branch);
   const { content: currentOverrides, sha } = await getOverridesFile(branch);
 

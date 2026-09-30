@@ -614,3 +614,37 @@ describe("assertReindexAllowed — Request Reindex disabled for pr_open pages", 
     await expect(assertReindexAllowed(1)).resolves.toBeUndefined();
   });
 });
+
+describe("approveBatchToPR — one PR per batch (a second batch the same day does not append to the first)", () => {
+  it("gives the second same-day batch its own branch and its own PR", async () => {
+    const pages = [
+      page({ id: 1, page: "/hvac-elizabeth-nj" }),
+      page({ id: 2, page: "/hvac-clifton-nj", title: "Clifton NJ HVAC Contractor | AC Repair & Install", metaDescription: "Licensed HVAC in Clifton, NJ. Free assessment. Call (862) 423-9396." }),
+    ];
+    const { db, batches } = makeDb(pages);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+
+    const first = await approveBatchToPR({ pageIds: [1], label: "batch-a", actorId: 1 });
+    const second = await approveBatchToPR({ pageIds: [2], label: "batch-b", actorId: 1 });
+
+    const rows = [...batches.values()];
+    expect(rows[0].branch).toMatch(/^pr-seo-meta-\d{8}$/);
+    expect(rows[1].branch).toBe(`${rows[0].branch}-2`);
+    expect(second.prNumber).not.toBe(first.prNumber);
+    expect(ghState.prs.size).toBe(2);
+    // Each PR carries only its own page.
+    expect(rows[0].pages).toEqual(["/hvac-elizabeth-nj"]);
+    expect(rows[1].pages).toEqual(["/hvac-clifton-nj"]);
+  });
+
+  it("a third batch becomes -3, and laneForBatch still reads every suffixed branch as the meta lane", async () => {
+    const { db, batches } = makeDb([page({ id: 1 }), page({ id: 2, page: "/a" }), page({ id: 3, page: "/b" })]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    await approveBatchToPR({ pageIds: [1], label: "a", actorId: 1 });
+    await approveBatchToPR({ pageIds: [2], label: "b", actorId: 1 });
+    await approveBatchToPR({ pageIds: [3], label: "c", actorId: 1 });
+    const branches = [...batches.values()].map((r) => r.branch as string);
+    expect(branches[2]).toBe(`${branches[0]}-3`);
+    for (const b of branches) expect(laneForBatch(b)).toBe("meta");
+  });
+});

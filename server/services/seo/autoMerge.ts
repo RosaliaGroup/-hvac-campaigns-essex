@@ -29,11 +29,25 @@ import { sendEmail } from "../emailService";
 
 const DEFAULT_HOLD_HOURS = 24;
 const MIN_HOLD_HOURS = 6;
+/** Absolute floor even when the owner lowers the minimum: a hold shorter than this can't be a veto window. */
+const ABSOLUTE_MIN_HOLD_HOURS = 0.25;
 
-function holdHours(): number {
+/**
+ * The shortest hold allowed. 6h by default (owner decision, addendum §A2). The
+ * owner can deliberately lower it by setting SEO_AUTOPUBLISH_MIN_HOLD_HOURS —
+ * setting SEO_AUTOPUBLISH_HOLD_HOURS alone is still clamped to 6h, so a stray
+ * value can never shorten the veto window by itself.
+ */
+export function minHoldHours(): number {
+  const raw = Number(process.env.SEO_AUTOPUBLISH_MIN_HOLD_HOURS);
+  if (!Number.isFinite(raw) || raw <= 0) return MIN_HOLD_HOURS;
+  return Math.max(ABSOLUTE_MIN_HOLD_HOURS, raw);
+}
+
+export function holdHours(): number {
   const raw = Number(process.env.SEO_AUTOPUBLISH_HOLD_HOURS);
-  if (!Number.isFinite(raw)) return DEFAULT_HOLD_HOURS;
-  return Math.max(MIN_HOLD_HOURS, raw);
+  if (!Number.isFinite(raw)) return Math.max(minHoldHours(), DEFAULT_HOLD_HOURS);
+  return Math.max(minHoldHours(), raw);
 }
 
 /**
