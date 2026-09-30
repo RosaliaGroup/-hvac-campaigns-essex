@@ -190,11 +190,35 @@ export async function getNetlifyCheckState(headSha: string): Promise<"success" |
   return "unknown";
 }
 
-/** Any issue/review comment on the PR — the auto-merge hold's "no open review comment" gate (addendum §A2). */
-export async function hasAnyPRComments(prNumber: number): Promise<boolean> {
-  const res = await gh(`/issues/${prNumber}/comments`);
-  const data = (await res.json()) as unknown[];
-  return Array.isArray(data) && data.length > 0;
+type GhCommentLike = { user?: { login?: string | null; type?: string | null } | null };
+
+/**
+ * True for comments posted by an app/CI bot (Netlify's deploy-preview comment,
+ * Codecov, …). Those are status noise, not review feedback — counting them made
+ * the auto-merge hold's "no open review comment" gate fail on EVERY PR, because
+ * Netlify comments on each one within seconds of it opening (2026-09-30: #141
+ * sat past its hold until a human merged it).
+ */
+export function isBotComment(c: GhCommentLike): boolean {
+  return c.user?.type === "Bot" || /\[bot\]$/i.test(c.user?.login ?? "");
+}
+
+/** True if any entry in a GitHub comments payload was written by a human. */
+export function hasHumanComment(comments: unknown): boolean {
+  return Array.isArray(comments) && comments.some((c) => !isBotComment((c ?? {}) as GhCommentLike));
+}
+
+/**
+ * Any HUMAN comment on the PR — a top-level (issue) comment or an inline review
+ * comment. The auto-merge hold's "no open review comment" gate (addendum §A2):
+ * a person commenting stops the merge; a bot commenting does not.
+ */
+export async function hasHumanPRComments(prNumber: number): Promise<boolean> {
+  const [issueRes, reviewRes] = await Promise.all([
+    gh(`/issues/${prNumber}/comments?per_page=100`),
+    gh(`/pulls/${prNumber}/comments?per_page=100`),
+  ]);
+  return hasHumanComment(await issueRes.json()) || hasHumanComment(await reviewRes.json());
 }
 
 /**

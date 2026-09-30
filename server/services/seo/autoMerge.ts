@@ -12,8 +12,8 @@
  * checkAndMergeIfReady(): the poll target (see startAutoMergeScheduler at the
  * bottom — no webhook, same "no push infra decision made" reasoning as
  * bulkApprove.ts's refreshBatchStatus). Every gate must pass: hold expired,
- * lane still warmed up, circuit breaker not paused, Netlify green, no PR
- * comments. A vetoed batch is naturally excluded — vetoBatch() already moved
+ * lane still warmed up, circuit breaker not paused, Netlify green, no human
+ * PR comments (bot comments such as Netlify's deploy-preview note don't count). A vetoed batch is naturally excluded — vetoBatch() already moved
  * it out of "pr_open" before this ever runs.
  */
 import { eq, and, isNotNull } from "drizzle-orm";
@@ -22,7 +22,7 @@ import { seoApprovalBatches, type SeoApprovalBatchRow } from "../../../drizzle/s
 import { laneForBatch, refreshBatchStatus, approveBatchToPR, type ApproveBatchInput, type ApproveBatchResult } from "./bulkApprove";
 import { isWarmedUp, advanceWarmup } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
-import { getNetlifyCheckState, hasAnyPRComments, mergePR } from "./github";
+import { getNetlifyCheckState, hasHumanPRComments, mergePR } from "./github";
 import { signActionLink } from "./actionLinks";
 import { logAudit } from "./auditLog";
 import { sendEmail } from "../emailService";
@@ -121,7 +121,7 @@ export async function checkAndMergeIfReady(batchId: number): Promise<MergeCheckR
     isWarmedUp(lane),
     checkCircuitBreakerConditions(),
     batch.commitSha ? getNetlifyCheckState(batch.commitSha) : Promise.resolve("unknown" as const),
-    batch.prNumber ? hasAnyPRComments(batch.prNumber) : Promise.resolve(false),
+    batch.prNumber ? hasHumanPRComments(batch.prNumber) : Promise.resolve(false),
   ]);
 
   const readiness = evaluateAutoMergeReadiness({
@@ -191,30 +191,46 @@ export async function approveMetaBatchWithAutopublish(input: ApproveBatchInput):
   return result;
 }
 
-/** In-process poller — every batch with an expired, unmerged hold. Mirrors the other SEO schedulers' pattern. */
+/** 15 minutes — frequent enough that a merge lands promptly after its hold expires, without hammering GitHub. */
+export const AUTO_MERGE_POLL_MS = 15 * 60 * 1000;
+
+/**
+ * One poll: every batch that is still pr_open AND has a hold armed. Logs WHY a
+ * held batch was not merged (anything except "hold not expired yet", which is
+ * the normal state for hours) — before this, the poller was silent unless it
+ * merged, so "why didn't it merge?" could only be answered by reading code.
+ */
+export async function runAutoMergeTick(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const dueBatches = await db.select().from(seoApprovalBatches).where(and(eq(seoApprovalBatches.status, "pr_open"), isNotNull(seoApprovalBatches.holdUntil)));
+  for (const batch of dueBatches) {
+    try {
+      // refreshBatchStatus first so a batch someone already merged by hand on
+      // GitHub is reflected before we'd otherwise try (and fail) to merge it again.
+      const refreshed = await refreshBatchStatus(batch.id);
+      if (refreshed.changed) {
+        console.log(`[SEO] auto-merge poll: batch ${batch.id} (${batch.label}) is now "${refreshed.batch.status}" (changed outside the poller)`);
+        continue;
+      }
+      const result = await checkAndMergeIfReady(batch.id);
+      if (result.merged) console.log(`[SEO] auto-merged batch ${batch.id} (${batch.label})`);
+      else if (result.reason !== "hold_not_expired") console.log(`[SEO] auto-merge poll: batch ${batch.id} (${batch.label}) not merged — ${result.reason}`);
+    } catch (err) {
+      console.error(`[SEO] auto-merge check failed for batch ${batch.id}:`, (err as Error).message);
+    }
+  }
+}
+
+/** In-process poller — runs once at boot and then every AUTO_MERGE_POLL_MS. Mirrors the other SEO schedulers' pattern. */
 export function startAutoMergeScheduler(): void {
   if (process.env.SEO_AUTOPUBLISH_ENABLED !== "true") {
     console.log("[SEO] Autopublish auto-merge scheduler disabled (set SEO_AUTOPUBLISH_ENABLED=true to enable)");
     return;
   }
-  const POLL_MS = 15 * 60 * 1000; // 15 minutes — frequent enough that a merge lands promptly after its hold expires, without hammering GitHub.
-  const run = async () => {
-    const db = await getDb();
-    if (!db) return;
-    const dueBatches = await db.select().from(seoApprovalBatches).where(and(eq(seoApprovalBatches.status, "pr_open"), isNotNull(seoApprovalBatches.holdUntil)));
-    for (const batch of dueBatches) {
-      try {
-        // refreshBatchStatus first so a batch someone already merged by hand on
-        // GitHub is reflected before we'd otherwise try (and fail) to merge it again.
-        await refreshBatchStatus(batch.id);
-        const result = await checkAndMergeIfReady(batch.id);
-        if (result.merged) console.log(`[SEO] auto-merged batch ${batch.id} (${batch.label})`);
-      } catch (err) {
-        console.error(`[SEO] auto-merge check failed for batch ${batch.id}:`, (err as Error).message);
-      }
-    }
-  };
   console.log("[SEO] Autopublish auto-merge scheduler started — polling every 15 minutes");
-  setInterval(run, POLL_MS);
-  run().catch((err) => console.error("[SEO] auto-merge scheduler initial run failed:", err));
+  setInterval(() => {
+    runAutoMergeTick().catch((err) => console.error("[SEO] auto-merge poll failed:", err));
+  }, AUTO_MERGE_POLL_MS);
+  runAutoMergeTick().catch((err) => console.error("[SEO] auto-merge scheduler initial run failed:", err));
 }
