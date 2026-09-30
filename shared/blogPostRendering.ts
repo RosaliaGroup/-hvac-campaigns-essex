@@ -9,6 +9,7 @@
  * shared/verifiedFacts.ts's comment on the same concern) despite reusing the
  * client's own post shape rather than a duplicate type.
  */
+import { extractBlogTitles } from "./blogSource";
 import type { BlogPostData, BlogSection } from "../client/src/data/blogPosts";
 
 export type PostStructureCounts = {
@@ -97,5 +98,6 @@ export function insertBlogPostIntoSource(sourceText: string, post: BlogPostData)
 
 /** All existing posts' titles (for the duplicate-topic check) — parsed from the raw source rather than requiring a live import (server-side, no bundler). */
 export function extractExistingTitles(sourceText: string): string[] {
-  return Array.from(sourceText.matchAll(/title:\s*"((?:[^"\\]|\\.)*)"/g)).map((m) => m[1].replace(/\\"/g, '"'));
+  // Tolerant of quoted keys, so a duplicate of an earlier CONTENT-LANE post (JSON-serialized, "title": "…") is detected too.
+  return extractBlogTitles(sourceText);
 }

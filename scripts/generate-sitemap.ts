@@ -7,6 +7,7 @@
  */
 import fs from "fs";
 import path from "path";
+import { extractBlogSlugs, extractBlogDates } from "../shared/blogSource";
 
 const BASE = "https://mechanicalenterprise.com";
 const root = path.resolve(import.meta.dirname, "..");
@@ -91,13 +92,14 @@ const publicRoutes = allRoutes.filter(r => {
 // ── 2. Read blog posts ──────────────────────────────────────────────────────
 
 const blogSrc = readFile("client/src/data/blogPosts.ts");
-const blogSlugs = Array.from(blogSrc.matchAll(/slug:\s*"([^"]+)"/g)).map(m => m[1]);
-const blogDates = Array.from(blogSrc.matchAll(/date:\s*"([^"]+)"/g)).map(m => m[1]);
+// Tolerant of quoted keys: content-lane posts are JSON-serialized ("slug": "…"), which the old /slug:\s*"…"/ missed — so they never reached the sitemap or routes-manifest.json and 404ed at the edge. See shared/blogSource.ts.
+const blogSlugs = extractBlogSlugs(blogSrc);
+const blogDates = extractBlogDates(blogSrc);
 
 // ── 3. Read direct install industries ───────────────────────────────────────
 
 const diSrc = readFile("client/src/data/directInstallIndustries.ts");
-const diSlugs = Array.from(diSrc.matchAll(/slug:\s*"([^"]+)"/g)).map(m => m[1]);
+const diSlugs = extractBlogSlugs(diSrc);
 
 // ── 4. Classify priorities ──────────────────────────────────────────────────
 
