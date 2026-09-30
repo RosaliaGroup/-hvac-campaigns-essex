@@ -24,6 +24,94 @@ export type BlogPostData = {
 export const blogPosts: BlogPostData[] = [
   {
     "date": "September 26, 2026",
+    "slug": "hvac-capital-budgeting-per-unit-apartment-owners",
+    "title": "Per-Unit HVAC Capital Budgeting Guide for NJ Apartments",
+    "excerpt": "How apartment owners across Essex, Hudson, Bergen and surrounding NJ counties can build a per-unit HVAC capital plan grounded in install quality, correct system fit, and realistic financing options.",
+    "category": "Commercial & Multifamily HVAC",
+    "readTime": "8 min read",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Capital budgeting for HVAC replacement across a multifamily portfolio is different from pricing a single job. Owners and property managers need a per-unit framework that accounts for equipment type, building configuration, and the quality of the installation itself — because poor installation practices, not just aging equipment, are one of the biggest drivers of unplanned replacement across NJ apartment portfolios. Mechanical Enterprise LLC works with owners and general contractors across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties to plan HVAC lifecycle replacement unit by unit, building by building."
+      },
+      {
+        "type": "h2",
+        "content": "Why Installation Quality Drives Per-Unit Lifecycle Costs"
+      },
+      {
+        "type": "paragraph",
+        "content": "Every per-unit capital plan starts with the same assumption: the equipment will perform to spec for its expected service life. That assumption only holds if the install is done correctly the first time. Correct refrigerant charge, properly sized ductwork or line sets, and a unit matched to the actual load of the apartment all affect how often a system needs service calls, how much energy it uses, and how soon it needs to be replaced again. When budgeting per unit across a building or a portfolio, owners should weight installation quality as heavily as the equipment line item itself — a lower-quality install on a mid-tier system can create more callbacks and shorter service life than a well-installed system of the same class."
+      },
+      {
+        "type": "h2",
+        "content": "Matching System Type to Unit Type and Building Profile"
+      },
+      {
+        "type": "paragraph",
+        "content": "Per-unit budgeting also depends on which system type fits the building. Garden-style apartment complexes in counties like Hudson or Bergen often rely on PTAC units or through-wall systems, while mid-rise and high-rise buildings may use split systems, ductless mini-splits, or centralized VRV/VRF systems serving multiple units off shared equipment. Each system type carries a different replacement cycle, different labor requirements, and different failure patterns. A capital plan that treats every unit type the same — applying one flat per-unit cost across PTAC, mini-split, RTU, and split inventory — will consistently misstate the real budget. Mechanical Enterprise installs heat pumps, central AC, ductless mini-splits, full system replacements, and VRV/VRF systems, and can help owners separate the portfolio into unit-type cohorts before setting per-unit capital reserves."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage as a Budgeting Tool"
+      },
+      {
+        "type": "paragraph",
+        "content": "Some owners choose to pair new installations with 10-Year Parts & Labor Coverage, offered as a third-party extended service agreement backed by A-rated insurers. This coverage is a paid add-on, not something bundled into the price of the unit, and it is available for new HVAC installations completed by Mechanical Enterprise, as well as for existing systems that pass an eligibility inspection and qualify under program criteria. For portfolio owners, this matters because it converts an unpredictable repair line item into a known, budgeted expense across the coverage term — useful when you are trying to smooth operating costs against a multi-year capital replacement schedule rather than reacting to failures unit by unit."
+      },
+      {
+        "type": "h2",
+        "content": "Rebates and Financing Can Offset Capital Outlay"
+      },
+      {
+        "type": "paragraph",
+        "content": "Rebates should factor into a capital plan as a secondary consideration, after install quality and system fit are settled — not as the reason to choose a system or a vendor. For commercial and multifamily projects, PSE&G Direct Install can cover up to 80% of project cost, and the remaining balance may be eligible for PSE&G On-Bill Repayment, which offers 0% interest financing repaid through the monthly utility bill. These programs can materially change the timing of a capital project, but eligibility and amounts depend on the specific program terms in effect at the time of application, so owners should confirm current details before building them into a final per-unit number."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Unit count by type (PTAC, mini-split, RTU, split) and by building",
+          "Age and manufacturer of existing equipment, where known",
+          "Any known recurring service issues or repeat callback locations",
+          "Electrical panel capacity and any known infrastructure constraints",
+          "Prior energy audits or Direct Install assessments, if available",
+          "Preferred phasing — full portfolio replacement vs. building-by-building rollout"
+        ],
+        "content": "What to Send Us Before Requesting a Portfolio Bid"
+      },
+      {
+        "type": "paragraph",
+        "content": "When you ask other bidders for a per-unit capital estimate, ask them to separate labor, equipment, and any optional coverage into distinct line items, and to state explicitly whether their quoted per-unit number assumes existing infrastructure is adequate or includes allowance for electrical and structural upgrades. A number that hides those assumptions will not hold up once the work starts."
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning a multi-building or multi-unit HVAC replacement across your NJ portfolio? Get a per-unit breakdown built around your actual building mix.",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial",
+        "buttonText": "Request a Commercial Portfolio Quote"
+      }
+    ],
+    "faqSchema": [
+      {
+        "answer": "Start by separating the portfolio into cohorts by unit type — PTAC, mini-split, RTU, split — since each has different replacement cycles and labor needs. Then weigh installation quality and correct system sizing as heavily as equipment cost, since these factors affect service life and callback frequency.",
+        "question": "How should apartment owners set a per-unit HVAC capital budget?"
+      },
+      {
+        "answer": "No. It is an optional, paid add-on administered as a third-party extended service agreement. It's available for new installations by Mechanical Enterprise and for existing systems that pass an eligibility inspection and qualify under program criteria.",
+        "question": "Is the 10-Year Parts & Labor Coverage included with a new HVAC installation?"
+      },
+      {
+        "answer": "PSE&G Direct Install can cover up to 80% of eligible commercial project cost, and the remaining balance may be eligible for 0% interest On-Bill Repayment. Program terms and eligibility should be confirmed at the time of application.",
+        "question": "Do PSE&G commercial rebates apply to apartment building HVAC projects?"
+      },
+      {
+        "answer": "Pricing is quoted per unit per year by portfolio rather than by county. Mechanical Enterprise services Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties under the same portfolio pricing approach.",
+        "question": "Does per-unit pricing differ across counties served by Mechanical Enterprise?"
+      }
+    ],
+    "metaDescription": "A per-unit framework for apartment owners budgeting HVAC replacement across NJ portfolios, from install quality to optional coverage and rebates."
+  },
+
+  {
+    "date": "September 26, 2026",
     "slug": "commercial-hvac-response-sla-checklist",
     "title": "What a Commercial HVAC Response SLA Should Include",
     "excerpt": "A usable HVAC service SLA is built around installation quality, a defined response window, escalation steps, and regular reporting — not a marketing number. Here's what NJ property managers should require before signing.",
