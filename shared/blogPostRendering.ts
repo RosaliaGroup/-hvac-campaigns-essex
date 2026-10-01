@@ -85,6 +85,34 @@ export function extractInternalLinkPaths(post: BlogPostData): string[] {
 const BLOG_POSTS_ARRAY_MARKER = "export const blogPosts: BlogPostData[] = [";
 
 /**
+ * Reduce a model-drafted post to EXACTLY the fields BlogPostData allows. The model sometimes adds a stray key — PR #162's
+ * post gave a `checklist` section a `"content"` label (the list's heading), which is not a field of that section type.
+ * The renderer ignored it, but the TypeScript object literal in blogPosts.ts then failed `tsc` ("'content' does not exist in
+ * type checklist") on main. Extra keys carry no meaning the site renders, so they are dropped rather than shipped.
+ */
+export function normalizeBlogPost(post: BlogPostData): BlogPostData {
+  const str = (v: unknown) => (typeof v === "string" ? v : "");
+  const sections = post.sections.map((raw): BlogSection => {
+    const s = raw as unknown as Record<string, unknown>;
+    switch (s.type) {
+      case "checklist":
+      case "numbered_list":
+        return { type: s.type, items: Array.isArray(s.items) ? s.items.filter((i): i is string => typeof i === "string") : [] };
+      case "cta_box":
+        return { type: "cta_box", content: str(s.content), buttonText: str(s.buttonText), buttonUrl: str(s.buttonUrl) };
+      default:
+        return { type: s.type as "intro" | "h2" | "paragraph" | "stat_box", content: str(s.content) };
+    }
+  });
+  const out: BlogPostData = {
+    title: post.title, slug: post.slug, date: post.date, readTime: post.readTime, category: post.category,
+    metaDescription: post.metaDescription, excerpt: post.excerpt, sections,
+  };
+  if (Array.isArray(post.faqSchema)) out.faqSchema = post.faqSchema.map((f) => ({ question: str(f?.question), answer: str(f?.answer) }));
+  return out;
+}
+
+/**
  * Insert `post` as a new entry at the TOP of the blogPosts array in
  * `sourceText` (client/src/data/blogPosts.ts's raw file content). The object
  * is serialized via JSON.stringify — valid JS/TS object-literal syntax (JSON
@@ -99,7 +127,7 @@ export function insertBlogPostIntoSource(sourceText: string, post: BlogPostData)
     throw new Error(`Could not find "${BLOG_POSTS_ARRAY_MARKER}" in blogPosts.ts — its shape may have changed.`);
   }
   const insertAt = idx + BLOG_POSTS_ARRAY_MARKER.length;
-  const entry = `\n  ${JSON.stringify(post, null, 2).split("\n").join("\n  ")},\n`;
+  const entry = `\n  ${JSON.stringify(normalizeBlogPost(post), null, 2).split("\n").join("\n  ")},\n`;
   return sourceText.slice(0, insertAt) + entry + sourceText.slice(insertAt);
 }
 

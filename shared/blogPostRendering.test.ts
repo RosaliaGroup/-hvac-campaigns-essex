@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { countPostStructure, renderPostPlainText, extractInternalLinkPaths, insertBlogPostIntoSource, extractExistingTitles } from "./blogPostRendering";
+import { countPostStructure, renderPostPlainText, extractInternalLinkPaths, insertBlogPostIntoSource, extractExistingTitles, normalizeBlogPost } from "./blogPostRendering";
 import type { BlogPostData } from "../client/src/data/blogPosts";
 
 const samplePost: BlogPostData = {
@@ -131,5 +131,52 @@ describe("renderPostPlainText / extractInternalLinkPaths never throw on a malfor
     const post = bad([{ type: "checklist", items: ["one", "two"] }, { type: "cta_box", content: "go", buttonText: "b", buttonUrl: "https://mechanicalenterprise.com/commercial" }]);
     expect(renderPostPlainText(post)).toContain("one\ntwo");
     expect(extractInternalLinkPaths(post)).toEqual(["/commercial"]);
+  });
+});
+
+describe("normalizeBlogPost — only the fields BlogPostData allows (a stray checklist 'content' label broke tsc on main in PR #162)", () => {
+  const base = { title: "T", slug: "s", date: "d", readTime: "r", category: "c", metaDescription: "m", excerpt: "e" };
+
+  it("REGRESSION: drops the stray `content` on a checklist (the exact PR #162 shape) and keeps the items", () => {
+    const post = {
+      ...base,
+      sections: [{ type: "checklist", items: ["a", "b"], content: "What to Send Us Before Requesting a Portfolio Bid" }],
+    } as unknown as BlogPostData;
+    const out = normalizeBlogPost(post);
+    expect(out.sections).toEqual([{ type: "checklist", items: ["a", "b"] }]);
+    expect(JSON.stringify(out)).not.toContain("What to Send Us Before");
+  });
+
+  it("drops unknown keys at the post, section and FAQ level, for every section type", () => {
+    const post = {
+      ...base, extraTop: 1, confidence: 0.9,
+      sections: [
+        { type: "intro", content: "i", note: "x" }, { type: "h2", content: "h", level: 2 }, { type: "paragraph", content: "p", items: ["stray"] },
+        { type: "stat_box", content: "s", source: "y" }, { type: "numbered_list", items: ["1"], content: "label" },
+        { type: "cta_box", content: "c", buttonText: "b", buttonUrl: "https://mechanicalenterprise.com/commercial", style: "big" },
+      ],
+      faqSchema: [{ question: "Q?", answer: "A.", id: 3 }],
+    } as unknown as BlogPostData;
+    const out = normalizeBlogPost(post) as unknown as Record<string, unknown>;
+    expect(Object.keys(out).sort()).toEqual(["category", "date", "excerpt", "faqSchema", "metaDescription", "readTime", "sections", "slug", "title"]);
+    const secs = out.sections as Array<Record<string, unknown>>;
+    expect(secs.map((s) => Object.keys(s).sort())).toEqual([
+      ["content", "type"], ["content", "type"], ["content", "type"], ["content", "type"], ["items", "type"], ["buttonText", "buttonUrl", "content", "type"],
+    ]);
+    expect(out.faqSchema).toEqual([{ question: "Q?", answer: "A." }]);
+  });
+
+  it("leaves a well-formed post untouched (same JSON), and omits faqSchema when there is none", () => {
+    const post = { ...base, sections: [{ type: "intro", content: "hi" }, { type: "checklist", items: ["x"] }] } as unknown as BlogPostData;
+    expect(JSON.stringify(normalizeBlogPost(post))).toBe(JSON.stringify(post));
+    expect("faqSchema" in normalizeBlogPost(post)).toBe(false);
+  });
+
+  it("insertBlogPostIntoSource writes the normalized post — no stray key can reach blogPosts.ts", () => {
+    const src = "export const blogPosts: BlogPostData[] = [\n];";
+    const post = { ...base, sections: [{ type: "checklist", items: ["a"], content: "label that must not ship" }] } as unknown as BlogPostData;
+    const out = insertBlogPostIntoSource(src, post);
+    expect(out).not.toContain("label that must not ship");
+    expect(out).toContain('"items"');
   });
 });

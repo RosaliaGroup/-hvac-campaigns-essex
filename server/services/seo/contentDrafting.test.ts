@@ -190,3 +190,23 @@ describe("parseContentDraftResponse — structurally broken sections are a retry
     expect(post.sections).toHaveLength(7);
   });
 });
+
+describe("parseContentDraftResponse — stray keys the model adds are dropped (PR #162's checklist 'content' label broke tsc on main)", () => {
+  it("returns a post with exactly the allowed fields", async () => {
+    const dirty = { ...validPost, confidence: 0.9, sections: [{ type: "intro", content: "Hi." }, { type: "checklist", items: ["a"], content: "A stray list label" }] };
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(dirty)));
+    const post = (await draftContentPost(topic, VERIFIED_FACTS)) as unknown as Record<string, unknown>;
+    expect("confidence" in post).toBe(false);
+    expect((post.sections as unknown[])[1]).toEqual({ type: "checklist", items: ["a"] });
+  });
+});
+
+describe("draftContentPost — section sizing so the model can actually reach the word count", () => {
+  it("tells the model how to size sections (7-8 x 130-170 words + a 3-question FAQ ~ 1,100 words)", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(validPost)));
+    await draftContentPost(topic, VERIFIED_FACTS);
+    const s = (vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system;
+    expect(s).toContain("7-8 sections of 130-170 words");
+    expect(s).toContain("3-question FAQ");
+  });
+});
