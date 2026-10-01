@@ -23,6 +23,95 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "What GCs Need From an HVAC Subcontractor",
+    "slug": "what-gcs-need-from-hvac-subcontractor",
+    "date": "September 26, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "What NJ general contractors should expect from an HVAC subcontractor: submittals, trade coordination, and close-out that doesn't bounce back.",
+    "excerpt": "A look at what general contractors actually need from an HVAC subcontractor on commercial and multifamily jobs across New Jersey — from submittals through close-out.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "General contractors don't just need an HVAC subcontractor who can install equipment — they need one who shows up with the right submittals, coordinates cleanly with other trades, and hands over a close-out package that doesn't bounce back three times. Mechanical Enterprise LLC has spent 20 years working inside commercial and multifamily projects across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, and we build our process around what keeps your schedule — and your reputation — intact."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Come First"
+      },
+      {
+        "type": "paragraph",
+        "content": "Submittals and schedules matter, but none of it counts if the system doesn't fit the building. Before we price a job, we look at load calculations, duct or refrigerant line routing, and how the equipment — heat pump, central AC, ductless mini-split, or a VRV/VRF system for larger multi-tenant buildings — will actually perform in the space. A unit that's sized wrong creates callbacks, tenant complaints, and change orders nobody wants to own. For new installations, we also offer optional 10-year parts and labor coverage as a paid add-on, administered through a third-party service agreement backed by A-rated insurers. Existing systems may qualify for the same coverage after an eligibility inspection. We're upfront that this isn't included in the base install cost — it's a separate decision for the owner to make once the system is in and running."
+      },
+      {
+        "type": "h2",
+        "content": "Submittals That Keep Your Schedule Moving"
+      },
+      {
+        "type": "paragraph",
+        "content": "Late or incomplete submittals are one of the most common reasons HVAC scopes fall behind on commercial jobs. We submit equipment cut sheets, control sequences, and coordination drawings early enough for your team to review and return comments without compressing the install window. If a spec calls for substitution review, we flag it up front instead of discovering it during rough-in. The goal is simple: give your project engineer what they need the first time, in a format that matches how your other trades are submitting, so nothing gets held up waiting on us."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Full mechanical drawing set and specs, including any addenda",
+          "Load calculations or basis of design if already established",
+          "Site logistics: crane access, loading dock hours, elevator availability",
+          "Phasing plan for occupied or partially occupied buildings",
+          "Required submittal format and review turnaround expectations",
+          "Confirmation of which counties/service area the sub actually covers",
+          "Whether close-out documentation includes O&M manuals and startup reports",
+          "Clarification on which warranty or coverage options are optional add-ons versus standard"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Coordination On Site"
+      },
+      {
+        "type": "paragraph",
+        "content": "Multifamily buildings, office retrofits, and mixed-use projects rarely give you a clean, empty shell to work in. We're used to coordinating around electrical rough-in, fire protection, and finish trades on jobs involving PTAC units, mini-splits, rooftop units, and traditional split systems — often all on the same property. That means working from an updated schedule, flagging conflicts before they become RFIs, and keeping noise and downtime predictable for occupied units. On portfolio work, we price per unit per year and report on a quarterly cadence, which gives property managers and GCs overseeing multiple buildings a consistent way to track progress across a mixed inventory of equipment types."
+      },
+      {
+        "type": "h2",
+        "content": "Close-Out Documentation and Optional Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "Close-out is where a lot of subcontractor relationships go sideways — missing O&M manuals, incomplete startup logs, or warranty paperwork that doesn't match what was actually installed. We provide documentation covering all major brands we work with, along with clear information on any optional coverage the owner chose. If the building owner opts into our Comfort Membership, it's worth noting upfront for your records: it's a paid, owned-equipment service plan with 3, 5, or 10-year terms, two maintenance visits per year, and priority scheduling — not a lease or subscription on the equipment itself. Membership and coverage payments can count toward a future system replacement, which property managers sometimes like to have documented in their capital planning files."
+      },
+      {
+        "type": "h2",
+        "content": "NJ-Specific Considerations for Multifamily and Commercial Builds"
+      },
+      {
+        "type": "paragraph",
+        "content": "Projects in Essex, Hudson, Bergen, and the surrounding counties often involve older multifamily stock with limited mechanical room space, alongside newer commercial builds designed for VRF efficiency. Where it applies, commercial projects may also be eligible for PSE&G Direct Install support, which can cover up to 80% of project cost, with the remaining balance eligible for 0% interest financing through PSE&G's On-Bill Repayment program, repaid via the monthly utility bill. These are secondary benefits worth mentioning to ownership during pricing conversations — they don't change the installation approach, but they can affect how a client weighs system options during design."
+      },
+      {
+        "type": "cta_box",
+        "content": "Bidding a commercial or multifamily project in Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, or Somerset County? Send us the drawing set and let's talk submittal timelines.",
+        "buttonText": "Start a Commercial Conversation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "What should a GC include in a bid package for HVAC scope?",
+        "answer": "Full mechanical drawings and specs, any load calculations already completed, site logistics details (crane access, loading dock hours, elevator availability), and a phasing plan if the building is occupied during construction. The clearer the package, the faster a sub can return accurate submittals."
+      },
+      {
+        "question": "Does Mechanical Enterprise work on multifamily buildings across multiple counties?",
+        "answer": "Yes. We work on commercial and multifamily projects across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, and we price portfolio work per unit per year with quarterly reporting for property managers overseeing multiple buildings."
+      },
+      {
+        "question": "Is the 10-year parts and labor coverage included with a new install?",
+        "answer": "No — it's an optional, paid add-on available for new installations by Mechanical Enterprise. Existing systems may also qualify after passing an eligibility inspection. It's never included automatically in the base installation cost."
+      }
+    ]
+  },
+
+  {
     "date": "September 26, 2026",
     "slug": "hvac-capital-budgeting-per-unit-apartment-owners",
     "title": "Per-Unit HVAC Capital Budgeting Guide for NJ Apartments",
