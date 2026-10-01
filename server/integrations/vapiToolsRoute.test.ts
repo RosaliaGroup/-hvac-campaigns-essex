@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const dispatch = vi.fn(async () => ({ results: [{ toolCallId: "t1", result: '{"ok":true}' }] }));
 vi.mock("./vapiTools", () => ({ handleVapiToolCalls: (p: unknown) => dispatch(p) }));
 
-import { registerVapiToolsRoute } from "./vapiToolsRoute";
+import { registerVapiToolsRoute, normalizeToolCallArguments } from "./vapiToolsRoute";
 
 type Handler = (req: unknown, res: unknown) => Promise<unknown> | unknown;
 
@@ -48,6 +48,18 @@ describe("POST /api/vapi/tools", () => {
     expect(r.statusCode).toBe(200);
     expect(r.body).toEqual({ results: [{ toolCallId: "t1", result: '{"ok":true}' }] });
     expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+  it("normalizes object arguments (what Vapi sends for function tools) to a JSON string before dispatch", async () => {
+    const objBody = { message: { type: "tool-calls", toolCallList: [{ id: "t1", type: "function", function: { name: "getCallerInfo", arguments: { phone: "+12015550123" } } }] } };
+    const r = res(); await capture().handler(req("Bearer s3cret", objBody), r);
+    expect(r.statusCode).toBe(200);
+    const sent = (dispatch.mock.calls[0] as unknown[])[0] as { message: { toolCallList: Array<{ function: { arguments: unknown } }> } };
+    expect(typeof sent.message.toolCallList[0].function.arguments).toBe("string");
+    expect(JSON.parse(sent.message.toolCallList[0].function.arguments as string)).toEqual({ phone: "+12015550123" });
+  });
+  it("leaves string arguments untouched", () => {
+    const p = { message: { type: "tool-calls", toolCallList: [{ id: "t", type: "function", function: { name: "x", arguments: "{\"a\":1}" } }] } } as never;
+    expect(((normalizeToolCallArguments(p) as any).message.toolCallList[0].function.arguments)).toBe("{\"a\":1}");
   });
   it("500 without leaking details when the dispatcher throws", async () => {
     dispatch.mockRejectedValueOnce(new Error("db password=hunter2"));

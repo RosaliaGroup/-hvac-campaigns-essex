@@ -16,6 +16,21 @@ import type { Express, Request, Response } from "express";
 import { authenticateVapiToolCall } from "./vapiToolAuth";
 import { handleVapiToolCalls, type VapiToolCallPayload } from "./vapiTools";
 
+/**
+ * Vapi delivers `function.arguments` as an already-parsed OBJECT for server (function) tools, while the
+ * dispatcher (written for the OpenAI-style string) JSON.parses it — an object makes JSON.parse throw and the
+ * tool silently runs with empty args. Normalize to the JSON string the dispatcher expects.
+ */
+export function normalizeToolCallArguments(payload: VapiToolCallPayload): VapiToolCallPayload {
+  for (const call of payload.message.toolCallList) {
+    const args = (call as { function?: { arguments?: unknown } }).function?.arguments;
+    if (args !== undefined && args !== null && typeof args !== "string") {
+      (call.function as { arguments: unknown }).arguments = JSON.stringify(args);
+    }
+  }
+  return payload;
+}
+
 export function registerVapiToolsRoute(app: Express): void {
   app.post("/api/vapi/tools", async (req: Request, res: Response) => {
     const auth = authenticateVapiToolCall(req.get("authorization"));
@@ -34,7 +49,7 @@ export function registerVapiToolsRoute(app: Express): void {
     }
 
     try {
-      const result = await handleVapiToolCalls(payload as VapiToolCallPayload);
+      const result = await handleVapiToolCalls(normalizeToolCallArguments(payload as VapiToolCallPayload));
       return res.status(200).json(result);
     } catch (err) {
       console.error("[VapiToolsRoute] dispatcher failed:", err instanceof Error ? err.message : "unknown error");
