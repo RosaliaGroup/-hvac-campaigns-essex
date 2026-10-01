@@ -28,6 +28,7 @@ import { startMarketIntelScheduler } from "../services/seo/intel/job";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
 import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
+import { registerVapiToolsRoute } from "../integrations/vapiToolsRoute";
 import { startGrowthCadencePoller } from "../services/growth/cadenceEngine";
 import { startReviewEnginePoller } from "../services/growth/reviewEngine";
 import { startImportReleaseSweep } from "../services/growth/contactImport";
@@ -87,6 +88,8 @@ async function startServer() {
   registerGbpSyncRoutes(app);
   // Vapi (Jessica) end-of-call recap — persist to Mechanical CRM + notify (POST /api/vapi/call-recap)
   registerVapiRecapRoute(app);
+  // Vapi function tools (getCallerInfo/bookHVAC/rescheduleHVAC/sendReferralLink) — Vapi-shaped REST adapter over the vapiTools dispatcher (POST /api/vapi/tools)
+  registerVapiToolsRoute(app);
   // API responses (incl. auth.me and every session-scoped read) must never be
   // cached or restored from the back button / bfcache — always re-fetched and
   // re-authorized. Applied before the tRPC handler so it covers all responses.
