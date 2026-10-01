@@ -75,8 +75,7 @@ export const blogPosts: BlogPostData[] = [
           "Electrical panel capacity and any known infrastructure constraints",
           "Prior energy audits or Direct Install assessments, if available",
           "Preferred phasing — full portfolio replacement vs. building-by-building rollout"
-        ],
-        "content": "What to Send Us Before Requesting a Portfolio Bid"
+        ]
       },
       {
         "type": "paragraph",

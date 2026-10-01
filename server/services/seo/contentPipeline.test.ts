@@ -34,7 +34,7 @@ import { isGithubConfigured, ensureBranch, getFileContent, putFileContent, openO
 import { isWarmedUp } from "./warmupGate";
 import { uniqueBranchFor, findOpenBatchWithPrefix } from "./batchBranches";
 import { armHold } from "./autoMerge";
-import { runWeeklyContentJob, findLatestContentDraft, approveContentToPR, approveContentToPRWithAutopublish, ContentNotReadyError } from "./contentPipeline";
+import { runWeeklyContentJob, findLatestContentDraft, approveContentToPR, approveContentToPRWithAutopublish, ContentNotReadyError, describeFinding, collectBlockingFindings } from "./contentPipeline";
 import { VERIFIED_FACTS } from "../../../shared/verifiedFacts";
 import type { SeoContentQueueRow } from "../../../drizzle/schema";
 
@@ -464,5 +464,36 @@ describe("runWeeklyContentJob — a malformed-section draft is a failed attempt 
     const feedback = (vi.mocked(draftContentPost).mock.calls[1][2] as string[]).find((f) => f.startsWith("invalid_json"));
     expect(feedback).toContain('section 4 (paragraph) is missing its "content" string');
     expect(feedback).toContain("every section complete");
+  });
+});
+
+describe("describeFinding / collectBlockingFindings — a word-count finding says what to DO (811 words did not move the model in 3 retries)", () => {
+  it("under the minimum: how many words to add and where they come from", () => {
+    const msg = describeFinding("word_count", "Body is 811 words (must be 900-1400).");
+    expect(msg).toContain("word_count: Body is 811 words");
+    expect(msg).toContain("289 MORE words");
+    expect(msg).toContain("~1100 total");
+    expect(msg).toContain("expand your shortest sections");
+    expect(msg).toContain("Do not pad");
+  });
+
+  it("over the maximum: how many to cut", () => {
+    const msg = describeFinding("word_count", "Body is 1500 words (must be 900-1400).");
+    expect(msg).toContain("Cut about 400 words");
+  });
+
+  it("other findings keep the plain code: message form, and an unparseable word_count falls back to it", () => {
+    expect(describeFinding("title_too_long", "Title is 76 characters (max 60).")).toBe("title_too_long: Title is 76 characters (max 60).");
+    expect(describeFinding("word_count", "weird message")).toBe("word_count: weird message");
+  });
+
+  it("collectBlockingFindings uses it for content-lint word_count blocks, and still skips warnings", () => {
+    const out = collectBlockingFindings({
+      metaLint: { passes: true, findings: [] },
+      contentLint: { passes: false, findings: [{ severity: "block", code: "word_count", message: "Body is 811 words (must be 900-1400)." }, { severity: "warn", code: "reading_level", message: "hard" }] },
+      critic: { passes: true, unsupportedClaims: [], model: "m" },
+    } as never);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toContain("289 MORE words");
   });
 });

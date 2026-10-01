@@ -13,6 +13,7 @@ import {
   lintDollarRanges,
   lintPageMeta,
   isGuaranteeAsserted,
+  isSuperlativeAsserted,
 } from "./seoLinter";
 import { lintContent, type ContentLintInput } from "./contentLinter";
 import { renderPostPlainText } from "./blogPostRendering";
@@ -253,5 +254,39 @@ describe("10. claimContext helpers", () => {
     const text = renderPostPlainText(post);
     expect(text.split("\n")).toEqual(["A title", "An excerpt", "Heading", "one item\ntwo item"].join("\n").split("\n"));
     expect(text.trim().split(/\s+/).length).toBe("A title An excerpt Heading one item two item".split(" ").length);
+  });
+});
+
+describe("11b. 'cheapest' / 'lowest price' — allowed when negated or asked, like 'guaranteed' (topic #3)", () => {
+  it("#3: 'the winning quote isn't always the cheapest one' is a disclaimer, not a superlative", () => {
+    const sentence = "The same pattern shows up on nearly every job: the winning quote isn't always the cheapest one, it's the one built around correct system fit and clear installation standards.";
+    expect(isSuperlativeAsserted(sentence, "cheapest")).toBe(false);
+    const input: ContentLintInput = { title: "How to Compare NJ HVAC Installation Quotes", metaDescription: "Compare quotes.", body: sentence, h1Count: 1, h2Count: 3, h3Count: 0, faqQuestionCount: 0, internalLinkPaths: [], existingTitlesAndH1s: [] };
+    expect(codes(lintContent(input, VERIFIED_FACTS).findings)).not.toContain("superlative");
+  });
+
+  it.each([
+    "Is the cheapest bid the best value?",
+    "A quote that is not the lowest price can still win.",
+    "Never choose a contractor on the lowest price alone.",
+    "Don't assume the cheapest quote is the right one.",
+  ])("does not block: %s", (s) => {
+    expect(isSuperlativeAsserted(s, "cheapest") || isSuperlativeAsserted(s, "lowest price")).toBe(false);
+  });
+
+  it.each([
+    ["We are the cheapest installer in NJ.", "cheapest"],
+    ["Lowest price in Essex County.", "lowest price"],
+    ["Not only the cheapest, but the fastest.", "cheapest"],
+    ["Cheapest quotes, guaranteed.", "cheapest"],
+  ])("STILL blocks the assertion: %s", (s, phrase) => {
+    expect(isSuperlativeAsserted(s, phrase)).toBe(true);
+  });
+
+  it("the meta lint uses the same rule, and 'best' / '#1' / 'top-rated' stay strict even in a negation", () => {
+    expect(codes(lintPageMeta({ pagePath: "/blog/x", title: "Why the Cheapest Quote Isnt Always Right", metaDescription: "The cheapest bid isn't always the winner. Call (862) 423-9396." }).findings)).not.toContain("superlative");
+    for (const t of ["Not the best, but close.", "We're #1 in NJ", "Top-rated HVAC contractor"]) {
+      expect(codes(lintPageMeta({ pagePath: "/blog/x", title: t + " HVAC Guide", metaDescription: "Call (862) 423-9396." }).findings), t).toContain("superlative");
+    }
   });
 });

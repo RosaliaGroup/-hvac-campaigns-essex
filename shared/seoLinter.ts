@@ -77,7 +77,21 @@ export const SUPERLATIVES = [
  * to say, so those sentences don't trip the rule.
  */
 export function isGuaranteeAsserted(text: string): boolean {
-  return splitSentences(text).some((s) => /\bguaranteed\b/i.test(s) && !isQuestion(s) && !hasNegation(s));
+  return isSuperlativeAsserted(text, "guaranteed");
+}
+
+/** The superlatives that are only a violation when ASSERTED: they read naturally in a disclaimer or a question. The rest ("best", "#1", "top-rated", "award-winning", "number one") stay strict. */
+export const NEGATABLE_SUPERLATIVES: ReadonlySet<string> = new Set(["guaranteed", "cheapest", "lowest price"]);
+
+/**
+ * True if `phrase` appears in a sentence that ASSERTS it. A question ("Are rebate amounts guaranteed?") or a negation
+ * ("the winning quote isn't always the cheapest one", "never guaranteed", "not the lowest price") is the honest thing to say —
+ * and the natural thing to say in a guide to comparing quotes — so those sentences don't trip the rule. "We're the cheapest in NJ",
+ * "Lowest price guaranteed" and "Not only the cheapest, but..." (not-only is no denial) still do.
+ */
+export function isSuperlativeAsserted(text: string, phrase: string): boolean {
+  const re = phraseRegex(phrase);
+  return splitSentences(text).some((s) => re.test(s) && !isQuestion(s) && !hasNegation(s));
 }
 
 export const EXPIRED_INCENTIVES = [
@@ -756,7 +770,7 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
 
   // Superlatives / unsupported claims ("guaranteed" only when asserted — see isGuaranteeAsserted)
   for (const phrase of SUPERLATIVES) {
-    if (phrase === "guaranteed" ? isGuaranteeAsserted(combined) : includesPhrase(combined, phrase)) {
+    if (NEGATABLE_SUPERLATIVES.has(phrase) ? isSuperlativeAsserted(combined, phrase) : includesPhrase(combined, phrase)) {
       findings.push(blockFinding("both", "superlative", `Unsupported superlative claim: "${phrase}".`));
     }
   }

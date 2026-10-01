@@ -125,10 +125,30 @@ async function evaluateDraft(post: BlogPostData, facts: VerifiedFacts): Promise<
 }
 
 /** Blocking (non-warn) findings from every gate, phrased as instructions for the next draft attempt. */
+/** Word-count target the drafter is told to aim for (the linter's window is 900-1400). */
+const WORD_COUNT_TARGET = 1100;
+
+/**
+ * "Body is 811 words" alone did not move the model across three retries. Say what to DO: how many words to add (or cut), and
+ * where they should come from — expanding the shortest sections with concrete detail, never padding or repeating.
+ */
+export function describeFinding(code: string, message: string): string {
+  if (code === "word_count") {
+    const n = Number(message.match(/Body is (\d+) words/)?.[1]);
+    if (Number.isFinite(n)) {
+      if (n < WORD_COUNT_TARGET) {
+        return `word_count: ${message} Write about ${WORD_COUNT_TARGET - n} MORE words (aim for ~${WORD_COUNT_TARGET} total): expand your shortest sections with concrete detail — what to ask, what to send, a worked example — and add a section if needed. Do not pad or repeat yourself.`;
+      }
+      return `word_count: ${message} Cut about ${n - WORD_COUNT_TARGET} words (aim for ~${WORD_COUNT_TARGET} total) by tightening the longest sections, not by dropping required parts.`;
+    }
+  }
+  return `${code}: ${message}`;
+}
+
 export function collectBlockingFindings(e: Pick<EvaluatedDraft, "metaLint" | "contentLint" | "critic">): string[] {
   return [
-    ...e.metaLint.findings.filter((f) => f.severity !== "warn").map((f) => `${f.code}: ${f.message}`),
-    ...e.contentLint.findings.filter((f) => f.severity !== "warn").map((f) => `${f.code}: ${f.message}`),
+    ...e.metaLint.findings.filter((f) => f.severity !== "warn").map((f) => describeFinding(f.code, f.message)),
+    ...e.contentLint.findings.filter((f) => f.severity !== "warn").map((f) => describeFinding(f.code, f.message)),
     ...e.critic.unsupportedClaims.map((c) => `unsupported_claim (remove it or replace it with a VERIFIED FACT): ${c}`),
   ];
 }

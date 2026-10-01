@@ -8,6 +8,7 @@
  */
 import { callAnthropicModelChain } from "../../_core/anthropic";
 import type { BlogPostData } from "../../../client/src/data/blogPosts";
+import { normalizeBlogPost } from "../../../shared/blogPostRendering";
 import type { VerifiedFacts } from "../../../shared/verifiedFacts";
 import type { SeoContentQueueRow } from "../../../drizzle/schema";
 
@@ -55,7 +56,7 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
     "Rules:",
     "- `title`: AT MOST 60 characters including spaces. The topic above is a SUBJECT, not the title — write a new, shorter page title; never paste the topic text as the title if it is longer than 60 characters.",
     "- `metaDescription`: AT MOST 155 characters including spaces (aim for 140-150).",
-    "- 1,000-1,250 words total across all sections combined (the linter rejects anything under 900 or over 1,400, so don't aim at either edge).",
+    "- 1,000-1,250 words total across all sections combined (the linter rejects anything under 900 or over 1,400, so don't aim at either edge). Plan for 7-8 sections of 130-170 words each plus a 3-question FAQ — that lands near 1,100 words; a draft of 8 short 100-word sections will come up short.",
     "- The `title` field IS the page's one H1 — do not repeat it as a section.",
     "- At most 6 `h2` sections. No sub-headings beyond h2 (the format has no h3).",
     "- Include exactly one `cta_box` section linking to a B2B page (buttonUrl must start with https://mechanicalenterprise.com/commercial).",
@@ -90,7 +91,8 @@ function parseContentDraftResponse(text: string): BlogPostData {
   }
   const problem = describeShapeProblem(p);
   if (problem) throw new ContentDraftParseError(problem);
-  return parsed as BlogPostData;
+  // Drop any stray keys the model added (a checklist "content" label broke tsc on main in PR #162).
+  return normalizeBlogPost(parsed as BlogPostData);
 }
 
 const TEXT_SECTION_TYPES = new Set(["intro", "h2", "paragraph", "stat_box", "cta_box"]);
