@@ -23,6 +23,98 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "How to Compare HVAC Installation Quotes in NJ",
+    "slug": "compare-hvac-installation-quotes-nj",
+    "date": "September 26, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "A property manager's guide to comparing NJ HVAC installation quotes: equipment fit, labor scope, warranty terms, and permits.",
+    "excerpt": "Side-by-side pricing rarely tells the full story. Here's what commercial and multifamily buyers in New Jersey should weigh before signing an HVAC installation contract.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "When you're reviewing competing HVAC installation quotes for a commercial building or multifamily property in New Jersey, the lowest number on the page isn't always the lowest-risk choice. Installation quality, correct system sizing, and the labor scope behind the quote matter as much as the equipment brand. Optional 10-year parts & labor coverage can also factor into the comparison, and any rebate figures should only be treated as a secondary, verify-before-you-count-on-it benefit."
+      },
+      {
+        "type": "h2",
+        "content": "Why NJ HVAC Quotes Can Vary So Much"
+      },
+      {
+        "type": "paragraph",
+        "content": "Two contractors can walk the same mechanical room in Bergen County and return quotes thousands of dollars apart, and the gap usually isn't about markup — it's about what's actually included. One bid might cover a full load calculation, new line sets, disposal of old equipment, and permit fees; another might assume existing infrastructure is reusable and price labor as a bare install. Equipment tier matters too: a VRV/VRF system quoted for a multi-tenant building has different installation requirements than a straightforward RTU swap. Before comparing dollar figures, line up each quote's scope item by item so you're not accidentally comparing a stripped-down bid against a complete one."
+      },
+      {
+        "type": "h2",
+        "content": "Equipment Specs and System Fit for the Building"
+      },
+      {
+        "type": "paragraph",
+        "content": "Ask each bidder to show their sizing method, not just a model number. A heat pump, central AC, ductless mini-split, or VRV/VRF system that's oversized or undersized for the space will run inefficiently and shorten equipment life regardless of brand. For multifamily and commercial buildings, system fit also depends on zoning needs, tenant turnover, and how the new equipment integrates with existing ductwork or electrical capacity. Request documentation showing how the proposed equipment matches the building's actual load — square footage alone isn't a substitute for a real calculation. Equipment that covers all major brands in its warranty eligibility is also worth noting, since it affects future service flexibility."
+      },
+      {
+        "type": "h2",
+        "content": "Labor Scope, Installation Quality, and NJ Permits"
+      },
+      {
+        "type": "paragraph",
+        "content": "Labor is where installation quality is won or lost. Ask how many technicians will be on-site, how long the job is expected to take, and whether the crew doing the physical install is the same one that sold the job. In New Jersey, mechanical and electrical permits are typically required for HVAC replacements and new installs, and the responsible municipality will schedule an inspection before the system can legally operate. Confirm in writing whether the contractor pulls the permit and schedules the inspection, or whether that responsibility falls to the property owner or GC. A quote that skips permit language isn't necessarily cheaper — it may just be shifting risk and cost onto you later."
+      },
+      {
+        "type": "h2",
+        "content": "Comparing Warranty and Coverage Terms"
+      },
+      {
+        "type": "paragraph",
+        "content": "Standard manufacturer warranties vary by brand and typically cover parts only, for a limited term. Separately, some contractors offer optional 10-year parts & labor coverage as a paid add-on — this is not included or free, and it should be priced and explained as its own line item in the proposal. For new installations, confirm the deductible structure and what's covered. For existing systems being evaluated for coverage, ask whether the equipment would need to pass an eligibility inspection before it qualifies, since not all existing systems will. Get the administration details — third-party or manufacturer-backed — in writing before comparing coverage across bids."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us When Requesting a Quote"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Current equipment make, model, age, and fuel/electric type",
+          "Square footage and floor plan or layout of the space served",
+          "Number of units for multifamily or portfolio properties (PTAC, mini-split, RTU, or split)",
+          "Known electrical capacity or recent electrical upgrades",
+          "Any existing permit history or open violations on the mechanical system",
+          "Timeline constraints — occupied units, tenant notice requirements, or seasonal deadlines",
+          "Whether you want pricing for optional 10-year parts & labor coverage included as a separate line item"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Rebates and Incentives: A Secondary Factor"
+      },
+      {
+        "type": "paragraph",
+        "content": "Incentives can offset part of a commercial project's cost, but they shouldn't be the deciding factor between bids. PSE&G's Direct Install program for commercial properties can cover up to 80% of eligible project costs, and PSE&G's On-Bill Repayment option offers 0% interest financing on the remaining balance, repaid through the monthly utility bill. Eligibility, caps, and program terms change and are determined by the utility, not the contractor, so confirm current details directly with PSE&G before factoring any specific amount into your budget. Treat incentive estimates as a bonus to a sound bid, not a reason to accept a quote with unclear scope or warranty terms."
+      },
+      {
+        "type": "cta_box",
+        "content": "Comparing quotes for a commercial or multifamily HVAC installation across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, or Somerset County? Request a scoped quote that lays out equipment, labor, and permit responsibility clearly.",
+        "buttonText": "Request a Commercial HVAC Quote",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Should property managers always choose the lowest HVAC installation quote?",
+        "answer": "Not automatically. A lower price often reflects a narrower scope — fewer labor hours, no permit handling, or a smaller equipment tier. Compare line items before comparing totals."
+      },
+      {
+        "question": "Does optional 10-year parts & labor coverage apply to any HVAC system?",
+        "answer": "It's available for new installations and for existing systems that are eligible after passing an inspection. It's a paid add-on, not an included or automatic benefit, and terms should be reviewed in writing."
+      },
+      {
+        "question": "Who is responsible for pulling HVAC permits in New Jersey?",
+        "answer": "This should be specified in the contract. Confirm in writing whether the contractor handles permit filing and inspection scheduling with the local municipality, or whether that falls to the building owner or general contractor."
+      }
+    ]
+  },
+
+  {
     "title": "What GCs Need From an HVAC Subcontractor",
     "slug": "what-gcs-need-from-hvac-subcontractor",
     "date": "September 26, 2026",
