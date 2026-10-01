@@ -22,7 +22,7 @@ import { seoApprovalBatches, type SeoApprovalBatchRow } from "../../../drizzle/s
 import { laneForBatch, refreshBatchStatus, approveBatchToPR, type ApproveBatchInput, type ApproveBatchResult } from "./bulkApprove";
 import { isWarmedUp, advanceWarmup } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
-import { getNetlifyCheckState, hasAnyPRComments, mergePR } from "./github";
+import { getNetlifyCheckState, hasAnyPRComments, mergePR, setHoldStatus } from "./github";
 import { signActionLink } from "./actionLinks";
 import { logAudit } from "./auditLog";
 import { sendEmail } from "../emailService";
@@ -51,6 +51,32 @@ export function holdHours(): number {
 }
 
 /**
+ * What the `autopublish/hold` commit status should say right now. This is what makes the hold
+ * enforceable against a human: with the status required in branch protection, GitHub's Merge
+ * button stays disabled while it is pending (or absent, e.g. right after an edit pushed a new
+ * commit). No hold at all → success, so ordinary human-reviewed batch PRs are never stuck.
+ */
+export function holdStatusFor(holdUntil: Date | null | undefined, now: Date): { state: "pending" | "success"; description: string } {
+  if (!holdUntil) return { state: "success", description: "No autopublish hold on this PR" };
+  if (holdUntil.getTime() > now.getTime()) {
+    const et = holdUntil.toLocaleString("en-US", { timeZone: "America/New_York", dateStyle: "short", timeStyle: "short" });
+    return { state: "pending", description: `Autopublish hold until ${et} ET — veto window, merge blocked until then` };
+  }
+  return { state: "success", description: "Autopublish hold elapsed" };
+}
+
+/** Best-effort: a GitHub hiccup must never break arming, the poller, or a merge — the next tick re-syncs. */
+export async function syncHoldStatus(batch: { id: number; prNumber: number | null; holdUntil: Date | null }, now: Date = new Date()): Promise<void> {
+  if (!batch.prNumber) return;
+  const s = holdStatusFor(batch.holdUntil, now);
+  try {
+    await setHoldStatus(batch.prNumber, s.state, s.description);
+  } catch (err) {
+    console.error(`[SEO] autopublish/hold status (${s.state}) failed for batch ${batch.id} PR #${batch.prNumber}:`, (err as Error).message);
+  }
+}
+
+/**
  * Arm the hold on a freshly-approved batch and notify. Call only when
  * isWarmedUp(lane) is true. No-ops (leaves the batch as a normal PR with no
  * hold — a human merges it on GitHub) when SEO_AUTOPUBLISH_ENABLED isn't
@@ -66,6 +92,8 @@ export async function armHold(batchId: number): Promise<void> {
   if (!db) return;
   const holdUntil = new Date(Date.now() + holdHours() * 60 * 60 * 1000);
   await db.update(seoApprovalBatches).set({ holdUntil }).where(eq(seoApprovalBatches.id, batchId));
+  const [armed] = await db.select().from(seoApprovalBatches).where(eq(seoApprovalBatches.id, batchId)).limit(1);
+  if (armed) await syncHoldStatus({ id: batchId, prNumber: armed.prNumber, holdUntil });
   await sendHoldNotification(batchId, holdUntil);
 }
 
@@ -168,6 +196,12 @@ export async function publishNow(batchId: number, actorId: number | null): Promi
   const netlifyState = await getNetlifyCheckState(batch.commitSha);
   if (netlifyState !== "success") return { merged: false, reason: "netlify_not_green" };
 
+  // The explicit override: satisfy the required hold status first, or GitHub would refuse this merge.
+  try {
+    await setHoldStatus(batch.prNumber as number, "success", "Hold skipped by manual publish-now override");
+  } catch (err) {
+    console.error(`[SEO] publishNow: could not set autopublish/hold=success for batch ${batchId}:`, (err as Error).message);
+  }
   const result = await mergePR(batch.prNumber as number);
   if (!result.merged) return { merged: false, reason: "merge_rejected" };
 
@@ -207,6 +241,20 @@ export async function approveMetaBatchWithAutopublish(input: ApproveBatchInput):
 
 export const AUTO_MERGE_POLL_MS = 15 * 60 * 1000;
 
+/**
+ * Open batch PRs with NO hold (human-reviewed lane, reverts) still need the required status to
+ * report, or the Merge button would wait on it forever. Best-effort, never throws.
+ */
+async function syncNoHoldStatuses(db: NonNullable<Awaited<ReturnType<typeof getDb>>>): Promise<void> {
+  try {
+    const open = await db.select().from(seoApprovalBatches).where(eq(seoApprovalBatches.status, "pr_open"));
+    if (!Array.isArray(open)) return;
+    for (const b of open) if (!b.holdUntil) await syncHoldStatus(b);
+  } catch (err) {
+    console.error("[SEO] autopublish/hold no-hold sweep failed:", (err as Error).message);
+  }
+}
+
 let tickRunning = false;
 
 /**
@@ -232,6 +280,7 @@ export async function runAutoMergeTick(): Promise<{ checked: number; merged: num
       console.log("[SEO] auto-merge tick: database unavailable");
       return { checked, merged };
     }
+    await syncNoHoldStatuses(db);
     const dueBatches = await db.select().from(seoApprovalBatches).where(and(eq(seoApprovalBatches.status, "pr_open"), isNotNull(seoApprovalBatches.holdUntil)));
     console.log(`[SEO] auto-merge tick: ${dueBatches.length} open batch(es) with a hold`);
     for (const batch of dueBatches) {
@@ -240,6 +289,9 @@ export async function runAutoMergeTick(): Promise<{ checked: number; merged: num
         // refreshBatchStatus first so a batch someone already merged by hand on
         // GitHub is reflected before we'd otherwise try (and fail) to merge it again.
         await refreshBatchStatus(batch.id);
+        // Flip pending→success once the hold has passed (and re-assert pending if an edit reset it),
+        // BEFORE the merge attempt: with the status required, GitHub rejects the poller's own merge otherwise.
+        await syncHoldStatus(batch);
         const result = await checkAndMergeIfReady(batch.id);
         if (result.merged) {
           merged++;
