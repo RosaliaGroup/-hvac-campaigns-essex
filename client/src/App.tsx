@@ -10,6 +10,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import About from "./pages/About";
+import Company from "./pages/Company";
 import Services from "./pages/Services";
 import Contact from "./pages/Contact";
 import RebateGuide from "./pages/RebateGuide";
@@ -147,6 +148,7 @@ function Router() {
       {/* ── Public routes ─────────────────────────────────────────── */}
       <Route path={"/"} component={Home} />
       <Route path={"/about"} component={About} />
+      <Route path={"/company"} component={Company} />
       <Route path={"/services"} component={Services} />
       <Route path={"/contact"} component={Contact} />
       <Route path={"/rebate-guide"} component={RebateGuide} />

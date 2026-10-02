@@ -7,6 +7,7 @@ import DashboardFooter from "@/components/DashboardFooter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import type { MarketIntelSections } from "@shared/marketIntelTypes";
+import AiVisibilityCard from "@/components/AiVisibilityCard";
 
 const DISMISS_REASONS = ["wrong", "not_now", "off_brand", "already_done"] as const;
 
@@ -138,8 +139,10 @@ export default function MarketIntel() {
             const sec = active.report.sections as MarketIntelSections | null;
             const cc = sec?.crawlCheck;
             const ex = sec?.experiment;
+            const aiv = sec?.aiVisibility;
             return (
               <>
+                {aiv && <AiVisibilityCard section={aiv} />}
                 {cc && (
                   <Card>
                     <CardHeader>

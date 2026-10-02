@@ -9,6 +9,7 @@ import ScrollRebatePopup from "@/components/ScrollRebatePopup";
 import WarrantyCoverageSection from "@/components/WarrantyCoverageSection";
 import BuyFinanceMemberComparison from "@/components/BuyFinanceMemberComparison";
 import { useSEO } from "@/hooks/useSEO";
+import AiFaqSection from "@/components/AiFaqSection";
 
 /* Design Philosophy: Modern Corporate with Tech-Forward Edge
    Residential focus with warm, family-friendly tone */
@@ -222,6 +223,8 @@ export default function ResidentialCampaigns() {
           </div>
         </div>
       </section>
+
+      <AiFaqSection path="/residential" name="Residential HVAC installation in NJ" />
 
       <Footer />
     </div>

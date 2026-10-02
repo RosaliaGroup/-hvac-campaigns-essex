@@ -62,6 +62,10 @@ const PAGE_META: Record<string, PageMeta> = {
     title: "About Mechanical Enterprise | NJ HVAC Contractor",
     description: "Licensed NJ HVAC contractor serving 15 counties. WMBE/SBE certified. PSE&G approved. Call (862) 423-9396.",
   },
+  "/company": {
+    title: "Company Facts | Mechanical Enterprise LLC | NJ HVAC",
+    description: "Mechanical Enterprise LLC: contact details, counties served, HVAC services and optional 10-year parts & labor coverage in New Jersey.",
+  },
   "/contact": {
     title: "Contact Mechanical Enterprise | NJ HVAC",
     description: "Contact Mechanical Enterprise for HVAC service in New Jersey. Call (862) 423-9396 or request a free assessment online.",

@@ -533,6 +533,13 @@
       "when": 1790400300000,
       "tag": "0079_seo_intel_query_key",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "5",
+      "when": 1790400400000,
+      "tag": "0080_seo_intel_ai_visibility",
+      "breakpoints": true
     }
   ]
 }

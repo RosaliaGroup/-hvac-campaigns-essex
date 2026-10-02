@@ -134,6 +134,13 @@ export type VerifiedFacts = {
     yearsInBusiness: number;
     /** Deliberately null: no verified founding year exists anywhere in the codebase. Owner-supplied only. */
     founded: number | null;
+    /**
+     * NJ HVAC contractor license, as the owner wants it stated (type + number). Null until the owner supplies it —
+     * nothing renders a license claim until then (the /company entity page and llms.txt omit the line).
+     */
+    license: { text: string; verifiedOn: string; source: string } | null;
+    /** Business hours, plain text (e.g. "Mon–Fri 8am–5pm"). Null until the owner supplies it — nothing renders hours until then. */
+    hours: { text: string; verifiedOn: string; source: string } | null;
   };
   /** Owner-maintained. Empty until the owner verifies at least one current incentive figure. */
   incentives: VerifiedIncentive[];
@@ -180,6 +187,9 @@ export const VERIFIED_FACTS: VerifiedFacts = {
     // of combined/team HVAC experience — this is team experience, not a company founding date.
     yearsInBusiness: 20,
     founded: null,
+    // Owner-supplied only — see the field comments. Both stay null until the owner provides them.
+    license: null,
+    hours: null,
   },
   // Owner-attested as factual on 2026-09-26, standardized site-wide by commit
   // 1b8bf71 ("Standardize rebate claims: $16K residential, 80% commercial,

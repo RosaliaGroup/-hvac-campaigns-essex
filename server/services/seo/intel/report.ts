@@ -16,8 +16,9 @@ import { snapshotTodaysQueries, collectSearchDemand } from "./searchDemand";
 import { collectCompetitorDiffs } from "./competitorWatch";
 import { collectSerpChecks } from "./serpChecks";
 import { collectTrends } from "./trends";
+import { runAiVisibilityCheck, collectAiVisibility } from "./aiVisibility";
 import { detectDifferentiatorMatches, auditOurStaleClaims } from "./positioning";
-import { buildItemDrafts, executeItem, emptyExecutionCounts, suggestionKeyFor, isSuppressed, laneReadyForAutoExecution, type ItemDraft } from "./adjustments";
+import { buildItemDrafts, buildAiVisibilityDrafts, executeItem, emptyExecutionCounts, suggestionKeyFor, isSuppressed, laneReadyForAutoExecution, type ItemDraft } from "./adjustments";
 import { checkCircuitBreakerConditions, checkMarketIntelCircuit, isGscFreshEnough } from "./guardrails";
 import { logAudit } from "../auditLog";
 import { sendDailyDigest, sendCrawlCheckAlert } from "./email";
@@ -71,11 +72,22 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
   const differentiatorMatches = detectDifferentiatorMatches(competitors.diffs);
   const staleClaims = auditOurStaleClaims();
 
+  // Weekly only (cost): the Monday roll-up asks the engines; every other report just reads the latest stored week.
+  let aiVisibility: MarketIntelSections["aiVisibility"];
+  try {
+    if (windowKind === "weekly") await runAiVisibilityCheck({ now });
+    aiVisibility = await collectAiVisibility(now);
+  } catch (err) {
+    console.error("[MarketIntel] ai-visibility failed:", (err as Error).message);
+  }
+
   const drafts = buildItemDrafts({
     rising: searchDemand.rising, unserved: searchDemand.unserved, decaying: searchDemand.decaying,
     cannibalization: searchDemand.cannibalization, seasonality: searchDemand.seasonality,
     competitorDiffs: competitors.diffs, differentiatorMatches, staleClaims,
   });
+
+  drafts.push(...buildAiVisibilityDrafts(aiVisibility));
 
   // §4: shared autopublish breaker (gates the underlying lanes) AND market-intel's own breaker (§4: 2 reverts/7d or 1 wrong/off_brand).
   const [sharedBreaker, ownBreaker, metaWarmedUp] = await Promise.all([
@@ -97,6 +109,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
     searchDemand, competitors: { diffs: competitors.diffs, skippedDomains: competitors.skippedDomains },
     positioning: { theirClaims: differentiatorMatches, ourStaleClaims: staleClaims },
     serp, trends,
+    ...(aiVisibility ? { aiVisibility } : {}),
     numbers: {
       clicks7d: 0, clicksPrior7d: 0, impressions7d: 0, impressionsPrior7d: 0,
       topRisingQueries: searchDemand.rising.slice(0, 3).map((r) => r.query),
