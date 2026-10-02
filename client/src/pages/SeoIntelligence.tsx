@@ -115,6 +115,7 @@ import {
   type AiDraftStatus,
   type BusinessImpact,
 } from "@shared/seo";
+import { signedDeltaLabel } from "@shared/deltaLabel";
 
 /**
  * The bulk-approve workflow's own safety net (docs/seo-bulk-approve-spec.md)
@@ -218,8 +219,7 @@ function DeltaPill({ value, kind }: { value: number; kind: "higher-better" | "lo
   const isUp = value > 0;
   const good = kind === "higher-better" ? isUp : !isUp;
   const Icon = isUp ? TrendingUp : TrendingDown;
-  const magnitude = Math.abs(value);
-  const label = kind === "lower-better" ? magnitude.toFixed(1) : fmtPct(magnitude);
+  const label = signedDeltaLabel(value, (m) => (kind === "lower-better" ? m.toFixed(1) : fmtPct(m)));
   return (
     <span className={`inline-flex items-center gap-1 text-xs font-medium ${good ? "text-green-600" : "text-red-600"}`}>
       <Icon className="h-3.5 w-3.5" />
@@ -1860,8 +1860,8 @@ export default function SeoIntelligence() {
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-8">
-            <KpiCard label="Organic Clicks" value={fmtInt(o.organicClicks)} hint="vs prev. 28 days" icon={MousePointerClick} delta={<DeltaPill value={o.deltas.organicClicks} kind="higher-better" />} />
-            <KpiCard label="Impressions" value={fmtInt(o.impressions)} hint="vs prev. 28 days" icon={Eye} delta={<DeltaPill value={o.deltas.impressions} kind="higher-better" />} />
+            <KpiCard label="Organic Clicks" value={fmtInt(o.organicClicks)} hint="last 90 days vs prev. 90 days" icon={MousePointerClick} delta={<DeltaPill value={o.deltas.organicClicks} kind="higher-better" />} />
+            <KpiCard label="Impressions" value={fmtInt(o.impressions)} hint="last 90 days vs prev. 90 days" icon={Eye} delta={<DeltaPill value={o.deltas.impressions} kind="higher-better" />} />
             <KpiCard label="CTR" value={fmtPct(o.ctr, 2)} hint="Click-through rate" icon={Percent} delta={<DeltaPill value={o.deltas.ctr} kind="higher-better" />} />
             <KpiCard label="Average Position" value={o.averagePosition.toFixed(1)} hint="Lower is better" icon={ArrowUpDown} delta={<DeltaPill value={o.deltas.averagePosition} kind="lower-better" />} />
             <KpiCard label="Indexed Pages" value={fmtInt(o.indexedPages)} hint="In Google's index" icon={FileCheck2} />
