@@ -28,6 +28,20 @@
   status = 200
   force = true
 
+# /llms.txt — plain-text index for AI answer engines (generated from VERIFIED_FACTS by scripts/generate-llms-txt.ts).
+# Served as the static file (not the SPA fallback), indexable: no X-Robots-Tag.
+[[redirects]]
+  from = "/llms.txt"
+  to = "/llms.txt"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/llms.txt"
+  [headers.values]
+    Content-Type = "text/plain; charset=utf-8"
+    Cache-Control = "public, max-age=3600"
+
 [[redirects]]
   from = "/google-ads-import.csv"
   to = "/google-ads-import.csv"
