@@ -152,11 +152,14 @@ export function highestDuplicateSimilarity(candidate: string, existing: string[]
  * (call shared/seoLinter.ts's lintPageMeta for that — the two are meant to be
  * combined by the caller, not duplicated here).
  */
-export function lintContent(input: ContentLintInput, facts: VerifiedFacts): ContentLintResult {
+/**
+ * The claim rules alone (superlatives, expired incentives, certification words, competitor names, warranty /
+ * differentiation / dollar / numeric claims, project counts, named clients) on any text — no word-count, heading or
+ * link-structure checks. lintContent runs these on a whole post; short copy (e.g. FAQ answers) uses them directly.
+ */
+export function lintClaims(body: string, facts: VerifiedFacts): ContentLintFinding[] {
   const findings: ContentLintFinding[] = [];
-  const body = input.body;
   const bodyLower = body.toLowerCase();
-
   // ── Same BLOCK rules as title/meta, applied to the body ──
   for (const phrase of SUPERLATIVES) {
     // "guaranteed" / "cheapest" / "lowest price" are only a violation when asserted; in a question or a disclaimer ("never guaranteed", "isn't always the cheapest") they are allowed.
@@ -215,6 +218,15 @@ export function lintContent(input: ContentLintInput, facts: VerifiedFacts): Cont
   if (!isFactsConfigured(facts) && dollarMatches.length > 0) {
     findings.push(blockFinding("facts_not_configured", `Body contains dollar figures but no incentive has been verified yet (VERIFIED_FACTS.incentives is empty).`));
   }
+  return findings;
+}
+
+export function lintContent(input: ContentLintInput, facts: VerifiedFacts): ContentLintResult {
+  const findings: ContentLintFinding[] = [];
+  const body = input.body;
+  const bodyLower = body.toLowerCase();
+
+  findings.push(...lintClaims(body, facts));
 
   const wordCount = countWords(bodyLower);
   if (wordCount < WORD_COUNT_MIN || wordCount > WORD_COUNT_MAX) {

@@ -62,6 +62,7 @@ import type {
   CompetitorDiffFinding,
 } from "../../../../shared/marketIntelTypes";
 import type { DifferentiatorMatch, OurStaleClaim } from "./positioning";
+import type { AiVisibilitySection } from "../../../../shared/aiVisibility";
 
 /**
  * §3a significance floor + section cap, on top of (not instead of) each
@@ -312,3 +313,54 @@ export async function executeItem(
 }
 
 export { emptyExecutionCounts, suggestionKeyFor, isSuppressed, laneReadyForAutoExecution, DAILY_CAPS };
+
+const AI_VIS_GAP_CAP = 10;
+const REVIEW_PLATFORM_SHARE_THRESHOLD = 0.4;
+
+/**
+ * Pure: turn the weekly AI-visibility section into item drafts. Nothing here executes — content-lane items
+ * route to the human-gated content queue, the rest are report-only owner decisions (the same posture as every
+ * other non-meta item: staged, never auto-published).
+ */
+export function buildAiVisibilityDrafts(section: AiVisibilitySection | undefined): ItemDraft[] {
+  if (!section || !section.checked || !section.current) return [];
+  const items: ItemDraft[] = [];
+  const cur = section.current;
+
+  const cited = cur.topCited.reduce((n, d) => n + d.count, 0);
+  if (cited >= 10 && cur.reviewPlatformShare >= REVIEW_PLATFORM_SHARE_THRESHOLD) {
+    const reviewSites = cur.topCited.filter((d) => /yelp|angi|homeadvisor|thumbtack|bbb|trustpilot|google|nextdoor|facebook/.test(d.domain)).slice(0, 4).map((d) => d.domain);
+    items.push({
+      kind: "owner_decision",
+      title: "AI answer engines mostly cite review platforms",
+      evidence: { reviewPlatformShare: cur.reviewPlatformShare, topCited: cur.topCited.slice(0, 6) },
+      suggestion: `${(cur.reviewPlatformShare * 100).toFixed(0)}% of the sources cited in AI answers for our target queries are review/directory platforms (${reviewSites.join(", ") || "Yelp / Google reviews"}). Raise the review-request engine's priority — fresh reviews are what these engines read.`,
+      targetQueue: "report_only", factsBlocked: false,
+    });
+  }
+
+  for (const g of section.gaps.slice(0, AI_VIS_GAP_CAP)) {
+    items.push({
+      kind: "new_post",
+      title: `AI answers don't name us: "${g.query}"`,
+      evidence: g,
+      suggestion:
+        `No AI engine named Mechanical Enterprise for "${g.query}" this week.` +
+        (g.competitors.length ? ` Named instead: ${g.competitors.join(", ")}.` : "") +
+        (g.citedDomains.length ? ` Sources cited: ${g.citedDomains.join(", ")}.` : "") +
+        " Candidate for the content queue (a post that answers this question with verified facts).",
+      targetQueue: "content_queue", factsBlocked: false,
+    });
+  }
+
+  for (const q of section.change?.lost ?? []) {
+    items.push({
+      kind: "refresh_post",
+      title: `AI answers stopped naming us: "${q}"`,
+      evidence: { query: q, weekOf: cur.weekOf },
+      suggestion: `An AI engine named us for "${q}" last week but not this week. Check whether the page answering it changed or a competitor now outranks it.`,
+      targetQueue: "report_only", factsBlocked: false,
+    });
+  }
+  return items;
+}

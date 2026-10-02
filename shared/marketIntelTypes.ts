@@ -128,7 +128,11 @@ export type ExperimentReadout =
 /** A dated hand-written note published into one day's report (docs/intel-notes, server/services/seo/intel/notes.ts). */
 export type ReportNote = { id: string; title: string; markdown: string };
 
+import type { AiVisibilitySection } from "./aiVisibility";
+
 export type MarketIntelSections = {
+  /** Weekly AI-answer-engine visibility (does Perplexity/OpenAI/Google AI Overviews name us, who else, which sources). */
+  aiVisibility?: AiVisibilitySection;
   /** Absent on reports with no note scheduled for their date. */
   notes?: ReportNote[];
   /** Daily Googlebot-style fetch check of the top URLs. Absent if the check couldn't run. */

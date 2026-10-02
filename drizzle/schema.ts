@@ -3678,6 +3678,44 @@ export const seoIntelQuerySnapshots = mysqlTable(
 );
 export type SeoIntelQuerySnapshotRow = typeof seoIntelQuerySnapshots.$inferSelect;
 export type InsertSeoIntelQuerySnapshot = typeof seoIntelQuerySnapshots.$inferInsert;
+
+/**
+ * Weekly AI-visibility observation: one row per (week, engine, target query) — did the engine name us, which
+ * competitors, which sources it cited (server/services/seo/intel/aiVisibility.ts). obsKey = sha256(weekOf|engine|query)
+ * carries the UNIQUE index (a composite over the varchar(512) query would exceed the MySQL key-length limit — see 0079).
+ */
+export const seoIntelAiVisibility = mysqlTable(
+  "seoIntelAiVisibility",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** Monday of the America/New_York week, YYYY-MM-DD. */
+    weekOf: varchar("weekOf", { length: 10 }).notNull(),
+    engine: mysqlEnum("engine", ["perplexity", "openai", "google_ai_overview"]).notNull(),
+    query: varchar("query", { length: 512 }).notNull(),
+    obsKey: varchar("obsKey", { length: 64 }).notNull(),
+    status: mysqlEnum("status", ["ok", "no_overview", "error"]).default("ok").notNull(),
+    named: boolean("named").default(false).notNull(),
+    citedUs: boolean("citedUs").default(false).notNull(),
+    namedAs: varchar("namedAs", { length: 255 }),
+    /** string[] of watchlist competitor names. */
+    competitors: json("competitors"),
+    /** string[] of other company-looking names seen in the answer. */
+    otherCompanies: json("otherCompanies"),
+    /** string[] of cited source domains. */
+    citedDomains: json("citedDomains"),
+    /** string[] of up to 10 cited URLs. */
+    citations: json("citations"),
+    excerpt: text("excerpt"),
+    error: varchar("error", { length: 255 }),
+    capturedAt: timestamp("capturedAt").defaultNow().notNull(),
+  },
+  table => ({
+    keyUq: uniqueIndex("seoIntelAiVisibility_key_uq").on(table.obsKey),
+    weekEngineIdx: index("seoIntelAiVisibility_week_engine_idx").on(table.weekOf, table.engine),
+  }),
+);
+export type SeoIntelAiVisibilityRow = typeof seoIntelAiVisibility.$inferSelect;
+export type InsertSeoIntelAiVisibility = typeof seoIntelAiVisibility.$inferInsert;
 export type InsertEstimateLineItem = typeof estimateLineItems.$inferInsert;
 
 // ═══════════════════════════════════════════════════════════════════════════

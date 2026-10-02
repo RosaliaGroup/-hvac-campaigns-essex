@@ -10,6 +10,7 @@ import WarrantyCoverageSection from "@/components/WarrantyCoverageSection";
 import BuyFinanceMemberComparison from "@/components/BuyFinanceMemberComparison";
 import PriceRangeTable from "@/components/PriceRangeTable";
 import { VERIFIED_FACTS } from "@shared/verifiedFacts";
+import AiFaqSection from "@/components/AiFaqSection";
 
 // The exact 4 ServicePage-routed slugs named in docs/positioning-warranty-spec.md
 // §4 (the spec's 5th listed page, /residential, is a separate component).
@@ -217,6 +218,8 @@ export default function ServicePage({ service, slug, description }: ServicePageP
           </div>
         </div>
       </section>
+
+      <AiFaqSection path={`/${slug}`} name={`${service} installation in NJ`} existing={faqs} />
 
       {/* Bottom CTA */}
       <section className="py-16 bg-[#e8813a]">

@@ -11,6 +11,7 @@ import { getNearbyCities, pickDeterministic, ALL_CITIES } from "@/data/njCountie
 import { blogPosts } from "@/data/blogPosts";
 import { directInstallIndustries } from "@/data/directInstallIndustries";
 import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
+import AiFaqSection from "@/components/AiFaqSection";
 
 // City slugs are plain town names, so this always resolves to "residential"
 // today — kept as a function (rather than a hardcoded prop) to match the
@@ -428,14 +429,7 @@ export default function CityPage({ city, slug }: CityPageProps) {
         "priceRange": "Free Assessment", "openingHours": "Mo-Su 00:00-23:59",
         "description": `Heat pump and HVAC installation in ${city} NJ. Free assessments, NJ rebates up to $16,000.`,
       }) }} />
-      {/* FAQPage Schema for rich snippets */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
-        "@context": "https://schema.org", "@type": "FAQPage",
-        "mainEntity": faqs.map(faq => ({
-          "@type": "Question", "name": faq.q,
-          "acceptedAnswer": { "@type": "Answer", "text": faq.a },
-        })),
-      }) }} />
+      {/* FAQPage schema (existing + generated Q&As) is emitted once by <AiFaqSection/> below */}
       <Navigation />
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
@@ -638,6 +632,8 @@ export default function CityPage({ city, slug }: CityPageProps) {
           </div>
         </div>
       </section>
+
+      <AiFaqSection path={`/hvac-${slug}-nj`} name={`HVAC in ${city}, NJ`} existing={faqs} />
 
       {/* ── Nearby Service Areas (expanded for SEO internal linking) ── */}
       <section className="py-12 bg-[#f7f8fa]">
