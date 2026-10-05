@@ -16,6 +16,7 @@ import { getDb } from "../db";
 import { smsContacts, smsInboxMessages } from "../../drizzle/schema";
 import { sendTelnyxSms, toE164 } from "./telnyxSms";
 import { classifyInbound } from "./smsReplyKeywords";
+import { ensureSmsExternalContact, logCommunication } from "./crmCommunications";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 type AnyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -160,6 +161,30 @@ export async function recordOutboundSms(
     deliveryErrorCode: null,
     sentAt: args.deliveryStatus === "failed" ? null : new Date(),
   });
+  // Mirror outbound Telnyx activity into the unified CRM timeline. Best-effort:
+  // failure here must never turn a successful carrier send into an application failure.
+  try {
+    const external = await ensureSmsExternalContact(db, {
+      phone: e164,
+      customerId: args.customerId ?? null,
+      leadId: args.leadId ?? null,
+    });
+    await logCommunication(db, {
+      externalContactId: external.id,
+      customerId: args.customerId ?? null,
+      leadId: args.leadId ?? null,
+      channel: "sms",
+      direction: "outbound",
+      provider: "telnyx",
+      providerMessageId: args.telnyxMessageId,
+      fromAddress: args.fromNumber,
+      toAddress: e164,
+      body: args.message,
+      status: args.deliveryStatus,
+    });
+  } catch (err) {
+    console.error("[smsOutbound] Failed to mirror outbound SMS to CRM timeline:", err);
+  }
   return { inserted: true };
 }
 
