@@ -3919,3 +3919,37 @@ export const importedContacts = mysqlTable(
 );
 export type ImportedContact = typeof importedContacts.$inferSelect;
 export type InsertImportedContact = typeof importedContacts.$inferInsert;
+
+
+/** ChatGPT/Gmail/Telnyx contact bridge (migration 0080). */
+export const crmExternalContacts = mysqlTable("crmExternalContacts", {
+  id: int("id").autoincrement().primaryKey(),
+  customerId: int("customerId"), leadId: int("leadId"), leadCaptureId: int("leadCaptureId"),
+  name: varchar("name", { length: 255 }).notNull(), company: varchar("company", { length: 255 }),
+  title: varchar("title", { length: 255 }), email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 50 }), propertyName: varchar("propertyName", { length: 255 }),
+  source: varchar("source", { length: 100 }), notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, t => ({ emailIdx: index("crmExternalContacts_email_idx").on(t.email), phoneIdx: index("crmExternalContacts_phone_idx").on(t.phone) }));
+export type CrmExternalContact = typeof crmExternalContacts.$inferSelect;
+export type InsertCrmExternalContact = typeof crmExternalContacts.$inferInsert;
+
+export const crmCommunications = mysqlTable("crmCommunications", {
+  id: int("id").autoincrement().primaryKey(), externalContactId: int("externalContactId"),
+  customerId: int("customerId"), leadId: int("leadId"),
+  channel: mysqlEnum("channel", ["email","sms","call"]).notNull(),
+  direction: mysqlEnum("direction", ["inbound","outbound"]).notNull(),
+  provider: varchar("provider", { length: 30 }).notNull(),
+  providerMessageId: varchar("providerMessageId", { length: 255 }),
+  providerThreadId: varchar("providerThreadId", { length: 255 }),
+  fromAddress: varchar("fromAddress", { length: 320 }), toAddress: varchar("toAddress", { length: 320 }),
+  subject: varchar("subject", { length: 500 }), body: text("body"), status: varchar("status", { length: 50 }),
+  occurredAt: timestamp("occurredAt").defaultNow().notNull(), createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, t => ({
+  providerMessageUq: uniqueIndex("crmCommunications_provider_message_uq").on(t.provider, t.providerMessageId),
+  contactIdx: index("crmCommunications_contact_idx").on(t.externalContactId, t.occurredAt),
+  threadIdx: index("crmCommunications_thread_idx").on(t.providerThreadId),
+}));
+export type CrmCommunication = typeof crmCommunications.$inferSelect;
+export type InsertCrmCommunication = typeof crmCommunications.$inferInsert;
