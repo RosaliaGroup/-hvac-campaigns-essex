@@ -239,3 +239,20 @@ export async function mergePR(prNumber: number): Promise<{ merged: boolean; sha:
   const data = (await res.json()) as { merged: boolean; sha: string | null };
   return { merged: data.merged, sha: data.sha ?? null };
 }
+
+/** The commit-status context the repo's branch protection requires, so GitHub's Merge button stays disabled until the hold ends. */
+export const HOLD_STATUS_CONTEXT = "autopublish/hold";
+
+/**
+ * Sets the `autopublish/hold` status on the PR's CURRENT head commit (looked up live, so an
+ * edit that pushed a new commit is covered — statuses are per-SHA). Only ever pending|success:
+ * a failing status would be a veto, which is a separate, explicit action. Returns the SHA.
+ */
+export async function setHoldStatus(prNumber: number, state: "pending" | "success", description: string): Promise<string> {
+  const pr = (await (await gh(`/pulls/${prNumber}`)).json()) as { head: { sha: string } };
+  await gh(`/statuses/${pr.head.sha}`, {
+    method: "POST",
+    body: JSON.stringify({ state, context: HOLD_STATUS_CONTEXT, description: description.slice(0, 140) }),
+  });
+  return pr.head.sha;
+}
