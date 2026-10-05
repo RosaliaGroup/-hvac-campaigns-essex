@@ -49,3 +49,18 @@ export async function getContactTimeline(db: Db, externalContactId: number) {
     .where(eq(crmCommunications.externalContactId, externalContactId))
     .orderBy(desc(crmCommunications.occurredAt));
 }
+
+
+/** Resolve/create the unified external contact for an SMS phone number. */
+export async function ensureSmsExternalContact(db: Db, input: {
+  phone: string; name?: string | null; customerId?: number | null; leadId?: number | null; leadCaptureId?: number | null;
+}) {
+  return upsertExternalContact(db, {
+    name: input.name?.trim() || input.phone,
+    phone: input.phone,
+    source: "telnyx",
+    customerId: input.customerId ?? null,
+    leadId: input.leadId ?? null,
+    leadCaptureId: input.leadCaptureId ?? null,
+  });
+}
