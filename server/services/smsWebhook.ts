@@ -40,6 +40,7 @@ import { toE164 } from "./telnyxSms";
 import { authorizeTelnyxWebhook, resolveWebhookAuthMode } from "./telnyxSignature";
 import { eq, and, sql } from "drizzle-orm";
 import { stopCadenceOnReply } from "./growth/cadenceEngine";
+import { ensureSmsExternalContact, logCommunication } from "./crmCommunications";
 import { handleReviewReply } from "./growth/reviewEngine";
 
 type AnyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -265,6 +266,32 @@ export async function handleInboundReply(
     match,
     providerMessageId: args.providerMessageId,
   });
+
+  // Mirror inbound Telnyx activity into the unified CRM timeline. Best-effort:
+  // the established SMS inbox remains the source of truth and webhook intake
+  // must never fail because the unified timeline could not be written.
+  try {
+    const external = await ensureSmsExternalContact(db, {
+      phone: e164,
+      customerId: match.customerId,
+      leadId: match.leadId,
+    });
+    await logCommunication(db, {
+      externalContactId: external.id,
+      customerId: match.customerId,
+      leadId: match.leadId,
+      channel: "sms",
+      direction: "inbound",
+      provider: "telnyx",
+      providerMessageId: args.providerMessageId,
+      fromAddress: e164,
+      toAddress: mechanicalSmsFrom(),
+      body: args.text,
+      status: "received",
+    });
+  } catch (err) {
+    console.error("[SMSWebhook] Failed to mirror inbound SMS to CRM timeline:", err);
+  }
 
   // Growth system (§2/§5) — best-effort, never blocks inbound message intake.
   try {
