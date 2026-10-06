@@ -129,6 +129,7 @@ describe("buildAuthorizeUrl", () => {
   it("exposes the exact scope set", () => {
     expect(GOOGLE_OAUTH_SCOPES).toEqual([
       "openid",
+      "https://www.googleapis.com/auth/gmail.readonly",
       "email",
       "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/webmasters.readonly",

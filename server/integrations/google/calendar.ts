@@ -37,6 +37,8 @@ const CALENDAR_BASE = "https://www.googleapis.com/calendar/v3";
  */
 export const GOOGLE_OAUTH_SCOPES: readonly string[] = [
   "openid",
+  // CRM email timeline: read sent messages and replies; never send or modify mail.
+  "https://www.googleapis.com/auth/gmail.readonly",
   "email",
   // Calendar: create/read/update appointment events (unchanged, existing feature).
   "https://www.googleapis.com/auth/calendar.events",

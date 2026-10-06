@@ -21,8 +21,10 @@ import {
 // enforced by the test suite.
 const KNOWN_ROUTES = new Set<string>([
   "/command-center",
+  "/executive-dashboards",
   "/lead-dashboard",
   "/customers",
+  "/contacts/communications",
   "/opportunities",
   "/lead-scoring",
   "/calendar",
@@ -134,6 +136,7 @@ describe("department structure", () => {
     const sales = DEPARTMENTS.find((d) => d.id === "sales")!;
     expect(sales.items.map((i) => i.label)).toEqual([
       "Lead Inbox",
+      "Communications",
       "Contacts",
       "Opportunity Center",
       "Lead Scoring",
@@ -284,6 +287,7 @@ describe("getVisibleDepartments", () => {
     expect(deptIds("sales")).toEqual(["home", "sales", "dispatch"]);
     expect(itemLabels("sales", "sales")).toEqual([
       "Lead Inbox",
+      "Communications",
       "Contacts",
       "Opportunity Center",
       "Lead Scoring",
@@ -295,7 +299,7 @@ describe("getVisibleDepartments", () => {
 
   it("dispatcher sees Dispatch & Field plus Contacts", () => {
     expect(deptIds("dispatcher")).toEqual(["home", "sales", "dispatch"]);
-    expect(itemLabels("dispatcher", "sales")).toEqual(["Contacts"]);
+    expect(itemLabels("dispatcher", "sales")).toEqual(["Communications", "Contacts"]);
     expect(itemLabels("dispatcher", "dispatch")).toEqual([
       "Calendar",
       "Appointments",
