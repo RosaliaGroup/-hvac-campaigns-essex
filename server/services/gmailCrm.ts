@@ -5,6 +5,7 @@ import { logCommunication, upsertExternalContact } from "./crmCommunications";
 
 export const CRM_MAILBOX = "sales@mechanicalenterprise.com";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 type Part = { mimeType?: string; body?: { data?: string }; parts?: Part[] };
 export type GmailMessage = {
   id?: string;
@@ -85,6 +86,7 @@ export async function gmailCrmStatus() {
     connected: conn?.status === "connected",
     accountEmail: conn?.googleAccountEmail ?? null,
     hasReadPermission: Boolean(conn?.scope?.split(" ").includes(GMAIL_SCOPE)),
+    hasSendPermission: Boolean(conn?.scope?.split(" ").includes(GMAIL_SEND_SCOPE)),
   };
 }
 
