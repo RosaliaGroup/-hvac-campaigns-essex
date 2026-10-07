@@ -1,5 +1,5 @@
 import { and, desc, isNotNull, like, or, sql } from "drizzle-orm";
-import { crmExternalContacts, customers, leads, leadCaptures } from "../../drizzle/schema";
+import { crmExternalContacts, crmCommunications, customers, leads, leadCaptures } from "../../drizzle/schema";
 import { gmailCrmStatus, syncGmailPage } from "../services/gmailCrm";
 import { startJob, getJob } from "../services/asyncLaneJob";
 import { z } from "zod";
@@ -32,6 +32,8 @@ export const crmCommunicationsRouter = router({
             isNotNull(crmExternalContacts.customerId),
             isNotNull(crmExternalContacts.leadId),
             isNotNull(crmExternalContacts.leadCaptureId),
+            // Include contacts imported from Gmail Sent, even before they become leads.
+            sql`exists (select 1 from ${crmCommunications} where ${crmCommunications.externalContactId} = ${crmExternalContacts.id} and ${crmCommunications.direction} = 'outbound' and ${crmCommunications.channel} = 'email')`,
             sql`exists (select 1 from ${customers} where ${customers.email} = ${crmExternalContacts.email} or ${customers.phone} = ${crmExternalContacts.phone})`,
             sql`exists (select 1 from ${leads} where (${leads.contactType} = 'email' and ${leads.contact} = ${crmExternalContacts.email}) or (${leads.contactType} = 'phone' and ${leads.contact} = ${crmExternalContacts.phone}))`,
             sql`exists (select 1 from ${leadCaptures} where ${leadCaptures.email} = ${crmExternalContacts.email} or ${leadCaptures.phone} = ${crmExternalContacts.phone})`
@@ -39,7 +41,9 @@ export const crmCommunicationsRouter = router({
           or(
             like(crmExternalContacts.name, term),
             like(crmExternalContacts.email, term),
-            like(crmExternalContacts.phone, term)
+            like(crmExternalContacts.phone, term),
+            like(crmExternalContacts.company, term),
+            like(crmExternalContacts.title, term)
           ))
         )
         .orderBy(desc(crmExternalContacts.updatedAt))
