@@ -108,10 +108,29 @@ export async function syncGmailPage(
         signal: AbortSignal.timeout(15000),
       }
     );
-    if (!response.ok)
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      const reasons = [
+        ...(payload?.error?.errors ?? []).map((item: { reason?: string }) => item.reason),
+        ...(payload?.error?.details ?? []).map((item: { reason?: string }) => item.reason),
+      ];
+      const explanations: Record<string, string> = {
+        accessNotConfigured: "Enable Gmail API in the Google Cloud project that owns the CRM OAuth client.",
+        SERVICE_DISABLED: "Enable Gmail API in the Google Cloud project that owns the CRM OAuth client.",
+        insufficientPermissions: "Reconnect Google and approve Gmail read access.",
+        ACCESS_TOKEN_SCOPE_INSUFFICIENT: "Reconnect Google and approve Gmail read access.",
+        domainPolicy: "Your Google Workspace administrator must allow this app to access Gmail.",
+        rateLimitExceeded: "Google rate limit reached. Retry later.",
+        userRateLimitExceeded: "Google mailbox rate limit reached. Retry later.",
+        dailyLimitExceeded: "Google daily quota reached. Check the Gmail API quota.",
+      };
+      const reason = reasons.find((value: unknown) => typeof value === "string" && Object.hasOwn(explanations, value));
       throw new Error(
-        `Gmail read failed (${response.status}). Check the Google connection and Gmail API access.`
+        reason
+          ? `Gmail read failed (${response.status}, ${reason}). ${explanations[reason]}`
+          : `Gmail read failed (${response.status}). Check the Google connection and Gmail API access.`
       );
+    }
     return response.json();
   }
   const profile = await read("profile");
