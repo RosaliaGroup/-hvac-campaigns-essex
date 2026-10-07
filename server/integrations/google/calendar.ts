@@ -39,6 +39,7 @@ export const GOOGLE_OAUTH_SCOPES: readonly string[] = [
   "openid",
   // CRM email timeline: read sent messages and replies; never send or modify mail.
   "https://www.googleapis.com/auth/gmail.readonly",
+  "https://www.googleapis.com/auth/gmail.send",
   "email",
   // Calendar: create/read/update appointment events (unchanged, existing feature).
   "https://www.googleapis.com/auth/calendar.events",

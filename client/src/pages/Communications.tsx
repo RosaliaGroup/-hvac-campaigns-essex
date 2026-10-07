@@ -28,11 +28,74 @@ export default function Communications() {
   const [notice, setNotice] = useState("");
   const [folder, setFolder] = useState<"all" | "inbox" | "sent" | "sms">("all");
   const [messageId, setMessageId] = useState<number | null>(null);
-  const contacts = trpc.crmCommunications.contacts.useQuery({ search });
+  const [draft, setDraft] = useState("");
+  const [compose, setCompose] = useState<"email" | "sms" | null>(null);
+  const [sendJobId, setSendJobId] = useState<string | null>(null);
+  const [cardName, setCardName] = useState("");
+  const [cardPhone, setCardPhone] = useState("");
+  const card = trpc.crmCommunications.contactCard.useQuery(
+    { id: contactId ?? 0 },
+    { enabled: contactId !== null }
+  );
+  useEffect(() => {
+    setCardName(card.data?.name ?? "");
+    setCardPhone(card.data?.phone ?? "");
+  }, [card.data]);
+  useEffect(() => {
+    setCompose(null);
+    setDraft("");
+  }, [contactId, messageId]);
+  const saveCard = trpc.crmCommunications.saveContactCard.useMutation({
+    onSuccess: () => {
+      void card.refetch();
+      void contacts.refetch();
+      setNotice("Contact saved.");
+    },
+    onError: error => setNotice(error.message),
+  });
+  const sendOptions = {
+    retry: false as const,
+    onSuccess: (data: { jobId: string }) => {
+      setSendJobId(data.jobId);
+      setNotice("Sending…");
+    },
+    onError: (error: { message: string }) => setNotice(error.message),
+  };
+  const reply = trpc.crmCommunications.replyEmail.useMutation(sendOptions);
+  const text = trpc.crmCommunications.sendText.useMutation(sendOptions);
+  const sending = Boolean(sendJobId) || reply.isPending || text.isPending;
+  const sendJob = trpc.crmCommunications.sendJob.useQuery(
+    { jobId: sendJobId ?? "" },
+    { enabled: Boolean(sendJobId), refetchInterval: sendJobId ? 1500 : false }
+  );
+  useEffect(() => {
+    if (!sendJobId || sendJob.isFetching) return;
+    if (sendJob.data?.status === "done") {
+      const result = sendJob.data.result as { warning?: string };
+      setNotice(result?.warning ?? "Message sent.");
+      setSendJobId(null);
+      setDraft("");
+      setCompose(null);
+      void timeline.refetch();
+      void contacts.refetch();
+    } else if (sendJob.data?.status === "error") {
+      setNotice(sendJob.data.error ?? "Send failed.");
+      setSendJobId(null);
+    } else if (sendJob.data === null || sendJob.error) {
+      setNotice(
+        "Send status is unavailable. Check Gmail Sent or SMS history before trying again."
+      );
+      setSendJobId(null);
+    }
+  }, [sendJob.data, sendJob.error, sendJob.isFetching, sendJobId]);
+  const contacts = trpc.crmCommunications.contacts.useQuery(
+    { search },
+    { refetchInterval: 30000 }
+  );
   const status = trpc.crmCommunications.gmailStatus.useQuery();
   const timeline = trpc.crmCommunications.timeline.useQuery(
     { externalContactId: contactId ?? 0 },
-    { enabled: contactId !== null }
+    { enabled: contactId !== null, refetchInterval: 30000 }
   );
   const sync = trpc.crmCommunications.syncGmail.useMutation({
     onSuccess: data => {
@@ -79,9 +142,8 @@ export default function Communications() {
     status.data?.connected &&
     status.data.hasReadPermission &&
     status.data.accountEmail?.toLowerCase() === status.data.mailbox;
-  const selectedContact = contacts.data?.find(
-    contact => contact.id === contactId
-  );
+  const selectedContact =
+    card.data ?? contacts.data?.find(contact => contact.id === contactId);
   const messages =
     timeline.data?.filter(
       message =>
@@ -194,7 +256,8 @@ export default function Communications() {
             {contacts.isLoading && <p>Loading contacts…</p>}
             {contacts.data?.length === 0 && (
               <p>
-                No matching contacts with communications yet. Sync Gmail Sent or add a contact to the CRM.
+                No matching contacts with communications yet. Sync Gmail Sent or
+                add a contact to the CRM.
               </p>
             )}
             {contacts.data?.map(contact => (
@@ -219,6 +282,76 @@ export default function Communications() {
           </section>
         </aside>
         <section className="min-w-0 rounded-2xl bg-white overflow-hidden border border-slate-100 min-h-[60vh]">
+          {contactId !== null && (
+            <section
+              aria-label="Client contact card"
+              className="border-b bg-slate-50 p-4 space-y-3"
+            >
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label className="text-xs text-slate-500">
+                  Client name
+                  <Input
+                    value={cardName}
+                    onChange={e => setCardName(e.target.value)}
+                    aria-label="Client name"
+                    className="mt-1 bg-white text-slate-800"
+                  />
+                </label>
+                <label className="text-xs text-slate-500">
+                  Phone number
+                  <Input
+                    type="tel"
+                    value={cardPhone}
+                    onChange={e => setCardPhone(e.target.value)}
+                    placeholder="Add phone number"
+                    aria-label="Client phone number"
+                    className="mt-1 bg-white text-slate-800"
+                  />
+                </label>
+              </div>
+              <p className="text-sm break-all">
+                {selectedContact?.email}
+                {selectedContact?.company && ` · ${selectedContact.company}`}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!cardName.trim() || saveCard.isPending}
+                  onClick={() =>
+                    saveCard.mutate({
+                      id: contactId,
+                      name: cardName,
+                      phone: cardPhone.trim() || undefined,
+                    })
+                  }
+                >
+                  Save contact
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={
+                    sending ||
+                    !contacts.data?.find(contact => contact.id === contactId)
+                      ?.phone
+                  }
+                  onClick={() => {
+                    setCompose("sms");
+                    setDraft("");
+                  }}
+                >
+                  Send text message
+                </Button>
+                {!contacts.data?.find(contact => contact.id === contactId)
+                  ?.phone && (
+                  <span className="text-xs text-slate-500 self-center">
+                    Save the contact with a phone number to enable texting.
+                  </span>
+                )}
+              </div>
+            </section>
+          )}
           <div className="flex items-center gap-3 border-b px-5 py-4">
             {selectedMessage && (
               <button
@@ -286,6 +419,26 @@ export default function Communications() {
                 {selectedMessage.body ??
                   "This email has no plain-text body available."}
               </div>
+              {selectedMessage.channel === "email" &&
+                selectedMessage.provider === "gmail" && (
+                  <Button
+                    variant="outline"
+                    disabled={sending || !status.data?.hasSendPermission}
+                    onClick={() => {
+                      setCompose("email");
+                      setDraft("");
+                    }}
+                  >
+                    Reply by email
+                  </Button>
+                )}
+              {selectedMessage.channel === "email" &&
+                !status.data?.hasSendPermission && (
+                  <p className="text-sm text-blue-700">
+                    Reconnect Google in Connection settings to enable email
+                    replies.
+                  </p>
+                )}
             </article>
           ) : messages.length === 0 ? (
             <p className="p-8 text-slate-500 text-sm">
@@ -329,6 +482,61 @@ export default function Communications() {
                 </time>
               </button>
             ))
+          )}
+          {compose && contactId !== null && (
+            <section
+              className="border-t p-5 space-y-3"
+              aria-label="Message composer"
+            >
+              <h3 className="font-semibold">
+                {compose === "email" ? "Email reply" : "Text message"} ·{" "}
+                {compose === "email"
+                  ? selectedContact?.email
+                  : selectedContact?.phone}
+              </h3>
+              <textarea
+                className="w-full min-h-32 rounded-lg border p-3 text-sm text-slate-800 bg-white"
+                aria-label="Message body"
+                placeholder="Write your message…"
+                maxLength={compose === "sms" ? 1600 : 20000}
+                value={draft}
+                onChange={e => setDraft(e.target.value)}
+                disabled={sending}
+              />
+              <div className="flex gap-2">
+                <Button
+                  disabled={sending || !draft.trim()}
+                  onClick={() => {
+                    const requestId = crypto.randomUUID();
+                    if (compose === "email" && messageId !== null)
+                      reply.mutate({
+                        externalContactId: contactId,
+                        messageId,
+                        body: draft,
+                        requestId,
+                      });
+                    else if (compose === "sms")
+                      text.mutate({
+                        externalContactId: contactId,
+                        body: draft,
+                        requestId,
+                      });
+                  }}
+                >
+                  {sending ? "Sending…" : "Send"}
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={sending}
+                  onClick={() => {
+                    setCompose(null);
+                    setDraft("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </section>
           )}
         </section>
       </div>
