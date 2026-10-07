@@ -2,6 +2,7 @@ import { startJob } from "./asyncLaneJob";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { getDb } from "../db";
 import { logCommunication, upsertExternalContact } from "./crmCommunications";
+import { ensureSentEmailContact } from "./sentEmailContact";
 
 export const CRM_MAILBOX = "sales@mechanicalenterprise.com";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
@@ -86,7 +87,9 @@ export async function gmailCrmStatus() {
     connected: conn?.status === "connected",
     accountEmail: conn?.googleAccountEmail ?? null,
     hasReadPermission: Boolean(conn?.scope?.split(" ").includes(GMAIL_SCOPE)),
-    hasSendPermission: Boolean(conn?.scope?.split(" ").includes(GMAIL_SEND_SCOPE)),
+    hasSendPermission: Boolean(
+      conn?.scope?.split(" ").includes(GMAIL_SEND_SCOPE)
+    ),
   };
 }
 
@@ -113,20 +116,34 @@ export async function syncGmailPage(
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
       const reasons = [
-        ...(payload?.error?.errors ?? []).map((item: { reason?: string }) => item.reason),
-        ...(payload?.error?.details ?? []).map((item: { reason?: string }) => item.reason),
+        ...(payload?.error?.errors ?? []).map(
+          (item: { reason?: string }) => item.reason
+        ),
+        ...(payload?.error?.details ?? []).map(
+          (item: { reason?: string }) => item.reason
+        ),
       ];
       const explanations: Record<string, string> = {
-        accessNotConfigured: "Enable Gmail API in the Google Cloud project that owns the CRM OAuth client.",
-        SERVICE_DISABLED: "Enable Gmail API in the Google Cloud project that owns the CRM OAuth client.",
-        insufficientPermissions: "Reconnect Google and approve Gmail read access.",
-        ACCESS_TOKEN_SCOPE_INSUFFICIENT: "Reconnect Google and approve Gmail read access.",
-        domainPolicy: "Your Google Workspace administrator must allow this app to access Gmail.",
+        accessNotConfigured:
+          "Enable Gmail API in the Google Cloud project that owns the CRM OAuth client.",
+        SERVICE_DISABLED:
+          "Enable Gmail API in the Google Cloud project that owns the CRM OAuth client.",
+        insufficientPermissions:
+          "Reconnect Google and approve Gmail read access.",
+        ACCESS_TOKEN_SCOPE_INSUFFICIENT:
+          "Reconnect Google and approve Gmail read access.",
+        domainPolicy:
+          "Your Google Workspace administrator must allow this app to access Gmail.",
         rateLimitExceeded: "Google rate limit reached. Retry later.",
-        userRateLimitExceeded: "Google mailbox rate limit reached. Retry later.",
-        dailyLimitExceeded: "Google daily quota reached. Check the Gmail API quota.",
+        userRateLimitExceeded:
+          "Google mailbox rate limit reached. Retry later.",
+        dailyLimitExceeded:
+          "Google daily quota reached. Check the Gmail API quota.",
       };
-      const reason = reasons.find((value: unknown) => typeof value === "string" && Object.hasOwn(explanations, value));
+      const reason = reasons.find(
+        (value: unknown) =>
+          typeof value === "string" && Object.hasOwn(explanations, value)
+      );
       throw new Error(
         reason
           ? `Gmail read failed (${response.status}, ${reason}). ${explanations[reason]}`
@@ -152,23 +169,48 @@ export async function syncGmailPage(
     duplicates = 0,
     skipped = 0;
   for (const item of page.messages ?? []) {
-    const parsed = parseGmailMessage(
-      await read(`messages/${encodeURIComponent(item.id)}?format=full`)
+    const remote = await read(
+      `messages/${encodeURIComponent(item.id)}?format=full`
     );
+    const parsed = parseGmailMessage(remote);
     if (!parsed) {
       skipped++;
       continue;
     }
     // A message is stored once under its Gmail ID, linked to the primary correspondent.
-    const contact = await upsertExternalContact(db, {
-      name: parsed.contacts[0],
-      email: parsed.contacts[0],
-      source: "gmail",
-    });
+    const linked = [];
+    for (const email of parsed.contacts) {
+      const recipientHeaders = (remote.payload?.headers ?? []).filter(
+        (h: { name?: string }) =>
+          ["to", "cc", "bcc", "from"].includes(h.name?.toLowerCase() ?? "")
+      );
+      const named = recipientHeaders
+        .flatMap((h: { value?: string }) =>
+          Array.from(
+            (h.value ?? "").matchAll(/(?:^|,)\s*([^<,]+)\s*<([^>]+)>/g)
+          )
+        )
+        .find(
+          (match: RegExpMatchArray) => match[2].trim().toLowerCase() === email
+        );
+      const name = named?.[1].trim().replace(/^"|"$/g, "") || email;
+      const contact = await upsertExternalContact(db, {
+        name,
+        email,
+        source: "gmail",
+      });
+      const customerId =
+        parsed.direction === "outbound"
+          ? await ensureSentEmailContact(db, contact)
+          : contact.customerId;
+      linked.push({ ...contact, customerId });
+    }
+    const contact = linked[0];
     const { contacts, ...communication } = parsed;
     const result = await logCommunication(db, {
       ...communication,
       externalContactId: contact.id,
+      customerId: contact.customerId,
       channel: "email",
       provider: "gmail",
       status: parsed.direction === "outbound" ? "sent" : "received",

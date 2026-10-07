@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   db: vi.fn(),
   upsert: vi.fn(),
   log: vi.fn(),
+  promote: vi.fn(),
 }));
 vi.mock("../integrations/google/calendar", () => ({
   googleCalendarProvider: {
@@ -13,6 +14,9 @@ vi.mock("../integrations/google/calendar", () => ({
   },
 }));
 vi.mock("../db", () => ({ getDb: mocks.db }));
+vi.mock("./sentEmailContact", () => ({
+  ensureSentEmailContact: mocks.promote,
+}));
 vi.mock("./crmCommunications", () => ({
   upsertExternalContact: mocks.upsert,
   logCommunication: mocks.log,
@@ -57,22 +61,61 @@ beforeEach(() => {
   mocks.db.mockResolvedValue({});
   mocks.upsert.mockResolvedValue({ id: 7 });
   mocks.log.mockResolvedValue({ id: 8, duplicate: false });
+  mocks.promote.mockResolvedValue(10);
 });
 describe("Gmail CRM", () => {
+  it("promotes every sent-email recipient even when the message was already imported", async () => {
+    mocks.log.mockResolvedValue({ duplicate: true });
+    const responses = [
+      { emailAddress: CRM_MAILBOX },
+      { messages: [{ id: "gmail1" }] },
+      message(CRM_MAILBOX, "A <a@example.com>, b@example.com"),
+    ];
+    const fetcher = vi
+      .fn()
+      .mockImplementation(async () => ({
+        ok: true,
+        json: async () => responses.shift(),
+      }));
+    await syncGmailPage({}, fetcher);
+    expect(mocks.promote).toHaveBeenCalledTimes(2);
+    expect(mocks.upsert).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ email: "a@example.com", name: "A" })
+    );
+    expect(mocks.upsert).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ email: "b@example.com" })
+    );
+  });
   it.each([
     ["SERVICE_DISABLED", "Google Cloud project"],
     ["ACCESS_TOKEN_SCOPE_INSUFFICIENT", "approve Gmail read access"],
     ["domainPolicy", "Workspace administrator"],
-  ])("explains Google rejection %s without exposing the response", async (reason, explanation) => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      error: { message: "private-token", errors: [{ reason }] },
-    }), { status: 403 }));
-    await expect(syncGmailPage({}, fetcher)).rejects.toThrow(explanation);
-    await expect(syncGmailPage({}, fetcher)).rejects.not.toThrow("private-token");
-  });
+  ])(
+    "explains Google rejection %s without exposing the response",
+    async (reason, explanation) => {
+      const fetcher = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: { message: "private-token", errors: [{ reason }] },
+          }),
+          { status: 403 }
+        )
+      );
+      await expect(syncGmailPage({}, fetcher)).rejects.toThrow(explanation);
+      await expect(syncGmailPage({}, fetcher)).rejects.not.toThrow(
+        "private-token"
+      );
+    }
+  );
   it("handles a non-JSON Google error", async () => {
-    const fetcher = vi.fn().mockImplementation(() => new Response("unavailable", { status: 503 }));
-    await expect(syncGmailPage({}, fetcher)).rejects.toThrow("Gmail read failed (503)");
+    const fetcher = vi
+      .fn()
+      .mockImplementation(() => new Response("unavailable", { status: 503 }));
+    await expect(syncGmailPage({}, fetcher)).rejects.toThrow(
+      "Gmail read failed (503)"
+    );
   });
   it("keeps Gmail message/thread IDs and decodes plain text without HTML", () => {
     expect(parseGmailMessage(message())).toMatchObject({
@@ -117,12 +160,10 @@ describe("Gmail CRM", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
   it("rejects the wrong actual mailbox before any CRM write", async () => {
-    const fetcher = vi
-      .fn()
-      .mockResolvedValue({
-        ok: true,
-        json: async () => ({ emailAddress: "other@example.com" }),
-      });
+    const fetcher = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ emailAddress: "other@example.com" }),
+    });
     await expect(syncGmailPage({}, fetcher)).rejects.toThrow(
       `Connect ${CRM_MAILBOX}`
     );
