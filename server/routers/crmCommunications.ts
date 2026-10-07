@@ -1,5 +1,5 @@
-import { desc, like, or } from "drizzle-orm";
-import { crmExternalContacts } from "../../drizzle/schema";
+import { and, desc, isNotNull, like, or, sql } from "drizzle-orm";
+import { crmExternalContacts, customers, leads, leadCaptures } from "../../drizzle/schema";
 import { gmailCrmStatus, syncGmailPage } from "../services/gmailCrm";
 import { startJob, getJob } from "../services/asyncLaneJob";
 import { z } from "zod";
@@ -27,11 +27,20 @@ export const crmCommunicationsRouter = router({
         .select()
         .from(crmExternalContacts)
         .where(
+          and(
+          or(
+            isNotNull(crmExternalContacts.customerId),
+            isNotNull(crmExternalContacts.leadId),
+            isNotNull(crmExternalContacts.leadCaptureId),
+            sql`exists (select 1 from ${customers} where ${customers.email} = ${crmExternalContacts.email} or ${customers.phone} = ${crmExternalContacts.phone})`,
+            sql`exists (select 1 from ${leads} where (${leads.contactType} = 'email' and ${leads.contact} = ${crmExternalContacts.email}) or (${leads.contactType} = 'phone' and ${leads.contact} = ${crmExternalContacts.phone}))`,
+            sql`exists (select 1 from ${leadCaptures} where ${leadCaptures.email} = ${crmExternalContacts.email} or ${leadCaptures.phone} = ${crmExternalContacts.phone})`
+          ),
           or(
             like(crmExternalContacts.name, term),
             like(crmExternalContacts.email, term),
             like(crmExternalContacts.phone, term)
-          )
+          ))
         )
         .orderBy(desc(crmExternalContacts.updatedAt))
         .limit(100);

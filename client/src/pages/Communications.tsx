@@ -71,7 +71,7 @@ export default function Communications() {
     <div className="p-6 space-y-5">
       <h1 className="text-2xl font-bold">Communications</h1>
       <p className="text-muted-foreground">
-        Gmail and SMS history for your contacts. Gmail refreshes every five
+        Email and SMS history for CRM leads and clients. Gmail refreshes every five
         minutes once connected.
       </p>
       <div className="flex flex-wrap items-center gap-3">
@@ -108,7 +108,7 @@ export default function Communications() {
           />
           {contacts.isLoading && <p>Loading contacts…</p>}
           {contacts.data?.length === 0 && (
-            <p>No matching contacts. Sync Gmail to import email history.</p>
+            <p>No matching leads or clients with communications yet. Add the person to CRM Leads or Contacts, then sync their email history.</p>
           )}
           {contacts.data?.map(contact => (
             <button
@@ -116,7 +116,8 @@ export default function Communications() {
               onClick={() => setContactId(contact.id)}
               className={`block w-full text-left rounded border p-3 ${contactId === contact.id ? "bg-muted" : ""}`}
             >
-              <strong>{contact.name}</strong>
+              <strong className="block break-words">{contact.name}</strong>
+              {contact.company && <p className="text-sm break-words">{contact.company}</p>}
               <p className="text-sm break-all">
                 {contact.email ?? contact.phone}
               </p>
