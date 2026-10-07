@@ -59,6 +59,21 @@ beforeEach(() => {
   mocks.log.mockResolvedValue({ id: 8, duplicate: false });
 });
 describe("Gmail CRM", () => {
+  it.each([
+    ["SERVICE_DISABLED", "Google Cloud project"],
+    ["ACCESS_TOKEN_SCOPE_INSUFFICIENT", "approve Gmail read access"],
+    ["domainPolicy", "Workspace administrator"],
+  ])("explains Google rejection %s without exposing the response", async (reason, explanation) => {
+    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      error: { message: "private-token", errors: [{ reason }] },
+    }), { status: 403 }));
+    await expect(syncGmailPage({}, fetcher)).rejects.toThrow(explanation);
+    await expect(syncGmailPage({}, fetcher)).rejects.not.toThrow("private-token");
+  });
+  it("handles a non-JSON Google error", async () => {
+    const fetcher = vi.fn().mockImplementation(() => new Response("unavailable", { status: 503 }));
+    await expect(syncGmailPage({}, fetcher)).rejects.toThrow("Gmail read failed (503)");
+  });
   it("keeps Gmail message/thread IDs and decodes plain text without HTML", () => {
     expect(parseGmailMessage(message())).toMatchObject({
       direction: "outbound",
