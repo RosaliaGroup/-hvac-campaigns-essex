@@ -109,8 +109,8 @@ export default function Communications() {
           <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-500" />
           <Input
             className="h-12 pl-12 rounded-full border-0 bg-[#eaf1fb] text-slate-800"
-            aria-label="Search leads and clients"
-            placeholder="Search leads and clients"
+            aria-label="Search contacts, companies or email"
+            placeholder="Search contacts, companies or email"
             value={search}
             onChange={e => {
               setSearch(e.target.value);
@@ -143,7 +143,7 @@ export default function Communications() {
           Connection settings
         </Link>
         <span className="text-xs text-slate-500">
-          Leads and clients only · refreshes every 5 minutes
+          Leads, clients and sent-email contacts · refreshes every 5 minutes
         </span>
         {!ready && (
           <p className="text-sm">
@@ -188,14 +188,13 @@ export default function Communications() {
           </nav>
           <h2 className="flex items-center gap-2 px-4 mb-2 text-xs uppercase tracking-wide text-slate-500">
             <Users className="h-4 w-4" />
-            Leads & clients
+            Contacts & outreach
           </h2>
           <section className="max-h-[55vh] overflow-y-auto space-y-1">
             {contacts.isLoading && <p>Loading contacts…</p>}
             {contacts.data?.length === 0 && (
               <p>
-                No matching leads or clients with communications yet. Add the
-                person to CRM Leads or Contacts, then sync their email history.
+                No matching contacts with communications yet. Sync Gmail Sent or add a contact to the CRM.
               </p>
             )}
             {contacts.data?.map(contact => (
@@ -232,7 +231,7 @@ export default function Communications() {
             )}
             <div className="min-w-0">
               <h2 className="font-semibold truncate">
-                {selectedContact?.name ?? "Leads & clients"}
+                {selectedContact?.name ?? "Contacts & outreach"}
               </h2>
               <p className="text-xs text-slate-500 truncate">
                 {selectedContact?.email ??
