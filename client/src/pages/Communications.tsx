@@ -21,8 +21,18 @@ type SyncResult = {
   nextPageToken?: string;
 };
 export default function Communications() {
+  const customerId = Number(
+    new URLSearchParams(window.location.search).get("customerId")
+  );
+  const linkedContact = trpc.crmCommunications.contactForCustomer.useQuery(
+    { customerId },
+    { enabled: customerId > 0 }
+  );
   const [search, setSearch] = useState("");
   const [contactId, setContactId] = useState<number | null>(null);
+  useEffect(() => {
+    if (linkedContact.data) setContactId(linkedContact.data.id);
+  }, [linkedContact.data?.id]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pageToken, setPageToken] = useState<string | undefined>();
   const handledSyncJob = useRef<string | null>(null);

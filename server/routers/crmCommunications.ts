@@ -292,6 +292,18 @@ export const crmCommunicationsRouter = router({
     )
     .mutation(async ({ input }) => logCommunication(await dbOrThrow(), input)),
 
+  contactForCustomer: protectedProcedure
+    .input(z.object({ customerId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      const [contact] = await db
+        .select()
+        .from(crmExternalContacts)
+        .where(eq(crmExternalContacts.customerId, input.customerId))
+        .limit(1);
+      return contact ?? null;
+    }),
+
   timeline: protectedProcedure
     .input(z.object({ externalContactId: z.number().int() }))
     .query(async ({ input }) =>
