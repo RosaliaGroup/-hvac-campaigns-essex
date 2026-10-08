@@ -284,14 +284,24 @@ export const appRouter = router({
         // Layer 1 (content): scored over RAW user fields only — never a
         // server-composed string. name = whatever the user actually typed.
         const rawName = input.name ?? ([input.firstName, input.lastName].filter(Boolean).join(" ") || undefined);
+        // Browser autofill can populate the hidden company_url field.
+        // A successfully verified Turnstile challenge is stronger evidence of a
+        // human than that single field. Retain every other spam signal.
+        // Never relax this check when Turnstile was skipped or failed.
+        const companyUrlAutofillOverride =
+          ts.success && !ts.skipped && Boolean(input.company_url?.trim()) &&
+          !input.website?.trim();
         const guard = evaluateSpam({
           name: rawName,
           email: input.email,
           phone: input.phone,
           website: input.website,
-          company_url: input.company_url,
+          company_url: companyUrlAutofillOverride ? "" : input.company_url,
           ts: input._ts,
         });
+        if (companyUrlAutofillOverride && !guard.blocked) {
+          console.info("[spam-guard] accepted verified form with autofilled company_url");
+        }
         if (guard.blocked) {
           console.warn(`[spam-guard] blocked captureType=${input.captureType} score=${guard.score} reasons=${guard.reasons.join(",")}`);
           return { success: true };
