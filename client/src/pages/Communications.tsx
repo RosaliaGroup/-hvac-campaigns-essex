@@ -41,7 +41,28 @@ export default function Communications() {
   const [folder, setFolder] = useState<"all" | "inbox" | "sent" | "sms">("all");
   const [messageId, setMessageId] = useState<number | null>(null);
   const [draft, setDraft] = useState("");
-  const [compose, setCompose] = useState<"email" | "sms" | null>(null);
+  const [subject, setSubject] = useState("");
+  const openingCustomer = useRef<number | null>(null);
+  const openCustomer = trpc.crmCommunications.openCustomerContact.useMutation({
+    onSuccess: contact => {
+      setContactId(contact.id);
+      void contacts.refetch();
+    },
+    onError: error => setNotice(error.message),
+  });
+  useEffect(() => {
+    if (
+      customerId > 0 &&
+      linkedContact.data === null &&
+      openingCustomer.current !== customerId
+    ) {
+      openingCustomer.current = customerId;
+      openCustomer.mutate({ customerId });
+    }
+  }, [customerId, linkedContact.data]);
+  const [compose, setCompose] = useState<"email" | "newEmail" | "sms" | null>(
+    null
+  );
   const [sendJobId, setSendJobId] = useState<string | null>(null);
   const [cardName, setCardName] = useState("");
   const [cardPhone, setCardPhone] = useState("");
@@ -69,13 +90,18 @@ export default function Communications() {
     retry: false as const,
     onSuccess: (data: { jobId: string }) => {
       setSendJobId(data.jobId);
-      setNotice("Sending…");
+      setNotice("Working…");
     },
     onError: (error: { message: string }) => setNotice(error.message),
   };
+  const newEmail = trpc.crmCommunications.composeEmail.useMutation(sendOptions);
   const reply = trpc.crmCommunications.replyEmail.useMutation(sendOptions);
   const text = trpc.crmCommunications.sendText.useMutation(sendOptions);
-  const sending = Boolean(sendJobId) || reply.isPending || text.isPending;
+  const sending =
+    Boolean(sendJobId) ||
+    reply.isPending ||
+    text.isPending ||
+    newEmail.isPending;
   const sendJob = trpc.crmCommunications.sendJob.useQuery(
     { jobId: sendJobId ?? "" },
     { enabled: Boolean(sendJobId), refetchInterval: sendJobId ? 1500 : false }
@@ -83,8 +109,16 @@ export default function Communications() {
   useEffect(() => {
     if (!sendJobId || sendJob.isFetching) return;
     if (sendJob.data?.status === "done") {
-      const result = sendJob.data.result as { warning?: string };
-      setNotice(result?.warning ?? "Message sent.");
+      const result = sendJob.data.result as {
+        warning?: string;
+        draftSaved?: boolean;
+      };
+      setNotice(
+        result?.warning ??
+          (result?.draftSaved
+            ? "Draft saved in Gmail Drafts. It has not been sent."
+            : "Message sent.")
+      );
       setSendJobId(null);
       setDraft("");
       setCompose(null);
@@ -95,7 +129,7 @@ export default function Communications() {
       setSendJobId(null);
     } else if (sendJob.data === null || sendJob.error) {
       setNotice(
-        "Send status is unavailable. Check Gmail Sent or SMS history before trying again."
+        "Send status is unavailable. Check Gmail Sent, Drafts, or SMS history before trying again."
       );
       setSendJobId(null);
     }
@@ -104,6 +138,30 @@ export default function Communications() {
     { search },
     { refetchInterval: 30000 }
   );
+  const crmContacts = trpc.customers.list.useQuery({
+    search: search || undefined,
+    limit: 100,
+    offset: 0,
+  });
+  const availableContacts = [
+    ...(contacts.data ?? []),
+    ...(crmContacts.data?.items ?? [])
+      .filter(
+        c =>
+          !(contacts.data ?? []).some(
+            e =>
+              e.customerId === c.id ||
+              (c.email && e.email?.toLowerCase() === c.email.toLowerCase())
+          )
+      )
+      .map(c => ({
+        id: -c.id,
+        name: c.displayName,
+        email: c.email,
+        phone: c.phone,
+        company: c.companyName,
+      })),
+  ];
   const status = trpc.crmCommunications.gmailStatus.useQuery();
   const timeline = trpc.crmCommunications.timeline.useQuery(
     { externalContactId: contactId ?? 0 },
@@ -248,9 +306,16 @@ export default function Communications() {
           {notice}
         </p>
       )}
-      {(contacts.error || timeline.error || job.error || status.error) && (
+      {(contacts.error ||
+        crmContacts.error ||
+        linkedContact.error ||
+        timeline.error ||
+        job.error ||
+        status.error) && (
         <p role="alert" className="text-red-600">
           {contacts.error?.message ??
+            crmContacts.error?.message ??
+            linkedContact.error?.message ??
             timeline.error?.message ??
             job.error?.message ??
             status.error?.message}
@@ -280,17 +345,19 @@ export default function Communications() {
           </h2>
           <section className="max-h-[55vh] overflow-y-auto space-y-1">
             {contacts.isLoading && <p>Loading contacts…</p>}
-            {contacts.data?.length === 0 && (
+            {availableContacts.length === 0 && (
               <p>
-                No matching contacts with communications yet. Sync Gmail Sent or
-                add a contact to the CRM.
+                No matching contacts. Search by name or email, or add a contact
+                to the CRM.
               </p>
             )}
-            {contacts.data?.map(contact => (
+            {availableContacts.map(contact => (
               <button
                 key={contact.id}
                 onClick={() => {
-                  setContactId(contact.id);
+                  if (contact.id < 0)
+                    openCustomer.mutate({ customerId: -contact.id });
+                  else setContactId(contact.id);
                   setMessageId(null);
                 }}
                 aria-pressed={contactId === contact.id}
@@ -340,6 +407,17 @@ export default function Communications() {
                 {selectedContact?.company && ` · ${selectedContact.company}`}
               </p>
               <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  disabled={!selectedContact?.email || sending}
+                  onClick={() => {
+                    setCompose("newEmail");
+                    setSubject("");
+                    setDraft("");
+                  }}
+                >
+                  Compose email
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"
@@ -407,7 +485,7 @@ export default function Communications() {
           {contactId === null ? (
             <div className="flex flex-col items-center justify-center py-24 px-6 text-center text-slate-500">
               <Inbox className="h-10 w-10 mb-4 text-blue-300" />
-              <p>Select a lead or client to open their messages.</p>
+              <p>Select a contact to view messages or compose a new email.</p>
             </div>
           ) : timeline.isLoading ? (
             <p className="p-6 text-slate-500">Loading messages…</p>
@@ -515,11 +593,36 @@ export default function Communications() {
               aria-label="Message composer"
             >
               <h3 className="font-semibold">
-                {compose === "email" ? "Email reply" : "Text message"} ·{" "}
-                {compose === "email"
+                {compose === "newEmail"
+                  ? "New email"
+                  : compose === "email"
+                    ? "Email reply"
+                    : "Text message"}{" "}
+                ·{" "}
+                {compose !== "sms"
                   ? selectedContact?.email
                   : selectedContact?.phone}
               </h3>
+              {compose === "newEmail" && (
+                <Input
+                  aria-label="Email subject"
+                  placeholder="Subject"
+                  maxLength={500}
+                  value={subject}
+                  onChange={e => setSubject(e.target.value)}
+                  disabled={sending}
+                />
+              )}
+              {compose === "newEmail" && !status.data?.hasDraftPermission && (
+                <p className="text-sm text-amber-700">
+                  Reconnect Google to save drafts in Gmail.
+                </p>
+              )}
+              {compose === "newEmail" && !status.data?.hasSendPermission && (
+                <p className="text-sm text-amber-700">
+                  Reconnect Google to send email.
+                </p>
+              )}
               <textarea
                 className="w-full min-h-32 rounded-lg border p-3 text-sm text-slate-800 bg-white"
                 aria-label="Message body"
@@ -530,11 +633,46 @@ export default function Communications() {
                 disabled={sending}
               />
               <div className="flex gap-2">
+                {compose === "newEmail" && (
+                  <Button
+                    variant="outline"
+                    disabled={
+                      sending ||
+                      !draft.trim() ||
+                      !subject.trim() ||
+                      !status.data?.hasDraftPermission
+                    }
+                    onClick={() =>
+                      newEmail.mutate({
+                        externalContactId: contactId,
+                        subject,
+                        body: draft,
+                        action: "draft",
+                        requestId: crypto.randomUUID(),
+                      })
+                    }
+                  >
+                    Save draft
+                  </Button>
+                )}
                 <Button
-                  disabled={sending || !draft.trim()}
+                  disabled={
+                    sending ||
+                    !draft.trim() ||
+                    (compose === "newEmail" &&
+                      (!subject.trim() || !status.data?.hasSendPermission))
+                  }
                   onClick={() => {
                     const requestId = crypto.randomUUID();
-                    if (compose === "email" && messageId !== null)
+                    if (compose === "newEmail")
+                      newEmail.mutate({
+                        externalContactId: contactId,
+                        subject,
+                        body: draft,
+                        action: "send",
+                        requestId,
+                      });
+                    else if (compose === "email" && messageId !== null)
                       reply.mutate({
                         externalContactId: contactId,
                         messageId,
@@ -549,7 +687,7 @@ export default function Communications() {
                       });
                   }}
                 >
-                  {sending ? "Sending…" : "Send"}
+                  {sending ? "Working…" : "Send"}
                 </Button>
                 <Button
                   variant="outline"

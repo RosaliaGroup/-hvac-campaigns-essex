@@ -6,6 +6,8 @@ import { ensureSentEmailContact } from "./sentEmailContact";
 
 export const CRM_MAILBOX = "sales@mechanicalenterprise.com";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
+export const GMAIL_COMPOSE_SCOPE =
+  "https://www.googleapis.com/auth/gmail.compose";
 export const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
 type Part = { mimeType?: string; body?: { data?: string }; parts?: Part[] };
 export type GmailMessage = {
@@ -87,8 +89,15 @@ export async function gmailCrmStatus() {
     connected: conn?.status === "connected",
     accountEmail: conn?.googleAccountEmail ?? null,
     hasReadPermission: Boolean(conn?.scope?.split(" ").includes(GMAIL_SCOPE)),
+    hasDraftPermission: Boolean(
+      conn?.scope?.split(" ").includes(GMAIL_COMPOSE_SCOPE)
+    ),
     hasSendPermission: Boolean(
-      conn?.scope?.split(" ").includes(GMAIL_SEND_SCOPE)
+      conn?.scope
+        ?.split(" ")
+        .some(
+          scope => scope === GMAIL_SEND_SCOPE || scope === GMAIL_COMPOSE_SCOPE
+        )
     ),
   };
 }

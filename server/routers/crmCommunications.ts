@@ -1,4 +1,5 @@
 import { and, desc, eq, isNotNull, like, or, sql } from "drizzle-orm";
+import { composeGmail } from "../services/gmailCompose";
 import { sendGmailReply } from "../services/gmailReply";
 import { sendAndRecordSms } from "../services/smsOutbound";
 import {
@@ -128,6 +129,53 @@ export const crmCommunicationsRouter = router({
         .where(eq(crmExternalContacts.id, input.id));
       return { saved: true };
     }),
+  openCustomerContact: protectedProcedure
+    .input(z.object({ customerId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      const [customer] = await db
+        .select()
+        .from(customers)
+        .where(eq(customers.id, input.customerId))
+        .limit(1);
+      if (!customer) throw new Error("Contact not found");
+      const [linked] = await db
+        .select()
+        .from(crmExternalContacts)
+        .where(eq(crmExternalContacts.customerId, customer.id))
+        .limit(1);
+      if (linked) return linked;
+      return upsertExternalContact(db, {
+        customerId: customer.id,
+        name: customer.displayName,
+        email: customer.email,
+        phone: customer.phone,
+        company: customer.companyName,
+        source: "crm",
+      });
+    }),
+  composeEmail: protectedProcedure
+    .input(
+      z.object({
+        externalContactId: z.number().int().positive(),
+        subject: z
+          .string()
+          .trim()
+          .min(1)
+          .max(500)
+          .refine(v => !/[\r\n]/.test(v), "Invalid subject"),
+        body: z.string().trim().min(1).max(20000),
+        action: z.enum(["draft", "send"]),
+        requestId: z.string().uuid(),
+      })
+    )
+    .mutation(({ input }) =>
+      startJob({
+        kind: "crm-compose",
+        key: `crm-compose:${input.requestId}`,
+        fn: () => composeGmail(input),
+      })
+    ),
   replyEmail: protectedProcedure
     .input(
       z.object({
@@ -201,7 +249,9 @@ export const crmCommunicationsRouter = router({
     .input(z.object({ jobId: z.string() }))
     .query(({ input }) => {
       const job = getJob(input.jobId);
-      return job && ["crm-reply", "crm-text"].includes(job.kind) ? job : null;
+      return job && ["crm-reply", "crm-text", "crm-compose"].includes(job.kind)
+        ? job
+        : null;
     }),
   contacts: protectedProcedure
     .input(z.object({ search: z.string().max(255).optional() }))

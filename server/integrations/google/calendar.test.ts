@@ -17,12 +17,18 @@ describe("mapToGoogleEvent", () => {
       location: "500 Main St",
       scheduledAt: new Date("2026-07-08T19:53:00.000Z"),
       durationMinutes: 90,
-      attendees: [{ email: "jane@example.com", name: "Jane" }, { email: "tech@x.com" }],
+      attendees: [
+        { email: "jane@example.com", name: "Jane" },
+        { email: "tech@x.com" },
+      ],
       timeZone: "America/New_York",
     }) as any;
     expect(event.summary).toBe("Service Visit — Jane");
     expect(event.location).toBe("500 Main St");
-    expect(event.start).toEqual({ dateTime: "2026-07-08T19:53:00.000Z", timeZone: "America/New_York" });
+    expect(event.start).toEqual({
+      dateTime: "2026-07-08T19:53:00.000Z",
+      timeZone: "America/New_York",
+    });
     // 90 minutes later.
     expect(event.end.dateTime).toBe("2026-07-08T21:23:00.000Z");
     expect(event.attendees).toEqual([
@@ -54,7 +60,10 @@ describe("mapToGoogleEvent", () => {
       attendees: [],
       reminderMinutes: 30,
     }) as any;
-    expect(event.reminders).toEqual({ useDefault: false, overrides: [{ method: "popup", minutes: 30 }] });
+    expect(event.reminders).toEqual({
+      useDefault: false,
+      overrides: [{ method: "popup", minutes: 30 }],
+    });
   });
 
   it("requests a Google Meet when createMeet is set", () => {
@@ -67,14 +76,26 @@ describe("mapToGoogleEvent", () => {
       meetRequestId: "meet-42",
     }) as any;
     expect(event.conferenceData.createRequest.requestId).toBe("meet-42");
-    expect(event.conferenceData.createRequest.conferenceSolutionKey).toEqual({ type: "hangoutsMeet" });
+    expect(event.conferenceData.createRequest.conferenceSolutionKey).toEqual({
+      type: "hangoutsMeet",
+    });
   });
 });
 
 describe("parseTokenResponse", () => {
   it("parses an authorization_code response", () => {
-    const t = parseTokenResponse({ access_token: "at", refresh_token: "rt", expires_in: 3599, scope: "s" });
-    expect(t).toMatchObject({ accessToken: "at", refreshToken: "rt", expiresIn: 3599, scope: "s" });
+    const t = parseTokenResponse({
+      access_token: "at",
+      refresh_token: "rt",
+      expires_in: 3599,
+      scope: "s",
+    });
+    expect(t).toMatchObject({
+      accessToken: "at",
+      refreshToken: "rt",
+      expiresIn: 3599,
+      scope: "s",
+    });
   });
   it("allows a missing refresh_token (refresh responses omit it)", () => {
     const t = parseTokenResponse({ access_token: "at", expires_in: 3600 });
@@ -98,7 +119,7 @@ describe("OAuth state signing", () => {
 describe("buildAuthorizeUrl", () => {
   const url = buildAuthorizeUrl(
     { clientId: "cid", clientSecret: "sec", redirectUri: "https://app/cb" },
-    signState("n"),
+    signState("n")
   );
 
   it("requests offline access with forced consent (re-prompts for the new scope)", () => {
@@ -109,9 +130,15 @@ describe("buildAuthorizeUrl", () => {
   });
 
   it("requests Calendar, Search Console AND GA4 Analytics scopes in one consent flow", () => {
-    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/calendar.events"));
-    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/webmasters.readonly"));
-    expect(url).toContain(encodeURIComponent("https://www.googleapis.com/auth/analytics.readonly"));
+    expect(url).toContain(
+      encodeURIComponent("https://www.googleapis.com/auth/calendar.events")
+    );
+    expect(url).toContain(
+      encodeURIComponent("https://www.googleapis.com/auth/webmasters.readonly")
+    );
+    expect(url).toContain(
+      encodeURIComponent("https://www.googleapis.com/auth/analytics.readonly")
+    );
   });
 
   it("preserves every required scope in the authorization URL (nothing dropped)", () => {
@@ -121,9 +148,15 @@ describe("buildAuthorizeUrl", () => {
     }
     expect(GOOGLE_OAUTH_SCOPES).toContain("openid");
     expect(GOOGLE_OAUTH_SCOPES).toContain("email");
-    expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/calendar.events");
-    expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/webmasters.readonly");
-    expect(GOOGLE_OAUTH_SCOPES).toContain("https://www.googleapis.com/auth/analytics.readonly");
+    expect(GOOGLE_OAUTH_SCOPES).toContain(
+      "https://www.googleapis.com/auth/calendar.events"
+    );
+    expect(GOOGLE_OAUTH_SCOPES).toContain(
+      "https://www.googleapis.com/auth/webmasters.readonly"
+    );
+    expect(GOOGLE_OAUTH_SCOPES).toContain(
+      "https://www.googleapis.com/auth/analytics.readonly"
+    );
   });
 
   it("exposes the exact scope set", () => {
@@ -131,6 +164,7 @@ describe("buildAuthorizeUrl", () => {
       "openid",
       "https://www.googleapis.com/auth/gmail.readonly",
       "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/gmail.compose",
       "email",
       "https://www.googleapis.com/auth/calendar.events",
       "https://www.googleapis.com/auth/webmasters.readonly",

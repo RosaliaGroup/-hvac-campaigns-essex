@@ -40,6 +40,7 @@ export const GOOGLE_OAUTH_SCOPES: readonly string[] = [
   // CRM email timeline: read sent messages and replies; never send or modify mail.
   "https://www.googleapis.com/auth/gmail.readonly",
   "https://www.googleapis.com/auth/gmail.send",
+  "https://www.googleapis.com/auth/gmail.compose",
   "email",
   // Calendar: create/read/update appointment events (unchanged, existing feature).
   "https://www.googleapis.com/auth/calendar.events",
@@ -73,19 +74,32 @@ export interface GoogleConfig {
 export function getGoogleConfig(): GoogleConfig {
   return {
     // Reuse the shared Google OAuth client (also used by Google Ads).
-    clientId: process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ADS_CLIENT_ID || "",
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || process.env.GOOGLE_ADS_CLIENT_SECRET || "",
+    clientId:
+      process.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_ADS_CLIENT_ID || "",
+    clientSecret:
+      process.env.GOOGLE_CLIENT_SECRET ||
+      process.env.GOOGLE_ADS_CLIENT_SECRET ||
+      "",
     redirectUri: process.env.GOOGLE_CALENDAR_REDIRECT_URI || "",
   };
 }
 
 // ── Signed OAuth state (CSRF) ───────────────────────────────────────────────
 function stateSecret(): string {
-  return process.env.JWT_SECRET || process.env.ENCRYPTION_KEY || "google-calendar-state-fallback";
+  return (
+    process.env.JWT_SECRET ||
+    process.env.ENCRYPTION_KEY ||
+    "google-calendar-state-fallback"
+  );
 }
 
-export function signState(nonce: string = crypto.randomBytes(16).toString("hex")): string {
-  const mac = crypto.createHmac("sha256", stateSecret()).update(nonce).digest("hex");
+export function signState(
+  nonce: string = crypto.randomBytes(16).toString("hex")
+): string {
+  const mac = crypto
+    .createHmac("sha256", stateSecret())
+    .update(nonce)
+    .digest("hex");
   return `${nonce}.${mac}`;
 }
 
@@ -93,7 +107,10 @@ export function verifyState(state: string | undefined | null): boolean {
   if (!state || !state.includes(".")) return false;
   const [nonce, mac] = state.split(".");
   if (!nonce || !mac) return false;
-  const expected = crypto.createHmac("sha256", stateSecret()).update(nonce).digest("hex");
+  const expected = crypto
+    .createHmac("sha256", stateSecret())
+    .update(nonce)
+    .digest("hex");
   const a = Buffer.from(mac);
   const b = Buffer.from(expected);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
@@ -125,7 +142,8 @@ export interface TokenSet {
 
 export function parseTokenResponse(json: Record<string, unknown>): TokenSet {
   const accessToken = String(json.access_token ?? "");
-  if (!accessToken) throw new Error("Google token response missing access_token");
+  if (!accessToken)
+    throw new Error("Google token response missing access_token");
   return {
     accessToken,
     refreshToken: json.refresh_token ? String(json.refresh_token) : undefined,
@@ -138,8 +156,10 @@ type FetchImpl = typeof fetch;
 
 export async function requestTokens(
   cfg: GoogleConfig,
-  grant: { type: "authorization_code"; code: string } | { type: "refresh_token"; refreshToken: string },
-  fetchImpl: FetchImpl = fetch,
+  grant:
+    | { type: "authorization_code"; code: string }
+    | { type: "refresh_token"; refreshToken: string },
+  fetchImpl: FetchImpl = fetch
 ): Promise<TokenSet> {
   const body =
     grant.type === "authorization_code"
@@ -159,19 +179,26 @@ export async function requestTokens(
 
   const res = await fetchImpl(TOKEN_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
     body: body.toString(),
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Google token request failed (${res.status}): ${text.slice(0, 200)}`);
+    throw new Error(
+      `Google token request failed (${res.status}): ${text.slice(0, 200)}`
+    );
   }
   return parseTokenResponse((await res.json()) as Record<string, unknown>);
 }
 
 async function fetchAccountEmail(accessToken: string): Promise<string | null> {
   try {
-    const res = await fetch(USERINFO_URL, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const res = await fetch(USERINFO_URL, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
     if (!res.ok) return null;
     const json = (await res.json()) as { email?: string };
     return json.email ?? null;
@@ -198,16 +225,23 @@ export interface CalendarEventInput {
 }
 
 /** Map a normalized appointment into a Google Calendar event resource. */
-export function mapToGoogleEvent(input: CalendarEventInput): Record<string, unknown> {
+export function mapToGoogleEvent(
+  input: CalendarEventInput
+): Record<string, unknown> {
   const tz = input.timeZone ?? DEFAULT_TIMEZONE;
-  const end = new Date(input.scheduledAt.getTime() + input.durationMinutes * 60_000);
+  const end = new Date(
+    input.scheduledAt.getTime() + input.durationMinutes * 60_000
+  );
   const event: Record<string, unknown> = {
     summary: input.summary,
     ...(input.description ? { description: input.description } : {}),
     ...(input.location ? { location: input.location } : {}),
     start: { dateTime: input.scheduledAt.toISOString(), timeZone: tz },
     end: { dateTime: end.toISOString(), timeZone: tz },
-    attendees: input.attendees.map(a => ({ email: a.email, ...(a.name ? { displayName: a.name } : {}) })),
+    attendees: input.attendees.map(a => ({
+      email: a.email,
+      ...(a.name ? { displayName: a.name } : {}),
+    })),
     reminders: reminderToGoogle(input.reminderMinutes),
   };
   if (input.createMeet) {
@@ -267,7 +301,9 @@ export class GoogleCalendarProvider {
 
   async getStatus(): Promise<GoogleStatus> {
     const cfg = this.cfg();
-    const configured = isEncryptionConfigured() && Boolean(cfg.clientId && cfg.clientSecret && cfg.redirectUri);
+    const configured =
+      isEncryptionConfigured() &&
+      Boolean(cfg.clientId && cfg.clientSecret && cfg.redirectUri);
     const conn = await this.getConnection();
     if (!conn) return { connected: false, configured };
     return {
@@ -286,9 +322,14 @@ export class GoogleCalendarProvider {
 
   async connect(input: { code: string }): Promise<GoogleStatus> {
     const cfg = this.cfg();
-    const tokens = await requestTokens(cfg, { type: "authorization_code", code: input.code });
+    const tokens = await requestTokens(cfg, {
+      type: "authorization_code",
+      code: input.code,
+    });
     if (!tokens.refreshToken) {
-      throw new Error("Google did not return a refresh token — revoke access and reconnect with consent.");
+      throw new Error(
+        "Google did not return a refresh token — revoke access and reconnect with consent."
+      );
     }
     const email = (await fetchAccountEmail(tokens.accessToken)) ?? "unknown";
     const now = new Date();
@@ -329,12 +370,16 @@ export class GoogleCalendarProvider {
     if (!conn) return;
     try {
       const refreshToken = decrypt(conn.refreshTokenEncrypted);
-      await fetch(`${REVOKE_URL}?token=${encodeURIComponent(refreshToken)}`, { method: "POST" });
+      await fetch(`${REVOKE_URL}?token=${encodeURIComponent(refreshToken)}`, {
+        method: "POST",
+      });
     } catch {
       /* ignore — still remove the local connection */
     }
     const db = await this.db();
-    await db.delete(googleCalendarConnections).where(eq(googleCalendarConnections.id, conn.id));
+    await db
+      .delete(googleCalendarConnections)
+      .where(eq(googleCalendarConnections.id, conn.id));
   }
 
   /**
@@ -342,20 +387,29 @@ export class GoogleCalendarProvider {
    * expiry. Google refresh responses do NOT return a new refresh token, so the
    * stored one is preserved. ALL Calendar API calls go through this.
    */
-  async getValidAccessToken(): Promise<{ accessToken: string; calendarId: string }> {
+  async getValidAccessToken(): Promise<{
+    accessToken: string;
+    calendarId: string;
+  }> {
     const conn = await this.getConnection();
     if (!conn) throw new Error("Google Calendar is not connected");
 
     const remaining = conn.expiresAt.getTime() - Date.now();
     if (remaining > REFRESH_SKEW_MS && conn.status === "connected") {
-      return { accessToken: decrypt(conn.accessTokenEncrypted), calendarId: conn.googleCalendarId };
+      return {
+        accessToken: decrypt(conn.accessTokenEncrypted),
+        calendarId: conn.googleCalendarId,
+      };
     }
 
     const cfg = this.cfg();
     const db = await this.db();
     try {
       const refreshToken = decrypt(conn.refreshTokenEncrypted);
-      const tokens = await requestTokens(cfg, { type: "refresh_token", refreshToken });
+      const tokens = await requestTokens(cfg, {
+        type: "refresh_token",
+        refreshToken,
+      });
       await db
         .update(googleCalendarConnections)
         .set({
@@ -366,13 +420,21 @@ export class GoogleCalendarProvider {
           lastError: null,
         })
         .where(eq(googleCalendarConnections.id, conn.id));
-      return { accessToken: tokens.accessToken, calendarId: conn.googleCalendarId };
+      return {
+        accessToken: tokens.accessToken,
+        calendarId: conn.googleCalendarId,
+      };
     } catch (e) {
       await db
         .update(googleCalendarConnections)
-        .set({ status: "expired", lastError: `Token refresh failed: ${(e as Error).message}` })
+        .set({
+          status: "expired",
+          lastError: `Token refresh failed: ${(e as Error).message}`,
+        })
         .where(eq(googleCalendarConnections.id, conn.id));
-      throw new Error("Google Calendar token refresh failed — reconnect required");
+      throw new Error(
+        "Google Calendar token refresh failed — reconnect required"
+      );
     }
   }
 
@@ -391,36 +453,80 @@ export class GoogleCalendarProvider {
   }
 
   /** Create an event; sendUpdates=all makes Google email the invites. Captures a Meet link when requested. */
-  async createEvent(event: Record<string, unknown>): Promise<{ id: string; calendarId: string; htmlLink?: string; meetUrl?: string | null }> {
+  async createEvent(
+    event: Record<string, unknown>
+  ): Promise<{
+    id: string;
+    calendarId: string;
+    htmlLink?: string;
+    meetUrl?: string | null;
+  }> {
     const { calendarId } = await this.getValidAccessToken();
     const conf = "conferenceData" in event ? "&conferenceDataVersion=1" : "";
-    const res = await this.calFetch(`/events?sendUpdates=all${conf}`, { method: "POST", body: JSON.stringify(event) });
-    if (!res.ok) throw new Error(`Google create event failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
-    const json = (await res.json()) as { id: string; htmlLink?: string; hangoutLink?: string };
-    return { id: json.id, calendarId, htmlLink: json.htmlLink, meetUrl: json.hangoutLink ?? null };
+    const res = await this.calFetch(`/events?sendUpdates=all${conf}`, {
+      method: "POST",
+      body: JSON.stringify(event),
+    });
+    if (!res.ok)
+      throw new Error(
+        `Google create event failed: ${res.status} ${(await res.text()).slice(0, 200)}`
+      );
+    const json = (await res.json()) as {
+      id: string;
+      htmlLink?: string;
+      hangoutLink?: string;
+    };
+    return {
+      id: json.id,
+      calendarId,
+      htmlLink: json.htmlLink,
+      meetUrl: json.hangoutLink ?? null,
+    };
   }
 
   /**
    * Update an existing event via PATCH (merge semantics) so the SAME event is
    * updated and its Meet/conference data is preserved when not re-sent.
    */
-  async updateEvent(eventId: string, event: Record<string, unknown>): Promise<{ id: string; htmlLink?: string; meetUrl?: string | null }> {
+  async updateEvent(
+    eventId: string,
+    event: Record<string, unknown>
+  ): Promise<{ id: string; htmlLink?: string; meetUrl?: string | null }> {
     const conf = "conferenceData" in event ? "&conferenceDataVersion=1" : "";
-    const res = await this.calFetch(`/events/${encodeURIComponent(eventId)}?sendUpdates=all${conf}`, {
-      method: "PATCH",
-      body: JSON.stringify(event),
-    });
-    if (!res.ok) throw new Error(`Google update event failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
-    const json = (await res.json()) as { id: string; htmlLink?: string; hangoutLink?: string };
-    return { id: json.id, htmlLink: json.htmlLink, meetUrl: json.hangoutLink ?? null };
+    const res = await this.calFetch(
+      `/events/${encodeURIComponent(eventId)}?sendUpdates=all${conf}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(event),
+      }
+    );
+    if (!res.ok)
+      throw new Error(
+        `Google update event failed: ${res.status} ${(await res.text()).slice(0, 200)}`
+      );
+    const json = (await res.json()) as {
+      id: string;
+      htmlLink?: string;
+      hangoutLink?: string;
+    };
+    return {
+      id: json.id,
+      htmlLink: json.htmlLink,
+      meetUrl: json.hangoutLink ?? null,
+    };
   }
 
   /** Cancel (delete) an event; sendUpdates=all sends cancellation notices. */
   async cancelEvent(eventId: string): Promise<void> {
-    const res = await this.calFetch(`/events/${encodeURIComponent(eventId)}?sendUpdates=all`, { method: "DELETE" });
+    const res = await this.calFetch(
+      `/events/${encodeURIComponent(eventId)}?sendUpdates=all`,
+      { method: "DELETE" }
+    );
     // 410 Gone = already deleted; treat as success.
     if (!res.ok && res.status !== 404 && res.status !== 410) {
-      throw new Error(`Google cancel event failed: ${res.status} ${(await res.text()).slice(0, 200)}`);
+      throw new Error(
+        `Google cancel event failed: ${res.status} ${(await res.text()).slice(0, 200)}`
+      );
     }
   }
 
