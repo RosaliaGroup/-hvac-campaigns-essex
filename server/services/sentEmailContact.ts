@@ -37,7 +37,7 @@ export async function ensureSentEmailContact(
         companyName: external.company ?? null,
         source: "Gmail Sent",
         notes:
-          "Contact imported from sent email. Relationship is a lead until CRM activity establishes otherwise.",
+          "Contact imported from sent email. Role and service type are unclassified until confirmed.",
       });
       customerId = Number(
         (result as unknown as [{ insertId: number }])[0].insertId

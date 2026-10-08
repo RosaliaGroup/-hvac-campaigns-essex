@@ -1,200 +1,404 @@
-import { useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import AddContactModal from "@/components/AddContactModal";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 import {
-  Building2, ChevronRight, Home, Mail, Phone, Plus, Search, UserRound, Users,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Plus,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  SlidersHorizontal,
 } from "lucide-react";
-import { relationshipLabel } from "@shared/leadPipeline";
 import { formatDisplayName } from "@shared/nameFormat";
+import { useAuth } from "@/_core/hooks/useAuth";
 
-const STATUS_BADGE: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  inactive: "bg-yellow-100 text-yellow-700",
-  archived: "bg-gray-100 text-gray-600",
+type Filters = {
+  search: string;
+  source: "all" | "gmail" | "other";
+  status: "default" | "active" | "inactive" | "archived";
+  sort: "newest" | "name";
 };
-
-const RELATIONSHIP_BADGE: Record<string, string> = {
-  Lead: "bg-slate-100 text-slate-700",
-  Prospect: "bg-amber-100 text-amber-800",
-  Customer: "bg-green-100 text-green-800",
+type SavedView = { name: string; filters: Filters };
+const initial: Filters = {
+  search: "",
+  source: "all",
+  status: "default",
+  sort: "newest",
 };
-
+const columns = [
+  "Email",
+  "Phone",
+  "Company",
+  "Lifecycle stage",
+  "Contact role",
+  "Service type",
+  "Source",
+  "Status",
+  "Created",
+];
+function readStored<T>(key: string, fallback: T): T {
+  try {
+    return JSON.parse(localStorage.getItem(key) || "null") ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+function persist(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* View still works without browser storage. */
+  }
+}
 export default function Customers() {
+  const { user } = useAuth();
+  const key = `crm-contact-views:${user?.id ?? "guest"}`;
   const [, navigate] = useLocation();
-  const { toast } = useToast();
-  const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "residential" | "commercial">("all");
-  const [statusFilter, setStatusFilter] = useState<"default" | "active" | "inactive" | "archived">("default");
+  const [filters, setFilters] = useState<Filters>(initial);
+  const [page, setPage] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [columnOpen, setColumnOpen] = useState(false);
+  const [visible, setVisible] = useState<string[]>(columns);
+  const [saved, setSaved] = useState<SavedView[]>([]);
 
-  const { data: stats } = trpc.customers.stats.useQuery();
-  const { data, isLoading, refetch } = trpc.customers.list.useQuery({
-    search: search || undefined,
-    type: typeFilter === "all" ? undefined : typeFilter,
-    status: statusFilter === "default" ? undefined : statusFilter,
-    limit: 100,
-    offset: 0,
-  });
-
+  const [viewName, setViewName] = useState("");
+  // Reload preferences when the signed-in account changes.
+  useEffect(() => {
+    setSaved(readStored(key, []));
+    setVisible(readStored(`${key}:columns`, columns));
+  }, [key]);
+  const change = (patch: Partial<Filters>) => {
+    setFilters(f => ({ ...f, ...patch }));
+    setPage(0);
+  };
+  const { data, isLoading, error, refetch, isFetching } =
+    trpc.customers.list.useQuery(
+      {
+        search: filters.search || undefined,
+        source: filters.source === "all" ? undefined : filters.source,
+        status: filters.status === "default" ? undefined : filters.status,
+        sort: filters.sort,
+        limit: 50,
+        offset: page * 50,
+      },
+      { refetchInterval: 30000 }
+    );
   const items = data?.items ?? [];
-
+  const total = data?.total ?? 0;
   return (
     <DashboardLayout>
       <InternalNav />
-      <div className="space-y-6 p-6">
-        <div className="flex items-center justify-between">
+      <div className="min-h-screen bg-[#f5f8fa] p-4 md:p-6 space-y-4 text-[#33475b]">
+        <header className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="h-6 w-6 text-[#1e3a5f]" /> Contacts
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              One record per person — Lead, Prospect, or Customer. No duplicates.
+            <p className="text-xs uppercase tracking-wider text-slate-500">
+              CRM
             </p>
+            <h1 className="text-2xl font-semibold">
+              Contacts{" "}
+              <span className="text-sm font-normal text-slate-500">
+                {total} records
+              </span>
+            </h1>
           </div>
-          <Button onClick={() => setCreateOpen(true)} className="bg-[#1e3a5f] hover:bg-[#16304f]">
-            <Plus className="h-4 w-4 mr-1" /> Add Contact
-          </Button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Total</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-bold">{stats?.total ?? 0}</span></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-1"><Home className="h-3.5 w-3.5" /> Residential</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-bold">{stats?.residential ?? 0}</span></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground flex items-center gap-1"><Building2 className="h-3.5 w-3.5" /> Commercial</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-bold">{stats?.commercial ?? 0}</span></CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Active</CardTitle></CardHeader>
-            <CardContent><span className="text-2xl font-bold">{stats?.active ?? 0}</span></CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate("/contacts/communications")}
+            >
+              Communications
+            </Button>
+            <Button
+              className="bg-[#ff7a59] hover:bg-[#e66e50] text-white"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create contact
+            </Button>
+          </div>
+        </header>
+        <div className="rounded-md border bg-white overflow-hidden">
+          <nav
+            aria-label="Contact views"
+            className="flex flex-wrap border-b bg-[#fafcfd] gap-1 px-4 pt-3"
+          >
+            {[
+              { name: "All contacts", filters: initial },
+              {
+                name: "Email contacts",
+                filters: { ...initial, source: "gmail" as const },
+              },
+              ...saved,
+            ].map((view, i) => (
+              <Button
+                key={`${view.name}-${i}`}
+                variant="ghost"
+                className="rounded-b-none border-b-2 border-transparent hover:border-[#00a4bd]"
+                onClick={() => {
+                  setFilters(view.filters);
+                  setPage(0);
+                }}
+              >
+                {view.name}
+              </Button>
+            ))}
+          </nav>
+          <div className="p-4 flex flex-wrap items-center gap-2 border-b">
+            <div className="relative min-w-60 flex-1">
+              <Search className="h-4 w-4 absolute left-3 top-3 text-slate-400" />
+              <Input
+                aria-label="Search contacts"
+                placeholder="Search name, email, phone or company"
+                className="pl-9"
+                value={filters.search}
+                onChange={e => change({ search: e.target.value })}
+              />
+            </div>
+            <select
+              aria-label="Source filter"
+              className="border rounded p-2 text-sm"
+              value={filters.source}
+              onChange={e =>
+                change({ source: e.target.value as Filters["source"] })
+              }
+            >
+              <option value="all">All sources</option>
+              <option value="gmail">Gmail Sent</option>
+              <option value="other">Other sources</option>
+            </select>
+            <select
+              aria-label="Status filter"
+              className="border rounded p-2 text-sm"
+              value={filters.status}
+              onChange={e =>
+                change({ status: e.target.value as Filters["status"] })
+              }
+            >
+              <option value="default">Active + inactive</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="archived">Archived</option>
+            </select>
+            <select
+              aria-label="Sort contacts"
+              className="border rounded p-2 text-sm"
+              value={filters.sort}
+              onChange={e =>
+                change({ sort: e.target.value as Filters["sort"] })
+              }
+            >
+              <option value="newest">Newest first</option>
+              <option value="name">Name A–Z</option>
+            </select>
+            <Button
+              variant="outline"
+              onClick={() => setColumnOpen(!columnOpen)}
+            >
+              <SlidersHorizontal className="h-4 w-4 mr-2" />
+              Columns
+            </Button>
+            <Button
+              variant="ghost"
+              aria-label="Refresh contacts"
+              onClick={() => refetch()}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+              />
+            </Button>
+          </div>
+          {columnOpen && (
+            <fieldset className="p-4 border-b flex flex-wrap gap-4">
+              <legend className="sr-only">Visible columns</legend>
+              {columns.map(c => (
+                <label key={c} className="text-sm flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={visible.includes(c)}
+                    onChange={e => {
+                      const next = e.target.checked
+                        ? [...visible, c]
+                        : visible.filter(x => x !== c);
+                      setVisible(next);
+                      persist(`${key}:columns`, next);
+                    }}
+                  />
+                  {c}
+                </label>
+              ))}
+            </fieldset>
+          )}
+          <div className="px-4 py-2 flex flex-wrap items-center gap-2 border-b text-xs text-slate-500">
+            <span>Save these filters as a view:</span>
             <Input
-              placeholder="Search name, email, or phone…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="pl-8"
+              aria-label="Saved view name"
+              className="h-8 w-44"
+              placeholder="View name"
+              maxLength={60}
+              value={viewName}
+              onChange={e => setViewName(e.target.value)}
             />
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!viewName.trim()}
+              onClick={() => {
+                const next = [
+                  ...saved.filter(v => v.name !== viewName.trim()),
+                  { name: viewName.trim(), filters },
+                ];
+                setSaved(next);
+                persist(key, next);
+                setViewName("");
+              }}
+            >
+              Save view
+            </Button>
+            {saved.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setSaved([]);
+                  persist(key, []);
+                }}
+              >
+                Clear saved views
+              </Button>
+            )}
+            <span className="ml-auto">
+              Views and columns are saved in this browser.
+            </span>
           </div>
-          <Select value={typeFilter} onValueChange={v => setTypeFilter(v as typeof typeFilter)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All types</SelectItem>
-              <SelectItem value="residential">Residential</SelectItem>
-              <SelectItem value="commercial">Commercial</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={v => setStatusFilter(v as typeof statusFilter)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Active + Inactive</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">All Contacts ({data?.total ?? 0})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">Loading customers…</p>
-            ) : items.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                No contacts yet. New leads become contacts automatically, or add one manually.
-              </p>
-            ) : (
+          {error ? (
+            <p role="alert" className="p-6 text-red-700">
+              {error.message}
+            </p>
+          ) : isLoading ? (
+            <p className="p-8 text-center">Loading contacts…</p>
+          ) : (
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Relationship</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-8" />
+                  <TableRow className="bg-[#f5f8fa]">
+                    <TableHead className="min-w-52">Contact name</TableHead>
+                    {columns
+                      .filter(c => visible.includes(c))
+                      .map(c => (
+                        <TableHead key={c} className="whitespace-nowrap">
+                          {c}
+                        </TableHead>
+                      ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {items.map(c => (
-                    <TableRow
-                      key={c.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/customers/${c.id}`)}
-                    >
-                      <TableCell>
-                        <div className="flex items-center gap-2 font-medium">
-                          {c.type === "commercial"
-                            ? <Building2 className="h-4 w-4 text-muted-foreground" />
-                            : <UserRound className="h-4 w-4 text-muted-foreground" />}
-                          {formatDisplayName(c.displayName)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {(() => {
-                          // Relationship is derived server-side from real signals
-                          // (lead stage, won jobs, appointments) — Lead by default,
-                          // never assumed Customer.
-                          const label = relationshipLabel(c.relationship ?? "lead");
-                          return <Badge className={RELATIONSHIP_BADGE[label]} variant="secondary">{label}</Badge>;
-                        })()}
-                      </TableCell>
-                      <TableCell className="capitalize text-sm">{c.type}</TableCell>
-                      <TableCell>
-                        <div className="text-sm space-y-0.5">
-                          {c.phone && <div className="flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground" />{c.phone}</div>}
-                          {c.email && <div className="flex items-center gap-1"><Mail className="h-3 w-3 text-muted-foreground" />{c.email}</div>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{c.source || "—"}</TableCell>
-                      <TableCell>
-                        <Badge className={STATUS_BADGE[c.status] || STATUS_BADGE.active} variant="secondary">
-                          {c.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
-                    </TableRow>
-                  ))}
+                  {items.map(c => {
+                    const values: Record<string, ReactNode> = {
+                      Email: c.email ? (
+                        <a
+                          className="text-[#007a8c]"
+                          href={`mailto:${c.email}`}
+                          onClick={e => e.stopPropagation()}
+                        >
+                          {c.email}
+                        </a>
+                      ) : (
+                        "—"
+                      ),
+                      Phone: c.phone || "—",
+                      Company: c.companyName || "—",
+                      "Lifecycle stage": (
+                        <Badge variant="secondary">{c.lifecycle}</Badge>
+                      ),
+                      "Contact role": c.contactRole,
+                      "Service type": c.serviceType,
+                      Source: c.source || "—",
+                      Status: c.status,
+                      Created: new Date(c.createdAt).toLocaleDateString(),
+                    };
+                    return (
+                      <TableRow key={c.id} className="hover:bg-[#f0f7fa]">
+                        <TableCell>
+                          <button
+                            className="text-[#007a8c] font-medium text-left hover:underline"
+                            onClick={() => navigate(`/customers/${c.id}`)}
+                          >
+                            {formatDisplayName(c.displayName)}
+                          </button>
+                        </TableCell>
+                        {columns
+                          .filter(x => visible.includes(x))
+                          .map(x => (
+                            <TableCell
+                              key={x}
+                              className="text-sm whitespace-nowrap capitalize"
+                            >
+                              {values[x]}
+                            </TableCell>
+                          ))}
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
-            )}
-          </CardContent>
-        </Card>
+              {items.length === 0 && (
+                <p className="p-8 text-center text-slate-500">
+                  No contacts match these filters.
+                </p>
+              )}
+            </div>
+          )}
+          <footer className="p-3 border-t flex items-center justify-between text-sm">
+            <span>
+              {total
+                ? `${page * 50 + 1}–${Math.min((page + 1) * 50, total)} of ${total}`
+                : "0 contacts"}
+            </span>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage(p => p - 1)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <span>Page {page + 1}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={(page + 1) * 50 >= total}
+                onClick={() => setPage(p => p + 1)}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </footer>
+        </div>
       </div>
-
-      {/* Add Contact — creates customer + first property in one transaction */}
       <AddContactModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}
-        onCreated={c => { refetch(); navigate(`/customers/${c.customerId}`); }}
+        onCreated={c => {
+          refetch();
+          navigate(`/customers/${c.customerId}`);
+        }}
       />
     </DashboardLayout>
   );
