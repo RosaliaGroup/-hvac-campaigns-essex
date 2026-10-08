@@ -39,6 +39,24 @@ describe("isGithubConfigured", () => {
 });
 
 describe("getNetlifyCheckState", () => {
+  it("accepts only a successful dedicated build check for the requested commit when Netlify is absent", async () => {
+    const mock = vi.fn().mockResolvedValueOnce(jsonResponse({ statuses: [] }))
+      .mockResolvedValueOnce(jsonResponse({ check_runs: [{ name: "SEO automation build", status: "completed", conclusion: "success" }] }));
+    global.fetch = mock as unknown as typeof fetch;
+    expect(await getNetlifyCheckState("head123")).toBe("success");
+    expect(mock.mock.calls[1][0]).toContain("/commits/head123/check-runs");
+  });
+  it.each(["failure", "cancelled", "skipped", "timed_out"])("blocks a build concluded %s", async (conclusion) => {
+    global.fetch = vi.fn().mockResolvedValueOnce(jsonResponse({ statuses: [] }))
+      .mockResolvedValueOnce(jsonResponse({ check_runs: [{ name: "SEO automation build", status: "completed", conclusion }] })) as unknown as typeof fetch;
+    expect(await getNetlifyCheckState("head123")).toBe("failure");
+  });
+  it("keeps an unfinished build pending", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce(jsonResponse({ statuses: [] }))
+      .mockResolvedValueOnce(jsonResponse({ check_runs: [{ name: "SEO automation build", status: "in_progress", conclusion: null }] })) as unknown as typeof fetch;
+    expect(await getNetlifyCheckState("head123")).toBe("pending");
+  });
+
   it("maps a netlify success status", async () => {
     global.fetch = vi.fn().mockResolvedValue(
       jsonResponse({ statuses: [{ context: "netlify/site/deploy-preview", state: "success" }] }),

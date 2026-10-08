@@ -185,9 +185,18 @@ export async function getNetlifyCheckState(headSha: string): Promise<"success" |
   const res = await gh(`/commits/${headSha}/status`);
   const data = (await res.json()) as { statuses?: Array<{ context: string; state: string }> };
   const netlify = data.statuses?.find((s) => s.context.toLowerCase().includes("netlify"));
-  if (!netlify) return "unknown";
-  if (netlify.state === "success" || netlify.state === "failure" || netlify.state === "pending") return netlify.state;
-  return "unknown";
+  if (netlify) {
+    if (netlify.state === "success" || netlify.state === "failure" || netlify.state === "pending") return netlify.state;
+    return "unknown";
+  }
+  // Railway hosts this project. Its PRs do not receive a Netlify preview;
+  // require the dedicated build check for this exact head commit instead.
+  const checksRes = await gh(`/commits/${headSha}/check-runs?per_page=100`);
+  const checks = (await checksRes.json()) as { check_runs?: Array<{ name: string; status: string; conclusion: string | null }> };
+  const build = checks.check_runs?.find((check) => check.name === "SEO automation build");
+  if (!build) return "unknown";
+  if (build.status !== "completed") return "pending";
+  return build.conclusion === "success" ? "success" : "failure";
 }
 
 type GhComment = { user?: { login?: string; type?: string } | null };

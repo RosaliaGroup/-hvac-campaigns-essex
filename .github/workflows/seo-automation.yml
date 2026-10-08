@@ -1,0 +1,24 @@
+name: SEO automation validation
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: seo-build-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: SEO automation build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run server/services/seo/circuitBreaker.test.ts server/services/seo/autoMerge.test.ts server/services/seo/warmupGate.test.ts server/services/seo/github.test.ts
+      - run: pnpm build

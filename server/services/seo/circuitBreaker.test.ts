@@ -26,9 +26,9 @@ describe("evaluateCircuitBreakerSignals (pure)", () => {
     expect(result.reason).toMatch(/revert/i);
   });
 
-  it("pauses when clicks are down more than 25%", () => {
-    expect(evaluateCircuitBreakerSignals({ ...clean, clicksDownPct: 0.26 }).shouldPause).toBe(true);
-    expect(evaluateCircuitBreakerSignals({ ...clean, clicksDownPct: 0.25 }).shouldPause).toBe(false); // exactly 25% is not "down more than 25%"
+  it("treats 90-day traffic declines as advisory", () => {
+    expect(evaluateCircuitBreakerSignals({ ...clean, clicksDownPct: 0.26 }).shouldPause).toBe(false);
+    expect(evaluateCircuitBreakerSignals({ ...clean, clicksDownPct: 0.25 }).shouldPause).toBe(false);
   });
 
   it("does not pause on a single Netlify failure — needs two in a row", () => {
@@ -84,6 +84,22 @@ beforeEach(() => {
 });
 
 describe("checkCircuitBreakerConditions (I/O wrapper)", () => {
+  it("recovers a persisted obsolete traffic pause after checking current signals", async () => {
+    vi.mocked(getAutopublishState).mockResolvedValue({ ...cleanState, circuitBreakerPaused: true, circuitBreakerReason: "Site-wide clicks are down 27% (90-day-window approximation of week-over-week)." });
+    const result = await checkCircuitBreakerConditions();
+    expect(result).toEqual({ shouldPause: false, reason: null, recovered: true });
+    expect(listAuditLog).toHaveBeenCalled();
+    expect(updateAutopublishState).toHaveBeenCalledWith({ circuitBreakerPaused: false, circuitBreakerReason: null, circuitBreakerPausedAt: null });
+    expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: "circuit_breaker_resumed" }));
+  });
+
+  it("keeps a current veto paused even when the stored reason is obsolete", async () => {
+    vi.mocked(getAutopublishState).mockResolvedValue({ ...cleanState, circuitBreakerPaused: true, circuitBreakerReason: "Site-wide clicks are down 27% (90-day-window approximation of week-over-week)." });
+    vi.mocked(listAuditLog).mockImplementation(async (filter) => filter?.action === "vetoed" ? ([{ id: 1 }] as never) : []);
+    expect((await checkCircuitBreakerConditions()).shouldPause).toBe(true);
+    expect(logAudit).not.toHaveBeenCalledWith(expect.objectContaining({ action: "circuit_breaker_resumed" }));
+  });
+
   it("short-circuits to the persisted reason once already paused, without re-querying signals", async () => {
     vi.mocked(getAutopublishState).mockResolvedValue({ ...cleanState, circuitBreakerPaused: true, circuitBreakerReason: "prior reason" });
     const result = await checkCircuitBreakerConditions();
