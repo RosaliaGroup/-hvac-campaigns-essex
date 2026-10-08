@@ -129,7 +129,7 @@ describe("Gmail replies", () => {
   });
 });
 
-it("replies to the quote requester in a new thread instead of the notification sender", async () => {
+it("replies to the quote requester while preserving the original email chain", async () => {
   const original = {
     provider: "gmail",
     channel: "email",
@@ -165,13 +165,15 @@ it("replies to the quote requester in a new thread instead of the notification s
             headers: [
               { name: "From", value: "noreply@mechanicalenterprise.com" },
               { name: "Subject", value: original.subject },
+              { name: "Message-ID", value: "<quote@example.com>" },
+              { name: "References", value: "<earlier@example.com>" },
             ],
           },
         })
       )
     )
     .mockResolvedValueOnce(
-      new Response(JSON.stringify({ id: "sent", threadId: "new-thread" }))
+      new Response(JSON.stringify({ id: "sent", threadId: "internal-thread" }))
     );
   await sendGmailReply(
     {
@@ -182,11 +184,11 @@ it("replies to the quote requester in a new thread instead of the notification s
     fetcher
   );
   const sent = JSON.parse(fetcher.mock.calls[2][1].body);
-  expect(sent.threadId).toBeUndefined();
+  expect(sent.threadId).toBe("internal-thread");
   expect(Buffer.from(sent.raw, "base64url").toString()).toContain(
     "To: client@example.com"
   );
-  expect(Buffer.from(sent.raw, "base64url").toString()).not.toContain(
-    "In-Reply-To"
+  expect(Buffer.from(sent.raw, "base64url").toString()).toContain(
+    "In-Reply-To: <quote@example.com>"
   );
 });
