@@ -1,3 +1,4 @@
+import EmailThreadList from "@/components/EmailThreadList";
 import ContactProfilePanel from "@/components/ContactProfilePanel";
 import { useState, type ReactNode } from "react";
 import { useLocation, useParams } from "wouter";
@@ -462,57 +463,70 @@ export default function CustomerDetail() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_280px] gap-5 items-start">
-          <aside className="rounded-md border bg-white p-5 space-y-5 lg:sticky lg:top-4">
-            <div className="border-b pb-4 space-y-2">
-              <div className="h-12 w-12 rounded-full bg-[#eaf0f6] flex items-center justify-center text-[#33475b] font-semibold">
-                {(customer.firstName || identity.name).slice(0, 1)}
-                {customer.lastName?.slice(0, 1)}
-              </div>
-              <h2 className="font-semibold text-lg text-[#33475b]">
-                {formatDisplayName(identity.name)}
-              </h2>
-              <p className="text-sm text-[#007a8c] break-all">
-                {customer.email}
-              </p>
-            </div>
-            <h2 className="font-semibold text-[#33475b]">About this contact</h2>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  navigate(`/contacts/communications?customerId=${customerId}`)
-                }
-              >
-                <Mail className="h-4 w-4 mr-1" />
-                Email / SMS
-              </Button>
-              <Button size="sm" variant="outline" onClick={openEdit}>
-                Edit
-              </Button>
-            </div>
-            <dl className="text-sm space-y-4">
-              {[
-                ["Email", customer.email],
-                ["Phone", customer.phone],
-                ["Company", customer.companyName],
-                ["Lifecycle stage", data.classification.lifecycle],
-                ["Contact role", data.classification.contactRole],
-                ["Service type", data.classification.serviceType],
-                ["Source", customer.source],
-              ].map(([label, value]) => (
-                <div key={label}>
-                  <dt className="text-xs text-slate-500 mb-1">{label}</dt>
-                  <dd className="break-words">{value || "—"}</dd>
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
+          <div className="min-w-0 space-y-4">
+            <aside className="rounded-md border bg-white p-5 space-y-5">
+              <div className="border-b pb-4 space-y-2">
+                <div className="h-12 w-12 rounded-full bg-[#eaf0f6] flex items-center justify-center text-[#33475b] font-semibold">
+                  {(customer.firstName || identity.name).slice(0, 1)}
+                  {customer.lastName?.slice(0, 1)}
                 </div>
-              ))}
-            </dl>
-            <p className="text-xs text-slate-500">
-              Email correspondence alone does not establish a sales
-              relationship.
-            </p>
-          </aside>
+                <h2 className="font-semibold text-lg text-[#33475b]">
+                  {formatDisplayName(identity.name)}
+                </h2>
+                <p className="text-sm text-[#007a8c] break-all">
+                  {customer.email}
+                </p>
+              </div>
+              <h2 className="font-semibold text-[#33475b]">
+                About this contact
+              </h2>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    navigate(
+                      `/contacts/communications?customerId=${customerId}`
+                    )
+                  }
+                >
+                  <Mail className="h-4 w-4 mr-1" />
+                  Email / SMS
+                </Button>
+                <Button size="sm" variant="outline" onClick={openEdit}>
+                  Edit
+                </Button>
+              </div>
+              <dl className="text-sm space-y-4">
+                {[
+                  ["Email", customer.email],
+                  ["Phone", customer.phone],
+                  ["Company", customer.companyName],
+                  ["Lifecycle stage", data.classification.lifecycle],
+                  ["Contact role", data.classification.contactRole],
+                  ["Service type", data.classification.serviceType],
+                  ["Source", customer.source],
+                ].map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-xs text-slate-500 mb-1">{label}</dt>
+                    <dd className="break-words">{value || "—"}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="text-xs text-slate-500">
+                Email correspondence alone does not establish a sales
+                relationship.
+              </p>
+            </aside>
+            <div>
+              <ContactProfilePanel
+                key={customerId}
+                customerId={customerId}
+                companyName={customer.companyName}
+              />
+            </div>
+          </div>
           <main className="min-w-0 space-y-4">
             <SummaryCards
               summary={summary}
@@ -882,45 +896,15 @@ export default function CustomerDetail() {
                         No synced email or SMS activity.
                       </p>
                     )}
-                    {messages.data?.map(message => (
-                      <article
-                        key={message.id}
-                        className="rounded border p-4 space-y-2"
-                      >
-                        <div className="flex justify-between gap-3 text-xs text-muted-foreground">
-                          <span>
-                            {message.channel === "email"
-                              ? "Email"
-                              : message.channel.toUpperCase()}{" "}
-                            ·{" "}
-                            {message.direction === "outbound"
-                              ? "Sent"
-                              : "Received"}
-                          </span>
-                          <time>{formatDate(message.occurredAt)}</time>
-                        </div>
-                        <h3 className="font-medium text-sm">
-                          {message.subject || "Text message"}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {message.fromAddress} → {message.toAddress}
-                        </p>
-                        <p className="text-sm whitespace-pre-wrap line-clamp-5">
-                          {message.body}
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() =>
-                            navigate(
-                              `/contacts/communications?customerId=${customerId}`
-                            )
-                          }
-                        >
-                          Open conversation / Reply
-                        </Button>
-                      </article>
-                    ))}
+                    <EmailThreadList
+                      messages={messages.data ?? []}
+                      contactName={identity.name}
+                      onOpen={messageId =>
+                        navigate(
+                          `/contacts/communications?customerId=${customerId}&messageId=${messageId}`
+                        )
+                      }
+                    />
                   </CardContent>
                 </Card>
 
@@ -943,13 +927,6 @@ export default function CustomerDetail() {
               </TabsContent>
             </Tabs>
           </main>
-          <div className="lg:col-span-2 xl:col-span-1">
-            <ContactProfilePanel
-              key={customerId}
-              customerId={customerId}
-              companyName={customer.companyName}
-            />
-          </div>
         </div>
       </div>
 
