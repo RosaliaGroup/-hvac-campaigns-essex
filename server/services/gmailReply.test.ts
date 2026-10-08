@@ -41,8 +41,17 @@ beforeEach(() => {
 });
 describe("Gmail replies", () => {
   it("refuses a different connected Gmail mailbox before sending", async () => {
-    const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify({ emailAddress: "other@example.com" })));
-    await expect(sendGmailReply({ externalContactId: 1, messageId: 2, body: "hi" }, fetcher)).rejects.toThrow("Connect sales@");
+    const fetcher = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ emailAddress: "other@example.com" }))
+      );
+    await expect(
+      sendGmailReply(
+        { externalContactId: 1, messageId: 2, body: "hi" },
+        fetcher
+      )
+    ).rejects.toThrow("Connect sales@");
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("rejects injected headers and encodes Unicode bodies", () => {
@@ -118,4 +127,66 @@ describe("Gmail replies", () => {
       })
     );
   });
+});
+
+it("replies to the quote requester in a new thread instead of the notification sender", async () => {
+  const original = {
+    provider: "gmail",
+    channel: "email",
+    providerMessageId: "notification",
+    direction: "inbound",
+    fromAddress: "noreply@mechanicalenterprise.com",
+    subject: "New Quote Request – Sample Contact",
+    body: "CONTACT INFO\nEmailclient@example.com Phone(201) 555-0100\nREQUEST DETAILS",
+  };
+  const limit = vi
+    .fn()
+    .mockResolvedValueOnce([original])
+    .mockResolvedValueOnce([{ email: "client@example.com" }]);
+  const chain: any = {
+    select: () => chain,
+    from: () => chain,
+    where: () => chain,
+    limit,
+  };
+  mocks.db.mockResolvedValue(chain);
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ emailAddress: "sales@mechanicalenterprise.com" })
+      )
+    )
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          threadId: "internal-thread",
+          payload: {
+            headers: [
+              { name: "From", value: "noreply@mechanicalenterprise.com" },
+              { name: "Subject", value: original.subject },
+            ],
+          },
+        })
+      )
+    )
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "sent", threadId: "new-thread" }))
+    );
+  await sendGmailReply(
+    {
+      externalContactId: 1,
+      messageId: 2,
+      body: "Can we schedule an estimate?",
+    },
+    fetcher
+  );
+  const sent = JSON.parse(fetcher.mock.calls[2][1].body);
+  expect(sent.threadId).toBeUndefined();
+  expect(Buffer.from(sent.raw, "base64url").toString()).toContain(
+    "To: client@example.com"
+  );
+  expect(Buffer.from(sent.raw, "base64url").toString()).not.toContain(
+    "In-Reply-To"
+  );
 });
