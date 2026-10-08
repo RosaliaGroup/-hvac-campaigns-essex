@@ -18,6 +18,7 @@ const personalDomains = new Set([
   "proton.me",
   "protonmail.com",
   "ymail.com",
+  "fastmail.com",
 ]);
 export function businessDomain(email?: string | null) {
   const domain = email?.trim().toLowerCase().split("@")[1];
@@ -27,13 +28,17 @@ export function publicUrl(value: unknown): string | null {
   try {
     const u = new URL(String(value));
     if (
-      u.protocol !== "https:" ||
+      !["https:", "http:"].includes(u.protocol) ||
       u.username ||
       u.password ||
       !u.hostname.includes(".") ||
       /^(localhost|127\.|10\.|192\.168\.|169\.254\.)/.test(u.hostname)
     )
       return null;
+    u.protocol = "https:";
+    u.hostname = u.hostname.replace(/^www\./, "");
+    u.hash = "";
+    u.pathname = u.pathname.replace(/\/$/, "") || "/";
     return u.href;
   } catch {
     return null;
@@ -66,7 +71,13 @@ export function validateResearch(
   };
   const name = fact(raw?.company?.name),
     website = fact(raw?.company?.website);
-  const websiteUrl = publicUrl(website?.value);
+  const websiteUrl = website?.value
+    ? publicUrl(
+        website.value.includes("://")
+          ? website.value
+          : `https://${website.value}`
+      )
+    : null;
   const domainMatch =
     domain &&
     websiteUrl &&
@@ -86,8 +97,9 @@ export function validateResearch(
       "description",
     ] as const) {
       const value = fact(raw?.company?.[key]);
-      if (value && (key !== "website" || publicUrl(value.value)))
-        company[key] = value;
+      if (value && key !== "website") company[key] = value;
+      else if (value && websiteUrl)
+        company.website = { ...value, value: websiteUrl };
     }
   const social: ContactProfile["social"] = [];
   for (const item of Array.isArray(raw?.social)

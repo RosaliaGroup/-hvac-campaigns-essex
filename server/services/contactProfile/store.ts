@@ -1,4 +1,4 @@
-import { eq, or, sql } from "drizzle-orm";
+import { and, desc, eq, or, sql } from "drizzle-orm";
 import {
   int,
   json,
@@ -7,8 +7,13 @@ import {
   varchar,
 } from "drizzle-orm/mysql-core";
 import { getDb } from "../../db";
-import { customers, crmExternalContacts } from "../../../drizzle/schema";
+import {
+  customers,
+  crmExternalContacts,
+  crmCommunications,
+} from "../../../drizzle/schema";
 import { upsertExternalContact } from "../crmCommunications";
+import { signatureCompany } from "./signature";
 import { researchContact } from "./research";
 import type { ContactProfile } from "../../../shared/contactProfile";
 const profiles = mysqlTable("crmContactProfiles", {
@@ -98,6 +103,7 @@ export async function contactProfile(
     if (!c) return null;
   }
   const identity = JSON.stringify({
+    version: 2,
     name: c.name,
     email: c.email,
     company: c.company,
@@ -121,11 +127,44 @@ export async function contactProfile(
     return saved.profile;
   if (running.has(c.id)) return running.get(c.id)!;
   const work = (async () => {
-    const profile = await researchContact({
-      name: c.name,
-      email: c.email,
-      company: c.company,
-    });
+    const messages = c.email
+      ? await db
+          .select()
+          .from(crmCommunications)
+          .where(
+            and(
+              eq(crmCommunications.fromAddress, c.email),
+              eq(crmCommunications.channel, "email"),
+              eq(crmCommunications.direction, "inbound"),
+              eq(crmCommunications.provider, "gmail")
+            )
+          )
+          .orderBy(desc(crmCommunications.occurredAt))
+          .limit(10)
+      : [];
+    const signature = messages
+      .map(message => signatureCompany(c, message))
+      .find(company => company.name);
+    let profile: ContactProfile;
+    try {
+      profile = await researchContact({
+        name: c.name,
+        email: c.email,
+        company: c.company || signature?.name?.value,
+      });
+    } catch {
+      profile = {
+        company: {},
+        social: [],
+        checkedAt: new Date().toISOString(),
+        status: "unavailable",
+        message:
+          "Public lookup could not finish. Company details from email are shown when available.",
+      };
+    }
+    profile.company = { ...signature, ...profile.company };
+    if (Object.keys(profile.company).length || profile.social.length)
+      profile.status = "matched";
     await db
       .insert(profiles)
       .values({ contactId: c.id, identity, profile })

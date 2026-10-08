@@ -96,3 +96,21 @@ describe("Sourced contact profiles", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 });
+
+it("accepts equivalent cited URL variants and bare company domains", () => {
+  const result = validateResearch(
+    {
+      company: {
+        ...company,
+        website: fact("www.example.com"),
+        name: { ...company.name, source: "http://www.example.com/about/" },
+      },
+      social: [{ ...person, url: personUrl + "/", source: personUrl + "/" }],
+    },
+    [companySource, personUrl],
+    { name: "Sample Person", email: "sample@example.com" }
+  );
+  expect(result.company.name?.value).toBe("Example Company");
+  expect(result.company.website?.value).toBe("https://example.com/");
+  expect(result.social).toHaveLength(1);
+});
