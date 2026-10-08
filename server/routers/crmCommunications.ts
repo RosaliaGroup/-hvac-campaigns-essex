@@ -1,3 +1,4 @@
+import { saveVerifiedProspect } from "../services/saveVerifiedProspect";
 import { and, desc, isNotNull, like, or, sql } from "drizzle-orm";
 import { crmExternalContacts, customers, leads, leadCaptures } from "../../drizzle/schema";
 import { gmailCrmStatus, syncGmailPage } from "../services/gmailCrm";
@@ -18,6 +19,18 @@ const dbOrThrow = async () => {
 };
 
 export const crmCommunicationsRouter = router({
+  saveVerifiedProspect: protectedProcedure
+    .input(z.object({
+      name: z.string().min(1).max(255),
+      title: z.string().min(1).max(255),
+      company: z.string().min(1).max(255),
+      email: z.string().email().max(320),
+      verificationUrl: z.string().url().max(2000),
+      phone: z.string().max(50).optional(),
+      propertyName: z.string().max(255).optional(),
+    }))
+    .mutation(({ input }) => saveVerifiedProspect(input)),
+
   contacts: protectedProcedure
     .input(z.object({ search: z.string().max(255).optional() }))
     .query(async ({ input }) => {
