@@ -1,3 +1,4 @@
+import ContactProfilePanel from "@/components/ContactProfilePanel";
 import { useState, type ReactNode } from "react";
 import { useLocation, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -461,8 +462,20 @@ export default function CustomerDetail() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-5 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)_280px] gap-5 items-start">
           <aside className="rounded-md border bg-white p-5 space-y-5 lg:sticky lg:top-4">
+            <div className="border-b pb-4 space-y-2">
+              <div className="h-12 w-12 rounded-full bg-[#eaf0f6] flex items-center justify-center text-[#33475b] font-semibold">
+                {(customer.firstName || identity.name).slice(0, 1)}
+                {customer.lastName?.slice(0, 1)}
+              </div>
+              <h2 className="font-semibold text-lg text-[#33475b]">
+                {formatDisplayName(identity.name)}
+              </h2>
+              <p className="text-sm text-[#007a8c] break-all">
+                {customer.email}
+              </p>
+            </div>
             <h2 className="font-semibold text-[#33475b]">About this contact</h2>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -509,7 +522,8 @@ export default function CustomerDetail() {
             />
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="flex-wrap h-auto">
-                <TabsTrigger value="summary">Summary</TabsTrigger>
+                <TabsTrigger value="timeline">Activities</TabsTrigger>
+                <TabsTrigger value="summary">Overview</TabsTrigger>
                 <TabsTrigger value="properties">
                   Properties ({counts.properties})
                 </TabsTrigger>
@@ -523,7 +537,6 @@ export default function CustomerDetail() {
                 <TabsTrigger value="invoices">
                   Invoices ({counts.invoices})
                 </TabsTrigger>
-                <TabsTrigger value="timeline">Activities</TabsTrigger>
               </TabsList>
 
               <TabsContent value="summary" className="space-y-4">
@@ -930,6 +943,13 @@ export default function CustomerDetail() {
               </TabsContent>
             </Tabs>
           </main>
+          <div className="lg:col-span-2 xl:col-span-1">
+            <ContactProfilePanel
+              key={customerId}
+              customerId={customerId}
+              companyName={customer.companyName}
+            />
+          </div>
         </div>
       </div>
 

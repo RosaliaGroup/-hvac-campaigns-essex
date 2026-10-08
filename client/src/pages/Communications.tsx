@@ -1,3 +1,4 @@
+import ContactProfilePanel from "@/components/ContactProfilePanel";
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -321,7 +322,7 @@ export default function Communications() {
             status.error?.message}
         </p>
       )}
-      <div className="grid md:grid-cols-[240px_minmax(0,1fr)] gap-4">
+      <div className="grid md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_280px] gap-4">
         <aside className="min-w-0">
           <nav aria-label="Communication folders" className="space-y-1 mb-6">
             {folders.map(item => (
@@ -703,6 +704,15 @@ export default function Communications() {
             </section>
           )}
         </section>
+        {contactId !== null && (
+          <div className="md:col-span-2 xl:col-span-1">
+            <ContactProfilePanel
+              key={contactId}
+              contactId={contactId}
+              companyName={card.data?.company}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
