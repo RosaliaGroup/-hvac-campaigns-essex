@@ -1,5 +1,7 @@
+import { quoteNotificationContact } from "./quoteNotification";
+import { composeMime } from "./gmailCompose";
 import { eq, and } from "drizzle-orm";
-import { crmCommunications } from "../../drizzle/schema";
+import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { addresses, CRM_MAILBOX, gmailCrmStatus } from "./gmailCrm";
@@ -97,11 +99,24 @@ export async function sendGmailReply(
       (h: { name: string; value: string }) =>
         h.name.toLowerCase() === name.toLowerCase()
     )?.value ?? "";
-  const to = (
-    original.direction === "inbound"
-      ? addresses(header("Reply-To") || header("From"))
-      : addresses(header("To"))
-  ).find(value => value !== CRM_MAILBOX);
+  const notification = quoteNotificationContact(
+    original.fromAddress ?? "",
+    original.subject ?? "",
+    original.body ?? ""
+  );
+  const [linkedContact] = notification
+    ? await db
+        .select()
+        .from(crmExternalContacts)
+        .where(eq(crmExternalContacts.id, input.externalContactId))
+        .limit(1)
+    : [];
+  const to = notification
+    ? linkedContact?.email?.trim().toLowerCase()
+    : (original.direction === "inbound"
+        ? addresses(header("Reply-To") || header("From"))
+        : addresses(header("To"))
+      ).find(value => value !== CRM_MAILBOX);
   if (!to) throw new Error("No reply recipient found.");
   const subject = /^re:/i.test(header("Subject"))
     ? header("Subject")
@@ -109,14 +124,16 @@ export async function sendGmailReply(
   const sent = await request("messages/send", {
     method: "POST",
     body: JSON.stringify({
-      raw: replyMime(
-        to,
-        subject,
-        input.body,
-        header("Message-ID"),
-        header("References")
-      ),
-      threadId: remote.threadId,
+      raw: notification
+        ? composeMime(to, subject, input.body)
+        : replyMime(
+            to,
+            subject,
+            input.body,
+            header("Message-ID"),
+            header("References")
+          ),
+      ...(notification ? {} : { threadId: remote.threadId }),
     }),
   });
   // Gmail has accepted the email. A logging failure must never invite a duplicate send.

@@ -1,3 +1,6 @@
+import { eq, and, sql } from "drizzle-orm";
+import { customers, crmCommunications } from "../../drizzle/schema";
+import { quoteNotificationContact } from "./quoteNotification";
 import { startJob } from "./asyncLaneJob";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { getDb } from "../db";
@@ -62,15 +65,23 @@ export function parseGmailMessage(message: GmailMessage) {
     ].includes(CRM_MAILBOX)
   )
     return null;
+  const body = plainText(message.payload);
+  const quoteContact =
+    direction === "inbound"
+      ? quoteNotificationContact(from.join(", "), header("Subject"), body)
+      : null;
   const contacts = (
     direction === "outbound"
       ? [...to, ...addresses(header("Cc")), ...addresses(header("Bcc"))]
-      : from
+      : quoteContact
+        ? [quoteContact.email]
+        : from
   ).filter(v => v !== CRM_MAILBOX);
   const occurredAt = new Date(Number(message.internalDate));
   if (!contacts.length || !Number.isFinite(occurredAt.getTime())) return null;
   return {
     contacts: Array.from(new Set(contacts)),
+    quoteContact,
     direction,
     fromAddress: from.join(", ").slice(0, 320),
     toAddress: to.join(", ").slice(0, 320),
@@ -78,7 +89,7 @@ export function parseGmailMessage(message: GmailMessage) {
     providerThreadId: message.threadId,
     occurredAt,
     subject: header("Subject").slice(0, 500),
-    body: plainText(message.payload) || null,
+    body: body || null,
   };
 }
 
@@ -202,11 +213,22 @@ export async function syncGmailPage(
         .find(
           (match: RegExpMatchArray) => match[2].trim().toLowerCase() === email
         );
-      const name = named?.[1].trim().replace(/^"|"$/g, "") || email;
+      const name =
+        parsed.quoteContact?.name ||
+        named?.[1].trim().replace(/^"|"$/g, "") ||
+        email;
+      const [quoteCustomer] = parsed.quoteContact
+        ? await db
+            .select({ id: customers.id })
+            .from(customers)
+            .where(sql`lower(trim(${customers.email})) = ${email}`)
+            .limit(1)
+        : [];
       const contact = await upsertExternalContact(db, {
         name,
         email,
         source: "gmail",
+        ...(quoteCustomer ? { customerId: quoteCustomer.id } : {}),
       });
       const customerId =
         parsed.direction === "outbound"
@@ -215,7 +237,21 @@ export async function syncGmailPage(
       linked.push({ ...contact, customerId });
     }
     const contact = linked[0];
-    const { contacts, ...communication } = parsed;
+    const { contacts, quoteContact, ...communication } = parsed;
+    // Re-sync must repair previously mislinked notifications, not create duplicates.
+    if (quoteContact)
+      await db
+        .update(crmCommunications)
+        .set({
+          externalContactId: contact.id,
+          ...(contact.customerId ? { customerId: contact.customerId } : {}),
+        })
+        .where(
+          and(
+            eq(crmCommunications.provider, "gmail"),
+            eq(crmCommunications.providerMessageId, parsed.providerMessageId)
+          )
+        );
     const result = await logCommunication(db, {
       ...communication,
       externalContactId: contact.id,

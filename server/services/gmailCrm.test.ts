@@ -71,12 +71,10 @@ describe("Gmail CRM", () => {
       { messages: [{ id: "gmail1" }] },
       message(CRM_MAILBOX, "A <a@example.com>, b@example.com"),
     ];
-    const fetcher = vi
-      .fn()
-      .mockImplementation(async () => ({
-        ok: true,
-        json: async () => responses.shift(),
-      }));
+    const fetcher = vi.fn().mockImplementation(async () => ({
+      ok: true,
+      json: async () => responses.shift(),
+    }));
     await syncGmailPage({}, fetcher);
     expect(mocks.promote).toHaveBeenCalledTimes(2);
     expect(mocks.upsert).toHaveBeenCalledWith(
@@ -223,5 +221,61 @@ describe("Gmail CRM", () => {
       imported: 0,
       duplicates: 1,
     });
+  });
+});
+
+describe("website quote notification messages", () => {
+  const quoteMessage = () => {
+    const m = message("noreply@mechanicalenterprise.com", CRM_MAILBOX);
+    m.payload.headers[2].value = "New Quote Request – Sample Contact";
+    m.payload.parts[1].body.data = Buffer.from(
+      "CONTACT INFO\nNameSample Contact Emailclient@example.com Phone(201) 555-0100\nREQUEST DETAILS\nMessagePlease quote a heat pump"
+    ).toString("base64url");
+    return m;
+  };
+  it("attributes the full inquiry body to the requester, keeping the actual sender", () => {
+    expect(parseGmailMessage(quoteMessage())).toMatchObject({
+      contacts: ["client@example.com"],
+      fromAddress: "noreply@mechanicalenterprise.com",
+      body: expect.stringContaining("Please quote a heat pump"),
+    });
+  });
+  it("repairs an already imported message link during re-sync", async () => {
+    const updateWhere = vi.fn().mockResolvedValue({});
+    const updateSet = vi.fn().mockReturnValue({ where: updateWhere });
+    const chain: any = {
+      select: () => chain,
+      from: () => chain,
+      where: () => chain,
+      limit: async () => [{ id: 42 }],
+      update: () => ({ set: updateSet }),
+    };
+    mocks.db.mockResolvedValue(chain);
+    mocks.upsert.mockResolvedValue({ id: 7, customerId: 42 });
+    mocks.log.mockResolvedValue({ id: 8, duplicate: true });
+    const fetcher = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ emailAddress: CRM_MAILBOX }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ messages: [{ id: "gmail1" }] }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => quoteMessage() });
+    expect(await syncGmailPage({}, fetcher)).toMatchObject({ duplicates: 1 });
+    expect(updateSet).toHaveBeenCalledWith({
+      externalContactId: 7,
+      customerId: 42,
+    });
+    expect(mocks.upsert).toHaveBeenCalledWith(
+      chain,
+      expect.objectContaining({
+        email: "client@example.com",
+        name: "Sample Contact",
+        customerId: 42,
+      })
+    );
   });
 });
