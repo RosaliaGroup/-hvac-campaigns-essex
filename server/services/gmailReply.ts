@@ -1,5 +1,4 @@
 import { quoteNotificationContact } from "./quoteNotification";
-import { composeMime } from "./gmailCompose";
 import { eq, and } from "drizzle-orm";
 import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { getDb } from "../db";
@@ -124,16 +123,14 @@ export async function sendGmailReply(
   const sent = await request("messages/send", {
     method: "POST",
     body: JSON.stringify({
-      raw: notification
-        ? composeMime(to, subject, input.body)
-        : replyMime(
-            to,
-            subject,
-            input.body,
-            header("Message-ID"),
-            header("References")
-          ),
-      ...(notification ? {} : { threadId: remote.threadId }),
+      raw: replyMime(
+        to,
+        subject,
+        input.body,
+        header("Message-ID"),
+        header("References")
+      ),
+      threadId: remote.threadId,
     }),
   });
   // Gmail has accepted the email. A logging failure must never invite a duplicate send.
