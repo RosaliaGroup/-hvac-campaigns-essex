@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,8 @@ export default function Communications() {
   const [contactId, setContactId] = useState<number | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pageToken, setPageToken] = useState<string | undefined>();
+  const handledSyncJob = useRef<string | null>(null);
+  const syncTotals = useRef({ imported: 0, duplicates: 0, skipped: 0 });
   const [notice, setNotice] = useState("");
   const [folder, setFolder] = useState<"all" | "inbox" | "sent" | "sms">("all");
   const [messageId, setMessageId] = useState<number | null>(null);
@@ -120,6 +122,8 @@ export default function Communications() {
       setJobId(null);
     }
     if (job.data?.status === "done") {
+      if (handledSyncJob.current === jobId) return;
+      handledSyncJob.current = jobId;
       const result = job.data.result as SyncResult | null;
       if (!result) {
         setNotice("Connect the Gmail account before syncing.");
@@ -127,12 +131,17 @@ export default function Communications() {
         return;
       }
       setPageToken(result.nextPageToken);
+      syncTotals.current.imported += result.imported;
+      syncTotals.current.duplicates += result.duplicates;
+      syncTotals.current.skipped += result.skipped;
       setNotice(
-        `${result.imported} emails added; ${result.duplicates} already recorded; ${result.skipped} skipped.`
+        `${syncTotals.current.imported} emails added; ${syncTotals.current.duplicates} already recorded; ${syncTotals.current.skipped} skipped.${result.nextPageToken ? " Reading the next page… Keep this page open." : " Sync complete."}`
       );
       setJobId(null);
       void contacts.refetch();
       if (contactId !== null) void timeline.refetch();
+      if (result.nextPageToken)
+        sync.mutate({ pageToken: result.nextPageToken });
     } else if (job.data?.status === "error") {
       setNotice(job.data.error ?? "Sync failed. Retry safely.");
       setJobId(null);
@@ -191,12 +200,19 @@ export default function Communications() {
           size="sm"
           className="rounded-full bg-white text-slate-800"
           disabled={!ready || Boolean(jobId) || sync.isPending}
-          onClick={() => sync.mutate({ pageToken })}
+          onClick={() => {
+            syncTotals.current = { imported: 0, duplicates: 0, skipped: 0 };
+            sync.mutate({ pageToken });
+          }}
         >
           <RefreshCw
             className={`h-4 w-4 mr-2 ${jobId ? "animate-spin" : ""}`}
           />
-          {pageToken ? "Sync next email page" : "Sync Gmail · last 30 days"}
+          {jobId || sync.isPending
+            ? "Syncing all email pages…"
+            : pageToken
+              ? "Resume Gmail sync"
+              : "Sync Gmail · last 30 days"}
         </Button>
         <Link
           className="text-blue-700 hover:underline"
