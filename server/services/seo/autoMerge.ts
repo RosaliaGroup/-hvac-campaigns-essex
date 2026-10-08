@@ -232,6 +232,14 @@ export async function runAutoMergeTick(): Promise<{ checked: number; merged: num
       console.log("[SEO] auto-merge tick: database unavailable");
       return { checked, merged };
     }
+    // Check even with no batches: a persisted obsolete pause otherwise never
+    // recovers, because the weekly job stopped creating batches.
+    const breaker = await checkCircuitBreakerConditions();
+    if (breaker.recovered && process.env.SEO_CONTENT_PIPELINE_ENABLED === "true") {
+      const { runWeeklyContentJob } = await import("./contentPipeline");
+      const outcome = await runWeeklyContentJob();
+      console.log(`[SEO] recovery content job: ${outcome.status}${outcome.status === "drafted" && outcome.autoApproved ? `, auto-approved to batch #${outcome.batchId}` : ""}`);
+    }
     const dueBatches = await db.select().from(seoApprovalBatches).where(and(eq(seoApprovalBatches.status, "pr_open"), isNotNull(seoApprovalBatches.holdUntil)));
     console.log(`[SEO] auto-merge tick: ${dueBatches.length} open batch(es) with a hold`);
     for (const batch of dueBatches) {

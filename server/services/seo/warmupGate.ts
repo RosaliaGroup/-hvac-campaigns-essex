@@ -25,6 +25,8 @@ function fieldFor(lane: AutopublishLane): "metaWarmupRemaining" | "contentWarmup
 
 /** True once this lane's warm-up requirement is satisfied — auto-merge is allowed (subject to every other gate). */
 export async function isWarmedUp(lane: AutopublishLane): Promise<boolean> {
+  // Explicit owner-selected automatic mode; persisted counters stay intact.
+  if (process.env.SEO_AUTOPUBLISH_ENABLED === "true" && process.env.SEO_AUTOPUBLISH_REQUIRE_WARMUP === "false") return true;
   const state = await getAutopublishState();
   return state[fieldFor(lane)] <= 0;
 }

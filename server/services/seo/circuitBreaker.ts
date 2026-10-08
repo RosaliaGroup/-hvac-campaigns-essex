@@ -10,12 +10,8 @@
  * wrapper real callers (the nightly/weekly jobs, before drafting or merging)
  * use.
  *
- * KNOWN APPROXIMATION: "week-over-week" clicks has no dedicated time-series
- * table (seoPages only tracks a 90-day window vs. the previous 90-day
- * window — see its schema comment). Rather than block this whole feature on
- * building a new weekly-snapshot pipeline, this reuses that 90-day delta as
- * a documented stand-in. It will trip later and less precisely than a true
- * WoW comparison would. Flagged here and in the final build report.
+ * Traffic declines are advisory until a real weekly time series is available.
+ * A 90-day comparison must not permanently disable content publishing.
  */
 import { desc } from "drizzle-orm";
 import { getDb } from "../../db";
@@ -28,7 +24,12 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
 const CLICKS_DOWN_THRESHOLD = 0.25;
 
-export type CircuitBreakerResult = { shouldPause: boolean; reason: string | null };
+/** Only the obsolete traffic-proxy pause can be recovered automatically. */
+export function isLegacyTrafficPause(reason: string | null): boolean {
+  return /^Site-wide clicks are down \d+% \(90-day-window approximation of week-over-week\)\.$/.test(reason ?? "");
+}
+
+export type CircuitBreakerResult = { shouldPause: boolean; reason: string | null; recovered?: true };
 
 export type CircuitBreakerSignals = {
   vetoInLast7Days: boolean;
@@ -49,12 +50,7 @@ export function evaluateCircuitBreakerSignals(signals: CircuitBreakerSignals): C
   if (signals.revertOpenedInLast14Days) {
     return { shouldPause: true, reason: "A revert was opened in the last 14 days." };
   }
-  if (signals.clicksDownPct !== null && signals.clicksDownPct > CLICKS_DOWN_THRESHOLD) {
-    return {
-      shouldPause: true,
-      reason: `Site-wide clicks are down ${(signals.clicksDownPct * 100).toFixed(0)}% (90-day-window approximation of week-over-week).`,
-    };
-  }
+  // clicksDownPct uses 90-day windows, not weeks: advisory only.
   if (signals.lastTwoAutoLaneNetlifyStates.length === 2 && signals.lastTwoAutoLaneNetlifyStates.every((s) => s === "failure")) {
     return { shouldPause: true, reason: "The Netlify preview failed for the last two auto-lane batches in a row." };
   }
@@ -102,7 +98,7 @@ async function last3ContentCriticBlocked(): Promise<boolean[]> {
 /** Fetch real signals, evaluate, and persist a pause if newly triggered. */
 export async function checkCircuitBreakerConditions(): Promise<CircuitBreakerResult> {
   const state = await getAutopublishState();
-  if (state.circuitBreakerPaused) {
+  if (state.circuitBreakerPaused && !isLegacyTrafficPause(state.circuitBreakerReason)) {
     return { shouldPause: true, reason: state.circuitBreakerReason };
   }
 
@@ -115,6 +111,10 @@ export async function checkCircuitBreakerConditions(): Promise<CircuitBreakerRes
     last3ContentCriticBlocked(),
   ]);
 
+  if (clicksDownPct !== null && clicksDownPct > CLICKS_DOWN_THRESHOLD) {
+    console.warn(`[SEO] Traffic advisory: clicks down ${(clicksDownPct * 100).toFixed(0)}% across 90-day windows; automatic publishing remains enabled subject to quality/build checks.`);
+  }
+
   const result = evaluateCircuitBreakerSignals({
     vetoInLast7Days: vetoes.length > 0,
     revertOpenedInLast14Days: reverts.length > 0,
@@ -125,6 +125,11 @@ export async function checkCircuitBreakerConditions(): Promise<CircuitBreakerRes
 
   if (result.shouldPause) {
     await pauseCircuitBreaker(result.reason ?? "Unknown trigger", null);
+  }
+  if (!result.shouldPause && state.circuitBreakerPaused && isLegacyTrafficPause(state.circuitBreakerReason)) {
+    await resumeCircuitBreaker("Owner requested automatic campaigns/blogs. Removed the invalid 90-day proxy for weekly traffic; current quality and build checks are clear.", null);
+    console.log("[SEO] Recovered obsolete traffic pause — automatic publishing resumed");
+    return { ...result, recovered: true };
   }
   return result;
 }
