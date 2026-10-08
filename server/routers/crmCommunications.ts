@@ -1,3 +1,4 @@
+import { contactProfile } from "../services/contactProfile/store";
 import { saveVerifiedProspect } from "../services/saveVerifiedProspect";
 import { and, desc, eq, isNotNull, like, or, sql } from "drizzle-orm";
 import { composeGmail } from "../services/gmailCompose";
@@ -27,19 +28,47 @@ const dbOrThrow = async () => {
   return db;
 };
 
+const profileInput = z
+  .object({
+    contactId: z.number().int().positive().optional(),
+    customerId: z.number().int().positive().optional(),
+  })
+  .refine(
+    v => Boolean(v.contactId) !== Boolean(v.customerId),
+    "Select one contact"
+  );
 export const crmCommunicationsRouter = router({
+  profile: protectedProcedure
+    .input(profileInput)
+    .query(({ input }) => contactProfile(input)),
+  enrichProfile: protectedProcedure
+    .input(profileInput)
+    .mutation(({ input }) =>
+      startJob({
+        kind: "crm-profile",
+        key: `crm-profile:${input.contactId ? "contact:" + input.contactId : "customer:" + input.customerId}`,
+        fn: () => contactProfile(input, true),
+      })
+    ),
+  profileJob: protectedProcedure
+    .input(z.object({ jobId: z.string() }))
+    .query(({ input }) => {
+      const job = getJob(input.jobId);
+      return job?.kind === "crm-profile" ? job : null;
+    }),
   saveVerifiedProspect: protectedProcedure
-    .input(z.object({
-      name: z.string().min(1).max(255),
-      title: z.string().min(1).max(255),
-      company: z.string().min(1).max(255),
-      email: z.string().email().max(320),
-      verificationUrl: z.string().url().max(2000),
-      phone: z.string().max(50).optional(),
-      propertyName: z.string().max(255).optional(),
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1).max(255),
+        title: z.string().min(1).max(255),
+        company: z.string().min(1).max(255),
+        email: z.string().email().max(320),
+        verificationUrl: z.string().url().max(2000),
+        phone: z.string().max(50).optional(),
+        propertyName: z.string().max(255).optional(),
+      })
+    )
     .mutation(({ input }) => saveVerifiedProspect(input)),
-
 
   contactCard: protectedProcedure
     .input(z.object({ id: z.number().int() }))
