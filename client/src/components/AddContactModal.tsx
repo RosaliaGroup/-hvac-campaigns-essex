@@ -61,6 +61,10 @@ export default function AddContactModal({
 
   const submit = () => {
     if(requireComplete) {
+      if(!form.firstName.trim()&&!form.lastName.trim()&&!form.companyName.trim()){
+        toast({title:"Name or company required",description:"Add a verified contact name or company before saving.",variant:"destructive"});
+        return;
+      }
       const emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
       const digits=form.phone.replace(/\D/g,"");
       const phoneOk=digits.length>=10&&digits.length<=15&&/^\+?[\d\s().-]+$/.test(form.phone.trim());
