@@ -33,10 +33,23 @@ export async function sync30DayFromGmail(
   }
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function read(path: string) {
-    const response = await fetchImpl(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      signal: AbortSignal.timeout(15_000),
-    });
+    let response: Response | undefined;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await fetchImpl(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          signal: AbortSignal.timeout(15_000),
+        });
+        if (response.status !== 429 && response.status < 500) break;
+        if (attempt === 2) break;
+      } catch (error) {
+        if (attempt === 2) {
+          throw new Error(`CRM Gmail follow-up transport failed after 3 attempts (path=${path}): ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+    if (!response) throw new Error(`CRM Gmail follow-up transport returned no response (path=${path})`);
     if (!response.ok) throw new Error(`CRM Gmail follow-up scan failed (HTTP ${response.status})`);
     return response.json();
   }
