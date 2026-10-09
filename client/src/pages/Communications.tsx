@@ -353,45 +353,7 @@ export default function Communications() {
               </button>
             ))}
           </nav>
-          <details
-            open={contactId === null}
-            className="mb-4 rounded-xl border bg-white"
-          >
-            <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-xs uppercase tracking-wide text-slate-500">
-              <Users className="h-4 w-4" />
-              Contacts & outreach
-            </summary>
-            <section className="max-h-64 overflow-y-auto space-y-1">
-              {contacts.isLoading && <p>Loading contacts…</p>}
-              {availableContacts.length === 0 && (
-                <p>
-                  No matching contacts. Search by name or email, or add a
-                  contact to the CRM.
-                </p>
-              )}
-              {availableContacts.map(contact => (
-                <button
-                  key={contact.id}
-                  onClick={() => {
-                    if (contact.id < 0)
-                      openCustomer.mutate({ customerId: -contact.id });
-                    else setContactId(contact.id);
-                    setMessageId(null);
-                  }}
-                  aria-pressed={contactId === contact.id}
-                  className={`block w-full text-left rounded-xl px-4 py-3 ${contactId === contact.id ? "bg-[#d3e3fd]" : "hover:bg-slate-200"}`}
-                >
-                  <strong className="block break-words">{contact.name}</strong>
-                  {contact.company && (
-                    <p className="text-sm break-words">{contact.company}</p>
-                  )}
-                  <p className="text-sm break-all">
-                    {contact.email ?? contact.phone}
-                  </p>
-                </button>
-              ))}
-            </section>
-          </details>
+
           {contactId !== null && (
             <section
               aria-label="Client contact card"
@@ -497,7 +459,7 @@ export default function Communications() {
             )}
             <div className="min-w-0">
               <h2 className="font-semibold truncate">
-                {selectedContact?.name ?? "Contacts & outreach"}
+                {selectedContact?.name ?? "Communications"}
               </h2>
               <p className="text-xs text-slate-500 truncate">
                 {selectedContact?.email ??
@@ -512,9 +474,48 @@ export default function Communications() {
             )}
           </div>
           {contactId === null ? (
-            <div className="flex flex-col items-center justify-center py-24 px-6 text-center text-slate-500">
+            <div className="flex flex-col items-center justify-center gap-4 py-8 px-6 text-center text-slate-500">
               <Inbox className="h-10 w-10 mb-4 text-blue-300" />
               <p>Select a contact to view messages or compose a new email.</p>
+          <details
+            open
+            className="w-full max-w-2xl rounded-xl border bg-white text-left"
+          >
+            <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-xs uppercase tracking-wide text-slate-500">
+              <Users className="h-4 w-4" />
+              Select a contact
+            </summary>
+            <section className="max-h-64 overflow-y-auto space-y-1">
+              {contacts.isLoading && <p>Loading contacts…</p>}
+              {availableContacts.length === 0 && (
+                <p>
+                  No matching contacts. Search by name or email, or add a
+                  contact to the CRM.
+                </p>
+              )}
+              {availableContacts.map(contact => (
+                <button
+                  key={contact.id}
+                  onClick={() => {
+                    if (contact.id < 0)
+                      openCustomer.mutate({ customerId: -contact.id });
+                    else setContactId(contact.id);
+                    setMessageId(null);
+                  }}
+                  aria-pressed={contactId === contact.id}
+                  className={`block w-full text-left rounded-xl px-4 py-3 ${contactId === contact.id ? "bg-[#d3e3fd]" : "hover:bg-slate-200"}`}
+                >
+                  <strong className="block break-words">{contact.name}</strong>
+                  {contact.company && (
+                    <p className="text-sm break-words">{contact.company}</p>
+                  )}
+                  <p className="text-sm break-all">
+                    {contact.email ?? contact.phone}
+                  </p>
+                </button>
+              ))}
+            </section>
+          </details>
             </div>
           ) : timeline.isLoading ? (
             <p className="p-6 text-slate-500">Loading messages…</p>
