@@ -249,6 +249,32 @@ export async function runAutoMergeTick(): Promise<{ checked: number; merged: num
     } catch (err) {
       console.error("[SEO] content queue reconciliation failed:", (err as Error).message);
     }
+    // One-time backlog recovery for the explicitly approved topic #15.
+    // Never open a second content PR, bypass draft QA, or skip the normal hold.
+    try {
+      const { listContentQueue } = await import("./contentQueue");
+      const { findLatestContentDraft, approveContentToPRWithAutopublish } = await import("./contentPipeline");
+      const { findOpenBatchWithPrefix, CONTENT_BRANCH_PREFIX } = await import("./batchBranches");
+      const { getFileContent } = await import("./github");
+      const topic = (await listContentQueue()).find(t => t.id === 15 && t.status === "drafted");
+      if (topic && process.env.SEO_AUTOPUBLISH_ENABLED === "true" && await isWarmedUp("content")) {
+        const open = await findOpenBatchWithPrefix(CONTENT_BRANCH_PREFIX);
+        if (!open) {
+          const draft = await findLatestContentDraft(topic.id);
+          if (draft?.passes && !draft.blocked && !breaker.shouldPause) {
+            const { content } = await getFileContent("client/src/data/blogPosts.ts", "main");
+            const slugs = new Set(Array.from(content.matchAll(/["']slug["']\\s*:\\s*["']([^"']+)["']/g), m => m[1]));
+            const alreadyExists = slugs.has(draft.post.slug);
+            if (!alreadyExists) {
+              const approved = await approveContentToPRWithAutopublish(topic.id, null);
+              console.log(`[SEO] approved recovered topic #15 to batch #${approved.batchId}`);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[SEO] topic #15 recovery deferred:", (err as Error).message);
+    }
     const dueBatches = await db.select().from(seoApprovalBatches).where(and(eq(seoApprovalBatches.status, "pr_open"), isNotNull(seoApprovalBatches.holdUntil)));
     console.log(`[SEO] auto-merge tick: ${dueBatches.length} open batch(es) with a hold`);
     for (const batch of dueBatches) {
