@@ -99,6 +99,7 @@ export async function sync30DayFromGmail(
     .where(eq(users.email, assigneeEmail)).limit(1);
   let created = 0;
   for (const candidate of candidates.values()) {
+    if (suppressed.has(candidate.email)) { skipped++; continue; }
     const [existing] = await db.select().from(crmExternalContacts)
       .where(eq(crmExternalContacts.email, candidate.email)).limit(1);
     if (cadenceExcluded({
