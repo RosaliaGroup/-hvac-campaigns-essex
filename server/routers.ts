@@ -598,6 +598,37 @@ export const appRouter = router({
         return leads.map((l: any) => ({ ...l, relationship: relationships.get(l.id) ?? deriveContactRelationship({ leadStages: [l.status] }) }));
       }),
 
+    /** Read-only rolling 30-day marketing baseline; no inferred qualification. */
+    marketingBaseline: protectedProcedure.query(async () => {
+      const dbi = await db.getDb();
+      if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const rows = await dbi.select({
+        id: leadCapturesTable.id, createdAt: leadCapturesTable.createdAt,
+        status: leadCapturesTable.status, channel: leadCapturesTable.channel,
+        captureType: leadCapturesTable.captureType, followUpAt: leadCapturesTable.followUpAt,
+        assignedTo: leadCapturesTable.assignedTo, firstTouchLandingPath: leadCapturesTable.firstTouchLandingPath,
+      }).from(leadCapturesTable).where(dGte(leadCapturesTable.createdAt, since));
+      const byChannel: Record<string, number> = {};
+      const byCaptureType: Record<string, number> = {};
+      const byStage: Record<string, number> = {};
+      let qualifiedStage = 0, newUnassigned = 0, followUpOverdue = 0;
+      const qualifiedStages = new Set(["qualified", "assessment_scheduled", "assessment_completed", "proposal_sent", "won", "booked"]);
+      const now = Date.now();
+      for (const row of rows) {
+        const channel = row.channel || "unknown";
+        byChannel[channel] = (byChannel[channel] || 0) + 1;
+        byCaptureType[row.captureType] = (byCaptureType[row.captureType] || 0) + 1;
+        byStage[row.status] = (byStage[row.status] || 0) + 1;
+        if (qualifiedStages.has(row.status)) qualifiedStage++;
+        if (row.status === "new" && !row.assignedTo) newUnassigned++;
+        if (row.followUpAt && new Date(row.followUpAt).getTime() < now && !["won", "lost"].includes(row.status)) followUpOverdue++;
+      }
+      return { windowDays: 30, since: since.toISOString(), totalCaptures: rows.length,
+        qualifiedStage, qualificationDefinition: "Qualified or advanced pipeline stage; not independently verified lead quality",
+        newUnassigned, followUpOverdue, byChannel, byCaptureType, byStage };
+    }),
+
     /** Single lead capture for the full-page Lead detail (Task 8B). */
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
