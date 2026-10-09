@@ -41,15 +41,13 @@ export const crmCommunicationsRouter = router({
   profile: protectedProcedure
     .input(profileInput)
     .query(({ input }) => contactProfile(input)),
-  enrichProfile: protectedProcedure
-    .input(profileInput)
-    .mutation(({ input }) =>
-      startJob({
-        kind: "crm-profile",
-        key: `crm-profile:${input.contactId ? "contact:" + input.contactId : "customer:" + input.customerId}`,
-        fn: () => contactProfile(input, true),
-      })
-    ),
+  enrichProfile: protectedProcedure.input(profileInput).mutation(({ input }) =>
+    startJob({
+      kind: "crm-profile",
+      key: `crm-profile:${input.contactId ? "contact:" + input.contactId : "customer:" + input.customerId}`,
+      fn: () => contactProfile(input, true),
+    })
+  ),
   profileJob: protectedProcedure
     .input(z.object({ jobId: z.string() }))
     .query(({ input }) => {
@@ -194,6 +192,108 @@ export const crmCommunicationsRouter = router({
         email: customer.email,
         phone: customer.phone,
         company: customer.companyName,
+        source: "crm",
+      });
+    }),
+  leadOptions: protectedProcedure
+    .input(z.object({ search: z.string().max(255).optional() }))
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      const term = `%${input.search ?? ""}%`;
+      const [manual, captures] = await Promise.all([
+        db
+          .select()
+          .from(leads)
+          .where(or(like(leads.name, term), like(leads.contact, term)))
+          .orderBy(desc(leads.updatedAt))
+          .limit(100),
+        db
+          .select()
+          .from(leadCaptures)
+          .where(
+            or(
+              like(leadCaptures.name, term),
+              like(leadCaptures.firstName, term),
+              like(leadCaptures.lastName, term),
+              like(leadCaptures.email, term),
+              like(leadCaptures.phone, term)
+            )
+          )
+          .orderBy(desc(leadCaptures.createdAt))
+          .limit(100),
+      ]);
+      return [
+        ...manual.map(l => ({
+          id: l.id,
+          kind: "lead" as const,
+          name: l.name,
+          email: l.contactType === "email" ? l.contact : null,
+          phone: l.contactType === "phone" ? l.contact : null,
+        })),
+        ...captures.map(l => ({
+          id: l.id,
+          kind: "capture" as const,
+          name:
+            l.name ||
+            [l.firstName, l.lastName].filter(Boolean).join(" ") ||
+            l.email ||
+            l.phone ||
+            "Lead",
+          email: l.email,
+          phone: l.phone,
+        })),
+      ];
+    }),
+  openLeadContact: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        kind: z.enum(["lead", "capture"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      const [linked] = await db
+        .select()
+        .from(crmExternalContacts)
+        .where(
+          input.kind === "lead"
+            ? eq(crmExternalContacts.leadId, input.id)
+            : eq(crmExternalContacts.leadCaptureId, input.id)
+        )
+        .limit(1);
+      if (linked) return linked;
+      if (input.kind === "lead") {
+        const [lead] = await db
+          .select()
+          .from(leads)
+          .where(eq(leads.id, input.id))
+          .limit(1);
+        if (!lead) throw new Error("Lead not found");
+        return upsertExternalContact(db, {
+          name: lead.name,
+          email: lead.contactType === "email" ? lead.contact : null,
+          phone: lead.contactType === "phone" ? lead.contact : null,
+          leadId: lead.id,
+          source: "crm",
+        });
+      }
+      const [lead] = await db
+        .select()
+        .from(leadCaptures)
+        .where(eq(leadCaptures.id, input.id))
+        .limit(1);
+      if (!lead) throw new Error("Lead not found");
+      return upsertExternalContact(db, {
+        name:
+          lead.name ||
+          [lead.firstName, lead.lastName].filter(Boolean).join(" ") ||
+          lead.email ||
+          lead.phone ||
+          "Lead",
+        email: lead.email,
+        phone: lead.phone,
+        leadCaptureId: lead.id,
         source: "crm",
       });
     }),

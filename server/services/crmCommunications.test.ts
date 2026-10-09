@@ -85,3 +85,11 @@ describe("CRM communications preservation", () => {
     ).rejects.toThrow("DB unavailable");
   });
 });
+
+it("links a lead to existing Gmail history without changing customer classification", async () => {
+  const db = fake([[{ id: 42, name: "Amit", email: "amit@example.com", customerId: 8 }]]);
+  const contact = await upsertExternalContact(db, { name: "Amit", email: "AMIT@example.com", leadCaptureId: 7 });
+  expect(contact).toMatchObject({ id: 42, customerId: 8, leadCaptureId: 7 });
+  expect(db.inserts).toHaveLength(0);
+  expect(db.updates[0]).not.toHaveProperty("customerId");
+});
