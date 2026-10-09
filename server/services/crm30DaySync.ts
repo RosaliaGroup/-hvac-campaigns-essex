@@ -91,14 +91,14 @@ export async function sync30DayFromGmail(
   }
 
   let cancelled = 0;
-  for (const email of suppressed) {
+  for (const email of Array.from(suppressed)) {
     cancelled += await cancelOpen30DayTasks(email, "Suppressed due to failed delivery or do-not-contact Gmail label.");
   }
   const assigneeEmail = process.env.CRM_FOLLOWUP_ASSIGNEE_EMAIL || CRM_MAILBOX;
   const [assignee] = await db.select({ id: users.id }).from(users)
     .where(eq(users.email, assigneeEmail)).limit(1);
   let created = 0;
-  for (const candidate of candidates.values()) {
+  for (const candidate of Array.from(candidates.values())) {
     if (suppressed.has(candidate.email)) { skipped++; continue; }
     const [existing] = await db.select().from(crmExternalContacts)
       .where(eq(crmExternalContacts.email, candidate.email)).limit(1);
