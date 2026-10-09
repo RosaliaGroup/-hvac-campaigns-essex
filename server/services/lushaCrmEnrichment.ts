@@ -5,7 +5,7 @@
 import { and, eq, or, isNull } from "drizzle-orm";
 import { crmExternalContacts } from "../../drizzle/schema";
 import { getDb } from "../db";
-import { classifyContactPhone } from "./crmContactEnrichment";
+import { classifyContactPhone, getContactEnrichment } from "./crmContactEnrichment";
 import { saveVerifiedLushaLinkedIn } from "./contactProfile/store";
 
 const API = "https://api.lusha.com/v3";
@@ -137,7 +137,8 @@ export async function revealLushaPhone(contactId: number, confirmedCreditSpend: 
   const {db,c} = await contactFor(contactId);
   if (cached.email !== c.email || cached.name !== c.name || cached.company !== c.company)
     throw new Error("CRM identity changed; run a new preview.");
-  if (c.phone?.trim()) throw new Error("This CRM contact already has a phone number; no paid reveal needed.");
+  if ((await getContactEnrichment(contactId)).phone?.trim())
+    throw new Error("This CRM contact or linked customer already has a phone number; no paid reveal needed.");
   if (!cached.canRevealPhones) throw new Error("Lusha has no phone data to reveal for this contact.");
   const body = await lushaPost("/contacts/enrich",{
     ids:[cached.lushaId],reveal:["phones"],waterfallEnabled:false,
