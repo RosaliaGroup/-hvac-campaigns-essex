@@ -1,20 +1,20 @@
-/** Gmail-labeled prospecting messages -> CRM reminders. No automatic sends. */
-import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
+/** Gmail-labeled prospecting messages -> 30-day CRM cadence. No automatic sends. */
+import { and, eq, gt } from "drizzle-orm";
 import { crmCommunications, crmExternalContacts, users } from "../../drizzle/schema";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { gmailCrmStatus, parseGmailMessage, CRM_MAILBOX, type GmailMessage } from "./gmailCrm";
 import { upsertExternalContact } from "./crmCommunications";
 import { ensureSentEmailContact } from "./sentEmailContact";
 import { startJob } from "./asyncLaneJob";
-import { excludeFromOutreachFollowups, followupDueAt, FOLLOWUP_STEPS } from "./crmFollowupRules";
-import { addCrmFollowupTask, followupDatabase, followupTasks, listCrmFollowupTasks } from "./crmFollowupTasks";
+import { cadenceExcluded, cadenceDueAt, THIRTY_DAY_STEPS } from "./crm30DayRules";
+import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks, cancelOpen30DayTasks, cancelTasksWithInboundReplies } from "./crm30DayTasks";
 
 type Candidate = {
   email: string; introAt: Date; messageId: string; threadId: string;
 };
 
 /** @slow Gmail API scan: invoke through async job, never inline in a mutation. */
-export async function syncCrmFollowupsFromGmail(
+export async function sync30DayFromGmail(
   lookbackDays: 10 | 35 = 10,
   fetchImpl: typeof fetch = fetch,
 ) {
@@ -23,7 +23,7 @@ export async function syncCrmFollowupsFromGmail(
       status.accountEmail?.toLowerCase() !== CRM_MAILBOX) {
     throw new Error("Connect sales@mechanicalenterprise.com with Gmail read access in CRM Integrations.");
   }
-  const db = await followupDatabase();
+  const db = await cadenceDatabase();
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function read(path: string) {
     const response = await fetchImpl(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
@@ -51,6 +51,7 @@ export async function syncCrmFollowupsFromGmail(
     .map((label: { id: string }) => label.id));
 
   const candidates = new Map<string, Candidate>();
+  const suppressed = new Set<string>();
   let pageToken: string | undefined;
   let scanned = 0, skipped = 0;
   // A bounded rolling window; manual 35-day backfill covers older introductions.
@@ -64,15 +65,18 @@ export async function syncCrmFollowupsFromGmail(
     for (const item of page.messages ?? []) {
       scanned++;
       const remote = await read(`messages/${encodeURIComponent(item.id)}?format=full`) as GmailMessage;
-      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId) ||
-          remote.labelIds.some(id => suppressionLabels.has(id))) {
+      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId)) {
         skipped++; continue;
       }
       const parsed = parseGmailMessage(remote);
       if (!parsed || parsed.direction !== "outbound") { skipped++; continue; }
+      if (remote.labelIds.some(id => suppressionLabels.has(id))) {
+        for (const email of parsed.contacts) suppressed.add(email.toLowerCase());
+        skipped++; continue;
+      }
       for (const email of parsed.contacts) {
         const normalized = email.toLowerCase();
-        if (excludeFromOutreachFollowups({ email: normalized })) { skipped++; continue; }
+        if (cadenceExcluded({ email: normalized })) { skipped++; continue; }
         const current = candidates.get(normalized);
         if (!current || parsed.occurredAt < current.introAt) {
           candidates.set(normalized, {
@@ -86,51 +90,63 @@ export async function syncCrmFollowupsFromGmail(
     if (!pageToken) break;
   }
 
+  let cancelled = 0;
+  for (const email of Array.from(suppressed)) {
+    cancelled += await cancelOpen30DayTasks(email, "Suppressed due to failed delivery or do-not-contact Gmail label.");
+  }
   const assigneeEmail = process.env.CRM_FOLLOWUP_ASSIGNEE_EMAIL || CRM_MAILBOX;
   const [assignee] = await db.select({ id: users.id }).from(users)
     .where(eq(users.email, assigneeEmail)).limit(1);
-  let created = 0, cancelled = 0;
+  let created = 0;
   for (const candidate of Array.from(candidates.values())) {
+    if (suppressed.has(candidate.email)) { skipped++; continue; }
     const [existing] = await db.select().from(crmExternalContacts)
       .where(eq(crmExternalContacts.email, candidate.email)).limit(1);
-    if (excludeFromOutreachFollowups({
-      email: candidate.email, name: existing?.name, company: existing?.company,
-    })) { skipped++; continue; }
+    if (cadenceExcluded({
+      email: candidate.email, name: existing?.name, company: existing?.company, notes: existing?.notes,
+    })) {
+      cancelled += await cancelOpen30DayTasks(candidate.email, "Contact excluded or opted out.");
+      skipped++; continue;
+    }
     const contact = existing ?? await upsertExternalContact(db, {
       name: candidate.email, email: candidate.email, source: "gmail-prospecting",
     });
     if (!contact.customerId) await ensureSentEmailContact(db, contact);
-    const [laterTouch] = await db.select({ id: crmCommunications.id })
+    // A reply (inbound contact communication) stops nurture. Unanswered outgoing
+    // call attempts do not stop the cadence; they count only when logged.
+    const [reply] = await db.select({ id: crmCommunications.id })
       .from(crmCommunications)
       .where(and(
         eq(crmCommunications.externalContactId, contact.id),
+        eq(crmCommunications.direction, "inbound"),
         gt(crmCommunications.occurredAt, candidate.introAt),
-        or(isNull(crmCommunications.providerMessageId),
-           ne(crmCommunications.providerMessageId, candidate.messageId)),
       )).limit(1);
-    for (const step of FOLLOWUP_STEPS) {
-      const note = laterTouch
-        ? "Later communication recorded. Review before any additional outreach."
-        : step.kind === "human"
-          ? "Personal contact due on day 2. Check replies, calls, texts and notes first."
-          : "Review current Gmail thread and CRM history first. This task never sends email.";
-      const inserted = await addCrmFollowupTask({
+    for (const step of THIRTY_DAY_STEPS) {
+      const note = reply
+        ? "Inbound response received. Cadence stopped; hand over to Ana."
+        : `Touch ${step.touch}/10, day ${step.day}: ${step.label}. ` +
+          (step.kind === "human"
+            ? "Log actual call attempt and outcome; an unanswered attempt does not stop the sequence."
+            : "Review Gmail and CRM before emailing. This reminder never sends an email.");
+      const inserted = await insert30DayTask({
         contactId: contact.id, email: candidate.email,
         introMessageId: candidate.messageId, introThreadId: candidate.threadId,
-        introAt: candidate.introAt, kind: step.kind,
-        dueAt: followupDueAt(candidate.introAt, step.kind),
+        introAt: candidate.introAt, touchNumber: step.touch, kind: step.kind,
+        dueAt: cadenceDueAt(candidate.introAt, step.touch),
         assignedToUserId: assignee?.id ?? null,
-        status: laterTouch ? "cancelled" : "open", note,
+        status: reply ? "cancelled" : "open", note,
       });
       if (inserted) created++;
     }
-    if (laterTouch) {
-      const result = await db.update(followupTasks)
-        .set({ status: "cancelled", note: "Later communication recorded. Review before any additional outreach." })
-        .where(and(eq(followupTasks.recipientEmail, candidate.email), eq(followupTasks.status, "open")));
+    if (reply) {
+      const result = await db.update(crm30DayTasks)
+        .set({ status: "cancelled", note: "Inbound response received. Hand off to Ana." })
+        .where(and(eq(crm30DayTasks.recipientEmail, candidate.email), eq(crm30DayTasks.status, "open")));
       cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
     }
   }
+  // Reconcile replies for older prospects outside the rolling Gmail intro window.
+  cancelled += await cancelTasksWithInboundReplies();
   return {
     scanned, created, cancelled, skipped,
     hasMore: Boolean(pageToken),
@@ -139,23 +155,23 @@ export async function syncCrmFollowupsFromGmail(
   };
 }
 
-export function startCrmFollowupScheduler() {
+export function start30DayCadenceScheduler() {
   if (process.env.NODE_ENV !== "production" ||
-      process.env.CRM_FOLLOWUP_SYNC_ENABLED === "false") return;
+      process.env.CRM_30_DAY_SYNC_ENABLED === "false") return;
   const run = () => {
     startJob({
-      kind: "crm-followup", key: "crm-followup-sync",
+      kind: "crm-30-day", key: "crm-30-day-sync",
       fn: async () => {
         try {
-          const result = await syncCrmFollowupsFromGmail(10);
-          const openTasks = await listCrmFollowupTasks({ status: "open" });
-          console.info("[CRM Follow-up] Scan:", JSON.stringify({
+          const result = await sync30DayFromGmail(10);
+          const openTasks = await list30DayTasks({ status: "open" });
+          console.info("[CRM 30-Day] Scan:", JSON.stringify({
             ...result, openTasksVisible: openTasks.length,
           }));
           return result;
         }
         catch (error) {
-          console.error("[CRM Follow-up] Sync failed:", error instanceof Error ? error.message : "Unknown error");
+          console.error("[CRM 30-Day] Sync failed:", error instanceof Error ? error.message : "Unknown error");
           throw error;
         }
       },

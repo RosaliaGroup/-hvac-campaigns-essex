@@ -1,5 +1,5 @@
 import { startGmailCrmScheduler } from "../services/gmailCrm";
-import { startCrmFollowupScheduler } from "../services/crmFollowupGmail";
+import { start30DayCadenceScheduler } from "../services/crm30DaySync";
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
@@ -134,7 +134,7 @@ async function startServer() {
     // Start daily Search Console → cache sync for SEO Intelligence
     startSeoSyncScheduler();
     startGmailCrmScheduler();
-    startCrmFollowupScheduler();
+    start30DayCadenceScheduler();
     // Start daily GA4 Analytics Data API → cache sync for Marketing Analytics
     startGa4SyncScheduler();
     // Start daily Business Profile → cache sync for Local SEO

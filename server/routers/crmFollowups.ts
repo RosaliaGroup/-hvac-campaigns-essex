@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getJob, startJob } from "../services/asyncLaneJob";
-import { assignAllOpenFollowups, assignCrmFollowupTask, listCrmFollowupTasks, updateCrmFollowupTask } from "../services/crmFollowupTasks";
-import { syncCrmFollowupsFromGmail } from "../services/crmFollowupGmail";
+import {
+  assign30DayTask, assignAll30DayTasks, list30DayTasks, complete30DayTask,
+} from "../services/crm30DayTasks";
+import { sync30DayFromGmail } from "../services/crm30DaySync";
 
 export const crmFollowupsRouter = router({
   list: protectedProcedure
@@ -10,32 +12,35 @@ export const crmFollowupsRouter = router({
       status: z.enum(["open", "done", "cancelled"]).optional(),
       contactId: z.number().int().positive().optional(),
     }).default({}))
-    .query(({ input }) => listCrmFollowupTasks(input)),
-  updateStatus: protectedProcedure
+    .query(({ input }) => list30DayTasks(input)),
+  complete: protectedProcedure
     .input(z.object({
       id: z.number().int().positive(),
-      status: z.enum(["open", "done", "cancelled"]),
+      outcome: z.enum([
+        "attempted_no_answer", "connected", "not_interested",
+        "reviewed_no_send", "sent_verified",
+      ]),
     }))
-    .mutation(({ input }) => updateCrmFollowupTask(input.id, input.status)),
+    .mutation(({ input }) => complete30DayTask(input.id, input.outcome)),
   assignToMe: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
-    .mutation(({ ctx, input }) => assignCrmFollowupTask(
+    .mutation(({ ctx, input }) => assign30DayTask(
       input.id, ctx.user.id, ctx.user.name || ctx.user.email || "CRM User",
     )),
   assignAllToMe: adminProcedure
-    .mutation(({ ctx }) => assignAllOpenFollowups(
+    .mutation(({ ctx }) => assignAll30DayTasks(
       ctx.user.id, ctx.user.name || ctx.user.email || "CRM User",
     )),
   syncOutreach: protectedProcedure
     .input(z.object({ lookbackDays: z.union([z.literal(10), z.literal(35)]).default(35) }))
     .mutation(({ input }) => startJob({
-      kind: "crm-followup", key: "crm-followup-sync",
-      fn: () => syncCrmFollowupsFromGmail(input.lookbackDays),
+      kind: "crm-30-day", key: "crm-30-day-sync",
+      fn: () => sync30DayFromGmail(input.lookbackDays),
     })),
   syncJob: protectedProcedure
     .input(z.object({ jobId: z.string().min(1) }))
     .query(({ input }) => {
       const job = getJob(input.jobId);
-      return job?.kind === "crm-followup" ? job : null;
+      return job?.kind === "crm-30-day" ? job : null;
     }),
 });
