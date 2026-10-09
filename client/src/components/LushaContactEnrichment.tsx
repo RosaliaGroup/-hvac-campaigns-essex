@@ -21,6 +21,7 @@ export default function LushaContactEnrichment({contactId,onUpdated}:{
   const updateIdentity=trpc.crmCommunications.upsertContact.useMutation({
     onSuccess:async()=>{
       try {
+        await utils.crmCommunications.contactCard.invalidate({id:contactId});
         const saved=await utils.crmCommunications.contactCard.fetch({id:contactId});
         if(saved.name!==name.trim()||saved.company!==company.trim())throw new Error("CRM identity readback did not match.");
         setNotice("Verified contact name and company saved.");setEditing(false);setPreview(null);
