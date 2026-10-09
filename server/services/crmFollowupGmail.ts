@@ -42,6 +42,13 @@ export async function syncCrmFollowupsFromGmail(
     scanned: 0, created: 0, cancelled: 0, skipped: 0,
     hasMore: false, note: "Outreach/Prospecting Sent label not found",
   };
+  // Do not create reminders for messages already suppressed by bounce/DNC hygiene.
+  const suppressionLabels = new Set((labels.labels ?? [])
+    .filter((label: { name?: string }) => [
+      "Prospecting - Failed Delivery", "HVAC Bounce Processed",
+      "Do Not Contact", "Unsubscribed",
+    ].includes(label.name ?? ""))
+    .map((label: { id: string }) => label.id));
 
   const candidates = new Map<string, Candidate>();
   let pageToken: string | undefined;
@@ -57,7 +64,8 @@ export async function syncCrmFollowupsFromGmail(
     for (const item of page.messages ?? []) {
       scanned++;
       const remote = await read(`messages/${encodeURIComponent(item.id)}?format=full`) as GmailMessage;
-      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId)) {
+      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId) ||
+          remote.labelIds.some(id => suppressionLabels.has(id))) {
         skipped++; continue;
       }
       const parsed = parseGmailMessage(remote);
