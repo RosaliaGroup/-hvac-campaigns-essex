@@ -7,7 +7,7 @@ import { upsertExternalContact } from "./crmCommunications";
 import { ensureSentEmailContact } from "./sentEmailContact";
 import { startJob } from "./asyncLaneJob";
 import { cadenceExcluded, cadenceDueAt, THIRTY_DAY_STEPS } from "./crm30DayRules";
-import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks } from "./crm30DayTasks";
+import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks, cancelOpen30DayTasks } from "./crm30DayTasks";
 
 type Candidate = {
   email: string; introAt: Date; messageId: string; threadId: string;
@@ -51,6 +51,7 @@ export async function sync30DayFromGmail(
     .map((label: { id: string }) => label.id));
 
   const candidates = new Map<string, Candidate>();
+  const suppressed = new Set<string>();
   let pageToken: string | undefined;
   let scanned = 0, skipped = 0;
   // A bounded rolling window; manual 35-day backfill covers older introductions.
@@ -64,12 +65,15 @@ export async function sync30DayFromGmail(
     for (const item of page.messages ?? []) {
       scanned++;
       const remote = await read(`messages/${encodeURIComponent(item.id)}?format=full`) as GmailMessage;
-      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId) ||
-          remote.labelIds.some(id => suppressionLabels.has(id))) {
+      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId)) {
         skipped++; continue;
       }
       const parsed = parseGmailMessage(remote);
       if (!parsed || parsed.direction !== "outbound") { skipped++; continue; }
+      if (remote.labelIds.some(id => suppressionLabels.has(id))) {
+        for (const email of parsed.contacts) suppressed.add(email.toLowerCase());
+        skipped++; continue;
+      }
       for (const email of parsed.contacts) {
         const normalized = email.toLowerCase();
         if (cadenceExcluded({ email: normalized })) { skipped++; continue; }
@@ -86,16 +90,23 @@ export async function sync30DayFromGmail(
     if (!pageToken) break;
   }
 
+  let cancelled = 0;
+  for (const email of suppressed) {
+    cancelled += await cancelOpen30DayTasks(email, "Suppressed due to failed delivery or do-not-contact Gmail label.");
+  }
   const assigneeEmail = process.env.CRM_FOLLOWUP_ASSIGNEE_EMAIL || CRM_MAILBOX;
   const [assignee] = await db.select({ id: users.id }).from(users)
     .where(eq(users.email, assigneeEmail)).limit(1);
-  let created = 0, cancelled = 0;
+  let created = 0;
   for (const candidate of candidates.values()) {
     const [existing] = await db.select().from(crmExternalContacts)
       .where(eq(crmExternalContacts.email, candidate.email)).limit(1);
     if (cadenceExcluded({
       email: candidate.email, name: existing?.name, company: existing?.company, notes: existing?.notes,
-    })) { skipped++; continue; }
+    })) {
+      cancelled += await cancelOpen30DayTasks(candidate.email, "Contact excluded or opted out.");
+      skipped++; continue;
+    }
     const contact = existing ?? await upsertExternalContact(db, {
       name: candidate.email, email: candidate.email, source: "gmail-prospecting",
     });
