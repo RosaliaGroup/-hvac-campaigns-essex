@@ -9,6 +9,7 @@ type Props = {
   contactId: number;
   contactName: string;
   phone: string | null;
+  phoneType?: "business" | "cell" | "unknown" | null;
   disabled?: boolean;
   onOutcome: (outcome: Outcome, note?: string) => void;
   onRefresh: () => void;
@@ -21,7 +22,7 @@ function dialable(phone: string) {
 /** Opens the device's dialer, then logs an explicit human-reported call outcome.
  *  This does not claim the browser has placed or recorded a provider call. */
 export default function TaskCallActions({
-  contactId, contactName, phone, disabled, onOutcome, onRefresh,
+  contactId, contactName, phone, phoneType, disabled, onOutcome, onRefresh,
 }: Props) {
   const [showLog, setShowLog] = useState(false);
   const [note, setNote] = useState("");
@@ -51,23 +52,24 @@ export default function TaskCallActions({
     if (!window.confirm("Confirm that you actually called this contact and want to record this outcome in CRM.")) return;
     onOutcome(outcome, note.trim() || undefined);
   };
-  return <div className="flex flex-col gap-2 items-start">
+  return <div className="flex w-full flex-col gap-2 items-start">
     {number ? <>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 w-full">
         <span className="text-sm font-medium tabular-nums" aria-label="Contact phone number">{phone}</span>
+        <span className="text-xs text-slate-600">{phoneType === "cell" ? "Verified cell" : phoneType === "business" ? "Business phone" : "Type unverified"}</span>
         <a href={`tel:${number}`} onClick={() => setShowLog(true)}
-          className="inline-flex items-center rounded-md bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800">
+          className="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800">
           <Phone className="mr-1 h-4 w-4"/>Call
         </a>
-        <Button size="sm" variant="outline" onClick={() => setShowLog(v => !v)}>
+        <Button size="sm" variant="outline" className="min-h-11" onClick={() => setShowLog(v => !v)}>
           {showLog ? "Hide call log" : "Log call"}
         </Button>
       </div>
-      {showLog && <div className="flex flex-col gap-2 rounded-lg border bg-slate-50 p-3 max-w-md">
+      {showLog && <div className="flex w-full flex-col gap-2 rounded-lg border bg-slate-50 p-3 max-w-md">
         <p className="text-xs text-slate-600">The Call button opens your device dialer. Record the result after your attempt; no call is automatically logged or recorded.</p>
         <Input aria-label="Optional call notes" placeholder="Call notes (optional)" maxLength={1000}
           value={note} onChange={e => setNote(e.target.value)}/>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 [&>button]:min-h-11">
           <Button size="sm" variant="outline" disabled={disabled} onClick={() => record("attempted_no_answer")}>No answer</Button>
           <Button size="sm" variant="outline" disabled={disabled} onClick={() => record("connected")}>Spoke · handoff</Button>
           <Button size="sm" variant="outline" disabled={disabled} onClick={() => record("not_interested")}>Not interested</Button>
