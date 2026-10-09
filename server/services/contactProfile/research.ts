@@ -166,7 +166,7 @@ export function validateResearch(
     if (!url || !source || !sources.has(url) || !sources.has(source) ||
         typeof item?.evidence !== "string") continue;
     const u = new URL(url);
-    const host = u.hostname.replace(/^www\\./, "");
+    const host = u.hostname.replace(/^www\./, "");
     const platform = ({
       "linkedin.com": "LinkedIn", "facebook.com": "Facebook",
       "instagram.com": "Instagram", "x.com": "X", "twitter.com": "X",
@@ -184,7 +184,7 @@ export function validateResearch(
     ...(companySocial.length ? { companySocial } : {}),
     checkedAt: new Date().toISOString(),
     status:
-      Object.keys(company).length || social.length ? "matched" : "not_found",
+      Object.keys(company).length || social.length || companySocial.length ? "matched" : "not_found",
   };
 }
 export async function researchContact(
