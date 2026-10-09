@@ -25,21 +25,13 @@ export async function upsertExternalContact(
 ) {
   const email = cleanEmail(input.email);
   const phone = cleanPhone(input.phone);
-  const matches =
-    !email && !phone
-      ? []
-      : await db
-          .select()
-          .from(crmExternalContacts)
-          .where(
-            or(
-              ...([
-                email ? eq(crmExternalContacts.email, email) : undefined,
-                phone ? eq(crmExternalContacts.phone, phone) : undefined,
-              ].filter(Boolean) as any)
-            )
-          )
-          .limit(1);
+  // A shared building/office phone is not a unique person identifier.
+  // Prefer exact email whenever present, and match phone only for SMS-only
+  // events that lack an email address.
+  const matches = !email && !phone ? [] : await db.select()
+    .from(crmExternalContacts)
+    .where(email ? eq(crmExternalContacts.email,email) : eq(crmExternalContacts.phone,phone!))
+    .limit(1);
   // Sparse provider events must not erase enriched contact details or CRM links.
   const patch = Object.fromEntries(
     Object.entries({ ...input, email, phone }).filter(
@@ -67,12 +59,13 @@ export async function upsertExternalContact(
   return { id, ...patch };
 }
 /** Queue immediately without holding up inbound Gmail, SMS or web lead capture.
- * The durable minute scheduler reconciles any interrupted requests.
+ * Only explicitly imported or TASK-sourced contacts qualify. The durable
+ * minute scheduler reconciles interrupted requests without importing Gmail.
  */
 function scheduleEnrichment(contactId:number,force:boolean) {
   void import("./automaticContactEnrichment").then(async worker => {
-    await worker.queueContactEnrichment(contactId,force);
-    await worker.processContactEnrichment(contactId);
+    const queued=await worker.queueContactEnrichment(contactId,force);
+    if(queued.queued) await worker.processContactEnrichment(contactId);
   }).catch(error=>console.warn("[CRM Auto Enrich] Queue deferred to scheduler",
     contactId,error instanceof Error?error.message:"unknown"));
 }
