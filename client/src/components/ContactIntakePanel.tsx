@@ -27,6 +27,7 @@ export default function ContactIntakePanel() {
       await Promise.all([
         utils.crmCommunications.contacts.invalidate(),
         utils.crmContactEnrichment.queue.invalidate(),
+        utils.customers.list.invalidate(),
       ]);
     },
     onError:e=>setNotice(e.message),
