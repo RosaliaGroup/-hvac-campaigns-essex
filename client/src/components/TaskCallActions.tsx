@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 
 type Outcome = "attempted_no_answer" | "connected" | "not_interested";
 type Props = {
-  taskId: number;
   contactId: number;
   contactName: string;
   phone: string | null;
@@ -22,7 +21,7 @@ function dialable(phone: string) {
 /** Opens the device's dialer, then logs an explicit human-reported call outcome.
  *  This does not claim the browser has placed or recorded a provider call. */
 export default function TaskCallActions({
-  taskId, contactId, contactName, phone, disabled, onOutcome, onRefresh,
+  contactId, contactName, phone, disabled, onOutcome, onRefresh,
 }: Props) {
   const [showLog, setShowLog] = useState(false);
   const [note, setNote] = useState("");
