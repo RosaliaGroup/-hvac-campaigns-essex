@@ -93,6 +93,20 @@ function validLinkedIn(value: unknown) {
 function linkedinOf(row: any) {
   return validLinkedIn(row?.socialLinks?.linkedin ?? row?.linkedinUrl ?? row?.linkedin);
 }
+/** Only accept a provider-classified business or mobile number. No inferred type. */
+export function selectVerifiedLushaPhone(phones: unknown):
+  { number: string; phoneType: "business" | "cell" } | null {
+  if (!Array.isArray(phones)) return null;
+  const valid = (p: any) => typeof p?.number === "string" &&
+    p.number.replace(/\\D/g, "").length >= 10 &&
+    p.number.replace(/\\D/g, "").length <= 15;
+  const work = phones.find((p: any) =>
+    valid(p) && ["direct", "work", "office", "business"].includes(String(p.type).toLowerCase()));
+  if (work) return {number:work.number.trim(),phoneType:"business"};
+  const mobile = phones.find((p: any) => valid(p) && String(p.type).toLowerCase() === "mobile");
+  return mobile ? {number:mobile.number.trim(),phoneType:"cell"} : null;
+}
+
 export function lushaConfigured() { return Boolean(process.env.LUSHA_API_KEY?.trim()); }
 
 /** Preview may consume Lusha's contact search credits, but does not reveal phone numbers. */
@@ -152,14 +166,10 @@ export async function revealLushaPhone(contactId: number, confirmedCreditSpend: 
     return {status:"restricted",saved:false,message:"Lusha compliance restriction; no data saved."};
   if (!row || row.error || !validateLushaIdentity(c,row))
     return {status:"mismatch",saved:false,message:"Enriched identity did not match the CRM name and company; no data saved."};
-  const phones = Array.isArray(row.phones) ? row.phones : [];
-  const selected = phones.find((p:any)=>["direct","work","office","business"].includes(String(p.type).toLowerCase())) ??
-    phones.find((p:any)=>String(p.type).toLowerCase()==="mobile");
-  const number = typeof selected?.number==="string" ? selected.number.trim() : "";
-  if (number.replace(/\D/g,"").length < 10 || number.replace(/\D/g,"").length > 15)
-    return {status:"no_phone",saved:false,message:"Lusha did not return a valid business contact number."};
+  const selected = selectVerifiedLushaPhone(row.phones);
+  if (!selected) return {status:"no_phone",saved:false,message:"Lusha did not return a valid classified contact number."};
+  const {number,phoneType:type} = selected;
   if (c.phone?.trim()) return {status:"already_present",saved:false,message:"Existing CRM phone preserved; no overwrite."};
-  const type = String(selected.type).toLowerCase()==="mobile" ? "cell" : "business";
   await db.update(crmExternalContacts).set({phone:number})
     .where(and(eq(crmExternalContacts.id,c.id),or(isNull(crmExternalContacts.phone),eq(crmExternalContacts.phone,""))));
   const [saved] = await db.select({phone:crmExternalContacts.phone}).from(crmExternalContacts)
