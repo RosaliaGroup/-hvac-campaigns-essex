@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getJob, startJob } from "../services/asyncLaneJob";
-import { assignCrmFollowupTask, listCrmFollowupTasks, updateCrmFollowupTask } from "../services/crmFollowupTasks";
+import { assignAllOpenFollowups, assignCrmFollowupTask, listCrmFollowupTasks, updateCrmFollowupTask } from "../services/crmFollowupTasks";
 import { syncCrmFollowupsFromGmail } from "../services/crmFollowupGmail";
 
 export const crmFollowupsRouter = router({
@@ -21,6 +21,10 @@ export const crmFollowupsRouter = router({
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(({ ctx, input }) => assignCrmFollowupTask(
       input.id, ctx.user.id, ctx.user.name || ctx.user.email || "CRM User",
+    )),
+  assignAllToMe: adminProcedure
+    .mutation(({ ctx }) => assignAllOpenFollowups(
+      ctx.user.id, ctx.user.name || ctx.user.email || "CRM User",
     )),
   syncOutreach: protectedProcedure
     .input(z.object({ lookbackDays: z.union([z.literal(10), z.literal(35)]).default(35) }))
