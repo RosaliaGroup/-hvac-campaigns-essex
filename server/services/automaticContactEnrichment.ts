@@ -54,6 +54,13 @@ async function database() {
   await ready;
   return db;
 }
+/** Only explicitly selected or TASK-sourced prospects enter automatic enrichment. */
+export const APPROVED_CONTACT_SOURCES = [
+  "gmail-prospecting","verified-hvac-prospect","crm-manual","gmail-selected",
+] as const;
+export function approvedContactSource(source:string|null|undefined) {
+  return APPROVED_CONTACT_SOURCES.includes(source as typeof APPROVED_CONTACT_SOURCES[number]);
+}
 const validEmail = (email: string | null | undefined) =>
   Boolean(email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()));
 const validPhone = (phone: string | null | undefined) =>
@@ -86,6 +93,10 @@ async function reserveCredits(credits:number) {
 }
 export async function queueContactEnrichment(contactId:number, force=false) {
   const db=await database();
+  const [contact]=await db.select({source:crmExternalContacts.source})
+    .from(crmExternalContacts).where(eq(crmExternalContacts.id,contactId)).limit(1);
+  if(!contact || !approvedContactSource(contact.source))
+    return {queued:false,contactId,reason:"Not a task prospect or explicitly imported contact"};
   await db.execute(sql`
     INSERT INTO crmContactEnrichmentJobs(contactId,status,nextAttemptAt)
     VALUES (${contactId},'pending',CURRENT_TIMESTAMP)
@@ -130,6 +141,10 @@ export async function processContactEnrichment(contactId:number) {
     const [c]=await db.select().from(crmExternalContacts)
       .where(eq(crmExternalContacts.id,contactId)).limit(1);
     if(!c){await finish(contactId,"blocked","Contact no longer exists");return {status:"blocked"};}
+    if(!approvedContactSource(c.source)){
+      await finish(contactId,"blocked","Source not approved for automatic enrichment");
+      return {status:"blocked"};
+    }
     const existing=await getContactEnrichment(contactId);
     if(!validEmail(c.email)){
       await finish(contactId,"review","Email required; keep incoming lead/message staged");
@@ -197,6 +212,15 @@ export async function processContactEnrichment(contactId:number) {
     try{await contactProfile({contactId},true);}
     catch(error){console.warn("[CRM Auto Enrich] Public profile research skipped",contactId,
       error instanceof Error?error.message:"unknown");}
+    // Promote a task-sourced prospect into the main Contacts/customer index
+    // ONLY after both email and phone are verified. Never promote generic Gmail.
+    if(c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect"){
+      const {ensureSentEmailContact}=await import("./sentEmailContact");
+      const [fresh]=await db.select().from(crmExternalContacts)
+        .where(eq(crmExternalContacts.id,contactId)).limit(1);
+      if(fresh?.email && validPhone(fresh.phone||after.phone))
+        await ensureSentEmailContact(db,{...fresh,phone:fresh.phone||after.phone});
+    }
     await finish(contactId,"complete","Valid email and phone; available verified profiles saved");
     return {status:"complete"};
   }catch(error){
@@ -219,7 +243,10 @@ export async function runContactEnrichmentBatch(limit=3) {
     // Backfill older imported Gmail/SMS contacts without changing their history.
     const missing=await db.select({id:crmExternalContacts.id}).from(crmExternalContacts)
       .leftJoin(contactEnrichmentJobs,eq(contactEnrichmentJobs.contactId,crmExternalContacts.id))
-      .where(isNull(contactEnrichmentJobs.contactId))
+      .where(and(
+        isNull(contactEnrichmentJobs.contactId),
+        sql`${crmExternalContacts.source} IN ('gmail-prospecting','verified-hvac-prospect','crm-manual','gmail-selected')`,
+      ))
       .orderBy(asc(crmExternalContacts.id)).limit(25);
     for(const item of missing)await queueContactEnrichment(item.id);
     const jobs=await db.select({id:contactEnrichmentJobs.contactId}).from(contactEnrichmentJobs)
