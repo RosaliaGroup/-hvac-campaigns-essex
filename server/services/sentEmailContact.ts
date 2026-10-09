@@ -35,9 +35,9 @@ export async function ensureSentEmailContact(
         email,
         phone: external.phone ?? null,
         companyName: external.company ?? null,
-        source: "Gmail Sent",
+        source: "HVAC Prospecting Task",
         notes:
-          "Contact imported from sent email. Role and service type are unclassified until confirmed.",
+          "Contact promoted from verified HVAC prospecting task after email and phone verification.",
       });
       customerId = Number(
         (result as unknown as [{ insertId: number }])[0].insertId
