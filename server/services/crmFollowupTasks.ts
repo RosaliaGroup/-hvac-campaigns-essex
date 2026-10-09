@@ -1,5 +1,5 @@
 /** Durable CRM reminders. These tasks never send email or SMS. */
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { crmExternalContacts } from "../../drizzle/schema";
 import { getDb } from "../db";
@@ -113,4 +113,25 @@ export async function assignCrmFollowupTask(id: number, userId: number, userName
   const [row] = await db.select().from(followupTasks).where(eq(followupTasks.id, id)).limit(1);
   if (!row || row.assignedToUserId !== userId) throw new Error("CRM task assignment not verified");
   return row;
+}
+
+/** Assign only currently unassigned open tasks to the verified CRM user. */
+export async function assignAllOpenFollowups(userId: number, userName: string) {
+  const db = await followupDatabase();
+  const unassigned = and(
+    eq(followupTasks.status, "open"),
+    isNull(followupTasks.assignedToUserId),
+  );
+  const [before] = await db.select({ total: sql<number>`count(*)` })
+    .from(followupTasks).where(unassigned);
+  await db.update(followupTasks)
+    .set({ assignedToUserId: userId, assignedToName: userName })
+    .where(unassigned);
+  const [after] = await db.select({ total: sql<number>`count(*)` })
+    .from(followupTasks).where(unassigned);
+  return {
+    assigned: Number(before?.total ?? 0) - Number(after?.total ?? 0),
+    remainingUnassigned: Number(after?.total ?? 0),
+    userId,
+  };
 }
