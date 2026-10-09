@@ -114,14 +114,14 @@ CURRENT PERFORMANCE:
 - Total all-time: ${context.totalAppointments} appointments
 
 AVAILABLE CHANNELS:
-- Google Ads (Search + Performance Max) — currently running
-- Facebook/Instagram Ads
+- Google Ads — paused; do not recommend activating or spending on ads
+- Unpaid Facebook/Instagram content and referrals
 - Jessica (AI phone assistant) — handles inbound calls
 - SMS follow-up sequences
 - Google Business Profile posts
 - Organic SEO
 
-Generate exactly 5 specific, actionable recommendations to close the gap to 20 appointments/week. For each recommendation that involves creating a new Google Ads campaign, include full campaign data.
+Generate exactly 5 specific, actionable ZERO-AD-SPEND recommendations to close the gap to 20 appointments/week. Do not recommend creating or activating paid campaigns, adjusting budgets, or any paid advertising. Use actionType manual or update_script and campaignData null. Do not invent results or performance lift.
 
 Return ONLY valid JSON in this exact format:
 {
@@ -153,7 +153,7 @@ For any recommendation with actionType "push_to_google_ads" or "create_campaign"
   "callToAction": "Get Free Quote"
 }
 
-Focus on what will generate the most appointments fastest given the current gap.`;
+Focus on no-additional-spend lead generation through SEO, referrals, existing CRM reactivation, opt-in follow-up and organic content. Avoid unverified rebate and service claims.`;
 
   try {
     const response = await invokeLLM({
@@ -220,7 +220,7 @@ Focus on what will generate the most appointments fastest given the current gap.
     if (!content) return getFallbackRecommendations(context.gapToGoal);
 
     const parsed = typeof content === "string" ? JSON.parse(content) : content;
-    return parsed.recommendations || getFallbackRecommendations(context.gapToGoal);
+    return (Array.isArray(parsed.recommendations) ? parsed.recommendations.filter((r: AIRecommendation) => !["adjust_budget","push_to_google_ads","create_campaign"].includes(r.actionType) && r.campaignData == null && !/\b(ads? budget|paid ads?|ad spend|google ads campaign)\b/i.test(r.action + " " + r.description)) : []).slice(0,5).length ? (parsed.recommendations as AIRecommendation[]).filter((r) => !["adjust_budget","push_to_google_ads","create_campaign"].includes(r.actionType) && r.campaignData == null && !/\b(ads? budget|paid ads?|ad spend|google ads campaign)\b/i.test(r.action + " " + r.description)).slice(0,5) : getFallbackRecommendations(context.gapToGoal);
   } catch (err) {
     console.error("[CampaignEngine] AI recommendation error:", err);
     return getFallbackRecommendations(context.gapToGoal);
@@ -228,71 +228,17 @@ Focus on what will generate the most appointments fastest given the current gap.
 }
 
 function getFallbackRecommendations(gapToGoal: number): AIRecommendation[] {
-  return [
-    {
-      id: "rec_fallback_1",
-      priority: gapToGoal > 15 ? "critical" : "high",
-      category: "budget",
-      title: "Increase Google Ads daily budget by 30%",
-      description: "Current campaigns are limited by budget. Increasing spend on the Heat Pump Rebates campaign will immediately generate more clicks and calls to Jessica.",
-      expectedImpact: "+4 to +6 appointments/week",
-      action: "Go to Google Ads → Heat Pump Rebates campaign → Budget → increase by 30%",
-      actionType: "adjust_budget",
-      campaignData: undefined,
-    },
-    {
-      id: "rec_fallback_2",
-      priority: "high",
-      category: "new_campaign",
-      title: "Launch Emergency HVAC Search Campaign",
-      description: "Emergency HVAC searches have high intent and convert at 3x the rate of general searches. A dedicated emergency campaign captures callers who need service today.",
-      expectedImpact: "+3 to +5 appointments/week",
-      action: "Push the Emergency HVAC campaign to Google Ads with $30/day budget",
-      actionType: "push_to_google_ads",
-      campaignData: {
-        name: "Emergency HVAC — Essex County",
-        type: "search",
-        budget: 30,
-        targetLocations: ["Essex County NJ", "Newark NJ", "Montclair NJ", "Bloomfield NJ"],
-        keywords: ["emergency hvac repair", "no heat emergency", "ac not working", "hvac emergency service newark", "24 hour hvac repair nj"],
-        headlines: ["24/7 Emergency HVAC Service", "No Heat? Call Now", "Same-Day HVAC Repair New Jersey", "Emergency AC Repair Essex County", "HVAC Emergency — We Come to You"],
-        descriptions: ["24/7 emergency HVAC service across New Jersey. $100 dispatch fee applied to repair. Call now.", "No heat or AC? Our technicians are on call 24/7 across Essex County and 14 other New Jersey counties."],
-        finalUrl: "https://mechanicalenterprise.com/lp/emergency",
-        callToAction: "Call Now",
-      },
-    },
-    {
-      id: "rec_fallback_3",
-      priority: "high",
-      category: "jessica",
-      title: "Add missed-call SMS follow-up for Jessica",
-      description: "When callers hang up before Jessica answers, an immediate SMS follow-up recovers 20-30% of those leads. Set up an automated text that fires within 60 seconds of a missed call.",
-      expectedImpact: "+2 to +4 appointments/week",
-      action: "Configure Vapi missed-call webhook to trigger Telnyx SMS: 'Hi, this is Jessica from Mechanical Enterprise! Sorry I missed you. Reply YES to schedule your free consultation or call (862) 423-9396.'",
-      actionType: "manual",
-      campaignData: undefined,
-    },
-    {
-      id: "rec_fallback_4",
-      priority: "medium",
-      category: "targeting",
-      title: "Add Montclair, Bloomfield, and Livingston to geo-targeting",
-      description: "These affluent Essex County towns have high heat pump conversion rates due to older homes and high energy costs. Adding them to targeting expands the addressable market by ~40,000 households.",
-      expectedImpact: "+2 to +3 appointments/week",
-      action: "In Google Ads, add Montclair NJ, Bloomfield NJ, and Livingston NJ to location targeting on all residential campaigns",
-      actionType: "manual",
-      campaignData: undefined,
-    },
-    {
-      id: "rec_fallback_5",
-      priority: "medium",
-      category: "creative",
-      title: "Add rebate dollar amounts to all ad headlines",
-      description: "Ads that mention specific dollar amounts ($16,000 rebate) get 35-50% higher CTR than generic ads. Update all residential campaign headlines to include the rebate amount.",
-      expectedImpact: "+15-25% CTR improvement → +2 appointments/week",
-      action: "Update all residential campaign headlines to include: 'Up to $16,000 in Rebates' and 'Zero Upfront Cost'",
-      actionType: "manual",
-      campaignData: undefined,
-    },
+  const ideas: Array<[AIRecommendation["category"], string, string, string]> = [
+    ["seo", "Verify organic blog publishing", "Inspect the scheduled draft-to-live pipeline and repair blocked batches without bypassing quality checks.", "Audit drafts, PR checks, deployment and live URLs."],
+    ["targeting", "Reactivate existing qualified CRM leads", "Review prior inquiries and estimates; follow up only with eligible contacts who have not opted out.", "Create owner tasks for stale qualified opportunities and track responses."],
+    ["creative", "Publish organic service content", "Repurpose verified HVAC expertise into free website, Google Business Profile and social posts.", "Prepare useful service FAQs and factual posts for review."],
+    ["jessica", "Recover missed inbound inquiries", "Check missed-call and form follow-up paths, respecting SMS consent and opt-outs.", "Audit callback tasks, booking links and message delivery."],
+    ["targeting", "Develop referral partnerships", "Reach out personally to relevant property managers and real estate partners using verified business details.", "Create a referral follow-up queue with source attribution."]
   ];
+  return ideas.map(([category,title,description,action],i) => ({
+    id: "organic_fallback_" + (i+1),
+    priority: i === 0 && gapToGoal > 0 ? "high" : "medium",
+    category, title, description, expectedImpact: "Not yet measured",
+    action, actionType: "manual", campaignData: null
+  }));
 }
