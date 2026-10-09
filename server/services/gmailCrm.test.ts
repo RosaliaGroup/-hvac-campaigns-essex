@@ -17,6 +17,14 @@ vi.mock("../db", () => ({ getDb: mocks.db }));
 vi.mock("./sentEmailContact", () => ({
   ensureSentEmailContact: mocks.promote,
 }));
+vi.mock("./outreachSuppression", () => ({
+  seedKnownOutreachSuppressions: vi.fn().mockResolvedValue(13),
+  recordOutreachSuppression: vi.fn().mockResolvedValue({}),
+  isExplicitOutreachOptOut: vi.fn().mockReturnValue(false),
+  KNOWN_OUTREACH_SUPPRESSIONS: [],
+}));
+vi.mock("./crm30DayTasks", () => ({ cancelOpen30DayTasks: vi.fn().mockResolvedValue(0) }));
+vi.mock("./crmFollowupTasks", () => ({ followupDatabase: vi.fn().mockResolvedValue({}), followupTasks: {} }));
 vi.mock("./crmCommunications", () => ({
   upsertExternalContact: mocks.upsert,
   logCommunication: mocks.log,
