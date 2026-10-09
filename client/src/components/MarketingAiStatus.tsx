@@ -24,6 +24,10 @@ export default function MarketingAiStatus() {
     onSuccess: () => { setError(""); lane.refetch(); queue.refetch(); jobs.refetch(); },
     onError: e => setError(e.message),
   });
+  const retryDraft = trpc.seo.retryRejectedContentDraft.useMutation({
+    onSuccess: () => { setError(""); queue.refetch(); lane.refetch(); },
+    onError: e => setError(e.message),
+  });
   const task = trpc.marketingAiTasks.submit.useMutation({
     onSuccess: (data) => { setResult(data); setError(""); setTitle(""); setInstructions(""); },
     onError: (e) => setError(e.message),
@@ -60,6 +64,16 @@ export default function MarketingAiStatus() {
               <p className="font-medium">Blog content pipeline</p>
               <p role="status">Content job: {lane.data?.status ?? "Checking"} {lane.data?.error ? `— ${lane.data.error}` : ""}</p>
               <p>Queued topics: {queue.data ? queue.data.filter(t => t.status === "queued" || t.status === "refresh_due").length : "Checking"}</p>
+              <div className="space-y-1">
+                <p className="font-medium">Retry a rejected blog draft</p>
+                <p className="text-xs text-muted-foreground">Regenerates through existing quality checks. One draft at a time; may use paid AI tokens.</p>
+                {(queue.data ?? []).filter(t => t.status === "drafted" && !t.contentBatchId).map(t => (
+                  <div key={t.id} className="flex items-center justify-between gap-2 text-xs border-b py-1">
+                    <span>{t.title}</span>
+                    <Button size="sm" variant="outline" disabled={retryDraft.isPending || runContent.isPending || lane.data?.status === "running"} onClick={() => retryDraft.mutate({ topicId: t.id })}>Retry</Button>
+                  </div>
+                ))}
+              </div>
               <p className="text-xs text-muted-foreground">Runs the existing admin-authorized draft workflow. Publishing still requires the configured warm-up, quality checks, and hold rules.</p>
               <Button size="sm" variant="outline" disabled={runContent.isPending || lane.data?.status === "running" || status.data?.circuitBreakerPaused} onClick={() => runContent.mutate()}>
                 {runContent.isPending || lane.data?.status === "running" ? "Content job running" : "Run blog content job now"}
