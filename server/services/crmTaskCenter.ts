@@ -4,6 +4,7 @@ import { opportunityTasks, opportunities, customers } from "../../drizzle/schema
 import { getDb } from "../db";
 import { crm30DayTasks, cadenceDatabase } from "./crm30DayTasks";
 import { crmExternalContacts } from "../../drizzle/schema";
+import { phoneMeta, enrichmentDb } from "./crmContactEnrichment";
 
 export type TaskState = "open" | "done" | "cancelled" | "all";
 export type ActionFilter = "all" | "call" | "email" | "text";
@@ -32,6 +33,7 @@ function dueClause(column: typeof crm30DayTasks.dueAt | typeof opportunityTasks.
 
 
 export async function outreachTaskPage(input: TaskPageInput) {
+  await enrichmentDb();
   const db = await cadenceDatabase();
   const term = input.search.trim().slice(0, 120);
   const filters = and(
@@ -57,9 +59,11 @@ export async function outreachTaskPage(input: TaskPageInput) {
     note: crm30DayTasks.note,
     name: crmExternalContacts.name, company: crmExternalContacts.company,
     phone: sql<string | null>`coalesce(${crmExternalContacts.phone}, ${customers.phone})`,
+    phoneType: phoneMeta.type,
   }).from(crm30DayTasks).leftJoin(
     crmExternalContacts, eq(crm30DayTasks.externalContactId, crmExternalContacts.id)
-  ).leftJoin(customers, eq(crmExternalContacts.customerId, customers.id));
+  ).leftJoin(customers, eq(crmExternalContacts.customerId, customers.id))
+    .leftJoin(phoneMeta, eq(crmExternalContacts.id, phoneMeta.contactId));
   const [rows, totals] = await Promise.all([
     base.where(filters).orderBy(asc(crm30DayTasks.dueAt), asc(crm30DayTasks.id))
       .limit(input.limit).offset(input.offset),
