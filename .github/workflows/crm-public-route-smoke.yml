@@ -1,0 +1,57 @@
+name: CRM public route smoke test
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/crm-public-route-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  public-route-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check live CRM frontend, assets, and API without credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          for origin in "https://hvac-campaigns-essex-production.up.railway.app" "https://mechanicalenterprise.com"; do
+            echo "::group::Public CRM smoke test: $origin"
+            for path in "/" "/tasks" "/team-login"; do
+              safe=$(echo "$path" | tr / _)
+              code=$(curl --retry 1 --connect-timeout 8 --max-time 30 -sSL \
+                -D "/tmp/headers-${safe}" -o "/tmp/body-${safe}" \
+                -w "%{http_code}" "$origin$path" || echo "000")
+              content_type=$(grep -i '^content-type:' "/tmp/headers-${safe}" | tail -1 | tr -d '\r' || true)
+              bytes=$(wc -c < "/tmp/body-${safe}" 2>/dev/null || echo 0)
+              echo "$path -> HTTP $code, $content_type, bytes=$bytes"
+              if [[ "$code" != 2* ]]; then
+                echo "::error::Page $origin$path returned HTTP $code"
+                exit 1
+              fi
+              if ! grep -q 'id="root"' "/tmp/body-${safe}"; then
+                echo "::warning::No root div found on $origin$path"
+              fi
+              if [[ "$path" == "/tasks" ]]; then
+                script=$(grep -oE 'src="/assets/[^"]+\.js"' "/tmp/body-${safe}" | head -1 | cut -d '"' -f2 || true)
+                echo "HTML script asset: ${script:-not found}"
+                if [[ -n "$script" ]]; then
+                  assetcode=$(curl --connect-timeout 8 --max-time 30 -sSL \
+                    -o /tmp/crm-asset.js -w "%{http_code}" "$origin$script" || echo "000")
+                  echo "JS asset -> HTTP $assetcode, bytes=$(wc -c </tmp/crm-asset.js 2>/dev/null || echo 0)"
+                  if [[ "$assetcode" != 2* ]]; then
+                    echo "::error::Frontend asset failed $origin$script HTTP $assetcode"
+                    exit 1
+                  fi
+                fi
+              fi
+            done
+            code=$(curl --connect-timeout 8 --max-time 30 -sSL \
+              -o /tmp/auth-body -w "%{http_code}" "$origin/api/trpc/auth.me" || echo "000")
+            echo "GET /api/trpc/auth.me -> HTTP $code, bytes=$(wc -c </tmp/auth-body 2>/dev/null || echo 0)"
+            if [[ "$code" != 2* && "$code" != "401" ]]; then
+              echo "::error::Auth API unhealthy: HTTP $code"
+              exit 1
+            fi
+            echo "::endgroup::"
+          done
