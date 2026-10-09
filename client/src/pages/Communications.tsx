@@ -1,3 +1,6 @@
+import EmailThreadList from "@/components/EmailThreadList";
+import EmailConversation from "@/components/EmailConversation";
+import { groupEmailThreads } from "@/lib/emailThreads";
 import ContactProfilePanel from "@/components/ContactProfilePanel";
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
@@ -40,7 +43,11 @@ export default function Communications() {
   const syncTotals = useRef({ imported: 0, duplicates: 0, skipped: 0 });
   const [notice, setNotice] = useState("");
   const [folder, setFolder] = useState<"all" | "inbox" | "sent" | "sms">("all");
-  const [messageId, setMessageId] = useState<number | null>(null);
+  const [messageId, setMessageId] = useState<number | null>(
+    () =>
+      Number(new URLSearchParams(window.location.search).get("messageId")) ||
+      null
+  );
   const [draft, setDraft] = useState("");
   const [subject, setSubject] = useState("");
   const openingCustomer = useRef<number | null>(null);
@@ -222,16 +229,22 @@ export default function Communications() {
     status.data.accountEmail?.toLowerCase() === status.data.mailbox;
   const selectedContact =
     card.data ?? contacts.data?.find(contact => contact.id === contactId);
-  const messages =
-    timeline.data?.filter(
+  const allThreads = groupEmailThreads(timeline.data ?? []);
+  const visibleThreads = allThreads.filter(thread =>
+    thread.messages.some(
       message =>
         folder === "all" ||
         (folder === "sms"
           ? message.channel === "sms"
           : message.channel === "email" &&
             message.direction === (folder === "inbox" ? "inbound" : "outbound"))
-    ) ?? [];
-  const selectedMessage = messages.find(message => message.id === messageId);
+    )
+  );
+  const messages = visibleThreads.flatMap(thread => thread.messages);
+  const selectedThread = visibleThreads.find(thread =>
+    thread.messages.some(message => message.id === messageId)
+  );
+  const selectedMessage = selectedThread?.latest;
   const folders = [
     { id: "all" as const, label: "All communications", icon: Mail },
     { id: "inbox" as const, label: "Inbox", icon: Inbox },
@@ -322,7 +335,7 @@ export default function Communications() {
             status.error?.message}
         </p>
       )}
-      <div className="grid md:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[240px_minmax(0,1fr)_280px] gap-4">
+      <div className="grid md:grid-cols-[240px_minmax(0,1fr)] gap-4">
         <aside className="min-w-0">
           <nav aria-label="Communication folders" className="space-y-1 mb-6">
             {folders.map(item => (
@@ -340,48 +353,12 @@ export default function Communications() {
               </button>
             ))}
           </nav>
-          <h2 className="flex items-center gap-2 px-4 mb-2 text-xs uppercase tracking-wide text-slate-500">
-            <Users className="h-4 w-4" />
-            Contacts & outreach
-          </h2>
-          <section className="max-h-[55vh] overflow-y-auto space-y-1">
-            {contacts.isLoading && <p>Loading contacts…</p>}
-            {availableContacts.length === 0 && (
-              <p>
-                No matching contacts. Search by name or email, or add a contact
-                to the CRM.
-              </p>
-            )}
-            {availableContacts.map(contact => (
-              <button
-                key={contact.id}
-                onClick={() => {
-                  if (contact.id < 0)
-                    openCustomer.mutate({ customerId: -contact.id });
-                  else setContactId(contact.id);
-                  setMessageId(null);
-                }}
-                aria-pressed={contactId === contact.id}
-                className={`block w-full text-left rounded-xl px-4 py-3 ${contactId === contact.id ? "bg-[#d3e3fd]" : "hover:bg-slate-200"}`}
-              >
-                <strong className="block break-words">{contact.name}</strong>
-                {contact.company && (
-                  <p className="text-sm break-words">{contact.company}</p>
-                )}
-                <p className="text-sm break-all">
-                  {contact.email ?? contact.phone}
-                </p>
-              </button>
-            ))}
-          </section>
-        </aside>
-        <section className="min-w-0 rounded-2xl bg-white overflow-hidden border border-slate-100 min-h-[60vh]">
           {contactId !== null && (
             <section
               aria-label="Client contact card"
-              className="border-b bg-slate-50 p-4 space-y-3"
+              className="rounded-xl border bg-white p-4 space-y-3 mt-4"
             >
-              <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid gap-3">
                 <label className="text-xs text-slate-500">
                   Client name
                   <Input
@@ -457,6 +434,53 @@ export default function Communications() {
               </div>
             </section>
           )}
+
+          {contactId !== null && (
+            <div className="mt-4">
+              <ContactProfilePanel
+                key={contactId}
+                contactId={contactId}
+                companyName={card.data?.company}
+              />
+            </div>
+          )}
+
+          <h2 className="flex items-center gap-2 px-4 mb-2 text-xs uppercase tracking-wide text-slate-500">
+            <Users className="h-4 w-4" />
+            Contacts & outreach
+          </h2>
+          <section className="max-h-[55vh] overflow-y-auto space-y-1">
+            {contacts.isLoading && <p>Loading contacts…</p>}
+            {availableContacts.length === 0 && (
+              <p>
+                No matching contacts. Search by name or email, or add a contact
+                to the CRM.
+              </p>
+            )}
+            {availableContacts.map(contact => (
+              <button
+                key={contact.id}
+                onClick={() => {
+                  if (contact.id < 0)
+                    openCustomer.mutate({ customerId: -contact.id });
+                  else setContactId(contact.id);
+                  setMessageId(null);
+                }}
+                aria-pressed={contactId === contact.id}
+                className={`block w-full text-left rounded-xl px-4 py-3 ${contactId === contact.id ? "bg-[#d3e3fd]" : "hover:bg-slate-200"}`}
+              >
+                <strong className="block break-words">{contact.name}</strong>
+                {contact.company && (
+                  <p className="text-sm break-words">{contact.company}</p>
+                )}
+                <p className="text-sm break-all">
+                  {contact.email ?? contact.phone}
+                </p>
+              </button>
+            ))}
+          </section>
+        </aside>
+        <section className="min-w-0 rounded-2xl bg-white overflow-hidden border border-slate-100 min-h-[60vh]">
           <div className="flex items-center gap-3 border-b px-5 py-4">
             {selectedMessage && (
               <button
@@ -479,7 +503,7 @@ export default function Communications() {
             </div>
             {contactId !== null && (
               <span className="ml-auto text-xs text-slate-500 whitespace-nowrap">
-                {messages.length} messages
+                {visibleThreads.length} conversations
               </span>
             )}
           </div>
@@ -491,39 +515,20 @@ export default function Communications() {
           ) : timeline.isLoading ? (
             <p className="p-6 text-slate-500">Loading messages…</p>
           ) : selectedMessage ? (
-            <article className="p-6 md:p-8 space-y-6">
+            <article className="p-5 md:p-7 space-y-5">
               <h2 className="text-2xl font-normal break-words">
-                {selectedMessage.subject ??
+                {selectedThread?.messages[0].subject?.replace(
+                  /^(?:(?:re|fwd?):\s*)+/i,
+                  ""
+                ) ||
                   (selectedMessage.channel === "sms"
                     ? "Text message"
                     : "No subject")}
               </h2>
-              <div className="flex flex-wrap items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-800 font-semibold">
-                  {(selectedMessage.fromAddress ?? selectedContact?.name ?? "?")
-                    .charAt(0)
-                    .toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold break-all">
-                    {selectedMessage.fromAddress}
-                  </p>
-                  <p className="text-xs text-slate-500 break-all">
-                    to {selectedMessage.toAddress}
-                  </p>
-                </div>
-                <p className="text-xs text-slate-500">
-                  {new Date(selectedMessage.occurredAt).toLocaleString()}
-                </p>
-              </div>
-              <p className="text-xs text-slate-500">
-                {selectedMessage.channel.toUpperCase()} ·{" "}
-                {selectedMessage.direction} · {selectedMessage.status}
-              </p>
-              <div className="whitespace-pre-wrap break-words text-sm leading-7">
-                {selectedMessage.body ??
-                  "This email has no plain-text body available."}
-              </div>
+              <EmailConversation
+                key={selectedThread?.key}
+                messages={selectedThread?.messages ?? []}
+              />
               {selectedMessage.channel === "email" &&
                 selectedMessage.provider === "gmail" && (
                   <Button
@@ -550,43 +555,11 @@ export default function Communications() {
               No messages in this folder for this contact.
             </p>
           ) : (
-            messages.map(message => (
-              <button
-                key={message.id}
-                onClick={() => setMessageId(message.id)}
-                className="grid w-full grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[160px_minmax(0,1fr)_90px] items-center gap-x-4 gap-y-1 border-b border-slate-100 px-5 py-3 text-left hover:bg-[#f2f6fc] focus-visible:outline-blue-500"
-              >
-                <span className="truncate text-sm font-medium">
-                  {message.direction === "outbound"
-                    ? "Me"
-                    : (selectedContact?.name ?? message.fromAddress)}
-                </span>
-                <span className="min-w-0 truncate text-sm row-start-2 lg:row-start-auto">
-                  <span className="mr-2 text-[10px] rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">
-                    {message.channel === "sms"
-                      ? "SMS"
-                      : message.direction === "outbound"
-                        ? "Sent"
-                        : "Inbox"}
-                  </span>
-                  <span className="font-medium">
-                    {message.subject ?? "No subject"}
-                  </span>
-                  <span className="text-slate-500">
-                    {" "}
-                    —{" "}
-                    {message.body?.replace(/\s+/g, " ") ??
-                      "No preview available"}
-                  </span>
-                </span>
-                <time className="text-xs text-slate-500 text-right col-start-2 row-start-1 lg:col-start-3">
-                  {new Date(message.occurredAt).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </time>
-              </button>
-            ))
+            <EmailThreadList
+              messages={messages}
+              contactName={selectedContact?.name}
+              onOpen={setMessageId}
+            />
           )}
           {compose && contactId !== null && (
             <section
@@ -673,10 +646,10 @@ export default function Communications() {
                         action: "send",
                         requestId,
                       });
-                    else if (compose === "email" && messageId !== null)
+                    else if (compose === "email" && selectedMessage)
                       reply.mutate({
                         externalContactId: contactId,
-                        messageId,
+                        messageId: selectedMessage.id,
                         body: draft,
                         requestId,
                       });
@@ -704,15 +677,6 @@ export default function Communications() {
             </section>
           )}
         </section>
-        {contactId !== null && (
-          <div className="md:col-span-2 xl:col-span-1">
-            <ContactProfilePanel
-              key={contactId}
-              contactId={contactId}
-              companyName={card.data?.company}
-            />
-          </div>
-        )}
       </div>
     </div>
   );
