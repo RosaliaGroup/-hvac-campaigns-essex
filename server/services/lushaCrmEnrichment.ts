@@ -19,6 +19,9 @@ const RESTRICTED_LUSHA_EMAILS = new Set([
   "sanjeannetta.worley@njit.edu",
   "mlee@tulfra.com",
   "drasmusson@crownpointgroup.com",
+  "adham.ebid@wrdc.net",
+  "phyllis@youngandassoc.com",
+  "sjennings@sanzari.com",
 ]);
 const previews = new Map<number, {
   lushaId: string; email: string; name: string; company: string;
