@@ -20,7 +20,7 @@ export const crmContactEnrichmentRouter = router({
     followed:z.boolean(),
   })).mutation(({input})=>setFollowConfirmed(input)),
   queue: protectedProcedure.input(z.object({
-    filter:z.enum(["all","missing_phone","unknown_type"]).default("missing_phone"),
+    filter:z.enum(["all","missing_phone","unknown_type","needs_social"]).default("missing_phone"),
     offset:z.number().int().min(0).default(0),
     limit:z.number().int().min(1).max(100).default(50),
   })).query(({input})=>listContactEnrichmentQueue(input)),
