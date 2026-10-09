@@ -57,6 +57,7 @@ import { portalRouter } from "./routers/portal";
 import { growthRouter } from "./routers/growth";
 import { crmCommunicationsRouter } from "./routers/crmCommunications";
 import { crmFollowupsRouter } from "./routers/crmFollowups";
+import { crmTasksRouter } from "./routers/crmTasks";
 import { enrollSpeedToLead } from "./services/growth/speedToLead";
 import { stopCadenceOnBooking } from "./services/growth/cadenceEngine";
 import { ensureReviewRequestForAppointment } from "./services/growth/reviewEngine";
@@ -105,6 +106,7 @@ export const appRouter = router({
   conversationCrm: conversationCrmRouter,
   crmCommunications: crmCommunicationsRouter,
   crmFollowups: crmFollowupsRouter,
+  crmTasks: crmTasksRouter,
   rebateCalculator: rebateCalculatorRouter,
   heygen: heygenRouter,
   takeoffs: takeoffsRouter,

@@ -2,7 +2,6 @@ import EmailThreadList from "@/components/EmailThreadList";
 import EmailConversation from "@/components/EmailConversation";
 import { groupEmailThreads } from "@/lib/emailThreads";
 import ContactProfilePanel from "@/components/ContactProfilePanel";
-import CrmFollowupTasks from "@/components/CrmFollowupTasks";
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -36,7 +35,7 @@ export default function Communications() {
     { enabled: customerId > 0 }
   );
   const [search, setSearch] = useState("");
-  const [contactId, setContactId] = useState<number | null>(null);
+  const [contactId, setContactId] = useState<number | null>(() => Number(new URLSearchParams(window.location.search).get("contactId")) || null);
   useEffect(() => {
     if (linkedContact.data) setContactId(linkedContact.data.id);
   }, [linkedContact.data?.id]);
@@ -385,7 +384,6 @@ export default function Communications() {
             status.error?.message}
         </p>
       )}
-      <CrmFollowupTasks onOpenContact={id => { setContactId(id); setMessageId(null); }} />
       <div className="grid min-w-0 md:h-[calc(100dvh-240px)] md:min-h-[420px] md:grid-cols-[280px_minmax(0,1fr)] gap-4">
         <aside className="min-w-0 md:h-full md:overflow-y-auto pr-1">
           <nav aria-label="Communication folders" className="space-y-1 mb-6">
