@@ -15,6 +15,7 @@ import {
 import { upsertExternalContact } from "../crmCommunications";
 import { signatureCompany } from "./signature";
 import { researchContact } from "./research";
+import { VERIFIED_SOCIAL_LINKS } from "./verifiedSocialLinks";
 import type { ContactProfile } from "../../../shared/contactProfile";
 const profiles = mysqlTable("crmContactProfiles", {
   contactId: int("contactId").primaryKey(),
@@ -65,6 +66,20 @@ export async function profileContact(input: {
     customerId: c.id,
   });
 }
+/** Merge independently verified public links; never imply a follow or connection. */
+function withVerifiedSocialLinks(profile: ContactProfile, email: string | null | undefined): ContactProfile {
+  const entries = VERIFIED_SOCIAL_LINKS.filter(p => p.email === email?.trim().toLowerCase());
+  if (!entries.length) return profile;
+  const social = [...(profile.social ?? [])];
+  const companySocial = [...(profile.companySocial ?? [])];
+  for (const entry of entries) {
+    const target = entry.kind === "company" ? companySocial : social;
+    if (!target.some(p => p.url === entry.url))
+      target.push({platform:entry.platform,url:entry.url,source:entry.source,evidence:entry.evidence});
+  }
+  return {...profile,social,companySocial,status:"matched"};
+}
+
 const running = new Map<number, Promise<ContactProfile>>();
 export async function contactProfile(
   input: { contactId?: number; customerId?: number },
@@ -163,6 +178,7 @@ export async function contactProfile(
       };
     }
     profile.company = { ...signature, ...profile.company };
+    profile = withVerifiedSocialLinks(profile, c.email);
     if (Object.keys(profile.company).length || profile.social.length)
       profile.status = "matched";
     await db
@@ -175,4 +191,44 @@ export async function contactProfile(
   })().finally(() => running.delete(c.id));
   running.set(c.id, work);
   return work;
+}
+
+/** One-time startup seed: attach only verified public LinkedIn links to existing exact-email CRM contacts. */
+export async function backfillVerifiedSocialLinks() {
+  const db = await database();
+  let updated=0, unchanged=0, missing=0;
+  const errors: Array<{email:string;error:string}>=[];
+  const emails = [...new Set(VERIFIED_SOCIAL_LINKS.map(x=>x.email))];
+  for (const email of emails) {
+    try {
+      const [contact] = await db.select().from(crmExternalContacts)
+        .where(eq(crmExternalContacts.email,email)).limit(1);
+      if (!contact) {missing++;continue;}
+      const [stored] = await db.select().from(profiles)
+        .where(eq(profiles.contactId,contact.id)).limit(1);
+      const base: ContactProfile = stored?.profile ?? {
+        company:{},social:[],checkedAt:new Date().toISOString(),status:"not_found",
+      };
+      const merged=withVerifiedSocialLinks(base,contact.email);
+      if (JSON.stringify(merged) === JSON.stringify(base)) {unchanged++;continue;}
+      const identity=JSON.stringify({version:2,name:contact.name,email:contact.email,company:contact.company});
+      await db.insert(profiles).values({contactId:contact.id,identity,profile:merged})
+        .onDuplicateKeyUpdate({set:{identity,profile:merged,updatedAt:new Date()}});
+      const [readback]=await db.select({profile:profiles.profile}).from(profiles)
+        .where(eq(profiles.contactId,contact.id)).limit(1);
+      const expected=VERIFIED_SOCIAL_LINKS.filter(p=>p.email===email);
+      const actual=[...(readback?.profile?.social??[]),...(readback?.profile?.companySocial??[])];
+      if (!expected.every(p=>actual.some(a=>a.url===p.url))) throw new Error("LinkedIn CRM write readback mismatch");
+      updated++;
+    } catch(e) {errors.push({email,error:e instanceof Error?e.message:"Unknown error"});}
+  }
+  return {verifiedLinks:VERIFIED_SOCIAL_LINKS.length,updated,unchanged,missing,errors};
+}
+export function startVerifiedSocialBackfill() {
+  if(process.env.NODE_ENV!=="production" || process.env.CRM_VERIFIED_SOCIAL_BACKFILL_ENABLED==="false")return;
+  const timer=setTimeout(()=>{
+    void backfillVerifiedSocialLinks().then(result=>console.info("[CRM Verified LinkedIn]",JSON.stringify(result)))
+      .catch(error=>console.error("[CRM Verified LinkedIn] backfill failed",error instanceof Error?error.message:"Unknown error"));
+  },75_000);
+  timer.unref();
 }

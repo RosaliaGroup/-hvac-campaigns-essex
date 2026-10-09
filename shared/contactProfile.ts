@@ -13,6 +13,7 @@ export type ContactProfile = {
     source: string;
     evidence: string;
   }>;
+  companySocial?: Array<{ platform: string; url: string; source: string; evidence: string }>;
   checkedAt: string;
   status: "matched" | "not_found" | "unavailable";
   message?: string;

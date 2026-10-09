@@ -57,6 +57,7 @@ import { portalRouter } from "./routers/portal";
 import { growthRouter } from "./routers/growth";
 import { marketingAiTasksRouter } from "./routers/marketingAiTasks";
 import { crmCommunicationsRouter } from "./routers/crmCommunications";
+import { crmContactEnrichmentRouter } from "./routers/crmContactEnrichment";
 import { crmFollowupsRouter } from "./routers/crmFollowups";
 import { crmTasksRouter } from "./routers/crmTasks";
 import { enrollSpeedToLead } from "./services/growth/speedToLead";
@@ -106,6 +107,7 @@ export const appRouter = router({
   smsCampaigns: smsCampaignsRouter,
   conversationCrm: conversationCrmRouter,
   crmCommunications: crmCommunicationsRouter,
+  crmContactEnrichment: crmContactEnrichmentRouter,
   crmFollowups: crmFollowupsRouter,
   crmTasks: crmTasksRouter,
   rebateCalculator: rebateCalculatorRouter,
