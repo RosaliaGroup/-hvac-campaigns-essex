@@ -122,7 +122,6 @@ export default function CrmTasks(){
           {!task.assignedToUserId&&<Button size="sm" variant="outline" disabled={busy}
             onClick={()=>assign.mutate({id:task.id})}>Assign to me</Button>}
           {task.kind==="human"?<TaskCallActions
-            taskId={task.id}
             contactId={task.externalContactId}
             contactName={task.name || task.recipientEmail}
             phone={task.phone}
