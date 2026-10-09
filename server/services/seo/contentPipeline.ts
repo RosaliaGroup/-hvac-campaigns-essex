@@ -208,7 +208,12 @@ export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS)
     if (!topic || blockedTopicIds.includes(topic.id)) return lastBlocked ?? { status: "no_topic" };
 
     if (isResidentialOrRebateTopic(topic)) {
-      return { status: "refused_residential_rebate", topicId: topic.id };
+      // Set aside refused topics so later eligible topics can proceed.
+      await updateQueueStatus(topic.id, "drafted");
+      console.warn("[SEO] content topic refused by safety gate; set aside:", topic.id);
+      blockedTopicIds.push(topic.id);
+      lastBlocked = { status: "refused_residential_rebate", topicId: topic.id };
+      continue;
     }
     if (!isFactsConfigured(facts)) {
       return { status: "facts_not_configured" };
