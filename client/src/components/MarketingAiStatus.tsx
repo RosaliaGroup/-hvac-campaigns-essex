@@ -18,7 +18,7 @@ export default function MarketingAiStatus() {
   const [error, setError] = useState("");
   const status = trpc.seo.autopublishStatus.useQuery(undefined, { refetchInterval: 30000, retry: 1 });
   const jobs = trpc.seo.getActiveJobs.useQuery(undefined, { enabled: admin, refetchInterval: 15000, retry: 1 });
-  const lane = trpc.seo.getLaneJobStatus.useQuery({ lane: "content" }, { enabled: admin && open, refetchInterval: 5000, retry: 1 });
+  const lane = trpc.seo.getLaneJobStatus.useQuery({ lane: "content" }, { enabled: admin, refetchInterval: 5000, retry: 1 });
   const queue = trpc.seo.listContentQueue.useQuery(undefined, { enabled: admin && open, refetchInterval: 30000, retry: 1 });
   const runContent = trpc.seo.runContentJobNow.useMutation({
     onSuccess: () => { setError(""); lane.refetch(); queue.refetch(); jobs.refetch(); },
@@ -29,8 +29,8 @@ export default function MarketingAiStatus() {
     onError: (e) => setError(e.message),
   });
   const paused = !!status.data?.circuitBreakerPaused || status.isError;
-  const active = admin && Array.isArray(jobs.data) && jobs.data.length > 0;
-  const state = paused ? "Needs attention" : active ? "Working" : status.isLoading ? "Checking" : "Idle";
+  const active = admin && (lane.data?.status === "running" || (Array.isArray(jobs.data) && jobs.data.length > 0));
+  const state = paused || (admin && lane.data?.status === "error") ? "Needs attention" : active ? "Working" : status.isLoading || (admin && lane.isLoading) ? "Checking" : "Idle";
   const color = paused ? "bg-red-500" : active ? "bg-green-500 animate-pulse" : "bg-slate-400";
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -58,7 +58,7 @@ export default function MarketingAiStatus() {
             {status.data?.circuitBreakerReason && <p className="text-red-600">Reason: {status.data.circuitBreakerReason}</p>}
             {admin && <div className="space-y-2 border-t pt-2">
               <p className="font-medium">Blog content pipeline</p>
-              <p>Content job: {lane.data?.status ?? "Checking"} {lane.data?.error ? `— ${lane.data.error}` : ""}</p>
+              <p role="status">Content job: {lane.data?.status ?? "Checking"} {lane.data?.error ? `— ${lane.data.error}` : ""}</p>
               <p>Queued topics: {queue.data ? queue.data.filter(t => t.status === "queued" || t.status === "refresh_due").length : "Checking"}</p>
               <p className="text-xs text-muted-foreground">Runs the existing admin-authorized draft workflow. Publishing still requires the configured warm-up, quality checks, and hold rules.</p>
               <Button size="sm" variant="outline" disabled={runContent.isPending || lane.data?.status === "running" || status.data?.circuitBreakerPaused} onClick={() => runContent.mutate()}>
