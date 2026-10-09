@@ -56,15 +56,16 @@ export async function outreachTaskPage(input: TaskPageInput) {
     assignedToUserId: crm30DayTasks.assignedToUserId,
     note: crm30DayTasks.note,
     name: crmExternalContacts.name, company: crmExternalContacts.company,
-    phone: crmExternalContacts.phone,
+    phone: sql<string | null>`coalesce(${crmExternalContacts.phone}, ${customers.phone})`,
   }).from(crm30DayTasks).leftJoin(
     crmExternalContacts, eq(crm30DayTasks.externalContactId, crmExternalContacts.id)
-  );
+  ).leftJoin(customers, eq(crmExternalContacts.customerId, customers.id));
   const [rows, totals] = await Promise.all([
     base.where(filters).orderBy(asc(crm30DayTasks.dueAt), asc(crm30DayTasks.id))
       .limit(input.limit).offset(input.offset),
     db.select({ total: count() }).from(crm30DayTasks)
       .leftJoin(crmExternalContacts, eq(crm30DayTasks.externalContactId, crmExternalContacts.id))
+      .leftJoin(customers, eq(crmExternalContacts.customerId, customers.id))
       .where(filters),
   ]);
   return { items: rows, total: Number(totals[0]?.total ?? 0) };
