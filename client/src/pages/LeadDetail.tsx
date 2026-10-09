@@ -176,7 +176,6 @@ export default function LeadDetail() {
                 <Button size="sm" variant="outline" disabled={!cap.phone} onClick={() => cap.phone && navigate(internalSmsConversationPath(cap.phone))}>
                   <MessageSquare className="h-3.5 w-3.5 mr-1" /> Text
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => navigate(`/contacts/communications?leadCaptureId=${leadId}`)}><Mail className="h-3.5 w-3.5 mr-1" /> Communications</Button>
                 <Button size="sm" variant="outline" onClick={() => setScheduleOpen(true)}>
                   <CalendarPlus className="h-3.5 w-3.5 mr-1" /> Schedule Assessment
                 </Button>
@@ -223,7 +222,6 @@ export default function LeadDetail() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <CardTitle className="text-base flex items-center gap-2"><Calendar className="h-4 w-4 text-[#1e3a5f]" /> Appointments ({appointments.length})</CardTitle>
-                <Button size="sm" variant="outline" onClick={() => navigate(`/contacts/communications?leadCaptureId=${leadId}`)}><Mail className="h-3.5 w-3.5 mr-1" /> Communications</Button>
                 <Button size="sm" variant="outline" onClick={() => setScheduleOpen(true)}><CalendarPlus className="h-4 w-4 mr-1" /> Schedule Assessment</Button>
               </CardHeader>
               <CardContent className="space-y-2">
