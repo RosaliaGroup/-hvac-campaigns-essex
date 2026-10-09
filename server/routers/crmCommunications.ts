@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { contactProfile } from "../services/contactProfile/store";
 import { saveVerifiedProspect } from "../services/saveVerifiedProspect";
 import { and, desc, eq, isNotNull, like, or, sql } from "drizzle-orm";
@@ -524,9 +525,9 @@ export const crmCommunicationsRouter = router({
         ) ?? sql`false`).limit(1);
       if(!existing.length){
         if(!input.email?.trim() || !input.phone?.trim() ||
-          !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(input.email.trim()) ||
-          input.phone.replace(/\\D/g,"").length < 10 ||
-          input.phone.replace(/\\D/g,"").length > 15)
+          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) ||
+          input.phone.replace(/\D/g,"").length < 10 ||
+          input.phone.replace(/\D/g,"").length > 15)
           throw new TRPCError({code:"BAD_REQUEST",
             message:"New CRM contacts require a valid email and phone number. Incomplete inbound leads remain in Contact Enrichment."});
       }
