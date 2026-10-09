@@ -161,8 +161,23 @@ export async function processContactEnrichment(contactId:number) {
     const needsPhone=!validPhone(existing.phone);
     const needsIdentity=!c.company?.trim()||!c.name?.trim()||c.name.includes("@");
     if(needsIdentity && needsPhone){
-      // Never request paid phone data against an unverified person/company.
-      await finish(contactId,"review","Verify full name and company before Lusha matching");
+      // Try verified public company/social research automatically, even when
+      // the Gmail task has only an email address. A company name may be
+      // established from a matching official domain, but never guess a person.
+      try {
+        const profile=await contactProfile({contactId},true);
+        const verifiedCompany=profile?.company?.name?.value?.trim();
+        if(verifiedCompany && !c.company?.trim()){
+          await db.update(crmExternalContacts).set({company:verifiedCompany})
+            .where(eq(crmExternalContacts.id,contactId));
+        }
+      }catch(error){
+        console.warn("[CRM Auto Enrich] Public identity lookup unavailable",contactId,
+          error instanceof Error?error.message:"unknown");
+      }
+      // A name equal to the email is still unverified; do not spend Lusha
+      // credits on a speculative match or fabricate a direct phone number.
+      await finish(contactId,"review","Public research attempted; verify person name and company before paid Lusha matching");
       return {status:"review",reason:"missing-identity"};
     }
     if(needsIdentity && !needsPhone){
