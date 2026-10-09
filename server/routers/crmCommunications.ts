@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { contactProfile } from "../services/contactProfile/store";
 import { saveVerifiedProspect } from "../services/saveVerifiedProspect";
+import { createSelectedContact, listGmailContactCandidates } from "../services/crmContactIntake";
 import { and, desc, eq, isNotNull, like, or, sql } from "drizzle-orm";
 import { composeGmail } from "../services/gmailCompose";
 import { sendGmailReply } from "../services/gmailReply";
@@ -400,6 +401,20 @@ export const crmCommunicationsRouter = router({
         ? job
         : null;
     }),
+  gmailContactCandidates: protectedProcedure
+    .input(z.object({search:z.string().max(120).default("")}))
+    .query(({input})=>listGmailContactCandidates(input.search)),
+  addSelectedContact: protectedProcedure
+    .input(z.object({
+      from:z.enum(["manual","gmail"]),
+      name:z.string().trim().min(2).max(255),
+      email:z.string().trim().email().max(320),
+      phone:z.string().trim().min(10).max(50),
+      company:z.string().trim().max(255).optional(),
+      title:z.string().trim().max(255).optional(),
+      propertyName:z.string().trim().max(255).optional(),
+    }))
+    .mutation(({input})=>createSelectedContact(input,input.from)),
   contacts: protectedProcedure
     .input(z.object({ search: z.string().max(255).optional() }))
     .query(async ({ input }) => {
@@ -410,16 +425,14 @@ export const crmCommunicationsRouter = router({
         .from(crmExternalContacts)
         .where(
           and(
-            or(
-              isNotNull(crmExternalContacts.customerId),
-              isNotNull(crmExternalContacts.leadId),
-              isNotNull(crmExternalContacts.leadCaptureId),
-              // Include contacts imported from Gmail Sent, even before they become leads.
-              sql`exists (select 1 from ${crmCommunications} where ${crmCommunications.externalContactId} = ${crmExternalContacts.id} and ${crmCommunications.direction} = 'outbound' and ${crmCommunications.channel} = 'email')`,
-              sql`exists (select 1 from ${customers} where ${customers.email} = ${crmExternalContacts.email} or ${customers.phone} = ${crmExternalContacts.phone})`,
-              sql`exists (select 1 from ${leads} where (${leads.contactType} = 'email' and ${leads.contact} = ${crmExternalContacts.email}) or (${leads.contactType} = 'phone' and ${leads.contact} = ${crmExternalContacts.phone}))`,
-              sql`exists (select 1 from ${leadCaptures} where ${leadCaptures.email} = ${crmExternalContacts.email} or ${leadCaptures.phone} = ${crmExternalContacts.phone})`
-            ),
+            // Only TASK-generated, explicitly selected Gmail, or manual
+            // contacts belong in Contacts. Never promote generic Gmail sync.
+            sql`(
+              ${crmExternalContacts.source} IN
+                ('gmail-prospecting','verified-hvac-prospect','gmail-selected','crm-manual','crm')
+              OR (${crmExternalContacts.source} IS NULL AND
+                  ${crmExternalContacts.customerId} IS NOT NULL)
+            )`,
             // Incomplete imported contacts remain in Contact Enrichment,
             // not the completed Contacts list. Linked customer phones count.
             sql`${crmExternalContacts.email} LIKE '%@%.%'`,
