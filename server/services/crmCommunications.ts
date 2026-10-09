@@ -49,7 +49,9 @@ export async function upsertExternalContact(
       Boolean(email && !matches[0].email) ||
       Boolean(phone && !matches[0].phone) ||
       Boolean(input.company && !matches[0].company) ||
-      Boolean(input.name && matches[0].name.includes("@") && !input.name.includes("@"));
+      Boolean(input.name && matches[0].name.includes("@") && !input.name.includes("@")) ||
+      Boolean(input.source && input.source !== matches[0].source &&
+        ["gmail-prospecting","verified-hvac-prospect","crm-manual","gmail-selected"].includes(input.source));
     if (improvedIdentity) scheduleEnrichment(matches[0].id, true);
     return { ...matches[0], ...patch };
   }
