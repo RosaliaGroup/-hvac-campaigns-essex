@@ -53,11 +53,28 @@ export async function upsertExternalContact(
       .update(crmExternalContacts)
       .set(patch)
       .where(eq(crmExternalContacts.id, matches[0].id));
+    const improvedIdentity =
+      Boolean(email && !matches[0].email) ||
+      Boolean(phone && !matches[0].phone) ||
+      Boolean(input.company && !matches[0].company) ||
+      Boolean(input.name && matches[0].name.includes("@") && !input.name.includes("@"));
+    if (improvedIdentity) scheduleEnrichment(matches[0].id, true);
     return { ...matches[0], ...patch };
   }
   const result = await db.insert(crmExternalContacts).values(patch);
   const id = Number((result as any)[0]?.insertId);
+  scheduleEnrichment(id, false);
   return { id, ...patch };
+}
+/** Queue immediately without holding up inbound Gmail, SMS or web lead capture.
+ * The durable minute scheduler reconciles any interrupted requests.
+ */
+function scheduleEnrichment(contactId:number,force:boolean) {
+  void import("./automaticContactEnrichment").then(async worker => {
+    await worker.queueContactEnrichment(contactId,force);
+    await worker.processContactEnrichment(contactId);
+  }).catch(error=>console.warn("[CRM Auto Enrich] Queue deferred to scheduler",
+    contactId,error instanceof Error?error.message:"unknown"));
 }
 
 export async function logCommunication(
