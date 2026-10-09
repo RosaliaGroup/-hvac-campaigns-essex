@@ -55,6 +55,7 @@ import { gbpRouter } from "./routers/gbp";
 import { googleCalendarRouter } from "./routers/googleCalendar";
 import { portalRouter } from "./routers/portal";
 import { growthRouter } from "./routers/growth";
+import { marketingAiTasksRouter } from "./routers/marketingAiTasks";
 import { crmCommunicationsRouter } from "./routers/crmCommunications";
 import { crmFollowupsRouter } from "./routers/crmFollowups";
 import { crmTasksRouter } from "./routers/crmTasks";
@@ -131,6 +132,7 @@ export const appRouter = router({
   portal: portalRouter,
   // Growth system (docs/growth-system-spec.md): §7 CSV import admin + §10 scoreboard.
   growth: growthRouter,
+  marketingAiTasks: marketingAiTasksRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
