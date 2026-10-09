@@ -5,6 +5,7 @@ on:
     paths:
       - "server/services/automaticContactEnrichment*"
       - "server/services/crmContactIntake.ts"
+      - "server/services/crmContactEnrichment.ts"
       - "server/services/gmailCrm.ts"
       - "server/services/crm30DaySync.ts"
       - "server/services/crmCommunications.ts"
