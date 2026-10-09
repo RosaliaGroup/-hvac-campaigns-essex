@@ -2,6 +2,7 @@ import { startGmailCrmScheduler } from "../services/gmailCrm";
 import { start30DayCadenceScheduler } from "../services/crm30DaySync";
 import { startVerifiedProspectPhoneBackfill } from "../services/backfillVerifiedProspectPhones";
 import { startVerifiedSocialBackfill } from "../services/contactProfile/store";
+import { startLushaConnectionProbe } from "../services/lushaCredentialProbe";
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
@@ -139,6 +140,7 @@ async function startServer() {
     start30DayCadenceScheduler();
     startVerifiedProspectPhoneBackfill();
     startVerifiedSocialBackfill();
+    startLushaConnectionProbe();
     // Start daily GA4 Analytics Data API → cache sync for Marketing Analytics
     startGa4SyncScheduler();
     // Start daily Business Profile → cache sync for Local SEO
