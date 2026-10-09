@@ -1,7 +1,7 @@
 /**
- * Automatic CRM contact enrichment. Every incoming contact is retained as a
- * staged record, but only records with BOTH a valid email and a usable phone
- * are "complete". Never lose incoming Gmail, SMS or lead history.
+ * Automatic CRM enrichment is restricted to task prospects and explicitly
+ * selected Gmail/manual contacts. Incoming Gmail/SMS/leads remain in their
+ * original history, not automatically promoted to completed Contacts.
  *
  * Lusha searches and reveals are bounded by a shared, atomic daily credit
  * reservation (default 10 credits/day); no compliance bypass or guessed data.
