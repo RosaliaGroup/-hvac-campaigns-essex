@@ -21,6 +21,7 @@ export default function LeadTracker() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const [showForm, setShowForm] = useState(false);
+  const baseline = trpc.leadCaptures.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });
 
   // Form state
   const [formData, setFormData] = useState({
@@ -170,6 +171,37 @@ export default function LeadTracker() {
       <InternalNav />
       
       <div className="container py-8">
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Marketing lead baseline — last 30 days</CardTitle>
+            <CardDescription>Website lead captures only. Qualified means an advanced CRM pipeline stage, not independently verified sales quality.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {baseline.isLoading ? <p>Loading lead baseline…</p> : baseline.isError ? <p>Unable to load marketing baseline.</p> : baseline.data ? (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    ["Website captures", baseline.data.totalCaptures],
+                    ["Advanced-stage leads", baseline.data.qualifiedStage],
+                    ["New, unassigned", baseline.data.newUnassigned],
+                    ["Overdue follow-ups", baseline.data.followUpOverdue],
+                  ].map(([label, value]) => (
+                    <div key={String(label)} className="rounded border p-3">
+                      <div className="text-xs text-muted-foreground">{label}</div>
+                      <div className="text-2xl font-semibold">{value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-sm font-medium">Sources</div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(baseline.data.byChannel).sort((a,b) => b[1]-a[1]).map(([channel,count]) =>
+                    <Badge key={channel} variant="outline">{channel}: {count}</Badge>)}
+                </div>
+                <p className="text-xs text-muted-foreground">Does not include separate manually entered CRM leads. Unknown sources remain unknown.</p>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
