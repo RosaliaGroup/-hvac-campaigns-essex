@@ -14,10 +14,14 @@ export async function ensureSentEmailContact(
     company?: string | null;
     phone?: string | null;
     customerId?: number | null;
+    source?: string | null;
   }
 ) {
   if (!external.email) return null;
   const email = external.email.trim().toLowerCase();
+  const source = external.source==="crm-manual" ? "CRM Manual"
+    : external.source==="gmail-selected" ? "Gmail Selected"
+    : "HVAC Prospecting Task";
   return db.transaction(async tx => {
     const [existing] = await tx
       .select()
@@ -29,15 +33,26 @@ export async function ensureSentEmailContact(
       )
       .limit(1);
     let customerId = existing?.id;
+    if(existing){
+      // Legacy bulk Gmail imports must be explicitly selected before they
+      // become approved Contacts. Preserve all other existing customer data.
+      const patch:Partial<typeof customers.$inferInsert> = {};
+      if(existing.source==="Gmail Sent") patch.source=source;
+      if(!existing.phone?.trim() && external.phone?.trim()) patch.phone=external.phone;
+      if(existing.displayName===email && external.name && external.name!==email)
+        patch.displayName=external.name;
+      if(Object.keys(patch).length)
+        await tx.update(customers).set(patch).where(eq(customers.id,existing.id));
+    }
     if (!customerId) {
       const result = await tx.insert(customers).values({
         displayName: external.name || email,
         email,
         phone: external.phone ?? null,
         companyName: external.company ?? null,
-        source: "HVAC Prospecting Task",
+        source,
         notes:
-          "Contact promoted from verified HVAC prospecting task after email and phone verification.",
+          "Approved CRM Contact with verified email and phone. Source: "+source,
       });
       customerId = Number(
         (result as unknown as [{ insertId: number }])[0].insertId
