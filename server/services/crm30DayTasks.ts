@@ -153,3 +153,15 @@ export async function assignAll30DayTasks(userId: number, userName: string) {
   const [after] = await db.select({ n: sql<number>`count(*)` }).from(crm30DayTasks).where(where);
   return { assigned: Number(before?.n ?? 0) - Number(after?.n ?? 0), remainingUnassigned: Number(after?.n ?? 0), userId };
 }
+
+/** Suppress all remaining open reminders when a bounce, opt-out or reply is known. */
+export async function cancelOpen30DayTasks(email: string, reason: string) {
+  const db = await cadenceDatabase();
+  const result = await db.update(crm30DayTasks)
+    .set({ status: "cancelled", note: reason })
+    .where(and(
+      eq(crm30DayTasks.recipientEmail, email.trim().toLowerCase()),
+      eq(crm30DayTasks.status, "open"),
+    ));
+  return Number((result as any)?.[0]?.affectedRows ?? 0);
+}
