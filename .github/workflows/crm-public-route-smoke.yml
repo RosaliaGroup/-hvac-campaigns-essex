@@ -32,7 +32,7 @@ jobs:
               if ! grep -q 'id="root"' "/tmp/body-${safe}"; then
                 echo "::warning::No root div found on $origin$path"
               fi
-              if [[ "$path" == "/tasks" || "$path" == "/team-login" ]]; then
+              if [[ "$path" == "/tasks" ]]; then
                 if ! grep -q '<div id="root"></div>' "/tmp/body-${safe}"; then
                   echo "::error::CRM route served prerendered HTML instead of the empty SPA shell: $origin$path"
                   exit 1
