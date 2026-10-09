@@ -134,6 +134,11 @@ export async function setFollowConfirmed(input: { contactId: number; url: string
     throw new Error("CRM social follow status could not be verified.");
   return result;
 }
+export const effectiveContactPhoneSQL = sql<string | null>`COALESCE(
+  NULLIF(TRIM(${crmExternalContacts.phone}), ''),
+  NULLIF(TRIM(${customers.phone}), '')
+)`;
+
 /**
  * A prospect may have a linked customer record with the only verified phone.
  * Use the same contact/customer fallback as Sales > Tasks and the Call button.
@@ -143,10 +148,7 @@ export async function listContactEnrichmentQueue(input: {
   filter: "all" | "missing_phone" | "unknown_type" | "needs_social"; offset: number; limit: number;
 }) {
   const db = await enrichmentDb();
-  const effectivePhone = sql<string | null>`COALESCE(
-    NULLIF(TRIM(${crmExternalContacts.phone}), ''),
-    NULLIF(TRIM(${customers.phone}), '')
-  )`;
+  const effectivePhone = effectiveContactPhoneSQL;
   const socialExists = sql<boolean>`EXISTS (
     SELECT 1 FROM crmContactProfiles p
     WHERE p.contactId = ${crmExternalContacts.id}
