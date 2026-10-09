@@ -7,6 +7,7 @@ const filters = z.object({
   action: z.enum(["all", "call", "email", "text"]).default("all"),
   search: z.string().max(120).default(""),
   offset: z.number().int().min(0).default(0),
+  due: z.enum(["all","overdue","today","upcoming"]).default("all"),
   limit: z.number().int().min(1).max(100).default(50),
 });
 
