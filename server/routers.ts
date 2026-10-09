@@ -378,6 +378,7 @@ export const appRouter = router({
         if (input.email) contactInfo.push(`Email: ${input.email}`);
         if (input.phone) contactInfo.push(`Phone: ${input.phone}`);
         
+        contactInfo.push(`Marketing channel: ${attribution.channel ?? "unknown"}`);
         await notifyOwner({
           title: `New Lead Capture: ${input.captureType.replace(/_/g, ' ')}`,
           content: `A visitor has submitted their contact information:\n\n${contactInfo.join('\n')}\nCapture Type: ${input.captureType}\nPage: ${input.pageUrl || 'Unknown'}\nMessage: ${input.message || 'None'}\n\nLog in to your dashboard to follow up.`,
@@ -556,6 +557,7 @@ export const appRouter = router({
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Page</td><td style="padding:6px 0">${input.pageUrl ?? "Unknown"}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Submitted</td><td style="padding:6px 0">${timestamp}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Source</td><td style="padding:6px 0">${input.captureType.replace(/_/g, " ")}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Marketing channel</td><td style="padding:6px 0">${attribution.channel ?? "unknown"}</td></tr>
                     </table>
                     <p style="color:#999;font-size:12px">Log in to the <a href="https://mechanicalenterprise.com/lead-dashboard">dashboard</a> to follow up.</p>
                   </div>
