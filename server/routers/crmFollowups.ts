@@ -20,8 +20,9 @@ export const crmFollowupsRouter = router({
         "attempted_no_answer", "connected", "not_interested",
         "reviewed_no_send", "sent_verified",
       ]),
+      note: z.string().trim().max(1000).optional(),
     }))
-    .mutation(({ input }) => complete30DayTask(input.id, input.outcome)),
+    .mutation(({ input }) => complete30DayTask(input.id, input.outcome, input.note)),
   assignToMe: protectedProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(({ ctx, input }) => assign30DayTask(

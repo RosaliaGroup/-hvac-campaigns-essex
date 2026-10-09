@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
+import TaskCallActions from "@/components/TaskCallActions";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,14 +121,14 @@ export default function CrmTasks(){
         {task.status==="open"&&<div className="flex flex-wrap gap-2 shrink-0">
           {!task.assignedToUserId&&<Button size="sm" variant="outline" disabled={busy}
             onClick={()=>assign.mutate({id:task.id})}>Assign to me</Button>}
-          {task.kind==="human"?<>
-            <Button size="sm" variant="outline" disabled={busy}
-              onClick={()=>done.mutate({id:task.id,outcome:"attempted_no_answer"})}>Called · no answer</Button>
-            <Button size="sm" variant="outline" disabled={busy}
-              onClick={()=>done.mutate({id:task.id,outcome:"connected"})}>Spoke · handoff</Button>
-            <Button size="sm" variant="outline" disabled={busy}
-              onClick={()=>done.mutate({id:task.id,outcome:"not_interested"})}>Not interested</Button>
-          </>:<>
+          {task.kind==="human"?<TaskCallActions
+            contactId={task.externalContactId}
+            contactName={task.name || task.recipientEmail}
+            phone={task.phone}
+            disabled={busy}
+            onRefresh={refresh}
+            onOutcome={(outcome,note)=>done.mutate({id:task.id,outcome,note})}
+          />:<>
             <Button size="sm" variant="outline" disabled={busy}
               onClick={()=>done.mutate({id:task.id,outcome:"reviewed_no_send"})}>Reviewed · no send</Button>
             <Button size="sm" variant="outline" disabled={busy}

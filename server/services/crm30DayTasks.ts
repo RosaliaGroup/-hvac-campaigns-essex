@@ -1,7 +1,8 @@
 /** Durable 30-day CRM cadence tasks; legacy 3-step table is preserved, not used. */
 import { and, asc, eq, isNull, gte, lt, ne, sql } from "drizzle-orm";
 import { int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
-import { crmExternalContacts, crmCommunications } from "../../drizzle/schema";
+import { crmExternalContacts, crmCommunications, customers } from "../../drizzle/schema";
+import { logCommunication } from "./crmCommunications";
 import { getDb } from "../db";
 import type { CadenceKind, CadenceOutcome } from "./crm30DayRules";
 
@@ -83,7 +84,7 @@ export async function list30DayTasks(input: {
 }
 
 /** A review alone is not a sent email; only a Gmail-imported sent message can count. */
-export async function complete30DayTask(id: number, outcome: CadenceOutcome) {
+export async function complete30DayTask(id: number, outcome: CadenceOutcome, note?: string) {
   const db = await cadenceDatabase();
   const [task] = await db.select().from(crm30DayTasks).where(eq(crm30DayTasks.id, id)).limit(1);
   if (!task) throw new Error("CRM cadence task not found");
@@ -105,8 +106,41 @@ export async function complete30DayTask(id: number, outcome: CadenceOutcome) {
       )).limit(1);
     if (!sent) throw new Error("No qualifying sent Gmail message in the original thread; cannot count email as a completed touch.");
   }
+  // A CRM call outcome is user-reported, not provider-confirmed. Record it
+  // only when the operator explicitly chooses an outcome after making a call.
+  if (task.kind === "human") {
+    const [contact] = await db.select().from(crmExternalContacts)
+      .where(eq(crmExternalContacts.id, task.externalContactId)).limit(1);
+    if (!contact) throw new Error("Contact no longer exists");
+    const [customer] = contact.customerId
+      ? await db.select({ phone: customers.phone }).from(customers)
+          .where(eq(customers.id, contact.customerId)).limit(1)
+      : [];
+    const dialedNumber = contact.phone || customer?.phone;
+    if (!dialedNumber || dialedNumber.replace(/\D/g, "").length < 10)
+      throw new Error("Save a valid contact phone number before logging a call.");
+    const logged = await logCommunication(db, {
+      externalContactId: task.externalContactId,
+      customerId: contact.customerId,
+      channel: "call",
+      direction: "outbound",
+      provider: "crm-manual",
+      providerMessageId: `crm-30day-call-${task.id}`,
+      toAddress: dialedNumber,
+      subject: outcome === "attempted_no_answer" ? "Call attempted — no answer"
+        : outcome === "connected" ? "Call connected — handoff"
+        : "Call completed — not interested",
+      body: note?.trim() || "Outcome entered manually by CRM user.",
+      status: outcome,
+      occurredAt: new Date(),
+    });
+    const [confirmed] = await db.select({ id: crmCommunications.id })
+      .from(crmCommunications).where(eq(crmCommunications.id, logged.id)).limit(1);
+    if (!confirmed) throw new Error("Call log could not be verified in CRM Communications");
+  }
   await db.update(crm30DayTasks).set({
     status: "done", outcome, completedAt: new Date(),
+    ...(note?.trim() ? { note: note.trim() } : {}),
   }).where(and(eq(crm30DayTasks.id, id), eq(crm30DayTasks.status, "open")));
   if (outcome === "connected" || outcome === "not_interested") {
     await db.update(crm30DayTasks).set({
