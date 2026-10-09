@@ -98,8 +98,8 @@ export function selectVerifiedLushaPhone(phones: unknown):
   { number: string; phoneType: "business" | "cell" } | null {
   if (!Array.isArray(phones)) return null;
   const valid = (p: any) => typeof p?.number === "string" &&
-    p.number.replace(/\\D/g, "").length >= 10 &&
-    p.number.replace(/\\D/g, "").length <= 15;
+    p.number.replace(/\D/g, "").length >= 10 &&
+    p.number.replace(/\D/g, "").length <= 15;
   const work = phones.find((p: any) =>
     valid(p) && ["direct", "work", "office", "business"].includes(String(p.type).toLowerCase()));
   if (work) return {number:work.number.trim(),phoneType:"business"};
