@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import TaskCallActions from "@/components/TaskCallActions";
+import ContactEnrichmentQueue from "@/components/ContactEnrichmentQueue";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarClock, ListTodo, Mail, Phone, RefreshCw, Search } from "lucide-react";
 
-type Source="outreach"|"opportunities";
+type Source="outreach"|"opportunities"|"enrichment";
 type Status="open"|"done"|"cancelled"|"all";
 type Action="all"|"call"|"email"|"text";
 type Due="all"|"overdue"|"today"|"upcoming";
@@ -64,10 +65,12 @@ export default function CrmTasks(){
       </div>}
     </div>
     <div className="flex gap-2 border-b pb-2" role="tablist">
-      {([["outreach","Prospect follow-ups"],["opportunities","Opportunity actions"]] as const).map(([id,label])=>
+      {([["outreach","Prospect follow-ups"],["opportunities","Opportunity actions"],["enrichment","Contact enrichment"]] as const).map(([id,label])=>
         <button key={id} role="tab" aria-selected={source===id} onClick={()=>{setSource(id);setPage(0);}}
           className={`rounded-lg px-4 py-2 text-sm font-medium ${source===id?"bg-blue-100 text-blue-900":"hover:bg-slate-100 text-slate-600"}`}>{label}</button>)}
     </div>
+    {source==="enrichment"&&<ContactEnrichmentQueue/>}
+    {source!=="enrichment"&&<>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <label className="text-xs font-medium">Search
         <div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400"/>
@@ -164,5 +167,6 @@ export default function CrmTasks(){
         </div>
       </div>}
     </section>
+    </>}
   </div>;
 }
