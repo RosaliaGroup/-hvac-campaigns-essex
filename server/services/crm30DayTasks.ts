@@ -117,7 +117,7 @@ export async function complete30DayTask(id: number, outcome: CadenceOutcome, not
           .where(eq(customers.id, contact.customerId)).limit(1)
       : [];
     const dialedNumber = contact.phone || customer?.phone;
-    if (!dialedNumber || dialedNumber.replace(/\\D/g, "").length < 10)
+    if (!dialedNumber || dialedNumber.replace(/\D/g, "").length < 10)
       throw new Error("Save a valid contact phone number before logging a call.");
     const logged = await logCommunication(db, {
       externalContactId: task.externalContactId,
