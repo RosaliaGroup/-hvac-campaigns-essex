@@ -16,6 +16,7 @@ vi.mock("../integrations/google/calendar", () => ({
 vi.mock("./crmCommunications", () => ({ logCommunication: mocks.log }));
 vi.mock("./outreachSuppression", () => ({ assertOutreachNotSuppressed: vi.fn().mockResolvedValue(undefined) }));
 import { composeMime, composeGmail } from "./gmailCompose";
+import { assertOutreachNotSuppressed } from "./outreachSuppression";
 const input = {
   externalContactId: 1,
   subject: "Olá",
@@ -57,6 +58,12 @@ describe("new email and Gmail drafts", () => {
     ).toString();
     expect(raw).toContain(Buffer.from("Olá").toString("base64"));
     expect(raw).not.toContain("In-Reply-To");
+  });
+  it("blocks a suppressed recipient before calling Gmail", async () => {
+    vi.mocked(assertOutreachNotSuppressed).mockRejectedValueOnce(new Error("Do not contact"));
+    const fetcher = vi.fn();
+    await expect(composeGmail({ ...input, action: "send" }, fetcher)).rejects.toThrow("Do not contact");
+    expect(fetcher).not.toHaveBeenCalled();
   });
   it("saves a Gmail draft without sending or logging a sent email", async () => {
     const fetcher = vi
