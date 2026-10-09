@@ -2,13 +2,16 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
+import ContactIntakePanel from "./ContactIntakePanel";
 
 type Filter = "all"|"missing_phone"|"unknown_type"|"needs_social";
 export default function ContactEnrichmentQueue() {
   const [filter,setFilter]=useState<Filter>("missing_phone");
   const [page,setPage]=useState(0);
   const list=trpc.crmContactEnrichment.queue.useQuery({filter,offset:page*50,limit:50});
-  return <section className="rounded-xl border bg-white overflow-hidden">
+  return <div className="space-y-4">
+    <ContactIntakePanel/>
+    <section className="rounded-xl border bg-white overflow-hidden">
     <div className="p-4 border-b flex flex-wrap items-center justify-between gap-3">
       <div><h2 className="font-semibold">Contact enrichment</h2>
         <p className="text-xs text-slate-500">Review missing phone numbers, unverified business/cell types and social profiles. Never guess or treat a mobile number as SMS consent.</p></div>
@@ -46,5 +49,6 @@ export default function ContactEnrichmentQueue() {
         <Button size="sm" variant="outline" disabled={(page+1)*50>=list.data.total} onClick={()=>setPage(p=>p+1)}>Next</Button>
       </div>
     </div>}
-  </section>;
+  </section>
+  </div>;
 }

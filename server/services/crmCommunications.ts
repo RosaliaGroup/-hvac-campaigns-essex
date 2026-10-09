@@ -25,21 +25,13 @@ export async function upsertExternalContact(
 ) {
   const email = cleanEmail(input.email);
   const phone = cleanPhone(input.phone);
-  const matches =
-    !email && !phone
-      ? []
-      : await db
-          .select()
-          .from(crmExternalContacts)
-          .where(
-            or(
-              ...([
-                email ? eq(crmExternalContacts.email, email) : undefined,
-                phone ? eq(crmExternalContacts.phone, phone) : undefined,
-              ].filter(Boolean) as any)
-            )
-          )
-          .limit(1);
+  // A shared building/office phone is not a unique person identifier.
+  // Prefer exact email whenever present, and match phone only for SMS-only
+  // events that lack an email address.
+  const matches = !email && !phone ? [] : await db.select()
+    .from(crmExternalContacts)
+    .where(email ? eq(crmExternalContacts.email,email) : eq(crmExternalContacts.phone,phone!))
+    .limit(1);
   // Sparse provider events must not erase enriched contact details or CRM links.
   const patch = Object.fromEntries(
     Object.entries({ ...input, email, phone }).filter(
@@ -53,11 +45,31 @@ export async function upsertExternalContact(
       .update(crmExternalContacts)
       .set(patch)
       .where(eq(crmExternalContacts.id, matches[0].id));
+    const improvedIdentity =
+      Boolean(email && !matches[0].email) ||
+      Boolean(phone && !matches[0].phone) ||
+      Boolean(input.company && !matches[0].company) ||
+      Boolean(input.name && matches[0].name.includes("@") && !input.name.includes("@")) ||
+      Boolean(input.source && input.source !== matches[0].source &&
+        ["gmail-prospecting","verified-hvac-prospect","crm-manual","gmail-selected"].includes(input.source));
+    if (improvedIdentity) scheduleEnrichment(matches[0].id, true);
     return { ...matches[0], ...patch };
   }
   const result = await db.insert(crmExternalContacts).values(patch);
   const id = Number((result as any)[0]?.insertId);
+  scheduleEnrichment(id, false);
   return { id, ...patch };
+}
+/** Queue immediately without holding up inbound Gmail, SMS or web lead capture.
+ * Only explicitly imported or TASK-sourced contacts qualify. The durable
+ * minute scheduler reconciles interrupted requests without importing Gmail.
+ */
+function scheduleEnrichment(contactId:number,force:boolean) {
+  void import("./automaticContactEnrichment").then(async worker => {
+    const queued=await worker.queueContactEnrichment(contactId,force);
+    if(queued.queued) await worker.processContactEnrichment(contactId);
+  }).catch(error=>console.warn("[CRM Auto Enrich] Queue deferred to scheduler",
+    contactId,error instanceof Error?error.message:"unknown"));
 }
 
 export async function logCommunication(

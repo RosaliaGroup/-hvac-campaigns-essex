@@ -1,0 +1,48 @@
+name: CRM Selective Contact Enrichment
+
+on:
+  pull_request:
+    paths:
+      - "server/services/automaticContactEnrichment*"
+      - "server/services/crmContactIntake.ts"
+      - "server/services/crmContactEnrichment.ts"
+      - "server/services/gmailCrm.ts"
+      - "server/services/crm30DaySync.ts"
+      - "server/services/crmCommunications.ts"
+      - "server/routers/crmCommunications.ts"
+      - "client/src/components/ContactIntakePanel.tsx"
+      - "client/src/components/ContactEnrichmentQueue.tsx"
+      - "client/src/pages/Communications.tsx"
+      - ".github/workflows/crm-selective-contact-enrichment.yml"
+  workflow_dispatch:
+
+jobs:
+  selective-intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Test approved sources and required contact fields
+        run: pnpm exec vitest run server/services/automaticContactEnrichment.test.ts
+      - name: Guard against unapproved Gmail contact auto-import
+        run: |
+          if grep -q 'upsertExternalContact(' server/services/gmailCrm.ts; then
+            echo "Gmail sync must not create CRM contacts automatically"
+            exit 1
+          fi
+          if grep -q 'ensureSentEmailContact(' server/services/gmailCrm.ts; then
+            echo "Gmail sync must not promote every sent-email recipient"
+            exit 1
+          fi
+          if grep -q 'ensureSentEmailContact(' server/services/crm30DaySync.ts; then
+            echo "Task prospects must wait for email + phone before promotion"
+            exit 1
+          fi
+      - name: Typecheck CRM
+        run: pnpm exec tsc --noEmit
