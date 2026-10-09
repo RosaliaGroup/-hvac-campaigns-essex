@@ -23,6 +23,126 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Commercial HVAC: Repair or Replace?",
+    "slug": "commercial-hvac-repair-or-replace-decision-guide",
+    "date": "September 26, 2026",
+    "readTime": "8 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "A decision framework for NJ property managers on aging commercial HVAC: when to repair, when to replace, and what to ask bidders.",
+    "excerpt": "Aging RTUs, PTACs, and VRF systems don't fail on a schedule. Here's how commercial building owners across Essex, Bergen, and Hudson counties can decide between repair and replacement with confidence.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Every facility manager hits the same wall eventually: an aging rooftop unit, PTAC fleet, or VRF system that keeps limping along but no longer runs efficiently. The question isn't just mechanical — it's financial. Mechanical Enterprise LLC has spent 20 years servicing commercial and multifamily properties across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, and the repair-versus-replace call comes down to a handful of factors you can actually measure, not guesswork."
+      },
+      {
+        "type": "h2",
+        "content": "The Real Cost of Deferring a Replacement Decision"
+      },
+      {
+        "type": "paragraph",
+        "content": "Deferred replacement rarely saves money — it shifts cost into unpredictable emergency calls, rising utility bills from declining efficiency, and tenant complaints that affect occupancy. A unit past its mid-life point tends to need more frequent service visits, and each visit carries diminishing returns as parts become harder to source. For multifamily owners and commercial landlords, the real comparison isn't repair cost versus replacement cost in isolation — it's the total cost of ownership over the next five years, including downtime risk, comfort complaints, and the likelihood of a compressor or heat exchanger failure mid-season when contractors are booked solid."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality Determines Lifecycle, Not Just Equipment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Two identical rooftop units installed by different crews can have very different service lives. Proper sizing for the actual building load, correct refrigerant charge, sealed ductwork, and commissioning that verifies airflow and controls all determine whether a system hits its expected lifespan or starts failing early. When we evaluate a property for repair versus replace, we look at how the existing system was installed as much as how old it is — a poorly matched or undersized unit from day one will keep causing problems no matter how many repairs it gets. Getting the installation right the first time is the single biggest lever a building owner has over long-term HVAC cost."
+      },
+      {
+        "type": "h2",
+        "content": "Repair vs. Replace: A Practical Framework"
+      },
+      {
+        "type": "paragraph",
+        "content": "Repair generally still makes sense when the system is relatively young, the fault is isolated, and the equipment has a track record of reliable performance. Consider repair when:"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "The unit is under roughly half its expected service life",
+          "The repair addresses a single component, not a recurring pattern of failures",
+          "Energy consumption has stayed relatively flat year over year",
+          "Replacement parts are still readily available for the model",
+          "The building has no planned renovation or load changes coming"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "Replacement becomes the stronger investment when any of the following apply:"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "The system has needed three or more service calls in the past 12 months",
+          "Refrigerant is an older type that's increasingly costly or hard to source",
+          "Utility bills have climbed without a corresponding change in occupancy or usage",
+          "The unit no longer matches current building load after renovations or tenant turnover",
+          "A failure during peak season would put tenants or operations at serious risk"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "When a replacement is the right call, protecting that investment matters as much as the installation itself. Mechanical Enterprise offers an optional 10-year parts and labor coverage plan, administered through a third-party agreement backed by A-rated insurers, available for new HVAC installations across all major brands. Existing equipment may also qualify after it passes an eligibility inspection — this coverage is not included or automatic with every system, and it's not free; it's a paid add-on with no deductible once in place. For building owners weighing a major capital expense, that structure gives a clearer picture of long-term maintenance cost before committing budget."
+      },
+      {
+        "type": "h2",
+        "content": "Rebates, Direct Install, and Financing for NJ Properties"
+      },
+      {
+        "type": "paragraph",
+        "content": "Replacement economics also depend on what's available to offset project cost. PSE&G's Direct Install program can cover up to 80% of an eligible commercial project, and the On-Bill Repayment option offers 0% interest financing on the remaining balance, repaid through the monthly utility bill. These programs are a secondary consideration behind getting the sizing, installation, and coverage right — but for a multifamily building in Union or Middlesex County weighing a multi-unit replacement, they can meaningfully change the budget conversation with ownership or the board."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us Before You Request Bids"
+      },
+      {
+        "type": "paragraph",
+        "content": "Getting an accurate repair-or-replace recommendation — and comparable bids from any contractor — starts with the right information upfront. Before you request a proposal, gather:"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Equipment nameplate data (make, model, serial number, refrigerant type)",
+          "Approximate install date or age of each unit",
+          "Service history or recent repair invoices, if available",
+          "Current utility bills for the past 12 months",
+          "Square footage served and current occupancy type (office, retail, multifamily)",
+          "Any planned renovations, tenant changes, or load additions",
+          "Portfolio scope if you're requesting pricing across multiple buildings or unit types"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Not sure whether your system needs a repair or a full replacement? Get a straight assessment from a contractor that's served NJ commercial properties for 20 years.",
+        "buttonText": "Request a Commercial HVAC Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How do you decide between repairing and replacing a commercial HVAC unit?",
+        "answer": "We look at the unit's age relative to its expected lifespan, repair frequency over the past year, refrigerant type, current utility trends, and whether the system still matches the building's actual load. A unit needing isolated repairs with a solid track record often warrants repair; one with recurring failures or rising energy costs usually points to replacement."
+      },
+      {
+        "question": "Is the 10-year parts and labor coverage included with a new system?",
+        "answer": "No — it's an optional, paid add-on available for new installations across all major brands, and existing equipment may qualify after passing an eligibility inspection. It is not automatic or free with every project."
+      },
+      {
+        "question": "Can older existing equipment qualify for extended coverage?",
+        "answer": "Existing systems may be eligible after an inspection confirms they meet program criteria. Eligibility isn't guaranteed and depends on the condition and age of the equipment at the time of inspection."
+      }
+    ]
+  },
+
+  {
     "title": "How to Compare HVAC Installation Quotes in NJ",
     "slug": "compare-hvac-installation-quotes-nj",
     "date": "September 26, 2026",
