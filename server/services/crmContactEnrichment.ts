@@ -134,28 +134,68 @@ export async function setFollowConfirmed(input: { contactId: number; url: string
     throw new Error("CRM social follow status could not be verified.");
   return result;
 }
+/**
+ * A prospect may have a linked customer record with the only verified phone.
+ * Use the same contact/customer fallback as Sales > Tasks and the Call button.
+ * This is read-only; never copy or overwrite phone fields automatically.
+ */
 export async function listContactEnrichmentQueue(input: {
   filter: "all" | "missing_phone" | "unknown_type" | "needs_social"; offset: number; limit: number;
 }) {
   const db = await enrichmentDb();
-  const rows = db.select({
-    id: crmExternalContacts.id, name: crmExternalContacts.name,
-    email: crmExternalContacts.email, company: crmExternalContacts.company,
-    phone: crmExternalContacts.phone, savedType: phoneMeta.type, savedPhone: phoneMeta.phone,
-    hasSocial: sql<boolean>`EXISTS (SELECT 1 FROM crmContactProfiles p WHERE p.contactId = ${crmExternalContacts.id} AND (JSON_LENGTH(JSON_EXTRACT(p.profile, '$.social')) > 0 OR JSON_LENGTH(JSON_EXTRACT(p.profile, '$.companySocial')) > 0))`,
-  }).from(crmExternalContacts).leftJoin(phoneMeta, eq(crmExternalContacts.id, phoneMeta.contactId));
+  const effectivePhone = sql<string | null>`COALESCE(
+    NULLIF(TRIM(${crmExternalContacts.phone}), ''),
+    NULLIF(TRIM(${customers.phone}), '')
+  )`;
+  const socialExists = sql<boolean>`EXISTS (
+    SELECT 1 FROM crmContactProfiles p
+    WHERE p.contactId = ${crmExternalContacts.id}
+      AND (
+        JSON_LENGTH(JSON_EXTRACT(p.profile, '$.social')) > 0
+        OR JSON_LENGTH(JSON_EXTRACT(p.profile, '$.companySocial')) > 0
+      )
+  )`;
   const filter = input.filter === "needs_social"
-    ? sql`NOT EXISTS (SELECT 1 FROM crmContactProfiles p WHERE p.contactId = ${crmExternalContacts.id} AND (JSON_LENGTH(JSON_EXTRACT(p.profile, '$.social')) > 0 OR JSON_LENGTH(JSON_EXTRACT(p.profile, '$.companySocial')) > 0))`
+    ? sql`NOT (${socialExists})`
     : input.filter === "missing_phone"
-    ? or(isNull(crmExternalContacts.phone), eq(crmExternalContacts.phone, ""))
-    : input.filter === "unknown_type"
-      ? and(sql`${crmExternalContacts.phone} IS NOT NULL AND ${crmExternalContacts.phone} <> ''`,
-          or(isNull(phoneMeta.type), eq(phoneMeta.type, "unknown"), sql`${phoneMeta.phone} <> ${crmExternalContacts.phone}`))
-      : undefined;
+      ? sql`${effectivePhone} IS NULL`
+      : input.filter === "unknown_type"
+        ? and(
+            sql`${effectivePhone} IS NOT NULL`,
+            or(
+              isNull(phoneMeta.type),
+              eq(phoneMeta.type, "unknown"),
+              sql`${phoneMeta.phone} <> ${effectivePhone}`,
+            ),
+          )
+        : undefined;
+  const base = () => db.select({
+    id: crmExternalContacts.id,
+    name: crmExternalContacts.name,
+    email: crmExternalContacts.email,
+    company: crmExternalContacts.company,
+    phone: effectivePhone,
+    phoneOrigin: sql<"contact" | "customer" | null>`CASE
+      WHEN NULLIF(TRIM(${crmExternalContacts.phone}), '') IS NOT NULL THEN 'contact'
+      WHEN NULLIF(TRIM(${customers.phone}), '') IS NOT NULL THEN 'customer'
+      ELSE NULL
+    END`,
+    savedType: sql<PhoneType | null>`CASE
+      WHEN ${phoneMeta.phone} = ${effectivePhone} THEN ${phoneMeta.type}
+      ELSE NULL
+    END`,
+    savedPhone: phoneMeta.phone,
+    hasSocial: socialExists,
+  }).from(crmExternalContacts)
+    .leftJoin(customers, eq(crmExternalContacts.customerId, customers.id))
+    .leftJoin(phoneMeta, eq(crmExternalContacts.id, phoneMeta.contactId));
   const [items, totals] = await Promise.all([
-    rows.where(filter).orderBy(asc(crmExternalContacts.id)).limit(input.limit).offset(input.offset),
+    base().where(filter).orderBy(asc(crmExternalContacts.id))
+      .limit(input.limit).offset(input.offset),
     db.select({ total: count() }).from(crmExternalContacts)
-      .leftJoin(phoneMeta, eq(crmExternalContacts.id, phoneMeta.contactId)).where(filter),
+      .leftJoin(customers, eq(crmExternalContacts.customerId, customers.id))
+      .leftJoin(phoneMeta, eq(crmExternalContacts.id, phoneMeta.contactId))
+      .where(filter),
   ]);
   return { items, total: Number(totals[0]?.total ?? 0) };
 }
