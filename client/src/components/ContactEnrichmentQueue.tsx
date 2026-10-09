@@ -31,8 +31,8 @@ export default function ContactEnrichmentQueue() {
         <div className="text-xs text-slate-600">{[contact.company,contact.email].filter(Boolean).join(" · ")}</div>
         <div className="text-xs mt-1">
           {contact.phone?
-            <span>{contact.phone} · {contact.savedType&&contact.savedPhone===contact.phone?contact.savedType:"Type unverified"}</span>:
-            <span className="text-amber-700">Phone missing</span>}
+            <span>{contact.phone} · {contact.savedType&&contact.savedPhone===contact.phone?contact.savedType:"Type unverified"}{contact.phoneOrigin==="customer"?" · Linked customer number":""}</span>:
+            <span className="text-amber-700">Phone missing in contact and linked customer</span>}
           <span className="ml-3">{contact.hasSocial?"Verified social found":"Social profile needs research"}</span>
         </div>
       </div>
