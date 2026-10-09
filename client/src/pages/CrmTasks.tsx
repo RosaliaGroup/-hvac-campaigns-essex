@@ -71,11 +71,11 @@ export default function CrmTasks(){
     </div>
     {source==="enrichment"&&<ContactEnrichmentQueue/>}
     {source!=="enrichment"&&<>
-    {source!=="enrichment"&&<div className="flex gap-2 overflow-x-auto pb-1 sm:hidden" aria-label="Quick due filters">
+    <div className="flex gap-2 overflow-x-auto pb-1 sm:hidden" aria-label="Quick due filters">
       {([["overdue","Overdue"],["today","Today"],["upcoming","Upcoming"],["all","All"]] as const).map(([value,label])=>
         <button type="button" key={value} aria-pressed={due===value} onClick={()=>{setDue(value);setPage(0);}}
           className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium ${due===value?"bg-blue-700 text-white border-blue-700":"bg-white text-slate-700"}`}>{label}</button>)}
-    </div>}
+    </div>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <label className="text-xs font-medium">Search
         <div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400"/>
