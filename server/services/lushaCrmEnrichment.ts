@@ -10,6 +10,16 @@ import { saveVerifiedLushaLinkedIn } from "./contactProfile/store";
 
 const API = "https://api.lusha.com/v3";
 const TTL_MS = 15 * 60_000;
+/** Restricted in the 2026-10-09 connected Lusha lookup. Do not retry these
+ * contacts through a different API or route to circumvent provider restrictions. */
+const RESTRICTED_LUSHA_EMAILS = new Set([
+  "rbowlby@ramapo.edu",
+  "dzappala@ripconj.com",
+  "rebecca.crespo@njefa.nj.gov",
+  "sanjeannetta.worley@njit.edu",
+  "mlee@tulfra.com",
+  "drasmusson@crownpointgroup.com",
+]);
 const previews = new Map<number, {
   lushaId: string; email: string; name: string; company: string;
   previewedAt: number; canRevealPhones: boolean; linkedin: string | null;
@@ -85,6 +95,8 @@ export function lushaConfigured() { return Boolean(process.env.LUSHA_API_KEY?.tr
 /** Preview may consume Lusha's contact search credits, but does not reveal phone numbers. */
 export async function previewLushaContact(contactId: number, fetchImpl: typeof fetch = fetch): Promise<LushaPreviewResult> {
   const {c} = await contactFor(contactId);
+  if (c.email && RESTRICTED_LUSHA_EMAILS.has(c.email.toLowerCase()))
+    return {status:"restricted",message:"Lusha previously restricted this exact contact. No lookup attempted.",phoneRevealCredits:5,linkedin:null,hasPhoneAvailable:false};
   if (!c.email || !c.company || !c.name || c.name.includes("@"))
     return {status:"missing_identity",message:"Verify this contact's name and company in CRM before using Lusha.",phoneRevealCredits:5,linkedin:null,hasPhoneAvailable:false};
   const cached = previews.get(contactId);
