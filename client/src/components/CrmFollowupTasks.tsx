@@ -30,6 +30,13 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
     onSuccess: () => { void tasks.refetch(); setNotice("CRM task assigned to your account."); },
     onError: error => setNotice(error.message),
   });
+  const assignAll = trpc.crmFollowups.assignAllToMe.useMutation({
+    onSuccess: result => {
+      void tasks.refetch();
+      setNotice(`${result.assigned} tasks assigned to your CRM account; ${result.remainingUnassigned} remain unassigned.`);
+    },
+    onError: error => setNotice(error.message),
+  });
   useEffect(() => {
     if (!jobId || job.isFetching) return;
     if (job.data?.status === "done") {
@@ -57,6 +64,8 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
             No automatic email or SMS is sent from this panel.
           </p>
         </div>
+        <Button variant="outline" size="sm" disabled={assignAll.isPending}
+          onClick={() => assignAll.mutate()}>Assign all to me</Button>
         <Button variant="outline" size="sm" disabled={sync.isPending || Boolean(jobId)}
           onClick={() => sync.mutate({ lookbackDays: 35 })}>
           <RefreshCw className="h-4 w-4 mr-2" /> Sync outreach tasks
