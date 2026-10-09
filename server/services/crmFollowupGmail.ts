@@ -146,7 +146,11 @@ export function startCrmFollowupScheduler() {
     startJob({
       kind: "crm-followup", key: "crm-followup-sync",
       fn: async () => {
-        try { return await syncCrmFollowupsFromGmail(10); }
+        try {
+          const result = await syncCrmFollowupsFromGmail(10);
+          console.info("[CRM Follow-up] Scan:", JSON.stringify(result));
+          return result;
+        }
         catch (error) {
           console.error("[CRM Follow-up] Sync failed:", error instanceof Error ? error.message : "Unknown error");
           throw error;

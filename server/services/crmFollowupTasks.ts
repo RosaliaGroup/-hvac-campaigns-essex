@@ -103,3 +103,14 @@ export async function addCrmFollowupTask(input: {
   `);
   return Number((inserted as any)?.[0]?.affectedRows ?? 0) === 1;
 }
+
+/** Bind a task to the authenticated CRM user; verify the assignment by readback. */
+export async function assignCrmFollowupTask(id: number, userId: number, userName: string) {
+  const db = await followupDatabase();
+  await db.update(followupTasks)
+    .set({ assignedToUserId: userId, assignedToName: userName })
+    .where(eq(followupTasks.id, id));
+  const [row] = await db.select().from(followupTasks).where(eq(followupTasks.id, id)).limit(1);
+  if (!row || row.assignedToUserId !== userId) throw new Error("CRM task assignment not verified");
+  return row;
+}
