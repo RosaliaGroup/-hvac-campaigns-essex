@@ -4,9 +4,10 @@
  * Manual entry also requires both email and phone. No outbound messages.
  */
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
-import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
+import { crmCommunications, crmExternalContacts, customers } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { upsertExternalContact } from "./crmCommunications";
+import { ensureSentEmailContact } from "./sentEmailContact";
 import { addresses, CRM_MAILBOX } from "./gmailCrm";
 import { contactCompleteness } from "./automaticContactEnrichment";
 
@@ -87,6 +88,15 @@ export async function createSelectedContact(input:ContactIntake,from:"manual"|"g
   if(!readback || !contactCompleteness({email:readback.email,phone:readback.phone}).complete ||
     readback.email!==checkedInput.email)
     throw new Error("Contact save could not be verified. Review the CRM record.");
+  // A complete approved Contact belongs in the main /customers Contacts tab,
+  // not just the Communications bridge. Do not promote incomplete prospects.
+  const customerId=await ensureSentEmailContact(db,{...readback,source});
+  if(!customerId)throw new Error("Approved Contact could not be added to main CRM Contacts.");
+  const [mainContact]=await db.select({email:customers.email,phone:customers.phone})
+    .from(customers).where(eq(customers.id,customerId)).limit(1);
+  if(mainContact?.email?.toLowerCase()!==checkedInput.email ||
+    !contactCompleteness({email:mainContact.email,phone:mainContact.phone}).complete)
+    throw new Error("Main CRM Contacts promotion could not be verified.");
   // Link only messages whose parsed From/To contains the EXACT selected email.
   if(from==="gmail"){
     const messages=await db.select({
