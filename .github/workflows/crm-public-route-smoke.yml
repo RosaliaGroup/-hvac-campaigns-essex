@@ -55,3 +55,53 @@ jobs:
             fi
             echo "::endgroup::"
           done
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+      - name: Install isolated browser driver
+        run: npm install --prefix /tmp/crm-smoke playwright-core@1.55.0 --no-save --no-package-lock
+      - name: Test client-side rendering and login redirect without credentials
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const {chromium}=require('/tmp/crm-smoke/node_modules/playwright-core');
+          (async()=>{
+            const browser=await chromium.launch({
+              executablePath:process.env.CHROME_PATH,headless:true,
+              args:['--no-sandbox','--disable-dev-shm-usage']
+            });
+            let failed=false;
+            for(const origin of [
+              'https://hvac-campaigns-essex-production.up.railway.app',
+              'https://mechanicalenterprise.com'
+            ]) {
+              const context=await browser.newContext();
+              const page=await context.newPage();
+              const errors=[];
+              page.on('pageerror',e=>errors.push('pageerror: '+e.message));
+              page.on('console',msg=>{if(msg.type()==='error')errors.push('console: '+msg.text().slice(0,250));});
+              try {
+                const response=await page.goto(origin+'/tasks',{waitUntil:'domcontentloaded',timeout:45000});
+                await page.waitForTimeout(5000);
+                const body=await page.locator('body').innerText({timeout:5000});
+                const finalUrl=page.url();
+                console.log(JSON.stringify({
+                  origin,http:response?.status(),finalUrl,
+                  title:await page.title(),bodyChars:body.length,
+                  bodyExcerpt:body.slice(0,300),errors:errors.slice(0,8)
+                }));
+                if(body.trim().length<20||body.includes('An unexpected error occurred.')||
+                   errors.some(e=>e.startsWith('pageerror:')))failed=true;
+              }catch(e){failed=true;console.log(origin+' browser error: '+e.message);}
+              await context.close();
+            }
+            await browser.close();
+            if(failed)process.exitCode=1;
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          NODE
