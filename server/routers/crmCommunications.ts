@@ -419,6 +419,18 @@ export const crmCommunicationsRouter = router({
               sql`exists (select 1 from ${leads} where (${leads.contactType} = 'email' and ${leads.contact} = ${crmExternalContacts.email}) or (${leads.contactType} = 'phone' and ${leads.contact} = ${crmExternalContacts.phone}))`,
               sql`exists (select 1 from ${leadCaptures} where ${leadCaptures.email} = ${crmExternalContacts.email} or ${leadCaptures.phone} = ${crmExternalContacts.phone})`
             ),
+            // Incomplete imported contacts remain in Contact Enrichment,
+            // not the completed Contacts list. Linked customer phones count.
+            sql`${crmExternalContacts.email} LIKE '%@%.%'`,
+            sql`(
+              CHAR_LENGTH(REGEXP_REPLACE(
+                COALESCE(
+                  NULLIF(TRIM(${crmExternalContacts.phone}), ''),
+                  (SELECT NULLIF(TRIM(c.phone),'') FROM customers c
+                   WHERE c.id = ${crmExternalContacts.customerId} LIMIT 1)
+                ), '[^0-9]', ''
+              )) BETWEEN 10 AND 15
+            )`,
             or(
               like(crmExternalContacts.name, term),
               like(crmExternalContacts.email, term),
@@ -430,6 +442,12 @@ export const crmCommunicationsRouter = router({
         )
         .orderBy(desc(crmExternalContacts.updatedAt))
         .limit(100);
+    }),
+  enrichmentStatus: protectedProcedure
+    .input(z.object({contactId:z.number().int().positive()}))
+    .query(async ({input})=>{
+      const {contactEnrichmentStatus}=await import("../services/automaticContactEnrichment");
+      return contactEnrichmentStatus(input.contactId);
     }),
   outreachSuppression: protectedProcedure
     .input(z.object({ email: z.string().email().max(320) }))
@@ -493,9 +511,27 @@ export const crmCommunicationsRouter = router({
         leadCaptureId: z.number().int().nullish(),
       })
     )
-    .mutation(async ({ input }) =>
-      upsertExternalContact(await dbOrThrow(), input)
-    ),
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      // New, manually created CRM contacts require BOTH a valid email and phone.
+      // Existing incomplete Gmail/SMS/lead records remain editable while they
+      // are staged for automatic enrichment; never lose incoming communications.
+      const existing = await db.select({id:crmExternalContacts.id})
+        .from(crmExternalContacts)
+        .where(or(
+          input.email ? eq(crmExternalContacts.email,input.email.trim().toLowerCase()) : undefined,
+          input.phone ? eq(crmExternalContacts.phone,input.phone) : undefined,
+        ) ?? sql`false`).limit(1);
+      if(!existing.length){
+        if(!input.email?.trim() || !input.phone?.trim() ||
+          !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(input.email.trim()) ||
+          input.phone.replace(/\\D/g,"").length < 10 ||
+          input.phone.replace(/\\D/g,"").length > 15)
+          throw new TRPCError({code:"BAD_REQUEST",
+            message:"New CRM contacts require a valid email and phone number. Incomplete inbound leads remain in Contact Enrichment."});
+      }
+      return upsertExternalContact(db,input);
+    }),
 
   log: protectedProcedure
     .input(
