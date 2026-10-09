@@ -31,6 +31,9 @@ describe("CRM contact intake eligibility", () => {
     expect(()=>validateContactIntake({
       name:"dana@building.com",email:"dana@building.com",phone:"2015550199",
     })).toThrow(/verified contact name/);
+    expect(()=>validateContactIntake({
+      name:"Dana Smith",email:"dana@building.com",phone:"201-555-0199 ext 123",
+    })).toThrow(/main phone number/);
   });
   it("parses Gmail correspondents without treating them as CRM contacts", () => {
     expect(addresses('Dana Smith <DANA@BUILDING.COM>, another@building.com'))
