@@ -18,6 +18,7 @@
  */
 import { eq, and, isNotNull } from "drizzle-orm";
 import { getDb } from "../../db";
+import { reconcileMergedContentTopics } from "./reconcileContentQueue";
 import { seoApprovalBatches, type SeoApprovalBatchRow } from "../../../drizzle/schema";
 import { laneForBatch, refreshBatchStatus, approveBatchToPR, type ApproveBatchInput, type ApproveBatchResult } from "./bulkApprove";
 import { isWarmedUp, advanceWarmup } from "./warmupGate";
@@ -239,6 +240,14 @@ export async function runAutoMergeTick(): Promise<{ checked: number; merged: num
       const { runWeeklyContentJob } = await import("./contentPipeline");
       const outcome = await runWeeklyContentJob();
       console.log(`[SEO] recovery content job: ${outcome.status}${outcome.status === "drafted" && outcome.autoApproved ? `, auto-approved to batch #${outcome.batchId}` : ""}`);
+    }
+    // Reconcile already-merged content PRs even when no hold-eligible batches exist.
+    // Failure must not prevent the regular merge poller from operating.
+    try {
+      const sync = await reconcileMergedContentTopics();
+      if (sync.checked) console.log(`[SEO] content queue reconciliation: checked ${sync.checked}, published ${sync.published}, held ${sync.held}`);
+    } catch (err) {
+      console.error("[SEO] content queue reconciliation failed:", (err as Error).message);
     }
     const dueBatches = await db.select().from(seoApprovalBatches).where(and(eq(seoApprovalBatches.status, "pr_open"), isNotNull(seoApprovalBatches.holdUntil)));
     console.log(`[SEO] auto-merge tick: ${dueBatches.length} open batch(es) with a hold`);
