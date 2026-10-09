@@ -18,6 +18,8 @@ export function validateContactIntake(input:ContactIntake) {
   const email=input.email.trim().toLowerCase();
   const phone=input.phone.trim();
   if(email===CRM_MAILBOX)throw new Error("The Mechanical Enterprise sending mailbox cannot be imported as a prospect.");
+  if(!/^\\+?[\\d\\s().-]+$/.test(phone))
+    throw new Error("Enter the main phone number only. Do not include an extension or letters.");
   const status=contactCompleteness({email,phone});
   if(!status.complete) throw new Error(
     "A valid business email and a phone number (10–15 digits) are required before saving a Contact.");
