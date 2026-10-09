@@ -7,7 +7,7 @@ import { upsertExternalContact } from "./crmCommunications";
 import { ensureSentEmailContact } from "./sentEmailContact";
 import { startJob } from "./asyncLaneJob";
 import { cadenceExcluded, cadenceDueAt, THIRTY_DAY_STEPS } from "./crm30DayRules";
-import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks, cancelOpen30DayTasks } from "./crm30DayTasks";
+import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks, cancelOpen30DayTasks, cancelTasksWithInboundReplies } from "./crm30DayTasks";
 
 type Candidate = {
   email: string; introAt: Date; messageId: string; threadId: string;
@@ -145,6 +145,8 @@ export async function sync30DayFromGmail(
       cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
     }
   }
+  // Reconcile replies for older prospects outside the rolling Gmail intro window.
+  cancelled += await cancelTasksWithInboundReplies();
   return {
     scanned, created, cancelled, skipped,
     hasMore: Boolean(pageToken),
