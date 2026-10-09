@@ -30,6 +30,8 @@ vi.mock("./telnyxSms", () => ({
   },
 }));
 
+vi.mock("./outreachSuppression", () => ({ isSmsRecipientSuppressed: vi.fn().mockResolvedValue(false) }));
+
 import {
   recordOutboundSms,
   isPhoneOptedOut,
