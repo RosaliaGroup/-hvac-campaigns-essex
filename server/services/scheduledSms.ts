@@ -6,6 +6,7 @@
 import { sendTelnyxSms, telnyxConfigured } from "./telnyxSms";
 import { logOutboundBestEffort, mechanicalSmsFrom } from "./smsOutbound";
 import { getDb } from "../db";
+import { isSmsRecipientSuppressed } from "./outreachSuppression";
 import { scheduledSends, smsContacts, smsSends } from "../../drizzle/schema";
 import { eq, lte, and } from "drizzle-orm";
 
@@ -62,6 +63,11 @@ export async function processScheduledSends(): Promise<{ processed: number; sent
         .update(scheduledSends)
         .set({ status: "cancelled" })
         .where(eq(scheduledSends.id, item.id));
+      continue;
+    }
+
+    if (await isSmsRecipientSuppressed(db, contact.phone)) {
+      await db.update(scheduledSends).set({ status: "cancelled" }).where(eq(scheduledSends.id, item.id));
       continue;
     }
 
