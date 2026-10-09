@@ -17,6 +17,7 @@ export type ContactIntake = {
 export function validateContactIntake(input:ContactIntake) {
   const email=input.email.trim().toLowerCase();
   const phone=input.phone.trim();
+  if(email===CRM_MAILBOX)throw new Error("The Mechanical Enterprise sending mailbox cannot be imported as a prospect.");
   const status=contactCompleteness({email,phone});
   if(!status.complete) throw new Error(
     "A valid business email and a phone number (10–15 digits) are required before saving a Contact.");
