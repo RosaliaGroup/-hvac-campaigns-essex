@@ -26,11 +26,9 @@ export async function ensureSentEmailContact(
     const [existing] = await tx
       .select()
       .from(customers)
-      .where(
-        external.customerId
-          ? eq(customers.id, external.customerId)
-          : sql`lower(trim(${customers.email})) = ${email}`
-      )
+      // A shared business phone or stale customerId must never merge two
+      // different people. Match the exact normalized email address only.
+      .where(sql`lower(trim(${customers.email})) = ${email}`)
       .limit(1);
     let customerId = existing?.id;
     if(existing){
