@@ -91,3 +91,77 @@ export default function CrmTasks(){
       </div>
       {selected.isLoading&&<p className="p-5 text-sm">Loading tasks…</p>}
       {!selected.isLoading&&total===0&&<p className="p-5 text-sm text-slate-500">No tasks match these filters.</p>}
+      {source==="outreach"&&outreach.data?.items.map(task=><div key={task.id}
+        className="border-b last:border-b-0 p-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div className="flex items-center flex-wrap gap-2">
+            {task.kind==="human"?<Phone className="h-4 w-4 text-blue-700"/>:<Mail className="h-4 w-4 text-blue-700"/>}
+            <strong>{labels[task.touchNumber]??"Follow-up"}</strong>
+            <span className="text-xs bg-slate-100 rounded px-2 py-1">Touch {task.touchNumber}/10</span>
+            {task.status!=="open"&&<span className="text-xs text-slate-600">{task.status} · {task.outcome?.replaceAll("_"," ")}</span>}
+          </div>
+          <div className="text-sm">
+            <Link href={`/contacts/communications?contactId=${task.externalContactId}`}
+              className="text-blue-700 font-medium hover:underline">
+              {task.name&&task.name!==task.recipientEmail?task.name:task.recipientEmail}
+            </Link>
+            {task.company&&<span className="text-slate-600"> · {task.company}</span>}
+          </div>
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+            <span className={task.status==="open"&&new Date(task.dueAt)<new Date()?"text-red-700 font-semibold":""}>
+              <CalendarClock className="h-3 w-3 inline mr-1"/>Due {formatDate(task.dueAt)}
+            </span>
+            <span>Assigned: {task.assignedToUserId?task.assignedToName:"Unassigned"}</span>
+            <a className="text-blue-700 hover:underline" target="_blank" rel="noreferrer"
+              href={`https://mail.google.com/mail/u/?authuser=sales%40mechanicalenterprise.com#all/${encodeURIComponent(task.introThreadId)}`}>
+              Original Gmail thread</a>
+          </div>
+        </div>
+        {task.status==="open"&&<div className="flex flex-wrap gap-2 shrink-0">
+          {!task.assignedToUserId&&<Button size="sm" variant="outline" disabled={busy}
+            onClick={()=>assign.mutate({id:task.id})}>Assign to me</Button>}
+          {task.kind==="human"?<>
+            <Button size="sm" variant="outline" disabled={busy}
+              onClick={()=>done.mutate({id:task.id,outcome:"attempted_no_answer"})}>Called · no answer</Button>
+            <Button size="sm" variant="outline" disabled={busy}
+              onClick={()=>done.mutate({id:task.id,outcome:"connected"})}>Spoke · handoff</Button>
+            <Button size="sm" variant="outline" disabled={busy}
+              onClick={()=>done.mutate({id:task.id,outcome:"not_interested"})}>Not interested</Button>
+          </>:<>
+            <Button size="sm" variant="outline" disabled={busy}
+              onClick={()=>done.mutate({id:task.id,outcome:"reviewed_no_send"})}>Reviewed · no send</Button>
+            <Button size="sm" variant="outline" disabled={busy}
+              onClick={()=>done.mutate({id:task.id,outcome:"sent_verified"})}>Verify sent email</Button>
+          </>}
+        </div>}
+      </div>)}
+      {source==="opportunities"&&opportunities.data?.items.map(task=><div key={task.id}
+        className="border-b last:border-b-0 p-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 font-semibold">
+            {task.type==="call"?<Phone className="h-4 w-4 text-blue-700"/>:<Mail className="h-4 w-4 text-blue-700"/>}
+            {task.title}
+          </div>
+          <Link href={`/opportunities/${task.opportunityId}`} className="text-blue-700 text-sm hover:underline">
+            {task.customerName||task.company||task.opportunityTitle||`Opportunity #${task.opportunityId}`}
+          </Link>
+          <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+            <span>Due {formatDate(task.dueAt)}</span><span>{task.type}</span><span>{task.status}</span>
+          </div>
+        </div>
+        {task.status==="open"&&<div className="flex gap-2">
+          <Button size="sm" variant="outline" disabled={busy}
+            onClick={()=>oppSnooze.mutate({taskId:task.id,days:1})}>Snooze 1 day</Button>
+          <Button size="sm" disabled={busy} onClick={()=>oppDone.mutate({taskId:task.id})}>Mark complete</Button>
+        </div>}
+      </div>)}
+      {total>50&&<div className="flex items-center justify-between gap-3 p-4 border-t text-sm">
+        <span>Showing {page*50+1}–{Math.min((page+1)*50,total)} of {total}</span>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))}>Previous</Button>
+          <Button size="sm" variant="outline" disabled={(page+1)*50>=total} onClick={()=>setPage(p=>p+1)}>Next</Button>
+        </div>
+      </div>}
+    </section>
+  </div>;
+}
