@@ -599,6 +599,26 @@ export const seoRouter = router({
       return { ok: true };
     }),
 
+  retryRejectedContentDraft: adminProcedure
+    .input(z.object({ topicId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const { findLatestContentDraft } = await import("../services/seo/contentPipeline");
+      const topic = (await listContentQueue()).find(t => t.id === input.topicId);
+      if (!topic || topic.status !== "drafted" || topic.contentBatchId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Topic is not eligible for retry." });
+      }
+      const draft = await findLatestContentDraft(topic.id);
+      if (!draft || draft.passes) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No rejected draft to retry." });
+      }
+      if (getLaneJobStatus("content")?.status === "running") {
+        throw new TRPCError({ code: "CONFLICT", message: "Content job is running." });
+      }
+      await updateContentQueueStatus(topic.id, "queued");
+      const { started } = startLaneJob("content", () => runWeeklyContentJob());
+      return { queued: true, started, topicId: topic.id };
+    }),
+
   /**
    * "Run now" for the weekly content pipeline — same job the scheduler calls,
    * run on demand. Fire-and-forget (see server/services/asyncLaneJob.ts): the
