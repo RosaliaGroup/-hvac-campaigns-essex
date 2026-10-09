@@ -59,6 +59,7 @@ describe("evaluateAutoMergeReadiness (pure)", () => {
 });
 
 vi.mock("../../db", () => ({ getDb: vi.fn() }));
+vi.mock("./reconcileContentQueue", () => ({ reconcileMergedContentTopics: vi.fn(async () => ({ checked: 0, published: 0, held: 0 })) }));
 vi.mock("./bulkApprove", () => ({ laneForBatch: vi.fn(() => "meta"), refreshBatchStatus: vi.fn(), approveBatchToPR: vi.fn() }));
 vi.mock("./warmupGate", () => ({ isWarmedUp: vi.fn(), advanceWarmup: vi.fn() }));
 vi.mock("./circuitBreaker", () => ({ checkCircuitBreakerConditions: vi.fn() }));
