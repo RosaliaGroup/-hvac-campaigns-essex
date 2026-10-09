@@ -183,6 +183,11 @@ export default function Communications() {
   }[] = [
     ...(contacts.data ?? []),
     ...(crmContacts.data?.items ?? [])
+      // Historical Gmail Sent auto-imports are not approved CRM contacts.
+      // Existing clients remain visible only with both email and phone.
+      .filter(c => c.source !== "Gmail Sent" &&
+        Boolean(c.email && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(c.email)) &&
+        Boolean(c.phone && c.phone.replace(/\\D/g,"").length >= 10))
       .filter(
         c =>
           !(contacts.data ?? []).some(
@@ -352,7 +357,7 @@ export default function Communications() {
           Connection settings
         </Link>
         <span className="text-xs text-slate-500">
-          Leads, clients and sent-email contacts · refreshes every 5 minutes
+          CRM contacts and leads · Gmail sync does not add people automatically
         </span>
         {!ready && (
           <p className="text-sm">
