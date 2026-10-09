@@ -1,0 +1,31 @@
+name: CRM Lusha and Click-to-Call Safety
+
+on:
+  pull_request:
+    paths:
+      - "client/src/lib/phoneDialer.ts"
+      - "client/src/lib/phoneDialer.test.ts"
+      - "client/src/components/TaskCallActions.tsx"
+      - "server/services/lushaCrmEnrichment.ts"
+      - "server/services/lushaCrmEnrichment.test.ts"
+      - ".github/workflows/crm-lusha-call-safety.yml"
+  workflow_dispatch:
+
+jobs:
+  safety-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Test dialer and Lusha identity/phone selection (no external calls)
+        run: pnpm exec vitest run client/src/lib/phoneDialer.test.ts server/services/lushaCrmEnrichment.test.ts
+      - name: Typecheck CRM integration
+        run: pnpm exec tsc --noEmit
