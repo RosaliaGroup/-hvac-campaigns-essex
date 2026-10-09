@@ -55,7 +55,7 @@ export default function CrmTasks(){
   const result=source==="outreach"?outreach.data:opportunities.data;
   const total=result?.total??0;
   const busy=done.isPending||assign.isPending||oppDone.isPending||oppSnooze.isPending;
-  return <div className="mx-auto max-w-7xl p-4 md:p-6 space-y-5">
+  return <div className="mx-auto max-w-7xl p-0 sm:p-4 md:p-6 space-y-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h1 className="text-2xl font-semibold flex items-center gap-2"><ListTodo className="h-6 w-6"/>Tasks</h1>
         <p className="text-sm text-slate-600">Calls, email reviews, and follow-up actions. Keep conversations in Communications.</p></div>
@@ -64,13 +64,18 @@ export default function CrmTasks(){
         <Button variant="outline" disabled={sync.isPending||Boolean(jobId)} onClick={()=>sync.mutate({lookbackDays:35})}><RefreshCw className="h-4 w-4 mr-2"/>Sync outreach tasks</Button>
       </div>}
     </div>
-    <div className="flex gap-2 border-b pb-2" role="tablist">
+    <div className="flex gap-2 overflow-x-auto border-b pb-2" role="tablist">
       {([["outreach","Prospect follow-ups"],["opportunities","Opportunity actions"],["enrichment","Contact enrichment"]] as const).map(([id,label])=>
         <button key={id} role="tab" aria-selected={source===id} onClick={()=>{setSource(id);setPage(0);}}
-          className={`rounded-lg px-4 py-2 text-sm font-medium ${source===id?"bg-blue-100 text-blue-900":"hover:bg-slate-100 text-slate-600"}`}>{label}</button>)}
+          className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium ${source===id?"bg-blue-100 text-blue-900":"hover:bg-slate-100 text-slate-600"}`}>{label}</button>)}
     </div>
     {source==="enrichment"&&<ContactEnrichmentQueue/>}
     {source!=="enrichment"&&<>
+    <div className="flex gap-2 overflow-x-auto pb-1 sm:hidden" aria-label="Quick due filters">
+      {([["overdue","Overdue"],["today","Today"],["upcoming","Upcoming"],["all","All"]] as const).map(([value,label])=>
+        <button type="button" key={value} aria-pressed={due===value} onClick={()=>{setDue(value);setPage(0);}}
+          className={`shrink-0 rounded-full border px-4 py-2 text-sm font-medium ${due===value?"bg-blue-700 text-white border-blue-700":"bg-white text-slate-700"}`}>{label}</button>)}
+    </div>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
       <label className="text-xs font-medium">Search
         <div className="relative mt-1"><Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400"/>
@@ -96,7 +101,7 @@ export default function CrmTasks(){
       {selected.isLoading&&<p className="p-5 text-sm">Loading tasks…</p>}
       {!selected.isLoading&&total===0&&<p className="p-5 text-sm text-slate-500">No tasks match these filters.</p>}
       {source==="outreach"&&outreach.data?.items.map(task=><div key={task.id}
-        className="border-b last:border-b-0 p-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+        className="border-b last:border-b-0 p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex items-center flex-wrap gap-2">
             {task.kind==="human"?<Phone className="h-4 w-4 text-blue-700"/>:<Mail className="h-4 w-4 text-blue-700"/>}
@@ -121,13 +126,14 @@ export default function CrmTasks(){
               Original Gmail thread</a>
           </div>
         </div>
-        {task.status==="open"&&<div className="flex flex-wrap gap-2 shrink-0">
+        {task.status==="open"&&<div className="flex flex-wrap gap-2 w-full xl:w-auto xl:shrink-0">
           {!task.assignedToUserId&&<Button size="sm" variant="outline" disabled={busy}
             onClick={()=>assign.mutate({id:task.id})}>Assign to me</Button>}
           {task.kind==="human"?<TaskCallActions
             contactId={task.externalContactId}
             contactName={task.name || task.recipientEmail}
             phone={task.phone}
+            phoneType={task.phoneType}
             disabled={busy}
             onRefresh={refresh}
             onOutcome={(outcome,note)=>done.mutate({id:task.id,outcome,note})}
