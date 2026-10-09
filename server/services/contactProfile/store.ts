@@ -241,7 +241,7 @@ export async function saveVerifiedLushaLinkedIn(contactId: number, linkedinUrl: 
     .where(eq(crmExternalContacts.id,contactId)).limit(1);
   if (!contact) throw new Error("CRM contact not found");
   const u = new URL(linkedinUrl);
-  if (u.protocol !== "https:" || !/^(www\\.)?linkedin\\.com$/.test(u.hostname) ||
+  if (u.protocol !== "https:" || !/^(www\.)?linkedin\.com$/.test(u.hostname) ||
       !u.pathname.startsWith("/in/")) throw new Error("Invalid LinkedIn person profile");
   const [saved] = await db.select().from(profiles).where(eq(profiles.contactId,contactId)).limit(1);
   const base: ContactProfile = saved?.profile ?? {
