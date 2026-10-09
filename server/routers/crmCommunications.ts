@@ -526,25 +526,17 @@ export const crmCommunicationsRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const db = await dbOrThrow();
-      // New, manually created CRM contacts require BOTH a valid email and phone.
-      // Existing incomplete Gmail/SMS/lead records remain editable while they
-      // are staged for automatic enrichment; never lose incoming communications.
-      const existing = await db.select({id:crmExternalContacts.id})
-        .from(crmExternalContacts)
-        .where(or(
-          input.email ? eq(crmExternalContacts.email,input.email.trim().toLowerCase()) : undefined,
-          input.phone ? eq(crmExternalContacts.phone,input.phone) : undefined,
-        ) ?? sql`false`).limit(1);
-      if(!existing.length){
-        if(!input.email?.trim() || !input.phone?.trim() ||
-          !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) ||
-          input.phone.replace(/\D/g,"").length < 10 ||
-          input.phone.replace(/\D/g,"").length > 15)
-          throw new TRPCError({code:"BAD_REQUEST",
-            message:"New CRM contacts require a valid email and phone number. Incomplete inbound leads remain in Contact Enrichment."});
-      }
-      return upsertExternalContact(db,input);
+      const db=await dbOrThrow();
+      const email=input.email?.trim().toLowerCase();
+      if(!email)throw new TRPCError({code:"BAD_REQUEST",
+        message:"An email address is required for CRM contacts."});
+      const [existing]=await db.select().from(crmExternalContacts)
+        .where(sql`lower(trim(${crmExternalContacts.email})) = ${email}`).limit(1);
+      if(!existing)throw new TRPCError({code:"BAD_REQUEST",
+        message:"Use Add Contact to create a new record with both email and phone."});
+      // Existing task-stage identities may be corrected before enrichment;
+      // they remain staged until both email and phone are verified.
+      return upsertExternalContact(db,{...input,source:existing.source});
     }),
 
   log: protectedProcedure
