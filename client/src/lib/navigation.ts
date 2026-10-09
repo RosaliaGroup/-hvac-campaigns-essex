@@ -214,6 +214,7 @@ export const INTERNAL_ROUTE_PREFIXES: string[] = [
   "/local-seo",
   "/leads",
   "/lead-dashboard",
+  "/tasks",
   "/growth",
   "/customers",
   "/contacts",
