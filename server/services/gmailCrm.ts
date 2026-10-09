@@ -6,7 +6,7 @@ import { googleCalendarProvider } from "../integrations/google/calendar";
 import { getDb } from "../db";
 import { logCommunication, upsertExternalContact } from "./crmCommunications";
 import { ensureSentEmailContact } from "./sentEmailContact";
-import { isExplicitOutreachOptOut, recordOutreachSuppression, seedKnownOutreachSuppressions } from "./outreachSuppression";
+import { isExplicitOutreachOptOut, recordOutreachSuppression, seedKnownOutreachSuppressions, KNOWN_OUTREACH_SUPPRESSIONS } from "./outreachSuppression";
 import { cancelOpen30DayTasks } from "./crm30DayTasks";
 import { followupDatabase, followupTasks } from "./crmFollowupTasks";
 
@@ -303,6 +303,27 @@ export function startGmailCrmScheduler() {
     process.env.GMAIL_CRM_SYNC_ENABLED === "false"
   )
     return;
+  // Suppression must be seeded and read back even if Gmail OAuth is disconnected.
+  const bootstrap = setTimeout(async () => {
+    try {
+      const db = await getDb();
+      if (!db) throw new Error("CRM database unavailable");
+      const verified = await seedKnownOutreachSuppressions(db);
+      let cancelled = 0;
+      await followupDatabase();
+      for (const entry of KNOWN_OUTREACH_SUPPRESSIONS) {
+        cancelled += await cancelOpen30DayTasks(entry.email, "Do not contact / delivery failure.");
+        const result = await db.update(followupTasks)
+          .set({ status: "cancelled", note: "Do not contact / delivery failure." })
+          .where(and(eq(followupTasks.recipientEmail, entry.email), eq(followupTasks.status, "open")));
+        cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
+      }
+      console.info("[CRM Suppression] Verified:", JSON.stringify({ verified, cancelled }));
+    } catch (error) {
+      console.error("[CRM Suppression] Bootstrap failed:", error instanceof Error ? error.message : "Unknown error");
+    }
+  }, 20_000);
+  bootstrap.unref();
   let pageToken: string | undefined;
   const run = () =>
     startJob({
