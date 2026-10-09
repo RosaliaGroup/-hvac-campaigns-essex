@@ -186,8 +186,8 @@ export default function Communications() {
       // Historical Gmail Sent auto-imports are not approved CRM contacts.
       // Existing clients remain visible only with both email and phone.
       .filter(c => c.source !== "Gmail Sent" &&
-        Boolean(c.email && /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(c.email)) &&
-        Boolean(c.phone && c.phone.replace(/\\D/g,"").length >= 10))
+        Boolean(c.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)) &&
+        Boolean(c.phone && c.phone.replace(/\D/g,"").length >= 10))
       .filter(
         c =>
           !(contacts.data ?? []).some(
