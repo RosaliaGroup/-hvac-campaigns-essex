@@ -3953,3 +3953,23 @@ export const crmCommunications = mysqlTable("crmCommunications", {
 }));
 export type CrmCommunication = typeof crmCommunications.$inferSelect;
 export type InsertCrmCommunication = typeof crmCommunications.$inferInsert;
+
+/** CRM-owned prospecting queue, migration 0082. No automatic schema writes. */
+export const prospectWorkflowSettings = mysqlTable('prospectWorkflowSettings', {
+  id: int('id').primaryKey(), enabled: boolean('enabled').default(false).notNull(),
+  ownerId: int('ownerId'), sendHour: varchar('sendHour', {length:32}), sentThisHour: int('sentThisHour').default(0).notNull(), lastHour: varchar('lastHour', {length:32}),
+  lastRunAt: timestamp('lastRunAt'), lastError: text('lastError'),
+});
+export const prospectWorkflowQueue = mysqlTable('prospectWorkflowQueue', {
+  id: int('id').autoincrement().primaryKey(), email: varchar('email',{length:320}).notNull(),
+  name: varchar('name',{length:255}).notNull(), company: varchar('company',{length:255}).notNull(),
+  title: varchar('title',{length:255}).notNull(), verificationUrl: text('verificationUrl').notNull(), evidence: text('evidence').notNull(),
+  phone: varchar('phone',{length:50}), smsConsent: boolean('smsConsent').default(false).notNull(), consentEvidence: text('consentEvidence'),
+  externalContactId: int('externalContactId'), leadId: int('leadId'), ownerId: int('ownerId').notNull(),
+  state: varchar('state',{length:32}).default('queued').notNull(),
+  emailBody: text('emailBody').notNull(), emailMessageId: varchar('emailMessageId',{length:255}), threadId: varchar('threadId',{length:255}),
+  smsState: varchar('smsState',{length:32}).default('consent_required').notNull(),
+  nextTouchAt: timestamp('nextTouchAt'), touchCount: int('touchCount').default(0).notNull(),
+  followUpAt: timestamp('followUpAt'), followUpDoneAt: timestamp('followUpDoneAt'), notifiedAt: timestamp('notifiedAt'),
+  lastError: text('lastError'), createdAt: timestamp('createdAt').defaultNow().notNull(),
+}, t=>({emailUq:uniqueIndex('prospectWorkflowQueue_email_uq').on(t.email), dueIdx:index('prospectWorkflowQueue_due_idx').on(t.state,t.nextTouchAt)}));

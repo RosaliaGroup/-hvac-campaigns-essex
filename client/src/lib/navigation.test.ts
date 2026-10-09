@@ -27,6 +27,7 @@ const KNOWN_ROUTES = new Set<string>([
   "/contacts/communications",
   "/opportunities",
   "/lead-scoring",
+  "/growth",
   "/calendar",
   "/jobs",
   "/field/today",
@@ -139,6 +140,7 @@ describe("department structure", () => {
       "Communications",
       "Contacts",
       "Opportunity Center",
+      "Prospecting & Follow-up",
       "Lead Scoring",
     ]);
   });
@@ -290,6 +292,7 @@ describe("getVisibleDepartments", () => {
       "Communications",
       "Contacts",
       "Opportunity Center",
+      "Prospecting & Follow-up",
       "Lead Scoring",
     ]);
     // Only the Calendar leaks into Dispatch for a salesperson.
@@ -322,7 +325,7 @@ describe("getVisibleDepartments", () => {
 
   it("marketing sees Marketing, Lead Inbox and Analytics", () => {
     expect(deptIds("marketing")).toEqual(["home", "sales", "marketing", "analytics"]);
-    expect(itemLabels("marketing", "sales")).toEqual(["Lead Inbox"]);
+    expect(itemLabels("marketing", "sales")).toEqual(["Lead Inbox", "Prospecting & Follow-up"]);
     expect(itemLabels("marketing", "marketing")).toEqual([
       "Marketing Dashboard",
       "SEO Intelligence",
