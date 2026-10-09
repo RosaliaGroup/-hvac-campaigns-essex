@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { lushaConfigured, previewLushaContact, revealLushaPhone, savePreviewedLushaLinkedIn } from "../services/lushaCrmEnrichment";
 import { protectedProcedure, router } from "../_core/trpc";
 import {
   getContactEnrichment, classifyContactPhone, setFollowConfirmed,
@@ -6,6 +7,22 @@ import {
 } from "../services/crmContactEnrichment";
 
 export const crmContactEnrichmentRouter = router({
+  lushaStatus: protectedProcedure.query(()=>({
+    configured:lushaConfigured(),
+    message:lushaConfigured()
+      ? "Lusha CRM API is configured. Previews and reveals require explicit actions."
+      : "LUSHA_API_KEY is missing in Railway; the connected ChatGPT Lusha app is separate.",
+  })),
+  lushaPreview: protectedProcedure
+    .input(z.object({contactId:z.number().int().positive(),approveSearchCost:z.literal(true)}))
+    .mutation(({input})=>previewLushaContact(input.contactId)),
+  lushaRevealPhone: protectedProcedure
+    .input(z.object({contactId:z.number().int().positive(),approvePhoneCredits:z.literal(true)}))
+    .mutation(({input})=>revealLushaPhone(input.contactId,input.approvePhoneCredits)),
+  lushaSaveLinkedIn: protectedProcedure
+    .input(z.object({contactId:z.number().int().positive()}))
+    .mutation(({input})=>savePreviewedLushaLinkedIn(input.contactId)),
+
   get: protectedProcedure.input(z.object({contactId:z.number().int().positive()}))
     .query(({input})=>getContactEnrichment(input.contactId)),
   classifyPhone: protectedProcedure.input(z.object({
