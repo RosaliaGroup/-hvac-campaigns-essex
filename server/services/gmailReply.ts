@@ -5,6 +5,7 @@ import { getDb } from "../db";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { addresses, CRM_MAILBOX, gmailCrmStatus } from "./gmailCrm";
 import { logCommunication } from "./crmCommunications";
+import { assertOutreachNotSuppressed } from "./outreachSuppression";
 
 export function replyMime(
   to: string,
@@ -117,6 +118,7 @@ export async function sendGmailReply(
         : addresses(header("To"))
       ).find(value => value !== CRM_MAILBOX);
   if (!to) throw new Error("No reply recipient found.");
+  await assertOutreachNotSuppressed(db, to);
   const subject = /^re:/i.test(header("Subject"))
     ? header("Subject")
     : `Re: ${header("Subject")}`;

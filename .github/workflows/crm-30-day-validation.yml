@@ -3,6 +3,12 @@ on:
   pull_request:
     paths:
       - "server/services/crm30Day*.ts"
+      - "server/services/outreachSuppression*.ts"
+      - "server/services/crmFollowupGmail.ts"
+      - "server/services/gmailCrm*.ts"
+      - "server/services/gmailCompose*.ts"
+      - "server/services/gmailReply*.ts"
+      - "server/services/smsOutbound*.ts"
       - "server/routers/crmFollowups.ts"
       - "server/_core/index.ts"
       - "client/src/components/CrmFollowupTasks.tsx"
@@ -24,4 +30,4 @@ jobs:
       - name: TypeScript typecheck
         run: pnpm check
       - name: Cadence unit tests
-        run: pnpm exec vitest run server/services/crm30DayRules.test.ts
+        run: pnpm exec vitest run server/services/crm30DayRules.test.ts server/services/outreachSuppression.test.ts server/services/gmailCrm.test.ts server/services/gmailCompose.test.ts server/services/gmailReply.test.ts server/services/smsOutbound.test.ts

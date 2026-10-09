@@ -13,6 +13,9 @@ import {
 } from "../../drizzle/schema";
 import { gmailCrmStatus, syncGmailPage } from "../services/gmailCrm";
 import { startJob, getJob } from "../services/asyncLaneJob";
+import { crmOutreachSuppressions, isOutreachSuppressed, KNOWN_OUTREACH_SUPPRESSIONS, seedKnownOutreachSuppressions } from "../services/outreachSuppression";
+import { cancelOpen30DayTasks } from "../services/crm30DayTasks";
+import { followupDatabase, followupTasks } from "../services/crmFollowupTasks";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
@@ -428,6 +431,36 @@ export const crmCommunicationsRouter = router({
         .orderBy(desc(crmExternalContacts.updatedAt))
         .limit(100);
     }),
+  outreachSuppression: protectedProcedure
+    .input(z.object({ email: z.string().email().max(320) }))
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      const email = input.email.trim().toLowerCase();
+      const suppressed = await isOutreachSuppressed(db, email);
+      const [record] = await db.select().from(crmOutreachSuppressions)
+        .where(eq(crmOutreachSuppressions.email, email)).limit(1);
+      return { email, suppressed, persisted: Boolean(record), reason: record?.reason ?? null };
+    }),
+  syncOutreachSuppressions: protectedProcedure.mutation(async () => {
+    const db = await dbOrThrow();
+    await seedKnownOutreachSuppressions(db);
+    await followupDatabase();
+    let cancelled = 0;
+    for (const entry of KNOWN_OUTREACH_SUPPRESSIONS) {
+      cancelled += await cancelOpen30DayTasks(entry.email, "Do not contact / delivery failure.");
+      const result = await db.update(followupTasks)
+        .set({ status: "cancelled", note: "Do not contact / delivery failure." })
+        .where(and(eq(followupTasks.recipientEmail, entry.email), eq(followupTasks.status, "open")));
+      cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
+    }
+    const records = await db.select().from(crmOutreachSuppressions);
+    const confirmed = KNOWN_OUTREACH_SUPPRESSIONS.filter(entry =>
+      records.some(row => row.email === entry.email &&
+        (entry.reason !== "opt_out" || row.reason === "opt_out")));
+    if (confirmed.length !== KNOWN_OUTREACH_SUPPRESSIONS.length)
+      throw new Error("CRM suppression readback incomplete");
+    return { verified: confirmed.length, cancelled, persisted: true };
+  }),
   gmailStatus: protectedProcedure.query(() => gmailCrmStatus()),
   syncGmail: protectedProcedure
     .input(z.object({ pageToken: z.string().max(2048).optional() }))

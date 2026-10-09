@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { CRM_MAILBOX, gmailCrmStatus } from "./gmailCrm";
 import { logCommunication } from "./crmCommunications";
+import { assertOutreachNotSuppressed } from "./outreachSuppression";
 export function composeMime(to: string, subject: string, body: string) {
   if (
     !/^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/.test(to) ||
@@ -55,6 +56,7 @@ export async function composeGmail(
     .limit(1);
   const to = contact?.email?.trim().toLowerCase();
   if (!to) throw new Error("Save a valid contact email address first.");
+  await assertOutreachNotSuppressed(db, to);
   const raw = composeMime(to, input.subject, input.body);
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function request(path: string, init: RequestInit = {}) {

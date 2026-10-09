@@ -6,6 +6,9 @@ import { googleCalendarProvider } from "../integrations/google/calendar";
 import { getDb } from "../db";
 import { logCommunication, upsertExternalContact } from "./crmCommunications";
 import { ensureSentEmailContact } from "./sentEmailContact";
+import { isExplicitOutreachOptOut, recordOutreachSuppression, seedKnownOutreachSuppressions, KNOWN_OUTREACH_SUPPRESSIONS } from "./outreachSuppression";
+import { cancelOpen30DayTasks } from "./crm30DayTasks";
+import { followupDatabase, followupTasks } from "./crmFollowupTasks";
 
 export const CRM_MAILBOX = "sales@mechanicalenterprise.com";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
@@ -179,6 +182,7 @@ export async function syncGmailPage(
     );
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
+  await seedKnownOutreachSuppressions(db);
   const params = new URLSearchParams({
     maxResults: "25",
     q: `in:anywhere -in:spam -in:trash -in:drafts newer_than:${input.lookbackDays ?? 30}d {from:${CRM_MAILBOX} to:${CRM_MAILBOX} cc:${CRM_MAILBOX}}`,
@@ -196,6 +200,27 @@ export async function syncGmailPage(
     if (!parsed) {
       skipped++;
       continue;
+    }
+    // Explicit opt-outs and hard delivery failures are durable before timeline import.
+    // Never turn a quoted email into an opt-out or assume that any auto-reply is one.
+    const sender = addresses((remote.payload?.headers ?? [])
+      .find((h: { name?: string }) => h.name?.toLowerCase() === "from")?.value ?? "")[0];
+    const failure = /delivery status notification \(failure\)|undeliverable|mail delivery failed/i.test(parsed.subject)
+      && /mailer-daemon|postmaster/i.test(sender ?? "");
+    const bounced = failure
+      ? parsed.body?.match(/(?:your message to|wasn't delivered to|was not delivered to|message to)\s+([a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,})/i)?.[1]
+      : undefined;
+    const suppressions = parsed.direction === "inbound" && isExplicitOutreachOptOut(parsed.body, parsed.subject)
+      ? parsed.contacts.map(email => ({ email, reason: "opt_out" as const }))
+      : bounced ? [{ email: bounced, reason: "hard_bounce" as const }] : [];
+    for (const entry of suppressions) {
+      await recordOutreachSuppression(db, entry.email, entry.reason, parsed.providerMessageId);
+      await cancelOpen30DayTasks(entry.email, "CRM Gmail recorded a delivery failure or explicit do-not-contact request.");
+      await followupDatabase();
+      await db.update(followupTasks).set({
+        status: "cancelled",
+        note: "CRM Gmail recorded a delivery failure or explicit do-not-contact request.",
+      }).where(and(eq(followupTasks.recipientEmail, entry.email), eq(followupTasks.status, "open")));
     }
     // A message is stored once under its Gmail ID, linked to the primary correspondent.
     const linked = [];
@@ -278,6 +303,27 @@ export function startGmailCrmScheduler() {
     process.env.GMAIL_CRM_SYNC_ENABLED === "false"
   )
     return;
+  // Suppression must be seeded and read back even if Gmail OAuth is disconnected.
+  const bootstrap = setTimeout(async () => {
+    try {
+      const db = await getDb();
+      if (!db) throw new Error("CRM database unavailable");
+      const verified = await seedKnownOutreachSuppressions(db);
+      let cancelled = 0;
+      await followupDatabase();
+      for (const entry of KNOWN_OUTREACH_SUPPRESSIONS) {
+        cancelled += await cancelOpen30DayTasks(entry.email, "Do not contact / delivery failure.");
+        const result = await db.update(followupTasks)
+          .set({ status: "cancelled", note: "Do not contact / delivery failure." })
+          .where(and(eq(followupTasks.recipientEmail, entry.email), eq(followupTasks.status, "open")));
+        cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
+      }
+      console.info("[CRM Suppression] Verified:", JSON.stringify({ verified, cancelled }));
+    } catch (error) {
+      console.error("[CRM Suppression] Bootstrap failed:", error instanceof Error ? error.message : "Unknown error");
+    }
+  }, 20_000);
+  bootstrap.unref();
   let pageToken: string | undefined;
   const run = () =>
     startJob({

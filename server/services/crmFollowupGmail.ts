@@ -5,6 +5,7 @@ import { googleCalendarProvider } from "../integrations/google/calendar";
 import { gmailCrmStatus, parseGmailMessage, CRM_MAILBOX, type GmailMessage } from "./gmailCrm";
 import { upsertExternalContact } from "./crmCommunications";
 import { ensureSentEmailContact } from "./sentEmailContact";
+import { GMAIL_SUPPRESSION_LABEL_NAMES, KNOWN_OUTREACH_SUPPRESSIONS, isOutreachSuppressed, seedKnownOutreachSuppressions } from "./outreachSuppression";
 import { startJob } from "./asyncLaneJob";
 import { excludeFromOutreachFollowups, followupDueAt, FOLLOWUP_STEPS } from "./crmFollowupRules";
 import { addCrmFollowupTask, followupDatabase, followupTasks, listCrmFollowupTasks } from "./crmFollowupTasks";
@@ -24,6 +25,14 @@ export async function syncCrmFollowupsFromGmail(
     throw new Error("Connect sales@mechanicalenterprise.com with Gmail read access in CRM Integrations.");
   }
   const db = await followupDatabase();
+  await seedKnownOutreachSuppressions(db);
+  let cancelled = 0;
+  for (const entry of KNOWN_OUTREACH_SUPPRESSIONS) {
+    const result = await db.update(followupTasks)
+      .set({ status: "cancelled", note: "Known delivery failure or do-not-contact request." })
+      .where(and(eq(followupTasks.recipientEmail, entry.email), eq(followupTasks.status, "open")));
+    cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
+  }
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function read(path: string) {
     const response = await fetchImpl(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
@@ -39,18 +48,16 @@ export async function syncCrmFollowupsFromGmail(
     (label: { name?: string }) => label.name === "Outreach/Prospecting Sent"
   )?.id as string | undefined;
   if (!labelId) return {
-    scanned: 0, created: 0, cancelled: 0, skipped: 0,
+    scanned: 0, created: 0, cancelled, skipped: 0,
     hasMore: false, note: "Outreach/Prospecting Sent label not found",
   };
   // Do not create reminders for messages already suppressed by bounce/DNC hygiene.
   const suppressionLabels = new Set((labels.labels ?? [])
-    .filter((label: { name?: string }) => [
-      "Prospecting - Failed Delivery", "HVAC Bounce Processed",
-      "Do Not Contact", "Unsubscribed",
-    ].includes(label.name ?? ""))
+    .filter((label: { name?: string }) => GMAIL_SUPPRESSION_LABEL_NAMES.has(label.name ?? ""))
     .map((label: { id: string }) => label.id));
 
   const candidates = new Map<string, Candidate>();
+  const suppressed = new Set<string>();
   let pageToken: string | undefined;
   let scanned = 0, skipped = 0;
   // A bounded rolling window; manual 35-day backfill covers older introductions.
@@ -64,15 +71,20 @@ export async function syncCrmFollowupsFromGmail(
     for (const item of page.messages ?? []) {
       scanned++;
       const remote = await read(`messages/${encodeURIComponent(item.id)}?format=full`) as GmailMessage;
-      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId) ||
-          remote.labelIds.some(id => suppressionLabels.has(id))) {
+      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId)) {
         skipped++; continue;
       }
       const parsed = parseGmailMessage(remote);
       if (!parsed || parsed.direction !== "outbound") { skipped++; continue; }
+      if (remote.labelIds.some(id => suppressionLabels.has(id))) {
+        for (const email of parsed.contacts) suppressed.add(email.toLowerCase());
+        skipped++; continue;
+      }
       for (const email of parsed.contacts) {
         const normalized = email.toLowerCase();
-        if (excludeFromOutreachFollowups({ email: normalized })) { skipped++; continue; }
+        if (excludeFromOutreachFollowups({ email: normalized }) || await isOutreachSuppressed(db, normalized)) {
+          suppressed.add(normalized); skipped++; continue;
+        }
         const current = candidates.get(normalized);
         if (!current || parsed.occurredAt < current.introAt) {
           candidates.set(normalized, {
@@ -89,8 +101,21 @@ export async function syncCrmFollowupsFromGmail(
   const assigneeEmail = process.env.CRM_FOLLOWUP_ASSIGNEE_EMAIL || CRM_MAILBOX;
   const [assignee] = await db.select({ id: users.id }).from(users)
     .where(eq(users.email, assigneeEmail)).limit(1);
-  let created = 0, cancelled = 0;
+  let created = 0;
+  for (const email of Array.from(suppressed)) {
+    const result = await db.update(followupTasks)
+      .set({ status: "cancelled", note: "Suppressed by Gmail label or CRM." })
+      .where(and(eq(followupTasks.recipientEmail, email), eq(followupTasks.status, "open")));
+    cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
+  }
   for (const candidate of Array.from(candidates.values())) {
+    if (suppressed.has(candidate.email) || await isOutreachSuppressed(db, candidate.email)) {
+      const result = await db.update(followupTasks)
+        .set({ status: "cancelled", note: "CRM outreach suppression." })
+        .where(and(eq(followupTasks.recipientEmail, candidate.email), eq(followupTasks.status, "open")));
+      cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
+      skipped++; continue;
+    }
     const [existing] = await db.select().from(crmExternalContacts)
       .where(eq(crmExternalContacts.email, candidate.email)).limit(1);
     if (excludeFromOutreachFollowups({
