@@ -11,7 +11,7 @@ import { VERIFIED_PROSPECT_PHONES } from "./verifiedProspectPhones";
 import { contactProfile } from "./contactProfile/store";
 
 export type PhoneType = "business" | "cell" | "unknown";
-const phoneMeta = mysqlTable("crmContactPhoneMetadata", {
+export const phoneMeta = mysqlTable("crmContactPhoneMetadata", {
   contactId: int("contactId").primaryKey(),
   phone: varchar("phone", { length: 50 }).notNull(),
   type: mysqlEnum("type", ["business", "cell", "unknown"]).notNull(),
