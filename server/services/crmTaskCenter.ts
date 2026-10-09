@@ -59,7 +59,7 @@ export async function outreachTaskPage(input: TaskPageInput) {
     note: crm30DayTasks.note,
     name: crmExternalContacts.name, company: crmExternalContacts.company,
     phone: sql<string | null>`coalesce(${crmExternalContacts.phone}, ${customers.phone})`,
-    phoneType: phoneMeta.type,
+    phoneType: sql<"business" | "cell" | "unknown" | null>`CASE WHEN ${phoneMeta.phone} = COALESCE(${crmExternalContacts.phone}, ${customers.phone}) THEN ${phoneMeta.type} ELSE NULL END`,
   }).from(crm30DayTasks).leftJoin(
     crmExternalContacts, eq(crm30DayTasks.externalContactId, crmExternalContacts.id)
   ).leftJoin(customers, eq(crmExternalContacts.customerId, customers.id))
