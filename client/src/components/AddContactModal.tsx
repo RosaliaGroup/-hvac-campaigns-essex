@@ -61,9 +61,9 @@ export default function AddContactModal({
 
   const submit = () => {
     if(requireComplete) {
-      const emailOk=/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(form.email.trim());
-      const digits=form.phone.replace(/\\D/g,"");
-      const phoneOk=digits.length>=10&&digits.length<=15&&/^\\+?[\\d\\s().-]+$/.test(form.phone.trim());
+      const emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+      const digits=form.phone.replace(/\D/g,"");
+      const phoneOk=digits.length>=10&&digits.length<=15&&/^\+?[\d\s().-]+$/.test(form.phone.trim());
       if(!emailOk||!phoneOk){
         toast({title:"Email and phone are required",description:"A completed CRM Contact must have a valid email and phone number.",variant:"destructive"});
         return;
