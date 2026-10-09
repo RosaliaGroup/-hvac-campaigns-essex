@@ -16,16 +16,14 @@ export default function EmailThreadList({
     <div aria-label="Email conversations">
       {groupEmailThreads(messages).map(thread => {
         const latest = thread.latest;
-        const inbound = thread.messages.some(
-          message => message.direction === "inbound"
-        );
+        const inbound = latest.direction === "inbound";
         return (
           <button
             key={thread.key}
             onClick={() => onOpen(latest.id)}
-            className="grid w-full grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[180px_minmax(0,1fr)_90px] items-center gap-x-4 gap-y-1 border-b border-slate-100 px-5 py-3 text-left hover:bg-[#f2f6fc] focus-visible:outline-blue-500"
+            className="flex min-w-0 max-w-full w-full items-center gap-3 border-b border-slate-100 px-5 py-3 text-left hover:bg-[#f2f6fc] focus-visible:outline-blue-500"
           >
-            <span className="truncate text-sm font-medium">
+            <span className="min-w-0 w-24 md:w-40 shrink-0 truncate text-sm font-medium">
               {inbound
                 ? contactName || latest.fromAddress
                 : `To: ${contactName || latest.toAddress || "Contact"}`}
@@ -35,7 +33,7 @@ export default function EmailThreadList({
                 </span>
               )}
             </span>
-            <span className="min-w-0 truncate text-sm row-start-2 md:row-start-auto">
+            <span className="min-w-0 flex-1 truncate text-sm">
               <span className="mr-2 text-[10px] rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">
                 {latest.channel === "sms" ? "SMS" : inbound ? "Inbox" : "Sent"}
               </span>
@@ -54,7 +52,7 @@ export default function EmailThreadList({
                 ) || "No preview available"}
               </span>
             </span>
-            <time className="text-xs text-slate-500 text-right col-start-2 row-start-1 md:col-start-3">
+            <time className="w-14 shrink-0 text-xs text-slate-500 text-right">
               {new Date(latest.occurredAt).toLocaleDateString(undefined, {
                 month: "short",
                 day: "numeric",

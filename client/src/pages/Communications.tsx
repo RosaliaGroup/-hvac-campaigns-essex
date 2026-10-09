@@ -252,7 +252,7 @@ export default function Communications() {
     { id: "sms" as const, label: "SMS", icon: MessageSquare },
   ];
   return (
-    <div className="min-h-[75vh] bg-[#f6f8fc] text-slate-800 rounded-2xl p-3 md:p-5 space-y-4">
+    <div className="min-w-0 max-w-full bg-[#f6f8fc] text-slate-800 rounded-2xl p-3 md:p-5 space-y-4">
       <header className="flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2 md:w-56">
           <Mail className="h-6 w-6 text-blue-600" />
@@ -335,8 +335,8 @@ export default function Communications() {
             status.error?.message}
         </p>
       )}
-      <div className="grid md:grid-cols-[240px_minmax(0,1fr)] gap-4">
-        <aside className="min-w-0">
+      <div className="grid min-w-0 md:h-[calc(100dvh-240px)] md:min-h-[420px] md:grid-cols-[280px_minmax(0,1fr)] gap-4">
+        <aside className="min-w-0 md:h-full md:overflow-y-auto pr-1">
           <nav aria-label="Communication folders" className="space-y-1 mb-6">
             {folders.map(item => (
               <button
@@ -353,6 +353,7 @@ export default function Communications() {
               </button>
             ))}
           </nav>
+
           {contactId !== null && (
             <section
               aria-label="Client contact card"
@@ -444,43 +445,8 @@ export default function Communications() {
               />
             </div>
           )}
-
-          <h2 className="flex items-center gap-2 px-4 mb-2 text-xs uppercase tracking-wide text-slate-500">
-            <Users className="h-4 w-4" />
-            Contacts & outreach
-          </h2>
-          <section className="max-h-[55vh] overflow-y-auto space-y-1">
-            {contacts.isLoading && <p>Loading contacts…</p>}
-            {availableContacts.length === 0 && (
-              <p>
-                No matching contacts. Search by name or email, or add a contact
-                to the CRM.
-              </p>
-            )}
-            {availableContacts.map(contact => (
-              <button
-                key={contact.id}
-                onClick={() => {
-                  if (contact.id < 0)
-                    openCustomer.mutate({ customerId: -contact.id });
-                  else setContactId(contact.id);
-                  setMessageId(null);
-                }}
-                aria-pressed={contactId === contact.id}
-                className={`block w-full text-left rounded-xl px-4 py-3 ${contactId === contact.id ? "bg-[#d3e3fd]" : "hover:bg-slate-200"}`}
-              >
-                <strong className="block break-words">{contact.name}</strong>
-                {contact.company && (
-                  <p className="text-sm break-words">{contact.company}</p>
-                )}
-                <p className="text-sm break-all">
-                  {contact.email ?? contact.phone}
-                </p>
-              </button>
-            ))}
-          </section>
         </aside>
-        <section className="min-w-0 rounded-2xl bg-white overflow-hidden border border-slate-100 min-h-[60vh]">
+        <section className="min-w-0 max-w-full rounded-2xl bg-white overflow-x-hidden overflow-y-auto border border-slate-100 min-h-[420px] md:min-h-0 md:h-full">
           <div className="flex items-center gap-3 border-b px-5 py-4">
             {selectedMessage && (
               <button
@@ -493,7 +459,7 @@ export default function Communications() {
             )}
             <div className="min-w-0">
               <h2 className="font-semibold truncate">
-                {selectedContact?.name ?? "Contacts & outreach"}
+                {selectedContact?.name ?? "Communications"}
               </h2>
               <p className="text-xs text-slate-500 truncate">
                 {selectedContact?.email ??
@@ -508,9 +474,48 @@ export default function Communications() {
             )}
           </div>
           {contactId === null ? (
-            <div className="flex flex-col items-center justify-center py-24 px-6 text-center text-slate-500">
+            <div className="flex flex-col items-center justify-center gap-4 py-8 px-6 text-center text-slate-500">
               <Inbox className="h-10 w-10 mb-4 text-blue-300" />
               <p>Select a contact to view messages or compose a new email.</p>
+          <details
+            open
+            className="w-full max-w-2xl rounded-xl border bg-white text-left"
+          >
+            <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-xs uppercase tracking-wide text-slate-500">
+              <Users className="h-4 w-4" />
+              Select a contact
+            </summary>
+            <section className="max-h-64 overflow-y-auto space-y-1">
+              {contacts.isLoading && <p>Loading contacts…</p>}
+              {availableContacts.length === 0 && (
+                <p>
+                  No matching contacts. Search by name or email, or add a
+                  contact to the CRM.
+                </p>
+              )}
+              {availableContacts.map(contact => (
+                <button
+                  key={contact.id}
+                  onClick={() => {
+                    if (contact.id < 0)
+                      openCustomer.mutate({ customerId: -contact.id });
+                    else setContactId(contact.id);
+                    setMessageId(null);
+                  }}
+                  aria-pressed={contactId === contact.id}
+                  className={`block w-full text-left rounded-xl px-4 py-3 ${contactId === contact.id ? "bg-[#d3e3fd]" : "hover:bg-slate-200"}`}
+                >
+                  <strong className="block break-words">{contact.name}</strong>
+                  {contact.company && (
+                    <p className="text-sm break-words">{contact.company}</p>
+                  )}
+                  <p className="text-sm break-all">
+                    {contact.email ?? contact.phone}
+                  </p>
+                </button>
+              ))}
+            </section>
+          </details>
             </div>
           ) : timeline.isLoading ? (
             <p className="p-6 text-slate-500">Loading messages…</p>
