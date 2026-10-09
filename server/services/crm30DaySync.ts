@@ -4,12 +4,12 @@ import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { gmailCrmStatus, parseGmailMessage, CRM_MAILBOX, type GmailMessage } from "./gmailCrm";
 import { upsertExternalContact } from "./crmCommunications";
-import { ensureSentEmailContact } from "./sentEmailContact";
 import { GMAIL_SUPPRESSION_LABEL_NAMES, KNOWN_OUTREACH_SUPPRESSIONS, isOutreachSuppressed, seedKnownOutreachSuppressions } from "./outreachSuppression";
 import { startJob } from "./asyncLaneJob";
 import { cadenceExcluded, cadenceDueAt, THIRTY_DAY_STEPS } from "./crm30DayRules";
 import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks, cancelOpen30DayTasks, cancelTasksWithInboundReplies, assignAll30DayTasks } from "./crm30DayTasks";
 import { resolveCadenceAssignee } from "./crm30DayAssignee";
+import { queueContactEnrichment } from "./automaticContactEnrichment";
 
 type Candidate = {
   email: string; introAt: Date; messageId: string; threadId: string;
@@ -127,10 +127,17 @@ export async function sync30DayFromGmail(
       cancelled += await cancelOpen30DayTasks(candidate.email, "Contact excluded or opted out.");
       skipped++; continue;
     }
+    // Only labeled, non-suppressed TASK outreach prospects qualify for
+    // automatic enrichment. Never promote an email-only person to Contacts.
     const contact = existing ?? await upsertExternalContact(db, {
       name: candidate.email, email: candidate.email, source: "gmail-prospecting",
     });
-    if (!contact.customerId) await ensureSentEmailContact(db, contact);
+    if (existing && !["gmail-prospecting","verified-hvac-prospect","crm-manual","gmail-selected","crm"].includes(existing.source??"")) {
+      await db.update(crmExternalContacts)
+        .set({source:"gmail-prospecting"})
+        .where(eq(crmExternalContacts.id,contact.id));
+    }
+    await queueContactEnrichment(contact.id);
     // A reply (inbound contact communication) stops nurture. Unanswered outgoing
     // call attempts do not stop the cadence; they count only when logged.
     const [reply] = await db.select({ id: crmCommunications.id })
