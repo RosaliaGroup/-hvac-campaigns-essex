@@ -5,6 +5,7 @@ import { googleCalendarProvider } from "../integrations/google/calendar";
 import { gmailCrmStatus, parseGmailMessage, CRM_MAILBOX, type GmailMessage } from "./gmailCrm";
 import { upsertExternalContact } from "./crmCommunications";
 import { ensureSentEmailContact } from "./sentEmailContact";
+import { GMAIL_SUPPRESSION_LABEL_NAMES, KNOWN_OUTREACH_SUPPRESSIONS, isOutreachSuppressed, seedKnownOutreachSuppressions } from "./outreachSuppression";
 import { startJob } from "./asyncLaneJob";
 import { cadenceExcluded, cadenceDueAt, THIRTY_DAY_STEPS } from "./crm30DayRules";
 import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks, cancelOpen30DayTasks, cancelTasksWithInboundReplies } from "./crm30DayTasks";
@@ -24,6 +25,11 @@ export async function sync30DayFromGmail(
     throw new Error("Connect sales@mechanicalenterprise.com with Gmail read access in CRM Integrations.");
   }
   const db = await cadenceDatabase();
+  await seedKnownOutreachSuppressions(db);
+  let cancelled = 0;
+  for (const entry of KNOWN_OUTREACH_SUPPRESSIONS) {
+    cancelled += await cancelOpen30DayTasks(entry.email, "Delivery failure or explicit do-not-contact request.");
+  }
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function read(path: string) {
     const response = await fetchImpl(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
@@ -39,15 +45,12 @@ export async function sync30DayFromGmail(
     (label: { name?: string }) => label.name === "Outreach/Prospecting Sent"
   )?.id as string | undefined;
   if (!labelId) return {
-    scanned: 0, created: 0, cancelled: 0, skipped: 0,
+    scanned: 0, created: 0, cancelled, skipped: 0,
     hasMore: false, note: "Outreach/Prospecting Sent label not found",
   };
   // Do not create reminders for messages already suppressed by bounce/DNC hygiene.
   const suppressionLabels = new Set((labels.labels ?? [])
-    .filter((label: { name?: string }) => [
-      "Prospecting - Failed Delivery", "HVAC Bounce Processed",
-      "Do Not Contact", "Unsubscribed",
-    ].includes(label.name ?? ""))
+    .filter((label: { name?: string }) => GMAIL_SUPPRESSION_LABEL_NAMES.has(label.name ?? ""))
     .map((label: { id: string }) => label.id));
 
   const candidates = new Map<string, Candidate>();
@@ -76,7 +79,9 @@ export async function sync30DayFromGmail(
       }
       for (const email of parsed.contacts) {
         const normalized = email.toLowerCase();
-        if (cadenceExcluded({ email: normalized })) { skipped++; continue; }
+        if (cadenceExcluded({ email: normalized }) || await isOutreachSuppressed(db, normalized)) {
+          suppressed.add(normalized); skipped++; continue;
+        }
         const current = candidates.get(normalized);
         if (!current || parsed.occurredAt < current.introAt) {
           candidates.set(normalized, {
@@ -90,7 +95,6 @@ export async function sync30DayFromGmail(
     if (!pageToken) break;
   }
 
-  let cancelled = 0;
   for (const email of Array.from(suppressed)) {
     cancelled += await cancelOpen30DayTasks(email, "Suppressed due to failed delivery or do-not-contact Gmail label.");
   }
@@ -99,7 +103,10 @@ export async function sync30DayFromGmail(
     .where(eq(users.email, assigneeEmail)).limit(1);
   let created = 0;
   for (const candidate of Array.from(candidates.values())) {
-    if (suppressed.has(candidate.email)) { skipped++; continue; }
+    if (suppressed.has(candidate.email) || await isOutreachSuppressed(db, candidate.email)) {
+      cancelled += await cancelOpen30DayTasks(candidate.email, "CRM outreach suppression.");
+      skipped++; continue;
+    }
     const [existing] = await db.select().from(crmExternalContacts)
       .where(eq(crmExternalContacts.email, candidate.email)).limit(1);
     if (cadenceExcluded({
