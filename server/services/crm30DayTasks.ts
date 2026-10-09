@@ -165,3 +165,19 @@ export async function cancelOpen30DayTasks(email: string, reason: string) {
     ));
   return Number((result as any)?.[0]?.affectedRows ?? 0);
 }
+
+/** Periodic reconciliation for replies even when the introduction is older than the Gmail scan window. */
+export async function cancelTasksWithInboundReplies() {
+  const db = await cadenceDatabase();
+  const result = await db.execute(sql`
+    UPDATE crmOutreach30DayTasks AS t
+    INNER JOIN crmCommunications AS c
+      ON c.externalContactId = t.externalContactId
+     AND c.direction = 'inbound'
+     AND c.occurredAt > t.introAt
+    SET t.status = 'cancelled',
+        t.note = 'Inbound response recorded; stop automatic follow-ups and hand off to Ana.'
+    WHERE t.status = 'open'
+  `);
+  return Number((result as any)?.[0]?.affectedRows ?? 0);
+}
