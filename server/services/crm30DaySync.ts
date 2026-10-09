@@ -1,6 +1,6 @@
 /** Gmail-labeled prospecting messages -> 30-day CRM cadence. No automatic sends. */
 import { and, eq, gt } from "drizzle-orm";
-import { crmCommunications, crmExternalContacts, users } from "../../drizzle/schema";
+import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { gmailCrmStatus, parseGmailMessage, CRM_MAILBOX, type GmailMessage } from "./gmailCrm";
 import { upsertExternalContact } from "./crmCommunications";
@@ -8,7 +8,8 @@ import { ensureSentEmailContact } from "./sentEmailContact";
 import { GMAIL_SUPPRESSION_LABEL_NAMES, KNOWN_OUTREACH_SUPPRESSIONS, isOutreachSuppressed, seedKnownOutreachSuppressions } from "./outreachSuppression";
 import { startJob } from "./asyncLaneJob";
 import { cadenceExcluded, cadenceDueAt, THIRTY_DAY_STEPS } from "./crm30DayRules";
-import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks, cancelOpen30DayTasks, cancelTasksWithInboundReplies } from "./crm30DayTasks";
+import { insert30DayTask, cadenceDatabase, crm30DayTasks, list30DayTasks, cancelOpen30DayTasks, cancelTasksWithInboundReplies, assignAll30DayTasks } from "./crm30DayTasks";
+import { resolveCadenceAssignee } from "./crm30DayAssignee";
 
 type Candidate = {
   email: string; introAt: Date; messageId: string; threadId: string;
@@ -98,9 +99,7 @@ export async function sync30DayFromGmail(
   for (const email of Array.from(suppressed)) {
     cancelled += await cancelOpen30DayTasks(email, "Suppressed due to failed delivery or do-not-contact Gmail label.");
   }
-  const assigneeEmail = process.env.CRM_FOLLOWUP_ASSIGNEE_EMAIL || CRM_MAILBOX;
-  const [assignee] = await db.select({ id: users.id }).from(users)
-    .where(eq(users.email, assigneeEmail)).limit(1);
+  const { user: assignee, source: assigneeSource } = await resolveCadenceAssignee();
   let created = 0;
   for (const candidate of Array.from(candidates.values())) {
     if (suppressed.has(candidate.email) || await isOutreachSuppressed(db, candidate.email)) {
@@ -154,11 +153,20 @@ export async function sync30DayFromGmail(
   }
   // Reconcile replies for older prospects outside the rolling Gmail intro window.
   cancelled += await cancelTasksWithInboundReplies();
+  // Reconcile previously created open reminders, without changing tasks already
+  // assigned to a human. No guessed login or implicit transfer of ownership.
+  const assignment = assignee
+    ? await assignAll30DayTasks(assignee.id, assignee.name?.trim() || "Ana Haynes")
+    : null;
   return {
     scanned, created, cancelled, skipped,
     hasMore: Boolean(pageToken),
-    note: assignee ? "Tasks assigned to the matching CRM user." :
-      "Tasks are labeled Ana Haynes; no matching CRM user email was found.",
+    autoAssigned: assignment?.assigned ?? 0,
+    remainingUnassigned: assignment?.remainingUnassigned ?? null,
+    assignmentSource: assigneeSource,
+    note: assignee
+      ? "Open unassigned tasks reconciled to a verified CRM user."
+      : "No unique CRM owner match. Sign in as Ana and use 'Assign all to me' in Sales > Tasks; no task was reassigned automatically.",
   };
 }
 
