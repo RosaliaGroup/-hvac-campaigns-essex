@@ -14,6 +14,7 @@ vi.mock("../integrations/google/calendar", () => ({
   googleCalendarProvider: { getValidAccessToken: mocks.token },
 }));
 vi.mock("./crmCommunications", () => ({ logCommunication: mocks.log }));
+vi.mock("./outreachSuppression", () => ({ assertOutreachNotSuppressed: vi.fn().mockResolvedValue(undefined) }));
 import { composeMime, composeGmail } from "./gmailCompose";
 const input = {
   externalContactId: 1,
