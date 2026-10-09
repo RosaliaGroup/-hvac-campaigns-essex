@@ -198,7 +198,7 @@ export async function backfillVerifiedSocialLinks() {
   const db = await database();
   let updated=0, unchanged=0, missing=0;
   const errors: Array<{email:string;error:string}>=[];
-  const emails = [...new Set(VERIFIED_SOCIAL_LINKS.map(x=>x.email))];
+  const emails = Array.from(new Set(VERIFIED_SOCIAL_LINKS.map(x=>x.email)));
   for (const email of emails) {
     try {
       const [contact] = await db.select().from(crmExternalContacts)
