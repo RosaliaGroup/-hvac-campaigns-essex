@@ -1,5 +1,5 @@
 /** Read-only unified task center listing: outreach cadence + Opportunity Center tasks. */
-import { and, asc, desc, eq, like, or, sql, count } from "drizzle-orm";
+import { and, asc, eq, like, or, sql, count, lt, gte } from "drizzle-orm";
 import { opportunityTasks, opportunities, customers } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { crm30DayTasks, cadenceDatabase } from "./crm30DayTasks";
@@ -9,14 +9,34 @@ export type TaskState = "open" | "done" | "cancelled" | "all";
 export type ActionFilter = "all" | "call" | "email" | "text";
 export type TaskPageInput = {
   status: TaskState; action: ActionFilter; search: string;
-  offset: number; limit: number;
+  offset: number; limit: number; due: "all" | "overdue" | "today" | "upcoming";
 };
+
+function easternMidnight(date: Date) {
+  const fmt = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"});
+  const parts = fmt.formatToParts(date);
+  const get = (k: string) => Number(parts.find(p=>p.type===k)?.value);
+  const utcMidnight = Date.UTC(get("year"),get("month")-1,get("day"));
+  const probe = new Date(utcMidnight + 12*3600000);
+  const zone = new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",timeZoneName:"shortOffset"}).formatToParts(probe).find(p=>p.type==="timeZoneName")?.value ?? "GMT";
+  const match = /^GMT([+-])(\\d{1,2})(?::(\\d{2}))?$/.exec(zone);
+  const offset = match ? (match[1]==="+"?1:-1)*(Number(match[2])*60+Number(match[3]??0)) : 0;
+  return new Date(utcMidnight-offset*60000);
+}
+function dueClause(column: typeof crm30DayTasks.dueAt | typeof opportunityTasks.dueAt, due: TaskPageInput["due"]) {
+  if (due === "all") return undefined;
+  const start = easternMidnight(new Date());
+  const next = easternMidnight(new Date(start.getTime()+36*3600000));
+  return due === "overdue" ? lt(column,start) : due === "today" ? and(gte(column,start),lt(column,next)) : gte(column,next);
+}
+
 
 export async function outreachTaskPage(input: TaskPageInput) {
   const db = await cadenceDatabase();
   const term = input.search.trim().slice(0, 120);
   const filters = and(
     input.status !== "all" ? eq(crm30DayTasks.status, input.status) : undefined,
+    dueClause(crm30DayTasks.dueAt,input.due),
     input.action === "call" ? eq(crm30DayTasks.kind, "human") :
       input.action === "email" ? eq(crm30DayTasks.kind, "email_review") :
       input.action === "text" ? sql`false` : undefined,
@@ -55,6 +75,7 @@ export async function opportunityTaskPage(input: TaskPageInput) {
   if (!db) throw new Error("CRM database unavailable");
   const term = input.search.trim().slice(0, 120);
   const filters = and(
+    dueClause(opportunityTasks.dueAt,input.due),
     input.status === "open" ? eq(opportunityTasks.status, "open") :
       input.status === "done" ? eq(opportunityTasks.status, "done") :
       input.status === "cancelled" ? eq(opportunityTasks.status, "cancelled") : undefined,
