@@ -49,7 +49,7 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
         <div>
           <h2 className="font-semibold">Prospect follow-up tasks</h2>
           <p className="text-xs text-slate-500">
-            Assigned to Ana Haynes · Day 2 personal contact, day 3 email review, day 33 final review.
+            For Ana Haynes · Day 2 personal contact, day 3 email review, day 33 final review.
             No automatic email or SMS is sent from this panel.
           </p>
         </div>
@@ -80,6 +80,7 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
                     hour: "numeric", minute: "2-digit",
                   })} ET
                 </div>
+                {!task.assignedToUserId && <div className="text-xs text-amber-700">CRM user assignment not linked yet</div>}
                 <a className="text-xs text-blue-700 hover:underline" target="_blank" rel="noreferrer"
                   href={`https://mail.google.com/mail/u/?authuser=sales%40mechanicalenterprise.com#all/${encodeURIComponent(task.introThreadId)}`}>
                   Original Gmail thread
