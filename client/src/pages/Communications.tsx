@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { internalSmsConversationPath } from "@/lib/internalSms";
 import {
   ArrowLeft,
   Inbox,
@@ -25,6 +26,7 @@ type SyncResult = {
   nextPageToken?: string;
 };
 export default function Communications() {
+  const [, navigate] = useLocation();
   const customerId = Number(
     new URLSearchParams(window.location.search).get("customerId")
   );
@@ -389,6 +391,10 @@ export default function Communications() {
               <button
                 key={item.id}
                 onClick={() => {
+                  if (item.id === "sms") {
+                    navigate(internalSmsConversationPath(selectedContact?.phone));
+                    return;
+                  }
                   setFolder(item.id);
                   setMessageId(null);
                 }}
@@ -461,20 +467,12 @@ export default function Communications() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={
-                    sending ||
-                    !contacts.data?.find(contact => contact.id === contactId)
-                      ?.phone
-                  }
-                  onClick={() => {
-                    setCompose("sms");
-                    setDraft("");
-                  }}
+                  disabled={!selectedContact?.phone}
+                  onClick={() => navigate(internalSmsConversationPath(selectedContact?.phone))}
                 >
                   Send text message
                 </Button>
-                {!contacts.data?.find(contact => contact.id === contactId)
-                  ?.phone && (
+                {!selectedContact?.phone && (
                   <span className="text-xs text-slate-500 self-center">
                     Save the contact with a phone number to enable texting.
                   </span>
