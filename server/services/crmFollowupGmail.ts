@@ -102,7 +102,7 @@ export async function syncCrmFollowupsFromGmail(
   const [assignee] = await db.select({ id: users.id }).from(users)
     .where(eq(users.email, assigneeEmail)).limit(1);
   let created = 0;
-  for (const email of suppressed) {
+  for (const email of Array.from(suppressed)) {
     const result = await db.update(followupTasks)
       .set({ status: "cancelled", note: "Suppressed by Gmail label or CRM." })
       .where(and(eq(followupTasks.recipientEmail, email), eq(followupTasks.status, "open")));
