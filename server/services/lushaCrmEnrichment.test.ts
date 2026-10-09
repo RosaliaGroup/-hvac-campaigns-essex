@@ -27,6 +27,11 @@ describe("Lusha CRM identity verification", () => {
       firstName:"Anil",lastName:"Bansal",company:{name:"First National Realty Management"},
     })).toBe(false);
   });
+  it("rejects a conflicting employer name even if a domain matches",()=>{
+    expect(validateLushaIdentity(crm,{
+      firstName:"Anil",lastName:"Bansal",company:{name:"TCS",domain:"fncusa.com"},
+    })).toBe(false);
+  });
   it("does not accept an unrelated company with a similar name",()=>{
     expect(validateLushaIdentity({...crm,company:"First National Bank"},{
       firstName:"Anil",lastName:"Bansal",company:{name:"First National Realty Management",domain:"other.example"},
