@@ -56,6 +56,7 @@ import { googleCalendarRouter } from "./routers/googleCalendar";
 import { portalRouter } from "./routers/portal";
 import { growthRouter } from "./routers/growth";
 import { crmCommunicationsRouter } from "./routers/crmCommunications";
+import { crmFollowupsRouter } from "./routers/crmFollowups";
 import { enrollSpeedToLead } from "./services/growth/speedToLead";
 import { stopCadenceOnBooking } from "./services/growth/cadenceEngine";
 import { ensureReviewRequestForAppointment } from "./services/growth/reviewEngine";
@@ -103,6 +104,7 @@ export const appRouter = router({
   smsCampaigns: smsCampaignsRouter,
   conversationCrm: conversationCrmRouter,
   crmCommunications: crmCommunicationsRouter,
+  crmFollowups: crmFollowupsRouter,
   rebateCalculator: rebateCalculatorRouter,
   heygen: heygenRouter,
   takeoffs: takeoffsRouter,
