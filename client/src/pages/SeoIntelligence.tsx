@@ -1233,6 +1233,14 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
   });
   const contentJobRunning = contentJobStatusQ.data?.status === "running";
   const metaJobRunning = metaJobStatusQ.data?.status === "running";
+  const retryContent = trpc.seo.retryRejectedContentDraft.useMutation({
+    onSuccess: (res) => {
+      toast.success(res.started ? "Draft retry started. Quality checks will run automatically." : "Draft queued for retry.");
+      invalidate();
+      contentJobStatusQ.refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const approveContent = trpc.seo.approveContentToPR.useMutation({
     onSuccess: (res) => { toast.success(`PR #${res.prNumber} opened`); invalidate(); },
     onError: (e) => toast.error(e.message),
@@ -1327,15 +1335,18 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className={`text-xs ${CONTENT_QUEUE_STATUS_STYLE[t.status] ?? ""}`}>{t.status.replace(/_/g, " ")}</Badge>
-                  {isAdmin && (t.status === "drafted" || t.status === "in_review") && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={approveContent.isPending}
-                      onClick={() => { setDraftingTopicId(t.id); approveContent.mutate({ topicId: t.id }); }}
-                    >
-                      {approveContent.isPending && draftingTopicId === t.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="mr-1.5 h-3.5 w-3.5" />}
-                      Approve to PR
+                  {isAdmin && t.status === "drafted" && !t.contentBatchId && (
+                    <Button size="sm" variant="outline"
+                      disabled={retryContent.isPending || contentJobRunning}
+                      onClick={() => retryContent.mutate({ topicId: t.id })}>
+                      {retryContent.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RotateCw className="mr-1.5 h-3.5 w-3.5" />}
+                      Retry Draft
+                    </Button>
+                  )}
+                  {isAdmin && t.status === "in_review" && (
+                    <Button size="sm" variant="outline" disabled={approveContent.isPending}
+                      onClick={() => { setDraftingTopicId(t.id); approveContent.mutate({ topicId: t.id }); }}>
+                      <GitPullRequest className="mr-1.5 h-3.5 w-3.5" /> Approve to PR
                     </Button>
                   )}
                 </div>
