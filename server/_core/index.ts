@@ -30,6 +30,7 @@ import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/ro
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
 import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
 import { registerVapiToolsRoute } from "../integrations/vapiToolsRoute";
+import { startProspectWorkflow } from "../services/prospectWorkflow";
 import { startGrowthCadencePoller } from "../services/growth/cadenceEngine";
 import { startReviewEnginePoller } from "../services/growth/reviewEngine";
 import { startImportReleaseSweep } from "../services/growth/contactImport";
@@ -152,6 +153,7 @@ async function startServer() {
     // dispatches inline at enrollment; this poller carries every later cadence
     // step (day-0 call, day-1/3/7/14) plus the review engine + §7 import release.
     startGrowthCadencePoller();
+    startProspectWorkflow();
     startReviewEnginePoller();
     startImportReleaseSweep();
     // Daily Market Intelligence Report (docs/market-intel-spec.md) — gated
