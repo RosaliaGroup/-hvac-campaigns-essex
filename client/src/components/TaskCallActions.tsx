@@ -3,6 +3,7 @@ import { Phone, Save } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { parseDialablePhone } from "@/lib/phoneDialer";
 
 type Outcome = "attempted_no_answer" | "connected" | "not_interested";
 type Props = {
@@ -14,11 +15,6 @@ type Props = {
   onOutcome: (outcome: Outcome, note?: string) => void;
   onRefresh: () => void;
 };
-function dialable(phone: string) {
-  const normalized = phone.replace(/[^+0-9]/g, "");
-  return /^\+?\d{10,15}$/.test(normalized) ? normalized : null;
-}
-
 /** Opens the device's dialer, then logs an explicit human-reported call outcome.
  *  This does not claim the browser has placed or recorded a provider call. */
 export default function TaskCallActions({
@@ -33,6 +29,7 @@ export default function TaskCallActions({
   const save = trpc.crmCommunications.saveContactCard.useMutation({
     onSuccess: async () => {
       try {
+        await utils.crmCommunications.contactCard.invalidate({ id: contactId });
         const card = await utils.crmCommunications.contactCard.fetch({ id: contactId });
         if (!card.phone || card.phone.replace(/\D/g, "") !== newPhone.replace(/\D/g, "")) {
           throw new Error("Saved number could not be verified in CRM.");
@@ -46,7 +43,7 @@ export default function TaskCallActions({
     },
     onError: e => setError(e.message),
   });
-  const number = phone ? dialable(phone) : null;
+  const number = parseDialablePhone(phone);
   const record = (outcome: Outcome) => {
     if (!number) return;
     if (!window.confirm("Confirm that you actually called this contact and want to record this outcome in CRM.")) return;
@@ -57,7 +54,8 @@ export default function TaskCallActions({
       <div className="flex flex-wrap items-center gap-2 w-full">
         <span className="text-sm font-medium tabular-nums" aria-label="Contact phone number">{phone}</span>
         <span className="text-xs text-slate-600">{phoneType === "cell" ? "Verified cell" : phoneType === "business" ? "Business phone" : "Type unverified"}</span>
-        <a href={`tel:${number}`} onClick={() => setShowLog(true)}
+        {number.extension && <span className="text-xs text-slate-700">Extension {number.extension} (enter after connecting)</span>}
+        <a href={`tel:${number.tel}`} onClick={() => setShowLog(true)}
           className="inline-flex min-h-11 items-center justify-center rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800">
           <Phone className="mr-1 h-4 w-4"/>Call
         </a>
@@ -81,11 +79,20 @@ export default function TaskCallActions({
         <div className="flex flex-wrap items-center gap-2">
           <Input aria-label="Contact phone number" placeholder="Verified business phone number"
             value={newPhone} onChange={e => setNewPhone(e.target.value)} className="w-52"/>
-          <Button size="sm" disabled={save.isPending || !dialable(newPhone)}
-            onClick={() => save.mutate({ id: contactId, name: contactName || "CRM contact", phone: newPhone })}>
+          <Button size="sm" disabled={save.isPending || !parseDialablePhone(newPhone) || Boolean(parseDialablePhone(newPhone)?.extension)}
+            onClick={async () => {
+              try {
+                await utils.crmCommunications.contactCard.invalidate({ id: contactId });
+                const card = await utils.crmCommunications.contactCard.fetch({ id: contactId });
+                save.mutate({ id: contactId, name: card.name?.trim() || contactName || "CRM contact", phone: newPhone });
+              } catch (cause) {
+                setError(cause instanceof Error ? cause.message : "Unable to verify contact before saving.");
+              }
+            }}>
             <Save className="h-4 w-4 mr-1"/>Save
           </Button>
           <Button size="sm" variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+          {parseDialablePhone(newPhone)?.extension && <p className="w-full text-xs text-amber-700">Save the main number without its extension; the CRM phone field does not store extensions separately yet.</p>}
         </div>}
       {error && <p className="text-xs text-red-700" role="alert">{error}</p>}
     </>}
