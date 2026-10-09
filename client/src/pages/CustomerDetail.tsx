@@ -598,7 +598,7 @@ export default function CustomerDetail() {
                       <Mail className="h-4 w-4 text-[#1e3a5f]" />
                       {customer.email ? (
                         <a
-                          href={`mailto:${customer.email}`}
+                          href={`/contacts/communications?customerId=${customerId}`}
                           className="hover:underline"
                         >
                           {customer.email}
