@@ -3,7 +3,7 @@
  * specific synced correspondent and supplies a valid phone + verified name.
  * Manual entry also requires both email and phone. No outbound messages.
  */
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { upsertExternalContact } from "./crmCommunications";
@@ -93,7 +93,7 @@ export async function createSelectedContact(input:ContactIntake,from:"manual"|"g
     for(const message of messages){
       if([...addresses(message.from??""),...addresses(message.to??"")].includes(checkedInput.email)){
         await db.update(crmCommunications).set({externalContactId:readback.id})
-          .where(eq(crmCommunications.id,message.id));
+          .where(and(eq(crmCommunications.id,message.id),isNull(crmCommunications.externalContactId)));
       }
     }
   }
