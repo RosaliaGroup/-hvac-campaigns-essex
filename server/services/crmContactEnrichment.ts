@@ -38,6 +38,7 @@ export async function enrichmentDb() {
       sourceUrl varchar(2000) NULL, verifiedAt timestamp NULL,
       updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS crmContactProfiles (contactId int NOT NULL PRIMARY KEY, identity varchar(1000) NOT NULL, profile json NOT NULL, updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
     await db.execute(sql`CREATE TABLE IF NOT EXISTS crmContactSocialFollows (
       id int NOT NULL AUTO_INCREMENT PRIMARY KEY, contactId int NOT NULL,
       url varchar(500) NOT NULL, platform varchar(40) NOT NULL,
@@ -133,15 +134,18 @@ export async function setFollowConfirmed(input: { contactId: number; url: string
   return result;
 }
 export async function listContactEnrichmentQueue(input: {
-  filter: "all" | "missing_phone" | "unknown_type"; offset: number; limit: number;
+  filter: "all" | "missing_phone" | "unknown_type" | "needs_social"; offset: number; limit: number;
 }) {
   const db = await enrichmentDb();
   const rows = db.select({
     id: crmExternalContacts.id, name: crmExternalContacts.name,
     email: crmExternalContacts.email, company: crmExternalContacts.company,
     phone: crmExternalContacts.phone, savedType: phoneMeta.type, savedPhone: phoneMeta.phone,
+    hasSocial: sql<boolean>`EXISTS (SELECT 1 FROM crmContactProfiles p WHERE p.contactId = ${crmExternalContacts.id} AND (JSON_LENGTH(JSON_EXTRACT(p.profile, '$.social')) > 0 OR JSON_LENGTH(JSON_EXTRACT(p.profile, '$.companySocial')) > 0))`,
   }).from(crmExternalContacts).leftJoin(phoneMeta, eq(crmExternalContacts.id, phoneMeta.contactId));
-  const filter = input.filter === "missing_phone"
+  const filter = input.filter === "needs_social"
+    ? sql`NOT EXISTS (SELECT 1 FROM crmContactProfiles p WHERE p.contactId = ${crmExternalContacts.id} AND (JSON_LENGTH(JSON_EXTRACT(p.profile, '$.social')) > 0 OR JSON_LENGTH(JSON_EXTRACT(p.profile, '$.companySocial')) > 0))`
+    : input.filter === "missing_phone"
     ? or(isNull(crmExternalContacts.phone), eq(crmExternalContacts.phone, ""))
     : input.filter === "unknown_type"
       ? and(sql`${crmExternalContacts.phone} IS NOT NULL AND ${crmExternalContacts.phone} <> ''`,
