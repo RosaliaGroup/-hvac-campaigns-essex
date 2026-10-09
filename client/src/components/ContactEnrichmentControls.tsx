@@ -3,6 +3,7 @@ import { ExternalLink, Phone, UserCheck } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import type { ContactProfile } from "@shared/contactProfile";
+import LushaContactEnrichment from "./LushaContactEnrichment";
 
 type Social = NonNullable<ContactProfile["companySocial"]>[number];
 function SocialFollow({ contactId, item, followed, onUpdated }: {
@@ -75,6 +76,7 @@ export default function ContactEnrichmentControls({
       <Button size="sm" variant="outline" disabled={update.isPending} onClick={save}>Save verified type</Button>
       <p className="text-xs text-slate-500">Mobile classification is not SMS consent. Never text without recorded opt-in.</p>
     </div>}
+    <LushaContactEnrichment contactId={contactId} onUpdated={()=>{void data.refetch();void utils.crmCommunications.profile.invalidate({contactId});}} />
     <div className="border-t pt-3 space-y-2">
       <h3 className="font-medium flex items-center gap-2"><UserCheck size={15}/>Verified social profiles</h3>
       {profiles.length===0&&<p className="text-xs text-amber-700">No verified social profile found. Refresh the contact profile or research manually; do not guess links.</p>}
