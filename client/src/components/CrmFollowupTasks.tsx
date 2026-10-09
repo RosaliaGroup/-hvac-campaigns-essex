@@ -26,6 +26,10 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
     onSuccess: () => { void tasks.refetch(); setNotice("CRM task updated."); },
     onError: error => setNotice(error.message),
   });
+  const assign = trpc.crmFollowups.assignToMe.useMutation({
+    onSuccess: () => { void tasks.refetch(); setNotice("CRM task assigned to your account."); },
+    onError: error => setNotice(error.message),
+  });
   useEffect(() => {
     if (!jobId || job.isFetching) return;
     if (job.data?.status === "done") {
@@ -86,6 +90,10 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
                   Original Gmail thread
                 </a>
               </div>
+              {!task.assignedToUserId && (
+                <Button size="sm" variant="outline" disabled={assign.isPending}
+                  onClick={() => assign.mutate({ id: task.id })}>Assign to me</Button>
+              )}
               <Button size="sm" variant="outline" disabled={update.isPending}
                 onClick={() => update.mutate({ id: task.id, status: "done" })}>
                 <CheckCircle2 className="h-4 w-4 mr-1" /> Done
