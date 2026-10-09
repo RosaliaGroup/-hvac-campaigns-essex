@@ -42,6 +42,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import MarketingAiStatus from "./MarketingAiStatus";
 import { iconFor } from "./navIcons";
 import { Button } from "./ui/button";
 
@@ -327,7 +328,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <span className="font-medium tracking-tight text-foreground truncate">
             {activeLabel}
           </span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <MarketingAiStatus />
             <NotificationBell />
           </div>
         </header>
