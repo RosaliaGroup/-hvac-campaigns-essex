@@ -263,8 +263,8 @@ export async function runAutoMergeTick(): Promise<{ checked: number; merged: num
           const draft = await findLatestContentDraft(topic.id);
           if (draft?.passes && !draft.blocked && !breaker.shouldPause) {
             const { content } = await getFileContent("client/src/data/blogPosts.ts", "main");
-            const slug = draft.post.slug.replace(/[.*+?^${}()|[\]\\]/g, "\\    const dueBatches = await db.select().from(seoApprovalBatches).where(and(eq(seoApprovalBatches.status, "pr_open"), isNotNull(seoApprovalBatches.holdUntil)));");
-            const alreadyExists = new RegExp('["\\\']slug["\\\']\\s*:\\s*["\\\']' + slug + '["\\\']').test(content);
+            const slugs = new Set(Array.from(content.matchAll(/["']slug["']\\s*:\\s*["']([^"']+)["']/g), m => m[1]));
+            const alreadyExists = slugs.has(draft.post.slug);
             if (!alreadyExists) {
               const approved = await approveContentToPRWithAutopublish(topic.id, null);
               console.log(`[SEO] approved recovered topic #15 to batch #${approved.batchId}`);
