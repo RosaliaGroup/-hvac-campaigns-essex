@@ -32,6 +32,7 @@ vi.mock("./telnyxSms", () => ({
 
 vi.mock("./outreachSuppression", () => ({ isSmsRecipientSuppressed: vi.fn().mockResolvedValue(false) }));
 
+import { isSmsRecipientSuppressed } from "./outreachSuppression";
 import {
   recordOutboundSms,
   isPhoneOptedOut,
@@ -171,6 +172,16 @@ describe("isPhoneOptedOut", () => {
 
 // ── sendAndRecordSms ────────────────────────────────────────────────────────
 describe("sendAndRecordSms", () => {
+  it("refuses a CRM do-not-contact number before Telnyx dispatch", async () => {
+    vi.mocked(isSmsRecipientSuppressed).mockResolvedValueOnce(true);
+    const db = makeFakeDb();
+    const result = await sendAndRecordSms(db, {
+      phone: "2019924007", message: "hi", source: "campaign",
+    });
+    expect(result.blocked).toBe(true);
+    expect(sendTelnyxSmsMock).not.toHaveBeenCalled();
+    expect(db.inserts).toHaveLength(0);
+  });
   it("blocks an opted-out number: no send, no row", async () => {
     const db = makeFakeDb([[{ optedOut: true }]]);
     const res = await sendAndRecordSms(db, { phone: "+17189383793", message: "hi", source: "inbox_reply" });
