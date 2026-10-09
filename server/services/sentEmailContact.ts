@@ -3,8 +3,8 @@ import { customers, crmExternalContacts } from "../../drizzle/schema";
 import { getDb } from "../db";
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 
-/** Promote sent-email correspondents into the main Contacts list, without
- * overwriting staff-entered details or claiming the prospect is a won client. */
+/** Promote only explicitly approved and complete CRM contacts to the main
+ * Contacts list. Never bulk-promote Gmail correspondents or overwrite client details. */
 export async function ensureSentEmailContact(
   db: Db,
   external: {
