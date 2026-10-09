@@ -44,7 +44,7 @@ export function validateLushaIdentity(
   const companyDomain = lusha?.company?.domain ?? lusha?.companyDomain ?? "";
   const crmDomain = crm.email.split("@")[1];
   const employerMatch = Boolean(lushaCompany && norm(lushaCompany) === norm(crm.company)) ||
-    Boolean(companyDomain && domain(companyDomain) === domain(crmDomain));
+    Boolean(!lushaCompany && companyDomain && domain(companyDomain) === domain(crmDomain));
   return nameMatch && employerMatch;
 }
 function firstResult(body: any) {
