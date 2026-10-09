@@ -26,6 +26,10 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
     onSuccess: () => { void tasks.refetch(); setNotice("CRM task updated."); },
     onError: error => setNotice(error.message),
   });
+  const assign = trpc.crmFollowups.assignToMe.useMutation({
+    onSuccess: () => { void tasks.refetch(); setNotice("CRM task assigned to your account."); },
+    onError: error => setNotice(error.message),
+  });
   useEffect(() => {
     if (!jobId || job.isFetching) return;
     if (job.data?.status === "done") {
@@ -49,7 +53,7 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
         <div>
           <h2 className="font-semibold">Prospect follow-up tasks</h2>
           <p className="text-xs text-slate-500">
-            Assigned to Ana Haynes · Day 2 personal contact, day 3 email review, day 33 final review.
+            For Ana Haynes · Day 2 personal contact, day 3 email review, day 33 final review.
             No automatic email or SMS is sent from this panel.
           </p>
         </div>
@@ -80,11 +84,16 @@ export default function CrmFollowupTasks({ onOpenContact }: Props) {
                     hour: "numeric", minute: "2-digit",
                   })} ET
                 </div>
+                {!task.assignedToUserId && <div className="text-xs text-amber-700">CRM user assignment not linked yet</div>}
                 <a className="text-xs text-blue-700 hover:underline" target="_blank" rel="noreferrer"
                   href={`https://mail.google.com/mail/u/?authuser=sales%40mechanicalenterprise.com#all/${encodeURIComponent(task.introThreadId)}`}>
                   Original Gmail thread
                 </a>
               </div>
+              {!task.assignedToUserId && (
+                <Button size="sm" variant="outline" disabled={assign.isPending}
+                  onClick={() => assign.mutate({ id: task.id })}>Assign to me</Button>
+              )}
               <Button size="sm" variant="outline" disabled={update.isPending}
                 onClick={() => update.mutate({ id: task.id, status: "done" })}>
                 <CheckCircle2 className="h-4 w-4 mr-1" /> Done
