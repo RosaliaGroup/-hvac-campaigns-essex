@@ -1,0 +1,27 @@
+name: CRM 30-day cadence validation
+on:
+  pull_request:
+    paths:
+      - "server/services/crm30Day*.ts"
+      - "server/routers/crmFollowups.ts"
+      - "server/_core/index.ts"
+      - "client/src/components/CrmFollowupTasks.tsx"
+      - ".github/workflows/crm-30-day-validation.yml"
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: TypeScript typecheck
+        run: pnpm check
+      - name: Cadence unit tests
+        run: pnpm exec vitest run server/services/crm30DayRules.test.ts
