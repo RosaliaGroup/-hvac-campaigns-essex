@@ -160,10 +160,19 @@ export async function processContactEnrichment(contactId:number) {
     }
     const needsPhone=!validPhone(existing.phone);
     const needsIdentity=!c.company?.trim()||!c.name?.trim()||c.name.includes("@");
-    if(needsIdentity){
-      // Never use an unverified identity to request paid vendor data.
+    if(needsIdentity && needsPhone){
+      // Never request paid phone data against an unverified person/company.
       await finish(contactId,"review","Verify full name and company before Lusha matching");
       return {status:"review",reason:"missing-identity"};
+    }
+    if(needsIdentity && !needsPhone){
+      // This is already a complete contact. Research available public details
+      // without guessing an employer or spending identity-mismatched credits.
+      try{await contactProfile({contactId},true);}
+      catch(error){console.warn("[CRM Auto Enrich] Public profile lookup unavailable",contactId,
+        error instanceof Error?error.message:"unknown");}
+      await finish(contactId,"complete","Email and phone saved; additional identity fields require review");
+      return {status:"complete"};
     }
     if(!lushaConfigured()){
       await finish(contactId,needsPhone?"review":"complete",
@@ -240,7 +249,13 @@ export async function runContactEnrichmentBatch(limit=3) {
   running=true;
   try{
     const db=await database();
-    // Backfill older imported Gmail/SMS contacts without changing their history.
+    // An interrupted paid lookup must not be silently retried and charged
+    // again. Surface it for human review instead.
+    await db.update(contactEnrichmentJobs).set({
+      status:"review",reason:"Worker interrupted; review before retrying Lusha",
+    }).where(and(eq(contactEnrichmentJobs.status,"processing"),
+      lte(contactEnrichmentJobs.updatedAt,new Date(Date.now()-30*60_000))));
+    // Backfill only task-sourced or explicitly imported contacts.
     const missing=await db.select({id:crmExternalContacts.id}).from(crmExternalContacts)
       .leftJoin(contactEnrichmentJobs,eq(contactEnrichmentJobs.contactId,crmExternalContacts.id))
       .where(and(
