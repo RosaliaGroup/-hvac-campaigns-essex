@@ -171,6 +171,11 @@ export async function listContactEnrichmentQueue(input: {
             ),
           )
         : undefined;
+  // Enrichment queue is only for task-generated and explicitly selected
+  // contacts. Historical Gmail/SMS auto-imports are not prospective clients.
+  const approvedSource = sql`${crmExternalContacts.source} IN
+    ('gmail-prospecting','verified-hvac-prospect','gmail-selected','crm-manual')`;
+  const scopedFilter=and(approvedSource,filter);
   const base = () => db.select({
     id: crmExternalContacts.id,
     name: crmExternalContacts.name,
@@ -192,12 +197,12 @@ export async function listContactEnrichmentQueue(input: {
     .leftJoin(customers, eq(crmExternalContacts.customerId, customers.id))
     .leftJoin(phoneMeta, eq(crmExternalContacts.id, phoneMeta.contactId));
   const [items, totals] = await Promise.all([
-    base().where(filter).orderBy(asc(crmExternalContacts.id))
+    base().where(scopedFilter).orderBy(asc(crmExternalContacts.id))
       .limit(input.limit).offset(input.offset),
     db.select({ total: count() }).from(crmExternalContacts)
       .leftJoin(customers, eq(crmExternalContacts.customerId, customers.id))
       .leftJoin(phoneMeta, eq(crmExternalContacts.id, phoneMeta.contactId))
-      .where(filter),
+      .where(scopedFilter),
   ]);
   return { items, total: Number(totals[0]?.total ?? 0) };
 }
