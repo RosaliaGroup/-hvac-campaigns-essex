@@ -3,6 +3,7 @@ import { and, asc, eq, isNull, gte, lt, ne, sql } from "drizzle-orm";
 import { int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { crmExternalContacts, crmCommunications, customers } from "../../drizzle/schema";
 import { logCommunication } from "./crmCommunications";
+import { assertOutreachNotSuppressed } from "./outreachSuppression";
 import { getDb } from "../db";
 import type { CadenceKind, CadenceOutcome } from "./crm30DayRules";
 
@@ -89,6 +90,7 @@ export async function complete30DayTask(id: number, outcome: CadenceOutcome, not
   const [task] = await db.select().from(crm30DayTasks).where(eq(crm30DayTasks.id, id)).limit(1);
   if (!task) throw new Error("CRM cadence task not found");
   if (task.status !== "open") return task;
+  await assertOutreachNotSuppressed(db, task.recipientEmail);
   if (task.kind === "human" && !["attempted_no_answer", "connected", "not_interested"].includes(outcome))
     throw new Error("Choose a valid human follow-up outcome");
   if (task.kind === "email_review" && !["reviewed_no_send", "sent_verified"].includes(outcome))
