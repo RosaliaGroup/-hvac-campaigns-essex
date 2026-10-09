@@ -1,9 +1,10 @@
 /** Exact-address outreach suppression shared by CRM Gmail, follow-ups and send paths.
  * Never infer opt-in from an email reply; an opt-out blocks all marketing contact.
  */
-import { eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { mysqlTable, timestamp, varchar } from "drizzle-orm/mysql-core";
 import { getDb } from "../db";
+import { crmExternalContacts, customers, smsContacts } from "../../drizzle/schema";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 export type SuppressionReason = "opt_out" | "hard_bounce";
@@ -34,6 +35,9 @@ export const GMAIL_SUPPRESSION_LABEL_NAMES = new Set([
 ]);
 
 const known = new Set(KNOWN_OUTREACH_SUPPRESSIONS.map(row => row.email));
+// Both numbers are present in Dennis McConnell\'s verified opt-out reply signature.
+const knownDoNotContactPhones = new Set(["2019924007", "9082950300"]);
+const phone10 = (phone: string) => phone.replace(/\D/g, "").slice(-10);
 const normalize = (email: string) => email.trim().toLowerCase();
 export function isKnownOutreachSuppression(email: string) {
   return known.has(normalize(email));
@@ -103,6 +107,30 @@ export async function isOutreachSuppressed(db: Db, address: string) {
   const [stored] = await db.select({ email: crmOutreachSuppressions.email })
     .from(crmOutreachSuppressions).where(eq(crmOutreachSuppressions.email, email)).limit(1);
   return Boolean(stored);
+}
+
+/** A verified opt-out follows a contact across their saved mobile and work number.
+ * This guard also protects phone-only SMS sends, not merely email-linked sends.
+ */
+export async function isSmsRecipientSuppressed(db: Db, phone: string) {
+  const last = phone10(phone);
+  if (last.length !== 10) return true; // do not send to unverified numbers
+  if (knownDoNotContactPhones.has(last)) return true;
+  const [external, customer, smsContact] = await Promise.all([
+    db.select({ email: crmExternalContacts.email }).from(crmExternalContacts)
+      .where(sql`RIGHT(REGEXP_REPLACE(${crmExternalContacts.phone}, '[^0-9]', ''), 10) = ${last}`).limit(25),
+    db.select({ email: customers.email }).from(customers)
+      .where(or(
+        sql`RIGHT(REGEXP_REPLACE(${customers.phone}, '[^0-9]', ''), 10) = ${last}`,
+        sql`RIGHT(REGEXP_REPLACE(${customers.altPhone}, '[^0-9]', ''), 10) = ${last}`,
+      )).limit(25),
+    db.select({ email: smsContacts.email }).from(smsContacts)
+      .where(sql`RIGHT(REGEXP_REPLACE(${smsContacts.phone}, '[^0-9]', ''), 10) = ${last}`).limit(25),
+  ]);
+  for (const record of [...external, ...customer, ...smsContact]) {
+    if (record.email && await isOutreachSuppressed(db, record.email)) return true;
+  }
+  return false;
 }
 
 export async function assertOutreachNotSuppressed(db: Db, address: string) {
