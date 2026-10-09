@@ -152,3 +152,14 @@ export async function revealLushaPhone(contactId: number, confirmedCreditSpend: 
   return {status:"saved",saved:true,phone:number,phoneType:type,
     message:"Phone saved and read back in CRM. No SMS consent was granted."};
 }
+
+/** Save a matched public LinkedIn link after user review, without performing a follow. */
+export async function savePreviewedLushaLinkedIn(contactId: number) {
+  const cached=previews.get(contactId);
+  if (!cached || Date.now()-cached.previewedAt>TTL_MS || !cached.linkedin)
+    throw new Error("A current, identity-matched Lusha LinkedIn preview is required.");
+  const {c}=await contactFor(contactId);
+  if (cached.email!==c.email || cached.name!==c.name || cached.company!==c.company)
+    throw new Error("CRM identity changed; run a new preview.");
+  return saveVerifiedLushaLinkedIn(contactId,cached.linkedin);
+}
