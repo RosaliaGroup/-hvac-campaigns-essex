@@ -36,7 +36,7 @@ export default function CrmTasks(){
   const refresh=()=>{void utils.crmTasks.outreach.invalidate();void utils.crmTasks.opportunities.invalidate();};
   const done=trpc.crmFollowups.complete.useMutation({onSuccess:()=>{setNotice("Outcome saved.");refresh();},onError:e=>setNotice(e.message)});
   const assign=trpc.crmFollowups.assignToMe.useMutation({onSuccess:()=>{setNotice("Assigned to you.");refresh();},onError:e=>setNotice(e.message)});
-  const assignAll=trpc.crmFollowups.assignAllToMe.useMutation({onSuccess:r=>{setNotice(`${r.assigned} tasks assigned to you.`);refresh();},onError:e=>setNotice(e.message)});
+  const assignAll=trpc.crmFollowups.assignAllToMe.useMutation({onSuccess:r=>{setNotice(`${r.assigned} tasks assigned to your CRM login; ${r.remainingUnassigned} open tasks remain unassigned.`);refresh();},onError:e=>setNotice(e.message)});
   const oppDone=trpc.opportunities.completeTask.useMutation({onSuccess:()=>{setNotice("Opportunity task completed.");refresh();},onError:e=>setNotice(e.message)});
   const oppSnooze=trpc.opportunities.snoozeTask.useMutation({onSuccess:()=>{setNotice("Snoozed one day.");refresh();},onError:e=>setNotice(e.message)});
   const sync=trpc.crmFollowups.syncOutreach.useMutation({onSuccess:r=>{setJobId(r.jobId);setNotice("Checking Gmail outreach…");},onError:e=>setNotice(e.message)});
@@ -60,7 +60,7 @@ export default function CrmTasks(){
       <div><h1 className="text-2xl font-semibold flex items-center gap-2"><ListTodo className="h-6 w-6"/>Tasks</h1>
         <p className="text-sm text-slate-600">Calls, email reviews, and follow-up actions. Keep conversations in Communications.</p></div>
       {source==="outreach"&&<div className="flex flex-wrap gap-2">
-        <Button variant="outline" disabled={assignAll.isPending} onClick={()=>assignAll.mutate()}>Assign all to me</Button>
+        <Button variant="outline" disabled={assignAll.isPending} onClick={()=>{if(window.confirm("Assign all currently unassigned open prospect follow-ups to your signed-in CRM account?"))assignAll.mutate();}}>Assign all to me</Button>
         <Button variant="outline" disabled={sync.isPending||Boolean(jobId)} onClick={()=>sync.mutate({lookbackDays:35})}><RefreshCw className="h-4 w-4 mr-2"/>Sync outreach tasks</Button>
       </div>}
     </div>
