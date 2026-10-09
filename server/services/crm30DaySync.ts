@@ -1,5 +1,5 @@
 /** Gmail-labeled prospecting messages -> 30-day CRM cadence. No automatic sends. */
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, isNull, sql } from "drizzle-orm";
 import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { gmailCrmStatus, parseGmailMessage, CRM_MAILBOX, type GmailMessage } from "./gmailCrm";
@@ -171,15 +171,24 @@ export async function sync30DayFromGmail(
   const assignment = assignee
     ? await assignAll30DayTasks(assignee.id, assignee.name?.trim() || "Ana Haynes")
     : null;
+  const [ownership] = await db.select({
+    open: sql<number>`count(*)`,
+    unassigned: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} is null then 1 else 0 end)`,
+  }).from(crm30DayTasks).where(eq(crm30DayTasks.status, "open"));
+  const remainingUnassigned = Number(ownership?.unassigned ?? 0);
+  const openCount = Number(ownership?.open ?? 0);
   return {
     scanned, created, cancelled, skipped,
     hasMore: Boolean(pageToken),
     autoAssigned: assignment?.assigned ?? 0,
-    remainingUnassigned: assignment?.remainingUnassigned ?? null,
+    remainingUnassigned,
+    alreadyAssigned: openCount - remainingUnassigned,
     assignmentSource: assigneeSource,
     note: assignee
       ? "Open unassigned tasks reconciled to a verified CRM user."
-      : "No unique CRM owner match. Sign in as Ana and use 'Assign all to me' in Sales > Tasks; no task was reassigned automatically.",
+      : remainingUnassigned === 0
+        ? "Existing open tasks are assigned. Automatic owner lookup remains unresolved for new tasks."
+        : "Some open tasks remain unassigned; automatic owner lookup is unresolved. Existing assignments were preserved.",
   };
 }
 
