@@ -90,7 +90,7 @@ export async function syncCrmFollowupsFromGmail(
   const [assignee] = await db.select({ id: users.id }).from(users)
     .where(eq(users.email, assigneeEmail)).limit(1);
   let created = 0, cancelled = 0;
-  for (const candidate of candidates.values()) {
+  for (const candidate of Array.from(candidates.values())) {
     const [existing] = await db.select().from(crmExternalContacts)
       .where(eq(crmExternalContacts.email, candidate.email)).limit(1);
     if (excludeFromOutreachFollowups({
