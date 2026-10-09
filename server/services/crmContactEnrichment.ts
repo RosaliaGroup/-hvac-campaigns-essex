@@ -85,10 +85,11 @@ export async function getContactEnrichment(contactId: number) {
 export async function classifyContactPhone(input: {
   contactId: number; phoneType: PhoneType; sourceUrl?: string;
   confirmedByUser: boolean;
+  verifiedByProvider?: boolean;
 }) {
   const { db, phone } = await resolveContact(input.contactId);
   if (!phone || digits(phone).length < 10) throw new Error("Save a valid phone number on the contact first.");
-  if (input.phoneType !== "unknown" && !input.confirmedByUser)
+  if (input.phoneType !== "unknown" && !input.confirmedByUser && !input.verifiedByProvider)
     throw new Error("Confirm that the number type was verified before classifying.");
   const source = input.sourceUrl?.trim() || null;
   if (source) {
