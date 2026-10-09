@@ -14,7 +14,7 @@ export type ContactIntake = {
   name:string;email:string;phone:string;company?:string;title?:string;
   propertyName?:string;
 };
-function checked(input:ContactIntake) {
+export function validateContactIntake(input:ContactIntake) {
   const email=input.email.trim().toLowerCase();
   const phone=input.phone.trim();
   const status=contactCompleteness({email,phone});
@@ -69,7 +69,7 @@ async function gmailContainsEmail(email:string) {
   return recent.some(x=>[...addresses(x.from??""),...addresses(x.to??"")].includes(email));
 }
 export async function createSelectedContact(input:ContactIntake,from:"manual"|"gmail") {
-  const checkedInput=checked(input);
+  const checkedInput=validateContactIntake(input);
   if(from==="gmail" && !(await gmailContainsEmail(checkedInput.email)))
     throw new Error("Select an email address from the synced Gmail correspondents first.");
   const db=await dbOrThrow();
