@@ -20,7 +20,7 @@ export default function LPCommercialVRV() {
     description: "Cut commercial HVAC costs by up to 80% with VRV/VRF systems and stacked utility, state, and federal incentives. 2.6M+ sq ft served. Free site survey.",
     ogUrl: "https://mechanicalenterprise.com/lp/commercial-vrv",
   });
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "" });
+  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "", company: "", buildingType: "", timeline: "" });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   // Spam protection: honeypot decoy fields + form-load timestamp (too-fast submit).
@@ -62,7 +62,7 @@ export default function LPCommercialVRV() {
       phone: form.phone,
       captureType: "lp_commercial_vrv",
       ...captureContext(),
-      message: `Google Ads LP: Commercial VRV/VRF | Company: ${form.company}`,
+      message: `Commercial VRV/VRF inquiry | Company: ${form.company || "Not provided"} | Building type: ${form.buildingType || "Not provided"} | Project timeline: ${form.timeline || "Not provided"}`,
       website: honeypot.website || undefined,
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
@@ -134,6 +134,23 @@ export default function LPCommercialVRV() {
                       <Input placeholder="Last Name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
                     </div>
                     <Input placeholder="Company / Property Name" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <select aria-label="Building type" value={form.buildingType} onChange={(e) => setForm({ ...form, buildingType: e.target.value })} className="h-10 rounded-md border border-input bg-white px-3 text-sm">
+                        <option value="">Building type (optional)</option>
+                        <option value="Multifamily / condo">Multifamily / condo</option>
+                        <option value="Office / retail">Office / retail</option>
+                        <option value="Restaurant / hospitality">Restaurant / hospitality</option>
+                        <option value="Industrial / warehouse">Industrial / warehouse</option>
+                        <option value="Other commercial">Other commercial</option>
+                      </select>
+                      <select aria-label="Project timeline" value={form.timeline} onChange={(e) => setForm({ ...form, timeline: e.target.value })} className="h-10 rounded-md border border-input bg-white px-3 text-sm">
+                        <option value="">Project timeline (optional)</option>
+                        <option value="Immediately">Immediately</option>
+                        <option value="Within 30 days">Within 30 days</option>
+                        <option value="1-3 months">1–3 months</option>
+                        <option value="Planning / budgeting">Planning / budgeting</option>
+                      </select>
+                    </div>
                     <Input type="email" placeholder="Business Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                     <Input type="tel" placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
                     <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
