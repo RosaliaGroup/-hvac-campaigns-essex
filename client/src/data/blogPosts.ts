@@ -23,6 +23,103 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "What a 10-Year HVAC Warranty Should Really Cover",
+    "slug": "10-year-hvac-warranty-coverage-explained",
+    "date": "September 26, 2026",
+    "readTime": "6 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "A 10-year HVAC parts & labor agreement is a paid add-on, not a given. Here's what coverage, exclusions, and eligibility actually mean.",
+    "excerpt": "Before comparing warranty terms, property owners need to know the difference between a manufacturer's warranty and a purchased parts & labor agreement — and what 'covered' really excludes.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "For property managers and building owners across Essex, Hudson, Bergen, and the surrounding New Jersey counties, a 10-year HVAC warranty sounds reassuring until you read the fine print. The real question isn't how many years are printed on the page — it's what the agreement actually pays for, who performs the labor, and whether your equipment even qualifies. Before comparing coverage terms, start with the installation itself: a system sized correctly for the building, installed to manufacturer specifications, and matched to the load it actually serves. Coverage is a safety net, not a substitute for correct design and workmanship. Mechanical Enterprise LLC has installed and serviced commercial and multifamily HVAC systems across New Jersey for 20 years, and we treat extended coverage as an optional layer added after installation — not a replacement for doing the job right the first time."
+      },
+      {
+        "type": "h2",
+        "content": "Start With Installation Quality and System Fit"
+      },
+      {
+        "type": "paragraph",
+        "content": "Any warranty is only as good as the system behind it. Undersized equipment, poor duct or refrigerant line sizing, and rushed commissioning create recurring problems that no service agreement can fully offset through repeated parts swaps. Before discussing coverage terms, ask how the contractor calculated load, verified refrigerant charge, and tested airflow at startup. For multifamily buildings and commercial properties running PTAC units, mini-splits, RTUs, or split systems, fit matters as much for long-term reliability as for occupant comfort. A properly installed system across Union, Middlesex, Morris, or any county we serve will generally need less warranty activity over its life — which is the actual goal, not simply having a thick coverage document on file."
+      },
+      {
+        "type": "h2",
+        "content": "Manufacturer Warranty vs. a Purchased Service Agreement"
+      },
+      {
+        "type": "paragraph",
+        "content": "These are two different things, and vendors sometimes blur the line. A manufacturer's warranty, issued by the equipment maker, typically covers defective parts for a set period and is tied to the unit itself, not the contractor who installed it. It usually does not cover labor, diagnostic time, refrigerant, or travel. A 10-year parts and labor agreement is a separate, purchased add-on — it is not free, not standard, and not bundled into the cost of installation. Our 10-Year Parts & Labor Coverage is administered as a third-party extended service agreement backed by A-rated insurers, available for new installations by Mechanical Enterprise and for eligible existing systems that pass an inspection. It supplements the manufacturer's parts warranty; it does not replace or duplicate it."
+      },
+      {
+        "type": "h2",
+        "content": "What 'Parts & Labor' Really Covers Over 10 Years"
+      },
+      {
+        "type": "paragraph",
+        "content": "When a contract says parts and labor, ask exactly which labor is included: diagnostic visits, compressor replacement, board-level repairs, refrigerant recovery and recharge, travel time? Our coverage carries a $0 deductible on covered repairs, applies across all major brands, and is structured so you aren't billed separately for technician time on a covered failure. That said, no agreement covers routine maintenance, consumables, or damage from neglect, misuse, or modifications outside the manufacturer's guidelines. Read the exclusions list as carefully as the coverage list — what's left out tells you more about an agreement's real value than its headline term length."
+      },
+      {
+        "type": "h2",
+        "content": "Existing Systems: Eligibility, Not Automatic Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "If you're trying to extend coverage onto equipment you already own, know that eligible existing systems may qualify for the 10-year parts and labor agreement only after an inspection confirms they meet program criteria — age, condition, and documented maintenance history all factor in. Coverage is never automatic for older or undocumented equipment. For portfolios with mixed system types — PTAC, mini-split, RTU, and split systems across a multifamily or commercial building — expect per-unit eligibility review rather than a blanket portfolio approval. This is also why it pays to keep service records organized; a system with a clean maintenance trail is more likely to pass inspection than one with gaps in its history."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us — or Ask Any Bidder — Before Signing"
+      },
+      {
+        "type": "paragraph",
+        "content": "Whether you're evaluating our proposal or comparing bidders, get the specifics in writing before you commit to a 10-year term. The following checklist applies regardless of which contractor you're working with."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Equipment make, model, and install date for every unit in the portfolio",
+          "Most recent maintenance records and any existing manufacturer warranty documentation",
+          "Whether the agreement is parts-only, labor-only, or genuinely both",
+          "The deductible amount per repair, if any",
+          "A full list of exclusions, not just the covered-items summary",
+          "Who performs the repair work: the installing contractor or a third-party dispatch",
+          "Whether existing equipment requires an inspection before enrollment, and what that inspection checks",
+          "How claims are filed and what documentation is required at the time of failure"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Rebates and Incentives Are a Bonus, Not the Foundation"
+      },
+      {
+        "type": "paragraph",
+        "content": "Utility incentive programs can offset part of a replacement project, but they shouldn't drive the decision on their own. PSE&G's Direct Install program covers up to 80% of eligible commercial project costs, and the remaining balance can sometimes be financed at 0% interest through PSE&G's On-Bill Repayment program, repaid through the monthly utility bill. These programs apply to qualifying commercial projects and are worth discussing with your contractor during scoping — but they're a secondary consideration behind correct system design, quality installation, and a clear understanding of what any extended coverage will and won't pay for."
+      },
+      {
+        "type": "cta_box",
+        "content": "Serving commercial and multifamily properties across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, Mechanical Enterprise LLC can walk your portfolio through system design, installation, and optional 10-year parts & labor coverage eligibility.",
+        "buttonText": "Request a Commercial HVAC Proposal",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Does a 10-year warranty mean I'll never pay for a repair?",
+        "answer": "No. A 10-year parts and labor agreement covers specific failures and components defined in the contract, subject to exclusions and, in our case, a $0 deductible on covered repairs. Items outside the covered list, routine maintenance, and damage from misuse are not included."
+      },
+      {
+        "question": "Can I add coverage to equipment we already own?",
+        "answer": "Eligible existing systems may qualify for our 10-year parts and labor coverage, but enrollment depends on passing an inspection and meeting program criteria. Age, documented maintenance, and condition all factor into eligibility."
+      },
+      {
+        "question": "Is the manufacturer's warranty the same as your 10-year coverage?",
+        "answer": "No. The manufacturer's warranty is issued by the equipment maker and generally covers parts only for a defined period. Our 10-year parts and labor coverage is a separately purchased agreement, administered as a third-party extended service agreement backed by A-rated insurers, that supplements — not replaces — the manufacturer's warranty."
+      }
+    ]
+  },
+
+  {
     "title": "Commercial HVAC: Repair or Replace?",
     "slug": "commercial-hvac-repair-or-replace-decision-guide",
     "date": "September 26, 2026",
