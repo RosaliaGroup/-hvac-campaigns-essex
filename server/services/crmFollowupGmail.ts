@@ -7,7 +7,7 @@ import { upsertExternalContact } from "./crmCommunications";
 import { ensureSentEmailContact } from "./sentEmailContact";
 import { startJob } from "./asyncLaneJob";
 import { excludeFromOutreachFollowups, followupDueAt, FOLLOWUP_STEPS } from "./crmFollowupRules";
-import { addCrmFollowupTask, followupDatabase, followupTasks } from "./crmFollowupTasks";
+import { addCrmFollowupTask, followupDatabase, followupTasks, listCrmFollowupTasks } from "./crmFollowupTasks";
 
 type Candidate = {
   email: string; introAt: Date; messageId: string; threadId: string;
@@ -148,7 +148,10 @@ export function startCrmFollowupScheduler() {
       fn: async () => {
         try {
           const result = await syncCrmFollowupsFromGmail(10);
-          console.info("[CRM Follow-up] Scan:", JSON.stringify(result));
+          const openTasks = await listCrmFollowupTasks({ status: "open" });
+          console.info("[CRM Follow-up] Scan:", JSON.stringify({
+            ...result, openTasksVisible: openTasks.length,
+          }));
           return result;
         }
         catch (error) {
