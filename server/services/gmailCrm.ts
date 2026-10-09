@@ -129,13 +129,28 @@ export async function syncGmailPage(
     );
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function read(path: string) {
-    const response = await fetchImpl(
-      `https://gmail.googleapis.com/gmail/v1/users/me/${path}`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        signal: AbortSignal.timeout(15000),
+    let response: Response | undefined;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await fetchImpl(
+          `https://gmail.googleapis.com/gmail/v1/users/me/${path}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: AbortSignal.timeout(15000),
+          }
+        );
+        // Retry transient server errors, never auth or permission errors.
+        if (response.status !== 429 && response.status < 500) break;
+        if (attempt === 2) break;
+      } catch (error) {
+        if (attempt === 2) {
+          const cause = error instanceof Error ? error.message : String(error);
+          throw new Error(`Gmail transport failed after 3 attempts (path=${path}): ${cause}`);
+        }
       }
-    );
+      await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+    if (!response) throw new Error(`Gmail transport returned no response (path=${path})`);
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
       const reasons = [
