@@ -232,3 +232,33 @@ export function startVerifiedSocialBackfill() {
   },75_000);
   timer.unref();
 }
+
+/** Persist a Lusha-matched LinkedIn person profile only after strict CRM name/employer validation.
+ * Never marks the person followed or connected. */
+export async function saveVerifiedLushaLinkedIn(contactId: number, linkedinUrl: string) {
+  const db = await database();
+  const [contact] = await db.select().from(crmExternalContacts)
+    .where(eq(crmExternalContacts.id,contactId)).limit(1);
+  if (!contact) throw new Error("CRM contact not found");
+  const u = new URL(linkedinUrl);
+  if (u.protocol !== "https:" || !/^(www\\.)?linkedin\\.com$/.test(u.hostname) ||
+      !u.pathname.startsWith("/in/")) throw new Error("Invalid LinkedIn person profile");
+  const [saved] = await db.select().from(profiles).where(eq(profiles.contactId,contactId)).limit(1);
+  const base: ContactProfile = saved?.profile ?? {
+    company:{},social:[],checkedAt:new Date().toISOString(),status:"not_found",
+  };
+  const social = [...base.social];
+  if (!social.some(p=>p.url===u.href)) social.push({
+    platform:"LinkedIn",url:u.href,source:"https://www.lusha.com/",
+    evidence:"Lusha business contact matched by exact name and current employer",
+  });
+  const identity=JSON.stringify({version:2,name:contact.name,email:contact.email,company:contact.company});
+  const profile:ContactProfile = {...base,social,status:"matched",checkedAt:new Date().toISOString()};
+  await db.insert(profiles).values({contactId,identity,profile})
+    .onDuplicateKeyUpdate({set:{identity,profile,updatedAt:new Date()}});
+  const [readback]=await db.select({profile:profiles.profile}).from(profiles)
+    .where(eq(profiles.contactId,contactId)).limit(1);
+  if (!readback?.profile?.social?.some(p=>p.url===u.href))
+    throw new Error("CRM LinkedIn write readback failed");
+  return {saved:true,url:u.href,followed:false};
+}
