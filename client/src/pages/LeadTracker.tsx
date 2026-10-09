@@ -462,6 +462,7 @@ export default function LeadTracker() {
                           </span>
                         </TableCell>
                         <TableCell>
+                          <Button size="sm" variant="outline" className="mb-1 mr-2" onClick={() => setLocation(`/contacts/communications?leadId=${lead.id}`)}><Mail className="h-3.5 w-3.5 mr-1" /> Communications</Button>
                           {lead.customerId ? (
                             <Button
                               size="sm"
