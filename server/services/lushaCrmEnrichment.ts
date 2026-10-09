@@ -149,7 +149,7 @@ export async function revealLushaPhone(contactId: number, confirmedCreditSpend: 
   const [saved] = await db.select({phone:crmExternalContacts.phone}).from(crmExternalContacts)
     .where(eq(crmExternalContacts.id,c.id)).limit(1);
   if (saved?.phone !== number) return {status:"write_conflict",saved:false,message:"CRM phone not updated; another value was preserved."};
-  await classifyContactPhone({contactId,phoneType:type,sourceUrl:"https://www.lusha.com/",confirmedByUser:true});
+  await classifyContactPhone({contactId,phoneType:type,sourceUrl:"https://www.lusha.com/",confirmedByUser:false,verifiedByProvider:true});
   return {status:"saved",saved:true,phone:number,phoneType:type,
     message:"Phone saved and read back in CRM. No SMS consent was granted."};
 }
