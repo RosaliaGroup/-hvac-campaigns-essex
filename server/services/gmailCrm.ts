@@ -1,11 +1,10 @@
 import { eq, and, sql } from "drizzle-orm";
-import { customers, crmCommunications } from "../../drizzle/schema";
+import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { quoteNotificationContact } from "./quoteNotification";
 import { startJob } from "./asyncLaneJob";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { getDb } from "../db";
-import { logCommunication, upsertExternalContact } from "./crmCommunications";
-import { ensureSentEmailContact } from "./sentEmailContact";
+import { logCommunication } from "./crmCommunications";
 import { isExplicitOutreachOptOut, recordOutreachSuppression, seedKnownOutreachSuppressions, KNOWN_OUTREACH_SUPPRESSIONS } from "./outreachSuppression";
 import { cancelOpen30DayTasks } from "./crm30DayTasks";
 import { followupDatabase, followupTasks } from "./crmFollowupTasks";
@@ -237,68 +236,34 @@ export async function syncGmailPage(
         note: "CRM Gmail recorded a delivery failure or explicit do-not-contact request.",
       }).where(and(eq(followupTasks.recipientEmail, entry.email), eq(followupTasks.status, "open")));
     }
-    // A message is stored once under its Gmail ID, linked to the primary correspondent.
-    const linked = [];
+    // Gmail sync is COMMUNICATION HISTORY ONLY. Never automatically create a
+    // prospect, customer or contact from a correspondent. An operator must
+    // explicitly select a Gmail person to import with a valid email + phone.
+    // Already-approved CRM contacts retain their thread associations.
+    const matched = [];
     for (const email of parsed.contacts) {
-      const recipientHeaders = (remote.payload?.headers ?? []).filter(
-        (h: { name?: string }) =>
-          ["to", "cc", "bcc", "from"].includes(h.name?.toLowerCase() ?? "")
-      );
-      const named = recipientHeaders
-        .flatMap((h: { value?: string }) =>
-          Array.from(
-            (h.value ?? "").matchAll(/(?:^|,)\s*([^<,]+)\s*<([^>]+)>/g)
-          )
-        )
-        .find(
-          (match: RegExpMatchArray) => match[2].trim().toLowerCase() === email
-        );
-      const name =
-        parsed.quoteContact?.name ||
-        named?.[1].trim().replace(/^"|"$/g, "") ||
-        email;
-      const [quoteCustomer] = parsed.quoteContact
-        ? await db
-            .select({ id: customers.id })
-            .from(customers)
-            .where(sql`lower(trim(${customers.email})) = ${email}`)
-            .limit(1)
-        : [];
-      const contact = await upsertExternalContact(db, {
-        name,
-        email,
-        source: "gmail",
-        ...(quoteCustomer ? { customerId: quoteCustomer.id } : {}),
-      });
-      const customerId =
-        parsed.direction === "outbound"
-          ? await ensureSentEmailContact(db, contact)
-          : contact.customerId;
-      linked.push({ ...contact, customerId });
+      const [contact] = await db.select().from(crmExternalContacts)
+        .where(sql`lower(trim(${crmExternalContacts.email})) = ${email}`).limit(1);
+      if (contact) matched.push(contact);
     }
-    const contact = linked[0];
+    const contact = matched[0] ?? null;
     const { contacts, quoteContact, ...communication } = parsed;
-    // Re-sync must repair previously mislinked notifications, not create duplicates.
-    if (quoteContact)
-      await db
-        .update(crmCommunications)
-        .set({
-          externalContactId: contact.id,
-          ...(contact.customerId ? { customerId: contact.customerId } : {}),
-        })
-        .where(
-          and(
-            eq(crmCommunications.provider, "gmail"),
-            eq(crmCommunications.providerMessageId, parsed.providerMessageId)
-          )
-        );
+    // Repair links only when an existing CRM contact is already known.
+    if (quoteContact && contact) {
+      await db.update(crmCommunications).set({
+        externalContactId: contact.id,
+        ...(contact.customerId ? {customerId:contact.customerId} : {}),
+      }).where(and(
+        eq(crmCommunications.provider,"gmail"),
+        eq(crmCommunications.providerMessageId,parsed.providerMessageId),
+      ));
+    }
     const result = await logCommunication(db, {
       ...communication,
-      externalContactId: contact.id,
-      customerId: contact.customerId,
-      channel: "email",
-      provider: "gmail",
-      status: parsed.direction === "outbound" ? "sent" : "received",
+      externalContactId: contact?.id ?? null,
+      customerId: contact?.customerId ?? null,
+      channel:"email",provider:"gmail",
+      status:parsed.direction==="outbound"?"sent":"received",
     });
     if (result.duplicate) duplicates++;
     else imported++;
