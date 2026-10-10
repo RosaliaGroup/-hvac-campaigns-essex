@@ -23,6 +23,7 @@ export default function LeadTracker() {
   const [showForm, setShowForm] = useState(false);
   const [reviewAssignee, setReviewAssignee] = useState("");
   const [outreachOwnerId, setOutreachOwnerId] = useState("");
+  const [outreachTeamMemberId, setOutreachTeamMemberId] = useState("");
   const [assignmentHint, setAssignmentHint] = useState("");
   const utils = trpc.useUtils();
   const assignWebsiteLead = trpc.leadCaptures.assignWebsiteLead.useMutation({
@@ -32,6 +33,10 @@ export default function LeadTracker() {
   const outreachOwners = trpc.leadCaptures.outreachOwnerCandidates.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
   const reconcileOutreach = trpc.leadCaptures.reconcileOutreachOwner.useMutation({
     onSuccess: (result) => toast.success(`Assigned ${result.assigned} outreach tasks; ${result.remainingUnassigned} remain unassigned.`),
+    onError: e => toast.error(e.message),
+  });
+  const selfAssignOutreach = trpc.leadCaptures.reconcileOutreachToSelf.useMutation({
+    onSuccess: result => toast.success(`Assigned ${result.assigned} open outreach tasks to your login; ${result.remainingUnassigned} remain unassigned.`),
     onError: e => toast.error(e.message),
   });
   const baseline = trpc.leadCaptures.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });
@@ -326,7 +331,18 @@ export default function LeadTracker() {
                   <option value="">Select verified CRM owner</option>
                   {outreachOwners.data.filter(u => u.activeTeamMatch).map(u => <option key={u.id} value={u.id}>{u.name || u.email} — {u.email}</option>)}
                 </select>
-                {outreachOwners.data.filter(u => u.activeTeamMatch).length === 0 && <p role="alert" className="text-sm text-amber-700">No administrator login matches an active team-member email. Check CRM login and Team settings; do not use an unverified ID.</p>}
+                {outreachOwners.data.filter(u => u.activeTeamMatch).length === 0 && <p role="status" className="text-sm text-amber-700">No exact login/team email match. You can explicitly assign unowned tasks to your currently signed-in administrator account below.</p>}
+                <div className="space-y-2 rounded border p-3">
+                  <p className="text-sm font-medium">Take ownership using my signed-in admin account</p>
+                  <p className="text-xs text-muted-foreground">This assigns only unowned outreach tasks to your authenticated login. Choose the active CRM team profile for the displayed owner name. No emails or texts are sent.</p>
+                  <select aria-label="Team profile for my outreach tasks" value={outreachTeamMemberId} onChange={e => setOutreachTeamMemberId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                    <option value="">Choose active team profile</option>
+                    {followUpAudit.data?.activeTeam.map(m => <option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
+                  </select>
+                  <Button disabled={!outreachTeamMemberId || selfAssignOutreach.isPending} onClick={() => selfAssignOutreach.mutate({teamMemberId:Number(outreachTeamMemberId)})}>
+                    {selfAssignOutreach.isPending ? "Assigning…" : "Assign unowned tasks to my login"}
+                  </Button>
+                </div>
                 <Button disabled={!outreachOwnerId || reconcileOutreach.isPending} onClick={() => reconcileOutreach.mutate({userId:Number(outreachOwnerId)})}>
                   {reconcileOutreach.isPending ? "Assigning…" : "Assign unowned outreach tasks"}
                 </Button>
