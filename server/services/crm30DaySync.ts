@@ -17,7 +17,7 @@ type Candidate = {
 
 /** @slow Gmail API scan: invoke through async job, never inline in a mutation. */
 export async function sync30DayFromGmail(
-  lookbackDays: 10 | 35 = 10,
+  lookbackDays: 10 | 35 | 3650 = 10,
   fetchImpl: typeof fetch = fetch,
 ) {
   const status = await gmailCrmStatus();
@@ -71,8 +71,8 @@ export async function sync30DayFromGmail(
   const suppressed = new Set<string>();
   let pageToken: string | undefined;
   let scanned = 0, skipped = 0;
-  // A bounded rolling window; manual 35-day backfill covers older introductions.
-  for (let pageNumber = 0; pageNumber < 6; pageNumber++) {
+  // Paginated campaign-only history scan. Historical backfill uses the extended window.
+  for (let pageNumber = 0; pageNumber < (lookbackDays === 3650 ? 100 : 6); pageNumber++) {
     const params = new URLSearchParams({
       labelIds: labelId, maxResults: "100",
       q: `in:sent from:${CRM_MAILBOX} newer_than:${lookbackDays}d`,
