@@ -760,9 +760,12 @@ export const appRouter = router({
         const dbi = await db.getDb();
         if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
         const { users, teamMembers } = await import("../drizzle/schema");
-        const [login] = await dbi.select({ id: users.id, role: users.role })
-          .from(users).where(dAnd(dEq(users.id, ctx.user.id), dEq(users.role, "admin"))).limit(1);
-        if (!login) throw new TRPCError({ code: "FORBIDDEN", message: "Only a signed-in administrator can take ownership." });
+        // adminProcedure has already verified ctx.user.role === "admin".
+        // A legacy users.role may be stale even when the authenticated session is admin.
+        // Verify the signed-in user exists, but do not apply a second conflicting role gate.
+        const [login] = await dbi.select({ id: users.id })
+          .from(users).where(dEq(users.id, ctx.user.id)).limit(1);
+        if (!login) throw new TRPCError({ code: "UNAUTHORIZED", message: "Signed-in CRM user not found; sign in again." });
         const [member] = await dbi.select({ id: teamMembers.id, name: teamMembers.name })
           .from(teamMembers).where(dAnd(dEq(teamMembers.id, input.teamMemberId), dEq(teamMembers.status, "active"))).limit(1);
         if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Select an active CRM team member." });
