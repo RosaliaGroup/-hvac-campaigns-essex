@@ -43,5 +43,11 @@ export async function resolveCadenceAssignee(): Promise<{
     const verified = uniqueAssignee(matches);
     if (verified) return { user: verified, source: "unique-existing-owner" };
   }
+  console.warn("[CRM 30-Day] Owner lookup unresolved:", JSON.stringify({
+    configuredEmailPresent: Boolean(configuredEmail),
+    exactNameMatches: matches.length,
+    distinctAssignedOwners: owners.length,
+    existingOwnerId: owners.length === 1 ? owners[0].id : null,
+  }));
   return { user: null, source: "unresolved" };
 }
