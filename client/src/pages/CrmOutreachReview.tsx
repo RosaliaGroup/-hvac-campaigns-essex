@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 export default function CrmOutreachReview() {
   const [filter, setFilter] = useState("");
   const drafts = trpc.crmOutreachReview.list.useQuery(undefined, { retry: false });
+  const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => drafts.refetch() });
   const rows = (drafts.data ?? []).filter(row =>
     [row.email, row.company, row.decisionMaker, row.draftSubject]
       .some(value => (value ?? "").toLowerCase().includes(filter.toLowerCase()))
@@ -23,6 +24,7 @@ export default function CrmOutreachReview() {
       {drafts.isLoading && <p role="status">Loading drafts…</p>}
       {drafts.error && <p role="alert" className="text-destructive">Unable to load review queue. Administrator access may be required.</p>}
       {!drafts.isLoading && !drafts.error && rows.length === 0 && <p>No matching drafts in the review queue.</p>}
+      {decide.error && <p role="alert" className="text-destructive">Could not save review decision.</p>}
       <div className="space-y-4">
         {rows.map(row => (
           <article key={row.id} className="rounded-lg border p-4 space-y-2">
@@ -33,6 +35,12 @@ export default function CrmOutreachReview() {
             <p className="font-medium">{row.draftSubject}</p>
             <p className="whitespace-pre-wrap text-sm">{row.draftBody}</p>
             <a className="text-sm underline" href={row.sourceUrl} target="_blank" rel="noopener noreferrer">Verification source</a>
+            {row.status === "needs_human_approval" && (
+              <div className="flex gap-2">
+                <Button disabled={decide.isPending} onClick={() => decide.mutate({ id: row.id, decision: "approved" })}>Approve draft</Button>
+                <Button variant="outline" disabled={decide.isPending} onClick={() => decide.mutate({ id: row.id, decision: "rejected" })}>Reject</Button>
+              </div>
+            )}
           </article>
         ))}
       </div>
