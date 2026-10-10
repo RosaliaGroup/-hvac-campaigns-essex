@@ -753,24 +753,38 @@ export const appRouter = router({
         return result;
       }),
 
-    /** Explicit self-assignment avoids assuming teamMembers and OAuth login emails match. */
+    /** Assign to the real authenticated team session, never an unrelated OAuth user. */
     reconcileOutreachToSelf: adminProcedure
       .input(z.object({ teamMemberId: z.number().int().positive() }))
       .mutation(async ({ input, ctx }) => {
         const dbi = await db.getDb();
         if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
         const { users, teamMembers } = await import("../drizzle/schema");
-        // adminProcedure has already verified ctx.user.role === "admin".
-        // A legacy users.role may be stale even when the authenticated session is admin.
-        // Verify the signed-in user exists, but do not apply a second conflicting role gate.
-        const [login] = await dbi.select({ id: users.id })
-          .from(users).where(dEq(users.id, ctx.user.id)).limit(1);
-        if (!login) throw new TRPCError({ code: "UNAUTHORIZED", message: "Signed-in CRM user not found; sign in again." });
-        const [member] = await dbi.select({ id: teamMembers.id, name: teamMembers.name })
-          .from(teamMembers).where(dAnd(dEq(teamMembers.id, input.teamMemberId), dEq(teamMembers.status, "active"))).limit(1);
-        if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Select an active CRM team member." });
+        const openId = ctx.user.openId;
+        let assigneeId: number;
+        let assigneeName: string;
+        if (openId.startsWith("team:")) {
+          const memberId = Number(openId.slice(5));
+          if (!Number.isSafeInteger(memberId) || memberId <= 0 || memberId !== input.teamMemberId || ctx.user.id !== -memberId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Select your own active team profile." });
+          }
+          const [member] = await dbi.select({ id: teamMembers.id, name: teamMembers.name, role: teamMembers.role })
+            .from(teamMembers).where(dAnd(dEq(teamMembers.id, memberId), dEq(teamMembers.status, "active"))).limit(1);
+          if (!member || member.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Active team administrator required." });
+          assigneeId = -member.id; // SDK's documented team-session identity
+          assigneeName = member.name;
+        } else {
+          const [login] = await dbi.select({ id: users.id, name: users.name })
+            .from(users).where(dEq(users.id, ctx.user.id)).limit(1);
+          if (!login) throw new TRPCError({ code: "UNAUTHORIZED", message: "Signed-in user not found." });
+          const [member] = await dbi.select({ name: teamMembers.name })
+            .from(teamMembers).where(dAnd(dEq(teamMembers.id, input.teamMemberId), dEq(teamMembers.status, "active"))).limit(1);
+          if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose an active CRM team profile." });
+          assigneeId = login.id;
+          assigneeName = member.name;
+        }
         const { assignAll30DayTasks } = await import("./services/crm30DayTasks");
-        return await assignAll30DayTasks(login.id, member.name);
+        return assignAll30DayTasks(assigneeId, assigneeName);
       }),
 
     /** Single lead capture for the full-page Lead detail (Task 8B). */
