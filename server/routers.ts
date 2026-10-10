@@ -789,6 +789,57 @@ export const appRouter = router({
         return assignAll30DayTasks(assigneeId, assigneeName);
       }),
 
+    /** Inspect exact commercial URLs in GSC and count real CRM captures; no synthetic submissions. */
+    commercialAudienceAudit: adminProcedure.query(async () => {
+      const paths = [
+        "/commercial/for-property-management",
+        "/commercial/for-contractors-developers",
+        "/commercial/for-commercial-partners",
+      ] as const;
+      const dbi = await db.getDb();
+      if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const since = new Date(Date.now() - 30 * 86400000);
+      const captures = await dbi.select({
+        id: leadCapturesTable.id, pageUrl: leadCapturesTable.pageUrl,
+        firstTouchLandingPath: leadCapturesTable.firstTouchLandingPath,
+        message: leadCapturesTable.message, channel: leadCapturesTable.channel,
+        status: leadCapturesTable.status,
+      }).from(leadCapturesTable).where(dGte(leadCapturesTable.createdAt, since));
+      const { getSearchConsoleAccessToken, getSeoSiteUrl, getSiteOrigin, inspectUrl } = await import("./integrations/searchConsole");
+      const siteUrl = getSeoSiteUrl();
+      const origin = getSiteOrigin();
+      let accessToken: string | null = null;
+      let connectionError: string | null = null;
+      try { accessToken = await getSearchConsoleAccessToken(); }
+      catch (e) { connectionError = e instanceof Error ? e.message : "Search Console unavailable"; }
+      const results = [];
+      for (const path of paths) {
+        let inspection: { coverageState: string | null; lastCrawlTime: string | null } | null = null;
+        let inspectionError: string | null = connectionError;
+        if (accessToken) {
+          try {
+            const r = await inspectUrl({ accessToken, siteUrl, inspectionUrl: origin + path });
+            inspection = { coverageState: r.coverageState, lastCrawlTime: r.lastCrawlTime };
+          } catch (e) { inspectionError = e instanceof Error ? e.message : "Inspection failed"; }
+        }
+        const matched = captures.filter(row => {
+          let pagePath = "";
+          try { pagePath = row.pageUrl ? new URL(row.pageUrl, origin).pathname : ""; } catch {}
+          return row.firstTouchLandingPath === path || pagePath === path ||
+            row.message?.includes(`Page: audience-${path.slice("/commercial/for-".length)}`);
+        });
+        const byChannel: Record<string, number> = {};
+        const byStage: Record<string, number> = {};
+        for (const row of matched) {
+          byChannel[row.channel ?? "unknown"] = (byChannel[row.channel ?? "unknown"] ?? 0) + 1;
+          byStage[row.status] = (byStage[row.status] ?? 0) + 1;
+        }
+        results.push({ path, inspection, inspectionError, captures30d: matched.length, byChannel, byStage });
+      }
+      return { checkedAt: new Date().toISOString(), results,
+        note: "GSC URL Inspection is a point-in-time Google report; 30-day CRM captures are not independently verified qualified leads." };
+    }),
+
     /** Single lead capture for the full-page Lead detail (Task 8B). */
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
