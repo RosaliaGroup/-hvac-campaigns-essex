@@ -3,8 +3,7 @@
  * selected Gmail/manual contacts. Incoming Gmail/SMS/leads remain in their
  * original history, not automatically promoted to completed Contacts.
  *
- * Lusha searches and reveals are bounded by a shared, atomic daily credit
- * reservation (default 10 credits/day); no compliance bypass or guessed data.
+ * Public-source research only. No paid lookup providers.
  */
 import { and, asc, eq, isNull, lte, or, sql } from "drizzle-orm";
 import { int, mysqlEnum, mysqlTable, timestamp, varchar, date } from "drizzle-orm/mysql-core";
@@ -177,7 +176,7 @@ export async function processContactEnrichment(contactId:number) {
         console.warn("[CRM Auto Enrich] Public identity lookup unavailable",contactId,
           error instanceof Error?error.message:"unknown");
       }
-      // A name equal to the email is still unverified; do not spend Lusha
+      // A name equal to the email is still unverified; do not guess identity
       // credits on a speculative match or fabricate a direct phone number.
       await finish(contactId,"review","Public research attempted; verify person name and company through public sources");
       return {status:"review",reason:"missing-identity"};
