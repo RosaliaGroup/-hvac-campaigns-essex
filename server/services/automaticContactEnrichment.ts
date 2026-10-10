@@ -241,6 +241,14 @@ export async function runContactEnrichmentBatch(limit=3) {
       status:"review",reason:"Worker interrupted; review before retrying public research",
     }).where(and(eq(contactEnrichmentJobs.status,"processing"),
       lte(contactEnrichmentJobs.updatedAt,new Date(Date.now()-30*60_000))));
+    // Requeue older incomplete approved contacts that were stranded in review
+    // by the previous one-shot enrichment implementation.
+    await db.update(contactEnrichmentJobs).set({
+      status:"pending",nextAttemptAt:new Date(),
+      reason:"Public-source enrichment retry for incomplete contact",
+    }).where(and(eq(contactEnrichmentJobs.status,"review"),
+      lte(contactEnrichmentJobs.updatedAt,new Date(Date.now()-24*60*60_000)),
+      sql`EXISTS (SELECT 1 FROM crmExternalContacts c WHERE c.id = ${contactEnrichmentJobs.contactId} AND c.source IN ('gmail-prospecting','verified-hvac-prospect','crm-manual','gmail-selected') AND (c.phone IS NULL OR CHAR_LENGTH(REGEXP_REPLACE(c.phone,'[^0-9]','')) < 10))`));
     // Backfill only task-sourced or explicitly imported contacts.
     const missing=await db.select({id:crmExternalContacts.id}).from(crmExternalContacts)
       .leftJoin(contactEnrichmentJobs,eq(contactEnrichmentJobs.contactId,crmExternalContacts.id))
