@@ -185,8 +185,8 @@ export async function processContactEnrichment(contactId:number) {
       }
       // A name equal to the email is still unverified; do not spend Lusha
       // credits on a speculative match or fabricate a direct phone number.
-      await finish(contactId,"review","Public research attempted; verify person name and company through public sources");
-      return {status:"review",reason:"missing-identity"};
+      await finish(contactId,"pending","Phone/identity research incomplete; scheduled public-source retry",tomorrow());
+      return {status:"pending",reason:"missing-identity"};
     }
     if(needsIdentity && !needsPhone){
       // This is already a complete contact. Research available public details
@@ -214,9 +214,10 @@ export async function processContactEnrichment(contactId:number) {
       if(fresh?.email)
         await ensureSentEmailContact(db,{...fresh,phone:fresh.phone||after.phone});
     }
-    await finish(contactId,validPhone(after.phone)?"complete":"review",
-      validPhone(after.phone)?"Public research completed":"Phone missing after public research");
-    return {status:validPhone(after.phone)?"complete":"review"};
+    await finish(contactId,validPhone(after.phone)?"complete":"pending",
+      validPhone(after.phone)?"Public research completed":"Phone missing; public-source retry scheduled",
+      validPhone(after.phone)?undefined:tomorrow());
+    return {status:validPhone(after.phone)?"complete":"pending"};
   }catch(error){
     const message=error instanceof Error?error.message:"Unknown provider error";
     const [job]=await db.select({attempts:contactEnrichmentJobs.attempts})
@@ -240,6 +241,14 @@ export async function runContactEnrichmentBatch(limit=3) {
       status:"review",reason:"Worker interrupted; review before retrying public research",
     }).where(and(eq(contactEnrichmentJobs.status,"processing"),
       lte(contactEnrichmentJobs.updatedAt,new Date(Date.now()-30*60_000))));
+    // Requeue older incomplete approved contacts that were stranded in review
+    // by the previous one-shot enrichment implementation.
+    await db.update(contactEnrichmentJobs).set({
+      status:"pending",nextAttemptAt:new Date(),
+      reason:"Public-source enrichment retry for incomplete contact",
+    }).where(and(eq(contactEnrichmentJobs.status,"review"),
+      lte(contactEnrichmentJobs.updatedAt,new Date(Date.now()-24*60*60_000)),
+      sql`EXISTS (SELECT 1 FROM crmExternalContacts c WHERE c.id = ${contactEnrichmentJobs.contactId} AND c.source IN ('gmail-prospecting','verified-hvac-prospect','crm-manual','gmail-selected') AND (c.phone IS NULL OR CHAR_LENGTH(REGEXP_REPLACE(c.phone,'[^0-9]','')) < 10))`));
     // Backfill only task-sourced or explicitly imported contacts.
     const missing=await db.select({id:crmExternalContacts.id}).from(crmExternalContacts)
       .leftJoin(contactEnrichmentJobs,eq(contactEnrichmentJobs.contactId,crmExternalContacts.id))
