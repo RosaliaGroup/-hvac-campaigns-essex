@@ -50,7 +50,7 @@ export async function ensureSentEmailContact(
         companyName: external.company ?? null,
         source,
         notes:
-          "Approved CRM Contact with verified email and phone. Source: "+source,
+          "Approved CRM outreach contact. Missing phone is pending public research when unavailable. Source: "+source,
       });
       customerId = Number(
         (result as unknown as [{ insertId: number }])[0].insertId
