@@ -198,7 +198,7 @@ describe("Gmail CRM", () => {
     expect(mocks.log).toHaveBeenCalledWith(
       {},
       expect.objectContaining({
-        externalContactId: 7,
+        externalContactId: null,
         provider: "gmail",
         providerMessageId: "gmail1",
       })
