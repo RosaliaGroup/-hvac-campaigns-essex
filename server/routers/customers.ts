@@ -416,7 +416,7 @@ export const customersRouter = router({
         // inbound lead history still retain incomplete people.
         conditions.push(sql`(${customers.source} IS NULL OR ${customers.source} != 'Gmail Sent')`);
         conditions.push(sql`${customers.email} LIKE '%@%.%'`);
-        conditions.push(sql`CHAR_LENGTH(REGEXP_REPLACE(${customers.phone}, '[^0-9]', '')) BETWEEN 10 AND 15`);
+        // Email-only outreach recipients remain visible while phone research is pending.
       }
       // Default: hide archived unless explicitly requested
       conditions.push(

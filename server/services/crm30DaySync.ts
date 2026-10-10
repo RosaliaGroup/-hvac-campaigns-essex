@@ -17,7 +17,7 @@ type Candidate = {
 
 /** @slow Gmail API scan: invoke through async job, never inline in a mutation. */
 export async function sync30DayFromGmail(
-  lookbackDays: 10 | 35 = 10,
+  lookbackDays: 10 | 35 | 3650 = 10,
   fetchImpl: typeof fetch = fetch,
 ) {
   const status = await gmailCrmStatus();
@@ -72,7 +72,7 @@ export async function sync30DayFromGmail(
   let pageToken: string | undefined;
   let scanned = 0, skipped = 0;
   // A bounded rolling window; manual 35-day backfill covers older introductions.
-  for (let pageNumber = 0; pageNumber < 6; pageNumber++) {
+  for (let pageNumber = 0; pageNumber < (lookbackDays === 3650 ? 100 : 6); pageNumber++) {
     const params = new URLSearchParams({
       labelIds: labelId, maxResults: "100",
       q: `in:sent from:${CRM_MAILBOX} newer_than:${lookbackDays}d`,
@@ -137,6 +137,8 @@ export async function sync30DayFromGmail(
         .set({source:"gmail-prospecting"})
         .where(eq(crmExternalContacts.id,contact.id));
     }
+    const {ensureSentEmailContact}=await import("./sentEmailContact");
+    await ensureSentEmailContact(db,{...contact,source:"gmail-prospecting"});
     await queueContactEnrichment(contact.id);
     // A reply (inbound contact communication) stops nurture. Unanswered outgoing
     // call attempts do not stop the cadence; they count only when logged.
