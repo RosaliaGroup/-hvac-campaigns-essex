@@ -261,14 +261,19 @@ export default function LeadTracker() {
             <CardDescription>Assign to a verified active team member. Assignment does not send SMS, change consent, or claim contact was completed.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {followUpAudit.isLoading && <p className="text-sm">Loading team members and leads…</p>}
+            {followUpAudit.isError && <p role="alert" className="text-sm text-red-700">Could not load active team members: {followUpAudit.error.message}</p>}
             {followUpAudit.data && (
               <>
+                {followUpAudit.data.activeTeam.length === 0 && <p role="alert" className="text-sm text-amber-700">No active team members are available for assignment. Activate a team member in CRM Team settings first.</p>}
                 <select aria-label="Select active team member" value={reviewAssignee}
                   onChange={e => setReviewAssignee(e.target.value)}
                   className="h-10 rounded-md border border-input bg-background px-3 text-sm">
-                  <option value="">Select active team member</option>
+                  <option value="">Select active team member before assigning</option>
                   {followUpAudit.data.activeTeam.map(m => <option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
                 </select>
+                {!reviewAssignee && followUpAudit.data.activeTeam.length > 0 && <p className="text-xs text-muted-foreground">Choose a team member above to enable the Assign buttons.</p>}
+                {assignWebsiteLead.isError && <p role="alert" className="text-sm text-red-700">Assignment failed: {assignWebsiteLead.error.message}</p>}
                 {followUpAudit.data.leadReview.map(row => (
                   <div key={row.leadId} className="flex flex-wrap items-center gap-2 rounded border p-2 text-xs">
                     <span className="font-semibold">Lead #{row.leadId}</span>
@@ -278,7 +283,7 @@ export default function LeadTracker() {
                     <span>{row.hasCadence ? "Cadence active/recorded" : "No cadence"}</span>
                     <span>{row.hasRecordedSentTouch ? "Sent touch recorded" : "No sent touch recorded"}</span>
                     {row.assignedTo ? <span>Owner: {row.assignedTo}</span> :
-                      <Button size="sm" variant="outline" disabled={!reviewAssignee || assignWebsiteLead.isPending}
+                      <Button size="sm" variant="outline" disabled={!reviewAssignee || assignWebsiteLead.isPending || followUpAudit.data.activeTeam.length === 0}
                         onClick={() => assignWebsiteLead.mutate({ leadId: row.leadId, teamMemberId: Number(reviewAssignee) })}>
                         Assign
                       </Button>}
