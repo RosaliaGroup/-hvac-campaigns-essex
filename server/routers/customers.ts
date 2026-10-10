@@ -384,7 +384,7 @@ export const customersRouter = router({
           limit: z.number().int().min(1).max(100).default(50),
           offset: z.number().int().min(0).default(0),
         })
-        .default({ limit: 50, offset: 0, sort: "newest" })
+        .default({ limit: 50, offset: 0, sort: "newest", completedOnly: false })
     )
     .query(async ({ input }) => {
       const db = await getDb();
