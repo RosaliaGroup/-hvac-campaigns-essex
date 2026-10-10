@@ -24,7 +24,7 @@ export default function LeadTracker() {
   const [reviewAssignee, setReviewAssignee] = useState("");
   const utils = trpc.useUtils();
   const assignWebsiteLead = trpc.leadCaptures.assignWebsiteLead.useMutation({
-    onSuccess: () => { toast.success("Lead assigned"); utils.leadCaptures.followUpAudit.invalidate(); utils.leadCaptures.marketingBaseline.invalidate(); },
+    onSuccess: (res) => { toast.success(res.followUpDue ? "Lead assigned — human follow-up due now" : "Lead assigned — existing follow-up preserved"); utils.leadCaptures.followUpAudit.invalidate(); utils.leadCaptures.marketingBaseline.invalidate(); },
     onError: (e) => toast.error(e.message),
   });
   const baseline = trpc.leadCaptures.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });

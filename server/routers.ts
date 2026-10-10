@@ -704,13 +704,22 @@ export const appRouter = router({
         const [member] = await dbi.select({ id: teamMembers.id, name: teamMembers.name })
           .from(teamMembers).where(dAnd(dEq(teamMembers.id, input.teamMemberId), dEq(teamMembers.status, "active"))).limit(1);
         if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose an active team member." });
-        const [lead] = await dbi.select({ id: leadCapturesTable.id, assignedTo: leadCapturesTable.assignedTo })
-          .from(leadCapturesTable).where(dEq(leadCapturesTable.id, input.leadId)).limit(1);
+        const [lead] = await dbi.select({
+          id: leadCapturesTable.id, assignedTo: leadCapturesTable.assignedTo,
+          followUpAt: leadCapturesTable.followUpAt, status: leadCapturesTable.status,
+        }).from(leadCapturesTable).where(dEq(leadCapturesTable.id, input.leadId)).limit(1);
         if (!lead) throw new TRPCError({ code: "NOT_FOUND" });
         if (lead.assignedTo) throw new TRPCError({ code: "CONFLICT", message: "Lead is already assigned; refresh first." });
-        await dbi.update(leadCapturesTable).set({ assignedTo: member.name })
-          .where(dAnd(dEq(leadCapturesTable.id, input.leadId), dIsNull(leadCapturesTable.assignedTo)));
-        return { success: true };
+        // Create an immediate human follow-up due time only if one is not already set.
+        // Never send SMS, initiate calls, change consent, or claim the lead was contacted.
+        const [result] = await dbi.update(leadCapturesTable).set({
+          assignedTo: member.name,
+          ...(lead.followUpAt ? {} : { followUpAt: new Date() }),
+        }).where(dAnd(dEq(leadCapturesTable.id, input.leadId), dIsNull(leadCapturesTable.assignedTo)));
+        if (!result || result.affectedRows !== 1) {
+          throw new TRPCError({ code: "CONFLICT", message: "Lead assignment changed; refresh and try again." });
+        }
+        return { success: true, followUpDue: !lead.followUpAt };
       }),
 
     /** Single lead capture for the full-page Lead detail (Task 8B). */
