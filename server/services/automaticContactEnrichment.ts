@@ -23,10 +23,6 @@ export const contactEnrichmentJobs = mysqlTable("crmContactEnrichmentJobs", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
-const dailySpend = mysqlTable("crmAutoEnrichmentCreditBudget", {
-  day: date("day",{mode:"string"}).primaryKey(),
-  reserved: int("reserved").notNull().default(0),
-});
 
 let ready: Promise<unknown> | undefined;
 async function database() {
@@ -43,9 +39,7 @@ async function database() {
       createdAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
       INDEX crmContactEnrichmentJobs_due_idx (status,nextAttemptAt)
     )`);
-    await db.execute(sql`CREATE TABLE IF NOT EXISTS crmAutoEnrichmentCreditBudget (
-      day date NOT NULL PRIMARY KEY, reserved int NOT NULL DEFAULT 0
-    )`);
+
   })().catch(e => {ready=undefined;throw e;});
   await ready;
   return db;
@@ -67,26 +61,7 @@ export function contactCompleteness(input:{email?:string|null;phone?:string|null
   return {complete:emailValid&&phoneValid,emailValid,phoneValid,
     missing: [...(!emailValid?["email"]:[]),...(!phoneValid?["phone"]:[])]};
 }
-const dailyLimit=()=> {
-  const value=Number(process.env.CRM_AUTO_ENRICH_DAILY_CREDIT_LIMIT ?? "10");
-  return Number.isInteger(value)&&value>=0&&value<=100?value:0;
-};
 const tomorrow=()=>new Date(Date.now()+24*60*60_000);
-async function reserveCredits(credits:number) {
-  if (!Number.isInteger(credits)||credits<1||credits>10) return false;
-  const limit=dailyLimit();
-  if (limit<credits) return false;
-  const db=await database();
-  const day=new Date().toISOString().slice(0,10);
-  await db.insert(dailySpend).values({day,reserved:0}).onDuplicateKeyUpdate({
-    set:{day},
-  });
-  const result=await db.update(dailySpend)
-    .set({reserved:sql`${dailySpend.reserved} + ${credits}`})
-    .where(and(eq(dailySpend.day,day),sql`${dailySpend.reserved} + ${credits} <= ${limit}`));
-  // No refund on an uncertain vendor response; never risk double-spending.
-  return Number((result as any)?.[0]?.affectedRows??0)===1;
-}
 export async function queueContactEnrichment(contactId:number, force=false) {
   const db=await database();
   const [contact]=await db.select({source:crmExternalContacts.source})
