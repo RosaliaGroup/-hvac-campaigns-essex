@@ -158,6 +158,7 @@ export default function PortfolioPricingRequestForm({ pageContext, className, au
           <Textarea id="ppr-properties" value={formData.properties} onChange={(e) => setFormData({ ...formData, properties: e.target.value })} placeholder={audienceMode === "portfolio" ? "Number of buildings/units, locations" : "Location, project scope and building type"} rows={2} />
         </div>
 
+        {audienceMode === "portfolio" && (
         <div className="space-y-1.5">
           <Label className="text-xs">Unit counts by type</Label>
           <div className="grid grid-cols-2 gap-3">
@@ -175,6 +176,7 @@ export default function PortfolioPricingRequestForm({ pageContext, className, au
             ))}
           </div>
         </div>
+        )}
 
         <div className="space-y-1.5">
           <Label htmlFor="ppr-maintenance" className="text-xs">{audienceMode === "portfolio" ? "Current maintenance arrangement" : "Additional requirements (optional)"}</Label>
