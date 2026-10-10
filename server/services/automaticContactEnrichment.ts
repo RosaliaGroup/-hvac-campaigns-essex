@@ -185,8 +185,8 @@ export async function processContactEnrichment(contactId:number) {
       }
       // A name equal to the email is still unverified; do not spend Lusha
       // credits on a speculative match or fabricate a direct phone number.
-      await finish(contactId,"review","Public research attempted; verify person name and company through public sources");
-      return {status:"review",reason:"missing-identity"};
+      await finish(contactId,"pending","Phone/identity research incomplete; scheduled public-source retry",tomorrow());
+      return {status:"pending",reason:"missing-identity"};
     }
     if(needsIdentity && !needsPhone){
       // This is already a complete contact. Research available public details
@@ -214,9 +214,10 @@ export async function processContactEnrichment(contactId:number) {
       if(fresh?.email)
         await ensureSentEmailContact(db,{...fresh,phone:fresh.phone||after.phone});
     }
-    await finish(contactId,validPhone(after.phone)?"complete":"review",
-      validPhone(after.phone)?"Public research completed":"Phone missing after public research");
-    return {status:validPhone(after.phone)?"complete":"review"};
+    await finish(contactId,validPhone(after.phone)?"complete":"pending",
+      validPhone(after.phone)?"Public research completed":"Phone missing; public-source retry scheduled",
+      validPhone(after.phone)?undefined:tomorrow());
+    return {status:validPhone(after.phone)?"complete":"pending"};
   }catch(error){
     const message=error instanceof Error?error.message:"Unknown provider error";
     const [job]=await db.select({attempts:contactEnrichmentJobs.attempts})
