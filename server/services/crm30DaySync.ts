@@ -224,6 +224,21 @@ export function start30DayCadenceScheduler() {
     });
   };
   // First scan after boot; then refresh twice an hour.
+  // Run a one-time, opt-in historical import after deployment.
+  // The same labeled-outreach-only deduplication and suppression checks apply.
+  if(process.env.CRM_HISTORICAL_OUTREACH_BACKFILL==="true"){
+    const history=setTimeout(()=>{
+      startJob({
+        kind:"crm-30-day",key:"crm-historical-outreach-backfill",
+        fn:async()=>{
+          const result=await sync30DayFromGmail(3650);
+          console.info("[CRM Historical Backfill]",JSON.stringify(result));
+          return result;
+        },
+      });
+    },90_000);
+    history.unref();
+  }
   const first = setTimeout(run, 30_000);
   first.unref();
   const interval = setInterval(run, 30 * 60 * 1000);
