@@ -671,6 +671,17 @@ export const appRouter = router({
         currentFormVersion: c.formVersion === TCPA_FORM_VERSION,
         assigned: !!c.assignedTo,
       }));
+      const { teamMembers } = await import("../drizzle/schema");
+      const activeTeam = await dbi.select({ id: teamMembers.id, name: teamMembers.name, role: teamMembers.role })
+        .from(teamMembers).where(dEq(teamMembers.status, "active"));
+      const leadReview = captures.map(c => ({
+        leadId: c.id, status: c.status, assignedTo: c.assignedTo,
+        captureType: c.captureType, consentStatus: c.consentStatus,
+        formVersionPresent: !!c.formVersion,
+        currentFormVersion: c.formVersion === TCPA_FORM_VERSION,
+        hasCadence: cadenceLeadIds.has(c.id),
+        hasRecordedSentTouch: touchLeadIds.has(c.id),
+      }));
       const missingByConsent: Record<string, number> = {};
       for (const row of missingCadenceDetails) missingByConsent[row.consentStatus] = (missingByConsent[row.consentStatus] || 0) + 1;
       return {
@@ -679,7 +690,7 @@ export const appRouter = router({
         withoutCadence: captures.filter(c => !cadenceLeadIds.has(c.id)).length,
         withoutRecordedSentTouch: captures.filter(c => !touchLeadIds.has(c.id)).length,
         cadenceCount: cadences.length, byTaskStatus, byTouchOutcome,
-        missingCadenceDetails, missingByConsent,
+        missingCadenceDetails, missingByConsent, activeTeam, leadReview,
         note: "Sent touch means provider accepted/logged an outbound attempt, not recipient delivery or human contact.",
       };
     }),
