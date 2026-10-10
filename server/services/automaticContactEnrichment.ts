@@ -6,7 +6,7 @@
  * Public-source research only. No paid lookup providers.
  */
 import { and, asc, eq, isNull, lte, or, sql } from "drizzle-orm";
-import { int, mysqlEnum, mysqlTable, timestamp, varchar, date } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, timestamp, varchar } from "drizzle-orm/mysql-core";
 import { crmExternalContacts, customers } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { getContactEnrichment } from "./crmContactEnrichment";
