@@ -753,6 +753,23 @@ export const appRouter = router({
         return result;
       }),
 
+    /** Explicit self-assignment avoids assuming teamMembers and OAuth login emails match. */
+    reconcileOutreachToSelf: adminProcedure
+      .input(z.object({ teamMemberId: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        const dbi = await db.getDb();
+        if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const { users, teamMembers } = await import("../drizzle/schema");
+        const [login] = await dbi.select({ id: users.id, role: users.role })
+          .from(users).where(dAnd(dEq(users.id, ctx.user.id), dEq(users.role, "admin"))).limit(1);
+        if (!login) throw new TRPCError({ code: "FORBIDDEN", message: "Only a signed-in administrator can take ownership." });
+        const [member] = await dbi.select({ id: teamMembers.id, name: teamMembers.name })
+          .from(teamMembers).where(dAnd(dEq(teamMembers.id, input.teamMemberId), dEq(teamMembers.status, "active"))).limit(1);
+        if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Select an active CRM team member." });
+        const { assignAll30DayTasks } = await import("./services/crm30DayTasks");
+        return await assignAll30DayTasks(login.id, member.name);
+      }),
+
     /** Single lead capture for the full-page Lead detail (Task 8B). */
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
