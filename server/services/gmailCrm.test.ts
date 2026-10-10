@@ -66,13 +66,14 @@ beforeEach(() => {
     scope: GMAIL_SCOPE,
   });
   mocks.token.mockResolvedValue({ accessToken: "private-token" });
-  mocks.db.mockResolvedValue({});
+  const chain: any = { select: () => chain, from: () => chain, where: () => chain, limit: async () => [] };
+  mocks.db.mockResolvedValue(chain);
   mocks.upsert.mockResolvedValue({ id: 7 });
   mocks.log.mockResolvedValue({ id: 8, duplicate: false });
   mocks.promote.mockResolvedValue(10);
 });
 describe("Gmail CRM", () => {
-  it("promotes every sent-email recipient even when the message was already imported", async () => {
+  it("does not automatically import Gmail correspondents as CRM contacts", async () => {
     mocks.log.mockResolvedValue({ duplicate: true });
     const responses = [
       { emailAddress: CRM_MAILBOX },
@@ -83,15 +84,12 @@ describe("Gmail CRM", () => {
       ok: true,
       json: async () => responses.shift(),
     }));
-    await syncGmailPage({}, fetcher);
-    expect(mocks.promote).toHaveBeenCalledTimes(2);
-    expect(mocks.upsert).toHaveBeenCalledWith(
-      {},
-      expect.objectContaining({ email: "a@example.com", name: "A" })
-    );
-    expect(mocks.upsert).toHaveBeenCalledWith(
-      {},
-      expect.objectContaining({ email: "b@example.com" })
+    expect(await syncGmailPage({}, fetcher)).toMatchObject({ duplicates: 1 });
+    expect(mocks.promote).not.toHaveBeenCalled();
+    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.log).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ externalContactId: null, channel: "email" })
     );
   });
   it.each([
@@ -259,7 +257,7 @@ describe("website quote notification messages", () => {
       update: () => ({ set: updateSet }),
     };
     mocks.db.mockResolvedValue(chain);
-    mocks.upsert.mockResolvedValue({ id: 7, customerId: 42 });
+
     mocks.log.mockResolvedValue({ id: 8, duplicate: true });
     const fetcher = vi
       .fn()
@@ -274,16 +272,8 @@ describe("website quote notification messages", () => {
       .mockResolvedValueOnce({ ok: true, json: async () => quoteMessage() });
     expect(await syncGmailPage({}, fetcher)).toMatchObject({ duplicates: 1 });
     expect(updateSet).toHaveBeenCalledWith({
-      externalContactId: 7,
-      customerId: 42,
+      externalContactId: 42,
     });
-    expect(mocks.upsert).toHaveBeenCalledWith(
-      chain,
-      expect.objectContaining({
-        email: "client@example.com",
-        name: "Sample Contact",
-        customerId: 42,
-      })
-    );
+    expect(mocks.upsert).not.toHaveBeenCalled();
   });
 });
