@@ -175,6 +175,10 @@ export async function processContactEnrichment(contactId:number) {
           await db.update(crmExternalContacts).set({company:verifiedCompany})
             .where(eq(crmExternalContacts.id,contactId));
         }
+        if(verifiedCompany){
+          const {ensureSentEmailContact}=await import("./sentEmailContact");
+          await ensureSentEmailContact(db,{...c,company:verifiedCompany});
+        }
       }catch(error){
         console.warn("[CRM Auto Enrich] Public identity lookup unavailable",contactId,
           error instanceof Error?error.message:"unknown");
