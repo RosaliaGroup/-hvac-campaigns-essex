@@ -21,6 +21,12 @@ export default function LeadTracker() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
   const [showForm, setShowForm] = useState(false);
+  const [reviewAssignee, setReviewAssignee] = useState("");
+  const utils = trpc.useUtils();
+  const assignWebsiteLead = trpc.leadCaptures.assignWebsiteLead.useMutation({
+    onSuccess: () => { toast.success("Lead assigned"); utils.leadCaptures.followUpAudit.invalidate(); utils.leadCaptures.marketingBaseline.invalidate(); },
+    onError: (e) => toast.error(e.message),
+  });
   const baseline = trpc.leadCaptures.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });
   const followUpAudit = trpc.leadCaptures.followUpAudit.useQuery(undefined, { enabled: isAuthenticated });
 
@@ -247,6 +253,39 @@ export default function LeadTracker() {
                 </div>
               </div>
             ) : null}
+          </CardContent>
+        </Card>
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>Website leads requiring human follow-up</CardTitle>
+            <CardDescription>Assign to a verified active team member. Assignment does not send SMS, change consent, or claim contact was completed.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {followUpAudit.data && (
+              <>
+                <select aria-label="Select active team member" value={reviewAssignee}
+                  onChange={e => setReviewAssignee(e.target.value)}
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">Select active team member</option>
+                  {followUpAudit.data.activeTeam.map(m => <option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
+                </select>
+                {followUpAudit.data.leadReview.map(row => (
+                  <div key={row.leadId} className="flex flex-wrap items-center gap-2 rounded border p-2 text-xs">
+                    <span className="font-semibold">Lead #{row.leadId}</span>
+                    <Badge variant="outline">{row.captureType.replace(/_/g, " ")}</Badge>
+                    <Badge variant="outline">Consent: {row.consentStatus}</Badge>
+                    <Badge variant="outline">{row.currentFormVersion ? "Current form" : row.formVersionPresent ? "Older form" : "Form version missing"}</Badge>
+                    <span>{row.hasCadence ? "Cadence active/recorded" : "No cadence"}</span>
+                    <span>{row.hasRecordedSentTouch ? "Sent touch recorded" : "No sent touch recorded"}</span>
+                    {row.assignedTo ? <span>Owner: {row.assignedTo}</span> :
+                      <Button size="sm" variant="outline" disabled={!reviewAssignee || assignWebsiteLead.isPending}
+                        onClick={() => assignWebsiteLead.mutate({ leadId: row.leadId, teamMemberId: Number(reviewAssignee) })}>
+                        Assign
+                      </Button>}
+                  </div>
+                ))}
+              </>
+            )}
           </CardContent>
         </Card>
         {/* Header */}
