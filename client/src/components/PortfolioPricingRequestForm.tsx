@@ -186,7 +186,7 @@ export default function PortfolioPricingRequestForm({ pageContext, className, au
         <div className="space-y-1.5">
           <Label htmlFor="ppr-start" className="text-xs">{audienceMode === "portfolio" ? "Desired contract start" : "Project timeline"}</Label>
           <Input id="ppr-start" value={formData.contractStart} onChange={(e) => setFormData({ ...formData, contractStart: e.target.value })} placeholder="e.g. next quarter, ASAP" />
-        </div>}
+        </div>
 
         <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 
