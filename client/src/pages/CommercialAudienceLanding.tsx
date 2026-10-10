@@ -58,7 +58,7 @@ export default function CommercialAudienceLanding({ audience }: { audience: Audi
       <section id="request" className="bg-slate-50 py-12">
         <div className="container max-w-xl">
           <h2 className="text-2xl font-bold text-center mb-5">Tell us about your project or portfolio</h2>
-          <PortfolioPricingRequestForm pageContext={`audience-${audience}`} />
+          <PortfolioPricingRequestForm pageContext={`audience-${audience}`} audienceMode={audience === "property-management" ? "portfolio" : "project"} />
           <p className="text-center text-sm mt-5"><Link href={data.related} className="text-blue-700 underline">Explore related HVAC services</Link></p>
         </div>
       </section>
