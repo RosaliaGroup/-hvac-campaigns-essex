@@ -33,8 +33,12 @@ export const crmOutreachReviewRouter = router({
           .limit(1);
         return matches.length > 0;
       },
-      // If independent unsubscribe evidence is not available, fail closed.
-      async () => true,
+      // This endpoint only saves a draft for human review; it never sends.
+      // isOutreachSuppressed above checks known opt-outs, hard bounces, and
+      // persisted CRM suppressions. Do not mark every candidate unsubscribed:
+      // that made the review queue impossible to populate. Any future SEND
+      // endpoint must independently re-check suppression and delivery policy.
+      async () => false,
     );
     if (!check.eligible) return check;
     return queueReviewedCandidate(input);
