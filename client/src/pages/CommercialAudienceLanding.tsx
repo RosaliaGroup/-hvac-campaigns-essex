@@ -8,21 +8,21 @@ type Audience = "property-management" | "contractors-developers" | "commercial-p
 const CONTENT: Record<Audience, { title: string; description: string; eyebrow: string; benefits: string[]; related: string }> = {
   "property-management": {
     eyebrow: "Property managers, condo boards & multifamily owners",
-    title: "HVAC Service for NJ Property Portfolios",
+    title: "NJ Property Management HVAC Services & Maintenance",
     description: "Request a portfolio HVAC review for preventive maintenance, emergency service, PTAC replacements and capital planning across multiple buildings.",
     benefits: ["Multi-building maintenance and service coordination", "PTAC, heat pump, RTU and VRF replacement planning", "Condition reporting and utility incentive eligibility review"],
     related: "/commercial/property-managers",
   },
   "contractors-developers": {
     eyebrow: "General contractors & developers",
-    title: "NJ Commercial HVAC Subcontracting Partner",
+    title: "NJ Commercial HVAC Subcontractor for GCs & Developers",
     description: "Share your project scope for HVAC installation, equipment replacement, retrofit work or bid support. We review plans and scheduling needs before proposing a scope.",
     benefits: ["Commercial and multifamily mechanical scopes", "Equipment selection and replacement planning", "Bid review, coordination and project scheduling"],
     related: "/commercial/hvac-service-contracts",
   },
   "commercial-partners": {
     eyebrow: "Commercial brokers, facility teams & referral partners",
-    title: "A Commercial HVAC Resource for Your NJ Clients",
+    title: "NJ Commercial HVAC Partner for Brokers & Facility Teams",
     description: "Connect building owners and occupants with commercial HVAC service, replacement assessments and planned maintenance. Discuss recurring support or a specific property.",
     benefits: ["Property condition and replacement assessments", "Responsive service and maintenance planning", "Utility incentive screening where eligible"],
     related: "/commercial",
@@ -37,6 +37,11 @@ export default function CommercialAudienceLanding({ audience }: { audience: Audi
     description: data.description,
     ogUrl: `https://mechanicalenterprise.com${path}`,
   });
+  const relatedLinks = audience === "property-management"
+    ? [{ href: "/commercial/property-managers", label: "Portfolio HVAC maintenance and pricing" }, { href: "/commercial/hvac-service-contracts", label: "Commercial HVAC service contracts" }]
+    : audience === "contractors-developers"
+      ? [{ href: "/commercial-hvac-installation-nj", label: "Commercial HVAC installation in NJ" }, { href: "/vrv-vrf-installation-nj", label: "VRF and VRV HVAC installation" }]
+      : [{ href: "/commercial-hvac-service-nj", label: "Commercial HVAC service in NJ" }, { href: "/commercial/property-managers", label: "Property portfolio maintenance" }];
   return <div className="min-h-screen bg-white">
     <Navigation />
     <main>
@@ -54,6 +59,14 @@ export default function CommercialAudienceLanding({ audience }: { audience: Audi
           <div key={item} className="rounded-lg border p-5 text-sm leading-relaxed">{item}</div>
         )}</div>
         <p className="text-sm text-gray-600 mt-6">Coverage, pricing, response times and any incentive eligibility are confirmed after reviewing the property or project. No rebate or warranty approval is guaranteed.</p>
+      </section>
+      <section className="bg-white pb-12">
+        <div className="container max-w-5xl">
+          <h2 className="text-xl font-bold text-[#142c48] mb-4">Explore related commercial HVAC services</h2>
+          <div className="flex flex-wrap gap-4">
+            {relatedLinks.map(item => <Link key={item.href} href={item.href} className="text-blue-700 underline underline-offset-2">{item.label}</Link>)}
+          </div>
+        </div>
       </section>
       <section id="request" className="bg-slate-50 py-12">
         <div className="container max-w-xl">
