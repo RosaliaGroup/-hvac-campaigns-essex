@@ -74,6 +74,7 @@ const dailyLimit=()=> {
   return Number.isInteger(value)&&value>=0&&value<=100?value:0;
 };
 const tomorrow=()=>new Date(Date.now()+24*60*60_000);
+const MAX_PUBLIC_RESEARCH_ATTEMPTS=3;
 async function reserveCredits(credits:number) {
   if (!Number.isInteger(credits)||credits<1||credits>10) return false;
   const limit=dailyLimit();
@@ -143,6 +144,9 @@ export async function processContactEnrichment(contactId:number) {
       await finish(contactId,"blocked","Source not approved for automatic enrichment");
       return {status:"blocked"};
     }
+    const [currentJob]=await db.select({attempts:contactEnrichmentJobs.attempts})
+      .from(contactEnrichmentJobs).where(eq(contactEnrichmentJobs.contactId,contactId)).limit(1);
+    const retryable=(currentJob?.attempts??0)<MAX_PUBLIC_RESEARCH_ATTEMPTS;
     const existing=await getContactEnrichment(contactId);
     // Task-sourced email recipients are contacts immediately, even if phone research is pending.
     if(validEmail(c.email) && (c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect")) {
@@ -185,8 +189,8 @@ export async function processContactEnrichment(contactId:number) {
       }
       // A name equal to the email is still unverified; do not spend Lusha
       // credits on a speculative match or fabricate a direct phone number.
-      await finish(contactId,"pending","Phone/identity research incomplete; scheduled public-source retry",tomorrow());
-      return {status:"pending",reason:"missing-identity"};
+      await finish(contactId,retryable?"pending":"review",retryable?"Phone/identity research incomplete; retry scheduled":"Public research exhausted; human review required",retryable?tomorrow():undefined);
+      return {status:retryable?"pending":"review",reason:"missing-identity"};
     }
     if(needsIdentity && !needsPhone){
       // This is already a complete contact. Research available public details
@@ -214,10 +218,10 @@ export async function processContactEnrichment(contactId:number) {
       if(fresh?.email)
         await ensureSentEmailContact(db,{...fresh,phone:fresh.phone||after.phone});
     }
-    await finish(contactId,validPhone(after.phone)?"complete":"pending",
-      validPhone(after.phone)?"Public research completed":"Phone missing; public-source retry scheduled",
-      validPhone(after.phone)?undefined:tomorrow());
-    return {status:validPhone(after.phone)?"complete":"pending"};
+    await finish(contactId,validPhone(after.phone)?"complete":retryable?"pending":"review",
+      validPhone(after.phone)?"Public research completed":retryable?"Phone missing; public-source retry scheduled":"Phone unavailable after public research; human review required",
+      !validPhone(after.phone)&&retryable?tomorrow():undefined);
+    return {status:validPhone(after.phone)?"complete":retryable?"pending":"review"};
   }catch(error){
     const message=error instanceof Error?error.message:"Unknown provider error";
     const [job]=await db.select({attempts:contactEnrichmentJobs.attempts})
@@ -248,6 +252,7 @@ export async function runContactEnrichmentBatch(limit=3) {
       reason:"Public-source enrichment retry for incomplete contact",
     }).where(and(eq(contactEnrichmentJobs.status,"review"),
       lte(contactEnrichmentJobs.updatedAt,new Date(Date.now()-24*60*60_000)),
+      sql`${contactEnrichmentJobs.attempts} < ${MAX_PUBLIC_RESEARCH_ATTEMPTS}`,
       sql`EXISTS (SELECT 1 FROM crmExternalContacts c WHERE c.id = ${contactEnrichmentJobs.contactId} AND c.source IN ('gmail-prospecting','verified-hvac-prospect','crm-manual','gmail-selected') AND (c.phone IS NULL OR CHAR_LENGTH(REGEXP_REPLACE(c.phone,'[^0-9]','')) < 10))`));
     // Backfill only task-sourced or explicitly imported contacts.
     const missing=await db.select({id:crmExternalContacts.id}).from(crmExternalContacts)
