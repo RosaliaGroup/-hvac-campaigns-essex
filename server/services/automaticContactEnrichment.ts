@@ -13,6 +13,7 @@ import { getDb } from "../db";
 import { getContactEnrichment } from "./crmContactEnrichment";
 
 import { contactProfile } from "./contactProfile/store";
+import { linkCompanyProfile } from "./crmCompanyProfiles";
 import { isOutreachSuppressed } from "./outreachSuppression";
 
 export const contactEnrichmentJobs = mysqlTable("crmContactEnrichmentJobs", {
@@ -168,6 +169,7 @@ export async function processContactEnrichment(contactId:number) {
       // established from a matching official domain, but never guess a person.
       try {
         const profile=await contactProfile({contactId},true);
+        await linkCompanyProfile(contactId,profile);
         const verifiedCompany=profile?.company?.name?.value?.trim();
         if(verifiedCompany && !c.company?.trim()){
           await db.update(crmExternalContacts).set({company:verifiedCompany})
@@ -185,7 +187,7 @@ export async function processContactEnrichment(contactId:number) {
     if(needsIdentity && !needsPhone){
       // This is already a complete contact. Research available public details
       // without guessing an employer or spending identity-mismatched credits.
-      try{await contactProfile({contactId},true);}
+      try{const profile=await contactProfile({contactId},true);await linkCompanyProfile(contactId,profile);}
       catch(error){console.warn("[CRM Auto Enrich] Public profile lookup unavailable",contactId,
         error instanceof Error?error.message:"unknown");}
       await finish(contactId,"complete","Email and phone saved; additional identity fields require review");
