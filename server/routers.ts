@@ -24,6 +24,7 @@ import { metaAdsRouter } from "./routers/metaAds";
 import { teamAuthRouter } from "./routers/teamAuth";
 import { smsCampaignsRouter } from "./routers/smsCampaigns";
 import { conversationCrmRouter } from "./routers/conversationCrm";
+import { crmOutreachReviewRouter } from "./routers/crmOutreachReview";
 import { rebateCalculatorRouter } from "./routers/rebateCalculator";
 import { heygenRouter } from "./routers/heygen";
 import { runCampaignAnalysis } from "./services/campaignEngine";
@@ -106,6 +107,7 @@ export const appRouter = router({
   teamAuth: teamAuthRouter,
   smsCampaigns: smsCampaignsRouter,
   conversationCrm: conversationCrmRouter,
+  crmOutreachReview: crmOutreachReviewRouter,
   crmCommunications: crmCommunicationsRouter,
   crmContactEnrichment: crmContactEnrichmentRouter,
   crmFollowups: crmFollowupsRouter,
