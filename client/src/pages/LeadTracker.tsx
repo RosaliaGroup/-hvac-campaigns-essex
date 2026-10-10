@@ -22,11 +22,17 @@ export default function LeadTracker() {
   const [, setLocation] = useLocation();
   const [showForm, setShowForm] = useState(false);
   const [reviewAssignee, setReviewAssignee] = useState("");
+  const [outreachOwnerId, setOutreachOwnerId] = useState("");
   const [assignmentHint, setAssignmentHint] = useState("");
   const utils = trpc.useUtils();
   const assignWebsiteLead = trpc.leadCaptures.assignWebsiteLead.useMutation({
     onSuccess: (res) => { toast.success(res.followUpDue ? "Lead assigned — human follow-up due now" : "Lead assigned — existing follow-up preserved"); utils.leadCaptures.followUpAudit.invalidate(); utils.leadCaptures.marketingBaseline.invalidate(); },
     onError: (e) => toast.error(e.message),
+  });
+  const outreachOwners = trpc.leadCaptures.outreachOwnerCandidates.useQuery(undefined, { enabled: isAuthenticated && user?.role === "admin" });
+  const reconcileOutreach = trpc.leadCaptures.reconcileOutreachOwner.useMutation({
+    onSuccess: (result) => toast.success(`Assigned ${result.assigned} outreach tasks; ${result.remainingUnassigned} remain unassigned.`),
+    onError: e => toast.error(e.message),
   });
   const baseline = trpc.leadCaptures.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });
   const followUpAudit = trpc.leadCaptures.followUpAudit.useQuery(undefined, { enabled: isAuthenticated });
@@ -306,6 +312,28 @@ export default function LeadTracker() {
             )}
           </CardContent>
         </Card>
+        {user?.role === "admin" && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Outreach follow-up ownership</CardTitle>
+              <CardDescription>Select a verified CRM administrator whose login email matches an active team member. This assigns unowned 30-day outreach tasks only; it does not send messages.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {outreachOwners.isError && <p role="alert" className="text-sm text-red-700">Cannot load verified owners: {outreachOwners.error.message}</p>}
+              {outreachOwners.isLoading && <p className="text-sm">Loading verified owners…</p>}
+              {outreachOwners.data && <>
+                <select aria-label="Verified outreach owner" value={outreachOwnerId} onChange={e => setOutreachOwnerId(e.target.value)} className="h-10 rounded-md border border-input bg-background px-3 text-sm">
+                  <option value="">Select verified CRM owner</option>
+                  {outreachOwners.data.filter(u => u.activeTeamMatch).map(u => <option key={u.id} value={u.id}>{u.name || u.email} — {u.email}</option>)}
+                </select>
+                {outreachOwners.data.filter(u => u.activeTeamMatch).length === 0 && <p role="alert" className="text-sm text-amber-700">No administrator login matches an active team-member email. Check CRM login and Team settings; do not use an unverified ID.</p>}
+                <Button disabled={!outreachOwnerId || reconcileOutreach.isPending} onClick={() => reconcileOutreach.mutate({userId:Number(outreachOwnerId)})}>
+                  {reconcileOutreach.isPending ? "Assigning…" : "Assign unowned outreach tasks"}
+                </Button>
+              </>}
+            </CardContent>
+          </Card>
+        )}
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
