@@ -43,6 +43,23 @@ export default function CommercialCampaigns() {
         </div>
       </section>
 
+      <section className="py-12 bg-white">
+        <div className="container">
+          <h2 className="text-3xl font-bold text-[#1e3a5f] text-center mb-3">Commercial HVAC Support by Partner Type</h2>
+          <p className="text-center text-muted-foreground mb-8">Choose the type of property or project you manage to request the right assessment.</p>
+          <div className="grid md:grid-cols-3 gap-5">
+            {[
+              { href: "/commercial/for-property-management", title: "Property managers & condo associations", text: "Multi-building maintenance, PTAC replacement and portfolio planning." },
+              { href: "/commercial/for-contractors-developers", title: "General contractors & developers", text: "Commercial HVAC installation, retrofits and bid coordination." },
+              { href: "/commercial/for-commercial-partners", title: "Commercial brokers & referral partners", text: "HVAC assessments, service and replacements for client properties." },
+            ].map(item => <a key={item.href} href={item.href} className="block rounded-xl border p-6 hover:border-[#e8813a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-orange-600">
+              <h3 className="font-bold text-lg text-[#1e3a5f]">{item.title}</h3>
+              <p className="text-sm text-gray-600 mt-2">{item.text}</p>
+              <span className="inline-flex items-center gap-1 text-sm font-semibold text-blue-700 mt-4">Explore services <ArrowRight className="h-4 w-4" /></span>
+            </a>)}
+          </div>
+        </div>
+      </section>
       {/* Direct Replacement Program Highlight */}
       <section className="py-20 bg-white">
         <div className="container">
