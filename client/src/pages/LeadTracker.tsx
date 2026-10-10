@@ -226,6 +226,21 @@ export default function LeadTracker() {
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(followUpAudit.data.byTouchOutcome).map(([key, count]) => <Badge variant="outline" key={key}>{key}: {count}</Badge>)}
                 </div>
+                {followUpAudit.data.missingCadenceDetails.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium">Leads without an automated cadence — review individually</div>
+                    <p className="text-xs text-muted-foreground">Unknown consent is not permission for automated SMS/calls. Form-version status helps diagnose missing or outdated disclosures; it does not prove why enrollment was skipped.</p>
+                    {followUpAudit.data.missingCadenceDetails.map(row => (
+                      <div key={row.leadId} className="flex flex-wrap gap-2 items-center rounded border p-2 text-xs">
+                        <span className="font-semibold">Lead #{row.leadId}</span>
+                        <Badge variant="outline">{row.captureType.replace(/_/g, " ")}</Badge>
+                        <Badge variant="outline">Consent: {row.consentStatus}</Badge>
+                        <Badge variant="outline">{row.currentFormVersion ? "Current form version" : row.formVersionPresent ? "Older form version" : "No form version"}</Badge>
+                        <span>{row.assigned ? "Assigned" : "Needs owner"}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="text-sm">Cadence task statuses</div>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(followUpAudit.data.byTaskStatus).map(([key, count]) => <Badge variant="outline" key={key}>{key}: {count}</Badge>)}

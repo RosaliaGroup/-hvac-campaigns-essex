@@ -638,6 +638,8 @@ export const appRouter = router({
       const captures = await dbi.select({
         id: leadCapturesTable.id, status: leadCapturesTable.status,
         assignedTo: leadCapturesTable.assignedTo, createdAt: leadCapturesTable.createdAt,
+        captureType: leadCapturesTable.captureType, consentStatus: leadCapturesTable.consentStatus,
+        formVersion: leadCapturesTable.formVersion,
       }).from(leadCapturesTable).where(dGte(leadCapturesTable.createdAt, since));
       const ids = captures.map(c => c.id);
       const cadences = ids.length ? await dbi.select({
@@ -661,12 +663,23 @@ export const appRouter = router({
       }
       const cadenceLeadIds = new Set(cadences.map(c => c.leadId));
       const touchLeadIds = new Set(touches.filter(t => t.status === "sent").map(t => t.leadId));
+      const missingCadenceDetails = captures.filter(c => !cadenceLeadIds.has(c.id)).map(c => ({
+        leadId: c.id,
+        captureType: c.captureType,
+        consentStatus: c.consentStatus,
+        formVersionPresent: !!c.formVersion,
+        currentFormVersion: c.formVersion === TCPA_FORM_VERSION,
+        assigned: !!c.assignedTo,
+      }));
+      const missingByConsent: Record<string, number> = {};
+      for (const row of missingCadenceDetails) missingByConsent[row.consentStatus] = (missingByConsent[row.consentStatus] || 0) + 1;
       return {
         windowDays: 30, totalCaptures: captures.length,
         unassigned: captures.filter(c => !c.assignedTo && c.status === "new").length,
         withoutCadence: captures.filter(c => !cadenceLeadIds.has(c.id)).length,
         withoutRecordedSentTouch: captures.filter(c => !touchLeadIds.has(c.id)).length,
         cadenceCount: cadences.length, byTaskStatus, byTouchOutcome,
+        missingCadenceDetails, missingByConsent,
         note: "Sent touch means provider accepted/logged an outbound attempt, not recipient delivery or human contact.",
       };
     }),
