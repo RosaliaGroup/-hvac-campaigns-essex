@@ -139,7 +139,7 @@ export async function syncGmailPage(
           }
         );
         // Retry transient server errors, never auth or permission errors.
-        if (response.status !== 429 && response.status < 500) break;
+        if (response.ok || (response.status !== 429 && response.status < 500)) break;
         if (attempt === 2) break;
       } catch (error) {
         if (attempt === 2) {
