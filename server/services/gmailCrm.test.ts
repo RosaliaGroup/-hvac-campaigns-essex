@@ -196,7 +196,7 @@ describe("Gmail CRM", () => {
     });
     expect(fetcher.mock.calls[1][0]).toContain("pageToken=page1");
     expect(mocks.log).toHaveBeenCalledWith(
-      {},
+      expect.objectContaining({ select: expect.any(Function) }),
       expect.objectContaining({
         externalContactId: null,
         provider: "gmail",
