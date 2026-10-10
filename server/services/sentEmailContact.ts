@@ -37,6 +37,8 @@ export async function ensureSentEmailContact(
       const patch:Partial<typeof customers.$inferInsert> = {};
       if(existing.source==="Gmail Sent") patch.source=source;
       if(!existing.phone?.trim() && external.phone?.trim()) patch.phone=external.phone;
+      if(!existing.companyName?.trim() && external.company?.trim()) patch.companyName=external.company;
+      if(existing.type!=="commercial" && external.company?.trim()) patch.type="commercial";
       if(existing.displayName===email && external.name && external.name!==email)
         patch.displayName=external.name;
       if(Object.keys(patch).length)
@@ -48,6 +50,7 @@ export async function ensureSentEmailContact(
         email,
         phone: external.phone ?? null,
         companyName: external.company ?? null,
+        type: external.company?.trim() ? "commercial" : "residential",
         source,
         notes:
           "Approved CRM outreach contact. Missing phone is pending public research when unavailable. Source: "+source,
