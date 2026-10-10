@@ -3,7 +3,7 @@ import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { adminProcedure, router } from "../_core/trpc";
 import { checkOutreachReviewCandidate } from "../services/crmOutreachReviewQueue";
-import { queueReviewedCandidate, listReviewDrafts, crmOutreachReviewDrafts } from "../services/crmOutreachReviewStore";
+import { queueReviewedCandidate, listReviewDrafts, decideReviewDraft } from "../services/crmOutreachReviewStore";
 import { getDb } from "../db";
 import { crmCommunications } from "../../drizzle/schema";
 import { TRPCError } from "@trpc/server";
@@ -20,6 +20,7 @@ const candidate = z.object({
 
 export const crmOutreachReviewRouter = router({
   list: adminProcedure.query(() => listReviewDrafts()),
+  decide: adminProcedure.input(z.object({ id: z.number().int().positive(), decision: z.enum(["approved", "rejected"]) })).mutation(({ input }) => decideReviewDraft(input.id, input.decision)),
   enqueue: adminProcedure.input(candidate).mutation(async ({ input }) => {
     const db = await getDb();
     if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
