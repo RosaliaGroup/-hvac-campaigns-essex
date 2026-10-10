@@ -11,10 +11,7 @@ import { int, mysqlEnum, mysqlTable, timestamp, varchar, date } from "drizzle-or
 import { crmExternalContacts, customers } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { getContactEnrichment } from "./crmContactEnrichment";
-import {
-  previewLushaContact, revealLushaPhone, savePreviewedLushaLinkedIn,
-  lushaConfigured,
-} from "./lushaCrmEnrichment";
+
 import { contactProfile } from "./contactProfile/store";
 import { isOutreachSuppressed } from "./outreachSuppression";
 
@@ -146,6 +143,11 @@ export async function processContactEnrichment(contactId:number) {
       return {status:"blocked"};
     }
     const existing=await getContactEnrichment(contactId);
+    // Task-sourced email recipients are contacts immediately, even if phone research is pending.
+    if(validEmail(c.email) && (c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect")) {
+      const {ensureSentEmailContact}=await import("./sentEmailContact");
+      await ensureSentEmailContact(db,c);
+    }
     if(!validEmail(c.email)){
       await finish(contactId,"review","Email required; keep incoming lead/message staged");
       return {status:"review",reason:"missing-email"};
@@ -177,7 +179,7 @@ export async function processContactEnrichment(contactId:number) {
       }
       // A name equal to the email is still unverified; do not spend Lusha
       // credits on a speculative match or fabricate a direct phone number.
-      await finish(contactId,"review","Public research attempted; verify person name and company before paid Lusha matching");
+      await finish(contactId,"review","Public research attempted; verify person name and company through public sources");
       return {status:"review",reason:"missing-identity"};
     }
     if(needsIdentity && !needsPhone){
@@ -189,64 +191,26 @@ export async function processContactEnrichment(contactId:number) {
       await finish(contactId,"complete","Email and phone saved; additional identity fields require review");
       return {status:"complete"};
     }
-    if(!lushaConfigured()){
-      await finish(contactId,needsPhone?"review":"complete",
-        needsPhone?"Lusha API unavailable; missing phone requires research":"Email and phone verified; Lusha API unavailable");
-      return {status:needsPhone?"review":"complete"};
-    }
-    // Searches can cost credits. Reserve a maximum of one search credit per
-    // contact; stop and defer when the configured daily budget is exhausted.
-    if(!(await reserveCredits(1))){
-      await finish(contactId,"pending","Daily Lusha search budget reached",tomorrow());
-      return {status:"deferred-budget"};
-    }
-    const preview=await previewLushaContact(contactId);
-    if(preview.status!=="matched"){
-      await finish(contactId,needsPhone?"review":"complete",
-        "Lusha "+preview.status+": "+preview.message);
-      return {status:preview.status};
-    }
-    if(preview.linkedin){
-      try{await savePreviewedLushaLinkedIn(contactId);}
-      catch(error){console.warn("[CRM Auto Enrich] LinkedIn save skipped",contactId,
-        error instanceof Error?error.message:"unknown");}
-    }
-    if(needsPhone){
-      const credits=Math.ceil(preview.phoneRevealCredits);
-      if(!preview.hasPhoneAvailable){
-        await finish(contactId,"review","No verified phone available from Lusha");
-        return {status:"review",reason:"no-phone"};
-      }
-      if(!(await reserveCredits(credits))){
-        await finish(contactId,"pending","Daily Lusha phone budget reached",tomorrow());
-        return {status:"deferred-budget"};
-      }
-      const result=await revealLushaPhone(contactId,true);
-      if(result.status!=="saved"&&result.status!=="already_present"){
-        await finish(contactId,"review","Lusha phone reveal: "+result.message);
-        return {status:"review",reason:result.status};
-      }
-    }
+    // Only use public profile research; never call paid people-data providers.
+    try { await contactProfile({contactId}, true); }
+    catch(error) { console.warn("[CRM Auto Enrich] Public research failed",contactId,error); }
     const after=await getContactEnrichment(contactId);
-    if(!validPhone(after.phone)){
-      await finish(contactId,"review","Email saved, but no verified phone could be added");
-      return {status:"review"};
-    }
+
     // Optional social/company public research; do not fabricate social links.
     try{await contactProfile({contactId},true);}
     catch(error){console.warn("[CRM Auto Enrich] Public profile research skipped",contactId,
       error instanceof Error?error.message:"unknown");}
-    // Promote a task-sourced prospect into the main Contacts/customer index
-    // ONLY after both email and phone are verified. Never promote generic Gmail.
+    // Preserve task-only intake and keep unrelated Gmail correspondents excluded.
     if(c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect"){
       const {ensureSentEmailContact}=await import("./sentEmailContact");
       const [fresh]=await db.select().from(crmExternalContacts)
         .where(eq(crmExternalContacts.id,contactId)).limit(1);
-      if(fresh?.email && validPhone(fresh.phone||after.phone))
+      if(fresh?.email)
         await ensureSentEmailContact(db,{...fresh,phone:fresh.phone||after.phone});
     }
-    await finish(contactId,"complete","Valid email and phone; available verified profiles saved");
-    return {status:"complete"};
+    await finish(contactId,validPhone(after.phone)?"complete":"review",
+      validPhone(after.phone)?"Public research completed":"Phone missing after public research");
+    return {status:validPhone(after.phone)?"complete":"review"};
   }catch(error){
     const message=error instanceof Error?error.message:"Unknown provider error";
     const [job]=await db.select({attempts:contactEnrichmentJobs.attempts})
@@ -267,7 +231,7 @@ export async function runContactEnrichmentBatch(limit=3) {
     // An interrupted paid lookup must not be silently retried and charged
     // again. Surface it for human review instead.
     await db.update(contactEnrichmentJobs).set({
-      status:"review",reason:"Worker interrupted; review before retrying Lusha",
+      status:"review",reason:"Worker interrupted; review before retrying public research",
     }).where(and(eq(contactEnrichmentJobs.status,"processing"),
       lte(contactEnrichmentJobs.updatedAt,new Date(Date.now()-30*60_000))));
     // Backfill only task-sourced or explicitly imported contacts.
