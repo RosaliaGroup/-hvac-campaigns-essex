@@ -695,6 +695,24 @@ export const appRouter = router({
       };
     }),
 
+    assignWebsiteLead: adminProcedure
+      .input(z.object({ leadId: z.number().int().positive(), teamMemberId: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const { teamMembers } = await import("../drizzle/schema");
+        const [member] = await dbi.select({ id: teamMembers.id, name: teamMembers.name })
+          .from(teamMembers).where(dAnd(dEq(teamMembers.id, input.teamMemberId), dEq(teamMembers.status, "active"))).limit(1);
+        if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose an active team member." });
+        const [lead] = await dbi.select({ id: leadCapturesTable.id, assignedTo: leadCapturesTable.assignedTo })
+          .from(leadCapturesTable).where(dEq(leadCapturesTable.id, input.leadId)).limit(1);
+        if (!lead) throw new TRPCError({ code: "NOT_FOUND" });
+        if (lead.assignedTo) throw new TRPCError({ code: "CONFLICT", message: "Lead is already assigned; refresh first." });
+        await dbi.update(leadCapturesTable).set({ assignedTo: member.name })
+          .where(dAnd(dEq(leadCapturesTable.id, input.leadId), dIsNull(leadCapturesTable.assignedTo)));
+        return { success: true };
+      }),
+
     /** Single lead capture for the full-page Lead detail (Task 8B). */
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
