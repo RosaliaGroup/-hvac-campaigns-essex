@@ -22,6 +22,7 @@ export default function LeadTracker() {
   const [, setLocation] = useLocation();
   const [showForm, setShowForm] = useState(false);
   const [reviewAssignee, setReviewAssignee] = useState("");
+  const [assignmentHint, setAssignmentHint] = useState("");
   const utils = trpc.useUtils();
   const assignWebsiteLead = trpc.leadCaptures.assignWebsiteLead.useMutation({
     onSuccess: (res) => { toast.success(res.followUpDue ? "Lead assigned — human follow-up due now" : "Lead assigned — existing follow-up preserved"); utils.leadCaptures.followUpAudit.invalidate(); utils.leadCaptures.marketingBaseline.invalidate(); },
@@ -267,12 +268,13 @@ export default function LeadTracker() {
               <>
                 {followUpAudit.data.activeTeam.length === 0 && <p role="alert" className="text-sm text-amber-700">No active team members are available for assignment. Activate a team member in CRM Team settings first.</p>}
                 <select aria-label="Select active team member" value={reviewAssignee}
-                  onChange={e => setReviewAssignee(e.target.value)}
+                  onChange={e => { setReviewAssignee(e.target.value); setAssignmentHint(""); }}
                   className="h-10 rounded-md border border-input bg-background px-3 text-sm">
                   <option value="">Select active team member before assigning</option>
                   {followUpAudit.data.activeTeam.map(m => <option key={m.id} value={m.id}>{m.name} ({m.role})</option>)}
                 </select>
                 {!reviewAssignee && followUpAudit.data.activeTeam.length > 0 && <p className="text-xs text-muted-foreground">Choose a team member above to enable the Assign buttons.</p>}
+                {assignmentHint && <p role="alert" className="text-sm text-amber-700">{assignmentHint}</p>}
                 {assignWebsiteLead.isError && <p role="alert" className="text-sm text-red-700">Assignment failed: {assignWebsiteLead.error.message}</p>}
                 {followUpAudit.data.leadReview.map(row => (
                   <div key={row.leadId} className="flex flex-wrap items-center gap-2 rounded border p-2 text-xs">
@@ -283,8 +285,19 @@ export default function LeadTracker() {
                     <span>{row.hasCadence ? "Cadence active/recorded" : "No cadence"}</span>
                     <span>{row.hasRecordedSentTouch ? "Sent touch recorded" : "No sent touch recorded"}</span>
                     {row.assignedTo ? <span>Owner: {row.assignedTo}</span> :
-                      <Button size="sm" variant="outline" disabled={!reviewAssignee || assignWebsiteLead.isPending || followUpAudit.data.activeTeam.length === 0}
-                        onClick={() => assignWebsiteLead.mutate({ leadId: row.leadId, teamMemberId: Number(reviewAssignee) })}>
+                      <Button size="sm" variant="outline" disabled={assignWebsiteLead.isPending}
+                        onClick={() => {
+                          const members = followUpAudit.data.activeTeam;
+                          const selected = reviewAssignee || (members.length === 1 ? String(members[0].id) : "");
+                          if (!selected) {
+                            setAssignmentHint(members.length === 0
+                              ? "No active CRM team member is available. Activate one in Team settings."
+                              : "Choose an active team member in the dropdown above before assigning.");
+                            return;
+                          }
+                          setAssignmentHint("");
+                          assignWebsiteLead.mutate({ leadId: row.leadId, teamMemberId: Number(selected) });
+                        }}>
                         Assign
                       </Button>}
                   </div>
