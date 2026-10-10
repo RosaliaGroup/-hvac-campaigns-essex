@@ -22,7 +22,7 @@ export const crmOutreachReviewRouter = router({
   list: adminProcedure.query(() => listReviewDrafts()),
   enqueue: adminProcedure.input(candidate).mutation(async ({ input }) => {
     const db = await getDb();
-    if (!db) throw new TRPCError({ code: "SERVICE_UNAVAILABLE" });
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
     const check = await checkOutreachReviewCandidate(
       input,
       async email => {
