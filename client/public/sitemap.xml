@@ -1794,4 +1794,22 @@
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
+  <url>
+    <loc>https://mechanicalenterprise.com/commercial/for-property-management</loc>
+    <lastmod>2026-10-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://mechanicalenterprise.com/commercial/for-contractors-developers</loc>
+    <lastmod>2026-10-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://mechanicalenterprise.com/commercial/for-commercial-partners</loc>
+    <lastmod>2026-10-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>
