@@ -127,8 +127,7 @@ export async function sync30DayFromGmail(
       cancelled += await cancelOpen30DayTasks(candidate.email, "Contact excluded or opted out.");
       skipped++; continue;
     }
-    // Only labeled, non-suppressed TASK outreach prospects qualify for
-    // automatic enrichment. Never promote an email-only person to Contacts.
+    // Only labeled campaign recipients qualify. Promote email-only prospects immediately.
     const contact = existing ?? await upsertExternalContact(db, {
       name: candidate.email, email: candidate.email, source: "gmail-prospecting",
     });
@@ -137,6 +136,8 @@ export async function sync30DayFromGmail(
         .set({source:"gmail-prospecting"})
         .where(eq(crmExternalContacts.id,contact.id));
     }
+    const { ensureSentEmailContact } = await import("./sentEmailContact");
+    await ensureSentEmailContact(db, { ...contact, source: "gmail-prospecting" });
     await queueContactEnrichment(contact.id);
     // A reply (inbound contact communication) stops nurture. Unanswered outgoing
     // call attempts do not stop the cadence; they count only when logged.
