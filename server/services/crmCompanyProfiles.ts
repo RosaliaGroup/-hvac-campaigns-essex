@@ -33,7 +33,7 @@ export function classifyBusinessType(value:string):string {
 }
 export function verifiedCompanyDomain(email:string):string|null {
   const domain=email.trim().toLowerCase().split("@")[1];
-  return domain && /^[a-z0-9.-]+\\.[a-z]{2,}$/.test(domain) && !personal.has(domain) ? domain : null;
+  return domain && /^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain) && !personal.has(domain) ? domain : null;
 }
 let initialized:Promise<unknown>|undefined;
 export async function linkCompanyProfile(contactId:number, profile?:ContactProfile|null) {
