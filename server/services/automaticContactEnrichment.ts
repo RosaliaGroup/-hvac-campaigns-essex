@@ -143,6 +143,11 @@ export async function processContactEnrichment(contactId:number) {
       return {status:"blocked"};
     }
     const existing=await getContactEnrichment(contactId);
+    // Task-sourced email recipients are contacts immediately, even if phone research is pending.
+    if(validEmail(c.email) && (c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect")) {
+      const {ensureSentEmailContact}=await import("./sentEmailContact");
+      await ensureSentEmailContact(db,c);
+    }
     if(!validEmail(c.email)){
       await finish(contactId,"review","Email required; keep incoming lead/message staged");
       return {status:"review",reason:"missing-email"};
@@ -174,7 +179,7 @@ export async function processContactEnrichment(contactId:number) {
       }
       // A name equal to the email is still unverified; do not spend Lusha
       // credits on a speculative match or fabricate a direct phone number.
-      await finish(contactId,"review","Public research attempted; verify person name and company before paid Lusha matching");
+      await finish(contactId,"review","Public research attempted; verify person name and company through public sources");
       return {status:"review",reason:"missing-identity"};
     }
     if(needsIdentity && !needsPhone){
@@ -195,8 +200,7 @@ export async function processContactEnrichment(contactId:number) {
     try{await contactProfile({contactId},true);}
     catch(error){console.warn("[CRM Auto Enrich] Public profile research skipped",contactId,
       error instanceof Error?error.message:"unknown");}
-    // Promote a task-sourced prospect into the main Contacts/customer index
-    // ONLY after both email and phone are verified. Never promote generic Gmail.
+    // Preserve task-only intake and keep unrelated Gmail correspondents excluded.
     if(c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect"){
       const {ensureSentEmailContact}=await import("./sentEmailContact");
       const [fresh]=await db.select().from(crmExternalContacts)
@@ -227,7 +231,7 @@ export async function runContactEnrichmentBatch(limit=3) {
     // An interrupted paid lookup must not be silently retried and charged
     // again. Surface it for human review instead.
     await db.update(contactEnrichmentJobs).set({
-      status:"review",reason:"Worker interrupted; review before retrying Lusha",
+      status:"review",reason:"Worker interrupted; review before retrying public research",
     }).where(and(eq(contactEnrichmentJobs.status,"processing"),
       lte(contactEnrichmentJobs.updatedAt,new Date(Date.now()-30*60_000))));
     // Backfill only task-sourced or explicitly imported contacts.
