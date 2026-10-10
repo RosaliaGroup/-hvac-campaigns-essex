@@ -137,6 +137,8 @@ export async function sync30DayFromGmail(
         .set({source:"gmail-prospecting"})
         .where(eq(crmExternalContacts.id,contact.id));
     }
+    const {ensureSentEmailContact}=await import("./sentEmailContact");
+    await ensureSentEmailContact(db,{...contact,source:"gmail-prospecting"});
     await queueContactEnrichment(contact.id);
     // A reply (inbound contact communication) stops nurture. Unanswered outgoing
     // call attempts do not stop the cadence; they count only when logged.
