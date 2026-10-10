@@ -65,6 +65,7 @@ import GrowthDashboard from "./pages/growth/GrowthDashboard";
 import LeadDetail from "./pages/LeadDetail";
 import Communications from "./pages/Communications";
 import CrmTasks from "./pages/CrmTasks";
+import CrmOutreachReview from "./pages/CrmOutreachReview";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
@@ -357,6 +358,7 @@ function Router() {
       <Route path={"/growth"} component={protect(GrowthDashboard)} />
       <Route path={"/contacts/communications"} component={protect(Communications)} />
       <Route path={"/tasks"} component={protect(CrmTasks)} />
+      <Route path={"/outreach-review"} component={protect(CrmOutreachReview)} />
       <Route path={"/customers"} component={protect(Customers)} />
       <Route path={"/contacts"} component={protect(Customers)} />
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />
