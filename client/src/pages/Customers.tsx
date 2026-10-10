@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import InternalNav from "@/components/InternalNav";
 import AddContactModal from "@/components/AddContactModal";
+import ContactIntakePanel from "@/components/ContactIntakePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +72,8 @@ export default function Customers() {
   const [filters, setFilters] = useState<Filters>(initial);
   const [page, setPage] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [contactNotice,setContactNotice] = useState("");
+  const approveContact=trpc.crmCommunications.addSelectedContact.useMutation();
   const [columnOpen, setColumnOpen] = useState(false);
   const [visible, setVisible] = useState<string[]>(columns);
   const [saved, setSaved] = useState<SavedView[]>([]);
@@ -90,6 +93,7 @@ export default function Customers() {
       {
         search: filters.search || undefined,
         source: filters.source === "all" ? undefined : filters.source,
+        completedOnly: true,
         status: filters.status === "default" ? undefined : filters.status,
         sort: filters.sort,
         limit: 50,
@@ -127,10 +131,12 @@ export default function Customers() {
               onClick={() => setCreateOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create contact
+              Create contact + property
             </Button>
           </div>
         </header>
+        <ContactIntakePanel />
+        {contactNotice&&<p role="status" className="text-sm rounded border bg-white p-3">{contactNotice}</p>}
         <div className="rounded-md border bg-white overflow-hidden">
           <nav
             aria-label="Contact views"
@@ -139,7 +145,7 @@ export default function Customers() {
             {[
               { name: "All contacts", filters: initial },
               {
-                name: "Email contacts",
+                name: "Selected Gmail / Tasks",
                 filters: { ...initial, source: "gmail" as const },
               },
               ...saved,
@@ -394,9 +400,25 @@ export default function Customers() {
       </div>
       <AddContactModal
         open={createOpen}
+        requireComplete
         onClose={() => setCreateOpen(false)}
-        onCreated={c => {
-          refetch();
+        onCreated={async c => {
+          const customer=c.customer;
+          if(customer?.email&&customer.phone){
+            try{
+              await approveContact.mutateAsync({
+                from:"manual",name:customer.displayName,
+                email:customer.email,phone:customer.phone,
+              });
+              setContactNotice("Contact saved and automatic enrichment queued.");
+            }catch(error){
+              setContactNotice("Contact was created with email and phone, but enrichment needs review: "+
+                (error instanceof Error?error.message:"Unknown error"));
+            }
+          }else{
+            setContactNotice("Contact was created but enrichment requires a valid name, email and phone.");
+          }
+          void refetch();
           navigate(`/customers/${c.customerId}`);
         }}
       />

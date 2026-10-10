@@ -13,6 +13,10 @@ on:
       - "client/src/components/ContactIntakePanel.tsx"
       - "client/src/components/ContactEnrichmentQueue.tsx"
       - "client/src/pages/Communications.tsx"
+      - "client/src/pages/Customers.tsx"
+      - "client/src/components/AddContactModal.tsx"
+      - "server/routers/customers.ts"
+      - "server/services/sentEmailContact.ts"
       - ".github/workflows/crm-selective-contact-enrichment.yml"
   workflow_dispatch:
 
@@ -44,5 +48,10 @@ jobs:
             echo "Task prospects must wait for email + phone before promotion"
             exit 1
           fi
+      - name: Guard completed Contacts page validation
+        run: |
+          grep -q 'completedOnly: true' client/src/pages/Customers.tsx
+          grep -q 'requireComplete' client/src/pages/Customers.tsx
+          grep -q "Gmail Sent" server/routers/customers.ts
       - name: Typecheck CRM
         run: pnpm exec tsc --noEmit

@@ -379,6 +379,7 @@ export const customersRouter = router({
           status: z.enum(["active", "inactive", "archived"]).optional(),
           assignedToId: z.number().int().optional(),
           source: z.enum(["gmail", "other"]).optional(),
+          completedOnly: z.boolean().default(false),
           sort: z.enum(["newest", "name"]).default("newest"),
           limit: z.number().int().min(1).max(100).default(50),
           offset: z.number().int().min(0).default(0),
@@ -403,11 +404,20 @@ export const customersRouter = router({
       }
       if (input.type) conditions.push(eq(customers.type, input.type));
       if (input.source === "gmail")
-        conditions.push(eq(customers.source, "Gmail Sent"));
+        conditions.push(input.completedOnly
+          ? sql`${customers.source} IN ('Gmail Selected','HVAC Prospecting Task')`
+          : eq(customers.source, "Gmail Sent"));
       if (input.source === "other")
-        conditions.push(
-          sql`(${customers.source} IS NULL OR ${customers.source} != 'Gmail Sent')`
-        );
+        conditions.push(input.completedOnly
+          ? sql`(${customers.source} IS NULL OR ${customers.source} NOT IN ('Gmail Selected','HVAC Prospecting Task','Gmail Sent'))`
+          : sql`(${customers.source} IS NULL OR ${customers.source} != 'Gmail Sent')`);
+      if (input.completedOnly) {
+        // Only the visible CRM Contacts page is strict. Scheduling and
+        // inbound lead history still retain incomplete people.
+        conditions.push(sql`(${customers.source} IS NULL OR ${customers.source} != 'Gmail Sent')`);
+        conditions.push(sql`${customers.email} LIKE '%@%.%'`);
+        conditions.push(sql`CHAR_LENGTH(REGEXP_REPLACE(${customers.phone}, '[^0-9]', '')) BETWEEN 10 AND 15`);
+      }
       // Default: hide archived unless explicitly requested
       conditions.push(
         input.status
