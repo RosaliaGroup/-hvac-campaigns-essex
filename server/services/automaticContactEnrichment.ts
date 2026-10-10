@@ -11,10 +11,7 @@ import { int, mysqlEnum, mysqlTable, timestamp, varchar, date } from "drizzle-or
 import { crmExternalContacts, customers } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { getContactEnrichment } from "./crmContactEnrichment";
-import {
-  previewLushaContact, revealLushaPhone, savePreviewedLushaLinkedIn,
-  lushaConfigured,
-} from "./lushaCrmEnrichment";
+
 import { contactProfile } from "./contactProfile/store";
 import { isOutreachSuppressed } from "./outreachSuppression";
 
@@ -189,49 +186,11 @@ export async function processContactEnrichment(contactId:number) {
       await finish(contactId,"complete","Email and phone saved; additional identity fields require review");
       return {status:"complete"};
     }
-    if(!lushaConfigured()){
-      await finish(contactId,needsPhone?"review":"complete",
-        needsPhone?"Lusha API unavailable; missing phone requires research":"Email and phone verified; Lusha API unavailable");
-      return {status:needsPhone?"review":"complete"};
-    }
-    // Searches can cost credits. Reserve a maximum of one search credit per
-    // contact; stop and defer when the configured daily budget is exhausted.
-    if(!(await reserveCredits(1))){
-      await finish(contactId,"pending","Daily Lusha search budget reached",tomorrow());
-      return {status:"deferred-budget"};
-    }
-    const preview=await previewLushaContact(contactId);
-    if(preview.status!=="matched"){
-      await finish(contactId,needsPhone?"review":"complete",
-        "Lusha "+preview.status+": "+preview.message);
-      return {status:preview.status};
-    }
-    if(preview.linkedin){
-      try{await savePreviewedLushaLinkedIn(contactId);}
-      catch(error){console.warn("[CRM Auto Enrich] LinkedIn save skipped",contactId,
-        error instanceof Error?error.message:"unknown");}
-    }
-    if(needsPhone){
-      const credits=Math.ceil(preview.phoneRevealCredits);
-      if(!preview.hasPhoneAvailable){
-        await finish(contactId,"review","No verified phone available from Lusha");
-        return {status:"review",reason:"no-phone"};
-      }
-      if(!(await reserveCredits(credits))){
-        await finish(contactId,"pending","Daily Lusha phone budget reached",tomorrow());
-        return {status:"deferred-budget"};
-      }
-      const result=await revealLushaPhone(contactId,true);
-      if(result.status!=="saved"&&result.status!=="already_present"){
-        await finish(contactId,"review","Lusha phone reveal: "+result.message);
-        return {status:"review",reason:result.status};
-      }
-    }
+    // Only use public profile research; never call paid people-data providers.
+    try { await contactProfile({contactId}, true); }
+    catch(error) { console.warn("[CRM Auto Enrich] Public research failed",contactId,error); }
     const after=await getContactEnrichment(contactId);
-    if(!validPhone(after.phone)){
-      await finish(contactId,"review","Email saved, but no verified phone could be added");
-      return {status:"review"};
-    }
+
     // Optional social/company public research; do not fabricate social links.
     try{await contactProfile({contactId},true);}
     catch(error){console.warn("[CRM Auto Enrich] Public profile research skipped",contactId,
@@ -242,11 +201,12 @@ export async function processContactEnrichment(contactId:number) {
       const {ensureSentEmailContact}=await import("./sentEmailContact");
       const [fresh]=await db.select().from(crmExternalContacts)
         .where(eq(crmExternalContacts.id,contactId)).limit(1);
-      if(fresh?.email && validPhone(fresh.phone||after.phone))
+      if(fresh?.email)
         await ensureSentEmailContact(db,{...fresh,phone:fresh.phone||after.phone});
     }
-    await finish(contactId,"complete","Valid email and phone; available verified profiles saved");
-    return {status:"complete"};
+    await finish(contactId,validPhone(after.phone)?"complete":"review",
+      validPhone(after.phone)?"Public research completed":"Phone missing after public research");
+    return {status:validPhone(after.phone)?"complete":"review"};
   }catch(error){
     const message=error instanceof Error?error.message:"Unknown provider error";
     const [job]=await db.select({attempts:contactEnrichmentJobs.attempts})
