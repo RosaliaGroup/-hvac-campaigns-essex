@@ -315,11 +315,18 @@ export function startGmailCrmScheduler() {
           !status.connected ||
           !status.hasReadPermission ||
           status.accountEmail?.toLowerCase() !== CRM_MAILBOX
-        )
+        ) {
+          console.warn("[CRM Gmail] Sync skipped:", JSON.stringify({
+            connected: status.connected,
+            hasReadPermission: status.hasReadPermission,
+            mailboxMatches: status.accountEmail?.toLowerCase() === CRM_MAILBOX,
+          }));
           return null;
+        }
         try {
           const result = await syncGmailPage({ pageToken, lookbackDays: 2 });
           pageToken = result.nextPageToken;
+          console.info("[CRM Gmail] Sync succeeded:", JSON.stringify(result));
           return result;
         } catch (error) {
           pageToken = undefined;
