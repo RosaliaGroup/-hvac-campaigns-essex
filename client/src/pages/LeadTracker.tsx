@@ -39,6 +39,11 @@ export default function LeadTracker() {
     onSuccess: result => toast.success(`Assigned ${result.assigned} open outreach tasks to your login; ${result.remainingUnassigned} remain unassigned.`),
     onError: e => toast.error(e.message),
   });
+  const commercialAudienceAudit = trpc.leadCaptures.commercialAudienceAudit.useQuery(undefined, {
+    enabled: isAuthenticated && user?.role === "admin",
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
   const baseline = trpc.leadCaptures.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });
   const followUpAudit = trpc.leadCaptures.followUpAudit.useQuery(undefined, { enabled: isAuthenticated });
 
@@ -347,6 +352,32 @@ export default function LeadTracker() {
                   {reconcileOutreach.isPending ? "Assigning…" : "Assign unowned outreach tasks"}
                 </Button>
               </>}
+            </CardContent>
+          </Card>
+        )}
+        {user?.role === "admin" && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>Commercial landing-page SEO and conversion audit</CardTitle>
+              <CardDescription>Live Google Search Console URL Inspection and real website captures from the last 30 days. No test leads are created.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button size="sm" variant="outline" disabled={commercialAudienceAudit.isFetching}
+                onClick={() => commercialAudienceAudit.refetch()}>
+                {commercialAudienceAudit.isFetching ? "Checking Google and CRM…" : "Refresh Google indexing and CRM counts"}
+              </Button>
+              {commercialAudienceAudit.isError && <p role="alert" className="text-sm text-red-700">{commercialAudienceAudit.error.message}</p>}
+              {commercialAudienceAudit.data?.results.map(item => (
+                <div key={item.path} className="rounded border p-3 space-y-1 text-sm">
+                  <a href={item.path} className="font-semibold text-blue-700 underline">{item.path}</a>
+                  <p>Google coverage: {item.inspection?.coverageState || (item.inspectionError ? "Unavailable" : "Unknown")}</p>
+                  {item.inspectionError && <p className="text-xs text-amber-700">Inspection error: {item.inspectionError}</p>}
+                  <p>Last Google crawl: {item.inspection?.lastCrawlTime || "Not reported"}</p>
+                  <p>CRM captures (30 days): <strong>{item.captures30d}</strong></p>
+                  <p className="text-xs text-muted-foreground">Channels: {JSON.stringify(item.byChannel)} | Stages: {JSON.stringify(item.byStage)}</p>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">Counts represent CRM capture records, not deduplicated qualified leads. Google inspection does not guarantee search rankings.</p>
             </CardContent>
           </Card>
         )}
