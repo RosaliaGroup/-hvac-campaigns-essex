@@ -722,6 +722,37 @@ export const appRouter = router({
         return { success: true, followUpDue: !lead.followUpAt };
       }),
 
+    /** Admin-only verified OAuth user selection for outreach task ownership. */
+    outreachOwnerCandidates: adminProcedure.query(async () => {
+      const dbi = await db.getDb();
+      if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const { users, teamMembers } = await import("../drizzle/schema");
+      const logins = await dbi.select({ id: users.id, name: users.name, email: users.email, role: users.role })
+        .from(users).where(dEq(users.role, "admin")).limit(100);
+      const members = await dbi.select({ id: teamMembers.id, name: teamMembers.name, email: teamMembers.email })
+        .from(teamMembers).where(dEq(teamMembers.status, "active"));
+      const activeEmails = new Set(members.map(m => m.email.trim().toLowerCase()));
+      return logins.map(u => ({ ...u, activeTeamMatch: Boolean(u.email && activeEmails.has(u.email.trim().toLowerCase())) }));
+    }),
+
+    /** Explicit admin action; never silently assigns to a guessed user ID. */
+    reconcileOutreachOwner: adminProcedure
+      .input(z.object({ userId: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const { users, teamMembers } = await import("../drizzle/schema");
+        const [user] = await dbi.select({ id: users.id, name: users.name, email: users.email })
+          .from(users).where(dAnd(dEq(users.id, input.userId), dEq(users.role, "admin"))).limit(1);
+        if (!user?.email) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose an authenticated administrator with an email." });
+        const [member] = await dbi.select({ name: teamMembers.name })
+          .from(teamMembers).where(dAnd(dEq(teamMembers.status, "active"), dSql`lower(trim(${teamMembers.email})) = ${user.email.trim().toLowerCase()}`)).limit(1);
+        if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Login email does not match an active CRM team member." });
+        const { assignAll30DayTasks } = await import("./services/crm30DayTasks");
+        const result = await assignAll30DayTasks(user.id, member.name);
+        return result;
+      }),
+
     /** Single lead capture for the full-page Lead detail (Task 8B). */
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
