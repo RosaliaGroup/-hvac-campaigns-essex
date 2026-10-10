@@ -63,3 +63,20 @@ export async function listReviewDrafts() {
   const db = await database();
   return db.select().from(crmOutreachReviewDrafts);
 }
+
+/** Review decisions never trigger a send. Rejecting a draft is final. */
+export async function decideReviewDraft(id: number, decision: "approved" | "rejected") {
+  const db = await database();
+  const [before] = await db.select().from(crmOutreachReviewDrafts)
+    .where(eq(crmOutreachReviewDrafts.id, id)).limit(1);
+  if (!before) throw new Error("Review draft not found");
+  if (before.status !== "needs_human_approval")
+    throw new Error("Draft has already been reviewed");
+  await db.update(crmOutreachReviewDrafts)
+    .set({ status: decision, reviewedAt: new Date() })
+    .where(eq(crmOutreachReviewDrafts.id, id));
+  const [after] = await db.select().from(crmOutreachReviewDrafts)
+    .where(eq(crmOutreachReviewDrafts.id, id)).limit(1);
+  if (!after || after.status !== decision) throw new Error("Review decision verification failed");
+  return after;
+}
