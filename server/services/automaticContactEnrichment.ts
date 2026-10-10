@@ -152,7 +152,7 @@ export async function processContactEnrichment(contactId:number) {
           error instanceof Error?error.message:"unknown");
       }
       // A name equal to the email is still unverified; do not guess identity
-      // credits on a speculative match or fabricate a direct phone number.
+      // Never fabricate a direct phone number.
       await finish(contactId,"review","Public research attempted; verify person name and company through public sources");
       return {status:"review",reason:"missing-identity"};
     }
@@ -165,15 +165,18 @@ export async function processContactEnrichment(contactId:number) {
       await finish(contactId,"complete","Email and phone saved; additional identity fields require review");
       return {status:"complete"};
     }
-    // Only use public profile research; never call paid people-data providers.
-    try { await contactProfile({contactId}, true); }
-    catch(error) { console.warn("[CRM Auto Enrich] Public research failed",contactId,error); }
+    // Refresh public evidence once; fill only missing company identity.
+    try {
+      const profile=await contactProfile({contactId},true);
+      const company=profile?.company?.name?.value?.trim();
+      if(company && !c.company?.trim())
+        await db.update(crmExternalContacts).set({company})
+          .where(eq(crmExternalContacts.id,contactId));
+    } catch(error) {
+      console.warn("[CRM Auto Enrich] Public research unavailable",contactId,
+        error instanceof Error?error.message:"unknown");
+    }
     const after=await getContactEnrichment(contactId);
-
-    // Optional social/company public research; do not fabricate social links.
-    try{await contactProfile({contactId},true);}
-    catch(error){console.warn("[CRM Auto Enrich] Public profile research skipped",contactId,
-      error instanceof Error?error.message:"unknown");}
     // Preserve task-only intake and keep unrelated Gmail correspondents excluded.
     if(c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect"){
       const {ensureSentEmailContact}=await import("./sentEmailContact");
