@@ -31,6 +31,7 @@ import RevenueAttribution from "./pages/RevenueAttribution";
 import MarketingAnalytics from "./pages/MarketingAnalytics";
 import LocalSeo from "./pages/LocalSeo";
 import LeadTracker from "./pages/LeadTracker";
+import CommercialAudienceLanding from "./pages/CommercialAudienceLanding";
 import CampaignPerformance from "./pages/CampaignPerformance";
 import Testimonials from "./pages/Testimonials";
 import AIVADashboard from "./pages/AIVADashboard";
@@ -158,6 +159,9 @@ function Router() {
       <Route path={"/commercial"} component={CommercialCampaigns} />
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
       <Route path={"/warranty"} component={Warranty} />
+      <Route path={"/commercial/for-property-management"} component={() => <CommercialAudienceLanding audience="property-management" />} />
+      <Route path={"/commercial/for-contractors-developers"} component={() => <CommercialAudienceLanding audience="contractors-developers" />} />
+      <Route path={"/commercial/for-commercial-partners"} component={() => <CommercialAudienceLanding audience="commercial-partners" />} />
       <Route path={"/commercial/property-managers"} component={() => <PortfolioPricingPage variant="property-managers" />} />
       <Route path={"/commercial/hvac-service-contracts"} component={() => <PortfolioPricingPage variant="service-contracts" />} />
       <Route path={"/partnerships"} component={Partnerships} />
