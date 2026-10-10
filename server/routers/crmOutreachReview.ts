@@ -1,11 +1,11 @@
 /** Authenticated review-only CRM outreach queue. Never sends or schedules email. */
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { adminProcedure, router } from "../_core/trpc";
 import { checkOutreachReviewCandidate } from "../services/crmOutreachReviewQueue";
 import { queueReviewedCandidate, listReviewDrafts, decideReviewDraft } from "../services/crmOutreachReviewStore";
 import { getDb } from "../db";
-import { crmCommunications } from "../../drizzle/schema";
+import { crmCommunications, smsContacts } from "../../drizzle/schema";
 import { TRPCError } from "@trpc/server";
 
 const candidate = z.object({
@@ -33,12 +33,18 @@ export const crmOutreachReviewRouter = router({
           .limit(1);
         return matches.length > 0;
       },
-      // This endpoint only saves a draft for human review; it never sends.
-      // isOutreachSuppressed above checks known opt-outs, hard bounces, and
-      // persisted CRM suppressions. Do not mark every candidate unsubscribed:
-      // that made the review queue impossible to populate. Any future SEND
-      // endpoint must independently re-check suppression and delivery policy.
-      async () => false,
+      // Independent SMS contact opt-outs are an additional veto for review intake.
+      // Central email suppression is checked separately by the eligibility policy.
+      // A missing SMS contact does not constitute consent to send anything.
+      async email => {
+        const optedOut = await db.select({ id: smsContacts.id })
+          .from(smsContacts)
+          .where(and(
+            sql`lower(trim(${smsContacts.email})) = ${email}`,
+            eq(smsContacts.optedOut, true),
+          )).limit(1);
+        return optedOut.length > 0;
+      },
     );
     if (!check.eligible) return check;
     return queueReviewedCandidate(input);
