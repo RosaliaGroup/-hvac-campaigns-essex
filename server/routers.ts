@@ -88,7 +88,7 @@ import {
 } from "./services/appointmentNormalization";
 import { formatPropertyAddress } from "@shared/address";
 import { APPOINTMENT_TYPE_ENUM } from "../shared/appointmentTypes";
-import { and as dAnd, eq as dEq, or as dOr, sql as dSql, gte as dGte, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
+import { and as dAnd, eq as dEq, or as dOr, sql as dSql, gte as dGte, inArray as dInArray, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
 
 /** Zod shape for an attendee coming from the appointment dialog. */
 const attendeeInputSchema = z.object({
@@ -627,6 +627,48 @@ export const appRouter = router({
       return { windowDays: 30, since: since.toISOString(), totalCaptures: rows.length,
         qualifiedStage, qualificationDefinition: "Qualified or advanced pipeline stage; not independently verified lead quality",
         newUnassigned, followUpOverdue, byChannel, byCaptureType, byStage };
+    }),
+
+    /** Read-only operational audit: unassigned web leads and actual cadence/touch records. */
+    followUpAudit: protectedProcedure.query(async () => {
+      const dbi = await db.getDb();
+      if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const { growthCadences, growthCadenceTasks, growthTouches } = await import("../drizzle/schema");
+      const since = new Date(Date.now() - 30 * 86400000);
+      const captures = await dbi.select({
+        id: leadCapturesTable.id, status: leadCapturesTable.status,
+        assignedTo: leadCapturesTable.assignedTo, createdAt: leadCapturesTable.createdAt,
+      }).from(leadCapturesTable).where(dGte(leadCapturesTable.createdAt, since));
+      const ids = captures.map(c => c.id);
+      const cadences = ids.length ? await dbi.select({
+        id: growthCadences.id, leadId: growthCadences.leadId, status: growthCadences.status,
+      }).from(growthCadences).where(dAnd(dEq(growthCadences.leadTable, "leadCaptures"), dInArray(growthCadences.leadId, ids))) : [];
+      const cadenceIds = cadences.map(c => c.id);
+      const tasks = cadenceIds.length ? await dbi.select({
+        cadenceId: growthCadenceTasks.cadenceId, channel: growthCadenceTasks.channel,
+        status: growthCadenceTasks.status,
+      }).from(growthCadenceTasks).where(dInArray(growthCadenceTasks.cadenceId, cadenceIds)) : [];
+      const touches = ids.length ? await dbi.select({
+        leadId: growthTouches.leadId, channel: growthTouches.channel,
+        status: growthTouches.status,
+      }).from(growthTouches).where(dAnd(dEq(growthTouches.leadTable, "leadCaptures"), dInArray(growthTouches.leadId, ids))) : [];
+      const byTaskStatus: Record<string, number> = {};
+      const byTouchOutcome: Record<string, number> = {};
+      for (const t of tasks) byTaskStatus[t.status] = (byTaskStatus[t.status] || 0) + 1;
+      for (const t of touches) {
+        const key = t.channel + ":" + t.status;
+        byTouchOutcome[key] = (byTouchOutcome[key] || 0) + 1;
+      }
+      const cadenceLeadIds = new Set(cadences.map(c => c.leadId));
+      const touchLeadIds = new Set(touches.filter(t => t.status === "sent").map(t => t.leadId));
+      return {
+        windowDays: 30, totalCaptures: captures.length,
+        unassigned: captures.filter(c => !c.assignedTo && c.status === "new").length,
+        withoutCadence: captures.filter(c => !cadenceLeadIds.has(c.id)).length,
+        withoutRecordedSentTouch: captures.filter(c => !touchLeadIds.has(c.id)).length,
+        cadenceCount: cadences.length, byTaskStatus, byTouchOutcome,
+        note: "Sent touch means provider accepted/logged an outbound attempt, not recipient delivery or human contact.",
+      };
     }),
 
     /** Single lead capture for the full-page Lead detail (Task 8B). */
