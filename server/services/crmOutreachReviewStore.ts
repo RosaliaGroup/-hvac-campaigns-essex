@@ -2,7 +2,7 @@
  * Durable review-only outreach drafts. No delivery mechanism is exposed here.
  * Status transitions must be performed by an authenticated admin API.
  */
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { mysqlTable, int, varchar, text, timestamp } from "drizzle-orm/mysql-core";
 import { getDb } from "../db";
 import type { ReviewCandidate } from "./crmOutreachReviewQueue";
@@ -72,9 +72,11 @@ export async function decideReviewDraft(id: number, decision: "approved" | "reje
   if (!before) throw new Error("Review draft not found");
   if (before.status !== "needs_human_approval")
     throw new Error("Draft has already been reviewed");
-  await db.update(crmOutreachReviewDrafts)
+  const result = await db.update(crmOutreachReviewDrafts)
     .set({ status: decision, reviewedAt: new Date() })
-    .where(eq(crmOutreachReviewDrafts.id, id));
+    .where(and(eq(crmOutreachReviewDrafts.id, id), eq(crmOutreachReviewDrafts.status, "needs_human_approval")));
+  if (Number((result as any)?.[0]?.affectedRows ?? 0) !== 1)
+    throw new Error("Draft was reviewed concurrently; refresh the queue");
   const [after] = await db.select().from(crmOutreachReviewDrafts)
     .where(eq(crmOutreachReviewDrafts.id, id)).limit(1);
   if (!after || after.status !== decision) throw new Error("Review decision verification failed");
