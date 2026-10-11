@@ -206,7 +206,16 @@ export async function collectAiVisibility(now: Date = new Date(), env: NodeJS.Pr
     });
     return { checked: true, reason: `Week of ${weeks[0]}.`, enginesConfigured: configured, current, previous, change: compareWeeks(current, previous), gaps };
   } catch (err) {
-    return empty(`AI-visibility read failed: ${(err as Error).message}`);
+    // Surface the underlying DB error and actionable migration diagnosis.
+    // Never mutate the schema or swallow the failure as an empty report.
+    const message = err instanceof Error ? err.message : String(err);
+    const cause = err instanceof Error && err.cause instanceof Error ? err.cause.message : "";
+    const detail = [message, cause].filter(Boolean).join(" | ").slice(0, 600);
+    const schemaMismatch = /unknown column|doesn't exist|does not exist|ER_BAD_FIELD_ERROR|ER_NO_SUCH_TABLE|table .* doesn't exist/i.test(detail);
+    console.error("[MarketIntel] AI visibility read failure:", detail);
+    return empty(schemaMismatch
+      ? `AI visibility schema needs migration review: ${detail}`
+      : `AI-visibility read failed: ${detail}`);
   }
 }
 
