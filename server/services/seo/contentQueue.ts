@@ -85,6 +85,20 @@ export async function proposeTopic(input: {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
   const { source, ...rest } = input;
+  // Idempotent market-intelligence proposals: different daily reports may
+  // suggest the same refresh with different provenance labels. Keep one row
+  // per existing page rather than multiplying review work each morning.
+  if (source?.startsWith("market-intel:")) {
+    if (input.refreshesSlug) {
+      const [existing] = await db.select().from(seoContentQueue)
+        .where(eq(seoContentQueue.refreshesSlug, input.refreshesSlug)).limit(1);
+      if (existing) return existing;
+    } else {
+      const [existing] = await db.select().from(seoContentQueue)
+        .where(eq(seoContentQueue.title, input.title)).limit(1);
+      if (existing) return existing;
+    }
+  }
   await db.insert(seoContentQueue).values({ ...rest, status: "proposed", source: source ?? "proposed" });
   const [row] = await db.select().from(seoContentQueue).where(eq(seoContentQueue.title, input.title)).limit(1);
   await logAudit({ actorId: null, action: "topic_proposed", batchId: null, pagePath: null, before: null, after: { title: input.title }, lintResult: null });
