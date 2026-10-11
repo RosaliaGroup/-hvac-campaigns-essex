@@ -6,6 +6,7 @@
  * "each degrades gracefully if unavailable").
  */
 import { loadReportNotes } from "./notes";
+import { autoQueueMarketIntelTopics } from "../contentQueue";
 import { collectCrawlCheck } from "./crawlCheck";
 import { collectExperimentReadout } from "./experiment";
 import { eq } from "drizzle-orm";
@@ -158,6 +159,41 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
       executedPrId: executedNow && "prNumber" in result && result.prNumber ? String(result.prNumber) : null,
     });
     itemsCreated++;
+  }
+
+  // Research-to-content bridge: use only measured, unserved search demand.
+  // Skip local landing-page gaps, which belong to the separate page-PR backlog.
+  try {
+    const { proposeTopic, listContentQueue } = await import("../contentQueue");
+    const existingTitles = new Set((await listContentQueue()).map(t => t.title.toLowerCase()));
+    const opportunities = drafts.filter(d => d.kind === "unserved_query" && d.targetQueue === "content_queue").slice(0, 5);
+    for (const item of opportunities) {
+      const evidence = item.evidence as { query?: string; impressions?: number };
+      const query = evidence.query?.trim();
+      if (!query || query.length > 90 || (evidence.impressions ?? 0) < 20) continue;
+      if (!/hvac|ptac|heat pump|rooftop|mechanical|vrf|maintenance/i.test(query)) continue;
+      if (/(free|rebate|incentive|warranty|financing|discount|coupon|price guarantee)/i.test(query)) continue;
+      const title = `NJ Commercial HVAC Guide: ${query}`.slice(0, 120);
+      if (existingTitles.has(title.toLowerCase())) continue;
+      await proposeTopic({
+        title, audience: "NJ commercial property managers, building owners and contractors",
+        targetQuery: query,
+        brief: `Search Console identified ${evidence.impressions} impressions for this under-served commercial HVAC query. Write a practical, original B2B guide, link to the relevant existing commercial service page, and avoid unverified claims.`,
+        source: "market-intel:unserved_query",
+      });
+      existingTitles.add(title.toLowerCase());
+    }
+  } catch (error) {
+    console.error("[MarketIntel] opportunity proposal failed:", error);
+  }
+
+  // Convert eligible previously proposed demand topics into one guarded content job.
+  // This does not publish directly; lint, warmup, PR checks and hold remain mandatory.
+  try {
+    const queued = await autoQueueMarketIntelTopics();
+    if (queued.queued) console.log(`[MarketIntel] auto-queued ${queued.queued} evidence-backed content topic`);
+  } catch (error) {
+    console.error("[MarketIntel] content handoff failed:", error);
   }
 
   const summary = buildSummary({ itemCount: itemsCreated, executed, circuitClear, circuitReason, gscStale: searchDemand.skipped });
