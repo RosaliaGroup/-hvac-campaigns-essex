@@ -22,7 +22,7 @@ function pickBlogVariant(slug: string): InlineLeadVariant {
   const s = slug.toLowerCase();
   if (/(emergency|repair)/.test(s)) return "emergency";
   if (/(rebate|financing)/.test(s)) return "rebate";
-  if (/(commercial|vrv|vrf)/.test(s)) return "commercial";
+  if (/(commercial|vrv|vrf|ptac|property-managers|condo)/.test(s)) return "commercial";
   return "residential";
 }
 
