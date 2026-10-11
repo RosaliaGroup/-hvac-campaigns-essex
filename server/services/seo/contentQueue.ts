@@ -122,7 +122,7 @@ export async function autoQueueMarketIntelTopics(): Promise<{ queued: number; re
     .where(eq(seoContentQueue.status, "queued")).limit(1);
   if (existing.length) return { queued: 0, reason: "existing_backlog" };
   const proposed = await db.select().from(seoContentQueue)
-    .where(and(eq(seoContentQueue.status, "proposed"), eq(seoContentQueue.source, "market-intel:decaying_page")))
+    .where(and(eq(seoContentQueue.status, "proposed"), eq(seoContentQueue.source, "market-intel:unserved_query")))
     .orderBy(asc(seoContentQueue.createdAt)).limit(20);
   const safe = proposed.find(t => t.targetQuery && t.audience && t.brief && !t.refreshesSlug &&
     !/(price|warrant|rebate|incentive|financ|free|guarantee)/i.test(t.title + " " + t.targetQuery));
