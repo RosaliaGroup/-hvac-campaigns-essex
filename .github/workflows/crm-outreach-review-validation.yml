@@ -9,6 +9,7 @@ on:
       - "server/services/outreachSuppression*.ts"
       - "client/src/pages/CrmOutreachReview.tsx"
       - "client/src/lib/outreachCampaignTemplates.ts"
+      - "client/src/lib/prospectImport*.ts"
       - ".github/workflows/crm-outreach-review-validation.yml"
   workflow_dispatch:
 jobs:
@@ -27,4 +28,4 @@ jobs:
       - name: TypeScript typecheck
         run: pnpm check
       - name: Outreach review and suppression tests
-        run: pnpm exec vitest run server/services/crmOutreachReviewQueue.test.ts server/services/crmOutreachReviewStore.test.ts server/services/outreachSuppression.test.ts
+        run: pnpm exec vitest run server/services/crmOutreachReviewQueue.test.ts server/services/crmOutreachReviewStore.test.ts server/services/outreachSuppression.test.ts client/src/lib/prospectImport.test.ts
