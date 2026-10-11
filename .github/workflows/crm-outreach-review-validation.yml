@@ -1,4 +1,5 @@
 name: CRM outreach review validation
+# Revalidate current main after Marketing Dashboard router fix (#320).
 # Validation refresh: run focused checks against current main after PR #310.
 on:
   pull_request:
