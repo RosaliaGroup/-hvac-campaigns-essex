@@ -5,6 +5,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { blogPosts, type BlogSection, type FAQItem } from "@/data/blogPosts";
+import { commercialGrowthPosts } from "@/data/commercialGrowthPosts";
 import { Redirect } from "wouter";
 import { Link } from "wouter";
 import { ALL_CITIES, pickDeterministic } from "@/data/njCounties";
@@ -21,7 +22,7 @@ function pickBlogVariant(slug: string): InlineLeadVariant {
   const s = slug.toLowerCase();
   if (/(emergency|repair)/.test(s)) return "emergency";
   if (/(rebate|financing)/.test(s)) return "rebate";
-  if (/(commercial|vrv|vrf)/.test(s)) return "commercial";
+  if (/(commercial|vrv|vrf|ptac|property-managers|condo)/.test(s)) return "commercial";
   return "residential";
 }
 
@@ -102,7 +103,7 @@ function RenderSection({ section }: { section: BlogSection }) {
 }
 
 export default function BlogPost({ slug }: { slug: string }) {
-  const post = blogPosts.find((p) => p.slug === slug);
+  const post = [...commercialGrowthPosts, ...blogPosts].find((p) => p.slug === slug);
 
   useSEO({
     title: post ? `${post.title} | Mechanical Enterprise` : "Blog | Mechanical Enterprise",
@@ -249,7 +250,7 @@ export default function BlogPost({ slug }: { slug: string }) {
               <div className="mt-8">
                 <h3 className="text-xl font-bold text-[#0a1628] mb-3">More HVAC Guides</h3>
                 <div className="grid md:grid-cols-2 gap-3">
-                  {pickDeterministic(blogPosts.filter(p => p.slug !== slug), slug, 4).map((post) => (
+                  {pickDeterministic([...commercialGrowthPosts, ...blogPosts].filter(p => p.slug !== slug), slug, 4).map((post) => (
                     <Link key={post.slug} href={`/blog/${post.slug}`}>
                       <div className="bg-[#f7f8fa] rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
                         {post.title.length > 55 ? post.title.slice(0, 52) + "..." : post.title}
