@@ -20,13 +20,15 @@ export default function CrmOutreachReview() {
       } else {
         setIntakeResult("Draft saved for human approval. No message sent.");
         setForm({ email: "", company: "", decisionMaker: "", sourceUrl: "", draftSubject: "", draftBody: "" });
-        drafts.refetch();
+        void drafts.refetch();
+        void summary.refetch();
       }
     },
     onError: error => setIntakeResult(`Queue error: ${error.message}`),
   });
   const drafts = trpc.crmOutreachReview.list.useQuery(undefined, { retry: false });
-  const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => drafts.refetch() });
+  const summary = trpc.crmOutreachReview.summary.useQuery(undefined, { retry: false });
+  const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => { void drafts.refetch(); void summary.refetch(); } });
   const counts = {
     pending: (drafts.data ?? []).filter(row => row.status === "needs_human_approval").length,
     approved: (drafts.data ?? []).filter(row => row.status === "approved").length,
@@ -45,7 +47,7 @@ export default function CrmOutreachReview() {
           <h1 className="text-2xl font-semibold">Outreach Review Queue</h1>
           <p className="text-sm text-muted-foreground">Review-only drafts. No automatic emails are sent from this page.</p>
         </div>
-        <Button variant="outline" onClick={() => drafts.refetch()} disabled={drafts.isFetching}>Refresh</Button>
+        <Button variant="outline" onClick={() => { void drafts.refetch(); void summary.refetch(); }} disabled={drafts.isFetching}>Refresh</Button>
       </div>
       <section className="rounded-lg border p-4 space-y-3">
         <h2 className="text-lg font-semibold">Add a verified prospect for review</h2>
@@ -106,6 +108,11 @@ export default function CrmOutreachReview() {
           </Button>
         ))}
       </div>
+      {summary.data && (
+        <p className="text-sm text-muted-foreground" role="status">
+          Database verified: {summary.data.total} drafts · {summary.data.needsReview} pending · {summary.data.approved} approved · {summary.data.rejected} rejected
+        </p>
+      )}
       <Input aria-label="Search outreach drafts" placeholder="Search company, contact or subject" value={filter} onChange={event => setFilter(event.target.value)} />
       {drafts.isLoading && <p role="status">Loading drafts…</p>}
       {drafts.error && <p role="alert" className="text-destructive">Unable to load review queue. Administrator access may be required.</p>}
