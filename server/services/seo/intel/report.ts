@@ -210,7 +210,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
 
   await db
     .update(seoIntelReports)
-    .set({ itemCount: itemsCreated, acceptedCount: accepted, executedCount: executed, summary })
+    .set({ itemCount: existingKeys.size, acceptedCount: accepted + existingItems.filter(x => x.status === "accepted").length, executedCount: executed + existingItems.filter(x => x.status === "accepted").length, summary })
     .where(eq(seoIntelReports.id, reportId));
 
   await logAudit({ actorId: null, action: "market_intel_report_generated", batchId: null, pagePath: null, before: null, after: { reportId, itemCount: itemsCreated, executed }, lintResult: null });
