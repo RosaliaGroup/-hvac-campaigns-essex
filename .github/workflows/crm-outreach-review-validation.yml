@@ -1,4 +1,5 @@
 name: CRM outreach review validation
+# Validation refresh: run focused checks against current main after PR #310.
 on:
   pull_request:
     paths:
