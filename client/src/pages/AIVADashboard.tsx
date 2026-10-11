@@ -6,6 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Phone, MessageSquare, Share2, TrendingUp, Settings, CheckCircle, Clock, AlertCircle, Target } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 
@@ -343,48 +347,59 @@ function SmsConversations() {
  * Social Posts Component
  */
 function SocialPosts() {
-  const { data: posts, isLoading } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 });
-
-  if (isLoading) {
-    return <div>Loading social posts...</div>;
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Social Media Posts</CardTitle>
-        <CardDescription>AI-generated content across all platforms</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {posts && posts.length > 0 ? (
-            posts.map((post: any) => (
-              <div key={post.id} className="p-4 border rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge>{post.platform}</Badge>
-                  <Badge variant={
-                    post.status === "posted" ? "default" :
-                    post.status === "scheduled" ? "secondary" :
-                    post.status === "failed" ? "destructive" : "outline"
-                  }>
-                    {post.status}
-                  </Badge>
-                </div>
-                <p className="text-sm">{post.content}</p>
-                {post.postedAt && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Posted {new Date(post.postedAt).toLocaleString()}
-                  </p>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className="text-center text-muted-foreground py-8">No social posts yet. Configure social media credentials to start posting.</p>
-          )}
+  const utils = trpc.useUtils();
+  const { data: posts, isLoading, error } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 });
+  const { data: lane } = trpc.aiVa.socialLane.status.useQuery();
+  const [platform, setPlatform] = useState<"facebook" | "instagram">("facebook");
+  const [content, setContent] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const refresh = () => utils.aiVa.listSocialPosts.invalidate();
+  const schedule = trpc.aiVa.schedulePost.useMutation({
+    onSuccess: () => { toast.success("Post scheduled"); setContent(""); refresh(); },
+    onError: e => toast.error(e.message),
+  });
+  const publish = trpc.aiVa.publishPost.useMutation({
+    onSuccess: result => { toast.success(result.success ? "Publishing request completed" : "Publishing request returned an error"); refresh(); setBusyId(null); },
+    onError: e => { toast.error(e.message); setBusyId(null); refresh(); },
+  });
+  const connected = lane?.platforms?.[platform]?.connected === true;
+  const validDate = scheduledAt && !Number.isNaN(Date.parse(scheduledAt)) && Date.parse(scheduledAt) > Date.now();
+  return <Card>
+    <CardHeader>
+      <CardTitle>Social Media Posts</CardTitle>
+      <CardDescription>Schedule approved Facebook and Instagram content using your existing connected accounts.</CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-5">
+      <div className="rounded-lg border p-4 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {(["facebook", "instagram"] as const).map(p => <Button key={p} size="sm" variant={platform === p ? "default" : "outline"} onClick={() => setPlatform(p)}>{p === "facebook" ? "Facebook" : "Instagram"}</Button>)}
         </div>
-      </CardContent>
-    </Card>
-  );
+        <p className="text-xs text-muted-foreground">{connected ? `${platform} connected` : `${platform} not connected — check AI Settings`}. Scheduled publishing uses the existing automation.</p>
+        <Textarea aria-label="Post content" value={content} onChange={e => setContent(e.target.value)} placeholder="Write an approved HVAC campaign post..." rows={5} />
+        <label className="block text-sm">Schedule date and time (local)
+          <Input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} className="mt-1" />
+        </label>
+        <Button disabled={!connected || !content.trim() || !validDate || schedule.isPending} onClick={() => schedule.mutate({ platform, content: content.trim(), scheduledAt: new Date(scheduledAt).toISOString(), contentType: "commercial_campaign" })}>
+          {schedule.isPending ? "Scheduling…" : "Schedule Post"}
+        </Button>
+        {platform === "instagram" && <p className="text-xs text-amber-700">Instagram Graph API may require image or video media. Text-only posts can fail; check post status after scheduling.</p>}
+      </div>
+      {isLoading ? <p>Loading social posts...</p> : error ? <p role="alert" className="text-red-700">Unable to load social posts: {error.message}</p> :
+        !posts?.length ? <p className="text-sm text-muted-foreground">No social posts saved yet. Use the form above to schedule your first approved campaign post.</p> :
+        <div className="space-y-3">{posts.map(post => <div key={post.id} className="p-4 border rounded-lg">
+          <div className="flex items-center justify-between gap-2 mb-2"><Badge>{post.platform}</Badge><Badge variant={post.status === "posted" ? "default" : post.status === "failed" ? "destructive" : "secondary"}>{post.status}</Badge></div>
+          <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+          {post.scheduledAt && <p className="text-xs text-muted-foreground mt-2">Scheduled: {new Date(post.scheduledAt).toLocaleString()}</p>}
+          {post.postedAt && <p className="text-xs text-muted-foreground">Posted: {new Date(post.postedAt).toLocaleString()}</p>}
+          {post.errorMessage && <p role="alert" className="text-xs text-red-700 mt-2">{post.errorMessage}</p>}
+          {post.status === "scheduled" && (post.platform === "facebook" || post.platform === "instagram") &&
+            <Button className="mt-3" size="sm" variant="outline" disabled={publish.isPending} onClick={() => { setBusyId(post.id); publish.mutate({ id: post.id, platform: post.platform as "facebook" | "instagram", content: post.content, approved: true }); }}>
+              {publish.isPending && busyId === post.id ? "Publishing…" : "Publish Now"}
+            </Button>}
+        </div>)}</div>}
+    </CardContent>
+  </Card>;
 }
 
 /**
