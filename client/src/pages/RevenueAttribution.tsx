@@ -105,9 +105,9 @@ export default function RevenueAttribution() {
               Revenue Attribution
             </h1>
             <p className="text-muted-foreground max-w-2xl">
-              Does organic traffic turn into leads, estimates, won work, and revenue? Reporting is{" "}
+              Does new organic traffic turn into leads, estimates, won work, and revenue? Reporting is{" "}
               <strong>confirmed-only</strong> by default — revenue is credited to a page or source only when an explicit
-              lead→deal link exists. Everything else is preserved honestly as <em>unattributed</em>.
+              lead→deal link exists. Previously won jobs remain in the separate existing-business section and are not counted as new campaign results.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -138,7 +138,7 @@ export default function RevenueAttribution() {
           <Kpi icon={Trophy} label="Won Jobs" value={num(o?.wonJobs ?? 0)} sub="organic cohort" />
           <Kpi icon={DollarSign} label="Invoiced Revenue" value={usd(o?.invoicedRevenue ?? 0)} sub="organic cohort" />
           <Kpi icon={ShieldCheck} label="Confirmed Attributed" value={usd(o?.confirmedAttributedRevenue ?? 0)} sub="explicit links only" />
-          <Kpi icon={HelpCircle} label="Unattributed Leads" value={num(o?.unattributedLeads ?? 0)} sub={`${usd(o?.unattributedRevenue ?? 0)} won`} />
+          <Kpi icon={HelpCircle} label="Unknown-source Leads" value={num(o?.unattributedLeads ?? 0)} sub="Existing won revenue reported separately" />
         </div>
 
         {/* Weekly goal */}
@@ -335,19 +335,19 @@ export default function RevenueAttribution() {
 
         {/* Unattributed */}
         <Card className="mb-6">
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><HelpCircle className="h-4 w-4 text-muted-foreground" /> Unattributed</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><HelpCircle className="h-4 w-4 text-muted-foreground" /> Existing business / unlinked historical revenue</CardTitle></CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-6">
-              <div><div className="text-2xl font-bold text-[#1e3a5f]">{num(unattributed.data?.wonCount ?? 0)}</div><div className="text-xs text-muted-foreground">won deals with no honest link</div></div>
-              <div><div className="text-2xl font-bold text-[#1e3a5f]">{usd(unattributed.data?.revenue ?? 0)}</div><div className="text-xs text-muted-foreground">unattributed won revenue</div></div>
+              <div><div className="text-2xl font-bold text-[#1e3a5f]">{num(unattributed.data?.wonCount ?? 0)}</div><div className="text-xs text-muted-foreground">previously won deals without a verified marketing link</div></div>
+              <div><div className="text-2xl font-bold text-[#1e3a5f]">{usd(unattributed.data?.revenue ?? 0)}</div><div className="text-xs text-muted-foreground">existing won revenue — excluded from new campaign ROI</div></div>
               <div><div className="text-2xl font-bold text-[#1e3a5f]">{num(unattributed.data?.unknownChannelLeads ?? 0)}</div><div className="text-xs text-muted-foreground">leads with unknown channel</div></div>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">{unattributed.data?.note}</p>
+            <p className="text-xs text-muted-foreground mt-3">These are existing jobs, not newly generated marketing revenue. Keep them in company financial reporting, but do not assign them to SEO, campaigns or the 80-lead goal without independently verified evidence. {unattributed.data?.note}</p>
             {isAdmin && (unattributed.data?.opportunityIds.length ?? 0) > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {unattributed.data!.opportunityIds.slice(0, 20).map((id) => (
                   <Button key={id} size="sm" variant="ghost" className="text-xs" disabled={unlink.isPending}
-                    onClick={() => unlink.mutate({ opportunityId: id })} title="Clear any link (keep unattributed)">
+                    onClick={() => unlink.mutate({ opportunityId: id })} title="Remove an existing attribution link (does not delete the job)">
                     <Unlink className="h-3 w-3 mr-1" /> #{id}
                   </Button>
                 ))}
