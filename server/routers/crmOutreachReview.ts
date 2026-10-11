@@ -21,6 +21,12 @@ const candidate = z.object({
 
 type Candidate = z.infer<typeof candidate>;
 
+/** Structured operational audit: never log recipient PII, drafts or tokens. */
+function reviewAudit(event: string, details: Record<string, string | number | boolean>) {
+  console.info("[CRM Outreach Review]", JSON.stringify({ event, ...details }));
+}
+
+
 /** Shared fail-closed intake, including suppression, opt-outs and sent history. */
 async function intakeCandidate(input: Candidate) {
   const db = await getDb();
@@ -46,8 +52,13 @@ async function intakeCandidate(input: Candidate) {
       return optedOut.length > 0;
     },
   );
-  if (!check.eligible) return check;
-  return queueReviewedCandidate(input);
+  if (!check.eligible) {
+    reviewAudit("intake_blocked", { reason: check.reason });
+    return check;
+  }
+  const row = await queueReviewedCandidate(input);
+  reviewAudit("draft_queued", { draftId: row.id, status: row.status });
+  return row;
 }
 
 export const crmOutreachReviewRouter = router({
@@ -65,15 +76,21 @@ export const crmOutreachReviewRouter = router({
         .from(crmOutreachReviewDrafts)
         .where(eq(crmOutreachReviewDrafts.id, input.id)).limit(1);
       if (!draft) throw new TRPCError({ code: "NOT_FOUND" });
-      if (await isOutreachSuppressed(db, draft.email))
+      if (await isOutreachSuppressed(db, draft.email)) {
+        reviewAudit("approval_blocked", { draftId: input.id, reason: "suppressed" });
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Recipient is suppressed." });
+      }
       const optedOut = await db.select({ id: smsContacts.id }).from(smsContacts)
         .where(and(sql`lower(trim(${smsContacts.email})) = ${draft.email}`, eq(smsContacts.optedOut, true)))
         .limit(1);
-      if (optedOut.length > 0)
+      if (optedOut.length > 0) {
+        reviewAudit("approval_blocked", { draftId: input.id, reason: "opted_out" });
         throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Recipient opted out." });
+      }
     }
-    return decideReviewDraft(input.id, input.decision);
+    const row = await decideReviewDraft(input.id, input.decision);
+    reviewAudit("decision_saved", { draftId: row.id, status: row.status });
+    return row;
   }),
   enqueue: adminProcedure.input(candidate).mutation(({ input }) => intakeCandidate(input)),
   // Bulk preparation is review-only. No sending or scheduling is exposed.
@@ -84,6 +101,7 @@ export const crmOutreachReviewRouter = router({
       for (const item of input) {
         const email = item.email.trim().toLowerCase();
         if (seen.has(email)) {
+          reviewAudit("intake_blocked", { reason: "duplicate_in_batch" });
           results.push({ email, status: "duplicate_in_batch" });
           continue;
         }
@@ -96,11 +114,14 @@ export const crmOutreachReviewRouter = router({
               ? result.reason : "queued_for_review",
           });
         } catch {
+          reviewAudit("intake_blocked", { reason: "verification_failed" });
           // Fail closed on any DB/verification failure; do not leak internal errors.
           results.push({ email, status: "verification_failed" });
         }
       }
-      return { results, queued: results.filter(row => row.status === "queued_for_review").length };
+      const queued = results.filter(row => row.status === "queued_for_review").length;
+      reviewAudit("batch_completed", { submitted: input.length, queued, blocked: input.length - queued });
+      return { results, queued };
     }),
 
 });
