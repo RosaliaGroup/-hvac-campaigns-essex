@@ -23,6 +23,110 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Essex County Heat Pump Costs: What Moves the Price",
+    "slug": "essex-county-heat-pump-installation-costs",
+    "date": "September 26, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Cost Guide",
+    "metaDescription": "What drives heat pump installation costs for Essex County commercial and multifamily buildings — ductwork, electrical, permits, and equipment tier.",
+    "excerpt": "There's no single flat price for a heat pump install in Essex County. Here's what actually moves the number, and what to send bidders so quotes are comparable.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "If you manage commercial or multifamily property in Essex County, you've probably asked a few contractors what a heat pump installation costs and gotten a few different answers. That's normal. Pricing is driven by site-specific variables: existing ductwork condition, electrical service capacity, refrigerant line-set length, local permitting, and the equipment tier you select. A PTAC retrofit, a multifamily central plant upgrade, and a mixed-use building replacing aging rooftop units don't land on the same number. This guide walks through the factors that move pricing from project to project, what to send bidders before you ask for a quote, and where optional coverage and commercial incentive programs fit into the total cost picture."
+      },
+      {
+        "type": "h2",
+        "content": "Why Installed Costs Vary So Much in Essex County"
+      },
+      {
+        "type": "paragraph",
+        "content": "Essex County's building stock spans pre-war multifamily walk-ups, mid-century garden apartments, converted mixed-use storefronts, and newer commercial construction. Each comes with a different starting point for a heat pump installation. A building with existing central ductwork sized correctly for airflow is a simpler retrofit than one relying on through-wall PTAC units that need individual replacement. A property with open electrical panel capacity avoids a service upgrade; one running near capacity does not. Multifamily owners juggling unit-by-unit access and tenant scheduling face different labor logistics than a single-tenant commercial building with one point of contact. None of these differences are unusual — they're simply why a credible quote has to be based on a site walk, not a phone estimate."
+      },
+      {
+        "type": "h2",
+        "content": "Ductwork, Electrical, and Line-Set Factors"
+      },
+      {
+        "type": "paragraph",
+        "content": "Three mechanical factors tend to move pricing more than anything else. First, ductwork: reusing existing, correctly sized ducts is far more economical than modifying or replacing a system that was sized for a different type of equipment. Second, electrical capacity: heat pumps often draw differently than the system they're replacing, and some installations require a panel upgrade, new circuits, or disconnect work before the outdoor unit can even be set. Third, line-set length and routing: the distance and path between indoor and outdoor components — especially in multistory buildings or installations with roof-mounted condensers — affects both material cost and labor hours. Any bidder who quotes a number without confirming these three items on-site is guessing."
+      },
+      {
+        "type": "h2",
+        "content": "Equipment Tier and Building Type"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise installs heat pump, central AC, ductless mini-split, full system replacement, commercial, and VRV/VRF equipment, and the right tier depends on the building, not just the budget. PTAC-style units suit unit-by-unit multifamily replacements where tenants control individual comfort. Ductless mini-splits fit additions, mixed-use spaces, or buildings without ductwork. Larger commercial and multifamily properties often move toward VRF/VRV systems for zoned control across many spaces with fewer outdoor units. Rooftop unit (RTU) replacements are common for single-story commercial buildings. Equipment tier affects both upfront cost and long-term operating and maintenance planning, which is why it belongs in the same conversation as price."
+      },
+      {
+        "type": "h2",
+        "content": "Permits and Essex County Code Compliance"
+      },
+      {
+        "type": "paragraph",
+        "content": "Permitting adds time and, in some cases, cost that property owners don't always anticipate when comparing bids. Electrical work tied to a heat pump installation typically requires inspection, and commercial projects may involve additional review depending on building type, occupancy, and the scope of mechanical work. A contractor familiar with Essex County jurisdictions should be able to tell you upfront whether your project needs permits, what inspections to expect, and how that timeline affects your installation schedule. If a bid doesn't mention permitting at all, ask about it directly — it's a common place where quotes diverge after the contract is signed."
+      },
+      {
+        "type": "h2",
+        "content": "Coverage Options and Commercial Incentive Programs"
+      },
+      {
+        "type": "paragraph",
+        "content": "Installation quality and proper system fit matter more to long-term performance than the sticker price alone. For new installations by Mechanical Enterprise, optional 10-year parts and labor coverage is available as a separately purchased add-on backed by a third-party service agreement — it is not bundled into the installation price and is not automatic. Eligible existing systems may also qualify for this coverage after an inspection, though not every system will pass. On the incentive side, PSE&G's commercial Direct Install program has covered up to 80% of eligible project costs, with PSE&G's On-Bill Repayment program offering 0% interest financing on the remaining balance, repaid through the monthly utility bill. These programs can meaningfully change the net cost of a commercial heat pump project, but eligibility and amounts depend on the program's current terms — confirm specifics before you budget around them."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Building type and unit count (multifamily, mixed-use, single-tenant commercial, etc.)",
+          "Current heating/cooling system type: PTAC, split, RTU, central ducted, or none",
+          "Photos or a floor plan showing existing ductwork, if any",
+          "Electrical panel location, amperage, and approximate age",
+          "Distance between where outdoor and indoor equipment would be placed",
+          "Any known access restrictions (tenant scheduling, roof access, landmark/historic status)",
+          "Whether you're pursuing PSE&G Direct Install or On-Bill Repayment for the project"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Get a site-specific heat pump quote for your Essex County property, with ductwork, electrical, and equipment tier assessed before you're given a number.",
+        "buttonText": "Request a Commercial Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      },
+      {
+        "type": "h2",
+        "content": "Frequently Asked Questions"
+      },
+      {
+        "type": "paragraph",
+        "content": "Why can't I get a price over the phone? Because the ductwork, electrical capacity, line-set length, and permitting scope all vary by building, and each one changes labor and material costs. A number given without a site visit isn't reliable enough to budget against."
+      },
+      {
+        "type": "paragraph",
+        "content": "Does the optional 10-year coverage apply to systems we already have? Eligible existing systems may qualify for the optional parts and labor coverage after an inspection, but it's not available for every system and isn't bundled into any installation automatically."
+      },
+      {
+        "type": "paragraph",
+        "content": "Do incentive programs apply to every commercial building in Essex County? Program eligibility, amounts, and terms are set by PSE&G and NJ Clean Energy, not by Mechanical Enterprise, so it's worth confirming current eligibility for your specific property and project scope before finalizing a budget."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Why can't I get a heat pump installation price over the phone?",
+        "answer": "Because ductwork condition, electrical capacity, refrigerant line-set length, and permitting scope all vary by building and significantly change labor and material costs. A reliable quote requires a site visit."
+      },
+      {
+        "question": "Does the optional 10-year parts and labor coverage apply to our existing system?",
+        "answer": "Eligible existing systems may qualify for the optional coverage after an inspection, but not every system passes, and it is a separately purchased add-on rather than something bundled into installation."
+      },
+      {
+        "question": "Are PSE&G commercial incentive programs available for every Essex County building?",
+        "answer": "Program terms, amounts, and eligibility are set by PSE&G and NJ Clean Energy and can vary by project type, so confirm current eligibility for your specific building before budgeting around a rebate or financing figure."
+      }
+    ]
+  },
+
+  {
     "title": "What a 10-Year HVAC Warranty Should Really Cover",
     "slug": "10-year-hvac-warranty-coverage-explained",
     "date": "September 26, 2026",
