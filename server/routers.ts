@@ -1010,7 +1010,8 @@ export const appRouter = router({
         const fbConnected = !!(fbCreds as Record<string, string>)?.accessToken;
         const igConnected = fbConnected && !!(fbCreds as Record<string, string>)?.instagramAccountId;
         const { getGbpTarget } = await import("./integrations/gbp");
-        const gbpConnected = !!getGbpTarget();
+        const savedGbp = await db.getAiVaCredentials("google_business");
+        const gbpConnected = !!(savedGbp.accountId && savedGbp.locationId) || !!getGbpTarget();
 
         return {
           socialLaneEnabled: isSocialLaneEnabled(),
@@ -1096,7 +1097,8 @@ export const appRouter = router({
 
       verifyGoogleBusinessPosting: adminProcedure.query(async () => {
         const { getGbpTarget, getGbpAccessToken } = await import("./integrations/gbp");
-        const target = getGbpTarget();
+        const selected = await db.getAiVaCredentials("google_business");
+        const target = selected.accountId && selected.locationId ? { accountId: selected.accountId, locationId: selected.locationId, locationResource: `locations/${selected.locationId}` } : getGbpTarget();
         if (!target) return {
           ready: false, reason: "Existing Google connection found, but the Business Profile account/location target is not configured. Set GBP_ACCOUNT_ID and GBP_LOCATION_ID after verifying the correct profile.",
           locationName: null, missing: ["GBP_ACCOUNT_ID", "GBP_LOCATION_ID"],
