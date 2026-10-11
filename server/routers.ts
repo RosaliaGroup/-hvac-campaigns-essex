@@ -1004,12 +1004,14 @@ export const appRouter = router({
       status: protectedProcedure.query(async () => {
         const [fbCreds, gbpCreds, laneState] = await Promise.all([
           db.getAiVaCredentials("facebook"),
-          db.getAiVaCredentials("google_business"),
+          Promise.resolve(null),
           getSocialLaneState(),
         ]);
         const fbConnected = !!(fbCreds as Record<string, string>)?.accessToken;
         const igConnected = fbConnected && !!(fbCreds as Record<string, string>)?.instagramAccountId;
-        const gbpConnected = !!(gbpCreds as Record<string, string>)?.accessToken;
+        const { getGbpTarget } = await import("./integrations/gbp");
+        const gbpConnected = !!getGbpTarget();
+
         return {
           socialLaneEnabled: isSocialLaneEnabled(),
           circuitBreakerPaused: laneState.circuitBreakerPaused,
@@ -1020,7 +1022,7 @@ export const appRouter = router({
             google_business: {
               mode: gbpConnected ? "connect" : "manual" as const,
               connected: gbpConnected,
-              note: "Falls back to the manual queue until credentials are connected AND a verified successful local-post exists (no GBP local-post has ever run in production).",
+              note: "Uses shared Google OAuth and the configured Local SEO location. Connection requires a successful access check; automatic posting remains disabled until a controlled test succeeds.",
             },
             nextdoor: { mode: "manual" as const, connected: false, note: "No public posting API — always manual queue." },
             linkedin: { mode: "manual" as const, connected: false, note: "No company-page posting API for this use — always manual queue (copy generated, pasted by hand)." },
@@ -1032,18 +1034,23 @@ export const appRouter = router({
        * Do not assume GBP access just because Search Console or Google Ads is connected.
        */
       verifyGoogleBusinessPosting: adminProcedure.query(async () => {
-        const cred = await db.getAiVaCredentials("google_business") as Record<string, string> | null;
-        if (!cred?.accessToken || !cred?.accountId || !cred?.locationId) {
-          return { ready: false, reason: "Legacy Google Business posting credentials are incomplete. Your existing Google Business Profile may still be connected for Local SEO; the posting integration requires separate authorization.", locationName: null, missing: ["accessToken", "accountId", "locationId"].filter(key => !cred?.[key]) };
-        }
+        const { getGbpTarget, getGbpAccessToken } = await import("./integrations/gbp");
+        const target = getGbpTarget();
+        if (!target) return {
+          ready: false, reason: "Existing Google connection found, but the Business Profile account/location target is not configured. Set GBP_ACCOUNT_ID and GBP_LOCATION_ID after verifying the correct profile.",
+          locationName: null, missing: ["GBP_ACCOUNT_ID", "GBP_LOCATION_ID"],
+        };
         try {
-          const url = `https://mybusinessbusinessinformation.googleapis.com/v1/locations/${encodeURIComponent(cred.locationId)}?readMask=name,title`;
-          const response = await fetch(url, { headers: { Authorization: `Bearer ${cred.accessToken}` }, signal: AbortSignal.timeout(12000) });
-          if (!response.ok) return { ready: false, reason: `Google Business Profile location lookup failed (HTTP ${response.status}); check permissions and token.`, locationName: null };
+          const token = await getGbpAccessToken();
+          const response = await fetch(
+            `https://mybusinessbusinessinformation.googleapis.com/v1/${target.locationResource}?readMask=name,title`,
+            { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(12000) },
+          );
+          if (!response.ok) return { ready: false, reason: `Shared Google connection cannot access configured Business Profile location (HTTP ${response.status}). Reconnect Google with Business Profile permission if needed.`, locationName: null, missing: [] };
           const location = await response.json() as { title?: string; name?: string };
-          return { ready: true, reason: "Location access verified. Posting capability still requires a successful controlled test.", locationName: location.title ?? location.name ?? null };
+          return { ready: true, reason: "Existing Google OAuth location access verified. A controlled local-post test is still required before automated publishing.", locationName: location.title ?? location.name ?? null, missing: [] };
         } catch (error) {
-          return { ready: false, reason: error instanceof Error ? error.message.slice(0, 180) : "Profile lookup failed", locationName: null };
+          return { ready: false, reason: `Shared Google OAuth access failed: ${error instanceof Error ? error.message.slice(0,150) : "unknown error"}`, locationName: null, missing: [] };
         }
       }),
 

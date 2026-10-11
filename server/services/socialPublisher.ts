@@ -128,19 +128,25 @@ async function defaultPublishToPlatform(
   content: string,
   mediaUrls?: string[],
 ): Promise<string> {
+  // Google Business Profile uses the SAME encrypted, refreshable Google OAuth
+  // grant and configured location as Local SEO. Never require legacy AI VA tokens.
+  if (platform === "google_business") {
+    const { getGbpAccessToken, getGbpTarget } = await import("../integrations/gbp");
+    const target = getGbpTarget();
+    if (!target) throw new Error("Google Business Profile location is not configured (GBP_ACCOUNT_ID / GBP_LOCATION_ID).");
+    const accessToken = await getGbpAccessToken();
+    return await postToGoogleBusiness(
+      { accessToken, accountId: target.accountId, locationId: target.locationId },
+      content,
+      mediaUrls,
+    );
+  }
+
   // Instagram credentials are stored under the "facebook" service (shared Meta token).
   const service = platform === "instagram" ? "facebook" : platform;
   const cred = await dbModule.getAiVaCredentials(service);
   if (!cred || !cred.accessToken) {
     throw new Error(`No credentials saved for ${platform}. Please configure in AI VA Settings.`);
-  }
-
-  if (platform === "google_business") {
-    return await postToGoogleBusiness(
-      { accessToken: cred.accessToken, accountId: cred.accountId, locationId: cred.locationId },
-      content,
-      mediaUrls,
-    );
   }
   if (platform === "facebook") {
     return await postToFacebook(
