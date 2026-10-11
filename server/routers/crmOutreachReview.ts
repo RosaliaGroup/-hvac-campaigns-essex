@@ -63,6 +63,17 @@ async function intakeCandidate(input: Candidate) {
 
 export const crmOutreachReviewRouter = router({
   list: adminProcedure.query(() => listReviewDrafts()),
+  summary: adminProcedure.query(async () => {
+    const drafts = await listReviewDrafts();
+    const summary = {
+      total: drafts.length,
+      needsReview: drafts.filter(row => row.status === "needs_human_approval").length,
+      approved: drafts.filter(row => row.status === "approved").length,
+      rejected: drafts.filter(row => row.status === "rejected").length,
+    };
+    reviewAudit("queue_summary_read", summary);
+    return summary;
+  }),
   decide: adminProcedure.input(z.object({
     id: z.number().int().positive(),
     decision: z.enum(["approved", "rejected"]),
