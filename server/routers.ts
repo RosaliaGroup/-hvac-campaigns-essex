@@ -1036,6 +1036,7 @@ export const appRouter = router({
        */
       /** Discover accounts and their locations using the existing shared Google grant. */
       discoverGoogleBusinessLocations: adminProcedure.query(async () => {
+        const { describeGbpApiFailure } = await import("./services/gbp/apiError");
         const { getGbpAccessToken } = await import("./integrations/gbp");
         const token = await getGbpAccessToken();
         const headers = { Authorization: `Bearer ${token}` };
@@ -1046,7 +1047,7 @@ export const appRouter = router({
           url.searchParams.set("pageSize", "20");
           if (next) url.searchParams.set("pageToken", next);
           const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
-          if (!res.ok) throw new Error(`Business Profile account discovery failed (HTTP ${res.status}). Check Google authorization and API access.`);
+          if (!res.ok) throw new Error(await describeGbpApiFailure(res, "Business Profile account discovery"));
           const json = await res.json() as { accounts?: Array<{ name: string; accountName?: string }>; nextPageToken?: string };
           accounts.push(...(json.accounts ?? []).map(a => ({ name: a.name, accountName: a.accountName ?? a.name })));
           next = json.nextPageToken ?? "";
@@ -1063,7 +1064,7 @@ export const appRouter = router({
             const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
             if (!res.ok) {
               if (res.status === 403 || res.status === 404) break;
-              throw new Error(`Business Profile locations lookup failed (HTTP ${res.status}) for ${account.accountName}.`);
+              throw new Error(await describeGbpApiFailure(res, "Business Profile locations lookup"));
             }
             const json = await res.json() as { locations?: Array<{ name: string; title?: string; storefrontAddress?: { addressLines?: string[]; locality?: string; administrativeArea?: string } }>; nextPageToken?: string };
             for (const loc of json.locations ?? []) {
