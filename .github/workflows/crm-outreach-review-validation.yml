@@ -1,0 +1,28 @@
+name: CRM outreach review validation
+on:
+  pull_request:
+    paths:
+      - "server/services/crmOutreachReview*.ts"
+      - "server/routers/crmOutreachReview.ts"
+      - "server/services/outreachSuppression*.ts"
+      - "client/src/pages/CrmOutreachReview.tsx"
+      - "client/src/lib/outreachCampaignTemplates.ts"
+      - ".github/workflows/crm-outreach-review-validation.yml"
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: TypeScript typecheck
+        run: pnpm check
+      - name: Outreach review and suppression tests
+        run: pnpm exec vitest run server/services/crmOutreachReviewQueue.test.ts server/services/crmOutreachReviewStore.test.ts server/services/outreachSuppression.test.ts
