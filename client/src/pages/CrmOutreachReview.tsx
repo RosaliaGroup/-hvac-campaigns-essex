@@ -7,6 +7,7 @@ import { outreachCampaignTemplates, type OutreachCampaignKey } from "@/lib/outre
 
 export default function CrmOutreachReview() {
   const [filter, setFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "needs_human_approval" | "approved" | "rejected">("all");
   const [form, setForm] = useState({
     email: "", company: "", decisionMaker: "", sourceUrl: "",
     draftSubject: "", draftBody: "",
@@ -26,7 +27,14 @@ export default function CrmOutreachReview() {
   });
   const drafts = trpc.crmOutreachReview.list.useQuery(undefined, { retry: false });
   const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => drafts.refetch() });
+  const counts = {
+    pending: (drafts.data ?? []).filter(row => row.status === "needs_human_approval").length,
+    approved: (drafts.data ?? []).filter(row => row.status === "approved").length,
+    rejected: (drafts.data ?? []).filter(row => row.status === "rejected").length,
+  };
   const rows = (drafts.data ?? []).filter(row =>
+    (statusFilter === "all" || row.status === statusFilter) &&
+
     [row.email, row.company, row.decisionMaker, row.draftSubject]
       .some(value => (value ?? "").toLowerCase().includes(filter.toLowerCase()))
   );
@@ -83,6 +91,21 @@ export default function CrmOutreachReview() {
         </form>
         {intakeResult && <p role="status" className="text-sm">{intakeResult}</p>}
       </section>
+      <div className="flex flex-wrap gap-2" aria-label="Filter review drafts by status">
+        {([
+          ["all", "All", (drafts.data ?? []).length],
+          ["needs_human_approval", "Needs review", counts.pending],
+          ["approved", "Approved", counts.approved],
+          ["rejected", "Rejected", counts.rejected],
+        ] as const).map(([value, label, count]) => (
+          <Button key={value} type="button" size="sm"
+            variant={statusFilter === value ? "default" : "outline"}
+            aria-pressed={statusFilter === value}
+            onClick={() => setStatusFilter(value)}>
+            {label} ({count})
+          </Button>
+        ))}
+      </div>
       <Input aria-label="Search outreach drafts" placeholder="Search company, contact or subject" value={filter} onChange={event => setFilter(event.target.value)} />
       {drafts.isLoading && <p role="status">Loading drafts…</p>}
       {drafts.error && <p role="alert" className="text-destructive">Unable to load review queue. Administrator access may be required.</p>}
