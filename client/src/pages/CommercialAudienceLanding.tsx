@@ -42,6 +42,11 @@ export default function CommercialAudienceLanding({ audience }: { audience: Audi
     : audience === "contractors-developers"
       ? [{ href: "/commercial-hvac-installation-nj", label: "Commercial HVAC installation in NJ" }, { href: "/vrv-vrf-installation-nj", label: "VRF and VRV HVAC installation" }]
       : [{ href: "/commercial-hvac-service-nj", label: "Commercial HVAC service in NJ" }, { href: "/commercial/property-managers", label: "Property portfolio maintenance" }];
+  const guides = audience === "property-management"
+    ? [{ href: "/blog/fall-hvac-maintenance-nj-property-managers", label: "Fall HVAC checklist for NJ property managers" }, { href: "/blog/nj-condo-ptac-replacement-planning", label: "Condo PTAC replacement planning" }]
+    : audience === "contractors-developers"
+      ? [{ href: "/blog/what-gcs-need-from-hvac-subcontractor", label: "What general contractors need from an HVAC subcontractor" }, { href: "/blog/commercial-property-hvac-due-diligence-nj", label: "Commercial HVAC due diligence" }]
+      : [{ href: "/blog/commercial-property-hvac-due-diligence-nj", label: "HVAC due diligence for commercial property buyers" }, { href: "/blog/fall-hvac-maintenance-nj-property-managers", label: "Fall maintenance planning for managed buildings" }];
   return <div className="min-h-screen bg-white">
     <Navigation />
     <main>
@@ -68,10 +73,18 @@ export default function CommercialAudienceLanding({ audience }: { audience: Audi
           </div>
         </div>
       </section>
+      <section className="bg-slate-50 py-10" aria-label="Commercial HVAC resources">
+        <div className="container max-w-5xl">
+          <h2 className="text-xl font-bold text-[#142c48] mb-3">Helpful guides for your building or project</h2>
+          <div className="grid gap-3 md:grid-cols-2">
+            {guides.map(guide => <Link key={guide.href} href={guide.href} className="rounded-lg border bg-white p-4 font-medium text-blue-700 underline underline-offset-2">{guide.label}</Link>)}
+          </div>
+        </div>
+      </section>
       <section id="request" className="bg-slate-50 py-12">
         <div className="container max-w-xl">
-          <h2 className="text-2xl font-bold text-center mb-5">Tell us about your project or portfolio</h2>
-          <PortfolioPricingRequestForm pageContext={`audience-${audience}`} audienceMode={audience === "property-management" ? "portfolio" : "project"} />
+          <h2 className="text-2xl font-bold text-center mb-5">{audience === "property-management" ? "Request a portfolio HVAC review" : audience === "contractors-developers" ? "Send us your HVAC project or bid scope" : "Discuss your commercial property or client needs"}</h2>
+          <PortfolioPricingRequestForm pageContext={`audience-${audience}`} audienceMode={audience === "property-management" ? "portfolio" : audience === "commercial-partners" ? "partner" : "project"} />
           <p className="text-center text-sm mt-5"><Link href={data.related} className="text-blue-700 underline">Explore related HVAC services</Link></p>
         </div>
       </section>
