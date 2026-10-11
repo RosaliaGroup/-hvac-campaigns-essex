@@ -1028,6 +1028,25 @@ export const appRouter = router({
         };
       }),
 
+      /** Read-only verification of the existing Google Business Profile posting connection.
+       * Do not assume GBP access just because Search Console or Google Ads is connected.
+       */
+      verifyGoogleBusinessPosting: adminProcedure.query(async () => {
+        const cred = await db.getAiVaCredentials("google_business") as Record<string, string> | null;
+        if (!cred?.accessToken || !cred?.accountId || !cred?.locationId) {
+          return { ready: false, reason: "Google Business Profile posting credentials are incomplete in AI Settings.", locationName: null };
+        }
+        try {
+          const url = `https://mybusinessbusinessinformation.googleapis.com/v1/locations/${encodeURIComponent(cred.locationId)}?readMask=name,title`;
+          const response = await fetch(url, { headers: { Authorization: `Bearer ${cred.accessToken}` }, signal: AbortSignal.timeout(12000) });
+          if (!response.ok) return { ready: false, reason: `Google Business Profile location lookup failed (HTTP ${response.status}); check permissions and token.`, locationName: null };
+          const location = await response.json() as { title?: string; name?: string };
+          return { ready: true, reason: "Location access verified. Posting capability still requires a successful controlled test.", locationName: location.title ?? location.name ?? null };
+        } catch (error) {
+          return { ready: false, reason: error instanceof Error ? error.message.slice(0, 180) : "Profile lookup failed", locationName: null };
+        }
+      }),
+
       // Admin-only: build the Meta OAuth URL for the "Connect" button. Reuses
       // the SAME Meta app/token-exchange as the existing Meta Ads OAuth
       // connection (server/metaAds.ts), with posting-scoped permissions and
