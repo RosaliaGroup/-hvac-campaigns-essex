@@ -27,6 +27,18 @@ const DISMISS_REASON = z.enum(["wrong", "not_now", "off_brand", "already_done"])
  * all business logic lives in server/services/seo/intel/*. `protectedProcedure`
  * matches the SEO Intelligence router's own access level (server/routers/seo.ts).
  */
+/** Keep historical decisions intact while showing each suggestion only once. */
+function uniqueReportItems<T extends { suggestionKey: string | null; status: string; id: number }>(items: T[]): T[] {
+  const seen = new Map<string, T>();
+  for (const item of items) {
+    const key = item.suggestionKey || `legacy:${item.id}`;
+    const current = seen.get(key);
+    // Prefer a decision over an open duplicate; otherwise retain latest row.
+    if (!current || (current.status === "open" && item.status !== "open")) seen.set(key, item);
+  }
+  return [...seen.values()];
+}
+
 export const marketIntelRouter = router({
   listReports: protectedProcedure.query(async () => {
     const db = await getDb();
@@ -40,7 +52,7 @@ export const marketIntelRouter = router({
     const [report] = await db.select().from(seoIntelReports).where(eq(seoIntelReports.id, input.reportId)).limit(1);
     if (!report) return null;
     const items = await db.select().from(seoIntelItems).where(eq(seoIntelItems.reportId, input.reportId)).orderBy(desc(seoIntelItems.id));
-    return { report, items };
+    return { report, items: uniqueReportItems(items) };
   }),
 
   getLatestReport: protectedProcedure.query(async () => {
@@ -49,7 +61,7 @@ export const marketIntelRouter = router({
     const [report] = await db.select().from(seoIntelReports).orderBy(desc(seoIntelReports.date)).limit(1);
     if (!report) return null;
     const items = await db.select().from(seoIntelItems).where(eq(seoIntelItems.reportId, report.id)).orderBy(desc(seoIntelItems.id));
-    return { report, items };
+    return { report, items: uniqueReportItems(items) };
   }),
 
   /**
