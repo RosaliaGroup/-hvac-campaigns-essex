@@ -417,6 +417,13 @@ function SocialPosts() {
           {gbpCheck.isFetching ? "Checking…" : "Verify Google Business Profile Connection"}
         </Button>
         {gbpCheck.data && <p role="status" className="text-sm">{gbpCheck.data.ready ? "Location verified: " + (gbpCheck.data.locationName ?? "Connected location") : "Not ready: "}{gbpCheck.data.reason}</p>}
+        {gbpCheck.data && !gbpCheck.data.ready && <div className="text-xs space-y-2">
+          {"missing" in gbpCheck.data && Array.isArray(gbpCheck.data.missing) && <p>Missing posting authorization fields: {gbpCheck.data.missing.join(", ")}. Secret values are never displayed.</p>}
+          <p>The existing Local SEO Google connection is separate from the legacy posting credentials. Do not create another Business Profile or assume Google Ads authorization grants posting access.</p>
+          <a className="text-blue-700 underline" href="/settings/integrations">Review existing Google integrations</a>
+          <span className="mx-2">·</span>
+          <a className="text-blue-700 underline" href="/ai-va-settings">Review posting settings</a>
+        </div>}
         {gbpCheck.error && <p role="alert" className="text-sm text-red-700">Connection check failed: {gbpCheck.error.message}</p>}
         <p className="text-xs text-muted-foreground">Automatic Google Business Profile posting stays disabled until a controlled test succeeds. Configure credentials in AI Settings if this check reports missing access.</p>
       </div>
