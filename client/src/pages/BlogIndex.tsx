@@ -7,6 +7,7 @@ import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
 import { blogPosts } from "@/data/blogPosts";
+import { commercialGrowthPosts } from "@/data/commercialGrowthPosts";
 
 const BASE = "https://mechanicalenterprise.com";
 
@@ -35,7 +36,7 @@ export default function BlogIndex() {
       <section className="py-16 bg-[#f7f8fa]">
         <div className="container">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {blogPosts.map((post) => (
+            {[...commercialGrowthPosts, ...blogPosts].map((post) => (
               <Link key={post.slug} href={`/blog/${post.slug}`}>
                 <Card className="h-full cursor-pointer group hover:shadow-lg transition-shadow border-t-4 border-t-transparent hover:border-t-[#e8813a]">
                   <CardContent className="pt-6">
