@@ -117,10 +117,11 @@ export async function autoQueueMarketIntelTopics(): Promise<{ queued: number; re
     return { queued: 0, reason: "publishing_lane_disabled" };
   const db = await getDb();
   if (!db) return { queued: 0, reason: "no_db" };
-  // Existing queued seed topics take priority; don't overload the pipeline.
+  // A large seeded backlog must not permanently starve evidence-backed demand.
+  // Still allow only one market-intel topic in the queue at any time.
   const existing = await db.select({ id: seoContentQueue.id }).from(seoContentQueue)
-    .where(eq(seoContentQueue.status, "queued")).limit(1);
-  if (existing.length) return { queued: 0, reason: "existing_backlog" };
+    .where(and(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.source, "market-intel:unserved_query"))).limit(1);
+  if (existing.length) return { queued: 0, reason: "market_topic_already_queued" };
   const proposed = await db.select().from(seoContentQueue)
     .where(and(eq(seoContentQueue.status, "proposed"), eq(seoContentQueue.source, "market-intel:unserved_query")))
     .orderBy(asc(seoContentQueue.createdAt)).limit(20);
@@ -143,11 +144,14 @@ export async function updateQueueStatus(id: number, status: SeoContentQueueRow["
 export async function nextTopicToProcess(): Promise<SeoContentQueueRow | null> {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db
-    .select()
-    .from(seoContentQueue)
+  // Prioritize one verified market-demand topic when available. This is
+  // still the same single-topic, linted and hold-gated publishing pipeline.
+  const market = await db.select().from(seoContentQueue)
+    .where(and(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.source, "market-intel:unserved_query")))
+    .orderBy(asc(seoContentQueue.createdAt)).limit(1);
+  if (market.length) return market[0];
+  const rows = await db.select().from(seoContentQueue)
     .where(or(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.status, "refresh_due")))
-    .orderBy(asc(seoContentQueue.createdAt))
-    .limit(1);
+    .orderBy(asc(seoContentQueue.createdAt)).limit(1);
   return rows[0] ?? null;
 }
