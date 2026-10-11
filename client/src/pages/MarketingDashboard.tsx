@@ -341,7 +341,7 @@ export default function MarketingDashboard() {
   const [monthlyBudget, setMonthlyBudget] = useState([600]);
   const { data: socialLane, isLoading: socialLaneLoading } = trpc.aiVa.socialLane.status.useQuery(undefined, { enabled: isAuthenticated });
   const { data: socialPosts, isLoading: socialPostsLoading } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 }, { enabled: isAuthenticated });
-  const { data: leadBaseline } = trpc.aiVa.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: leadBaseline } = trpc.leadCaptures.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });
   const recentSocialPosts = [...(socialPosts ?? [])].sort((a, b) => new Date(b.postedAt ?? b.createdAt).getTime() - new Date(a.postedAt ?? a.createdAt).getTime()).slice(0, 5);
   const platformLabel = (platform: "facebook" | "instagram" | "google_business") =>
     socialLaneLoading ? "Checking" : socialLane?.platforms?.[platform]?.connected ? "Connected" : "Manual";
