@@ -36,7 +36,7 @@ function uniqueReportItems<T extends { suggestionKey: string | null; status: str
     // Prefer a decision over an open duplicate; otherwise retain latest row.
     if (!current || (current.status === "open" && item.status !== "open")) seen.set(key, item);
   }
-  return [...seen.values()];
+  return Array.from(seen.values());
 }
 
 export const marketIntelRouter = router({
