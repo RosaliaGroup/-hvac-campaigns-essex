@@ -480,13 +480,14 @@ export default function MarketingDashboard() {
             {isCanaryAdmin(user) && <TabsTrigger value="canary">Canary</TabsTrigger>}
           </TabsList>
 
+          {/* Single-source operational summary; avoid counting scheduled posts as published. */}
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Quick Stats</CardTitle>
-                  <CardDescription>Last 30 days performance</CardDescription>
+                  <CardDescription>CRM captures from the last 30 days; SEO metrics available in SEO Intelligence.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -505,7 +506,7 @@ export default function MarketingDashboard() {
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Leads Generated</p>
+                      <p className="text-sm text-muted-foreground">CRM Lead Captures (30 days)</p>
                       <p className="text-2xl font-bold">{leadBaseline?.totalCaptures ?? "—"}</p>
                     </div>
                     <MessageSquare className="h-8 w-8 text-blue-600" />
