@@ -110,6 +110,29 @@ export async function hasExistingProposal(refreshesSlug: string, source: string)
   return !!row;
 }
 
+/** Promote only verified, safe market-intel proposals into the existing guarded draft lane. */
+export async function autoQueueMarketIntelTopics(): Promise<{ queued: number; reason?: string }> {
+  if (process.env.SEO_INTEL_AUTO_QUEUE_ENABLED !== "true") return { queued: 0, reason: "disabled" };
+  if (process.env.SEO_CONTENT_PIPELINE_ENABLED !== "true" || process.env.SEO_AUTOPUBLISH_ENABLED !== "true")
+    return { queued: 0, reason: "publishing_lane_disabled" };
+  const db = await getDb();
+  if (!db) return { queued: 0, reason: "no_db" };
+  // Existing queued seed topics take priority; don't overload the pipeline.
+  const existing = await db.select({ id: seoContentQueue.id }).from(seoContentQueue)
+    .where(eq(seoContentQueue.status, "queued")).limit(1);
+  if (existing.length) return { queued: 0, reason: "existing_backlog" };
+  const proposed = await db.select().from(seoContentQueue)
+    .where(and(eq(seoContentQueue.status, "proposed"), eq(seoContentQueue.source, "market-intel:unserved_query")))
+    .orderBy(asc(seoContentQueue.createdAt)).limit(20);
+  const safe = proposed.find(t => t.targetQuery && t.audience && t.brief && !t.refreshesSlug &&
+    !/(price|warrant|rebate|incentive|financ|free|guarantee)/i.test(t.title + " " + t.targetQuery));
+  if (!safe) return { queued: 0, reason: "no_safe_evidence_backed_topic" };
+  await db.update(seoContentQueue).set({ status: "queued" })
+    .where(and(eq(seoContentQueue.id, safe.id), eq(seoContentQueue.status, "proposed")));
+  await logAudit({ actorId: null, action: "market_intel_topic_auto_queued", batchId: null, pagePath: null, before: { id: safe.id, status: "proposed" }, after: { id: safe.id, status: "queued" }, lintResult: null });
+  return { queued: 1 };
+}
+
 export async function updateQueueStatus(id: number, status: SeoContentQueueRow["status"], contentBatchId?: number | null): Promise<void> {
   const db = await getDb();
   if (!db) return;
