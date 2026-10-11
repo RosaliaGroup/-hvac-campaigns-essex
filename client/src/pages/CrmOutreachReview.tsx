@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { outreachCampaignTemplates, type OutreachCampaignKey } from "@/lib/outreachCampaignTemplates";
 
 export default function CrmOutreachReview() {
   const [filter, setFilter] = useState("");
@@ -41,6 +42,23 @@ export default function CrmOutreachReview() {
       <section className="rounded-lg border p-4 space-y-3">
         <h2 className="text-lg font-semibold">Add a verified prospect for review</h2>
         <p className="text-sm text-muted-foreground">Enter a verified direct business email and its public HTTPS verification source. The CRM checks suppressions and previous outreach before saving a draft. Approval never sends an email.</p>
+        <label className="block space-y-1 text-sm">
+          <span>Optional campaign draft template</span>
+          <select className="w-full rounded-md border bg-background p-2" defaultValue=""
+            onChange={event => {
+              const key = event.target.value as OutreachCampaignKey;
+              const template = outreachCampaignTemplates[key];
+              if (template) setForm(current => ({
+                ...current, draftSubject: template.subject, draftBody: template.body,
+              }));
+            }}>
+            <option value="">Start with a blank draft</option>
+            {Object.entries(outreachCampaignTemplates).map(([key, template]) => (
+              <option key={key} value={key}>{template.label}</option>
+            ))}
+          </select>
+        </label>
+        <p className="text-xs text-muted-foreground">Replace all bracketed placeholders with verified details. Templates do not send emails.</p>
         <form className="grid gap-3 md:grid-cols-2" onSubmit={event => {
           event.preventDefault();
           setIntakeResult("");
