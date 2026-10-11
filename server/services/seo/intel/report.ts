@@ -6,6 +6,7 @@
  * "each degrades gracefully if unavailable").
  */
 import { loadReportNotes } from "./notes";
+import { autoQueueMarketIntelTopics } from "../contentQueue";
 import { collectCrawlCheck } from "./crawlCheck";
 import { collectExperimentReadout } from "./experiment";
 import { eq } from "drizzle-orm";
@@ -158,6 +159,15 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
       executedPrId: executedNow && "prNumber" in result && result.prNumber ? String(result.prNumber) : null,
     });
     itemsCreated++;
+  }
+
+  // Convert eligible previously proposed demand topics into one guarded content job.
+  // This does not publish directly; lint, warmup, PR checks and hold remain mandatory.
+  try {
+    const queued = await autoQueueMarketIntelTopics();
+    if (queued.queued) console.log(`[MarketIntel] auto-queued ${queued.queued} evidence-backed content topic`);
+  } catch (error) {
+    console.error("[MarketIntel] content handoff failed:", error);
   }
 
   const summary = buildSummary({ itemCount: itemsCreated, executed, circuitClear, circuitReason, gscStale: searchDemand.skipped });
