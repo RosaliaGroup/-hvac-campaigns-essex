@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { outreachCampaignTemplates, type OutreachCampaignKey } from "@/lib/outreachCampaignTemplates";
+import { parseProspectCsv } from "@/lib/prospectImport";
 
 export default function CrmOutreachReview() {
   const [filter, setFilter] = useState("");
@@ -14,6 +15,8 @@ export default function CrmOutreachReview() {
   });
   const [intakeResult, setIntakeResult] = useState("");
   const [batchText, setBatchText] = useState("");
+  const [csvText, setCsvText] = useState("");
+  const [csvResult, setCsvResult] = useState("");
   const [batchResult, setBatchResult] = useState("");
 
   const enqueue = trpc.crmOutreachReview.enqueue.useMutation({
@@ -127,6 +130,27 @@ export default function CrmOutreachReview() {
           </div>
         </form>
         {intakeResult && <p role="status" className="text-sm">{intakeResult}</p>}
+      </section>
+      <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Import business-contact research</h2>
+        <p className="text-sm text-muted-foreground">Paste a permitted CSV export from your business-contact research provider. Required columns: email, company, decisionMaker, sourceUrl, draftSubject, draftBody. Direct business emails, HTTPS verification sources and personalized drafts are required. Import only prepares review drafts; it does not send messages.</p>
+        <Textarea aria-label="Prospect research CSV" rows={5} value={csvText}
+          placeholder="email,company,decisionMaker,sourceUrl,draftSubject,draftBody"
+          onChange={event => setCsvText(event.target.value)} />
+        <Button type="button" variant="outline" disabled={!csvText.trim()} onClick={() => {
+          const result = parseProspectCsv(csvText);
+          if (result.rows.length > 10) {
+            setCsvResult("Import is limited to 10 verified prospects per batch. Split the export into smaller batches.");
+            return;
+          }
+          if (result.errors.length) {
+            setCsvResult(result.errors.join(" | "));
+            return;
+          }
+          setBatchText(JSON.stringify(result.rows, null, 2));
+          setCsvResult(`Prepared ${result.rows.length} prospects. Review the JSON below, then use Check and queue batch.`);
+        }}>Prepare CSV for review</Button>
+        {csvResult && <p role="status" className="text-sm">{csvResult}</p>}
       </section>
       <section className="rounded-lg border p-4 space-y-3">
         <h2 className="text-lg font-semibold">Batch intake — up to 10 verified prospects</h2>
