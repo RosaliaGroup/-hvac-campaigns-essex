@@ -43,7 +43,8 @@ export function parseProspectCsv(text: string): ProspectImportResult {
   const missing = Object.entries(indexes).filter(([, i]) => i < 0).map(([key]) => key);
   if (missing.length) return { rows: [], errors: ["Missing required CSV columns: " + missing.join(", ")] };
   const rows: ProspectImportRow[] = [], errors: string[] = [], seen = new Set<string>();
-  for (const [index, cells] of records.entries()) {
+  for (let index = 0; index < records.length; index++) {
+    const cells = records[index];
     const item = Object.fromEntries(Object.entries(indexes).map(([key, i]) => [key, (cells[i] ?? "").trim()])) as ProspectImportRow;
     const email = item.email.toLowerCase();
     if (!Object.values(item).every(Boolean) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
