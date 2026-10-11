@@ -33,6 +33,12 @@ export async function checkOutreachReviewCandidate(
     return { eligible: false, normalizedEmail: email, reason: "unverified_contact" };
   if (!candidate.draftSubject.trim() || !candidate.draftBody.trim())
     return { eligible: false, normalizedEmail: email, reason: "missing_draft" };
+  // Campaign templates are drafts, not verified personalization. Do not
+  // queue messages with unresolved bracketed recipient/property placeholders.
+  if (/\[(?:First Name|Company|Building\/Association|Project\/Company)\]/i.test(
+    candidate.draftSubject + "\n" + candidate.draftBody
+  ))
+    return { eligible: false, normalizedEmail: email, reason: "unresolved_personalization" };
   const db = await getDb();
   if (!db) return { eligible: false, normalizedEmail: email, reason: "database_unavailable" };
   if (await isOutreachSuppressed(db, email))

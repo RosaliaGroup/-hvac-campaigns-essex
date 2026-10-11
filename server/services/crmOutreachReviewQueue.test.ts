@@ -27,6 +27,16 @@ describe("CRM outreach review eligibility", () => {
     expect((await checkOutreachReviewCandidate(candidate, async () => true, async () => false)).eligible).toBe(false);
     expect((await checkOutreachReviewCandidate(candidate, async () => false, async () => true)).eligible).toBe(false);
   });
+  it("rejects unfilled commercial campaign personalization", async () => {
+    const result = await checkOutreachReviewCandidate({
+      ...candidate,
+      draftSubject: "Fall HVAC planning for [Company]'s NJ properties",
+    }, async () => false, async () => false);
+    expect(result).toEqual({
+      eligible: false, normalizedEmail: "prospect@example.com",
+      reason: "unresolved_personalization",
+    });
+  });
   it("rejects incomplete verification and drafts", async () => {
     expect((await checkOutreachReviewCandidate({ ...candidate, sourceUrl: "" }, async () => false, async () => false)).eligible).toBe(false);
     expect((await checkOutreachReviewCandidate({ ...candidate, draftBody: "" }, async () => false, async () => false)).eligible).toBe(false);
