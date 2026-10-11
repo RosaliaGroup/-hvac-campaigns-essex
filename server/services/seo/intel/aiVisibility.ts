@@ -15,6 +15,37 @@ import crypto from "crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { seoIntelAiVisibility } from "../../../../drizzle/schema";
+import { sql } from "drizzle-orm";
+
+/**
+ * Create the missing AI-visibility observation table only. This is additive,
+ * idempotent, and does not touch CRM or other SEO tables.
+ */
+async function ensureAiVisibilityTable(db: NonNullable<Awaited<ReturnType<typeof getDb>>>): Promise<void> {
+  await db.execute(sql.raw(`CREATE TABLE IF NOT EXISTS \`seoIntelAiVisibility\` (
+    \`id\` int NOT NULL AUTO_INCREMENT,
+    \`weekOf\` varchar(10) NOT NULL,
+    \`engine\` enum('perplexity','openai','google_ai_overview') NOT NULL,
+    \`query\` varchar(512) NOT NULL,
+    \`obsKey\` varchar(64) NOT NULL,
+    \`status\` enum('ok','no_overview','error') NOT NULL DEFAULT 'ok',
+    \`named\` tinyint(1) NOT NULL DEFAULT 0,
+    \`citedUs\` tinyint(1) NOT NULL DEFAULT 0,
+    \`namedAs\` varchar(255) DEFAULT NULL,
+    \`competitors\` json DEFAULT NULL,
+    \`otherCompanies\` json DEFAULT NULL,
+    \`citedDomains\` json DEFAULT NULL,
+    \`citations\` json DEFAULT NULL,
+    \`excerpt\` text,
+    \`error\` varchar(255) DEFAULT NULL,
+    \`capturedAt\` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (\`id\`),
+    UNIQUE KEY \`seoIntelAiVisibility_key_uq\` (\`obsKey\`),
+    KEY \`seoIntelAiVisibility_week_engine_idx\` (\`weekOf\`,\`engine\`)
+  )`));
+}
+
+
 import { TARGET_QUERIES } from "../../../../shared/targetQueries";
 import { COMPETITOR_WATCHLIST } from "../../../../shared/competitorWatchlist";
 import {
@@ -147,6 +178,7 @@ export async function runAiVisibilityCheck(opts: RunOptions = {}): Promise<RunRe
   if (!db) return { skipped: true, reason: "Database unavailable." };
 
   const queries = opts.queries ?? TARGET_QUERIES;
+  await ensureAiVisibilityTable(db);
   const existing = await db.select({ key: seoIntelAiVisibility.obsKey }).from(seoIntelAiVisibility).where(and(eq(seoIntelAiVisibility.weekOf, weekOf), inArray(seoIntelAiVisibility.engine, engines)));
   const have = new Set(existing.map((r) => r.key));
   const jobs: Array<{ engine: AiEngine; query: string }> = [];
@@ -192,6 +224,7 @@ export async function collectAiVisibility(now: Date = new Date(), env: NodeJS.Pr
   try {
     const db = await getDb();
     if (!db) return empty("Database unavailable.");
+    await ensureAiVisibilityTable(db);
     const rows = await db.select().from(seoIntelAiVisibility);
     if (rows.length === 0) return empty(configured.length ? "Configured, but the first weekly run hasn't happened yet." : "No AI-visibility engine configured (PERPLEXITY_API_KEY / OPENAI_API_KEY).");
     const weeks = Array.from(new Set(rows.map((r) => r.weekOf))).sort().reverse();
