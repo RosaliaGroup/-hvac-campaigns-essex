@@ -8,6 +8,7 @@ import { Phone, MessageSquare, Share2, TrendingUp, Settings, CheckCircle, Clock,
 import { Link } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
+import { OCTOBER_B2B_SOCIAL_POSTS, buildOctoberSocialContent } from "@/data/octoberB2BSocialCampaign";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
@@ -352,11 +353,12 @@ function SocialPosts() {
   const { data: lane } = trpc.aiVa.socialLane.status.useQuery();
   const [platform, setPlatform] = useState<"facebook" | "instagram">("facebook");
   const [content, setContent] = useState("");
+  const [campaignKey, setCampaignKey] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const refresh = () => utils.aiVa.listSocialPosts.invalidate();
   const schedule = trpc.aiVa.schedulePost.useMutation({
-    onSuccess: () => { toast.success("Post scheduled"); setContent(""); refresh(); },
+    onSuccess: () => { toast.success("Post scheduled"); setContent(""); setCampaignKey(""); refresh(); },
     onError: e => toast.error(e.message),
   });
   const publish = trpc.aiVa.publishPost.useMutation({
@@ -373,9 +375,21 @@ function SocialPosts() {
     <CardContent className="space-y-5">
       <div className="rounded-lg border p-4 space-y-3">
         <div className="flex flex-wrap gap-2">
-          {(["facebook", "instagram"] as const).map(p => <Button key={p} size="sm" variant={platform === p ? "default" : "outline"} onClick={() => setPlatform(p)}>{p === "facebook" ? "Facebook" : "Instagram"}</Button>)}
+          {(["facebook", "instagram"] as const).map(p => <Button key={p} size="sm" variant={platform === p ? "default" : "outline"} onClick={() => { setPlatform(p); const selected = OCTOBER_B2B_SOCIAL_POSTS.find(post => post.key === campaignKey); if (selected) setContent(buildOctoberSocialContent(selected, p)); }}>{p === "facebook" ? "Facebook" : "Instagram"}</Button>)}
         </div>
         <p className="text-xs text-muted-foreground">{connected ? `${platform} connected` : `${platform} not connected — check AI Settings`}. Scheduled publishing uses the existing automation.</p>
+        <label className="block text-sm">Load October commercial campaign post
+          <select aria-label="Select prepared campaign post" className="mt-1 w-full rounded-md border bg-background p-2 text-sm" value={campaignKey}
+            onChange={e => {
+              const key = e.target.value;
+              setCampaignKey(key);
+              const selected = OCTOBER_B2B_SOCIAL_POSTS.find(p => p.key === key);
+              if (selected) setContent(buildOctoberSocialContent(selected, platform));
+            }}>
+            <option value="">Choose one of eight prepared posts</option>
+            {OCTOBER_B2B_SOCIAL_POSTS.map(post => <option key={post.key} value={post.key}>{post.label}</option>)}
+          </select>
+        </label>
         <Textarea aria-label="Post content" value={content} onChange={e => setContent(e.target.value)} placeholder="Write an approved HVAC campaign post..." rows={5} />
         <label className="block text-sm">Schedule date and time (local)
           <Input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} className="mt-1" />
