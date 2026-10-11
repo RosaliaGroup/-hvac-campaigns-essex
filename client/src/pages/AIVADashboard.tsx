@@ -351,6 +351,13 @@ function SocialPosts() {
   const utils = trpc.useUtils();
   const { data: posts, isLoading, error } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 });
   const { data: lane } = trpc.aiVa.socialLane.status.useQuery();
+  const [gbpDiscoveryRequested, setGbpDiscoveryRequested] = useState(false);
+  const [selectedGbp, setSelectedGbp] = useState("");
+  const gbpDiscovery = trpc.aiVa.socialLane.discoverGoogleBusinessLocations.useQuery(undefined, { enabled: gbpDiscoveryRequested, retry: false });
+  const gbpSelect = trpc.aiVa.socialLane.selectGoogleBusinessLocation.useMutation({
+    onSuccess: r => { toast.success(`Business Profile selected: ${r.title}`); utils.aiVa.socialLane.status.invalidate(); gbpCheck.refetch(); },
+    onError: e => toast.error(e.message),
+  });
   const [gbpCheckRequested, setGbpCheckRequested] = useState(false);
   const gbpCheck = trpc.aiVa.socialLane.verifyGoogleBusinessPosting.useQuery(undefined, { enabled: gbpCheckRequested, retry: false });
 
@@ -425,6 +432,21 @@ function SocialPosts() {
           <a className="text-blue-700 underline" href="/ai-va-settings">Review posting settings</a>
         </div>}
         {gbpCheck.error && <p role="alert" className="text-sm text-red-700">Connection check failed: {gbpCheck.error.message}</p>}
+        <div className="space-y-2 border-t pt-3">
+          <Button size="sm" variant="outline" onClick={() => { setGbpDiscoveryRequested(true); if (gbpDiscoveryRequested) gbpDiscovery.refetch(); }} disabled={gbpDiscovery.isFetching}>Find My Existing Google Business Profiles</Button>
+          {gbpDiscovery.error && <p role="alert" className="text-xs text-red-700">{gbpDiscovery.error.message}</p>}
+          {gbpDiscovery.data && <p className="text-xs">{gbpDiscovery.data.locations.length} accessible locations found across {gbpDiscovery.data.accountsFound} accounts.</p>}
+          {!!gbpDiscovery.data?.locations.length && <>
+            <select aria-label="Choose existing Google Business Profile" className="w-full rounded-md border bg-background p-2 text-sm" value={selectedGbp} onChange={e => setSelectedGbp(e.target.value)}>
+              <option value="">Select your existing business location</option>
+              {gbpDiscovery.data.locations.map(loc => <option key={loc.accountId + ":" + loc.locationId} value={loc.accountId + ":" + loc.locationId}>{loc.title} — {loc.address || loc.accountName}</option>)}
+            </select>
+            <Button size="sm" disabled={!selectedGbp || gbpSelect.isPending} onClick={() => {
+              const [accountId, locationId] = selectedGbp.split(":");
+              gbpSelect.mutate({ accountId, locationId });
+            }}>Save Selected Business Profile</Button>
+          </>}
+        </div>
         <p className="text-xs text-muted-foreground">Automatic Google Business Profile posting stays disabled until a controlled test succeeds. Configure credentials in AI Settings if this check reports missing access.</p>
       </div>
       <div className="rounded-lg border p-4 space-y-3">

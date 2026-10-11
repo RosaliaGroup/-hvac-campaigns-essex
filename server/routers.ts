@@ -1010,7 +1010,8 @@ export const appRouter = router({
         const fbConnected = !!(fbCreds as Record<string, string>)?.accessToken;
         const igConnected = fbConnected && !!(fbCreds as Record<string, string>)?.instagramAccountId;
         const { getGbpTarget } = await import("./integrations/gbp");
-        const gbpConnected = !!getGbpTarget();
+        const savedGbp = await db.getAiVaCredentials("google_business");
+        const gbpConnected = !!(savedGbp.accountId && savedGbp.locationId) || !!getGbpTarget();
 
         return {
           socialLaneEnabled: isSocialLaneEnabled(),
@@ -1033,9 +1034,71 @@ export const appRouter = router({
       /** Read-only verification of the existing Google Business Profile posting connection.
        * Do not assume GBP access just because Search Console or Google Ads is connected.
        */
+      /** Discover accounts and their locations using the existing shared Google grant. */
+      discoverGoogleBusinessLocations: adminProcedure.query(async () => {
+        const { getGbpAccessToken } = await import("./integrations/gbp");
+        const token = await getGbpAccessToken();
+        const headers = { Authorization: `Bearer ${token}` };
+        const accounts: Array<{ name: string; accountName: string }> = [];
+        let next = "";
+        for (let i = 0; i < 10; i++) {
+          const url = new URL("https://mybusinessaccountmanagement.googleapis.com/v1/accounts");
+          url.searchParams.set("pageSize", "20");
+          if (next) url.searchParams.set("pageToken", next);
+          const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
+          if (!res.ok) throw new Error(`Business Profile account discovery failed (HTTP ${res.status}). Check Google authorization and API access.`);
+          const json = await res.json() as { accounts?: Array<{ name: string; accountName?: string }>; nextPageToken?: string };
+          accounts.push(...(json.accounts ?? []).map(a => ({ name: a.name, accountName: a.accountName ?? a.name })));
+          next = json.nextPageToken ?? "";
+          if (!next) break;
+        }
+        const locations: Array<{ accountId: string; locationId: string; title: string; accountName: string; address: string }> = [];
+        for (const account of accounts) {
+          let page = "";
+          for (let i = 0; i < 10; i++) {
+            const url = new URL(`https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations`);
+            url.searchParams.set("readMask", "name,title,storefrontAddress");
+            url.searchParams.set("pageSize", "100");
+            if (page) url.searchParams.set("pageToken", page);
+            const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
+            if (!res.ok) {
+              if (res.status === 403 || res.status === 404) break;
+              throw new Error(`Business Profile locations lookup failed (HTTP ${res.status}) for ${account.accountName}.`);
+            }
+            const json = await res.json() as { locations?: Array<{ name: string; title?: string; storefrontAddress?: { addressLines?: string[]; locality?: string; administrativeArea?: string } }>; nextPageToken?: string };
+            for (const loc of json.locations ?? []) {
+              const accountId = account.name.replace(/^accounts\//, "");
+              const locationId = loc.name.replace(/^locations\//, "");
+              if (!/^\d+$/.test(accountId) || !/^\d+$/.test(locationId)) continue;
+              locations.push({ accountId, locationId, title: loc.title ?? loc.name, accountName: account.accountName,
+                address: [...(loc.storefrontAddress?.addressLines ?? []), loc.storefrontAddress?.locality, loc.storefrontAddress?.administrativeArea].filter(Boolean).join(", ") });
+            }
+            page = json.nextPageToken ?? "";
+            if (!page) break;
+          }
+        }
+        return { locations, accountsFound: accounts.length };
+      }),
+
+      /** Persist only user-selected non-secret IDs. Never select a business automatically. */
+      selectGoogleBusinessLocation: adminProcedure
+        .input(z.object({ accountId: z.string().regex(/^\d+$/), locationId: z.string().regex(/^\d+$/) }))
+        .mutation(async ({ input }) => {
+          const { getGbpAccessToken } = await import("./integrations/gbp");
+          const token = await getGbpAccessToken();
+          const url = `https://mybusinessbusinessinformation.googleapis.com/v1/locations/${input.locationId}?readMask=name,title`;
+          const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(12000) });
+          if (!response.ok) throw new Error(`Selected Business Profile location could not be verified (HTTP ${response.status}).`);
+          const location = await response.json() as { name?: string; title?: string };
+          if (location.name !== `locations/${input.locationId}`) throw new Error("Location ID mismatch");
+          await db.saveAiVaCredentials("google_business", { accountId: input.accountId, locationId: input.locationId });
+          return { saved: true, title: location.title ?? location.name ?? "" };
+        }),
+
       verifyGoogleBusinessPosting: adminProcedure.query(async () => {
         const { getGbpTarget, getGbpAccessToken } = await import("./integrations/gbp");
-        const target = getGbpTarget();
+        const selected = await db.getAiVaCredentials("google_business");
+        const target = selected.accountId && selected.locationId ? { accountId: selected.accountId, locationId: selected.locationId, locationResource: `locations/${selected.locationId}` } : getGbpTarget();
         if (!target) return {
           ready: false, reason: "Existing Google connection found, but the Business Profile account/location target is not configured. Set GBP_ACCOUNT_ID and GBP_LOCATION_ID after verifying the correct profile.",
           locationName: null, missing: ["GBP_ACCOUNT_ID", "GBP_LOCATION_ID"],
