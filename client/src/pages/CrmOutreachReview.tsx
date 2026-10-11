@@ -2,9 +2,27 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function CrmOutreachReview() {
   const [filter, setFilter] = useState("");
+  const [form, setForm] = useState({
+    email: "", company: "", decisionMaker: "", sourceUrl: "",
+    draftSubject: "", draftBody: "",
+  });
+  const [intakeResult, setIntakeResult] = useState("");
+  const enqueue = trpc.crmOutreachReview.enqueue.useMutation({
+    onSuccess: result => {
+      if ("eligible" in result && result.eligible === false) {
+        setIntakeResult(`Not queued: ${result.reason}`);
+      } else {
+        setIntakeResult("Draft saved for human approval. No message sent.");
+        setForm({ email: "", company: "", decisionMaker: "", sourceUrl: "", draftSubject: "", draftBody: "" });
+        drafts.refetch();
+      }
+    },
+    onError: error => setIntakeResult(`Queue error: ${error.message}`),
+  });
   const drafts = trpc.crmOutreachReview.list.useQuery(undefined, { retry: false });
   const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => drafts.refetch() });
   const rows = (drafts.data ?? []).filter(row =>
@@ -20,6 +38,33 @@ export default function CrmOutreachReview() {
         </div>
         <Button variant="outline" onClick={() => drafts.refetch()} disabled={drafts.isFetching}>Refresh</Button>
       </div>
+      <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Add a verified prospect for review</h2>
+        <p className="text-sm text-muted-foreground">Enter a verified direct business email and its public HTTPS verification source. The CRM checks suppressions and previous outreach before saving a draft. Approval never sends an email.</p>
+        <form className="grid gap-3 md:grid-cols-2" onSubmit={event => {
+          event.preventDefault();
+          setIntakeResult("");
+          enqueue.mutate({ ...form, verifiedAt: new Date() });
+        }}>
+          {(["company","decisionMaker","email","sourceUrl","draftSubject"] as const).map(key => (
+            <label key={key} className="text-sm space-y-1">
+              <span>{({company:"Company",decisionMaker:"Decision-maker name",email:"Verified business email",sourceUrl:"Public verification URL (HTTPS)",draftSubject:"Personalized email subject"})[key]}</span>
+              <Input required type={key === "email" ? "email" : key === "sourceUrl" ? "url" : "text"}
+                value={form[key]} onChange={e => setForm(current => ({...current,[key]:e.target.value}))}/>
+            </label>
+          ))}
+          <label className="text-sm space-y-1 md:col-span-2">
+            <span>Personalized outreach draft</span>
+            <Textarea required rows={6} value={form.draftBody}
+              onChange={e => setForm(current => ({...current,draftBody:e.target.value}))}/>
+          </label>
+          <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+            <Button type="submit" disabled={enqueue.isPending}>{enqueue.isPending ? "Checking…" : "Check eligibility and queue draft"}</Button>
+            <span className="text-xs text-muted-foreground">Review only · No automatic sending</span>
+          </div>
+        </form>
+        {intakeResult && <p role="status" className="text-sm">{intakeResult}</p>}
+      </section>
       <Input aria-label="Search outreach drafts" placeholder="Search company, contact or subject" value={filter} onChange={event => setFilter(event.target.value)} />
       {drafts.isLoading && <p role="status">Loading drafts…</p>}
       {drafts.error && <p role="alert" className="text-destructive">Unable to load review queue. Administrator access may be required.</p>}
