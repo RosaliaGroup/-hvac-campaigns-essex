@@ -351,6 +351,9 @@ function SocialPosts() {
   const utils = trpc.useUtils();
   const { data: posts, isLoading, error } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 });
   const { data: lane } = trpc.aiVa.socialLane.status.useQuery();
+  const [gbpCheckRequested, setGbpCheckRequested] = useState(false);
+  const gbpCheck = trpc.aiVa.socialLane.verifyGoogleBusinessPosting.useQuery(undefined, { enabled: gbpCheckRequested, retry: false });
+
   const [platform, setPlatform] = useState<"facebook" | "instagram">("facebook");
   const [content, setContent] = useState("");
   const [campaignKey, setCampaignKey] = useState("");
@@ -406,6 +409,16 @@ function SocialPosts() {
       <CardDescription>Schedule approved Facebook and Instagram content using your existing connected accounts.</CardDescription>
     </CardHeader>
     <CardContent className="space-y-5">
+      <div className="rounded-lg border p-4 space-y-2">
+        <p className="font-medium text-sm">Google Business Profile — existing location</p>
+        <p className="text-xs text-muted-foreground">Check whether the existing business profile has separate organic posting authorization. Google Ads, Search Console and a public Business Profile do not automatically authorize posting.</p>
+        <Button size="sm" variant="outline" onClick={() => { setGbpCheckRequested(true); if (gbpCheckRequested) gbpCheck.refetch(); }} disabled={gbpCheck.isFetching}>
+          {gbpCheck.isFetching ? "Checking…" : "Verify Google Business Profile Connection"}
+        </Button>
+        {gbpCheck.data && <p role="status" className="text-sm">{gbpCheck.data.ready ? "Location verified: " + (gbpCheck.data.locationName ?? "Connected location") : "Not ready: "}{gbpCheck.data.reason}</p>}
+        {gbpCheck.error && <p role="alert" className="text-sm text-red-700">Connection check failed: {gbpCheck.error.message}</p>}
+        <p className="text-xs text-muted-foreground">Automatic Google Business Profile posting stays disabled until a controlled test succeeds. Configure credentials in AI Settings if this check reports missing access.</p>
+      </div>
       <div className="rounded-lg border p-4 space-y-3">
         <div className="flex flex-wrap gap-2">
           {(["facebook", "instagram"] as const).map(p => <Button key={p} size="sm" variant={platform === p ? "default" : "outline"} onClick={() => { setPlatform(p); const selected = OCTOBER_B2B_SOCIAL_POSTS.find(post => post.key === campaignKey); if (selected) setContent(buildOctoberSocialContent(selected, p)); }}>{p === "facebook" ? "Facebook" : "Instagram"}</Button>)}
