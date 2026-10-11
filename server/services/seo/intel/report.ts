@@ -127,6 +127,14 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
     reportId = existing?.id ?? 0;
   }
 
+  // Daily reruns update the same report row. Avoid appending repeated items:
+  // retain prior decisions/dismissals and insert only genuinely new findings.
+  const existingItems = await db.select({
+    suggestionKey: seoIntelItems.suggestionKey,
+    status: seoIntelItems.status,
+  }).from(seoIntelItems).where(eq(seoIntelItems.reportId, reportId));
+  const existingKeys = new Set(existingItems.map(x => x.suggestionKey).filter((x): x is string => !!x));
+
   let counts = emptyExecutionCounts();
   let executed = 0;
   let accepted = 0;
@@ -134,6 +142,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
 
   for (const draft of drafts) {
     const key = suggestionKeyFor(draft.kind, draft.title, draft.targetQueue);
+    if (existingKeys.has(key)) continue;
     if (await isSuppressed(key, now)) continue; // §7: dismissed-as-wrong/off_brand within 90 days — not re-suggested.
 
     const { result, counts: nextCounts } = await executeItem(draft as ItemDraft, { counts, metaWarmedUp, circuitClear, now });
@@ -158,6 +167,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
       executedBatchId: executedNow && "batchId" in result ? result.batchId : null,
       executedPrId: executedNow && "prNumber" in result && result.prNumber ? String(result.prNumber) : null,
     });
+    existingKeys.add(key);
     itemsCreated++;
   }
 
