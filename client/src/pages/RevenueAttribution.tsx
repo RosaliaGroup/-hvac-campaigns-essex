@@ -62,6 +62,7 @@ export default function RevenueAttribution() {
 
   const overview = trpc.attribution.getOverview.useQuery(args, { enabled: isAuthenticated });
   const bySource = trpc.attribution.getBySource.useQuery(args, { enabled: isAuthenticated });
+  const commercialAudit = trpc.attribution.getCommercialLandingAudit.useQuery(undefined, { enabled: isAuthenticated });
   const byPage = trpc.attribution.getByLandingPage.useQuery(args, { enabled: isAuthenticated });
   const funnel = trpc.attribution.getFunnel.useQuery({ channel: "organic" }, { enabled: isAuthenticated });
   const unattributed = trpc.attribution.getUnattributed.useQuery(args, { enabled: isAuthenticated });
@@ -302,6 +303,35 @@ export default function RevenueAttribution() {
             </CardContent>
           </Card>
         )}
+
+        {/* Live, read-only commercial landing-page audit; no synthetic leads. */}
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Commercial landing-page lead audit — last 30 days</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <p className="text-xs text-muted-foreground">Actual CRM submissions by first-touch landing page, not estimated conversions.</p>
+              <Button variant="outline" size="sm" onClick={() => commercialAudit.refetch()} disabled={commercialAudit.isFetching}>
+                <RefreshCw className="h-3 w-3 mr-1" /> Refresh
+              </Button>
+            </div>
+            {commercialAudit.isLoading ? <p className="text-sm">Loading commercial lead counts…</p>
+              : commercialAudit.isError ? <p role="alert" className="text-sm text-red-700">Unable to load commercial audit: {commercialAudit.error.message}</p>
+              : commercialAudit.data ? <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b text-left"><th className="py-2 pr-3">Landing page</th><th className="py-2 pr-3">CRM captures</th><th className="py-2 pr-3">Advanced stage</th><th className="py-2 pr-3">GSC clicks</th><th className="py-2">GSC impressions</th></tr></thead>
+                    <tbody>{commercialAudit.data.pages.map(row => <tr key={row.path} className="border-b">
+                      <td className="py-2 pr-3"><a href={row.path} className="text-blue-700 underline">{row.path.replace("/commercial/for-", "").replaceAll("-", " ")}</a><div className="text-xs text-muted-foreground">{Object.entries(row.byChannel).map(([key, value]) => `${key}: ${value}`).join(", ") || "No captured channels"}</div></td>
+                      <td className="py-2 pr-3">{row.captures}</td><td className="py-2 pr-3">{row.advancedStage}</td><td className="py-2 pr-3">{row.clicks}</td><td className="py-2">{row.impressions}</td>
+                    </tr>)}</tbody>
+                  </table>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">{commercialAudit.data.note}</p>
+              </> : <p className="text-sm">No audit data available.</p>}
+          </CardContent>
+        </Card>
 
         {/* Unattributed */}
         <Card className="mb-6">
