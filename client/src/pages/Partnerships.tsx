@@ -111,6 +111,19 @@ export default function Partnerships() {
         </div>
       </section>
 
+      {/* Commercial-intent path: distinguish referral enrollment from HVAC service requests. */}
+      <section aria-label="Commercial HVAC services" className="bg-white border-b border-slate-200 py-8">
+        <div className="container mx-auto px-4 max-w-5xl">
+          <h2 className="text-xl font-bold text-slate-900">Looking for commercial HVAC support instead?</h2>
+          <p className="mt-2 text-slate-700">Property managers, building owners, brokers and contractors can request service, maintenance or project support directly.</p>
+          <div className="mt-4 flex flex-wrap gap-5">
+            <Link href="/commercial/for-property-management" className="text-blue-700 font-semibold underline underline-offset-2">Property management HVAC services</Link>
+            <Link href="/commercial/for-contractors-developers" className="text-blue-700 font-semibold underline underline-offset-2">GC and developer HVAC bids</Link>
+            <Link href="/commercial/for-commercial-partners" className="text-blue-700 font-semibold underline underline-offset-2">Commercial broker and facility partnerships</Link>
+          </div>
+        </div>
+      </section>
+
       {/* Overview Section */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
