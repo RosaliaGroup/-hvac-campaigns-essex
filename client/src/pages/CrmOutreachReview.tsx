@@ -141,9 +141,6 @@ export default function CrmOutreachReview() {
               <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium underline">{source.name}</a>
               <p className="text-xs font-medium">{source.audience}</p>
               <p className="text-xs text-muted-foreground">{source.note}</p>
-              <Button type="button" variant="outline" size="sm" onClick={() =>
-                setForm(current => ({ ...current, sourceUrl: source.url }))
-              }>Use directory as research starting point</Button>
             </article>
           ))}
         </div>
