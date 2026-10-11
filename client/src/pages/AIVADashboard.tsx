@@ -356,6 +356,10 @@ function SocialPosts() {
   const [campaignKey, setCampaignKey] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [bulkStart, setBulkStart] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState("");
+
   const refresh = () => utils.aiVa.listSocialPosts.invalidate();
   const schedule = trpc.aiVa.schedulePost.useMutation({
     onSuccess: () => { toast.success("Post scheduled"); setContent(""); setCampaignKey(""); refresh(); },
@@ -365,6 +369,35 @@ function SocialPosts() {
     onSuccess: result => { toast.success(result.success ? "Publishing request completed" : "Publishing request returned an error"); refresh(); setBusyId(null); },
     onError: e => { toast.error(e.message); setBusyId(null); refresh(); },
   });
+  const bulkSchedule = async () => {
+    if (!lane?.platforms?.facebook?.connected || bulkBusy) return;
+    const start = new Date(bulkStart);
+    if (!bulkStart || Number.isNaN(start.getTime()) || start.getTime() <= Date.now()) {
+      toast.error("Choose a future start date and time."); return;
+    }
+    const existing = new Set((posts ?? []).filter(p => p.platform === "facebook" && p.status !== "failed").map(p => p.content));
+    const pending = OCTOBER_B2B_SOCIAL_POSTS.slice(1).filter(p => !existing.has(buildOctoberSocialContent(p, "facebook")));
+    if (!pending.length) { toast.info("All seven remaining Facebook posts are already saved."); return; }
+    setBulkBusy(true);
+    let saved = 0;
+    try {
+      for (const post of pending) {
+        // Twice weekly, starting at the user-selected local time.
+        const at = new Date(start.getTime() + saved * 4 * 86400000);
+        setBulkProgress(`Scheduling ${saved + 1} of ${pending.length}: ${post.label}`);
+        await utils.client.aiVa.schedulePost.mutate({
+          platform: "facebook", content: buildOctoberSocialContent(post, "facebook"),
+          contentType: "commercial_campaign", scheduledAt: at.toISOString(),
+        });
+        saved++;
+      }
+      toast.success(`Scheduled ${saved} Facebook campaign posts`);
+      await refresh();
+    } catch (err) {
+      toast.error(`Saved ${saved} posts; scheduling stopped: ${err instanceof Error ? err.message : String(err)}`);
+      await refresh();
+    } finally { setBulkBusy(false); setBulkProgress(""); }
+  };
   const connected = lane?.platforms?.[platform]?.connected === true;
   const validDate = scheduledAt && !Number.isNaN(Date.parse(scheduledAt)) && Date.parse(scheduledAt) > Date.now();
   return <Card>
@@ -397,6 +430,18 @@ function SocialPosts() {
         <Button disabled={!connected || !content.trim() || !validDate || schedule.isPending} onClick={() => schedule.mutate({ platform, content: content.trim(), scheduledAt: new Date(scheduledAt).toISOString(), contentType: "commercial_campaign" })}>
           {schedule.isPending ? "Scheduling…" : "Schedule Post"}
         </Button>
+        {platform === "facebook" && <div className="rounded-md border p-3 space-y-2">
+          <p className="font-medium text-sm">Schedule remaining seven October B2B posts</p>
+          <p className="text-xs text-muted-foreground">Uses the seven posts after the verified property-manager test. Twice-weekly spacing, existing saved posts skipped. Review each caption in the campaign selector above before scheduling.</p>
+          <label className="block text-sm">First post date and time (local)
+            <Input type="datetime-local" value={bulkStart} onChange={e => setBulkStart(e.target.value)} className="mt-1" />
+          </label>
+          <Button variant="outline" disabled={!lane?.platforms?.facebook?.connected || !bulkStart || bulkBusy || isLoading} onClick={bulkSchedule}>
+            {bulkBusy ? "Scheduling…" : "Schedule Remaining 7 Facebook Posts"}
+          </Button>
+          {bulkProgress && <p role="status" className="text-xs">{bulkProgress}</p>}
+          <p className="text-xs text-amber-700">These are saved as scheduled posts. Verify that the production due-post worker is running before relying on unattended publishing.</p>
+        </div>}
         {platform === "instagram" && <p className="text-xs text-amber-700">Instagram Graph API may require image or video media. Text-only posts can fail; check post status after scheduling.</p>}
       </div>
       {isLoading ? <p>Loading social posts...</p> : error ? <p role="alert" className="text-red-700">Unable to load social posts: {error.message}</p> :
