@@ -19,6 +19,37 @@ const candidate = z.object({
   verifiedAt: z.coerce.date(),
 });
 
+type Candidate = z.infer<typeof candidate>;
+
+/** Shared fail-closed intake, including suppression, opt-outs and sent history. */
+async function intakeCandidate(input: Candidate) {
+  const db = await getDb();
+  if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+  const check = await checkOutreachReviewCandidate(
+    input,
+    async email => {
+      const matches = await db.select({ id: crmCommunications.id })
+        .from(crmCommunications)
+        .where(and(
+          sql`lower(trim(${crmCommunications.toAddress})) = ${email}`,
+          eq(crmCommunications.direction, "outbound"),
+        )).limit(1);
+      return matches.length > 0;
+    },
+    async email => {
+      const optedOut = await db.select({ id: smsContacts.id })
+        .from(smsContacts)
+        .where(and(
+          sql`lower(trim(${smsContacts.email})) = ${email}`,
+          eq(smsContacts.optedOut, true),
+        )).limit(1);
+      return optedOut.length > 0;
+    },
+  );
+  if (!check.eligible) return check;
+  return queueReviewedCandidate(input);
+}
+
 export const crmOutreachReviewRouter = router({
   list: adminProcedure.query(() => listReviewDrafts()),
   decide: adminProcedure.input(z.object({
@@ -44,32 +75,32 @@ export const crmOutreachReviewRouter = router({
     }
     return decideReviewDraft(input.id, input.decision);
   }),
-  enqueue: adminProcedure.input(candidate).mutation(async ({ input }) => {
-    const db = await getDb();
-    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
-    const check = await checkOutreachReviewCandidate(
-      input,
-      async email => {
-        const matches = await db.select({ id: crmCommunications.id })
-          .from(crmCommunications)
-          .where(and(eq(crmCommunications.toAddress, email), eq(crmCommunications.direction, "outbound")))
-          .limit(1);
-        return matches.length > 0;
-      },
-      // Independent SMS contact opt-outs are an additional veto for review intake.
-      // Central email suppression is checked separately by the eligibility policy.
-      // A missing SMS contact does not constitute consent to send anything.
-      async email => {
-        const optedOut = await db.select({ id: smsContacts.id })
-          .from(smsContacts)
-          .where(and(
-            sql`lower(trim(${smsContacts.email})) = ${email}`,
-            eq(smsContacts.optedOut, true),
-          )).limit(1);
-        return optedOut.length > 0;
-      },
-    );
-    if (!check.eligible) return check;
-    return queueReviewedCandidate(input);
-  }),
+  enqueue: adminProcedure.input(candidate).mutation(({ input }) => intakeCandidate(input)),
+  // Bulk preparation is review-only. No sending or scheduling is exposed.
+  enqueueBatch: adminProcedure.input(z.array(candidate).min(1).max(10))
+    .mutation(async ({ input }) => {
+      const seen = new Set<string>();
+      const results = [];
+      for (const item of input) {
+        const email = item.email.trim().toLowerCase();
+        if (seen.has(email)) {
+          results.push({ email, status: "duplicate_in_batch" });
+          continue;
+        }
+        seen.add(email);
+        try {
+          const result = await intakeCandidate(item);
+          results.push({
+            email,
+            status: "eligible" in result && result.eligible === false
+              ? result.reason : "queued_for_review",
+          });
+        } catch {
+          // Fail closed on any DB/verification failure; do not leak internal errors.
+          results.push({ email, status: "verification_failed" });
+        }
+      }
+      return { results, queued: results.filter(row => row.status === "queued_for_review").length };
+    }),
+
 });
