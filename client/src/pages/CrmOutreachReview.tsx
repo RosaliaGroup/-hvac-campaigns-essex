@@ -13,6 +13,9 @@ export default function CrmOutreachReview() {
     draftSubject: "", draftBody: "",
   });
   const [intakeResult, setIntakeResult] = useState("");
+  const [batchText, setBatchText] = useState("");
+  const [batchResult, setBatchResult] = useState("");
+
   const enqueue = trpc.crmOutreachReview.enqueue.useMutation({
     onSuccess: result => {
       if ("eligible" in result && result.eligible === false) {
@@ -27,6 +30,38 @@ export default function CrmOutreachReview() {
     onError: error => setIntakeResult(`Queue error: ${error.message}`),
   });
   const drafts = trpc.crmOutreachReview.list.useQuery(undefined, { retry: false });
+  const enqueueBatch = trpc.crmOutreachReview.enqueueBatch.useMutation({
+    onSuccess: result => {
+      setBatchResult(`Queued ${result.queued} of ${result.results.length} for review. ` +
+        result.results.map(row => `${row.email}: ${row.status}`).join(" | "));
+      void drafts.refetch();
+      void summary.refetch();
+    },
+    onError: error => setBatchResult(`Batch failed: ${error.message}`),
+  });
+  function submitBatch() {
+    try {
+      const parsed: unknown = JSON.parse(batchText);
+      if (!Array.isArray(parsed) || parsed.length < 1 || parsed.length > 10) {
+        setBatchResult("Provide a JSON array of 1–10 verified prospects.");
+        return;
+      }
+      const fields = ["email", "company", "decisionMaker", "sourceUrl", "draftSubject", "draftBody"];
+      if (!parsed.every(item => item && typeof item === "object" &&
+        fields.every(key => typeof item[key] === "string" && item[key].trim()))) {
+        setBatchResult("Every prospect needs email, company, decisionMaker, sourceUrl, draftSubject and draftBody.");
+        return;
+      }
+      enqueueBatch.mutate(parsed.map(item => ({
+        email: item.email, company: item.company, decisionMaker: item.decisionMaker,
+        sourceUrl: item.sourceUrl, draftSubject: item.draftSubject,
+        draftBody: item.draftBody, verifiedAt: new Date(),
+      })));
+    } catch {
+      setBatchResult("Invalid JSON. Provide an array of prospect objects.");
+    }
+  }
+
   const summary = trpc.crmOutreachReview.summary.useQuery(undefined, { retry: false });
   const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => { void drafts.refetch(); void summary.refetch(); } });
   const counts = {
@@ -92,6 +127,17 @@ export default function CrmOutreachReview() {
           </div>
         </form>
         {intakeResult && <p role="status" className="text-sm">{intakeResult}</p>}
+      </section>
+      <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Batch intake — up to 10 verified prospects</h2>
+        <p className="text-sm text-muted-foreground">Paste a JSON array of prospect drafts. Each requires email, company, decisionMaker, sourceUrl, draftSubject, and draftBody. Every recipient is checked independently for duplicate outreach and opt-outs. This only queues drafts; it never sends emails.</p>
+        <Textarea aria-label="Batch prospect JSON" rows={6} value={batchText}
+          placeholder={'[{"email":"contact@example.com","company":"Example Properties","decisionMaker":"Jane Smith","sourceUrl":"https://example.com/team","draftSubject":"HVAC planning","draftBody":"Hi Jane, ..."}]'}
+          onChange={event => setBatchText(event.target.value)} />
+        <Button type="button" disabled={enqueueBatch.isPending || !batchText.trim()} onClick={submitBatch}>
+          {enqueueBatch.isPending ? "Checking prospects…" : "Check and queue batch"}
+        </Button>
+        {batchResult && <p role="status" className="text-sm whitespace-pre-wrap">{batchResult}</p>}
       </section>
       <div className="flex flex-wrap gap-2" aria-label="Filter review drafts by status">
         {([
