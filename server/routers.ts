@@ -1034,7 +1034,7 @@ export const appRouter = router({
       verifyGoogleBusinessPosting: adminProcedure.query(async () => {
         const cred = await db.getAiVaCredentials("google_business") as Record<string, string> | null;
         if (!cred?.accessToken || !cred?.accountId || !cred?.locationId) {
-          return { ready: false, reason: "Google Business Profile posting credentials are incomplete in AI Settings.", locationName: null };
+          return { ready: false, reason: "Legacy Google Business posting credentials are incomplete. Your existing Google Business Profile may still be connected for Local SEO; the posting integration requires separate authorization.", locationName: null, missing: ["accessToken", "accountId", "locationId"].filter(key => !cred?.[key]) };
         }
         try {
           const url = `https://mybusinessbusinessinformation.googleapis.com/v1/locations/${encodeURIComponent(cred.locationId)}?readMask=name,title`;
