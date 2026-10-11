@@ -358,6 +358,7 @@ function SocialPosts() {
   const [content, setContent] = useState("");
   const [campaignKey, setCampaignKey] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [bulkStart, setBulkStart] = useState("");
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -365,7 +366,7 @@ function SocialPosts() {
 
   const refresh = () => utils.aiVa.listSocialPosts.invalidate();
   const schedule = trpc.aiVa.schedulePost.useMutation({
-    onSuccess: () => { toast.success("Post scheduled"); setContent(""); setCampaignKey(""); refresh(); },
+    onSuccess: () => { toast.success("Post scheduled"); setContent(""); setCampaignKey(""); setImageUrl(""); refresh(); },
     onError: e => toast.error(e.message),
   });
   const publish = trpc.aiVa.publishPost.useMutation({
@@ -437,10 +438,14 @@ function SocialPosts() {
           </select>
         </label>
         <Textarea aria-label="Post content" value={content} onChange={e => setContent(e.target.value)} placeholder="Write an approved HVAC campaign post..." rows={5} />
+        {platform === "instagram" && <label className="block text-sm">Public image URL (required for Instagram)
+          <Input type="url" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://mechanicalenterprise.com/images/campaign.jpg" className="mt-1" />
+          <span className="block text-xs text-muted-foreground mt-1">Use an image hosted at a publicly accessible HTTPS URL. Uploading local files is not supported in this form.</span>
+        </label>}
         <label className="block text-sm">Schedule date and time (local)
           <Input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} className="mt-1" />
         </label>
-        <Button disabled={!connected || !content.trim() || !validDate || schedule.isPending} onClick={() => schedule.mutate({ platform, content: content.trim(), scheduledAt: new Date(scheduledAt).toISOString(), contentType: "commercial_campaign" })}>
+        <Button disabled={!connected || !content.trim() || !validDate || schedule.isPending || (platform === "instagram" && !/^https:\/\/[^\s]+\.[a-z0-9]+(?:\?[^\s]*)?$/i.test(imageUrl.trim()))} onClick={() => schedule.mutate({ platform, content: content.trim(), scheduledAt: new Date(scheduledAt).toISOString(), contentType: "commercial_campaign", mediaUrls: platform === "instagram" ? [imageUrl.trim()] : undefined })}>
           {schedule.isPending ? "Scheduling…" : "Schedule Post"}
         </Button>
         {platform === "facebook" && <div className="rounded-md border p-3 space-y-2">
@@ -455,7 +460,7 @@ function SocialPosts() {
           {bulkProgress && <p role="status" className="text-xs">{bulkProgress}</p>}
           <p className="text-xs text-amber-700">These are saved as scheduled posts. Verify that the production due-post worker is running before relying on unattended publishing.</p>
         </div>}
-        {platform === "instagram" && <p className="text-xs text-amber-700">Instagram Graph API may require image or video media. Text-only posts can fail; check post status after scheduling.</p>}
+        {platform === "instagram" && <p className="text-xs text-amber-700">Instagram publishing requires a public image URL. Schedule one test post and confirm it appears on the connected Instagram account before bulk scheduling.</p>}
       </div>
       {isLoading ? <p>Loading social posts...</p> : error ? <p role="alert" className="text-red-700">Unable to load social posts: {error.message}</p> :
         !posts?.length ? <p className="text-sm text-muted-foreground">No social posts saved yet. Use the form above to schedule your first approved campaign post.</p> :
@@ -466,7 +471,7 @@ function SocialPosts() {
           {post.postedAt && <p className="text-xs text-muted-foreground">Posted: {new Date(post.postedAt).toLocaleString()}</p>}
           {post.errorMessage && <p role="alert" className="text-xs text-red-700 mt-2">{post.errorMessage}</p>}
           {post.status === "scheduled" && (post.platform === "facebook" || post.platform === "instagram") &&
-            <Button className="mt-3" size="sm" variant="outline" disabled={publish.isPending} onClick={() => { setBusyId(post.id); publish.mutate({ id: post.id, platform: post.platform as "facebook" | "instagram", content: post.content, approved: true }); }}>
+            <Button className="mt-3" size="sm" variant="outline" disabled={publish.isPending} onClick={() => { setBusyId(post.id); publish.mutate({ id: post.id, platform: post.platform as "facebook" | "instagram", content: post.content, mediaUrls: post.mediaUrls ? JSON.parse(post.mediaUrls) as string[] : undefined, approved: true }); }}>
               {publish.isPending && busyId === post.id ? "Publishing…" : "Publish Now"}
             </Button>}
         </div>)}</div>}
