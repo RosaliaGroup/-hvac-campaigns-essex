@@ -20,14 +20,15 @@ export default function CrmOutreachReview() {
       } else {
         setIntakeResult("Draft saved for human approval. No message sent.");
         setForm({ email: "", company: "", decisionMaker: "", sourceUrl: "", draftSubject: "", draftBody: "" });
-        drafts.refetch();
+        void drafts.refetch();
+        void summary.refetch();
       }
     },
     onError: error => setIntakeResult(`Queue error: ${error.message}`),
   });
   const drafts = trpc.crmOutreachReview.list.useQuery(undefined, { retry: false });
   const summary = trpc.crmOutreachReview.summary.useQuery(undefined, { retry: false });
-  const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => drafts.refetch() });
+  const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => { void drafts.refetch(); void summary.refetch(); } });
   const counts = {
     pending: (drafts.data ?? []).filter(row => row.status === "needs_human_approval").length,
     approved: (drafts.data ?? []).filter(row => row.status === "approved").length,
