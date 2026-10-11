@@ -144,7 +144,7 @@ export async function autoQueueMarketIntelTopics(): Promise<{ queued: number; re
   if (!safe) return { queued: 0, reason: "no_safe_evidence_backed_topic" };
   await db.update(seoContentQueue).set({ status: "queued" })
     .where(and(eq(seoContentQueue.id, safe.id), eq(seoContentQueue.status, "proposed")));
-  await logAudit({ actorId: null, action: "market_intel_topic_auto_queued", batchId: null, pagePath: null, before: { id: safe.id, status: "proposed" }, after: { id: safe.id, status: "queued" }, lintResult: null });
+  await logAudit({ actorId: null, action: "market_intel_item_executed", batchId: null, pagePath: null, before: { id: safe.id, status: "proposed" }, after: { id: safe.id, status: "queued" }, lintResult: null });
   return { queued: 1 };
 }
 
