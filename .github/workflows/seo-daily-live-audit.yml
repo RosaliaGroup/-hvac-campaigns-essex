@@ -23,7 +23,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p artifacts/seo
-          RUN_ID=$(gh run list --workflow seo-daily-live-audit.yml --status completed --limit 15 --json databaseId --jq '.[].databaseId' | head -n 1)
+          RUN_ID=$(gh run list --workflow seo-daily-live-audit.yml --status completed --limit 15 --json databaseId --jq '.[].databaseId' | grep -v "^${{ github.run_id }}$" | head -n 1)
           if [ -n "$RUN_ID" ]; then
             gh run download "$RUN_ID" -n seo-publication-audit -D artifacts/seo || true
             if [ -f artifacts/seo/publication-audit.json ]; then
@@ -45,7 +45,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ ! -f artifacts/seo/publication-audit.json ]; then exit 1; fi
+          if [ ! -f artifacts/seo/publication-audit.json ]; then echo "Audit report missing; preserving existing issues"; exit 1; fi
           node -e 'const r=require("./artifacts/seo/publication-audit.json"); const fs=require("fs"); fs.writeFileSync("/tmp/seo-audit-issue.md", "Automated production publication audit: "+r.checkedAt+"\n\nFailed: "+r.failures+" of "+r.total+"\n\n"+r.results.filter(x=>x.status!=="verified_live").slice(0,100).map(x=>"- "+x.path+" — "+x.reason+" (attempts: "+x.attempts+", failed runs: "+r.failureStreaks[x.path]+")").join("\n"));'
           COUNT=$(node -p 'require("./artifacts/seo/publication-audit.json").failures')
           TITLE="SEO publication audit failures"
