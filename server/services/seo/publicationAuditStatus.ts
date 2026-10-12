@@ -5,8 +5,8 @@
 export async function getLatestSeoPublicationAudit() {
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPO || "RosaliaGroup/-hvac-campaigns-essex";
-  if (!token) return { status: "unconfigured" as const, message: "GitHub token not configured" };
-  const headers = { Authorization: "Bearer " + token, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
+  // Public repository workflow status can be read without a token; artifact downloads still require credentials.
+  const headers = { ...(token ? { Authorization: "Bearer " + token } : {}), Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
   const endpoint = "https://api.github.com/repos/" + repo + "/actions/workflows/seo-daily-live-audit.yml/runs?per_page=10";
   try {
     const response = await fetch(endpoint, { headers, signal: AbortSignal.timeout(10000) });
