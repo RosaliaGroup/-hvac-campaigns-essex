@@ -127,6 +127,18 @@ async function isReindexBlocked(pageId: number): Promise<boolean> {
  * the only change needed to go live; these procedures stay identical.
  */
 export const seoRouter = router({
+  /** On-demand public HTTP check, independent of GitHub merge and content queue. */
+  verifyRecentLiveBlogs: adminProcedure.query(async () => {
+    const { verifyLiveBlogPath } = await import("../services/seo/livePublicationCheck");
+    const paths = [
+      "/blog/commercial-hvac-repair-or-replace-decision-guide",
+      "/blog/10-year-hvac-warranty-coverage-explained",
+      "/blog/essex-county-heat-pump-installation-costs",
+    ];
+    return { checkedAt: new Date().toISOString(), pages: await Promise.all(paths.map(verifyLiveBlogPath)),
+      note: "Live URL check only; Google indexing and lead attribution require separate evidence." };
+  }),
+
   /** Top KPI figures for the dashboard cards. */
   getOverview: protectedProcedure.query(async () => {
     return getSeoProvider().getOverview();
