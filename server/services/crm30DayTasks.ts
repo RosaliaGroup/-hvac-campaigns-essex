@@ -183,7 +183,8 @@ export async function assign30DayTask(id: number, userId: number, userName: stri
 }
 export async function assignAll30DayTasks(userId: number, userName: string) {
   const db = await cadenceDatabase();
-  const where = and(eq(crm30DayTasks.status, "open"), or(isNull(crm30DayTasks.assignedToUserId), eq(crm30DayTasks.assignedToUserId, -1)));
+  if (!Number.isSafeInteger(userId) || userId <= 0) throw new Error("Valid authenticated CRM user ID required");
+  const where = and(eq(crm30DayTasks.status, "open"), or(isNull(crm30DayTasks.assignedToUserId), sql`${crm30DayTasks.assignedToUserId} <= 0`));
   const [before] = await db.select({ n: sql<number>`count(*)` }).from(crm30DayTasks).where(where);
   await db.update(crm30DayTasks).set({ assignedToUserId: userId, assignedToName: userName }).where(where);
   const [after] = await db.select({ n: sql<number>`count(*)` }).from(crm30DayTasks).where(where);
