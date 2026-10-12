@@ -29,6 +29,7 @@ export default function CrmTasks(){
   const [search,setSearch]=useState("");
   const [page,setPage]=useState(0);
   const [notice,setNotice]=useState("");
+  const [assignmentReceipt,setAssignmentReceipt]=useState<{assigned:number;remaining:number;at:string}|null>(null);
   const [jobId,setJobId]=useState<string|null>(null);
   const params={status,action,due,search,offset:page*50,limit:50};
   const outreach=trpc.crmTasks.outreach.useQuery(params,{enabled:source==="outreach"});
@@ -37,7 +38,7 @@ export default function CrmTasks(){
   const refresh=()=>{void utils.crmTasks.outreach.invalidate();void utils.crmTasks.opportunities.invalidate();};
   const done=trpc.crmFollowups.complete.useMutation({onSuccess:()=>{setNotice("Outcome saved.");refresh();},onError:e=>setNotice(e.message)});
   const assign=trpc.crmFollowups.assignToMe.useMutation({onSuccess:()=>{setNotice("Assigned to you.");refresh();},onError:e=>setNotice(e.message)});
-  const assignAll=trpc.crmFollowups.assignAllToMe.useMutation({onSuccess:r=>{setNotice(`${r.assigned} tasks assigned to your CRM login; ${r.remainingUnassigned} open tasks remain unassigned.`);refresh();},onError:e=>setNotice(e.message)});
+  const assignAll=trpc.crmFollowups.assignAllToMe.useMutation({onSuccess:r=>{setAssignmentReceipt({assigned:r.assigned,remaining:r.remainingUnassigned,at:new Date().toLocaleString()});setNotice(`Assignment completed: ${r.assigned} tasks updated; ${r.remainingUnassigned} still unassigned.`);refresh();},onError:e=>{setAssignmentReceipt(null);setNotice(`Assignment failed: ${e.message}`);}});
   const oppDone=trpc.opportunities.completeTask.useMutation({onSuccess:()=>{setNotice("Opportunity task completed.");refresh();},onError:e=>setNotice(e.message)});
   const oppSnooze=trpc.opportunities.snoozeTask.useMutation({onSuccess:()=>{setNotice("Snoozed one day.");refresh();},onError:e=>setNotice(e.message)});
   const sync=trpc.crmFollowups.syncOutreach.useMutation({onSuccess:r=>{setJobId(r.jobId);setNotice("Checking Gmail outreach…");},onError:e=>setNotice(e.message)});
@@ -93,6 +94,12 @@ export default function CrmTasks(){
         <option value="all">All actions</option><option value="call">Calls</option><option value="email">Email reviews</option><option value="text">Texts</option>
       </select></label>
     </div>
+    {assignmentReceipt&&source==="outreach"&&<section role="status" aria-live="polite" className="rounded-lg border border-green-300 bg-green-50 p-4 text-sm text-green-950 space-y-1">
+      <p className="font-semibold">Task assignment confirmed by CRM</p>
+      <p>{assignmentReceipt.assigned} task records updated; {assignmentReceipt.remaining} remain unassigned.</p>
+      <p>Confirmed at {assignmentReceipt.at}. The task list remains open until tasks are completed.</p>
+      <Button variant="outline" size="sm" type="button" onClick={()=>setAssignmentReceipt(null)}>Dismiss confirmation</Button>
+    </section>}
     {notice&&<p role="status" className="bg-slate-100 rounded-md p-3 text-sm">{notice}</p>}
     {selected.error&&<p role="alert" className="text-red-700 text-sm">{selected.error.message}</p>}
     <section className="rounded-xl border bg-white overflow-hidden">
