@@ -1,0 +1,27 @@
+name: SEO live publication verification tests
+on:
+  pull_request:
+    paths:
+      - "server/services/seo/livePublicationCheck.ts"
+      - "server/services/seo/livePublicationCheck.test.ts"
+      - ".github/workflows/seo-live-publication-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "server/services/seo/livePublicationCheck.ts"
+      - "server/services/seo/livePublicationCheck.test.ts"
+      - ".github/workflows/seo-live-publication-tests.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vitest run server/services/seo/livePublicationCheck.test.ts
