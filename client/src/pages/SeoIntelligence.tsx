@@ -1537,6 +1537,7 @@ export default function SeoIntelligence() {
   const utils = trpc.useUtils();
 
   const overview = trpc.seo.getOverview.useQuery(undefined, { enabled: isAuthenticated });
+  const publicationIssues = trpc.seo.getPublicationIssues.useQuery(undefined, { enabled: isAuthenticated && isAdmin, refetchInterval: 300000 });
   const publicationAuditStatus = trpc.seo.getPublicationAuditStatus.useQuery(undefined, { enabled: isAuthenticated && isAdmin, refetchInterval: 300000 });
   const [liveAuditRequested, setLiveAuditRequested] = useState(false);
   const liveAudit = trpc.seo.verifyRecentLiveBlogs.useQuery(undefined, { enabled: isAuthenticated && isAdmin && liveAuditRequested, retry: false });
@@ -2172,6 +2173,15 @@ export default function SeoIntelligence() {
       {isAdmin && (
         <div className="mx-6 my-4 rounded-lg border p-4 text-sm" role="status">
           <strong>Scheduled SEO publication audit</strong>
+          {publicationIssues.data?.status === "ready" && <p>{publicationIssues.data.issues.length} unresolved article issues from latest audit</p>}
+          {publicationIssues.data?.status === "ready" && publicationIssues.data.issues.slice(0, 30).map(issue => (
+            <div key={issue.path} className="mt-2 border-t pt-2">
+              <a href={"https://mechanicalenterprise.com" + issue.path} target="_blank" rel="noopener noreferrer" className="underline">{issue.path}</a>
+              <p>{issue.reason} — {issue.attempts ?? 1} attempts, {issue.consecutiveFailures} consecutive failed runs</p>
+              <p>Suggested fix: {issue.recommendedAction}</p>
+            </div>
+          ))}
+          {publicationIssues.data?.status === "unavailable" && <p>Per-page report unavailable: {publicationIssues.data.message}</p>
           <p>{publicationAuditStatus.isLoading ? "Loading latest GitHub audit..." : publicationAuditStatus.data?.message ?? "Audit status unavailable"}</p>
           {publicationAuditStatus.data && "url" in publicationAuditStatus.data && publicationAuditStatus.data.url && (
             <a className="underline" href={publicationAuditStatus.data.url} target="_blank" rel="noopener noreferrer">View audit run and failure report</a>
