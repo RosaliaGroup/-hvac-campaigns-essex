@@ -6,8 +6,11 @@ import {
 } from "../services/crm30DayTasks";
 import { sync30DayFromGmail } from "../services/crm30DaySync";
 import { preflightFollowupTask } from "../services/crmFollowupDeliveryPreflight";
+import { inspectFollowupDelivery } from "../services/crmFollowupDeliveryReconciliation";
 
 export const crmFollowupsRouter = router({
+  deliveryReconciliation: adminProcedure.input(z.object({ id: z.number().int().positive() }))
+    .query(({ input }) => inspectFollowupDelivery(input.id)),
   deliveryPreflight: adminProcedure.input(z.object({ id: z.number().int().positive() }))
     .query(({ input }) => preflightFollowupTask(input.id)),
   list: protectedProcedure
