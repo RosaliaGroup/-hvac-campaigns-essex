@@ -1,5 +1,5 @@
 /** Durable 30-day CRM cadence tasks; legacy 3-step table is preserved, not used. */
-import { and, asc, eq, isNull, gte, lt, ne, sql } from "drizzle-orm";
+import { and, asc, eq, isNull, or, gte, lt, ne, sql } from "drizzle-orm";
 import { int, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 import { crmExternalContacts, crmCommunications, customers } from "../../drizzle/schema";
 import { logCommunication } from "./crmCommunications";
@@ -183,7 +183,7 @@ export async function assign30DayTask(id: number, userId: number, userName: stri
 }
 export async function assignAll30DayTasks(userId: number, userName: string) {
   const db = await cadenceDatabase();
-  const where = and(eq(crm30DayTasks.status, "open"), isNull(crm30DayTasks.assignedToUserId));
+  const where = and(eq(crm30DayTasks.status, "open"), or(isNull(crm30DayTasks.assignedToUserId), eq(crm30DayTasks.assignedToUserId, -1)));
   const [before] = await db.select({ n: sql<number>`count(*)` }).from(crm30DayTasks).where(where);
   await db.update(crm30DayTasks).set({ assignedToUserId: userId, assignedToName: userName }).where(where);
   const [after] = await db.select({ n: sql<number>`count(*)` }).from(crm30DayTasks).where(where);
