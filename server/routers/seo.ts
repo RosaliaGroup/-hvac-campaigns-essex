@@ -127,6 +127,10 @@ async function isReindexBlocked(pageId: number): Promise<boolean> {
  * the only change needed to go live; these procedures stay identical.
  */
 export const seoRouter = router({
+  getPublicationAuditStatus: adminProcedure.query(async () => {
+    const { getLatestSeoPublicationAudit } = await import("../services/seo/publicationAuditStatus");
+    return getLatestSeoPublicationAudit();
+  }),
   /** On-demand public HTTP check, independent of GitHub merge and content queue. */
   verifyRecentLiveBlogs: adminProcedure.query(async () => {
     const { verifyLiveBlogPath } = await import("../services/seo/livePublicationCheck");

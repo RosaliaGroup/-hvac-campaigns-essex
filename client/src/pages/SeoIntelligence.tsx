@@ -1537,6 +1537,7 @@ export default function SeoIntelligence() {
   const utils = trpc.useUtils();
 
   const overview = trpc.seo.getOverview.useQuery(undefined, { enabled: isAuthenticated });
+  const publicationAuditStatus = trpc.seo.getPublicationAuditStatus.useQuery(undefined, { enabled: isAuthenticated && isAdmin, refetchInterval: 300000 });
   const [liveAuditRequested, setLiveAuditRequested] = useState(false);
   const liveAudit = trpc.seo.verifyRecentLiveBlogs.useQuery(undefined, { enabled: isAuthenticated && isAdmin && liveAuditRequested, retry: false });
   const opportunities = trpc.seo.getOpportunities.useQuery(undefined, { enabled: isAuthenticated });
@@ -2168,6 +2169,15 @@ export default function SeoIntelligence() {
 
       <AuditLogSheet open={auditOpen} onClose={() => setAuditOpen(false)} />
 
+      {isAdmin && (
+        <div className="mx-6 my-4 rounded-lg border p-4 text-sm" role="status">
+          <strong>Scheduled SEO publication audit</strong>
+          <p>{publicationAuditStatus.isLoading ? "Loading latest GitHub audit..." : publicationAuditStatus.data?.message ?? "Audit status unavailable"}</p>
+          {publicationAuditStatus.data && "url" in publicationAuditStatus.data && publicationAuditStatus.data.url && (
+            <a className="underline" href={publicationAuditStatus.data.url} target="_blank" rel="noopener noreferrer">View audit run and failure report</a>
+          )}
+        </div>
+      )}
       <DashboardFooter />
     </div>
   );
