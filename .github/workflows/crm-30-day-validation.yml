@@ -4,6 +4,7 @@ on:
     paths:
       - "server/services/crm30Day*.ts"
       - "server/services/crmFollowupDeliveryPolicy*.ts"
+      - "server/services/crmFollowupDeliveryLedger*.ts"
       - "server/services/outreachSuppression*.ts"
       - "server/services/crmFollowupGmail.ts"
       - "server/services/gmailCrm*.ts"
