@@ -182,7 +182,7 @@ export async function sync30DayFromGmail(
     : null;
   const [ownership] = await db.select({
     open: sql<number>`count(*)`,
-    unassigned: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} is null then 1 else 0 end)`,
+    unassigned: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} is null or ${crm30DayTasks.assignedToUserId} <= 0 then 1 else 0 end)`,
   }).from(crm30DayTasks).where(eq(crm30DayTasks.status, "open"));
   const remainingUnassigned = Number(ownership?.unassigned ?? 0);
   const openCount = Number(ownership?.open ?? 0);
@@ -197,7 +197,7 @@ export async function sync30DayFromGmail(
     note: assignee
       ? "Open unassigned tasks reconciled to a verified CRM user."
       : remainingUnassigned === 0
-        ? "Existing open tasks are assigned. Automatic owner lookup remains unresolved for new tasks."
+        ? "Open tasks have non-null owner IDs, but no authenticated owner has been resolved. Verify ownership before delivery."
         : "Some open tasks remain unassigned; automatic owner lookup is unresolved. Existing assignments were preserved.",
   };
 }
