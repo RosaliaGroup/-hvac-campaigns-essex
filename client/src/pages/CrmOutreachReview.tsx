@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { outreachCampaignTemplates, type OutreachCampaignKey } from "@/lib/outreachCampaignTemplates";
 import { parseProspectCsv } from "@/lib/prospectImport";
+import { publicProspectSources } from "@/lib/publicProspectSources";
 
 export default function CrmOutreachReview() {
   const [filter, setFilter] = useState("");
@@ -130,6 +131,20 @@ export default function CrmOutreachReview() {
           </div>
         </form>
         {intakeResult && <p role="status" className="text-sm">{intakeResult}</p>}
+      </section>
+      <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Public-source prospect research — no paid provider</h2>
+        <p className="text-sm text-muted-foreground">Start with these public New Jersey business directories. Verify a named decision-maker and their published direct business email before entering a draft. Do not guess email addresses or contact suppressed recipients.</p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {publicProspectSources.map(source => (
+            <article key={source.id} className="rounded-md border p-3 space-y-1">
+              <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium underline">{source.name}</a>
+              <p className="text-xs font-medium">{source.audience}</p>
+              <p className="text-xs text-muted-foreground">{source.note}</p>
+            </article>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">A directory link is only a starting point. Replace it with the specific public page verifying the contact before queueing.</p>
       </section>
       <section className="rounded-lg border p-4 space-y-3">
         <h2 className="text-lg font-semibold">Import business-contact research</h2>
