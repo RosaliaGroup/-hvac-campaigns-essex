@@ -7,14 +7,20 @@ function unzipArtifact(buffer: Buffer): Buffer {
   while (offset + 30 <= buffer.length) {
     if (buffer.readUInt32LE(offset) !== 0x04034b50) break;
     const method = buffer.readUInt16LE(offset + 8);
+    const flags = buffer.readUInt16LE(offset + 6);
     const compressed = buffer.readUInt32LE(offset + 18);
     const nameLength = buffer.readUInt16LE(offset + 26);
     const extraLength = buffer.readUInt16LE(offset + 28);
     const name = buffer.subarray(offset + 30, offset + 30 + nameLength).toString();
     const start = offset + 30 + nameLength + extraLength;
+    if (flags & 0x08) throw new Error("ZIP data descriptor requires central-directory parsing");
+    if (start + compressed > buffer.length) throw new Error("Truncated audit artifact");
     if (name.endsWith("publication-audit.json")) {
       if (compressed > 10_000_000) throw new Error("Audit artifact too large");
-      return method === 0 ? buffer.subarray(start, start + compressed) : inflateRawSync(buffer.subarray(start, start + compressed));
+      if (method !== 0 && method !== 8) throw new Error("Unsupported ZIP compression");
+      const decoded = method === 0 ? buffer.subarray(start, start + compressed) : inflateRawSync(buffer.subarray(start, start + compressed), { maxOutputLength: 10_000_000 });
+      if (decoded.length > 10_000_000) throw new Error("Audit report too large");
+      return decoded;
     }
     if (!compressed) break;
     offset = start + compressed;
