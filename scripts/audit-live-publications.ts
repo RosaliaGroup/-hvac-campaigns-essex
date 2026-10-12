@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "node:fs";
 import { verifyLiveBlogPath, type LivePageCheck } from "../server/services/seo/livePublicationCheck";
+import { planPublicationRepair } from "../server/services/seo/publicationRepairPlan";
 
 const site = "https://mechanicalenterprise.com";
 const dir = "artifacts/seo";
@@ -35,7 +36,8 @@ if (existsSync(priorPath)) {
 }
 const failureStreaks: Record<string, number> = {};
 for (const r of results) if (r.status !== "verified_live") failureStreaks[r.path] = (previous[r.path] ?? 0) + 1;
-const report = { checkedAt, total: results.length, failures: failures.length, failureStreaks, results };
+const report = { checkedAt, total: results.length, failures: failures.length, failureStreaks,
+  results: results.map(r => ({ ...r, repairPlan: planPublicationRepair(r) })) };
 writeFileSync(dir + "/publication-audit.json", JSON.stringify(report, null, 2));
 writeFileSync(priorPath, JSON.stringify(report, null, 2));
 const summary = "SEO publication audit: " + results.length + " checked; " + failures.length + " failed.\n" +
