@@ -34,6 +34,7 @@ beforeEach(() => {
   mocks.log.mockReset().mockResolvedValue({});
   const chain: any = {
     transaction: async (fn: (tx: any) => Promise<unknown>) => fn(chain),
+    execute: async () => [[]],
     update: () => ({ set: () => ({ where: async () => [{ affectedRows: 1 }] }) }),
     insert: () => ({ values: async () => [{ insertId: 1 }] }),
     select: () => chain,
