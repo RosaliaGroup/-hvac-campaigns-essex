@@ -32,4 +32,4 @@ jobs:
       - name: TypeScript typecheck
         run: pnpm check
       - name: Cadence unit tests
-        run: pnpm exec vitest run server/services/crmFollowupDeliveryPolicy.test.ts server/services/crm30DayRules.test.ts server/services/outreachSuppression.test.ts server/services/gmailCrm.test.ts server/services/gmailCompose.test.ts server/services/gmailReply.test.ts server/services/smsOutbound.test.ts
+        run: pnpm exec vitest run server/services/crmFollowupDeliveryLedger.test.ts server/services/crmFollowupDeliveryPolicy.test.ts server/services/crm30DayRules.test.ts server/services/outreachSuppression.test.ts server/services/gmailCrm.test.ts server/services/gmailCompose.test.ts server/services/gmailReply.test.ts server/services/smsOutbound.test.ts
