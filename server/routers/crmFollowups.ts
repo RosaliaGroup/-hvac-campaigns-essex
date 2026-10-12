@@ -1,3 +1,5 @@
+import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { crm30DayTasks, cadenceDatabase } from "../services/crm30DayTasks";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getJob, startJob } from "../services/asyncLaneJob";
@@ -9,6 +11,20 @@ import { preflightFollowupTask } from "../services/crmFollowupDeliveryPreflight"
 import { inspectFollowupDelivery } from "../services/crmFollowupDeliveryReconciliation";
 
 export const crmFollowupsRouter = router({
+  assignmentStatus: adminProcedure.query(async ({ ctx }) => {
+    const db = await cadenceDatabase();
+    const [counts] = await db.select({
+      total: sql<number>`count(*)`,
+      mine: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} = ${ctx.user.id} then 1 else 0 end)`,
+      invalid: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} is null or ${crm30DayTasks.assignedToUserId} <= 0 then 1 else 0 end)`,
+    }).from(crm30DayTasks).where(eq(crm30DayTasks.status, "open"));
+    return {
+      total: Number(counts?.total ?? 0),
+      mine: Number(counts?.mine ?? 0),
+      unassigned: Number(counts?.invalid ?? 0),
+    };
+  }),
+
   deliveryReconciliation: adminProcedure.input(z.object({ id: z.number().int().positive() }))
     .query(({ input }) => inspectFollowupDelivery(input.id)),
   deliveryPreflight: adminProcedure.input(z.object({ id: z.number().int().positive() }))
