@@ -193,6 +193,7 @@ export async function sync30DayFromGmail(
     remainingUnassigned,
     alreadyAssigned: openCount - remainingUnassigned,
     assignmentSource: assigneeSource,
+    verifiedTeamMailboxOwner: assigneeSource==="verified-team-mailbox",
     note: assignee
       ? "Open unassigned tasks reconciled to a verified CRM user."
       : remainingUnassigned === 0
