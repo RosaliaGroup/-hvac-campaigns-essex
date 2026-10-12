@@ -1,7 +1,7 @@
 {
   "/about": {
-    "title": "About Mechanical Enterprise | NJ HVAC Contractor",
-    "description": "Mechanical Enterprise brings 20+ years of NJ HVAC experience in VRV/VRF systems, smart buildings, and commercial installs. Call (862) 423-9396."
+    "title": "About Mechanical Enterprise | NJ HVAC Installation Experts",
+    "description": "HVAC installation and system design across New Jersey, from residential to industrial buildings. Learn about Mechanical Enterprise: (862) 423-9396."
   },
   "/heat-pump-installation-nj": {
     "title": "Heat Pump Installation in NJ | Mechanical Enterprise",
@@ -602,5 +602,81 @@
   "/blog/hvac-contractor-paterson-nj": {
     "title": "HVAC Contractor in Paterson, NJ | Mechanical Enterprise",
     "description": "HVAC services in Paterson, NJ — heat pumps, AC, ductless systems, and oil-to-heat-pump conversions. Free assessment. Call (862) 423-9396."
+  },
+  "/blog/oil-to-electric-heat-nj-rebates": {
+    "title": "Oil-to-Electric Conversion in NJ: Quality Install, Rebates",
+    "description": "Switching from oil to electric heat pumps in NJ? Learn how proper installation and sizing matter, plus optional 10-year coverage. Call (862) 423-9396."
+  },
+  "/blog/hvac-rebates-ocean-county-nj": {
+    "title": "Ocean County NJ HVAC Installation & Rebate Guide (2026)",
+    "description": "Quality heat pump installs for Ocean County, NJ homes, plus optional 10-year parts & labor coverage. Ask about current NJ rebates. Call (862) 423-9396."
+  },
+  "/blog/r22-hudson-county-nj": {
+    "title": "Hudson County NJ R22 Replacement: Expert Install & Rebates",
+    "description": "Replacing an R22 system in Hudson County? We size ductless and central installs for your home, with optional 10-year coverage. Call (862) 423-9396."
+  },
+  "/hvac-randolph-nj": {
+    "title": "Randolph NJ HVAC Installation | Optional 10-Year Coverage",
+    "description": "Randolph, NJ heat pump and AC installation with optional 10-year parts & labor coverage. Quality-focused fit and install. Call (862) 423-9396."
+  },
+  "/blog/hvac-contractor-trenton-nj": {
+    "title": "HVAC Contractor in Trenton, NJ | Mechanical Enterprise",
+    "description": "HVAC contractor serving Trenton, NJ with heat pump installs, repairs & PSE&G rebate help up to $16,000. Call (862) 423-9396 for a free assessment."
+  },
+  "/blog/r22-heat-pump-savings-nj": {
+    "title": "R22 Heat Pump Savings in NJ: Monthly Cost Breakdown",
+    "description": "See how much NJ homeowners save replacing R22 AC with a heat pump. Monthly cost breakdowns and 15-year totals. Call (862) 423-9396."
+  },
+  "/blog/r22-replacement-timeline-nj": {
+    "title": "R22 Replacement Timeline in NJ: What to Expect",
+    "description": "See the full R22 replacement timeline in NJ, from free assessment to installation and rebate check. Call Mechanical Enterprise at (862) 423-9396."
+  },
+  "/blog/restaurant-hvac-contractor-nj": {
+    "title": "Restaurant HVAC Contractor in NJ | Mechanical Enterprise",
+    "description": "Restaurant HVAC design for NJ kitchens and dining areas. Free assessments, PSE&G Direct Install savings. Call (862) 423-9396 today."
+  },
+  "/blog/vrf-vrv-system-installation-nj": {
+    "title": "VRF/VRV System Installation in NJ: Complete Guide",
+    "description": "Learn how VRF/VRV systems cut commercial energy costs in NJ with zone control and quiet operation. Call Mechanical Enterprise at (862) 423-9396."
+  },
+  "/blog/warehouse-lighting-hvac-direct-install-nj": {
+    "title": "Warehouse Lighting & HVAC Direct Install in NJ",
+    "description": "Warehouse lighting and HVAC upgrades in NJ via Direct Install — free assessments and paperwork help. Call (862) 423-9396 to get started."
+  },
+  "/direct-install/breweries-wineries-nj": {
+    "title": "NJ Breweries & Wineries: Free Lighting, 80% Off HVAC",
+    "description": "Free lighting and up to 80% off HVAC for NJ breweries and wineries via Direct Install. Free assessment—call (862) 423-9396 today."
+  },
+  "/direct-install/catering-facilities-nj": {
+    "title": "Free Lighting & 80% Off HVAC for NJ Catering Facilities",
+    "description": "Free LED lighting and HVAC upgrades for NJ catering facilities through Direct Install. Free assessment—call (862) 423-9396 today."
+  },
+  "/direct-install/cold-storage-nj": {
+    "title": "Cold Storage Direct Install NJ: Free Lighting, 80% HVAC",
+    "description": "Free LED lighting and up to 80% off HVAC for NJ cold storage facilities via Direct Install. Free assessment—call (862) 423-9396."
+  },
+  "/direct-install/convenience-stores-nj": {
+    "title": "NJ Convenience Store Direct Install: Free Lighting, HVAC Off",
+    "description": "NJ convenience stores get 100% free LED lighting and up to 80% off HVAC via Direct Install. Free assessment: call (862) 423-9396."
+  },
+  "/direct-install/coworking-spaces-nj": {
+    "title": "Free Lighting & HVAC Direct Install for NJ Coworking Spaces",
+    "description": "NJ coworking spaces get 100% free lighting and HVAC up to 80% covered via Direct Install. Free assessment: call (862) 423-9396."
+  },
+  "/direct-install/financial-advisors-nj": {
+    "title": "Free HVAC & Lighting for NJ Financial Advisor Offices",
+    "description": "NJ financial advisor offices: free LED lighting, HVAC up to 80% covered via Direct Install. Free assessment, we handle paperwork. Call (862) 423-9396."
+  },
+  "/direct-install/golf-courses-nj": {
+    "title": "Golf Course Clubhouse HVAC & Lighting Direct Install NJ",
+    "description": "Free LED lighting and HVAC upgrades for NJ golf course clubhouses through Direct Install. Free assessment: call (862) 423-9396."
+  },
+  "/direct-install/libraries-nj": {
+    "title": "NJ Libraries: Free Lighting + 80% Off HVAC | Direct Install",
+    "description": "NJ libraries: 100% free LED lighting, HVAC up to 80% covered via Direct Install. Free assessment, we handle paperwork. Call (862) 423-9396."
+  },
+  "/direct-install/manufacturing-plants-nj": {
+    "title": "NJ Manufacturing Plant Direct Install: Free Lighting, HVAC",
+    "description": "Free NJ Direct Install assessment for manufacturing plants: 100% free lighting, up to 80% HVAC coverage. Call (862) 423-9396."
   }
 }
