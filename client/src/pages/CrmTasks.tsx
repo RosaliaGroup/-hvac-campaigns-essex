@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import TaskCallActions from "@/components/TaskCallActions";
 import ContactEnrichmentQueue from "@/components/ContactEnrichmentQueue";
+import FollowupDeliveryDiagnostics from "@/components/FollowupDeliveryDiagnostics";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,7 @@ export default function CrmTasks(){
           className={`shrink-0 rounded-lg px-4 py-2 text-sm font-medium ${source===id?"bg-blue-100 text-blue-900":"hover:bg-slate-100 text-slate-600"}`}>{label}</button>)}
     </div>
     {source==="enrichment"&&<ContactEnrichmentQueue/>}
+    {source==="outreach"&&<FollowupDeliveryDiagnostics/>}
     {source!=="enrichment"&&<>
     <div className="flex gap-2 overflow-x-auto pb-1 sm:hidden" aria-label="Quick due filters">
       {([["overdue","Overdue"],["today","Today"],["upcoming","Upcoming"],["all","All"]] as const).map(([value,label])=>

@@ -7,6 +7,8 @@ on:
       - "server/services/crmFollowupDeliveryLedger*.ts"
       - "server/services/crmFollowupDeliveryReconciliation*.ts"
       - "server/routers/crmFollowups.ts"
+      - "client/src/components/FollowupDeliveryDiagnostics.tsx"
+      - "client/src/pages/CrmTasks.tsx"
       - "server/services/outreachSuppression*.ts"
       - "server/services/crmFollowupGmail.ts"
       - "server/services/gmailCrm*.ts"
