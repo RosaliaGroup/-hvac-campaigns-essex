@@ -2153,23 +2153,6 @@ export default function SeoIntelligence() {
         </Card>
       </div>
 
-      <OpportunityDrawer
-        opportunity={drawerOpportunity}
-        open={drawerId !== null}
-        onClose={() => setDrawerId(null)}
-        isAdmin={isAdmin}
-      />
-
-      <BulkApproveModal
-        open={approveModalOpen}
-        onClose={() => setApproveModalOpen(false)}
-        pageIds={toIds(selectedVisible)}
-        onApproved={clearSelection}
-        onRemovePage={(pageId) => setSelectedIds((prev) => { const next = new Set(prev); next.delete(String(pageId)); return next; })}
-      />
-
-      <AuditLogSheet open={auditOpen} onClose={() => setAuditOpen(false)} />
-
       {isAdmin && (
         <div className="mx-6 my-4 rounded-lg border p-4 text-sm" role="status">
           <strong>Scheduled SEO publication audit</strong>
@@ -2188,6 +2171,23 @@ export default function SeoIntelligence() {
           )}
         </div>
       )}
+      <OpportunityDrawer
+        opportunity={drawerOpportunity}
+        open={drawerId !== null}
+        onClose={() => setDrawerId(null)}
+        isAdmin={isAdmin}
+      />
+
+      <BulkApproveModal
+        open={approveModalOpen}
+        onClose={() => setApproveModalOpen(false)}
+        pageIds={toIds(selectedVisible)}
+        onApproved={clearSelection}
+        onRemovePage={(pageId) => setSelectedIds((prev) => { const next = new Set(prev); next.delete(String(pageId)); return next; })}
+      />
+
+      <AuditLogSheet open={auditOpen} onClose={() => setAuditOpen(false)} />
+
       <DashboardFooter />
     </div>
   );
