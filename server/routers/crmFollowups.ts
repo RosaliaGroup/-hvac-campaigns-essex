@@ -5,8 +5,11 @@ import {
   assign30DayTask, assignAll30DayTasks, list30DayTasks, complete30DayTask,
 } from "../services/crm30DayTasks";
 import { sync30DayFromGmail } from "../services/crm30DaySync";
+import { preflightFollowupTask } from "../services/crmFollowupDeliveryPreflight";
 
 export const crmFollowupsRouter = router({
+  deliveryPreflight: adminProcedure.input(z.object({ id: z.number().int().positive() }))
+    .query(({ input }) => preflightFollowupTask(input.id)),
   list: protectedProcedure
     .input(z.object({
       status: z.enum(["open", "done", "cancelled"]).optional(),
