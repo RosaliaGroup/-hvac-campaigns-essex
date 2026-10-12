@@ -2181,7 +2181,7 @@ export default function SeoIntelligence() {
               <p>Suggested fix: {issue.recommendedAction}</p>
             </div>
           ))}
-          {publicationIssues.data?.status === "unavailable" && <p>Per-page report unavailable: {publicationIssues.data.message}</p>
+          {publicationIssues.data?.status === "unavailable" && <p>Per-page report unavailable: {publicationIssues.data.message}</p>}
           <p>{publicationAuditStatus.isLoading ? "Loading latest GitHub audit..." : publicationAuditStatus.data?.message ?? "Audit status unavailable"}</p>
           {publicationAuditStatus.data && "url" in publicationAuditStatus.data && publicationAuditStatus.data.url && (
             <a className="underline" href={publicationAuditStatus.data.url} target="_blank" rel="noopener noreferrer">View audit run and failure report</a>
