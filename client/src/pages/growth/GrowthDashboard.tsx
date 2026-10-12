@@ -7,6 +7,7 @@
  * Not yet linked from the sidebar (client/src/lib/navigation.ts) — see the build
  * report. Reachable directly at /growth.
  */
+import { ProspectWorkflow } from "./ProspectWorkflow";
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
@@ -214,6 +215,7 @@ export default function GrowthDashboard() {
           </div>
         </div>
 
+        <ProspectWorkflow />
         <ScoreboardSection />
         <ImportSection />
       </div>

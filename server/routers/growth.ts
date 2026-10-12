@@ -13,7 +13,10 @@ import { contactImportBatches, importedContacts, growthCadences } from "../../dr
 import { parseImportCsv, validateHeaders, importContactsCsv, removeImportedContact, rollbackImportBatch, releaseImportBatch } from "../services/growth/contactImport";
 import { buildScoreboard } from "../services/growth/scoreboard";
 
+import { prospectWorkflowRouter } from "./prospectWorkflow";
+
 export const growthRouter = router({
+  prospecting: prospectWorkflowRouter,
   scoreboard: protectedProcedure.query(async () => {
     const db = await getDb();
     if (!db) return null;
