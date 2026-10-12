@@ -13,7 +13,7 @@ export function uniqueAssignee(candidates: Assignee[]): Assignee | null {
 }
 
 export async function resolveCadenceAssignee(): Promise<{
-  user: Assignee | null; source: "configured-email" | "exact-name" | "unique-existing-owner" | "active-team-email" | "unresolved";
+  user: Assignee | null; source: "configured-email" | "exact-name" | "unique-existing-owner" | "active-team-email" | "verified-team-mailbox" | "unresolved";
 }> {
   const db = await cadenceDatabase();
   const configuredEmail = process.env.CRM_FOLLOWUP_ASSIGNEE_EMAIL?.trim().toLowerCase();
@@ -24,6 +24,18 @@ export async function resolveCadenceAssignee(): Promise<{
       .limit(2);
     const user = uniqueAssignee(matches);
     if (user) return {user,source:"configured-email"};
+  }
+  // A verified active team mailbox can own tasks by name even when the
+  // OAuth users table has no matching login. Never invent a numeric user ID.
+  if(configuredEmail){
+    const activeMailbox=await db.select({email:teamMembers.email,name:teamMembers.name})
+      .from(teamMembers)
+      .where(and(eq(teamMembers.status,"active"),
+        sql`lower(trim(${teamMembers.email})) = ${configuredEmail}`))
+      .limit(2);
+    if(activeMailbox.length===1){
+      return {user:null,source:"verified-team-mailbox" as const};
+    }
   }
   const matches = await db.select({id:users.id,name:users.name,email:users.email})
     .from(users)
