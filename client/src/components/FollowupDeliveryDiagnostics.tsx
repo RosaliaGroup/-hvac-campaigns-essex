@@ -33,6 +33,21 @@ export default function FollowupDeliveryDiagnostics() {
         Unable to inspect task. Administrator access may be required.
       </p>}
       {preflight.data && <p className="text-sm">Preflight: {preflight.data.eligible ? "Eligible" : preflight.data.reason ?? "Blocked"}</p>}
+      {preflight.data?.signals && <div className="rounded-md border p-3 space-y-2">
+        <h3 className="text-sm font-semibold">Current delivery safeguards</h3>
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+          {([
+            ["Suppressed / opted out", preflight.data.signals.suppressed],
+            ["Inbound reply recorded", preflight.data.signals.inbound],
+            ["Later outbound recorded", preflight.data.signals.laterOutbound],
+            ["Valid task owner", preflight.data.signals.validOwner],
+            ["Gmail send permission", preflight.data.signals.gmailSendPermission],
+          ] as const).map(([label, value]) => <div key={label} className="flex justify-between gap-3">
+            <dt>{label}</dt><dd className="font-medium">{value ? "Yes" : "No"}</dd>
+          </div>)}
+        </dl>
+        <p className="text-xs text-slate-600">Sending remains disabled independently of these signals. A green check is not authorization to send.</p>
+      </div>}
       {reconciliation.data && <p className="text-sm">Gmail reconciliation: {reconciliation.data.state.replaceAll("_", " ")}</p>}
     </>}
   </section>;
