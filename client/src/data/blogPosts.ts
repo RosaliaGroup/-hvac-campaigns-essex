@@ -23,6 +23,102 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Fixed Per-Unit HVAC Pricing for NJ Apartments",
+    "slug": "fixed-per-unit-hvac-pricing-apartment-portfolios",
+    "date": "September 26, 2026",
+    "readTime": "6 min read",
+    "category": "Multifamily HVAC",
+    "metaDescription": "Fixed per-unit HVAC pricing across PTAC, mini-split, RTU, and split systems for NJ apartment portfolios—quarterly reporting, one point of contact.",
+    "excerpt": "How fixed per-unit portfolio pricing works across PTAC, mini-split, RTU, and split systems for New Jersey apartment owners and property managers.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Property managers overseeing apartment portfolios across Essex, Hudson, Bergen, and the other counties Mechanical Enterprise serves often manage a mix of equipment — PTAC units in older garden-style buildings, mini-splits in renovated units, rooftop RTUs on mixed-use properties, and split systems scattered across different buildings. Pricing each repair or replacement one-off makes budgeting difficult and slows decisions. Fixed per-unit portfolio pricing gives owners and managers a known annual cost by unit type, quoted across the entire portfolio, with quarterly reporting and one point of contact instead of multiple vendors and inconsistent invoices. Installation quality and proper system fit still come first — flat pricing only works when the underlying work is done correctly, which is where optional extended coverage can add further protection for eligible equipment."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Come First"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before pricing is discussed, correct sizing and installation matter more than any contract structure. A PTAC sized for one unit layout won't perform the same in another; a mini-split head placed poorly short-cycles and wastes energy; a rooftop RTU serving a mixed-use building in Hudson County needs load calculations specific to that roof and tenant mix. Mechanical Enterprise evaluates each unit type across the portfolio — heat pump, central AC, ductless mini-split, VRV/VRF, or full system replacement — before quoting per-unit pricing, so the flat rate reflects what each system actually needs rather than a generic number. Getting this right up front reduces callbacks and keeps quarterly reporting clean, since fewer emergency repairs mean fewer line items outside the fixed structure."
+      },
+      {
+        "type": "h2",
+        "content": "How Fixed Per-Unit Pricing Works Across System Types"
+      },
+      {
+        "type": "paragraph",
+        "content": "Per-unit pricing is quoted per unit, per year, across the portfolio, covering PTAC, mini-split, RTU, and split systems under one schedule. Rather than negotiating a separate quote every time a unit needs service, the property is billed at a set rate for each equipment type, based on the number and mix of units under contract. This lets owners and managers forecast HVAC spend across a budget cycle instead of reacting to invoices as they arrive. Because the rate is set per unit type, portfolios with a blend of equipment — PTACs in one building and an RTU serving ground-floor retail below apartments in another — can be priced accurately without averaging dissimilar systems into one misleading number."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Coverage for Eligible Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations completed by Mechanical Enterprise, and existing systems that pass an eligibility inspection, may qualify for separately purchased 10-year parts and labor coverage, administered through a third-party extended service agreement backed by A-rated insurers and available for all major brands. This coverage is purchased separately from per-unit service pricing — existing equipment must pass inspection and meet program criteria before it may qualify, and not every unit will. For portfolios planning multi-year capital cycles, adding this optional coverage to new installations across a property can extend budget predictability beyond per-unit pricing itself, without changing who owns or maintains the equipment."
+      },
+      {
+        "type": "h2",
+        "content": "Quarterly Reporting and One Point of Contact"
+      },
+      {
+        "type": "paragraph",
+        "content": "Managing a portfolio spread across Essex, Bergen, Union, and neighboring counties typically means fielding calls from multiple vendors, each with its own invoicing and service history. Fixed per-unit pricing is structured around a single point of contact at Mechanical Enterprise and quarterly reporting that tracks unit counts, service activity, and system status across the whole portfolio. That cadence gives asset managers a regular checkpoint to review equipment condition ahead of budget season, flag units nearing replacement, and confirm the portfolio's unit mix still matches what's being billed — useful when units are added, removed, or converted between PTAC and mini-split during renovations."
+      },
+      {
+        "type": "h2",
+        "content": "Rebates and Incentives as a Secondary Benefit"
+      },
+      {
+        "type": "paragraph",
+        "content": "Commercial HVAC upgrades across New Jersey may also qualify for programs separate from per-unit service pricing. PSE&G Direct Install can cover up to 80% of an eligible commercial project's cost, and any remaining balance can be financed at 0% interest through PSE&G On-Bill Repayment, repaid through the monthly utility bill. These programs apply to qualifying commercial projects and are evaluated case by case — they're a secondary consideration behind proper installation and system fit, not a reason to choose equipment that doesn't match a building's actual load. Per-unit pricing itself is set independently of whether a given project pursues these programs."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us Before Bidding"
+      },
+      {
+        "type": "paragraph",
+        "content": "When comparing per-unit pricing against a current vendor contract, having consistent information up front speeds up accurate bids and makes side-by-side comparisons meaningful. Use the list below as a starting point when requesting quotes for a mixed-equipment apartment portfolio."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Current unit count by type (PTAC, mini-split, RTU, split) per building",
+          "Age and manufacturer of existing equipment, where known",
+          "Recent service or repair history, if available",
+          "Square footage or unit mix for each building in the portfolio",
+          "Any planned renovations or unit conversions in the next 12-24 months",
+          "Current vendor contract terms and renewal dates, for comparison",
+          "County and building type for each property (garden-style, mixed-use, high-rise, etc.)"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to price out your portfolio? Request a fixed per-unit quote across your PTAC, mini-split, RTU, and split systems.",
+        "buttonText": "Request Portfolio Pricing",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Does fixed per-unit pricing cover emergency repairs?",
+        "answer": "Per-unit pricing covers scheduled service across PTAC, mini-split, RTU, and split systems; the specific repair scope and response terms for your portfolio are defined in the service agreement itself."
+      },
+      {
+        "question": "Can existing PTAC or RTU units qualify for the 10-year coverage?",
+        "answer": "Existing systems may qualify for the optional 10-year parts and labor coverage after passing an eligibility inspection against program criteria. Not every unit will qualify, and this coverage is purchased separately from per-unit service pricing."
+      },
+      {
+        "question": "How is quarterly reporting delivered to property managers?",
+        "answer": "Reporting is provided on a quarterly cadence and tracks unit counts and service activity across the portfolio, giving one consolidated view through a single point of contact instead of separate vendor invoices."
+      }
+    ]
+  },
+
+  {
     "title": "Essex County Heat Pump Costs: What Moves the Price",
     "slug": "essex-county-heat-pump-installation-costs",
     "date": "September 26, 2026",
