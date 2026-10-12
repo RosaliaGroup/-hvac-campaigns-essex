@@ -33,6 +33,9 @@ beforeEach(() => {
   mocks.token.mockResolvedValue({ accessToken: "token" });
   mocks.log.mockReset().mockResolvedValue({});
   const chain: any = {
+    transaction: async (fn: (tx: any) => Promise<unknown>) => fn(chain),
+    update: () => ({ set: () => ({ where: async () => [{ affectedRows: 1 }] }) }),
+    insert: () => ({ values: async () => [{ insertId: 1 }] }),
     select: () => chain,
     from: () => chain,
     where: () => chain,
