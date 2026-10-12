@@ -23,9 +23,9 @@ function unzipArtifact(buffer: Buffer): Buffer {
 }
 
 export async function getSeoPublicationIssues() {
-  const token = process.env.GITHUB_TOKEN;
+  const token = process.env.GITHUB_TOKEN || process.env.SEO_GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPO || "RosaliaGroup/-hvac-campaigns-essex";
-  if (!token) return { status: "unconfigured" as const, issues: [], message: "GitHub token not configured" };
+  if (!token) return { status: "unconfigured" as const, issues: [], message: "GitHub token not configured (GITHUB_TOKEN or SEO_GITHUB_TOKEN)" };
   const headers = { Authorization: "Bearer " + token, Accept: "application/vnd.github+json" };
   try {
     const runsResponse = await fetch("https://api.github.com/repos/" + repo + "/actions/workflows/seo-daily-live-audit.yml/runs?per_page=20", { headers, signal: AbortSignal.timeout(10000) });

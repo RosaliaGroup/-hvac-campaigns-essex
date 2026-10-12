@@ -3,7 +3,7 @@
  * Never exposes credentials to the client.
  */
 export async function getLatestSeoPublicationAudit() {
-  const token = process.env.GITHUB_TOKEN;
+  const token = process.env.GITHUB_TOKEN || process.env.SEO_GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPO || "RosaliaGroup/-hvac-campaigns-essex";
   // Public repository workflow status can be read without a token; artifact downloads still require credentials.
   const headers = { ...(token ? { Authorization: "Bearer " + token } : {}), Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
