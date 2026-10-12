@@ -127,6 +127,10 @@ async function isReindexBlocked(pageId: number): Promise<boolean> {
  * the only change needed to go live; these procedures stay identical.
  */
 export const seoRouter = router({
+  getPublicationIssues: adminProcedure.query(async () => {
+    const { getSeoPublicationIssues } = await import("../services/seo/publicationIssues");
+    return getSeoPublicationIssues();
+  }),
   getPublicationAuditStatus: adminProcedure.query(async () => {
     const { getLatestSeoPublicationAudit } = await import("../services/seo/publicationAuditStatus");
     return getLatestSeoPublicationAudit();
