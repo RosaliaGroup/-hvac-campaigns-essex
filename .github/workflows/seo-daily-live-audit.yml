@@ -56,6 +56,12 @@ jobs:
           elif [ -n "$ISSUE" ]; then
             gh issue close "$ISSUE" --comment "All sitemap blog URLs passed the latest production audit."
           fi
+      - name: Create per-page repair tickets and close recovered pages
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f artifacts/seo/publication-audit.json ]; then pnpm exec tsx scripts/seo-repair-issues.ts; fi
       - name: Fail on unresolved publication errors
         if: steps.audit.outcome == 'failure'
         run: exit 1
