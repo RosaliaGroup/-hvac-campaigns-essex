@@ -1537,6 +1537,8 @@ export default function SeoIntelligence() {
   const utils = trpc.useUtils();
 
   const overview = trpc.seo.getOverview.useQuery(undefined, { enabled: isAuthenticated });
+  const [liveAuditRequested, setLiveAuditRequested] = useState(false);
+  const liveAudit = trpc.seo.verifyRecentLiveBlogs.useQuery(undefined, { enabled: isAuthenticated && isAdmin && liveAuditRequested, retry: false });
   const opportunities = trpc.seo.getOpportunities.useQuery(undefined, { enabled: isAuthenticated });
   const syncStatus = trpc.seo.getSyncStatus.useQuery(undefined, { enabled: isAuthenticated });
   const businessImpact = trpc.seo.getBusinessImpact.useQuery(undefined, { enabled: isAuthenticated });
@@ -1762,6 +1764,18 @@ export default function SeoIntelligence() {
       <InternalNav />
 
       <div className="container py-8">
+        {isAdmin && <Card className="mb-6">
+          <CardHeader><CardTitle>Live blog publication verification</CardTitle><CardDescription>Checks production HTTP response, canonical and page-specific HTML. GitHub merge alone is not considered live publication.</CardDescription></CardHeader>
+          <CardContent className="space-y-3">
+            <Button variant="outline" disabled={liveAudit.isFetching} onClick={() => { setLiveAuditRequested(true); if (liveAuditRequested) liveAudit.refetch(); }}>{liveAudit.isFetching ? "Checking…" : "Verify Three Recent Blogs Live"}</Button>
+            {liveAudit.error && <p role="alert" className="text-sm text-red-700">{liveAudit.error.message}</p>}
+            {liveAudit.data && <div className="space-y-2">{liveAudit.data.pages.map(p => <div key={p.path} className="border-b pb-2 text-sm">
+              <div className="flex flex-wrap gap-2 items-center"><a className="underline" href={p.path} target="_blank" rel="noreferrer">{p.path}</a><Badge variant={p.status === "verified_live" ? "default" : "destructive"}>{p.status}</Badge></div>
+              <p className="text-xs text-muted-foreground">HTTP {p.httpStatus ?? "unreachable"} · canonical {p.canonicalMatches ? "matches" : "unverified"} · content {p.contentPresent ? "present" : "unverified"} — {p.reason}</p>
+            </div>)}
+            <p className="text-xs text-muted-foreground">Checked {new Date(liveAudit.data.checkedAt).toLocaleString()}. Google indexing and CRM conversions are separate.</p></div>}
+          </CardContent>
+        </Card>}
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
