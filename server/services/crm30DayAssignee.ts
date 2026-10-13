@@ -62,13 +62,14 @@ export async function resolveCadenceAssignee(): Promise<{
   // A verified active team mailbox can own tasks by name even when the
   // OAuth users table has no matching login. Never invent a numeric user ID.
   if(configuredEmail){
-    const activeMailbox=await db.select({email:teamMembers.email,name:teamMembers.name})
+    const activeMailbox=await db.select({id:teamMembers.id,email:teamMembers.email,name:teamMembers.name})
       .from(teamMembers)
       .where(and(eq(teamMembers.status,"active"),
         sql`lower(trim(${teamMembers.email})) = ${configuredEmail}`))
       .limit(2);
     if(activeMailbox.length===1){
-      return {user:null,source:"verified-team-mailbox" as const};
+      const member=activeMailbox[0];
+      return {user:{id:-member.id,name:member.name,email:member.email},source:"verified-team-mailbox" as const};
     }
   }
   console.warn("[CRM 30-Day] Owner lookup unresolved:", JSON.stringify({
