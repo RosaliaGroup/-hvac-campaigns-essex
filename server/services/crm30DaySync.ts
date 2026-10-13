@@ -177,9 +177,17 @@ export async function sync30DayFromGmail(
   cancelled += await cancelTasksWithInboundReplies();
   // Reconcile previously created open reminders, without changing tasks already
   // assigned to a human. No guessed login or implicit transfer of ownership.
-  const assignment = assignee
-    ? await assignAll30DayTasks(assignee.id, assignee.name?.trim() || "Ana Haynes")
-    : null;
+  // Assignment failures must never abort Gmail reconciliation or suppress
+  // contact creation and follow-up scheduling.
+  let assignment: Awaited<ReturnType<typeof assignAll30DayTasks>> | null = null;
+  if(assignee){
+    try {
+      assignment=await assignAll30DayTasks(assignee.id,assignee.name?.trim()||"Sales");
+    } catch(error) {
+      console.error("[CRM 30-Day] Assignment deferred; synchronization continues",
+        error instanceof Error?error.message:"unknown");
+    }
+  }
   const [ownership] = await db.select({
     open: sql<number>`count(*)`,
     unassigned: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} is null then 1 else 0 end)`,
