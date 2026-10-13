@@ -8,6 +8,11 @@ import { cadenceDatabase, crm30DayTasks } from "./crm30DayTasks";
 
 type Assignee = { id: number; name: string | null; email: string | null };
 
+export function teamSessionUserId(memberId:number):number {
+  if(!Number.isSafeInteger(memberId)||memberId<=0)throw new Error("Invalid team member ID");
+  return -memberId;
+}
+
 export function uniqueAssignee(candidates: Assignee[]): Assignee | null {
   return candidates.length === 1 ? candidates[0] : null;
 }
@@ -69,7 +74,7 @@ export async function resolveCadenceAssignee(): Promise<{
       .limit(2);
     if(activeMailbox.length===1){
       const member=activeMailbox[0];
-      return {user:{id:-member.id,name:member.name,email:member.email},source:"verified-team-mailbox" as const};
+      return {user:{id:teamSessionUserId(member.id),name:member.name,email:member.email},source:"verified-team-mailbox" as const};
     }
   }
   console.warn("[CRM 30-Day] Owner lookup unresolved:", JSON.stringify({
