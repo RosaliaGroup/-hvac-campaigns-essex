@@ -102,6 +102,7 @@ export default function CrmTasks(){
       </div>
       {assignmentStatus.isLoading&&<p role="status" className="text-sm">Reading CRM assignment counts…</p>}
       {assignmentStatus.error&&<p role="alert" className="text-sm text-red-700">Could not read assignment counts: {assignmentStatus.error.message}</p>}
+      {assignmentStatus.data&&!assignmentStatus.data.authenticatedOwnerValid&&<p role="alert" className="text-sm text-red-700">Your CRM session is not linked to a valid authenticated user record. Assignment is blocked until the administrator login is linked correctly.</p>}
       {assignmentStatus.data&&<p role="status" className="text-sm">
         {assignmentStatus.data.total} open tasks · {assignmentStatus.data.mine} assigned to your login · {assignmentStatus.data.unassigned} unassigned or invalid owner IDs
       </p>}
