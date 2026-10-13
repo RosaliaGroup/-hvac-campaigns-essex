@@ -118,7 +118,7 @@ export async function gmailCrmStatus() {
 /** @slow
  * One bounded page, resumable with Google's page token. No mailbox writes. */
 export async function syncGmailPage(
-  input: { pageToken?: string; lookbackDays?: 2 | 30; importOutboundContacts?: boolean },
+  input: { pageToken?: string; lookbackDays?: 2 | 14 | 30; importOutboundContacts?: boolean },
   fetchImpl: typeof fetch = fetch
 ) {
   const status = await gmailCrmStatus();
@@ -198,7 +198,7 @@ export async function syncGmailPage(
   if (!db) throw new Error("Database unavailable");
   await seedKnownOutreachSuppressions(db);
   const params = new URLSearchParams({
-    maxResults: "25",
+    maxResults: "50",
     q: `in:anywhere -in:spam -in:trash -in:drafts newer_than:${input.lookbackDays ?? 30}d {from:${CRM_MAILBOX} to:${CRM_MAILBOX} cc:${CRM_MAILBOX}}`,
   });
   if (input.pageToken) params.set("pageToken", input.pageToken);
@@ -332,7 +332,7 @@ export function startGmailCrmScheduler() {
           return null;
         }
         try {
-          const result = await syncGmailPage({ pageToken, lookbackDays: 2 });
+          const result = await syncGmailPage({ pageToken, lookbackDays: 14 });
           pageToken = result.nextPageToken;
           console.info("[CRM Gmail] Sync succeeded:", JSON.stringify(result));
           return result;
