@@ -236,35 +236,34 @@ export async function syncGmailPage(
         note: "CRM Gmail recorded a delivery failure or explicit do-not-contact request.",
       }).where(and(eq(followupTasks.recipientEmail, entry.email), eq(followupTasks.status, "open")));
     }
-    // Gmail sync is COMMUNICATION HISTORY ONLY. Never automatically create a
-    // prospect, customer or contact from a correspondent. An operator must
-    // explicitly select a Gmail person to import with a valid email + phone.
-    // Already-approved CRM contacts retain their thread associations.
-    const matched = [];
+    // Only qualifying OUTBOUND business outreach is eligible for automatic
+    // contact creation. Never import arbitrary inbox correspondents.
+    const outreach = parsed.direction === "outbound" &&
+      /\\b(hvac|mechanical|property|properties|maintenance|vendor|subcontractor|bid opportunities|contractor|referral partnership|commercial|heat pump|ptac)\\b/i.test(parsed.subject);
+    const approvedContacts = [];
     for (const email of parsed.contacts) {
-      const [contact] = await db.select().from(crmExternalContacts)
+      let [existing] = await db.select().from(crmExternalContacts)
         .where(sql`lower(trim(${crmExternalContacts.email})) = ${email}`).limit(1);
-      if (contact) matched.push(contact);
-    }
-    let contact = matched[0] ?? null;
-    if (!contact && input.importOutboundContacts === true && parsed.direction === "outbound") {
-      const recipient = parsed.contacts[0];
-      if (recipient && !(await isOutreachSuppressed(db, recipient))) {
-        contact = await upsertExternalContact(db, {
-          name: recipient, email: recipient, source: "gmail-selected",
-          notes: "Explicitly authorized outbound email reconciliation."
-        }) as typeof contact;
+      if (!existing && outreach && !(await isOutreachSuppressed(db, email))) {
+        existing = await upsertExternalContact(db, {
+          name: email, email, source: "gmail-selected",
+          notes: "Created from qualifying outbound Mechanical Enterprise outreach."
+        }) as typeof existing;
       }
+      if (existing) approvedContacts.push(existing);
     }
+    const contact = approvedContacts[0] ?? null;
     const { contacts, quoteContact, ...communication } = parsed;
-    // Repair links only when an existing CRM contact is already known.
-    if (quoteContact && contact) {
+    // Repair previously imported Gmail history when a contact is now known,
+    // including the duplicate-message path below.
+    if (contact) {
       await db.update(crmCommunications).set({
         externalContactId: contact.id,
-        ...(contact.customerId ? {customerId:contact.customerId} : {}),
+        ...(contact.customerId ? { customerId: contact.customerId } : {}),
       }).where(and(
-        eq(crmCommunications.provider,"gmail"),
-        eq(crmCommunications.providerMessageId,parsed.providerMessageId),
+        eq(crmCommunications.provider, "gmail"),
+        eq(crmCommunications.providerMessageId, parsed.providerMessageId),
+        sql`${crmCommunications.externalContactId} IS NULL`,
       ));
     }
     const result = await logCommunication(db, {
