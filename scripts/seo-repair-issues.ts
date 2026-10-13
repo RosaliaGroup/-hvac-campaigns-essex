@@ -3,9 +3,10 @@ import { execFileSync } from "node:child_process";
 
 type Audit = { results: Array<{ path: string; status: string; reason: string; httpStatus: number | null; repairPlan?: { action: string; reason: string } }> };
 const report = JSON.parse(readFileSync("artifacts/seo/publication-audit.json", "utf8")) as Audit;
-const existing = JSON.parse(execFileSync("gh", ["issue", "list", "--state", "open", "--limit", "100", "--json", "number,title"], { encoding: "utf8" })) as Array<{number:number;title:string}>;
+const existing = JSON.parse(execFileSync("gh", ["issue", "list", "--state", "open", "--limit", "1000", "--json", "number,title"], { encoding: "utf8" })) as Array<{number:number;title:string}>;
 const prefix = "[SEO Repair] ";
 const failed = report.results.filter(r => r.status !== "verified_live");
+if (report.results.length === 0) throw new Error("Empty audit; refusing to reconcile issues");
 const seen = new Set<string>();
 for (const item of failed.slice(0, 30)) {
   if (!/^\/blog\/[a-z0-9-]+$/.test(item.path)) continue;
