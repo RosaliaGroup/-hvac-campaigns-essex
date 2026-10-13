@@ -35,7 +35,8 @@ export default function CrmTasks(){
   const outreach=trpc.crmTasks.outreach.useQuery(params,{enabled:source==="outreach"});
   const opportunities=trpc.crmTasks.opportunities.useQuery(params,{enabled:source==="opportunities"});
   const utils=trpc.useUtils();
-  const refresh=()=>{void utils.crmTasks.outreach.invalidate();void utils.crmTasks.opportunities.invalidate();};
+  const assignmentStatus=trpc.crmFollowups.assignmentStatus.useQuery(undefined,{enabled:source==="outreach",retry:false});
+  const refresh=()=>{void utils.crmTasks.outreach.invalidate();void utils.crmTasks.opportunities.invalidate();void assignmentStatus.refetch();};
   const done=trpc.crmFollowups.complete.useMutation({onSuccess:()=>{setNotice("Outcome saved.");refresh();},onError:e=>setNotice(e.message)});
   const assign=trpc.crmFollowups.assignToMe.useMutation({onSuccess:()=>{setNotice("Assigned to you.");refresh();},onError:e=>setNotice(e.message)});
   const assignAll=trpc.crmFollowups.assignAllToMe.useMutation({onSuccess:r=>{setAssignmentReceipt({assigned:r.assigned,remaining:r.remainingUnassigned,at:new Date().toLocaleString()});setNotice(`Assignment completed: ${r.assigned} tasks updated; ${r.remainingUnassigned} still unassigned.`);refresh();},onError:e=>{setAssignmentReceipt(null);setNotice(`Assignment failed: ${e.message}`);}});
@@ -94,6 +95,18 @@ export default function CrmTasks(){
         <option value="all">All actions</option><option value="call">Calls</option><option value="email">Email reviews</option><option value="text">Texts</option>
       </select></label>
     </div>
+    {source==="outreach"&&<section className="rounded-lg border bg-white p-4 space-y-2" aria-label="Live CRM assignment status">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">Live follow-up assignment status</h2>
+        <Button type="button" size="sm" variant="outline" onClick={()=>void assignmentStatus.refetch()} disabled={assignmentStatus.isFetching}>Refresh assignment counts</Button>
+      </div>
+      {assignmentStatus.isLoading&&<p role="status" className="text-sm">Reading CRM assignment counts…</p>}
+      {assignmentStatus.error&&<p role="alert" className="text-sm text-red-700">Could not read assignment counts: {assignmentStatus.error.message}</p>}
+      {assignmentStatus.data&&<p role="status" className="text-sm">
+        {assignmentStatus.data.total} open tasks · {assignmentStatus.data.mine} assigned to your login · {assignmentStatus.data.unassigned} unassigned or invalid owner IDs
+      </p>}
+      <p className="text-xs text-slate-600">These numbers come from the CRM database and remain visible after refreshing the page. Assigning tasks does not send emails.</p>
+    </section>}
     {assignmentReceipt&&source==="outreach"&&<section role="status" aria-live="polite" className="rounded-lg border border-green-300 bg-green-50 p-4 text-sm text-green-950 space-y-1">
       <p className="font-semibold">Task assignment confirmed by CRM</p>
       <p>{assignmentReceipt.assigned} task records updated; {assignmentReceipt.remaining} remain unassigned.</p>
