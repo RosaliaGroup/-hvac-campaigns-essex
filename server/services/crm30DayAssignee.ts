@@ -8,6 +8,11 @@ import { cadenceDatabase, crm30DayTasks } from "./crm30DayTasks";
 
 type Assignee = { id: number; name: string | null; email: string | null };
 
+export function teamSessionUserId(memberId:number):number {
+  if(!Number.isSafeInteger(memberId)||memberId<=0)throw new Error("Invalid team member ID");
+  return -memberId;
+}
+
 export function uniqueAssignee(candidates: Assignee[]): Assignee | null {
   return candidates.length === 1 ? candidates[0] : null;
 }
@@ -62,13 +67,14 @@ export async function resolveCadenceAssignee(): Promise<{
   // A verified active team mailbox can own tasks by name even when the
   // OAuth users table has no matching login. Never invent a numeric user ID.
   if(configuredEmail){
-    const activeMailbox=await db.select({email:teamMembers.email,name:teamMembers.name})
+    const activeMailbox=await db.select({id:teamMembers.id,email:teamMembers.email,name:teamMembers.name})
       .from(teamMembers)
       .where(and(eq(teamMembers.status,"active"),
         sql`lower(trim(${teamMembers.email})) = ${configuredEmail}`))
       .limit(2);
     if(activeMailbox.length===1){
-      return {user:null,source:"verified-team-mailbox" as const};
+      const member=activeMailbox[0];
+      return {user:{id:teamSessionUserId(member.id),name:member.name,email:member.email},source:"verified-team-mailbox" as const};
     }
   }
   console.warn("[CRM 30-Day] Owner lookup unresolved:", JSON.stringify({
