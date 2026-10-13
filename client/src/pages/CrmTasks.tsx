@@ -29,6 +29,7 @@ export default function CrmTasks(){
   const [search,setSearch]=useState("");
   const [page,setPage]=useState(0);
   const [notice,setNotice]=useState("");
+  const [assignmentRefreshMessage,setAssignmentRefreshMessage]=useState("");
   const [assignmentReceipt,setAssignmentReceipt]=useState<{assigned:number;remaining:number;at:string}|null>(null);
   const [jobId,setJobId]=useState<string|null>(null);
   const params={status,action,due,search,offset:page*50,limit:50};
@@ -98,8 +99,9 @@ export default function CrmTasks(){
     {source==="outreach"&&<section className="rounded-lg border bg-white p-4 space-y-2" aria-label="Live CRM assignment status">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">Live follow-up assignment status</h2>
-        <Button type="button" size="sm" variant="outline" onClick={()=>void assignmentStatus.refetch()} disabled={assignmentStatus.isFetching}>Refresh assignment counts</Button>
+        <Button type="button" size="sm" variant="outline" onClick={async ()=>{setAssignmentRefreshMessage("Checking live CRM database…");try{const result=await assignmentStatus.refetch();setAssignmentRefreshMessage(result.error ? `Refresh failed: ${result.error.message}` : result.data ? `Checked at ${new Date().toLocaleTimeString()}: ${result.data.mine} assigned to you; ${result.data.unassigned} unassigned.` : "No assignment data returned. Please sign in again.");}catch(error){setAssignmentRefreshMessage(`Refresh failed: ${error instanceof Error ? error.message : "Unknown error"}`);}}} disabled={assignmentStatus.isFetching}>{assignmentStatus.isFetching?"Refreshing…":"Refresh assignment counts"}</Button>
       </div>
+      {assignmentRefreshMessage&&<p role="status" aria-live="polite" className="text-sm font-medium">{assignmentRefreshMessage}</p>}
       {assignmentStatus.isLoading&&<p role="status" className="text-sm">Reading CRM assignment counts…</p>}
       {assignmentStatus.error&&<p role="alert" className="text-sm text-red-700">Could not read assignment counts: {assignmentStatus.error.message}</p>}
       {assignmentStatus.data&&!assignmentStatus.data.authenticatedOwnerValid&&<p role="alert" className="text-sm text-red-700">Your CRM session is not linked to a valid authenticated user record. Assignment is blocked until the administrator login is linked correctly.</p>}
