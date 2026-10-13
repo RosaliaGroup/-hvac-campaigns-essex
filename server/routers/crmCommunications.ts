@@ -503,6 +503,15 @@ export const crmCommunicationsRouter = router({
         fn: () => syncGmailPage(input),
       })
     ),
+  reconcileSentOutreach: protectedProcedure
+    .input(z.object({ pageToken: z.string().max(2048).optional() }))
+    .mutation(({ input }) =>
+      startJob({
+        kind: "crm-gmail",
+        key: "crm-gmail",
+        fn: () => syncGmailPage({ ...input, lookbackDays: 2, importOutboundContacts: true }),
+      })
+    ),
   gmailSyncJob: protectedProcedure
     .input(z.object({ jobId: z.string() }))
     .query(({ input }) => {
