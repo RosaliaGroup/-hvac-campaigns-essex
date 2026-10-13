@@ -31,7 +31,9 @@ export async function verifyLiveBlogPath(path: string): Promise<LivePageCheck> {
     base.canonicalMatches = !!canonical && new URL(canonical, expected).pathname === path;
     // Require slug-specific content in returned HTML, not only a generic SPA shell.
     const slug = path.slice("/blog/".length);
-    base.contentPresent = html.toLowerCase().includes(slug);
+    // Exclude <head> metadata: a generic SPA fallback may contain the slug only in its canonical tag.
+    const body = html.match(/<body\\b[^>]*>([\\s\\S]*?)<\\/body>/i)?.[1] ?? html.replace(/<head\\b[^>]*>[\\s\\S]*?<\\/head>/gi, "").replace(/<link\\b[^>]*>/gi, "");
+    base.contentPresent = body.toLowerCase().includes(slug);
     base.status = base.canonicalMatches && base.contentPresent ? "verified_live" : "not_live";
     base.reason = !canonical ? "Canonical missing from response" : !base.canonicalMatches ? "Canonical points elsewhere" : !base.contentPresent ? "Expected blog slug absent from HTML" : "HTTP 200, expected canonical and slug-specific HTML confirmed";
     return base;
