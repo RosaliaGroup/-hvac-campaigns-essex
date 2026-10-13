@@ -314,7 +314,8 @@ export function startGrowthCadencePoller(): void {
         console.log(`[growth] cadence poll: dispatched=${result.dispatched} nurtured=${result.nurtured}`);
       }
     } catch (e) {
-      console.warn("[growth] cadence poll failed:", (e as Error).message);
+      const err = e as Error & { cause?: { code?: string; errno?: number; sqlState?: string } };
+      console.warn("[growth] cadence poll failed:", { name: err.name, code: err.cause?.code ?? "unknown", errno: err.cause?.errno ?? null, sqlState: err.cause?.sqlState ?? null });
     }
   };
   setTimeout(run, 15_000);
