@@ -252,6 +252,14 @@ export async function syncGmailPage(
       }
       if (existing) approvedContacts.push(existing);
     }
+    // Existing contacts created before enrichment was enabled also need
+    // phone research. The queue is idempotent and never invents a number.
+    for (const approved of approvedContacts) {
+      if (approved.id && !approved.phone && approved.source === "gmail-selected") {
+        const { queueContactEnrichment } = await import("./automaticContactEnrichment");
+        await queueContactEnrichment(approved.id);
+      }
+    }
     const contact = approvedContacts[0] ?? null;
     const { contacts, quoteContact, ...communication } = parsed;
     // Repair previously imported Gmail history when a contact is now known,
