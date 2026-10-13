@@ -1,3 +1,4 @@
+import { seoIssueActions } from "../server/services/seo/repairIssueLifecycle";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 
@@ -7,6 +8,7 @@ const existing = JSON.parse(execFileSync("gh", ["issue", "list", "--state", "ope
 const prefix = "[SEO Repair] ";
 const failed = report.results.filter(r => r.status !== "verified_live");
 if (report.results.length === 0) throw new Error("Empty audit; refusing to reconcile issues");
+const decisions = seoIssueActions(report.results, existing.map(x => x.title));
 const seen = new Set<string>();
 for (const item of failed.slice(0, 30)) {
   if (!/^\/blog\/[a-z0-9-]+$/.test(item.path)) continue;
@@ -22,11 +24,11 @@ for (const item of failed.slice(0, 30)) {
     "", "Do not auto-edit claims, canonical tags, routes or page content without source verification.",
   ].join("\n");
   const issue = existing.find(x => x.title === title);
-  if (issue) continue;
+  if (!decisions.create.includes(title)) continue;
   execFileSync("gh", ["issue", "create", "--title", title, "--body", body], { stdio: "inherit" });
 }
 for (const issue of existing.filter(x => x.title.startsWith(prefix))) {
-  if (!seen.has(issue.title) && report.results.some(r => prefix + r.path === issue.title && r.status === "verified_live")) {
+  if (decisions.close.includes(issue.title)) {
     execFileSync("gh", ["issue", "close", String(issue.number), "--comment", "The latest production audit verified this URL; issue closed automatically."], { stdio: "inherit" });
   }
 }
