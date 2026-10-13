@@ -182,7 +182,7 @@ export async function sync30DayFromGmail(
     : null;
   const [ownership] = await db.select({
     open: sql<number>`count(*)`,
-    unassigned: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} is null or ${crm30DayTasks.assignedToUserId} <= 0 then 1 else 0 end)`,
+    unassigned: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} is null then 1 else 0 end)`,
   }).from(crm30DayTasks).where(eq(crm30DayTasks.status, "open"));
   const remainingUnassigned = Number(ownership?.unassigned ?? 0);
   const openCount = Number(ownership?.open ?? 0);
