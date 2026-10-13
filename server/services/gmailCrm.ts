@@ -239,7 +239,7 @@ export async function syncGmailPage(
     // Only qualifying OUTBOUND business outreach is eligible for automatic
     // contact creation. Never import arbitrary inbox correspondents.
     const outreach = parsed.direction === "outbound" &&
-      /\\b(hvac|mechanical|property|properties|maintenance|vendor|subcontractor|bid opportunities|contractor|referral partnership|commercial|heat pump|ptac)\\b/i.test(parsed.subject);
+      /\b(hvac|mechanical|property|properties|maintenance|vendor|subcontractor|bid opportunities|contractor|referral partnership|commercial|heat pump|ptac)\b/i.test(parsed.subject);
     const approvedContacts = [];
     for (const email of parsed.contacts) {
       let [existing] = await db.select().from(crmExternalContacts)
