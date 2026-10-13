@@ -4,8 +4,8 @@ import { quoteNotificationContact } from "./quoteNotification";
 import { startJob } from "./asyncLaneJob";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { getDb } from "../db";
-import { logCommunication } from "./crmCommunications";
-import { isExplicitOutreachOptOut, recordOutreachSuppression, seedKnownOutreachSuppressions, KNOWN_OUTREACH_SUPPRESSIONS } from "./outreachSuppression";
+import { logCommunication, upsertExternalContact } from "./crmCommunications";
+import { isExplicitOutreachOptOut, recordOutreachSuppression, seedKnownOutreachSuppressions, isOutreachSuppressed, KNOWN_OUTREACH_SUPPRESSIONS } from "./outreachSuppression";
 import { cancelOpen30DayTasks } from "./crm30DayTasks";
 import { followupDatabase, followupTasks } from "./crmFollowupTasks";
 
@@ -118,7 +118,7 @@ export async function gmailCrmStatus() {
 /** @slow
  * One bounded page, resumable with Google's page token. No mailbox writes. */
 export async function syncGmailPage(
-  input: { pageToken?: string; lookbackDays?: 2 | 30 },
+  input: { pageToken?: string; lookbackDays?: 2 | 30; importOutboundContacts?: boolean },
   fetchImpl: typeof fetch = fetch
 ) {
   const status = await gmailCrmStatus();
@@ -246,7 +246,16 @@ export async function syncGmailPage(
         .where(sql`lower(trim(${crmExternalContacts.email})) = ${email}`).limit(1);
       if (contact) matched.push(contact);
     }
-    const contact = matched[0] ?? null;
+    let contact = matched[0] ?? null;
+    if (!contact && input.importOutboundContacts === true && parsed.direction === "outbound") {
+      const recipient = parsed.contacts[0];
+      if (recipient && !(await isOutreachSuppressed(db, recipient))) {
+        contact = await upsertExternalContact(db, {
+          name: recipient, email: recipient, source: "gmail-selected",
+          notes: "Explicitly authorized outbound email reconciliation."
+        }) as typeof contact;
+      }
+    }
     const { contacts, quoteContact, ...communication } = parsed;
     // Repair links only when an existing CRM contact is already known.
     if (quoteContact && contact) {
