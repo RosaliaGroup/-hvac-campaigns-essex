@@ -1,6 +1,6 @@
 /** Read-only follow-up delivery preflight. Never calls Gmail send. */
 import { and, eq, gt, or } from "drizzle-orm";
-import { crmCommunications, smsContacts } from "../../drizzle/schema";
+import { crmCommunications, smsContacts, teamMembers, users } from "../../drizzle/schema";
 import { cadenceDatabase, crm30DayTasks } from "./crm30DayTasks";
 import { isOutreachSuppressed } from "./outreachSuppression";
 import { gmailCrmStatus, CRM_MAILBOX } from "./gmailCrm";
@@ -23,6 +23,21 @@ export async function preflightFollowupTask(taskId: number) {
         gt(crmCommunications.occurredAt, task.introAt))).limit(200),
     gmailCrmStatus(),
   ]);
+  // Staff sessions have negative IDs by design. Verify their active team record
+  // rather than incorrectly marking all staff-owned tasks as invalid.
+  const ownerId = task.assignedToUserId;
+  let validOwner = false;
+  if (ownerId && Number.isSafeInteger(ownerId)) {
+    if (ownerId < 0) {
+      const [member] = await db.select({ id: teamMembers.id }).from(teamMembers)
+        .where(and(eq(teamMembers.id, -ownerId), eq(teamMembers.status, "active"))).limit(1);
+      validOwner = Boolean(member);
+    } else {
+      const [user] = await db.select({ id: users.id }).from(users)
+        .where(eq(users.id, ownerId)).limit(1);
+      validOwner = Boolean(user);
+    }
+  }
   const inbound = interactions.some(row => row.direction === "inbound");
   const laterOutbound = interactions.some(row => row.direction === "outbound");
   const decision = evaluateFollowupDelivery({
@@ -36,10 +51,10 @@ export async function preflightFollowupTask(taskId: number) {
     hasLaterOutbound: laterOutbound, hasVerifiedSend: laterOutbound,
     gmailSendPermission: gmail.connected && gmail.hasSendPermission &&
       gmail.accountEmail?.toLowerCase() === CRM_MAILBOX,
-    hasValidOwner: Boolean(task.assignedToUserId && task.assignedToUserId > 0),
+    hasValidOwner: validOwner,
   });
   return { taskId, eligible: decision.eligible, reason: decision.eligible ? null : decision.reason,
     signals: { suppressed: suppressed || optedOut.length > 0, inbound, laterOutbound,
-      validOwner: Boolean(task.assignedToUserId && task.assignedToUserId > 0),
+      validOwner: validOwner,
       gmailSendPermission: gmail.connected && gmail.hasSendPermission } };
 }
