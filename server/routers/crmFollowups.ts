@@ -1,5 +1,7 @@
 import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { crm30DayTasks, cadenceDatabase } from "../services/crm30DayTasks";
+import { users } from "../../drizzle/schema";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getJob, startJob } from "../services/asyncLaneJob";
@@ -13,15 +15,19 @@ import { inspectFollowupDelivery } from "../services/crmFollowupDeliveryReconcil
 export const crmFollowupsRouter = router({
   assignmentStatus: adminProcedure.query(async ({ ctx }) => {
     const db = await cadenceDatabase();
+    const validSessionId = Number.isSafeInteger(ctx.user.id) && ctx.user.id > 0;
+    const [verifiedLogin] = validSessionId ? await db.select({id:users.id}).from(users).where(eq(users.id,ctx.user.id)).limit(1) : [];
+    const verifiedOwnerId = verifiedLogin?.id ?? null;
     const [counts] = await db.select({
       total: sql<number>`count(*)`,
-      mine: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} = ${ctx.user.id} then 1 else 0 end)`,
+      mine: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} > 0 and ${crm30DayTasks.assignedToUserId} = ${verifiedOwnerId} then 1 else 0 end)`,
       invalid: sql<number>`sum(case when ${crm30DayTasks.assignedToUserId} is null or ${crm30DayTasks.assignedToUserId} <= 0 then 1 else 0 end)`,
     }).from(crm30DayTasks).where(eq(crm30DayTasks.status, "open"));
     return {
       total: Number(counts?.total ?? 0),
       mine: Number(counts?.mine ?? 0),
       unassigned: Number(counts?.invalid ?? 0),
+      authenticatedOwnerValid: Boolean(verifiedOwnerId),
     };
   }),
 
@@ -51,9 +57,14 @@ export const crmFollowupsRouter = router({
       input.id, ctx.user.id, ctx.user.name || ctx.user.email || "CRM User",
     )),
   assignAllToMe: adminProcedure
-    .mutation(({ ctx }) => assignAll30DayTasks(
-      ctx.user.id, ctx.user.name || ctx.user.email || "CRM User",
-    )),
+    .mutation(async ({ ctx }) => {
+      const db = await cadenceDatabase();
+      const id = ctx.user.id;
+      if (!Number.isSafeInteger(id) || id <= 0) throw new TRPCError({code:"PRECONDITION_FAILED",message:"Your CRM session has no valid user ID. Sign in with a linked administrator account before assigning tasks."});
+      const [verified] = await db.select({id:users.id}).from(users).where(eq(users.id,id)).limit(1);
+      if (!verified) throw new TRPCError({code:"PRECONDITION_FAILED",message:"Your CRM login is not linked to a valid user record. Administrator account linking is required."});
+      return assignAll30DayTasks(verified.id,ctx.user.name || ctx.user.email || "CRM User");
+    }),
   syncOutreach: protectedProcedure
     .input(z.object({ lookbackDays: z.union([z.literal(10), z.literal(35)]).default(35) }))
     .mutation(({ input }) => startJob({
