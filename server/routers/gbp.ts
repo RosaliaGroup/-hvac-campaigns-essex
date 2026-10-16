@@ -16,6 +16,10 @@ import { runGbpSync, readGbpSyncStatus } from "../services/gbp/sync";
  * — the only mutation is `sync`, which just refreshes the read cache from Google.
  */
 export const gbpRouter = router({
+  discoverLocations: adminProcedure.query(async () => {
+    const { discoverGbpLocations } = await import("../services/gbp/locationDiscovery");
+    return discoverGbpLocations();
+  }),
   /** Top KPI figures for the dashboard cards (rating, reviews, engagement totals). */
   overview: adminProcedure.query(async () => {
     return getGbpProvider().getOverview();
