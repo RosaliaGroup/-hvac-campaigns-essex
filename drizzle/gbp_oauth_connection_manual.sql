@@ -1,0 +1,1 @@
+CREATE TABLE IF NOT EXISTS `gbpOAuthConnections` (`id` int NOT NULL PRIMARY KEY, `accessTokenEncrypted` text NOT NULL, `refreshTokenEncrypted` text NOT NULL, `expiresAt` timestamp NOT NULL, `scope` text, `updatedAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP);
