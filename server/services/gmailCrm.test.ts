@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   upsert: vi.fn(),
   log: vi.fn(),
   promote: vi.fn(),
+  queue: vi.fn(),
+  suppressed: vi.fn(),
 }));
 vi.mock("../integrations/google/calendar", () => ({
   googleCalendarProvider: {
@@ -17,10 +19,15 @@ vi.mock("../db", () => ({ getDb: mocks.db }));
 vi.mock("./sentEmailContact", () => ({
   ensureSentEmailContact: mocks.promote,
 }));
+vi.mock("./automaticContactEnrichment", () => ({
+ approvedContactSource: (source:string) => ["gmail-selected","gmail-prospecting","verified-hvac-prospect","crm-manual"].includes(source),
+ queueContactEnrichment:mocks.queue,
+}));
 vi.mock("./outreachSuppression", () => ({
   seedKnownOutreachSuppressions: vi.fn().mockResolvedValue(13),
   recordOutreachSuppression: vi.fn().mockResolvedValue({}),
   isExplicitOutreachOptOut: vi.fn().mockReturnValue(false),
+  isOutreachSuppressed: mocks.suppressed,
   KNOWN_OUTREACH_SUPPRESSIONS: [],
 }));
 vi.mock("./crm30DayTasks", () => ({ cancelOpen30DayTasks: vi.fn().mockResolvedValue(0) }));
@@ -60,20 +67,21 @@ const message = (from = CRM_MAILBOX, to = "agent@example.com") => ({
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.suppressed.mockResolvedValue(false);
   mocks.connection.mockResolvedValue({
     status: "connected",
     googleAccountEmail: CRM_MAILBOX,
     scope: GMAIL_SCOPE,
   });
   mocks.token.mockResolvedValue({ accessToken: "private-token" });
-  const chain: any = { select: () => chain, from: () => chain, where: () => chain, limit: async () => [] };
+  const chain: any = { select: () => chain, from: () => chain, where: () => chain, limit: async () => [], update: () => chain, set: () => chain };
   mocks.db.mockResolvedValue(chain);
-  mocks.upsert.mockResolvedValue({ id: 7 });
+  mocks.upsert.mockImplementation(async (_db, input) => ({id:7,...input}));
   mocks.log.mockResolvedValue({ id: 8, duplicate: false });
   mocks.promote.mockResolvedValue(10);
 });
 describe("Gmail CRM", () => {
-  it("does not automatically import Gmail correspondents as CRM contacts", async () => {
+  it("promotes qualifying outreach recipients even on duplicate email imports", async () => {
     mocks.log.mockResolvedValue({ duplicate: true });
     const responses = [
       { emailAddress: CRM_MAILBOX },
@@ -85,12 +93,27 @@ describe("Gmail CRM", () => {
       json: async () => responses.shift(),
     }));
     expect(await syncGmailPage({}, fetcher)).toMatchObject({ duplicates: 1 });
-    expect(mocks.promote).not.toHaveBeenCalled();
-    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.promote).toHaveBeenCalledTimes(2);
+    expect(mocks.queue).toHaveBeenCalledTimes(2);
     expect(mocks.log).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ externalContactId: null, channel: "email" })
+      expect.objectContaining({ externalContactId: 7, customerId:10, channel: "email" })
     );
+  });
+  it.each([
+    ["inbound", false],
+    ["unrelated outbound", false],
+    ["suppressed outreach", true],
+  ])("does not create contacts for %s", async (kind, suppressed) => {
+    mocks.suppressed.mockResolvedValue(suppressed);
+    const remote = kind === "inbound" ? message("sender@example.com", CRM_MAILBOX) : message();
+    if(kind === "unrelated outbound") remote.payload.headers[2].value = "Lunch tomorrow";
+    const responses = [{emailAddress:CRM_MAILBOX},{messages:[{id:"gmail1"}]},remote];
+    const fetcher = vi.fn(async () => ({ok:true,json:async()=>responses.shift()}));
+    await syncGmailPage({},fetcher);
+    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.promote).not.toHaveBeenCalled();
+    expect(mocks.queue).not.toHaveBeenCalled();
   });
   it.each([
     ["SERVICE_DISABLED", "Google Cloud project"],
@@ -198,7 +221,8 @@ describe("Gmail CRM", () => {
     expect(mocks.log).toHaveBeenCalledWith(
       expect.objectContaining({ select: expect.any(Function) }),
       expect.objectContaining({
-        externalContactId: null,
+        externalContactId: 7,
+        customerId:10,
         provider: "gmail",
         providerMessageId: "gmail1",
       })

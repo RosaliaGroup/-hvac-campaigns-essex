@@ -8,6 +8,7 @@ import { logCommunication, upsertExternalContact } from "./crmCommunications";
 import { isExplicitOutreachOptOut, recordOutreachSuppression, seedKnownOutreachSuppressions, isOutreachSuppressed, KNOWN_OUTREACH_SUPPRESSIONS } from "./outreachSuppression";
 import { cancelOpen30DayTasks } from "./crm30DayTasks";
 import { followupDatabase, followupTasks } from "./crmFollowupTasks";
+import { ensureSentEmailContact } from "./sentEmailContact";
 
 export const CRM_MAILBOX = "sales@mechanicalenterprise.com";
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
@@ -254,9 +255,12 @@ export async function syncGmailPage(
     }
     // Existing contacts created before enrichment was enabled also need
     // phone research. The queue is idempotent and never invents a number.
+    const { approvedContactSource, queueContactEnrichment } = await import("./automaticContactEnrichment");
     for (const approved of approvedContacts) {
-      if (approved.id && !approved.phone && approved.source === "gmail-selected") {
-        const { queueContactEnrichment } = await import("./automaticContactEnrichment");
+      if (approved.id && approvedContactSource(approved.source)) {
+        // Phone research must not delay visibility in the main CRM. Revisit
+        // duplicates too, so earlier email-only imports are repaired.
+        approved.customerId = await ensureSentEmailContact(db, approved);
         await queueContactEnrichment(approved.id);
       }
     }
@@ -321,11 +325,13 @@ export function startGmailCrmScheduler() {
   }, 20_000);
   bootstrap.unref();
   let pageToken: string | undefined;
+  let retryAfter = 0;
   const run = () =>
     startJob({
       kind: "crm-gmail",
       key: "crm-gmail",
       fn: async () => {
+        if (Date.now() < retryAfter) return null;
         const status = await gmailCrmStatus();
         if (
           !status.connected ||
@@ -345,7 +351,12 @@ export function startGmailCrmScheduler() {
           console.info("[CRM Gmail] Sync succeeded:", JSON.stringify(result));
           return result;
         } catch (error) {
-          pageToken = undefined;
+          // Keep the current cursor on transient errors; restarting repeatedly
+          // re-reads old pages and starves contacts deeper in the mailbox.
+          const message = error instanceof Error ? error.message : "Unknown error";
+          if (/rateLimitExceeded|userRateLimitExceeded|429/.test(message))
+            retryAfter = Date.now() + 15 * 60 * 1000;
+          else if (/invalid.*page.*token/i.test(message)) pageToken = undefined;
           console.error(
             "[CRM Gmail] Sync failed:",
             error instanceof Error ? error.message : "Unknown error"

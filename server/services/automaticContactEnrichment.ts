@@ -149,7 +149,7 @@ export async function processContactEnrichment(contactId:number) {
     const retryable=(currentJob?.attempts??0)<MAX_PUBLIC_RESEARCH_ATTEMPTS;
     const existing=await getContactEnrichment(contactId);
     // Task-sourced email recipients are contacts immediately, even if phone research is pending.
-    if(validEmail(c.email) && (c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect")) {
+    if(validEmail(c.email) && approvedContactSource(c.source)) {
       const {ensureSentEmailContact}=await import("./sentEmailContact");
       await ensureSentEmailContact(db,c);
     }
@@ -211,7 +211,7 @@ export async function processContactEnrichment(contactId:number) {
     catch(error){console.warn("[CRM Auto Enrich] Public profile research skipped",contactId,
       error instanceof Error?error.message:"unknown");}
     // Preserve task-only intake and keep unrelated Gmail correspondents excluded.
-    if(c.source==="gmail-prospecting" || c.source==="verified-hvac-prospect"){
+    if(approvedContactSource(c.source)){
       const {ensureSentEmailContact}=await import("./sentEmailContact");
       const [fresh]=await db.select().from(crmExternalContacts)
         .where(eq(crmExternalContacts.id,contactId)).limit(1);
