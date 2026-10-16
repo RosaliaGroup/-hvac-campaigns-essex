@@ -229,9 +229,11 @@ export default function Integrations() {
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">Uses the separately approved Google Cloud project 408029125716. Does not replace Google Calendar or Gmail credentials.</p>
             {gbp && !gbp.configured && <p className="text-sm text-amber-700">{gbp.reason}</p>}
+            {gbp && !gbp.storageReady && <p className="text-sm text-amber-700">GBP database migration is required before Google authorization can be completed.</p>}
+            {gbpStatusQ.isError && <p className="text-sm text-red-600">Could not load GBP status: {gbpStatusQ.error.message}</p>}
             {gbp?.connected && <Meta label="Token expires" value={fmt(gbp.expiresAt)} />}
             <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => gbpConnect.mutate()} disabled={!isAdmin || !gbp?.configured || gbpConnect.isPending}>
+              <Button onClick={() => gbpConnect.mutate()} disabled={!isAdmin || !gbp?.configured || !gbp.storageReady || gbpConnect.isPending}>
                 {gbpConnect.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plug className="h-4 w-4 mr-1" />}
                 {gbp?.connected ? "Reconnect Google Business Profile" : "Connect Google Business Profile"}
               </Button>
