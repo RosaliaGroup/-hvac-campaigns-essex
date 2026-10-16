@@ -52,10 +52,14 @@ function sha256(s: string): string {
 function metricHash(locationName: string, date: string): string {
   return sha256(`${locationName}\n${date}`);
 }
-function parseTime(iso: string | null): Date | null {
+/** MySQL TIMESTAMP supports 1970-01-01 through 2038-01-19; reject out-of-range API dates. */
+export function parseTime(iso: string | null): Date | null {
   if (!iso) return null;
   const t = Date.parse(iso);
-  return Number.isNaN(t) ? null : new Date(t);
+  if (!Number.isFinite(t)) return null;
+  const min = Date.parse("1970-01-01T00:00:01Z");
+  const max = Date.parse("2038-01-19T03:14:07Z");
+  return t < min || t > max ? null : new Date(t);
 }
 
 export type SyncResult =
