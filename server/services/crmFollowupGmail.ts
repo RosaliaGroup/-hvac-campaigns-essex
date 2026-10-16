@@ -1,3 +1,4 @@
+import { gmailQuotaRemainingMs, gmailIsRateLimited, markGmailQuotaExceeded, GmailQuotaCooldownError } from "./gmailQuotaCooldown";
 /** Gmail-labeled prospecting messages -> CRM reminders. No automatic sends. */
 import { and, eq, gt, isNull, ne, or } from "drizzle-orm";
 import { crmCommunications, crmExternalContacts, users } from "../../drizzle/schema";
@@ -35,11 +36,19 @@ export async function syncCrmFollowupsFromGmail(
   }
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function read(path: string) {
+    if (gmailQuotaRemainingMs() > 0) throw new GmailQuotaCooldownError(gmailQuotaRemainingMs());
     const response = await fetchImpl(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      signal: AbortSignal.timeout(15_000),
+      headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(15000),
     });
-    if (!response.ok) throw new Error(`CRM Gmail follow-up scan failed (HTTP ${response.status}); check Gmail API quota and retry after cooldown`);
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      const reason = JSON.stringify(payload?.error?.errors ?? []) + " " + String(payload?.error?.status ?? "");
+      if (gmailIsRateLimited(response.status, reason)) {
+        markGmailQuotaExceeded(Number(response.headers.get("retry-after")));
+        throw new GmailQuotaCooldownError(gmailQuotaRemainingMs());
+      }
+      throw new Error(`CRM Gmail follow-up scan failed (HTTP ${response.status})`);
+    }
     return response.json();
   }
 
@@ -168,6 +177,7 @@ export function startCrmFollowupScheduler() {
   if (process.env.NODE_ENV !== "production" ||
       process.env.CRM_FOLLOWUP_SYNC_ENABLED === "false") return;
   const run = () => {
+    if (gmailQuotaRemainingMs() > 0) return;
     startJob({
       kind: "crm-followup", key: "crm-followup-sync",
       fn: async () => {
