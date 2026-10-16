@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   log: vi.fn(),
   promote: vi.fn(),
   queue: vi.fn(),
+  suppressed: vi.fn(),
 }));
 vi.mock("../integrations/google/calendar", () => ({
   googleCalendarProvider: {
@@ -26,7 +27,7 @@ vi.mock("./outreachSuppression", () => ({
   seedKnownOutreachSuppressions: vi.fn().mockResolvedValue(13),
   recordOutreachSuppression: vi.fn().mockResolvedValue({}),
   isExplicitOutreachOptOut: vi.fn().mockReturnValue(false),
-  isOutreachSuppressed: vi.fn().mockResolvedValue(false),
+  isOutreachSuppressed: mocks.suppressed,
   KNOWN_OUTREACH_SUPPRESSIONS: [],
 }));
 vi.mock("./crm30DayTasks", () => ({ cancelOpen30DayTasks: vi.fn().mockResolvedValue(0) }));
@@ -66,6 +67,7 @@ const message = (from = CRM_MAILBOX, to = "agent@example.com") => ({
 });
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.suppressed.mockResolvedValue(false);
   mocks.connection.mockResolvedValue({
     status: "connected",
     googleAccountEmail: CRM_MAILBOX,
@@ -97,6 +99,21 @@ describe("Gmail CRM", () => {
       expect.anything(),
       expect.objectContaining({ externalContactId: 7, customerId:10, channel: "email" })
     );
+  });
+  it.each([
+    ["inbound", false],
+    ["unrelated outbound", false],
+    ["suppressed outreach", true],
+  ])("does not create contacts for %s", async (kind, suppressed) => {
+    mocks.suppressed.mockResolvedValue(suppressed);
+    const remote = kind === "inbound" ? message("sender@example.com", CRM_MAILBOX) : message();
+    if(kind === "unrelated outbound") remote.payload.headers[2].value = "Lunch tomorrow";
+    const responses = [{emailAddress:CRM_MAILBOX},{messages:[{id:"gmail1"}]},remote];
+    const fetcher = vi.fn(async () => ({ok:true,json:async()=>responses.shift()}));
+    await syncGmailPage({},fetcher);
+    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.promote).not.toHaveBeenCalled();
+    expect(mocks.queue).not.toHaveBeenCalled();
   });
   it.each([
     ["SERVICE_DISABLED", "Google Cloud project"],
