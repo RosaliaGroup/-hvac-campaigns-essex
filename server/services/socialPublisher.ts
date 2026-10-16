@@ -132,6 +132,9 @@ async function defaultPublishToPlatform(
   // grant and configured location as Local SEO. Never require legacy AI VA tokens.
   if (platform === "google_business") {
     const { getGbpAccessToken, getGbpTarget } = await import("../integrations/gbp");
+    const { checkGbpProject } = await import("./gbp/projectPreflight");
+    const project = checkGbpProject(process.env.GOOGLE_CLIENT_ID);
+    if (!project.matches) throw new Error("Google Business posting blocked: " + project.reason + ". Use approved GCP project 408029125716.");
     const selected = await dbModule.getAiVaCredentials("google_business");
     const target = selected.accountId && selected.locationId ? { accountId: selected.accountId, locationId: selected.locationId } : getGbpTarget();
     if (!target) throw new Error("Select an existing Google Business Profile location in the Social Media dashboard.");
