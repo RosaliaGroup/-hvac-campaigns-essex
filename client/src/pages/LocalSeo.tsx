@@ -412,7 +412,7 @@ export default function LocalSeo() {
             <Button onClick={() => discoveredLocations.refetch()} disabled={discoveredLocations.isFetching}>
               {discoveredLocations.isFetching ? "Checking Google..." : "Discover Business Profile locations"}
             </Button>
-            {discoveredLocations.data?.ok === false && <p role="alert">Google API returned HTTP {discoveredLocations.data.status} during {discoveredLocations.data.stage}. Check approved project 408029125716 and OAuth access.</p>}
+            {discoveredLocations.data?.ok === false && <p role="alert">Google API returned HTTP {discoveredLocations.data.status} during {discoveredLocations.data.stage}. {"reason" in discoveredLocations.data ? String(discoveredLocations.data.reason) : ""}. {"retryAfterSeconds" in discoveredLocations.data && discoveredLocations.data.retryAfterSeconds ? `Wait at least ${Math.ceil(Number(discoveredLocations.data.retryAfterSeconds) / 60)} minutes before retrying. ` : ""}Check the Account Management API quota for approved project 408029125716.</p>}
             {discoveredLocations.isError && <p role="alert">{discoveredLocations.error.message}</p>}
             {discoveredLocations.data?.ok === true && (
               <div className="space-y-2">
