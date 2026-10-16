@@ -140,6 +140,7 @@ export default function LocalSeo() {
   const insights = trpc.gbp.insights.useQuery({ days: 30 }, { enabled });
   const posts = trpc.gbp.posts.useQuery({ limit: 20 }, { enabled });
   const syncStatus = trpc.gbp.getSyncStatus.useQuery(undefined, { enabled });
+  const discoveredLocations = trpc.gbp.discoverLocations.useQuery(undefined, { enabled: false, retry: false });
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -402,6 +403,30 @@ export default function LocalSeo() {
           </Card>
         </div>
 
+        <Card className="mx-4 my-4">
+          <CardHeader>
+            <CardTitle>Google Business Profile connection</CardTitle>
+            <CardDescription>Discover locations available to the connected Google account. Discovery is read-only and does not publish.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button onClick={() => discoveredLocations.refetch()} disabled={discoveredLocations.isFetching}>
+              {discoveredLocations.isFetching ? "Checking Google..." : "Discover Business Profile locations"}
+            </Button>
+            {discoveredLocations.data?.ok === false && <p role="alert">Google API returned HTTP {discoveredLocations.data.status} during {discoveredLocations.data.stage}. Check approved project 408029125716 and OAuth access.</p>}
+            {discoveredLocations.isError && <p role="alert">{discoveredLocations.error.message}</p>}
+            {discoveredLocations.data?.ok === true && (
+              <div className="space-y-2">
+                <p>{discoveredLocations.data.locations.length} authorized location(s) found. Confirm the Mechanical Enterprise listing before configuration.</p>
+                {discoveredLocations.data.locations.map(loc => (
+                  <div key={loc.accountId + ":" + loc.locationId} className="rounded border p-3 text-sm">
+                    <strong>{loc.title || "Untitled location"}</strong>
+                    <p>Account ID: {loc.accountId} · Location ID: {loc.locationId}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
         <DashboardFooter />
       </div>
     </div>
