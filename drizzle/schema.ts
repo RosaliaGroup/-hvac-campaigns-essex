@@ -3953,3 +3953,13 @@ export const crmCommunications = mysqlTable("crmCommunications", {
 }));
 export type CrmCommunication = typeof crmCommunications.$inferSelect;
 export type InsertCrmCommunication = typeof crmCommunications.$inferInsert;
+
+/** Separate Business Profile OAuth grant. Never shares or overwrites Calendar credentials. */
+export const gbpOAuthConnections = mysqlTable("gbpOAuthConnections", {
+  id: int("id").primaryKey(),
+  accessTokenEncrypted: text("accessTokenEncrypted").notNull(),
+  refreshTokenEncrypted: text("refreshTokenEncrypted").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  scope: text("scope"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
