@@ -187,24 +187,37 @@ async function performSync(
     }
 
     // ── Photos ──
+    // Isolate individual bad media records so they cannot block post persistence.
     let photosSynced = 0;
+    let photosFailed = 0;
     for (const m of media) {
-      await db
-        .insert(gbpPhotos)
-        .values({
-          locationName: target.locationName,
-          mediaName: m.mediaName,
-          mediaHash: sha256(m.mediaName),
-          category: m.category ?? undefined,
-          googleUrl: m.googleUrl ?? undefined,
-          viewCount: m.viewCount,
-          createTime: parseTime(m.createTime) ?? undefined,
-          syncedAt: new Date(),
-        })
-        .onDuplicateKeyUpdate({
-          set: { category: m.category ?? null, googleUrl: m.googleUrl ?? null, viewCount: m.viewCount, syncedAt: new Date() },
+      try {
+        await db
+          .insert(gbpPhotos)
+          .values({
+            locationName: target.locationName,
+            mediaName: m.mediaName,
+            mediaHash: sha256(m.mediaName),
+            category: m.category ?? undefined,
+            googleUrl: m.googleUrl ?? undefined,
+            viewCount: m.viewCount,
+            createTime: parseTime(m.createTime) ?? undefined,
+            syncedAt: new Date(),
+          })
+          .onDuplicateKeyUpdate({
+            set: { category: m.category ?? null, googleUrl: m.googleUrl ?? null, viewCount: m.viewCount, syncedAt: new Date() },
+          });
+        photosSynced++;
+      } catch (err) {
+        photosFailed++;
+        const cause = (err as Error & { cause?: { code?: string; errno?: number; sqlState?: string } }).cause;
+        console.warn("[GBP] photo upsert failed", {
+          mediaHashPrefix: sha256(m.mediaName).slice(0, 12),
+          code: cause?.code ?? "unknown",
+          errno: cause?.errno ?? null,
+          sqlState: cause?.sqlState ?? null,
         });
-      photosSynced++;
+      }
     }
 
     // ── Local posts ──
@@ -238,10 +251,10 @@ async function performSync(
     if (historyId > 0) {
       await db
         .update(gbpSyncHistory)
-        .set({ status: "success", completedAt: new Date(), reviewsSynced, metricsSynced, photosSynced, postsSynced })
+        .set({ status: photosFailed > 0 ? "error" : "success", error: photosFailed > 0 ? `${photosFailed} photo record(s) failed to save; other resources synchronized` : null, completedAt: new Date(), reviewsSynced, metricsSynced, photosSynced, postsSynced })
         .where(eq(gbpSyncHistory.id, historyId));
     }
-    return { ok: true, reviewsSynced, metricsSynced, photosSynced, postsSynced };
+    return photosFailed > 0 ? { ok: false, reason: "error", error: `${photosFailed} photo record(s) failed to save; other resources synchronized` } : { ok: true, reviewsSynced, metricsSynced, photosSynced, postsSynced };
   } catch (err) {
     const message = (err as Error).message ?? "unknown error";
     if (historyId > 0) {
