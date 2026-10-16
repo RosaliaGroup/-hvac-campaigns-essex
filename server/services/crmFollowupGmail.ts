@@ -39,7 +39,7 @@ export async function syncCrmFollowupsFromGmail(
       headers: { Authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(15_000),
     });
-    if (!response.ok) throw new Error(`CRM Gmail follow-up scan failed (HTTP ${response.status})`);
+    if (!response.ok) throw new Error(`CRM Gmail follow-up scan failed (HTTP ${response.status}); check Gmail API quota and retry after cooldown`);
     return response.json();
   }
 
