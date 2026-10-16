@@ -20,7 +20,6 @@ import {
   starRatingToInt,
   type GbpDailyMetricKey,
 } from "@shared/gbp";
-import { googleCalendarProvider } from "./google/calendar";
 
 const BUSINESS_INFO_BASE = "https://mybusinessbusinessinformation.googleapis.com/v1";
 const PERFORMANCE_BASE = "https://businessprofileperformance.googleapis.com/v1";
