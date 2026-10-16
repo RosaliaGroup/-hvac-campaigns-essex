@@ -57,10 +57,16 @@ export async function connectDedicatedGbp(code: string) {
 }
 export async function dedicatedGbpStatus() {
   const cfg = getDedicatedGbpConfig();
-  const db = await dbRequired();
-  const [row] = await db.select({ id: gbpOAuthConnections.id, expiresAt: gbpOAuthConnections.expiresAt })
-    .from(gbpOAuthConnections).where(eq(gbpOAuthConnections.id, 1)).limit(1);
-  return { configured: cfg.configured, connected: !!row, expiresAt: row?.expiresAt ?? null, reason: cfg.reason };
+  try {
+    const db = await dbRequired();
+    const [row] = await db.select({ id: gbpOAuthConnections.id, expiresAt: gbpOAuthConnections.expiresAt })
+      .from(gbpOAuthConnections).where(eq(gbpOAuthConnections.id, 1)).limit(1);
+    return { configured: cfg.configured, connected: !!row, expiresAt: row?.expiresAt ?? null, reason: cfg.reason, storageReady: true };
+  } catch {
+    // Do not prevent OAuth authorization from starting because the token table is absent.
+    // The callback still requires the migration before tokens can be persisted.
+    return { configured: cfg.configured, connected: false, expiresAt: null, reason: cfg.reason, storageReady: false };
+  }
 }
 export async function dedicatedGbpAccessToken(): Promise<string> {
   const db = await dbRequired();
