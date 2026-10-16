@@ -20,7 +20,6 @@ import {
   starRatingToInt,
   type GbpDailyMetricKey,
 } from "@shared/gbp";
-import { googleCalendarProvider } from "./google/calendar";
 
 const BUSINESS_INFO_BASE = "https://mybusinessbusinessinformation.googleapis.com/v1";
 const PERFORMANCE_BASE = "https://businessprofileperformance.googleapis.com/v1";
@@ -64,15 +63,8 @@ export function getGbpTarget(): GbpTarget | null {
 /* ── Access token (reuses the shared Google connection) ─────────────────── */
 
 export async function getGbpAccessToken(): Promise<string> {
-  try {
-    const { accessToken } = await googleCalendarProvider.getValidAccessToken();
-    if (!accessToken) throw new Error("empty access token");
-    return accessToken;
-  } catch (err) {
-    throw new GbpUnavailableError(
-      `Google not connected or token refresh failed: ${(err as Error).message}`,
-    );
-  }
+  const { dedicatedGbpAccessToken } = await import("./gbpDedicatedOAuth");
+  return dedicatedGbpAccessToken();
 }
 
 /* ── Pure helpers (unit-tested) ─────────────────────────────────────────── */
