@@ -24,6 +24,7 @@ import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 import { registerVapiToolRoutes } from "../services/vapiSendForm";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
+import { registerDedicatedGbpRoutes } from "../integrations/gbpDedicatedRoutes";
 import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
 import { registerActionLinkRoutes } from "../services/seo/actionLinkRoutes";
 import { startNightlyDraftScheduler } from "../services/seo/nightlyDraftJob";
@@ -83,6 +84,7 @@ async function startServer() {
   registerQuickbooksRoutes(app);
   // Google Calendar OAuth callback (/api/integrations/google-calendar/callback)
   registerGoogleCalendarRoutes(app);
+  registerDedicatedGbpRoutes(app);
   // SEO Intelligence — Search Console sync (POST /api/seo/sync)
   registerSeoSyncRoutes(app);
   // SEO autopublish — unauthenticated veto link (GET/POST /api/seo/action)
