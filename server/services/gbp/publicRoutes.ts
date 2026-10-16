@@ -1,8 +1,8 @@
 import type { Express } from "express";
 import { desc, eq } from "drizzle-orm";
-import { getDb } from "../db";
-import { gbpLocations, gbpReviews, gbpPhotos } from "../../drizzle/schema";
-import { getGbpTarget } from "../integrations/gbp";
+import { getDb } from "../../db";
+import { gbpLocations, gbpReviews, gbpPhotos } from "../../../drizzle/schema";
+import { getGbpTarget } from "../../integrations/gbp";
 
 /** Public read-only, cache-backed content; never exposes credentials or private CRM data. */
 export function registerPublicGbpRoutes(app: Express) {
