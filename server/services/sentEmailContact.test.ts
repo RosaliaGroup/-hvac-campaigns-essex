@@ -41,9 +41,16 @@ describe("Sent email CRM contacts", () => {
         displayName: "Ana",
         email: "a@example.com",
         phone: "2015550123",
-        source: "Gmail Sent",
+        source: "HVAC Prospecting Task",
       })
     );
     expect(tx.set).toHaveBeenCalledWith({ customerId: 12 });
   });
 });
+
+ it("keeps email-only selected outreach visible while phone research is pending", async () => {
+ const {tx,db}=database([]);
+ await ensureSentEmailContact(db,{id:8,email:"new@building.com",name:"New",source:"gmail-selected"});
+ expect(tx.values).toHaveBeenCalledWith(expect.objectContaining({email:"new@building.com",phone:null,source:"Gmail Selected"}));
+ expect(tx.set).toHaveBeenCalledWith({customerId:12});
+ });
