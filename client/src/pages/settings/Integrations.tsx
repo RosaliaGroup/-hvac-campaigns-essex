@@ -42,11 +42,24 @@ export default function Integrations() {
 
   const gcalStatusQ = trpc.googleCalendar.getStatus.useQuery();
   const gcal = gcalStatusQ.data;
+  const gbpStatusQ = trpc.gbp.oauthStatus.useQuery(undefined, { enabled: isAdmin });
+  const gbp = gbpStatusQ.data;
+  const gbpConnect = trpc.gbp.oauthConnectStart.useMutation({
+    onSuccess: result => { window.location.href = result.url; },
+    onError: error => toast({ title: "Google Business Profile connection failed", description: error.message, variant: "destructive" }),
+  });
 
   // Surface the OAuth callback result (?qb_* / ?gcal_*).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("qb_connected")) {
+    if (params.get("gbp_connected")) {
+      toast({ title: "Google Business Profile connected" });
+      gbpStatusQ.refetch();
+      window.history.replaceState({}, "", "/settings/integrations");
+    } else if (params.get("gbp_error")) {
+      toast({ title: "Google Business Profile connection failed", description: params.get("gbp_error") ?? undefined, variant: "destructive" });
+      window.history.replaceState({}, "", "/settings/integrations");
+    } else if (params.get("qb_connected")) {
       toast({ title: "QuickBooks connected" });
       statusQ.refetch();
       window.history.replaceState({}, "", "/settings/integrations");
@@ -201,6 +214,28 @@ export default function Integrations() {
                 </>
               )}
               {!isAdmin && <span className="text-xs text-muted-foreground self-center">Admin access required to change connection.</span>}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Independent Google Business Profile OAuth */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2">
+            <CardTitle className="flex items-center gap-2 text-[#1e3a5f]"><Building2 className="h-5 w-5" /> Google Business Profile</CardTitle>
+            {gbp?.connected
+              ? <Badge className="bg-green-100 text-green-700"><CheckCircle2 className="h-3 w-3 mr-1" /> Connected</Badge>
+              : <Badge variant="secondary">Not connected</Badge>}
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">Uses the separately approved Google Cloud project 408029125716. Does not replace Google Calendar or Gmail credentials.</p>
+            {gbp && !gbp.configured && <p className="text-sm text-amber-700">{gbp.reason}</p>}
+            {gbp?.connected && <Meta label="Token expires" value={fmt(gbp.expiresAt)} />}
+            <div className="flex gap-2 flex-wrap">
+              <Button onClick={() => gbpConnect.mutate()} disabled={!isAdmin || !gbp?.configured || gbpConnect.isPending}>
+                {gbpConnect.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plug className="h-4 w-4 mr-1" />}
+                {gbp?.connected ? "Reconnect Google Business Profile" : "Connect Google Business Profile"}
+              </Button>
+              {gbp?.connected && <Button variant="outline" onClick={() => window.location.href = "/local-seo"}>Open Local SEO</Button>}
             </div>
           </CardContent>
         </Card>
