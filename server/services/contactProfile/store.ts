@@ -80,6 +80,11 @@ function withVerifiedSocialLinks(profile: ContactProfile, email: string | null |
   return {...profile,social,companySocial,status:"matched"};
 }
 
+// Successful matches remain cached for a day; provider failures get a bounded
+// cooldown so Refresh can recover without repeatedly charging/searching.
+export function profileCacheMs(profile: ContactProfile) {
+  return profile.message || profile.status === "unavailable" ? 5 * 60 * 1000 : 24 * 60 * 60 * 1000;
+}
 const running = new Map<number, Promise<ContactProfile>>();
 export async function contactProfile(
   input: { contactId?: number; customerId?: number },
@@ -131,13 +136,13 @@ export async function contactProfile(
   if (!refresh)
     return saved?.identity === identity &&
       Date.now() - new Date(saved.profile.checkedAt).getTime() <
-        24 * 60 * 60 * 1000
+        profileCacheMs(saved.profile)
       ? saved.profile
       : null;
   if (
     saved?.identity === identity &&
     Date.now() - new Date(saved.profile.checkedAt).getTime() <
-      24 * 60 * 60 * 1000
+      profileCacheMs(saved.profile)
   )
     return saved.profile;
   if (running.has(c.id)) return running.get(c.id)!;
@@ -167,14 +172,17 @@ export async function contactProfile(
         email: c.email,
         company: c.company || signature?.name?.value,
       });
-    } catch {
+    } catch (error) {
+      // Never log request bodies, keys, contact identifiers or provider text.
+      const status = error instanceof Error ? error.message.match(/\((\d{3})\)/)?.[1] : undefined;
+      console.warn("[CRM Profile Research]", { contactId: c.id, status: status || "lookup_failed" });
       profile = {
         company: {},
         social: [],
         checkedAt: new Date().toISOString(),
         status: "unavailable",
         message:
-          "Public lookup could not finish. Company details from email are shown when available.",
+          `Public lookup could not finish${status ? ` (provider HTTP ${status})` : ""}. Retry after 5 minutes. Company details from email are shown when available.`,
       };
     }
     profile.company = { ...signature, ...profile.company };
