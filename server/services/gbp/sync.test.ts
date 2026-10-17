@@ -98,13 +98,14 @@ function makeWriteDb() {
 
   const asResult = (id: number, table: unknown, vals: Record<string, unknown>) => {
     const rows = [{ insertId: id }];
-    const commit = () => {
+    const commit = (set: Record<string, unknown>) => {
       const store = stores.get(table);
-      if (store) store.set(keyFor(table, vals), vals);
+      const key = keyFor(table, vals);
+      if (store) store.set(key, store.has(key) ? { ...store.get(key), ...set } : { ...vals });
     };
     return {
-      onDuplicateKeyUpdate: () => {
-        commit();
+      onDuplicateKeyUpdate: ({ set }: { set: Record<string, unknown> }) => {
+        commit(set);
         return Promise.resolve(rows);
       },
       then: (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve(rows).then(res, rej),
@@ -343,5 +344,91 @@ describe("readGbpSyncStatus", () => {
     expect(status.lastRunStatus).toBe("running");
     expect(status.lastSuccessAt).toBe(successRow.completedAt.toISOString());
     expect(status.stale).toBe(false);
+  });
+});
+
+
+describe("runGbpSync — partial download preservation", () => {
+  it("preserves the whole cache and reports error when all Google reads fail", async () => {
+    const { db, stores, history } = makeWriteDb();
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    stubHappy();
+    await runGbpSync({ lockConnectionFactory });
+    const before = structuredClone([...stores].map(([table, rows]) => [...rows]));
+    for (const fetcher of [fetchLocation, fetchReviews, fetchDailyMetrics, fetchMedia, fetchPosts]) {
+      vi.mocked(fetcher).mockRejectedValue(new Error("HTTP 429 RATE_LIMIT_EXCEEDED"));
+    }
+    const result = await runGbpSync({ lockConnectionFactory });
+    expect(result).toMatchObject({ ok: false, reason: "error" });
+    expect([...stores].map(([table, rows]) => [...rows])).toEqual(before);
+    expect(history[1]).toMatchObject({ status: "error", reviewsSynced: 0, metricsSynced: 0, photosSynced: 0, postsSynced: 0 });
+    expect(String(history[1].error)).toContain("reviews: HTTP 429");
+  });
+
+  it("keeps the old rating and photos while saving successful resources", async () => {
+    const { db, stores, history } = makeWriteDb();
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    stubHappy();
+    await runGbpSync({ lockConnectionFactory });
+    const before = { ...stores.get(gbpLocations)!.values().next().value };
+    const metricsBefore = [...stores.get(gbpDailyMetrics)!.values()].map(row => ({ ...row }));
+    vi.mocked(fetchReviews).mockRejectedValue(new Error("quota"));
+    vi.mocked(fetchMedia).mockRejectedValue(new Error("quota"));
+    vi.mocked(fetchLocation).mockResolvedValue({ title: "Updated title", storefrontAddress: null, primaryPhone: null, websiteUrl: null });
+    const result = await runGbpSync({ lockConnectionFactory });
+    expect(result.ok).toBe(false);
+    const saved = stores.get(gbpLocations)!.values().next().value!;
+    expect(saved).toMatchObject({ title: "Updated title", rating: "4.70", totalReviews: 3, totalPhotos: 1, lastSyncedAt: before.lastSyncedAt });
+    const todayBefore = metricsBefore.find(row => row.date === new Date().toISOString().slice(0, 10))!;
+    const todayAfter = [...stores.get(gbpDailyMetrics)!.values()].find(row => row.date === todayBefore.date)!;
+    expect(todayAfter.rating).toBe(todayBefore.rating);
+    expect(history[1].status).toBe("error");
+    expect(stores.get(gbpPosts)!.size).toBe(1);
+  });
+
+  it("a rating-only update preserves previously saved performance for today", async () => {
+    const { db, stores } = makeWriteDb();
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    stubHappy();
+    const today = new Date().toISOString().slice(0, 10);
+    vi.mocked(fetchDailyMetrics).mockResolvedValue([{ date: today, callClicks: 7, directionRequests: 2, websiteClicks: 9, searchViews: 90, mapsViews: 11 }]);
+    await runGbpSync({ lockConnectionFactory });
+    vi.mocked(fetchDailyMetrics).mockRejectedValue(new Error("performance quota"));
+    vi.mocked(fetchReviews).mockResolvedValue({ averageRating: 4.9, totalReviewCount: 4, reviews: [] });
+    await runGbpSync({ lockConnectionFactory });
+    const saved = [...stores.get(gbpDailyMetrics)!.values()].find(row => row.date === today)!;
+    expect(saved).toMatchObject({ rating: "4.90", reviewCount: 4, callClicks: 7, websiteClicks: 9, searchViews: 90 });
+  });
+
+  it("accepts genuine zero counts returned successfully by Google", async () => {
+    const { db, stores } = makeWriteDb();
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    stubHappy();
+    await runGbpSync({ lockConnectionFactory });
+    vi.mocked(fetchReviews).mockResolvedValue({ averageRating: 0, totalReviewCount: 0, reviews: [] });
+    vi.mocked(fetchMedia).mockResolvedValue([]);
+    vi.mocked(fetchPosts).mockResolvedValue([]);
+    const result = await runGbpSync({ lockConnectionFactory });
+    expect(result.ok).toBe(true);
+    expect(stores.get(gbpLocations)!.values().next().value).toMatchObject({ rating: "0.00", totalReviews: 0, totalPhotos: 0, totalPosts: 0 });
+  });
+});
+
+
+describe("runGbpSync — Google sentinel timestamps", () => {
+  it("saves photos while omitting dates outside MySQL TIMESTAMP's range", async () => {
+    const { db, stores } = makeWriteDb();
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    stubHappy();
+    vi.mocked(fetchMedia).mockResolvedValue([
+      { mediaName: "accounts/111/locations/222/media/sentinel", category: "COVER", googleUrl: "https://g/sentinel", viewCount: 0, createTime: "0001-01-01T00:00:00Z" },
+      { mediaName: "accounts/111/locations/222/media/epoch", category: "COVER", googleUrl: "https://g/epoch", viewCount: 0, createTime: "1970-01-01T00:00:00Z" },
+      { mediaName: "accounts/111/locations/222/media/future", category: "COVER", googleUrl: "https://g/future", viewCount: 0, createTime: "9999-12-31T23:59:59Z" },
+      { mediaName: "accounts/111/locations/222/media/valid", category: "COVER", googleUrl: "https://g/valid", viewCount: 0, createTime: "2026-10-17T10:00:00Z" },
+    ]);
+    expect(await runGbpSync({ lockConnectionFactory })).toMatchObject({ ok: true, photosSynced: 4 });
+    const photos = [...stores.get(gbpPhotos)!.values()];
+    expect(photos.slice(0, 3).map(row => row.createTime)).toEqual([undefined, undefined, undefined]);
+    expect(photos[3].createTime).toEqual(new Date("2026-10-17T10:00:00Z"));
   });
 });
