@@ -48,7 +48,7 @@ export default function LeadDetail() {
         toast({ title: "Possible QuickBooks duplicate", description: "Open the customer record to review and link the matching customer." });
       } else {
         toast({ title: "QuickBooks customer " + result.outcome });
-        refetch();
+        void refetch();
       }
     },
     onError: error => toast({ title: "QuickBooks sync failed", description: error.message, variant: "destructive" }),
