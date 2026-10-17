@@ -46,7 +46,7 @@ it("reads a saved profile without starting research or editing the CRM contact",
   chain.limit.mockResolvedValueOnce([contact]).mockResolvedValueOnce([
     {
       identity: JSON.stringify({
-        version: 2,
+        version: 3,
         name: contact.name,
         email: contact.email,
         company: contact.company,
@@ -68,7 +68,7 @@ it("reuses a recent cached result instead of paying for another lookup", async (
   chain.limit.mockResolvedValueOnce([contact]).mockResolvedValueOnce([
     {
       identity: JSON.stringify({
-        version: 2,
+        version: 3,
         name: contact.name,
         email: contact.email,
         company: contact.company,
@@ -95,7 +95,7 @@ it("requests a new lookup when a saved profile is more than a day old", async ()
   chain.limit.mockResolvedValueOnce([contact]).mockResolvedValueOnce([
     {
       identity: JSON.stringify({
-        version: 2,
+        version: 3,
         name: contact.name,
         email: contact.email,
         company: contact.company,
@@ -135,7 +135,7 @@ it("retains signature details when public lookup fails and does not send message
 
 it("retries an unavailable cached lookup after its five-minute cooldown", async () => {
   chain.limit.mockResolvedValueOnce([contact]).mockResolvedValueOnce([{
-    identity: JSON.stringify({version:2,name:contact.name,email:contact.email,company:contact.company}),
+    identity: JSON.stringify({version:3,name:contact.name,email:contact.email,company:contact.company}),
     profile: {...profile,status:"unavailable",checkedAt:new Date(Date.now()-6*60*1000).toISOString()},
   }]).mockResolvedValueOnce([]);
   await contactProfile({contactId:10},true);
@@ -143,7 +143,7 @@ it("retries an unavailable cached lookup after its five-minute cooldown", async 
 });
 it("does not hammer a provider during a recent failure cooldown", async () => {
   chain.limit.mockResolvedValueOnce([contact]).mockResolvedValueOnce([{
-    identity: JSON.stringify({version:2,name:contact.name,email:contact.email,company:contact.company}),
+    identity: JSON.stringify({version:3,name:contact.name,email:contact.email,company:contact.company}),
     profile: {...profile,status:"unavailable"},
   }]);
   await contactProfile({contactId:10},true);

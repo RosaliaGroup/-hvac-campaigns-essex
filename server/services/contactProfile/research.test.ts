@@ -130,3 +130,13 @@ it("accepts a cited professional directory with matching employer and domain", (
   const result=validateResearch({company,companySocial:[{url,source:url,evidence:"Example Company example.com"}]},[companySource,url],{name:"Sample Person",email:"sample@example.com"});
   expect(result.companySocial?.[0].platform).toBe("Zillow");
 });
+
+it("requires a cited exact-email identity before filling an unknown person's name",()=>{
+ const source="https://example.com/team";
+ const named=(evidence:string)=>({person:{firstName:{value:"Mary Ann",source,evidence},lastName:{value:"Smith",source,evidence}}});
+ const identity={name:"person@example.com",email:"person@example.com",company:"Example Company"};
+ expect(validateResearch(named("Mary Ann Smith person@example.com"),[source],identity).person?.firstName.value).toBe("Mary Ann");
+ expect(validateResearch(named("Mary Ann Smith Example Company"),[source],identity).person).toBeUndefined();
+ expect(validateResearch(named("Mary Ann Smith person@example.com"),[],identity).person).toBeUndefined();
+ expect(validateResearch(named("Other Person person@example.com"),[source],identity).person).toBeUndefined();
+});
