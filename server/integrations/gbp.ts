@@ -1,11 +1,8 @@
 /**
  * Google Business Profile API client (Local SEO — READ ONLY).
  *
- * Reuses the single shared Google grant (the OAuth flow behind Google Calendar /
- * Search Console — see server/integrations/google/calendar.ts, which now also
- * requests the business.manage scope). There is NO second OAuth flow: we mint an
- * access token from the existing connection's refresh token, exactly like
- * server/integrations/searchConsole.ts.
+ * Uses the dedicated Business Profile OAuth connection, isolated from the
+ * Calendar/Search Console grant (see gbpDedicatedOAuth.ts).
  *
  * This module ONLY performs GET reads (location info, reviews, performance
  * insights, media, local posts). Publishing / replying / uploading is a
@@ -20,6 +17,7 @@ import {
   starRatingToInt,
   type GbpDailyMetricKey,
 } from "@shared/gbp";
+import { getGbpJson } from "./gbpHttp";
 
 const BUSINESS_INFO_BASE = "https://mybusinessbusinessinformation.googleapis.com/v1";
 const PERFORMANCE_BASE = "https://businessprofileperformance.googleapis.com/v1";
@@ -60,7 +58,7 @@ export function getGbpTarget(): GbpTarget | null {
   };
 }
 
-/* ── Access token (reuses the shared Google connection) ─────────────────── */
+/* ── Access token (dedicated Business Profile connection) ──────────────── */
 
 export async function getGbpAccessToken(): Promise<string> {
   const { dedicatedGbpAccessToken } = await import("./gbpDedicatedOAuth");
@@ -280,12 +278,11 @@ export function parseLocation(json: unknown): ParsedLocation {
 /* ── Network callers ────────────────────────────────────────────────────── */
 
 async function getJson(url: string, accessToken: string, fetchImpl: typeof fetch): Promise<unknown> {
-  const res = await fetchImpl(url, { headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" } });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new GbpUnavailableError(`${new URL(url).pathname} ${res.status}: ${text.slice(0, 300)}`);
+  try {
+    return await getGbpJson(url, accessToken, fetchImpl);
+  } catch (error) {
+    throw new GbpUnavailableError(`${new URL(url).pathname}: ${(error as Error).message}`);
   }
-  return res.json();
 }
 
 export async function fetchLocation(

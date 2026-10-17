@@ -1,36 +1,68 @@
-/** Read-only discovery of GBP accounts and locations for the existing Google OAuth grant. */
+/** Cached, read-only discovery using the existing GBP OAuth grant. */
+import { createHash } from "node:crypto";
 import { getGbpAccessToken } from "../../integrations/gbp";
+import { getGbpJson, GbpHttpError } from "../../integrations/gbpHttp";
 
-let blockedUntil = 0;
-export async function discoverGbpLocations() {
-  if (Date.now() < blockedUntil) return { ok: false as const, status: 429, stage: "accounts", reason: "rate_limited", retryAfterSeconds: Math.ceil((blockedUntil - Date.now()) / 1000) };
+type Location = { accountId: string; locationId: string; title: string; accountName: string };
+type Result =
+  | { ok: true; locations: Location[] }
+  | { ok: false; status: number; stage: "accounts" | "locations"; reason: string; retryAfterSeconds?: number };
+let cache: { key: string; until: number; result: Result } | undefined;
+const pending = new Map<string, Promise<Result>>();
+
+export async function discoverGbpLocations(): Promise<Result> {
   const token = await getGbpAccessToken();
-  const headers = { Authorization: "Bearer " + token };
-  const accountsResponse = await fetch("https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=100", {
-    headers, signal: AbortSignal.timeout(12000),
-  });
-  if (!accountsResponse.ok) {
-    const payload = await accountsResponse.json().catch(() => null) as { error?: { status?: string; details?: Array<{ reason?: string; metadata?: { quota_limit?: string; service?: string } }> } } | null;
-    const reason = payload?.error?.details?.find(d => d.reason)?.reason ?? payload?.error?.status ?? "google_api_error";
-    const retryHeader = Number(accountsResponse.headers.get("retry-after"));
-    const retryAfterSeconds = accountsResponse.status === 429 ? Math.min(3600, Math.max(300, Number.isFinite(retryHeader) && retryHeader > 0 ? retryHeader : 900)) : undefined;
-    if (retryAfterSeconds) blockedUntil = Date.now() + retryAfterSeconds * 1000;
-    return { ok: false as const, status: accountsResponse.status, stage: "accounts", reason: String(reason).slice(0, 120), retryAfterSeconds };
-  }
-  const accounts = await accountsResponse.json() as { accounts?: Array<{ name: string; accountName?: string }> };
-  const locations: Array<{ accountId: string; locationId: string; title: string; accountName: string }> = [];
-  for (const account of accounts.accounts ?? []) {
-    if (!/^accounts\/\d+$/.test(account.name)) continue;
-    const accountId = account.name.slice("accounts/".length);
-    const response = await fetch("https://mybusinessbusinessinformation.googleapis.com/v1/" + account.name + "/locations?readMask=name,title&pageSize=100", {
-      headers, signal: AbortSignal.timeout(12000),
-    });
-    if (!response.ok) return { ok: false as const, status: response.status, stage: "locations", accountId };
-    const data = await response.json() as { locations?: Array<{ name: string; title?: string }> };
-    for (const loc of data.locations ?? []) {
-      if (!/^locations\/\d+$/.test(loc.name)) continue;
-      locations.push({ accountId, locationId: loc.name.slice("locations/".length), title: loc.title ?? "", accountName: account.accountName ?? "" });
+  // A different/reconnected Google grant must never reuse another grant's data.
+  const key = createHash("sha256").update(token).digest("hex");
+  if (cache?.key === key && cache.until > Date.now()) return cache.result;
+  const existing = pending.get(key);
+  if (existing) return existing;
+  const promise = discover(token).then(result => {
+    if (result.ok) cache = { key, until: Date.now() + 5 * 60_000, result };
+    return result;
+  }).finally(() => pending.delete(key));
+  pending.set(key, promise);
+  return promise;
+}
+
+async function discover(token: string): Promise<Result> {
+  let stage: "accounts" | "locations" = "accounts";
+  const locations: Location[] = [];
+  try {
+    const accounts = await pages<{ name: string; accountName?: string }>(
+      "https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=100", "accounts", token,
+    );
+    stage = "locations";
+    for (const account of accounts) {
+      if (!/^accounts\/\d+$/.test(account.name)) continue;
+      const accountId = account.name.slice("accounts/".length);
+      const rows = await pages<{ name: string; title?: string }>(
+        `https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations?readMask=name,title&pageSize=100`, "locations", token,
+      );
+      for (const loc of rows) {
+        if (!/^locations\/\d+$/.test(loc.name)) continue;
+        locations.push({ accountId, locationId: loc.name.slice("locations/".length), title: loc.title ?? "", accountName: account.accountName ?? "" });
+      }
     }
+    return { ok: true, locations };
+  } catch (error) {
+    if (!(error instanceof GbpHttpError)) throw error;
+    return { ok: false, status: error.status, stage, reason: error.reason, retryAfterSeconds: error.retryAfterSeconds };
   }
-  return { ok: true as const, locations };
+}
+
+async function pages<T>(url: string, field: "accounts" | "locations", token: string): Promise<T[]> {
+  const rows: T[] = [];
+  const seen = new Set<string>();
+  let next = "";
+  do {
+    const pageUrl = new URL(url);
+    if (next) pageUrl.searchParams.set("pageToken", next);
+    const page = await getGbpJson<{ accounts?: T[]; locations?: T[]; nextPageToken?: string }>(pageUrl.toString(), token);
+    rows.push(...(page[field] ?? []));
+    next = page.nextPageToken ?? "";
+    if (next && seen.has(next)) throw new Error("Google returned a repeated page token");
+    seen.add(next);
+  } while (next);
+  return rows;
 }
