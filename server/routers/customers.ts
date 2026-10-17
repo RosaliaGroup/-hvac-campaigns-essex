@@ -1,3 +1,4 @@
+import { contactDisplayName } from "../../shared/contactName";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -88,7 +89,7 @@ export function appointmentMatchesLead(
   return false;
 }
 
-/** displayName = companyName, else "First Last", else email/phone fallback. Never empty. */
+/** Prefer the person name; company stays in its own field. */
 export function buildDisplayName(c: {
   companyName?: string | null;
   firstName?: string | null;
@@ -96,10 +97,7 @@ export function buildDisplayName(c: {
   email?: string | null;
   phone?: string | null;
 }): string {
-  if (c.companyName?.trim()) return c.companyName.trim();
-  const name = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
-  if (name) return name;
-  return c.email?.trim() || c.phone?.trim() || "Unnamed Customer";
+  return contactDisplayName(c);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -396,6 +394,8 @@ export const customersRouter = router({
         conditions.push(
           or(
             like(customers.displayName, q),
+            like(customers.firstName, q),
+            like(customers.lastName, q),
             like(customers.email, q),
             like(customers.phone, q),
             like(customers.companyName, q)
@@ -703,714 +703,105 @@ export const customersRouter = router({
           state: p.state,
           zip: p.zip,
           address: formatPropertyAddress(p),
-        })),
-      };
-    }),
-
-  /**
-   * Create-or-match a customer + first property in one transaction, with dedupe by
-   * normalized phone/email (customer) and addressLine1 (property). Surfaces a match
-   * instead of creating a silent duplicate. Returns ids + normalized data for prefill.
-   */
-  createWithProperty: protectedProcedure
-    .input(
-      z.object({
-        type: z.enum(["residential", "commercial"]).default("residential"),
-        firstName: z.string().max(255).optional().nullable(),
-        lastName: z.string().max(255).optional().nullable(),
-        companyName: z.string().max(255).optional().nullable(),
-        email: z
-          .string()
-          .email()
-          .max(320)
-          .optional()
-          .nullable()
-          .or(z.literal("").transform(() => null)),
-        phone: z.string().max(50).optional().nullable(),
-        addressLine1: z.string().max(255).optional().nullable(),
-        addressLine2: z.string().max(255).optional().nullable(),
-        city: z.string().max(120).optional().nullable(),
-        state: z.string().max(10).optional().nullable(),
-        zip: z.string().max(20).optional().nullable(),
-        propertyType: z.enum(["residential", "commercial"]).optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const existing = await findExistingCustomer(db, input.phone, input.email);
-      const firstName = input.firstName ?? null;
-      const lastName = input.lastName ?? null;
-      const displayName = buildDisplayName({
-        firstName,
-        lastName,
-        companyName: input.companyName,
-        email: input.email,
-        phone: input.phone,
-      });
-      const hasAddress = Boolean(input.addressLine1?.trim());
-
-      const result = await db.transaction(async tx => {
-        let customerId: number;
-        let mergedCustomer = false;
-        if (existing) {
-          customerId = existing.id;
-          mergedCustomer = true;
-        } else {
-          const values: InsertCustomer = {
-            type: input.type,
-            firstName,
-            lastName,
-            companyName: input.companyName ?? null,
-            displayName,
-            email: input.email ?? null,
-            phone: input.phone ?? null,
-          };
-          const ins = await tx.insert(customers).values(values);
-          customerId = Number(
-            (ins as unknown as [{ insertId: number }])[0]?.insertId ?? 0
-          );
-        }
-
-        let propertyId: number | null = null;
-        let mergedProperty = false;
-        if (hasAddress) {
-          const key = input.addressLine1!.trim().toLowerCase();
-          const props = await tx
-            .select({
-              id: properties.id,
-              addressLine1: properties.addressLine1,
-            })
-            .from(properties)
-            .where(eq(properties.customerId, customerId));
-          const match = props.find(
-            p => (p.addressLine1 ?? "").trim().toLowerCase() === key
-          );
-          if (match) {
-            propertyId = match.id;
-            mergedProperty = true;
-          } else {
-            const isPrimary = props.length === 0;
-            const pins = await tx.insert(properties).values({
-              customerId,
-              addressLine1: input.addressLine1!.trim(),
-              addressLine2: input.addressLine2 ?? null,
-              city: input.city ?? null,
-              state: input.state ?? null,
-              zip: input.zip ?? null,
-              propertyType:
-                input.propertyType ??
-                (input.type as "residential" | "commercial"),
-              isPrimary,
-            });
-            propertyId = Number(
-              (pins as unknown as [{ insertId: number }])[0]?.insertId ?? 0
-            );
-          }
-        }
-        return { customerId, propertyId, mergedCustomer, mergedProperty };
-      });
-
-      const custRow = (
-        await db
-          .select({
-            id: customers.id,
-            displayName: customers.displayName,
-            phone: customers.phone,
-            email: customers.email,
-            type: customers.type,
-          })
-          .from(customers)
-          .where(eq(customers.id, result.customerId))
-          .limit(1)
-      )[0];
-      const propRow = result.propertyId
-        ? (
-            await db
-              .select()
-              .from(properties)
-              .where(eq(properties.id, result.propertyId))
-              .limit(1)
-          )[0]
-        : null;
-      return {
-        ...result,
-        customer: custRow
-          ? {
-              id: custRow.id,
-              displayName: custRow.displayName,
-              phone: custRow.phone,
-              email: custRow.email,
-              type: custRow.type,
-            }
-          : null,
-        property: propRow
-          ? {
-              id: propRow.id,
-              propertyType: propRow.propertyType,
-              address: formatPropertyAddress(propRow),
-            }
-          : null,
-      };
-    }),
-
-  /** 360° view: customer + properties + related records. */
-  getById: protectedProcedure
-    .input(z.object({ id: z.number().int() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const rows = await db
-        .select()
-        .from(customers)
-        .where(eq(customers.id, input.id))
-        .limit(1);
-      const customer = rows[0];
-      if (!customer)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Customer not found",
-        });
-
-      // Appointments link by customerId, or fall back to a phone/email match so
-      // visits booked before conversion still surface under the contact.
-      const phoneKey = normalizePhone(customer.phone);
-      const emailKey = customer.email?.trim().toLowerCase() || null;
-      const apptMatch = [eq(appointments.customerId, input.id)];
-      if (phoneKey)
-        apptMatch.push(
-          sql`RIGHT(REGEXP_REPLACE(${appointments.phone}, '[^0-9]', ''), 10) = ${phoneKey}`
-        );
-      if (emailKey)
-        apptMatch.push(sql`LOWER(${appointments.email}) = ${emailKey}`);
-
-      // Sales documents (estimates/invoices) reconcile to this customer by:
-      //  (a) the resolved local customerId FK,
-      //  (b) the raw QBO CustomerRef == the customer's ref, and
-      //  (c) the doc's PARENT ref == the customer's ref — i.e. an invoice/estimate
-      //      filed under a QBO sub-customer / child project whose parent is this
-      //      customer (the 351-vs-354 hierarchy case). Deduplicated in assembleCustomerRelations.
-      // A doc RESOLVED to a customer (customerId set) attaches ONLY via that FK,
-      // so a document can never be claimed by two customers. Ref / parent-ref
-      // matching is a fallback for docs the sync could not resolve (customerId
-      // IS NULL) — surfacing them under the right customer without double-claiming
-      // any already-resolved document.
-      const docMatch = [eq(quickbooksSalesDocuments.customerId, input.id)];
-      if (customer.quickbooksCustomerId) {
-        docMatch.push(
-          and(
-            isNull(quickbooksSalesDocuments.customerId),
-            or(
-              eq(
-                quickbooksSalesDocuments.quickbooksCustomerId,
-                customer.quickbooksCustomerId
-              ),
-              eq(
-                quickbooksSalesDocuments.quickbooksParentRef,
-                customer.quickbooksCustomerId
-              )
-            )
-          )!
-        );
+      …11205 tokens truncated…alidateResearch(
+      { company, social: [person] },
+      [companySource, personUrl],
+      { name: "Sample Person", email: "sample@example.com" }
+    );
+    expect(result.company.name?.value).toBe("Example Company");
+    expect(result.social[0].platform).toBe("LinkedIn");
+  });
+  it("does not assign an employer to a Gmail contact without a known company", () => {
+    expect(
+      validateResearch(
+        { company, social: [person] },
+        [companySource, personUrl],
+        { name: "Sample Person", email: "sample@gmail.com" }
+      )
+    ).toMatchObject({ company: {}, social: [], status: "not_found" });
+  });
+  it("requires employer or exact email evidence, not a name-only social match", () => {
+    const result = validateResearch(
+      { company, social: [{ ...person, evidence: "Sample Person" }] },
+      [companySource, personUrl],
+      { name: "Sample Person", email: "sample@example.com" }
+    );
+    expect(result.social).toEqual([]);
+  });
+  it("accepts known employer evidence for personal email contacts", () => {
+    const result = validateResearch(
+      { company, social: [person] },
+      [companySource, personUrl],
+      {
+        name: "Sample Person",
+        email: "sample@gmail.com",
+        company: "Example Company",
       }
+    );
+    expect(result.social).toHaveLength(1);
+  });
+  it("rejects company LinkedIn pages as person profiles", () => {
+    expect(
+      validateResearch(
+        {
+          social: [
+            { ...person, url: "https://www.linkedin.com/company/example" },
+          ],
+        },
+        ["https://www.linkedin.com/company/example", personUrl],
+        { name: "Sample Person", company: "Example Company" }
+      ).social
+    ).toEqual([]);
+  });
+  it("shows unavailable without calling an unconfigured research provider", async () => {
+    const fetcher = vi.fn();
+    expect(
+      await researchContact({ name: "Sample Person" }, {}, fetcher)
+    ).toMatchObject({ status: "unavailable" });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+});
 
-      const [
-        props,
-        appts,
-        relatedLeads,
-        relatedCaptures,
-        calls,
-        rebates,
-        relJobs,
-        relOpps,
-        relDocs,
-      ] = await Promise.all([
-        db
-          .select()
-          .from(properties)
-          .where(eq(properties.customerId, input.id))
-          .orderBy(desc(properties.isPrimary), desc(properties.createdAt)),
-        db
-          .select()
-          .from(appointments)
-          .where(or(...apptMatch))
-          .orderBy(desc(appointments.scheduledAt), desc(appointments.createdAt))
-          .limit(50),
-        db
-          .select()
-          .from(leads)
-          .where(eq(leads.customerId, input.id))
-          .orderBy(desc(leads.createdAt))
-          .limit(50),
-        db
-          .select()
-          .from(leadCaptures)
-          .where(eq(leadCaptures.customerId, input.id))
-          .orderBy(desc(leadCaptures.createdAt))
-          .limit(50),
-        db
-          .select()
-          .from(callLogs)
-          .where(eq(callLogs.customerId, input.id))
-          .orderBy(desc(callLogs.createdAt))
-          .limit(50),
-        db
-          .select()
-          .from(rebateCalculations)
-          .where(eq(rebateCalculations.customerId, input.id))
-          .orderBy(desc(rebateCalculations.createdAt))
-          .limit(20),
-        db
-          .select()
-          .from(jobs)
-          .where(eq(jobs.customerId, input.id))
-          .orderBy(desc(jobs.createdAt)),
-        db
-          .select()
-          .from(opportunities)
-          .where(eq(opportunities.customerId, input.id))
-          .orderBy(desc(opportunities.createdAt)),
-        db
-          .select({
-            id: quickbooksSalesDocuments.id,
-            docType: quickbooksSalesDocuments.docType,
-            docNumber: quickbooksSalesDocuments.docNumber,
-            quickbooksId: quickbooksSalesDocuments.quickbooksId,
-            quickbooksCustomerId: quickbooksSalesDocuments.quickbooksCustomerId,
-            quickbooksParentRef: quickbooksSalesDocuments.quickbooksParentRef,
-            customerId: quickbooksSalesDocuments.customerId,
-            opportunityId: quickbooksSalesDocuments.opportunityId,
-            status: quickbooksSalesDocuments.status,
-            totalAmount: quickbooksSalesDocuments.totalAmount,
-            balance: quickbooksSalesDocuments.balance,
-            dueDate: quickbooksSalesDocuments.dueDate,
-            voided: quickbooksSalesDocuments.voided,
-            txnDate: quickbooksSalesDocuments.txnDate,
-          })
-          .from(quickbooksSalesDocuments)
-          .where(or(...docMatch))
-          .orderBy(desc(quickbooksSalesDocuments.txnDate)),
-      ]);
+it("accepts equivalent cited URL variants and bare company domains", () => {
+  const result = validateResearch(
+    {
+      company: {
+        ...company,
+        website: fact("www.example.com"),
+        name: { ...company.name, source: "http://www.example.com/about/" },
+      },
+      social: [{ ...person, url: personUrl + "/", source: personUrl + "/" }],
+    },
+    [companySource, personUrl],
+    { name: "Sample Person", email: "sample@example.com" }
+  );
+  expect(result.company.name?.value).toBe("Example Company");
+  expect(result.company.website?.value).toBe("https://example.com/");
+  expect(result.social).toHaveLength(1);
+});
 
-      const relationship = deriveContactRelationship({
-        leadStages: relatedCaptures.map(c => c.status),
-        jobStatuses: relJobs.map(j => j.status),
-        hasAppointment: appts.length > 0,
-      });
+it("accepts cited Google business listings with domain evidence, rejects searches and namesakes", () => {
+  const listing = "https://www.google.com/maps/place/Example+Company";
+  const query = "https://www.google.com/maps/search/Example+Company";
+  const input = (url:string,evidence:string) => ({company,companySocial:[{url,source:url,evidence}]});
+  const identity={name:"Sample Person",email:"sample@example.com",company:"Example Company"};
+  expect(validateResearch(input(listing,"Example Company example.com"),[companySource,listing],identity).companySocial?.[0].platform).toBe("Google Business Profile");
+  expect(validateResearch(input(query,"Example Company example.com"),[companySource,query],identity).companySocial).toBeUndefined();
+  expect(validateResearch(input(listing,"Example Company unrelated.com"),[companySource,listing],identity).companySocial).toBeUndefined();
+  expect(validateResearch(input(listing,"Example Company example.com"),[companySource],identity).companySocial).toBeUndefined();
+});
+it("accepts a cited professional directory with matching employer and domain", () => {
+  const url="https://www.zillow.com/profile/example";
+  const result=validateResearch({company,companySocial:[{url,source:url,evidence:"Example Company example.com"}]},[companySource,url],{name:"Sample Person",email:"sample@example.com"});
+  expect(result.companySocial?.[0].platform).toBe("Zillow");
+});
 
-      const relations = assembleCustomerRelations({
-        opportunities: relOpps,
-        salesDocs: relDocs,
-        jobs: relJobs,
-        propertyCount: props.length,
-      });
-
-      return {
-        customer,
-        relationship,
-        classification: contactClassification(
-          customer,
-          relationship,
-          relatedCaptures.length > 0
-        ),
-        properties: props,
-        appointments: appts,
-        leads: relatedLeads,
-        captures: relatedCaptures,
-        callLogs: calls,
-        rebateCalculations: rebates,
-        opportunities: relations.opportunities,
-        estimates: relations.estimates,
-        invoices: relations.invoices,
-        jobs: relations.jobs,
-        counts: relations.counts,
-        summary: relations.summary,
-      };
-    }),
-
-  create: protectedProcedure
-    .input(customerInput)
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const values: InsertCustomer = {
-        ...input,
-        displayName: buildDisplayName(input),
-      };
-      const result = await db.insert(customers).values(values);
-      const id = Number(
-        (result as unknown as [{ insertId: number }])[0]?.insertId ?? 0
-      );
-      return { id };
-    }),
-
-  update: protectedProcedure
-    .input(
-      toPatch(customerInput).extend({
-        id: z.number().int(),
-        status: z.enum(["active", "inactive", "archived"]).optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const { id, ...patch } = input;
-      const existing = (
-        await db.select().from(customers).where(eq(customers.id, id)).limit(1)
-      )[0];
-      if (!existing)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Customer not found",
-        });
-
-      const merged = { ...existing, ...patch };
-      await db
-        .update(customers)
-        .set({ ...patch, displayName: buildDisplayName(merged) })
-        .where(eq(customers.id, id));
-      return { success: true };
-    }),
-
-  /** Soft delete — never hard-delete a customer. */
-  archive: protectedProcedure
-    .input(z.object({ id: z.number().int() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-      await db
-        .update(customers)
-        .set({ status: "archived" })
-        .where(eq(customers.id, input.id));
-      return { success: true };
-    }),
-
-  // ── Properties ──────────────────────────────────────────────
-
-  addProperty: protectedProcedure
-    .input(propertyInput.extend({ customerId: z.number().int() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const owner = (
-        await db
-          .select({ id: customers.id })
-          .from(customers)
-          .where(eq(customers.id, input.customerId))
-          .limit(1)
-      )[0];
-      if (!owner)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Customer not found",
-        });
-
-      if (input.isPrimary) {
-        await db
-          .update(properties)
-          .set({ isPrimary: false })
-          .where(eq(properties.customerId, input.customerId));
-      }
-      const result = await db.insert(properties).values(input);
-      const id = Number(
-        (result as unknown as [{ insertId: number }])[0]?.insertId ?? 0
-      );
-      return { id };
-    }),
-
-  updateProperty: protectedProcedure
-    .input(toPatch(propertyInput).extend({ id: z.number().int() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const { id, ...patch } = input;
-      const existing = (
-        await db.select().from(properties).where(eq(properties.id, id)).limit(1)
-      )[0];
-      if (!existing)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Property not found",
-        });
-
-      if (patch.isPrimary) {
-        await db
-          .update(properties)
-          .set({ isPrimary: false })
-          .where(eq(properties.customerId, existing.customerId));
-      }
-      await db.update(properties).set(patch).where(eq(properties.id, id));
-      return { success: true };
-    }),
-
-  deleteProperty: protectedProcedure
-    .input(z.object({ id: z.number().int() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const referenced = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(appointments)
-        .where(eq(appointments.propertyId, input.id));
-      if (Number(referenced[0]?.count ?? 0) > 0) {
-        throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message:
-            "This property has appointments linked to it and cannot be deleted.",
-        });
-      }
-      await db.delete(properties).where(eq(properties.id, input.id));
-      return { success: true };
-    }),
-
-  // ── Conversion (with dedupe) ────────────────────────────────
-
-  /**
-   * Convert a `leads` row into a customer. If a customer already matches
-   * on phone or email, LINK to it instead of creating a duplicate.
-   * The lead's own status is left unchanged.
-   */
-  convertFromLead: protectedProcedure
-    .input(z.object({ leadId: z.number().int() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const lead = (
-        await db.select().from(leads).where(eq(leads.id, input.leadId)).limit(1)
-      )[0];
-      if (!lead)
-        throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found" });
-      if (lead.customerId)
-        return {
-          customerId: lead.customerId,
-          merged: true,
-          alreadyConverted: true,
-        };
-
-      const phone = lead.contactType === "phone" ? lead.contact : null;
-      const email = lead.contactType === "email" ? lead.contact : null;
-
-      const existing = await findExistingCustomer(db, phone, email);
-      let customerId: number;
-      let merged = false;
-
-      if (existing) {
-        customerId = existing.id;
-        merged = true;
-      } else {
-        const { firstName, lastName } = splitName(lead.name);
-        const values: InsertCustomer = {
-          type: "residential",
-          firstName,
-          lastName,
-          displayName: buildDisplayName({ firstName, lastName, email, phone }),
-          email,
-          phone,
-          source: lead.source,
-          notes: lead.notes,
-          convertedFromLeadId: lead.id,
-        };
-        const result = await db.insert(customers).values(values);
-        customerId = Number(
-          (result as unknown as [{ insertId: number }])[0]?.insertId ?? 0
-        );
-      }
-
-      await db
-        .update(leads)
-        .set({ customerId, convertedAt: new Date() })
-        .where(eq(leads.id, lead.id));
-
-      // Keep appointment history linked: re-point matching unlinked appointments to
-      // the resolved customer (phone/email match, same model used elsewhere).
-      // Call logs are NOT relinked — they have no email, are joined strictly by
-      // customerId in read paths (no phone-match precedent), and their leadId FK is
-      // not populated, so phone-matching them would be an unsafe new heuristic.
-      const relinkedAppointments = await relinkAppointmentsToCustomer(
-        db,
-        customerId,
-        phone,
-        email
-      );
-      return {
-        customerId,
-        merged,
-        alreadyConverted: false,
-        relinkedAppointments,
-      };
-    }),
-
-  /** Convert a `leadCaptures` row into a customer, with the same dedupe rule. */
-  convertFromCapture: protectedProcedure
-    .input(z.object({ captureId: z.number().int() }))
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db)
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database unavailable",
-        });
-
-      const capture = (
-        await db
-          .select()
-          .from(leadCaptures)
-          .where(eq(leadCaptures.id, input.captureId))
-          .limit(1)
-      )[0];
-      if (!capture)
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Lead capture not found",
-        });
-      if (capture.customerId)
-        return {
-          customerId: capture.customerId,
-          merged: true,
-          alreadyConverted: true,
-        };
-
-      const existing = await findExistingCustomer(
-        db,
-        capture.phone,
-        capture.email
-      );
-      let customerId: number;
-      let merged = false;
-
-      if (existing) {
-        customerId = existing.id;
-        merged = true;
-      } else {
-        // Prefer explicit first/last; fall back to splitting `name`
-        const fromSplit = splitName(capture.name);
-        const firstName = capture.firstName || fromSplit.firstName;
-        const lastName = capture.lastName || fromSplit.lastName;
-        const isCommercial =
-          capture.captureType?.includes("commercial") ?? false;
-        const values: InsertCustomer = {
-          type: isCommercial ? "commercial" : "residential",
-          firstName,
-          lastName,
-          displayName: buildDisplayName({
-            firstName,
-            lastName,
-            email: capture.email,
-            phone: capture.phone,
-          }),
-          email: capture.email,
-          phone: capture.phone,
-          source: capture.captureType,
-          notes: capture.notes,
-          convertedFromCaptureId: capture.id,
-        };
-        const result = await db.insert(customers).values(values);
-        customerId = Number(
-          (result as unknown as [{ insertId: number }])[0]?.insertId ?? 0
-        );
-      }
-
-      await db
-        .update(leadCaptures)
-        .set({ customerId, convertedAt: new Date() })
-        .where(eq(leadCaptures.id, capture.id));
-
-      // Re-point matching unlinked appointments so the converted customer keeps its
-      // appointment history (same phone/email model as convertFromLead).
-      const relinkedAppointments = await relinkAppointmentsToCustomer(
-        db,
-        customerId,
-        capture.phone,
-        capture.email
-      );
-      return {
-        customerId,
-        merged,
-        alreadyConverted: false,
-        relinkedAppointments,
-      };
-    }),
-
-  /** Dashboard counts by type and status. */
-  stats: protectedProcedure.query(async () => {
-    const db = await getDb();
-    if (!db)
-      return {
-        total: 0,
-        residential: 0,
-        commercial: 0,
-        active: 0,
-        archived: 0,
-      };
-
-    const rows = await db
-      .select({
-        type: customers.type,
-        status: customers.status,
-        count: sql<number>`COUNT(*)`,
-      })
-      .from(customers)
-      .groupBy(customers.type, customers.status);
-
-    const stats = {
-      total: 0,
-      residential: 0,
-      commercial: 0,
-      active: 0,
-      archived: 0,
-    };
-    for (const row of rows) {
-      const n = Number(row.count);
-      stats.total += n;
-      if (row.type === "residential") stats.residential += n;
-      if (row.type === "commercial") stats.commercial += n;
-      if (row.status === "active") stats.active += n;
-      if (row.status === "archived") stats.archived += n;
-    }
-    return stats;
-  }),
+it("requires a cited exact-email identity before filling an unknown person's name",()=>{
+ const source="https://example.com/team";
+ const named=(evidence:string)=>({person:{firstName:{value:"Mary Ann",source,evidence},lastName:{value:"Smith",source,evidence}}});
+ const identity={name:"person@example.com",email:"person@example.com",company:"Example Company"};
+ expect(validateResearch(named("Mary Ann Smith person@example.com"),[source],identity).person?.firstName.value).toBe("Mary Ann");
+ expect(validateResearch(named("Mary Ann Smith Example Company"),[source],identity).person).toBeUndefined();
+ expect(validateResearch(named("Mary Ann Smith person@example.com"),[],identity).person).toBeUndefined();
+ expect(validateResearch(named("Other Person person@example.com"),[source],identity).person).toBeUndefined();
 });

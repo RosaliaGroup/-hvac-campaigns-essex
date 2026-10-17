@@ -39,8 +39,8 @@ describe("customers helpers — splitName", () => {
 });
 
 describe("customers helpers — buildDisplayName", () => {
-  it("prefers company name", () => {
-    expect(buildDisplayName({ companyName: "Acme HVAC", firstName: "Ana", lastName: "H" })).toBe("Acme HVAC");
+  it("prefers person name while keeping the company separate", () => {
+    expect(buildDisplayName({ companyName: "Acme HVAC", firstName: "Ana", lastName: "H" })).toBe("Ana H");
   });
   it("falls back to First Last", () => {
     expect(buildDisplayName({ firstName: "Ana", lastName: "Haynes" })).toBe("Ana Haynes");

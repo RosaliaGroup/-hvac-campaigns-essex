@@ -1,3 +1,4 @@
+import { startContactNameBackfill } from "../services/backfillContactNames";
 import { startGmailCrmScheduler } from "../services/gmailCrm";
 import { start30DayCadenceScheduler } from "../services/crm30DaySync";
 import { startVerifiedProspectPhoneBackfill } from "../services/backfillVerifiedProspectPhones";
@@ -149,6 +150,7 @@ async function startServer() {
     startScheduledSocialPostWorker();
     startLushaConnectionProbe();
     startAutomaticContactEnrichment();
+    startContactNameBackfill();
     // Start daily GA4 Analytics Data API → cache sync for Marketing Analytics
     startGa4SyncScheduler();
     // Start daily Business Profile → cache sync for Local SEO

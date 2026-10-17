@@ -1,3 +1,4 @@
+import { splitContactPersonName, contactDisplayName } from "../../shared/contactName";
 import { eq, sql } from "drizzle-orm";
 import { customers, crmExternalContacts } from "../../drizzle/schema";
 import { getDb } from "../db";
@@ -19,6 +20,7 @@ export async function ensureSentEmailContact(
 ) {
   if (!external.email) return null;
   const email = external.email.trim().toLowerCase();
+  const person = splitContactPersonName(external.name, external.company);
   const source = external.source==="crm-manual" ? "CRM Manual"
     : external.source==="gmail-selected" ? "Gmail Selected"
     : "HVAC Prospecting Task";
@@ -39,14 +41,21 @@ export async function ensureSentEmailContact(
       if(!existing.phone?.trim() && external.phone?.trim()) patch.phone=external.phone;
       if(!existing.companyName?.trim() && external.company?.trim()) patch.companyName=external.company;
       if(existing.type==="residential" && external.company?.trim()) patch.type="commercial";
-      if(existing.displayName===email && external.name && external.name!==email)
-        patch.displayName=external.name;
+      if(person && !splitContactPersonName([existing.firstName,existing.lastName].filter(Boolean).join(" "),existing.companyName)) {
+        patch.firstName=person.firstName;
+        patch.lastName=person.lastName;
+      }
+      const preferred=contactDisplayName({...existing,...patch});
+      if(preferred!==existing.displayName && (existing.firstName?.trim() || existing.lastName?.trim() || person))
+        patch.displayName=preferred;
       if(Object.keys(patch).length)
         await tx.update(customers).set(patch).where(eq(customers.id,existing.id));
     }
     if (!customerId) {
       const result = await tx.insert(customers).values({
-        displayName: external.name || email,
+        firstName: person?.firstName ?? null,
+        lastName: person?.lastName ?? null,
+        displayName: person ? contactDisplayName(person) : external.name || email,
         email,
         phone: external.phone ?? null,
         companyName: external.company ?? null,

@@ -1,3 +1,4 @@
+import { splitContactPersonName } from "../../shared/contactName";
 /**
  * Automatic CRM enrichment is restricted to task prospects and explicitly
  * selected Gmail/manual contacts. Incoming Gmail/SMS/leads remain in their
@@ -166,7 +167,7 @@ export async function processContactEnrichment(contactId:number) {
       return {status:"blocked"};
     }
     const needsPhone=!validPhone(existing.phone);
-    const needsIdentity=!c.company?.trim()||!c.name?.trim()||c.name.includes("@");
+    const needsIdentity=!c.company?.trim()||!splitContactPersonName(c.name,c.company);
     if(needsIdentity && needsPhone){
       // Try verified public company/social research automatically, even when
       // the Gmail task has only an email address. A company name may be
