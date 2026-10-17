@@ -132,3 +132,20 @@ it("retains signature details when public lookup fails and does not send message
   });
   expect(result?.status).toBe("matched");
 });
+
+it("retries an unavailable cached lookup after its five-minute cooldown", async () => {
+  chain.limit.mockResolvedValueOnce([contact]).mockResolvedValueOnce([{
+    identity: JSON.stringify({version:2,name:contact.name,email:contact.email,company:contact.company}),
+    profile: {...profile,status:"unavailable",checkedAt:new Date(Date.now()-6*60*1000).toISOString()},
+  }]).mockResolvedValueOnce([]);
+  await contactProfile({contactId:10},true);
+  expect(mocks.research).toHaveBeenCalledTimes(1);
+});
+it("does not hammer a provider during a recent failure cooldown", async () => {
+  chain.limit.mockResolvedValueOnce([contact]).mockResolvedValueOnce([{
+    identity: JSON.stringify({version:2,name:contact.name,email:contact.email,company:contact.company}),
+    profile: {...profile,status:"unavailable"},
+  }]);
+  await contactProfile({contactId:10},true);
+  expect(mocks.research).not.toHaveBeenCalled();
+});
