@@ -122,8 +122,8 @@ export async function contactProfile(
     }
     if (!c) return null;
   }
-  const identity = JSON.stringify({
-    version: 2,
+  let identity = JSON.stringify({
+    version: 3,
     name: c.name,
     email: c.email,
     company: c.company,
@@ -185,6 +185,18 @@ export async function contactProfile(
           `Public lookup could not finish${status ? ` (provider HTTP ${status})` : ""}. Retry after 5 minutes. Company details from email are shown when available.`,
       };
     }
+    if(profile.person) {
+      const firstName=profile.person.firstName.value, lastName=profile.person.lastName.value;
+      // Keep a conflicting staff-entered person name for review; only replace placeholders.
+      const {splitContactPersonName}=await import("../../../shared/contactName");
+      if(!splitContactPersonName(c.name,c.company) || c.name.trim().toLowerCase()===`${firstName} ${lastName}`.toLowerCase()) {
+        await db.update(crmExternalContacts).set({name:`${firstName} ${lastName}`}).where(eq(crmExternalContacts.id,c.id));
+        identity=JSON.stringify({version:3,name:`${firstName} ${lastName}`,email:c.email,company:c.company});
+        const {ensureSentEmailContact}=await import("../sentEmailContact");
+        if(c.customerId || ["gmail-prospecting","verified-hvac-prospect","crm-manual","gmail-selected"].includes(c.source || ""))
+          await ensureSentEmailContact(db,{...c,name:`${firstName} ${lastName}`});
+      }
+    }
     profile.company = { ...signature, ...profile.company };
     profile = withVerifiedSocialLinks(profile, c.email);
     if (Object.keys(profile.company).length || profile.social.length)
@@ -219,7 +231,7 @@ export async function backfillVerifiedSocialLinks() {
       };
       const merged=withVerifiedSocialLinks(base,contact.email);
       if (JSON.stringify(merged) === JSON.stringify(base)) {unchanged++;continue;}
-      const identity=JSON.stringify({version:2,name:contact.name,email:contact.email,company:contact.company});
+      const identity=JSON.stringify({version:3,name:contact.name,email:contact.email,company:contact.company});
       await db.insert(profiles).values({contactId:contact.id,identity,profile:merged})
         .onDuplicateKeyUpdate({set:{identity,profile:merged,updatedAt:new Date()}});
       const [readback]=await db.select({profile:profiles.profile}).from(profiles)
@@ -260,7 +272,7 @@ export async function saveVerifiedLushaLinkedIn(contactId: number, linkedinUrl: 
     platform:"LinkedIn",url:u.href,source:"https://www.lusha.com/",
     evidence:"Lusha business contact matched by exact name and current employer",
   });
-  const identity=JSON.stringify({version:2,name:contact.name,email:contact.email,company:contact.company});
+  const identity=JSON.stringify({version:3,name:contact.name,email:contact.email,company:contact.company});
   const profile:ContactProfile = {...base,social,status:"matched",checkedAt:new Date().toISOString()};
   await db.insert(profiles).values({contactId,identity,profile})
     .onDuplicateKeyUpdate({set:{identity,profile,updatedAt:new Date()}});

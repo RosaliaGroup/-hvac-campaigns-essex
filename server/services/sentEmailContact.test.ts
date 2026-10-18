@@ -54,3 +54,24 @@ describe("Sent email CRM contacts", () => {
  expect(tx.values).toHaveBeenCalledWith(expect.objectContaining({email:"new@building.com",phone:null,source:"Gmail Selected"}));
  expect(tx.set).toHaveBeenCalledWith({customerId:12});
  });
+
+it("splits a verified person name into dedicated fields on intake",async()=>{
+ const {tx,db}=database([]);
+ await ensureSentEmailContact(db,{id:9,email:"matt@example.com",name:"Matt Steier",company:"VanRock CRE"});
+ expect(tx.values).toHaveBeenCalledWith(expect.objectContaining({firstName:"Matt",lastName:"Steier",displayName:"Matt Steier",companyName:"VanRock CRE"}));
+});
+it("repairs empty person fields and company display labels without replacing existing names",async()=>{
+ const {tx,db}=database([{id:4,displayName:"VanRock CRE",companyName:"VanRock CRE",firstName:null,lastName:null}]);
+ await ensureSentEmailContact(db,{id:9,email:"matt@example.com",name:"Matt Steier",company:"VanRock CRE"});
+ expect(tx.set).toHaveBeenCalledWith(expect.objectContaining({firstName:"Matt",lastName:"Steier",displayName:"Matt Steier"}));
+});
+it("never turns an email or company into a first and last name",async()=>{
+ const {tx,db}=database([]);
+ await ensureSentEmailContact(db,{id:9,email:"matt@example.com",name:"VanRock CRE",company:"VanRock CRE"});
+ expect(tx.values).toHaveBeenCalledWith(expect.objectContaining({firstName:null,lastName:null}));
+});
+it("preserves a conflicting staff-entered full name",async()=>{
+ const {tx,db}=database([{id:4,displayName:"Example Company",firstName:"Mary",lastName:"Smith"}]);
+ await ensureSentEmailContact(db,{id:9,email:"matt@example.com",name:"Matt Steier"});
+ expect(tx.set).toHaveBeenCalledWith({displayName:"Mary Smith"});
+});

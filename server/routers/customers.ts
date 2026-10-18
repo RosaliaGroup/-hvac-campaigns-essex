@@ -1,3 +1,4 @@
+import { contactDisplayName } from "../../shared/contactName";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -88,7 +89,7 @@ export function appointmentMatchesLead(
   return false;
 }
 
-/** displayName = companyName, else "First Last", else email/phone fallback. Never empty. */
+/** Prefer the person name; company stays in its own field. */
 export function buildDisplayName(c: {
   companyName?: string | null;
   firstName?: string | null;
@@ -96,10 +97,7 @@ export function buildDisplayName(c: {
   email?: string | null;
   phone?: string | null;
 }): string {
-  if (c.companyName?.trim()) return c.companyName.trim();
-  const name = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
-  if (name) return name;
-  return c.email?.trim() || c.phone?.trim() || "Unnamed Customer";
+  return contactDisplayName(c);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -396,6 +394,8 @@ export const customersRouter = router({
         conditions.push(
           or(
             like(customers.displayName, q),
+            like(customers.firstName, q),
+            like(customers.lastName, q),
             like(customers.email, q),
             like(customers.phone, q),
             like(customers.companyName, q)
