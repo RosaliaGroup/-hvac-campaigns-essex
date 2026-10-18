@@ -1,9 +1,10 @@
+import { splitContactPersonName } from "@shared/contactName";
 import { parseQboCompositeName } from "@shared/qboCompositeName";
 
 /**
  * DISPLAY-ONLY identity resolver for the customer profile.
  *
- * Prefers structured fields (companyName → given+family → displayName) and falls
+ * Prefers structured fields (given+family → companyName → displayName) and falls
  * back to the composite QBO DisplayName parser only when a name is still a
  * composite ("PN#132 I PDC I 828 Summer Ave …"). It NEVER writes: production
  * customer fields (displayName/firstName/lastName/companyName/quickbooksCustomerId)
@@ -35,7 +36,9 @@ export function resolveCustomerIdentity(c: CustomerIdentityInput): ResolvedCusto
   const parsed = source ? parseQboCompositeName(source) : null;
 
   if (parsed?.isComposite) {
+    const structured = joinName(c.firstName,c.lastName);
     const name =
+      (splitContactPersonName(structured,c.companyName) ? structured : "") ||
       parsed.companyName?.trim() ||
       parsed.customerDisplayName?.trim() ||
       joinName(parsed.firstName, parsed.lastName) ||
@@ -50,6 +53,6 @@ export function resolveCustomerIdentity(c: CustomerIdentityInput): ResolvedCusto
   }
 
   const name =
-    c.companyName?.trim() || joinName(c.firstName, c.lastName) || c.displayName?.trim() || "Unknown";
+    joinName(c.firstName, c.lastName) || c.companyName?.trim() || c.displayName?.trim() || "Unknown";
   return { name, projectReference: null, serviceAddress: null, derivedFromComposite: false };
 }
