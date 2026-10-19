@@ -23,6 +23,103 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Multifamily HVAC Replacement Without Tenant Disruption",
+    "slug": "multifamily-hvac-replacement-occupied-buildings",
+    "date": "September 26, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial & Multifamily HVAC",
+    "metaDescription": "Plan multifamily HVAC replacement across occupied NJ buildings with minimal tenant disruption, quality installs, and optional 10-year coverage.",
+    "excerpt": "A practical approach to replacing HVAC systems in occupied multifamily buildings — prioritizing installation quality, system fit, and phased scheduling over disruptive all-at-once shutdowns.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Replacing HVAC systems across an occupied multifamily building is nothing like a new-construction install. Tenants still need heat, cooling, and hot water while crews work floor by floor or unit by unit. For property managers, general contractors, and building owners, the goal is a plan that prioritizes correct equipment sizing and installation quality first, then sequences the work so residents aren't displaced. Optional 10-year parts & labor coverage and utility incentive programs can support the budget, but they should never be the reason a system gets chosen over one that actually fits the building."
+      },
+      {
+        "type": "h2",
+        "content": "Why Occupied-Building Replacements Need a Different Plan"
+      },
+      {
+        "type": "paragraph",
+        "content": "In an occupied building, every unit represents a household or business that depends on continuous comfort. Replacement work has to account for access scheduling, noise windows, elevator or stairwell logistics, and advance notice to residents — constraints that simply don't exist in vacant new construction. A workable plan starts with an accurate inventory of what's in the building now: unit count, system types (PTAC, split systems, ductless mini-splits, rooftop units), and how each unit is currently zoned. From there, the replacement sequence can be built around occupancy patterns instead of forcing tenants to adjust around the contractor's convenience."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Come First"
+      },
+      {
+        "type": "paragraph",
+        "content": "The equipment that works for a garden-style apartment building won't necessarily work for a mixed-use mid-rise or a high-rise with shared risers. Mechanical Enterprise installs heat pumps, central AC, ductless mini-splits, full system replacements, and VRV/VRF systems across our New Jersey service area, matching system type to the building's layout, electrical capacity, and tenant mix. Correct sizing and a clean installation reduce callbacks, shorten punch lists, and cut down on the service calls that generate tenant complaints after turnover. Fit and workmanship, not the lowest bid line item, determine how few disruptions a building experiences over the following years."
+      },
+      {
+        "type": "h2",
+        "content": "Phasing Replacement Work Without Displacing Tenants"
+      },
+      {
+        "type": "paragraph",
+        "content": "Phasing is the tool that keeps occupied buildings livable during a replacement. Work can be broken into floors, wings, or unit clusters so that only a limited number of households are without conditioned air at any given time. Coordinating closely with on-site building staff on notice windows, common-area access, and parking for equipment staging keeps the schedule moving without last-minute surprises. For buildings with shared mechanical systems, sequencing also has to account for any shutdowns that affect multiple units simultaneously, so those windows are scheduled for the shortest practical duration."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Total unit count and a breakdown of current system types (PTAC, split, ductless, rooftop)",
+          "Approximate age and condition of existing equipment, where known",
+          "Electrical panel capacity and any known infrastructure limitations",
+          "Building access constraints: elevator availability, parking, loading areas",
+          "Tenant notification requirements and any lease or HOA notice periods",
+          "Project timeline or phasing constraints driven by budget cycles or occupancy",
+          "Whether optional parts & labor coverage should be included in the proposal",
+          "Any interest in exploring commercial rebate or financing programs"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Optional Coverage for New and Eligible Existing Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "For new installations, Mechanical Enterprise offers an optional 10-year parts & labor coverage as a separately purchased add-on, with a zero deductible and coverage available across all major brands. This is not bundled into the installation price and is not a standard feature — it's a paid agreement you select at the time of purchase. Existing equipment in a building may also qualify for the same coverage, but only after it passes an eligibility inspection; not every existing system will qualify, and eligibility is assessed unit by unit against program criteria."
+      },
+      {
+        "type": "h2",
+        "content": "Rebates and Financing: A Secondary Consideration"
+      },
+      {
+        "type": "paragraph",
+        "content": "Once the system design and phasing plan are set, commercial incentive programs can help manage the budget. PSE&G Direct Install (commercial) can cover up to 80% of eligible project costs, and PSE&G On-Bill Repayment offers 0% interest financing for the remaining balance, repaid through the monthly utility bill. These programs can meaningfully reduce out-of-pocket cost for qualifying multifamily properties, but they shouldn't drive equipment selection. A system chosen primarily to maximize a rebate, rather than to fit the building, tends to generate more service calls and tenant complaints down the line."
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning an HVAC replacement across an occupied multifamily property? Get a phased proposal built around your building and tenants.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      },
+      {
+        "type": "h2",
+        "content": "Serving Multifamily Properties Across Northern and Central NJ"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise has worked in New Jersey's mechanical trade for 20 years, serving commercial and multifamily properties throughout Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. That includes garden-style apartment complexes, mixed-use mid-rises, and high-rise multifamily buildings with shared mechanical infrastructure — each requiring a different phasing and system approach. To start planning a replacement for your building, call (862) 423-9396."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How is HVAC replacement scheduled in an occupied multifamily building?",
+        "answer": "Work is typically phased by floor, wing, or unit cluster so only a limited number of households are without conditioned air at one time, coordinated around tenant notice requirements and building access windows."
+      },
+      {
+        "question": "Can existing HVAC equipment qualify for the same coverage as new installs?",
+        "answer": "Eligible existing systems may qualify for the optional 10-year parts & labor coverage after passing an inspection, but not all existing equipment will automatically qualify."
+      },
+      {
+        "question": "What NJ counties does Mechanical Enterprise serve for commercial and multifamily projects?",
+        "answer": "We serve Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for commercial and multifamily HVAC work."
+      }
+    ]
+  },
+
+  {
     "title": "Fixed Per-Unit HVAC Pricing for NJ Apartments",
     "slug": "fixed-per-unit-hvac-pricing-apartment-portfolios",
     "date": "September 26, 2026",
