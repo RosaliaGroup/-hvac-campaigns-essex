@@ -2,7 +2,8 @@
  * Weekly B2B content pipeline's topic backlog (docs/seo-automation-spec.md
  * Part 2). seedContentQueue() is idempotent (checks by title) — safe to call
  * on every boot. The model may propose new topics (status "proposed") but
- * per spec "cannot self-select them" — nextTopicToProcess() only ever picks
+ * ordinary proposals require review; the owner-authorized auto-replenishment
+ * service validates and queues fresh subjects when exhausted. nextTopicToProcess() only picks
  * up "queued" or "refresh_due" rows, which requires a human to promote a
  * proposed topic first.
  */

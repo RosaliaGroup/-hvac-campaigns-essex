@@ -1,3 +1,4 @@
+import { pacedGmailRead } from "./gmailReadTransport";
 import { gmailQuotaRemainingMs, gmailIsRateLimited, markGmailQuotaExceeded, GmailQuotaCooldownError } from "./gmailQuotaCooldown";
 /** Gmail-labeled prospecting messages -> 30-day CRM cadence. No automatic sends. */
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
@@ -35,9 +36,9 @@ export async function sync30DayFromGmail(
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function read(path: string) {
     if (gmailQuotaRemainingMs() > 0) throw new GmailQuotaCooldownError(gmailQuotaRemainingMs());
-    const response = await fetchImpl(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
+    const response = await pacedGmailRead(`https://gmail.googleapis.com/gmail/v1/users/me/${path}`, {
       headers: { Authorization: `Bearer ${accessToken}` }, signal: AbortSignal.timeout(15000),
-    });
+    }, fetchImpl);
     if (!response.ok) {
       const payload = await response.json().catch(() => null);
       const reason = JSON.stringify(payload?.error?.errors ?? []) + " " + String(payload?.error?.status ?? "");

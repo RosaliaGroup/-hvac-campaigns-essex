@@ -301,3 +301,12 @@ describe("website quote notification messages", () => {
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 });
+
+// Last: a quota rejection intentionally leaves the shared transport cooling down.
+it("shares a quota stop with other scanners and never retries it immediately", async () => {
+  const fetcher = vi.fn(async () => new Response(JSON.stringify({error:{errors:[{reason:"rateLimitExceeded"}]}}), {status:403}));
+  await expect(syncGmailPage({}, fetcher)).rejects.toThrow("shared cooldown");
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  await expect(syncGmailPage({}, fetcher)).rejects.toThrow("shared cooldown");
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});
