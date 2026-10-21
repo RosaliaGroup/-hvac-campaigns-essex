@@ -4,8 +4,9 @@ import { Phone, ArrowRight, CheckCircle } from "lucide-react";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
-import { blogPosts, type BlogSection, type FAQItem } from "@/data/blogPosts";
-import { commercialGrowthPosts } from "@/data/commercialGrowthPosts";
+import { type BlogSection, type FAQItem } from "@/data/blogPosts";
+import { allBlogPosts } from "@/data/allBlogPosts";
+import { blogDateIso } from "@shared/blogPublication";
 import { Redirect } from "wouter";
 import { Link } from "wouter";
 import { ALL_CITIES, pickDeterministic } from "@/data/njCounties";
@@ -103,7 +104,7 @@ function RenderSection({ section }: { section: BlogSection }) {
 }
 
 export default function BlogPost({ slug }: { slug: string }) {
-  const post = [...commercialGrowthPosts, ...blogPosts].find((p) => p.slug === slug);
+  const post = allBlogPosts.find((p) => p.slug === slug);
 
   useSEO({
     title: post ? `${post.title} | Mechanical Enterprise` : "Blog | Mechanical Enterprise",
@@ -117,7 +118,8 @@ export default function BlogPost({ slug }: { slug: string }) {
     <div className="min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org", "@type": "Article",
-        "headline": post.title, "datePublished": post.date,
+        "headline": post.title, "datePublished": blogDateIso(post.date),
+        ...(post.updatedDate ? { "dateModified": blogDateIso(post.updatedDate) } : {}),
         "author": { "@type": "Organization", "name": "Mechanical Enterprise LLC" },
         "publisher": { "@type": "Organization", "name": "Mechanical Enterprise LLC", "url": BASE },
         "description": post.metaDescription,
@@ -140,12 +142,17 @@ export default function BlogPost({ slug }: { slug: string }) {
           <div className="max-w-3xl mx-auto text-center text-white">
             <Badge className="mb-4 bg-[#e8813a] text-white hover:bg-[#e8813a]/90 text-sm">{post.category}</Badge>
             <h1 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">{post.title}</h1>
-            <div className="flex items-center justify-center gap-4 text-white/60 text-sm">
-              <span>{post.date}</span>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-white/60 text-sm">
+              <span>Published <time dateTime={blogDateIso(post.date)}>{post.date}</time></span>
+              {post.updatedDate && <span>Updated <time dateTime={blogDateIso(post.updatedDate)}>{post.updatedDate}</time></span>}
               <span>·</span>
               <span>{post.readTime}</span>
               <span>·</span>
               <span>Mechanical Enterprise Team</span>
+            </div>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <a href="#blog-assessment" className="rounded-md bg-[#e8813a] px-5 py-3 font-semibold text-white hover:bg-[#d5732f]">Request an HVAC assessment</a>
+              <a href={PHONE_TEL} className="rounded-md border border-white/40 px-5 py-3 font-semibold text-white">Call {PHONE}</a>
             </div>
           </div>
         </div>
@@ -185,7 +192,7 @@ export default function BlogPost({ slug }: { slug: string }) {
               })()}
 
               {/* Bottom-of-article inline capture — replaces the old /contact CTA */}
-              <div className="mt-10">
+              <div id="blog-assessment" className="mt-10 scroll-mt-24">
                 <InlineLeadCapture
                   variant={pickBlogVariant(slug)}
                   pageContext={`blog:${slug}:bottom`}
@@ -250,7 +257,7 @@ export default function BlogPost({ slug }: { slug: string }) {
               <div className="mt-8">
                 <h3 className="text-xl font-bold text-[#0a1628] mb-3">More HVAC Guides</h3>
                 <div className="grid md:grid-cols-2 gap-3">
-                  {pickDeterministic([...commercialGrowthPosts, ...blogPosts].filter(p => p.slug !== slug), slug, 4).map((post) => (
+                  {pickDeterministic(allBlogPosts.filter(p => p.slug !== slug), slug, 4).map((post) => (
                     <Link key={post.slug} href={`/blog/${post.slug}`}>
                       <div className="bg-[#f7f8fa] rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
                         {post.title.length > 55 ? post.title.slice(0, 52) + "..." : post.title}

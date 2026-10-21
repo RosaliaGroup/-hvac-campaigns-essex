@@ -6,7 +6,7 @@ import { blogPosts } from "../client/src/data/blogPosts";
  * type-check, so an extra key (PR #162's checklist `content` label) shipped and only `tsc` noticed — failing main's type-check.
  * Unit tests on the generator are not enough; this fails on the data itself, in plain `vitest`.
  */
-const POST_KEYS = ["title", "slug", "date", "readTime", "category", "metaDescription", "excerpt", "sections", "faqSchema"];
+const POST_KEYS = ["title", "slug", "date", "updatedDate", "readTime", "category", "metaDescription", "excerpt", "sections", "faqSchema"];
 const SECTION_KEYS: Record<string, string[]> = {
   intro: ["type", "content"], h2: ["type", "content"], paragraph: ["type", "content"], stat_box: ["type", "content"],
   checklist: ["type", "items"], numbered_list: ["type", "items"], cta_box: ["type", "content", "buttonText", "buttonUrl"],
