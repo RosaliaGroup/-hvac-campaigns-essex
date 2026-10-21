@@ -135,6 +135,13 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Codespaces/standby safety: run the app UI and API against an isolated
+    // development database, but never start a second automated sender or any
+    // background side-effect pollers while in independent-development mode.
+    if (process.env.STANDBY_DISABLE_AUTOMATION === "true") {
+      console.warn("[STANDBY] All background automation/schedulers are disabled");
+      return;
+    }
     // Start background SMS scheduler (checks every 5 min for due sends)
     startScheduledSmsProcessor();
     // Start QuickBooks sales-document poller (incremental sync + follow-up dispatch)
