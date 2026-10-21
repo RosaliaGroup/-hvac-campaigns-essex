@@ -74,3 +74,38 @@ it("reports a search tool error instead of claiming no matching person exists", 
     anthropicSearch("sample", { ANTHROPIC_API_KEY: "sample" }, fetcher)
   ).rejects.toThrow("unavailable");
 });
+it("classifies billing errors without exposing provider text", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            type: "invalid_request_error",
+            message: "Your credit balance is too low. secret@example.com",
+          },
+        }),
+        { status: 400 }
+      )
+    );
+  await expect(
+    anthropicSearch("sample", { ANTHROPIC_API_KEY: "sample" }, fetcher)
+  ).rejects.toMatchObject({
+    status: 400,
+    reason: "billing_required",
+    message: "Public profile lookup failed (400); billing_required.",
+  });
+});
+it("does not expose arbitrary provider error text", async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValue(
+      new Response(
+        JSON.stringify({ error: { message: "private provider text" } }),
+        { status: 400 }
+      )
+    );
+  await expect(
+    anthropicSearch("sample", { ANTHROPIC_API_KEY: "sample" }, fetcher)
+  ).rejects.toThrow("provider_request_failed");
+});

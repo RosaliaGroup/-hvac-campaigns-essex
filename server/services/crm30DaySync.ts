@@ -14,13 +14,49 @@ import { resolveCadenceAssignee } from "./crm30DayAssignee";
 import { queueContactEnrichment } from "./automaticContactEnrichment";
 
 type Candidate = {
-  email: string; introAt: Date; messageId: string; threadId: string;
+  email: string;
+  introAt: Date;
+  messageId: string;
+  threadId: string;
 };
 
+// Resume a scan after quota/transport failures without re-reading completed messages.
+// Process tasks only after the whole window is collected, preserving the earliest intro.
+// A restart safely begins again; task inserts remain idempotent.
+const scans = new Map<
+  number,
+  {
+    candidates: Map<string, Candidate>;
+    suppressed: Set<string>;
+    pageToken?: string;
+    page?: { messages?: { id: string }[]; nextPageToken?: string };
+    index: number;
+    scanned: number;
+    skipped: number;
+    startedAt: number;
+    complete: boolean;
+  }
+>();
+
 /** @slow Gmail API scan: invoke through async job, never inline in a mutation. */
+let activeScan = false;
 export async function sync30DayFromGmail(
   lookbackDays: 10 | 35 | 3650 = 10,
-  fetchImpl: typeof fetch = fetch,
+  fetchImpl: typeof fetch = fetch
+) {
+  if (activeScan)
+    throw new Error("CRM cadence scan already running; retry next job.");
+  activeScan = true;
+  try {
+    return await sync30DayBatch(lookbackDays, fetchImpl);
+  } finally {
+    activeScan = false;
+  }
+}
+
+async function sync30DayBatch(
+  lookbackDays: 10 | 35 | 3650 = 10,
+  fetchImpl: typeof fetch = fetch
 ) {
   const status = await gmailCrmStatus();
   if (!status.connected || !status.hasReadPermission ||
@@ -64,47 +100,102 @@ export async function sync30DayFromGmail(
     .filter((label: { name?: string }) => GMAIL_SUPPRESSION_LABEL_NAMES.has(label.name ?? ""))
     .map((label: { id: string }) => label.id));
 
-  const candidates = new Map<string, Candidate>();
-  const suppressed = new Set<string>();
-  let pageToken: string | undefined;
-  let scanned = 0, skipped = 0;
-  // A bounded rolling window; manual 35-day backfill covers older introductions.
-  for (let pageNumber = 0; pageNumber < (lookbackDays === 3650 ? 100 : 6); pageNumber++) {
-    const params = new URLSearchParams({
-      labelIds: labelId, maxResults: "100",
-      q: `in:sent from:${CRM_MAILBOX} newer_than:${lookbackDays}d`,
-    });
-    if (pageToken) params.set("pageToken", pageToken);
-    const page = await read(`messages?${params.toString()}`);
-    for (const item of page.messages ?? []) {
-      scanned++;
-      const remote = await read(`messages/${encodeURIComponent(item.id)}?format=full`) as GmailMessage;
-      if (!remote.labelIds?.includes("SENT") || !remote.labelIds?.includes(labelId)) {
-        skipped++; continue;
+  let scan = scans.get(lookbackDays);
+  if (!scan) {
+    scan = {
+      candidates: new Map(),
+      suppressed: new Set(),
+      index: 0,
+      scanned: 0,
+      skipped: 0,
+      startedAt: Date.now(),
+      complete: false,
+    };
+    scans.set(lookbackDays, scan);
+  }
+  const { candidates, suppressed } = scan;
+  // Twenty messages per job keeps this scanner from monopolizing Gmail quota.
+  for (let remaining = 20; remaining > 0 && !scan.complete; remaining--) {
+    if (!scan.page) {
+      const params = new URLSearchParams({
+        labelIds: labelId,
+        maxResults: "20",
+        q: `in:sent from:${CRM_MAILBOX} after:${Math.floor(scan.startedAt / 1000) - lookbackDays * 86400} before:${Math.floor(scan.startedAt / 1000) + 1}`,
+      });
+      if (scan.pageToken) params.set("pageToken", scan.pageToken);
+      scan.page = await read(`messages?${params.toString()}`);
+      scan.index = 0;
+    }
+    const item = scan.page!.messages?.[scan.index];
+    if (!item) {
+      scan.pageToken = scan.page!.nextPageToken;
+      scan.page = undefined;
+      scan.complete = !scan.pageToken;
+      remaining++; // Page transitions do not consume the message budget.
+      continue;
+    }
+    const remote = (await read(
+      `messages/${encodeURIComponent(item.id)}?format=full`
+    )) as GmailMessage;
+    try {
+      scan.index++;
+      scan.scanned++;
+      if (
+        !remote.labelIds?.includes("SENT") ||
+        !remote.labelIds?.includes(labelId)
+      ) {
+        scan.skipped++;
+        continue;
       }
       const parsed = parseGmailMessage(remote);
-      if (!parsed || parsed.direction !== "outbound") { skipped++; continue; }
+      if (!parsed || parsed.direction !== "outbound") {
+        scan.skipped++;
+        continue;
+      }
       if (remote.labelIds.some(id => suppressionLabels.has(id))) {
-        for (const email of parsed.contacts) suppressed.add(email.toLowerCase());
-        skipped++; continue;
+        for (const email of parsed.contacts)
+          suppressed.add(email.toLowerCase());
+        scan.skipped++;
+        continue;
       }
       for (const email of parsed.contacts) {
         const normalized = email.toLowerCase();
-        if (cadenceExcluded({ email: normalized }) || await isOutreachSuppressed(db, normalized)) {
-          suppressed.add(normalized); skipped++; continue;
+        if (
+          cadenceExcluded({ email: normalized }) ||
+          (await isOutreachSuppressed(db, normalized))
+        ) {
+          suppressed.add(normalized);
+          scan.skipped++;
+          continue;
         }
         const current = candidates.get(normalized);
         if (!current || parsed.occurredAt < current.introAt) {
           candidates.set(normalized, {
-            email: normalized, introAt: parsed.occurredAt,
-            messageId: parsed.providerMessageId, threadId: parsed.providerThreadId,
+            email: normalized,
+            introAt: parsed.occurredAt,
+            messageId: parsed.providerMessageId,
+            threadId: parsed.providerThreadId,
           });
         }
       }
+    } catch (error) {
+      scan.index--;
+      scan.scanned--;
+      throw error;
     }
-    pageToken = page.nextPageToken;
-    if (!pageToken) break;
   }
+  const { scanned } = scan;
+  let { skipped } = scan;
+  const pageToken = scan.pageToken;
+  if (!scan.complete)
+    return {
+      scanned,
+      skipped,
+      created: 0,
+      cancelled,
+      hasMore: true,
+      note: "Scan checkpoint saved; next job resumes this window.",
+    };
 
   for (const email of Array.from(suppressed)) {
     cancelled += await cancelOpen30DayTasks(email, "Suppressed due to failed delivery or do-not-contact Gmail label.");
@@ -191,6 +282,7 @@ export async function sync30DayFromGmail(
   }).from(crm30DayTasks).where(eq(crm30DayTasks.status, "open"));
   const remainingUnassigned = Number(ownership?.unassigned ?? 0);
   const openCount = Number(ownership?.open ?? 0);
+  scans.delete(lookbackDays);
   return {
     scanned, created, cancelled, skipped,
     hasMore: Boolean(pageToken),
@@ -208,46 +300,48 @@ export async function sync30DayFromGmail(
 }
 
 export function start30DayCadenceScheduler() {
-  if (process.env.NODE_ENV !== "production" ||
-      process.env.CRM_30_DAY_SYNC_ENABLED === "false") return;
+  if (
+    process.env.NODE_ENV !== "production" ||
+    process.env.CRM_30_DAY_SYNC_ENABLED === "false"
+  )
+    return;
+  let historyComplete = false;
   const run = () => {
     if (gmailQuotaRemainingMs() > 0) return;
     startJob({
-      kind: "crm-30-day", key: "crm-30-day-sync",
+      kind: "crm-30-day",
+      key: "crm-30-day-sync",
       fn: async () => {
         try {
-          const result = await sync30DayFromGmail(10);
+          const historical =
+            process.env.CRM_HISTORICAL_OUTREACH_BACKFILL === "true" &&
+            !historyComplete;
+          const result = await sync30DayFromGmail(historical ? 3650 : 10);
+          if (historical && !result.hasMore) historyComplete = true;
           const openTasks = await list30DayTasks({ status: "open" });
-          console.info("[CRM 30-Day] Scan:", JSON.stringify({
-            ...result, openTasksVisible: openTasks.length,
-          }));
+          console.info(
+            "[CRM 30-Day] Scan:",
+            JSON.stringify({
+              ...result,
+              openTasksVisible: openTasks.length,
+            })
+          );
           return result;
-        }
-        catch (error) {
-          console.error("[CRM 30-Day] Sync failed:", error instanceof Error ? error.message : "Unknown error");
+        } catch (error) {
+          console.error(
+            "[CRM 30-Day] Sync failed:",
+            error instanceof Error ? error.message : "Unknown error"
+          );
           throw error;
         }
       },
     });
   };
-  // First scan after boot; then refresh twice an hour.
+  // First scan after boot; then resume small batches every five minutes.
   // Run a one-time, opt-in historical import after deployment.
   // The same labeled-outreach-only deduplication and suppression checks apply.
-  if(process.env.CRM_HISTORICAL_OUTREACH_BACKFILL==="true"){
-    const history=setTimeout(()=>{
-      startJob({
-        kind:"crm-30-day",key:"crm-historical-outreach-backfill",
-        fn:async()=>{
-          const result=await sync30DayFromGmail(3650);
-          console.info("[CRM Historical Backfill]",JSON.stringify(result));
-          return result;
-        },
-      });
-    },90_000);
-    history.unref();
-  }
   const first = setTimeout(run, 30_000);
   first.unref();
-  const interval = setInterval(run, 30 * 60 * 1000);
+  const interval = setInterval(run, 5 * 60 * 1000);
   interval.unref();
 }
