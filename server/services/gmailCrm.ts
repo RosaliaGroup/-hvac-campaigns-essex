@@ -1,3 +1,5 @@
+import { pacedGmailRead } from "./gmailReadTransport";
+import { gmailQuotaRemainingMs, GmailQuotaCooldownError } from "./gmailQuotaCooldown";
 import { eq, and, sql } from "drizzle-orm";
 import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { quoteNotificationContact } from "./quoteNotification";
@@ -132,17 +134,18 @@ export async function syncGmailPage(
     let response: Response | undefined;
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        response = await fetchImpl(
+        response = await pacedGmailRead(
           `https://gmail.googleapis.com/gmail/v1/users/me/${path}`,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
             signal: AbortSignal.timeout(15000),
-          }
+          }, fetchImpl
         );
         // Retry transient server errors, never auth or permission errors.
-        if (response.ok || (response.status !== 429 && response.status !== 403 && response.status < 500)) break;
+        if (response.ok || response.status < 500) break;
         if (attempt === 2) break;
       } catch (error) {
+        if (error instanceof GmailQuotaCooldownError) throw error;
         if (attempt === 2) {
           const cause = error instanceof Error ? error.message : String(error);
           throw new Error(`Gmail transport failed after 3 attempts (path=${path}): ${cause}`);
@@ -325,13 +328,12 @@ export function startGmailCrmScheduler() {
   }, 20_000);
   bootstrap.unref();
   let pageToken: string | undefined;
-  let retryAfter = 0;
   const run = () =>
     startJob({
       kind: "crm-gmail",
       key: "crm-gmail",
       fn: async () => {
-        if (Date.now() < retryAfter) return null;
+        if (gmailQuotaRemainingMs() > 0) return null;
         const status = await gmailCrmStatus();
         if (
           !status.connected ||
@@ -354,9 +356,7 @@ export function startGmailCrmScheduler() {
           // Keep the current cursor on transient errors; restarting repeatedly
           // re-reads old pages and starves contacts deeper in the mailbox.
           const message = error instanceof Error ? error.message : "Unknown error";
-          if (/rateLimitExceeded|userRateLimitExceeded|429/.test(message))
-            retryAfter = Date.now() + 15 * 60 * 1000;
-          else if (/invalid.*page.*token/i.test(message)) pageToken = undefined;
+          if (/invalid.*page.*token/i.test(message)) pageToken = undefined;
           console.error(
             "[CRM Gmail] Sync failed:",
             error instanceof Error ? error.message : "Unknown error"

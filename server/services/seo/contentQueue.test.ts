@@ -8,6 +8,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
     ...actual,
     eq: (col: { name: string }, val: unknown) => ({ __op: "eq", col, val }),
     or: (...conds: unknown[]) => ({ __op: "or", conds }),
+    and: (...conds: unknown[]) => ({ __op: "and", conds }),
     asc: (col: { name: string }) => col,
   };
 });
@@ -16,12 +17,12 @@ import { getDb } from "../../db";
 import { logAudit } from "./auditLog";
 import { seedContentQueue, listContentQueue, proposeTopic, updateQueueStatus, nextTopicToProcess, SEED_TOPICS } from "./contentQueue";
 
-type Cond = { __op: "eq"; col: { name: string }; val: unknown } | { __op: "or"; conds: Cond[] } | undefined;
+type Cond = { __op: "eq"; col: { name: string }; val: unknown } | { __op: "or" | "and"; conds: Cond[] } | undefined;
 
 function rowMatches(row: Record<string, any>, cond: Cond): boolean {
   if (!cond) return true;
   if (cond.__op === "eq") return row[cond.col.name] === cond.val;
-  return cond.conds.some((c) => rowMatches(row, c));
+  return cond.__op === "and" ? cond.conds.every(c => rowMatches(row, c)) : cond.conds.some(c => rowMatches(row, c));
 }
 
 function makeDb(initialRows: Array<Record<string, any>> = []) {
