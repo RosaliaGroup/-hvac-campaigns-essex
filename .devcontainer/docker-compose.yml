@@ -1,0 +1,46 @@
+# Railway-independent, DISPOSABLE development environment only.
+# Never add production OAuth tokens or connect this service to Railway MySQL.
+services:
+  workspace:
+    image: mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm
+    init: true
+    command: sleep infinity
+    volumes:
+      - ..:/workspaces/-hvac-campaigns-essex:cached
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      DATABASE_URL: "mysql://mechanical_dev:local_only@mysql:3306/mechanical_dev"
+      VITE_APP_ID: local-dev
+      VITE_OAUTH_PORTAL_URL: http://localhost:3000
+      OAUTH_SERVER_URL: http://localhost:3000
+      STANDBY_DISABLE_AUTOMATION: "true"
+      GROWTH_OUTBOUND_ENABLED: "false"
+      SMS_FOLLOWUPS_ENABLED: "false"
+      SOCIAL_SCHEDULED_WORKER_ENABLED: "false"
+      SEO_AUTOPUBLISH_ENABLED: "false"
+      SEO_NIGHTLY_DRAFTS_ENABLED: "false"
+      SEO_SYNC_SCHEDULER_ENABLED: "false"
+      GA4_SYNC_SCHEDULER_ENABLED: "false"
+      GBP_SYNC_SCHEDULER_ENABLED: "false"
+      QUICKBOOKS_POLL_ENABLED: "false"
+    depends_on:
+      mysql:
+        condition: service_healthy
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: local_dev_only_root
+      MYSQL_DATABASE: mechanical_dev
+      MYSQL_USER: mechanical_dev
+      MYSQL_PASSWORD: local_only
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - local_dev_mysql:/var/lib/mysql
+volumes:
+  local_dev_mysql:
