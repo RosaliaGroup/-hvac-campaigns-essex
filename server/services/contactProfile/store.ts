@@ -1,3 +1,4 @@
+import { ProfileProviderError } from "./anthropicSearch";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import {
   int,
@@ -175,14 +176,15 @@ export async function contactProfile(
     } catch (error) {
       // Never log request bodies, keys, contact identifiers or provider text.
       const status = error instanceof Error ? error.message.match(/\((\d{3})\)/)?.[1] : undefined;
-      console.warn("[CRM Profile Research]", { contactId: c.id, status: status || "lookup_failed" });
+      const reason = error instanceof ProfileProviderError ? error.reason : "lookup_failed";
+      console.warn("[CRM Profile Research]", { contactId: c.id, status: status || "lookup_failed", reason });
       profile = {
         company: {},
         social: [],
         checkedAt: new Date().toISOString(),
         status: "unavailable",
         message:
-          `Public lookup could not finish${status ? ` (provider HTTP ${status})` : ""}. Retry after 5 minutes. Company details from email are shown when available.`,
+          `Public lookup could not finish${reason === "billing_required" ? ": AI provider credit balance needs attention" : ""}${status ? ` (provider HTTP ${status})` : ""}. Retry after 5 minutes. Company details from email are shown when available.`,
       };
     }
     if(profile.person) {

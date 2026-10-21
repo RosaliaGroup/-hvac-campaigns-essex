@@ -1,3 +1,27 @@
+export class ProfileProviderError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly reason: string
+  ) {
+    super(`Public profile lookup failed (${status}); ${reason}.`);
+    this.name = "ProfileProviderError";
+  }
+}
+// Return only fixed categories; never expose provider text or request identifiers.
+export function profileProviderReason(body: unknown): string {
+  const error = (body as any)?.error;
+  const message = typeof error?.message === "string" ? error.message : "";
+  if (
+    /credit balance|out of credits|insufficient.*credit|billing/i.test(message)
+  )
+    return "billing_required";
+  if (/model.*(not found|invalid|unsupported|does not exist)/i.test(message))
+    return "model_unavailable";
+  if (error?.type === "authentication_error") return "authentication_failed";
+  if (error?.type === "rate_limit_error") return "rate_limited";
+  return "provider_request_failed";
+}
+
 /** Anthropic's server-side search keeps arbitrary public URL fetching out of our backend. */
 export async function anthropicSearch(
   query: string,
@@ -25,10 +49,13 @@ export async function anthropicSearch(
         messages,
       }),
     });
-    if (!response.ok)
-      throw new Error(
-        `Public profile lookup failed (${response.status}). Check the configured AI provider's web search access.`
+    if (!response.ok) {
+      const failure = await response.json().catch(() => null);
+      throw new ProfileProviderError(
+        response.status,
+        profileProviderReason(failure)
       );
+    }
     const body = await response.json();
     for (const block of Array.isArray(body.content) ? body.content : []) {
       if (block.type === "text") {
