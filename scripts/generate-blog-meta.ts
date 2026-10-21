@@ -5,23 +5,9 @@
  */
 import fs from "fs";
 import path from "path";
-import { extractBlogSlugs, extractBlogTitles, extractBlogMetaDescriptions } from "../shared/blogSource";
+import { allBlogPosts } from "../client/src/data/allBlogPosts";
 
-const blogSrc = fs.readFileSync(
-  path.resolve(import.meta.dirname, "..", "client", "src", "data", "blogPosts.ts"),
-  "utf-8"
-);
-
-// Tolerant of quoted keys: content-lane posts are JSON-serialized ("slug": "…"). See shared/blogSource.ts.
-const slugs = extractBlogSlugs(blogSrc);
-const titles = extractBlogTitles(blogSrc);
-const metas = extractBlogMetaDescriptions(blogSrc);
-
-const posts = slugs.map((slug, i) => ({
-  slug,
-  title: titles[i] ?? slug,
-  metaDescription: metas[i] ?? "",
-}));
+const posts = allBlogPosts.map(post => ({ slug: post.slug, title: post.title, metaDescription: post.metaDescription }));
 
 const outPath = path.resolve(import.meta.dirname, "..", "netlify", "edge-functions", "blog-meta.json");
 fs.writeFileSync(outPath, JSON.stringify(posts, null, 2), "utf-8");

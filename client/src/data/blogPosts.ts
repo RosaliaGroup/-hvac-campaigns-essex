@@ -13,6 +13,8 @@ export type BlogPostData = {
   title: string;
   slug: string;
   date: string;
+  /** Last substantive content revision; original publication date remains unchanged. */
+  updatedDate?: string;
   readTime: string;
   category: string;
   metaDescription: string;
@@ -25,7 +27,7 @@ export const blogPosts: BlogPostData[] = [
   {
     "title": "Multifamily HVAC Replacement Without Tenant Disruption",
     "slug": "multifamily-hvac-replacement-occupied-buildings",
-    "date": "September 26, 2026",
+    "date": "October 19, 2026",
     "readTime": "7 min read",
     "category": "Commercial & Multifamily HVAC",
     "metaDescription": "Plan multifamily HVAC replacement across occupied NJ buildings with minimal tenant disruption, quality installs, and optional 10-year coverage.",
@@ -122,7 +124,7 @@ export const blogPosts: BlogPostData[] = [
   {
     "title": "Fixed Per-Unit HVAC Pricing for NJ Apartments",
     "slug": "fixed-per-unit-hvac-pricing-apartment-portfolios",
-    "date": "September 26, 2026",
+    "date": "October 12, 2026",
     "readTime": "6 min read",
     "category": "Multifamily HVAC",
     "metaDescription": "Fixed per-unit HVAC pricing across PTAC, mini-split, RTU, and split systems for NJ apartment portfolios—quarterly reporting, one point of contact.",
@@ -218,7 +220,7 @@ export const blogPosts: BlogPostData[] = [
   {
     "title": "Essex County Heat Pump Costs: What Moves the Price",
     "slug": "essex-county-heat-pump-installation-costs",
-    "date": "September 26, 2026",
+    "date": "October 10, 2026",
     "readTime": "7 min read",
     "category": "HVAC Cost Guide",
     "metaDescription": "What drives heat pump installation costs for Essex County commercial and multifamily buildings — ductwork, electrical, permits, and equipment tier.",
@@ -322,7 +324,7 @@ export const blogPosts: BlogPostData[] = [
   {
     "title": "What a 10-Year HVAC Warranty Should Really Cover",
     "slug": "10-year-hvac-warranty-coverage-explained",
-    "date": "September 26, 2026",
+    "date": "October 9, 2026",
     "readTime": "6 min read",
     "category": "Commercial HVAC",
     "metaDescription": "A 10-year HVAC parts & labor agreement is a paid add-on, not a given. Here's what coverage, exclusions, and eligibility actually mean.",
@@ -419,7 +421,7 @@ export const blogPosts: BlogPostData[] = [
   {
     "title": "Commercial HVAC: Repair or Replace?",
     "slug": "commercial-hvac-repair-or-replace-decision-guide",
-    "date": "September 26, 2026",
+    "date": "October 9, 2026",
     "readTime": "8 min read",
     "category": "Commercial HVAC",
     "metaDescription": "A decision framework for NJ property managers on aging commercial HVAC: when to repair, when to replace, and what to ask bidders.",
@@ -539,7 +541,7 @@ export const blogPosts: BlogPostData[] = [
   {
     "title": "How to Compare HVAC Installation Quotes in NJ",
     "slug": "compare-hvac-installation-quotes-nj",
-    "date": "September 26, 2026",
+    "date": "September 30, 2026",
     "readTime": "7 min read",
     "category": "Commercial HVAC",
     "metaDescription": "A property manager's guide to comparing NJ HVAC installation quotes: equipment fit, labor scope, warranty terms, and permits.",
@@ -631,7 +633,7 @@ export const blogPosts: BlogPostData[] = [
   {
     "title": "What GCs Need From an HVAC Subcontractor",
     "slug": "what-gcs-need-from-hvac-subcontractor",
-    "date": "September 26, 2026",
+    "date": "September 30, 2026",
     "readTime": "7 min read",
     "category": "Commercial HVAC",
     "metaDescription": "What NJ general contractors should expect from an HVAC subcontractor: submittals, trade coordination, and close-out that doesn't bounce back.",
@@ -718,7 +720,7 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    "date": "September 26, 2026",
+    "date": "September 30, 2026",
     "slug": "hvac-capital-budgeting-per-unit-apartment-owners",
     "title": "Per-Unit HVAC Capital Budgeting Guide for NJ Apartments",
     "excerpt": "How apartment owners across Essex, Hudson, Bergen and surrounding NJ counties can build a per-unit HVAC capital plan grounded in install quality, correct system fit, and realistic financing options.",
@@ -805,7 +807,7 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    "date": "September 26, 2026",
+    "date": "September 30, 2026",
     "slug": "commercial-hvac-response-sla-checklist",
     "title": "What a Commercial HVAC Response SLA Should Include",
     "excerpt": "A usable HVAC service SLA is built around installation quality, a defined response window, escalation steps, and regular reporting — not a marketing number. Here's what NJ property managers should require before signing.",
@@ -3083,22 +3085,102 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "PSE&G On-Bill Repayment for HVAC: How It Works",
-    slug: "pseg-on-bill-repayment-hvac",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "PSE&G Programs",
-    metaDescription: "PSE&G On-Bill Repayment lets you finance HVAC at 0% interest through your utility bill. Save from day one. Free assessment.",
-    excerpt: "PSE&G On-Bill Repayment finances your HVAC upgrade at 0% interest through your utility bill. Most homeowners save money from day one.",
-    sections: [
-      { type: "intro", content: "PSE&G's On-Bill Repayment (OBR) program is one of the most innovative financing options for HVAC upgrades in New Jersey. After your rebate is applied, any remaining balance is added to your monthly PSE&G bill at 0% interest. Because your new heat pump reduces energy costs, most homeowners see lower total monthly bills from day one — even with the OBR payment included." },
-      { type: "h2", content: "How On-Bill Repayment Works" },
-      { type: "paragraph", content: "Here's a typical example: Your new heat pump costs $12,000. PSE&G rebates cover $14,000. In this case, you owe nothing — the rebate exceeds the cost. But even when there's a remaining balance, say $3,000 after a $9,000 rebate on a $12,000 system, that $3,000 is spread across 60 monthly payments of $50 on your PSE&G bill. Meanwhile, your energy savings are typically $100-$200 per month, meaning you're net positive from day one." },
-      { type: "stat_box", content: "Interest Rate: 0% | Term: Up to 60 months | Monthly Savings Often Exceed Payment" },
-      { type: "h2", content: "Who Qualifies for OBR" },
-      { type: "paragraph", content: "OBR is available to PSE&G residential customers with accounts in good standing. No credit check is required because the financing is through your utility bill, not a traditional loan. Mechanical Enterprise helps you apply for OBR as part of our installation process. Call (862) 423-9396 for a free assessment that includes OBR savings calculations." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+    "title": "PSE&G HVAC On-Bill Repayment: Eligibility & Next Steps",
+    "slug": "pseg-on-bill-repayment-hvac",
+    "date": "April 12, 2026",
+    "readTime": "5 min read",
+    "category": "PSE&G Programs",
+    "metaDescription": "Understand PSE&G HVAC on-bill repayment, current eligibility and project review. Request an NJ HVAC assessment before relying on incentives or approval.",
+    "excerpt": "PSE&G offers interest-free repayment for eligible HVAC projects. Learn what to confirm, how repayment differs from a rebate, and what to prepare for an assessment.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "PSE&G on-bill repayment can help eligible customers spread approved HVAC project costs across utility bills. It is a repayment obligation, separate from a rebate. Before budgeting for a replacement, establish the installation scope and confirm the program that applies to your account and equipment. An online example cannot establish your approval, project price or future energy savings."
+      },
+      {
+        "type": "h2",
+        "content": "What the current residential program says"
+      },
+      {
+        "type": "paragraph",
+        "content": "PSE&G's residential HVAC Instant Rebates page currently describes interest-free on-bill repayment, an allowance up to $25,000 for a qualifying HVAC Instant Rebates project, and repayment terms generally of 84 months. Income-qualified customers may have a 120-month option for project costs above $10,000. Separate building-decarbonization allowances and eligibility rules may apply. These limits are program allowances, not promised rebates or automatic approvals. Check [PSE&G's current HVAC program terms](https://myhomeenergy.pseg.com/appliance-offers/heatingandcooling) for the requirements that apply to your project. Information reviewed October 21, 2026; PSE&G may change its programs."
+      },
+      {
+        "type": "h2",
+        "content": "Keep project cost, rebates and repayment separate"
+      },
+      {
+        "type": "paragraph",
+        "content": "Ask for a written proposal showing the complete installation scope first. Then ask for any proposed incentive to be identified separately, with its approval status and requirements. Finally, establish the amount proposed for repayment and any amount due outside that arrangement. Do not subtract an unapproved rebate as though it were cash already received, or assume a repayment allowance means the equipment is free."
+      },
+      {
+        "type": "paragraph",
+        "content": "Your household budget should account for both the repayment installment and ongoing utility use. Equipment selection, the building and how the system is operated affect future bills. A promise that savings will always exceed the installment is not a substitute for a property-specific review. Ask what assumptions support any estimate and which charges are outside the proposal."
+      },
+      {
+        "type": "h2",
+        "content": "What to prepare before requesting an assessment"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Property town, ZIP code and whether it is a home, condo or multifamily building.",
+          "The utility serving the property and the name of the account holder.",
+          "Current heating fuel, equipment type and the reason for considering replacement.",
+          "Equipment photos and model information where safely accessible.",
+          "Any existing installation proposal, incentive estimate or program correspondence.",
+          "Your desired timing, access restrictions and any association approvals needed."
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "Use the assessment request to arrange a conversation; do not send account passwords, Social Security numbers or income documents through an ordinary website message. If further documentation is required for an application, confirm the appropriate submission process directly with the utility or authorized program representative."
+      },
+      {
+        "type": "h2",
+        "content": "Questions to resolve before installation"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
+          "Which current program applies to this utility account and proposed equipment?",
+          "What approval or enrollment steps are required before work starts?",
+          "Which project costs are included, excluded or still subject to assessment?",
+          "What rebate amounts, if any, are confirmed rather than estimated?",
+          "What repayment amount, term and customer agreement would apply?",
+          "What happens if the proposed equipment or project scope changes?"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Arrange the right HVAC review"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise can review the HVAC scope and discuss whether utility-program review is relevant to the proposed work. Start with [residential installation planning](/residential), compare [central AC replacement scopes](/blog/central-ac-replacement-nj-cost), or review [heat-pump installation](/heat-pump-installation-nj). Commercial and larger multifamily projects need their own assessment; do not apply the residential program limits above to a business property."
+      },
+      {
+        "type": "cta_box",
+        "content": "Tell Mechanical Enterprise about the property, existing equipment and proposed upgrade. Request an assessment before relying on a rebate or repayment estimate.",
+        "buttonText": "Request an HVAC assessment",
+        "buttonUrl": "#blog-assessment"
+      }
     ],
+    "faqSchema": [
+      {
+        "question": "Is PSE&G on-bill repayment the same as a rebate?",
+        "answer": "No. A rebate may reduce eligible project costs if approved; on-bill repayment is an arrangement to repay an approved balance through utility bills."
+      },
+      {
+        "question": "Does a repayment allowance guarantee my project is approved?",
+        "answer": "No. The utility account, equipment, program requirements and proposed project must be reviewed. Confirm the applicable approval and enrollment steps before work starts."
+      },
+      {
+        "question": "Can a business use the residential repayment limits in this guide?",
+        "answer": "Do not assume residential terms apply to a commercial property. Request a review under the program that matches the property and utility account."
+      }
+    ],
+    "updatedDate": "October 21, 2026"
   },
   {
     title: "PSE&G Clean Heat Program NJ: Complete Guide",
@@ -3453,23 +3535,103 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "Central AC Replacement Cost in NJ 2026",
-    slug: "central-ac-replacement-nj-cost",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Guides",
-    metaDescription: "Central AC replacement costs $8K-$15K in NJ before rebates. PSE&G rebates cover up to $16K. Free assessment and quote available.",
-    excerpt: "How much does central AC replacement cost in NJ? $8K-$15K before rebates, but PSE&G can cover up to $16K. Get a free quote.",
-    sections: [
-      { type: "intro", content: "If your central air conditioning needs replacement in New Jersey, you're probably wondering about costs. The good news: while replacement prices range from $8,000 to $15,000 depending on system type and home size, PSE&G rebates can cover up to $16,000 — meaning many homeowners pay $0 out of pocket for a brand new system." },
-      { type: "h2", content: "Cost Breakdown" },
-      { type: "stat_box", content: "Basic Central Heat Pump: $8K-$10K | Mid-Range: $10K-$13K | Premium/Variable Speed: $13K-$15K | After Rebates: Often $0" },
-      { type: "h2", content: "What Affects the Price" },
-      { type: "paragraph", content: "System size (tonnage), efficiency rating (SEER2), brand, and installation complexity all affect pricing. Homes needing ductwork modifications cost more. Higher-efficiency systems cost more upfront but qualify for larger rebates, often making them cheaper after incentives. Mechanical Enterprise provides detailed quotes with all costs itemized before any work begins." },
-      { type: "h2", content: "Get Your Free Quote" },
-      { type: "paragraph", content: "Call (862) 423-9396 for a free assessment and quote. We'll calculate your exact cost after all applicable rebates." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+    "title": "Central AC Replacement Cost in NJ: Quote Checklist",
+    "slug": "central-ac-replacement-nj-cost",
+    "date": "April 12, 2026",
+    "readTime": "5 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "Compare central AC replacement quotes in NJ: equipment, ductwork, electrical, permits and installation scope. Request a property-specific assessment.",
+    "excerpt": "Understand what changes a central AC replacement quote in New Jersey, which costs to ask bidders to separate, and what to send for a useful assessment.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "The useful answer to 'What does central AC replacement cost in NJ?' starts with the property and installation scope. A condenser price alone is not an installed-system quote. Equipment selection, the existing indoor unit, ducts, electrical work, access and required approvals all need review. Mechanical Enterprise can assess the property and prepare a scope; this guide explains how to compare the resulting proposals without treating an online estimate as a binding price."
+      },
+      {
+        "type": "h2",
+        "content": "What should a replacement quote include?"
+      },
+      {
+        "type": "paragraph",
+        "content": "Ask each bidder to identify the proposed equipment, the work included and the assumptions behind the proposal. Is the indoor equipment part of the replacement? Are controls, removal and disposal, startup checks and documentation included? If a line item is excluded, ask who will handle it. A lower total may describe a smaller scope rather than the same installation at a lower price."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Equipment models and the proposed system configuration.",
+          "Installation labor, removal and disposal responsibilities.",
+          "Duct, drain, refrigerant-line and electrical work included or excluded.",
+          "Access requirements and protection of the occupied property.",
+          "Permits, inspections and who coordinates them where required.",
+          "Startup checks, operating instructions and closeout documents.",
+          "Manufacturer warranty terms and any separately priced coverage.",
+          "Payment milestones, assumptions and change-order process."
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Why two NJ properties can need different scopes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A straightforward equipment replacement and a project requiring duct changes, difficult access or electrical work should not be priced as identical jobs. Share known comfort problems and prior repairs with the contractor, rather than asking only for the same equipment size. A site assessment helps establish which existing components can remain and which need further evaluation. In a condo or multifamily building, confirm equipment ownership and coordinate access with management before scheduling work."
+      },
+      {
+        "type": "h2",
+        "content": "Separate the installation price from possible incentives"
+      },
+      {
+        "type": "paragraph",
+        "content": "Keep the full project price, any confirmed incentive and the amount you must pay as separate figures. An incentive estimate is not approval, and central AC and heat-pump projects may have different requirements. Ask which program applies to the actual equipment and utility account, what must happen before installation, and what evidence confirms eligibility. Review current options through our [NJ rebate guide](/rebate-guide). Do not assume a rebate makes every replacement free."
+      },
+      {
+        "type": "h2",
+        "content": "What to send for a useful replacement assessment"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Property town and ZIP code, property type and the area served by the system.",
+          "Photos of outdoor and indoor equipment, including readable model labels where accessible.",
+          "Approximate equipment age and a description of current comfort or reliability problems.",
+          "Recent repair findings or an existing proposal you want help comparing.",
+          "Access restrictions, association approvals and your intended project timing."
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "These details help organize the assessment; they do not replace a site visit or confirm a final equipment selection. Ask for a written scope that identifies unresolved items. If a component cannot be inspected before the quote, agree how it will be evaluated and how additional work would be approved."
+      },
+      {
+        "type": "h2",
+        "content": "Choose the next step that fits your property"
+      },
+      {
+        "type": "paragraph",
+        "content": "For replacement planning, see [central AC installation in NJ](/central-ac-installation-nj). If you are deciding whether to keep an existing system, start with [AC repair and assessment](/ac-repair-nj). Property managers coordinating multiple units can use our [commercial property management services](/commercial/for-property-management). The assessment form below lets you request help without assuming a particular rebate, price or installation date."
+      },
+      {
+        "type": "cta_box",
+        "content": "Send your property details and current equipment information to discuss a central AC replacement scope with Mechanical Enterprise.",
+        "buttonText": "Request an installation assessment",
+        "buttonUrl": "#blog-assessment"
+      }
     ],
+    "faqSchema": [
+      {
+        "question": "Can I get a final central AC replacement price from equipment photos?",
+        "answer": "Photos help prepare an assessment, but access, system compatibility and installation requirements may need a site review before a final scope is confirmed."
+      },
+      {
+        "question": "Should I compare quotes only by their total price?",
+        "answer": "Compare the equipment and scope, exclusions, startup documentation, warranty terms and payment milestones alongside the total price."
+      },
+      {
+        "question": "Does every central AC replacement qualify for a rebate?",
+        "answer": "No. Eligibility depends on the current program, utility account, equipment and project requirements. Confirm it before relying on an incentive in your budget."
+      }
+    ],
+    "updatedDate": "October 21, 2026"
   },
   {
     title: "HVAC Financing Options in NJ",

@@ -6,6 +6,7 @@
  * title/meta pair), so it lives in its own module rather than extending that
  * provider's narrow title/meta scope.
  */
+import { publicationDate } from "../../../shared/blogPublication";
 import { callAnthropicModelChain } from "../../_core/anthropic";
 import type { BlogPostData } from "../../../client/src/data/blogPosts";
 import { normalizeBlogPost } from "../../../shared/blogPostRendering";
@@ -77,7 +78,7 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
     "- Only include a `faqSchema` array if you have 3 or more genuinely distinct, real questions for this exact topic — otherwise omit it.",
     "",
     'Respond with ONLY a JSON object, no markdown fences, no prose outside it, matching exactly:',
-    '{ "title": string, "slug": string (kebab-case), "date": string (e.g. "September 26, 2026"), "readTime": string (e.g. "8 min read"), "category": string, "metaDescription": string (<=155 chars), "excerpt": string, "sections": [ { "type": "intro"|"h2"|"paragraph"|"stat_box"|"checklist"|"numbered_list"|"cta_box", "content"?: string, "items"?: string[], "buttonText"?: string, "buttonUrl"?: string } ], "faqSchema"?: [ { "question": string, "answer": string } ] }',
+    '{ "title": string, "slug": string (kebab-case), "date": string (the actual current publication date; server stamps the final date), "readTime": string (e.g. "8 min read"), "category": string, "metaDescription": string (<=155 chars), "excerpt": string, "sections": [ { "type": "intro"|"h2"|"paragraph"|"stat_box"|"checklist"|"numbered_list"|"cta_box", "content"?: string, "items"?: string[], "buttonText"?: string, "buttonUrl"?: string } ], "faqSchema"?: [ { "question": string, "answer": string } ] }',
   ].join("\n");
 }
 
@@ -155,5 +156,5 @@ export async function draftContentPost(topic: SeoContentQueueRow, facts: Verifie
   if (!result.ok || result.text === undefined) {
     throw new Error(`Content drafting call failed: ${result.error ?? "no response text"}`);
   }
-  return parseContentDraftResponse(result.text);
+  return { ...parseContentDraftResponse(result.text), date: publicationDate() };
 }

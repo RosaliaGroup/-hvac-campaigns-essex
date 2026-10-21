@@ -6,15 +6,15 @@ import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
 import { useSEO } from "@/hooks/useSEO";
-import { blogPosts } from "@/data/blogPosts";
-import { commercialGrowthPosts } from "@/data/commercialGrowthPosts";
+import { allBlogPosts } from "@/data/allBlogPosts";
+import { blogDateIso } from "@shared/blogPublication";
 
 const BASE = "https://mechanicalenterprise.com";
 
 export default function BlogIndex() {
   useSEO({
-    title: "HVAC Blog | Rebate Guides & Tips for NJ Homeowners | Mechanical Enterprise",
-    description: "HVAC tips, rebate guides, and energy savings advice for NJ homeowners. Learn about heat pump rebates, installation, and more from Mechanical Enterprise.",
+    title: "NJ HVAC Blog | Repairs, Replacements & Building Guides",
+    description: "NJ HVAC installation, repair and building maintenance guides for homeowners and property managers. Read practical planning advice from Mechanical Enterprise.",
     ogUrl: `${BASE}/blog`,
   });
 
@@ -26,7 +26,7 @@ export default function BlogIndex() {
       <section className="bg-gradient-to-br from-[#0a1628] to-[#1e3a5f] py-16">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center text-white">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">HVAC Tips & Rebate Guides for NJ Homeowners</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">HVAC Guides for NJ Homes & Commercial Buildings</h1>
             <p className="text-lg text-white/70">Expert advice from the Mechanical Enterprise team</p>
           </div>
         </div>
@@ -36,13 +36,13 @@ export default function BlogIndex() {
       <section className="py-16 bg-[#f7f8fa]">
         <div className="container">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {[...commercialGrowthPosts, ...blogPosts].map((post) => (
+            {allBlogPosts.map((post) => (
               <Link key={post.slug} href={`/blog/${post.slug}`}>
                 <Card className="h-full cursor-pointer group hover:shadow-lg transition-shadow border-t-4 border-t-transparent hover:border-t-[#e8813a]">
                   <CardContent className="pt-6">
                     <Badge className="mb-3 bg-[#e8813a]/10 text-[#e8813a] hover:bg-[#e8813a]/20 text-xs">{post.category}</Badge>
                     <h2 className="font-bold text-xl text-[#0a1628] mb-3 group-hover:text-[#e8813a] transition-colors leading-tight">{post.title}</h2>
-                    <p className="text-sm text-gray-500 mb-3">{post.date} · {post.readTime}</p>
+                    <p className="text-sm text-gray-500 mb-3">{post.updatedDate ? "Updated " : "Published "}<time dateTime={blogDateIso(post.updatedDate ?? post.date)}>{post.updatedDate ?? post.date}</time> · {post.readTime}</p>
                     <p className="text-sm text-gray-600 leading-relaxed mb-4">{post.excerpt}</p>
                     <span className="text-[#e8813a] font-medium text-sm inline-flex items-center gap-1">
                       Read more <ArrowRight className="h-4 w-4" />
@@ -53,7 +53,7 @@ export default function BlogIndex() {
             ))}
           </div>
 
-          {blogPosts.length === 0 && (
+          {allBlogPosts.length === 0 && (
             <p className="text-center text-gray-500 text-lg">More articles coming soon.</p>
           )}
         </div>

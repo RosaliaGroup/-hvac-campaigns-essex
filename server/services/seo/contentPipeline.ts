@@ -23,6 +23,7 @@
  * durable, queryable record this needs.
  */
 import fs from "fs";
+import { publicationDate } from "../../../shared/blogPublication";
 import { replenishContentTopics } from "./topicReplenishment";
 import path from "path";
 import { getDb } from "../../db";
@@ -335,7 +336,7 @@ export async function approveContentToPR(topicId: number, actorId: number | null
   const branch = await uniqueBranchFor(`pr-content-${yyyymmdd()}-t${topicId}`);
   await ensureBranch(branch);
   const { content: currentSource, sha } = await getFileContent(BLOG_POSTS_PATH, branch);
-  const updatedSource = insertBlogPostIntoSource(currentSource, draft.post);
+  const updatedSource = insertBlogPostIntoSource(currentSource, { ...draft.post, date: publicationDate() });
   const commitMessage = `content(blog): ${draft.post.title}\n\nTopic queue #${topicId}. Drafted by the weekly autopublish content pipeline.`;
   const commitSha = await putFileContent(BLOG_POSTS_PATH, branch, updatedSource, commitMessage, sha);
 

@@ -42,6 +42,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   process.env.ANTHROPIC_API_KEY = originalKey;
+  vi.useRealTimers();
 });
 
 describe("draftContentPost", () => {
@@ -56,6 +57,14 @@ describe("draftContentPost", () => {
     const post = await draftContentPost(topic, VERIFIED_FACTS);
     expect(post.title).toBe(validPost.title);
     expect(post.slug).toBe(validPost.slug);
+  });
+
+  it("overrides a stale model date with the current Eastern publication date", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-22T01:00:00Z"));
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(validPost)));
+    const post = await draftContentPost(topic, VERIFIED_FACTS);
+    expect(post.date).toBe("October 21, 2026");
   });
 
   it("tolerates the model wrapping the JSON in prose/code fences", async () => {

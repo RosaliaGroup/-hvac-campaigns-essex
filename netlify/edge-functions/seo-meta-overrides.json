@@ -24,16 +24,16 @@
     "description": "Quality heat pump and AC installation for NJ homes, sized right for your space. Add optional 10-year parts & labor coverage. Call (862) 423-9396."
   },
   "/blog/central-ac-replacement-nj-cost": {
-    "title": "Central AC Replacement Cost in NJ: Installation Guide",
-    "description": "Central AC replacement in NJ: what affects installation cost, system fit tips, and optional 10-year coverage. Call (862) 423-9396 for a free assessment."
+    "title": "Central AC Replacement Cost in NJ: Quote Checklist",
+    "description": "Compare central AC replacement quotes in NJ: equipment, ductwork, electrical, permits and installation scope. Request a property-specific assessment."
   },
   "/hvac-short-hills-nj": {
     "title": "Short Hills NJ HVAC Installation | Up to $16K PSE&G Rebates",
     "description": "Quality HVAC installation in Short Hills, NJ with proper system sizing. Optional 10-year coverage available. NJ rebates up to $16K. Call (862) 423-9396."
   },
   "/blog/pseg-on-bill-repayment-hvac": {
-    "title": "PSE&G On-Bill Repayment for HVAC: How It Works in NJ",
-    "description": "Learn how PSE&G On-Bill Repayment spreads HVAC install costs over your utility bill at 0% interest. Call (862) 423-9396 for a free NJ assessment."
+    "title": "PSE&G HVAC On-Bill Repayment: Eligibility & Next Steps",
+    "description": "Understand PSE&G HVAC on-bill repayment, current eligibility and project review. Request an NJ HVAC assessment before relying on incentives or approval."
   },
   "/blog/hvac-permits-nj-guide": {
     "title": "HVAC Permits in NJ: What Homeowners Need to Know",
@@ -822,5 +822,21 @@
   "/hvac-chester-nj": {
     "title": "HVAC Installation in Chester, NJ | Mechanical Enterprise",
     "description": "Chester, NJ heat pump and AC installation with custom zoning and design. Free consultation—call Mechanical Enterprise at (862) 423-9396."
+  },
+  "/blog": {
+    "title": "NJ HVAC Blog | Repairs, Replacements & Building Guides",
+    "description": "NJ HVAC installation, repair and building maintenance guides for homeowners and property managers. Read practical planning advice from Mechanical Enterprise."
+  },
+  "/commercial/for-property-management": {
+    "title": "NJ Property Management HVAC Services & Maintenance",
+    "description": "Request a portfolio HVAC review for preventive maintenance, emergency service, PTAC replacements and capital planning across multiple buildings."
+  },
+  "/commercial/for-contractors-developers": {
+    "title": "NJ Commercial HVAC Subcontractor for GCs & Developers",
+    "description": "Share your project scope for HVAC installation, equipment replacement, retrofit work or bid support. We review plans and scheduling needs before proposing a scope."
+  },
+  "/commercial/for-commercial-partners": {
+    "title": "NJ Commercial HVAC Partner for Brokers & Facility Teams",
+    "description": "Connect building owners and occupants with commercial HVAC service, replacement assessments and planned maintenance. Discuss recurring support or a specific property."
   }
 }
