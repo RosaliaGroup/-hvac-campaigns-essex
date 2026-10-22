@@ -1,0 +1,20 @@
+{
+  "name": "Mechanical Enterprise — Independent Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/-hvac-campaigns-essex",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [3000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Mechanical Enterprise local development",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": "corepack enable && pnpm install --frozen-lockfile",
+  "customizations": {
+    "vscode": {
+      "extensions": ["esbenp.prettier-vscode"]
+    }
+  }
+}

@@ -1,0 +1,54 @@
+name: Independent development build (no Railway)
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - "backup/**"
+      - "feature/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: independent-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      # Builds must never have production credentials or enable side-effect workers.
+      STANDBY_DISABLE_AUTOMATION: "true"
+      GROWTH_OUTBOUND_ENABLED: "false"
+      SMS_FOLLOWUPS_ENABLED: "false"
+      SOCIAL_SCHEDULED_WORKER_ENABLED: "false"
+      SEO_NIGHTLY_DRAFTS_ENABLED: "false"
+      SEO_AUTOPUBLISH_ENABLED: "false"
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Enable pnpm
+        uses: pnpm/action-setup@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - name: Install exact dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check TypeScript
+        run: pnpm check
+      - name: Verify CRM suppression and delivery safety
+        run: pnpm exec vitest run server/services/outreachSuppression.test.ts server/services/crmFollowupDeliveryPolicy.test.ts server/services/crmFollowupDeliveryLedger.test.ts
+      - name: Build full frontend and backend without Railway
+        run: pnpm build
+      - name: Save independently built application artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mechanical-independent-build-${{ github.sha }}
+          path: |
+            dist/
+          retention-days: 14
+          if-no-files-found: error
