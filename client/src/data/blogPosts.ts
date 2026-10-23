@@ -25,6 +25,99 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "NJ Cooling Tower Shutdown Planning Guide",
+    "slug": "nj-cooling-tower-shutdown-planning",
+    "date": "October 23, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Plan cooling tower shutdowns for NJ commercial and multifamily properties with coordination, documentation, and vendor steps that protect equipment.",
+    "excerpt": "A practical framework for NJ property managers to coordinate cooling tower shutdowns, document conditions, question vendors, and verify restart readiness.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Cooling tower shutdown season is a predictable planning task for NJ property managers overseeing multifamily high-rises, mixed-use buildings, and commercial campuses. A rushed or poorly documented shutdown can leave equipment exposed to corrosion, freeze damage, and mechanical problems at restart. This guide helps owners coordinate qualified vendors, document equipment conditions, and define responsibilities. Your tower manufacturer's instructions and building-specific water management program should determine the work sequence."
+      },
+      {
+        "type": "h2",
+        "content": "Why Shutdown Planning Matters for NJ Buildings"
+      },
+      {
+        "type": "paragraph",
+        "content": "An unplanned or informal shutdown creates real exposure. Standing water left in a basin over a dormant season can support scale, biological growth, and corrosion on fill media, fans, and structural components. For multifamily properties in Bergen County or commercial buildings in Union County, that exposure translates into higher restart costs, delayed cooling availability, and potential water treatment complications. A coordinated plan with clear documentation gives property managers a record to compare against at startup and a basis for holding vendors accountable to the condition the tower was in when it went offline."
+      },
+      {
+        "type": "h2",
+        "content": "Building a Coordinated Shutdown Timeline"
+      },
+      {
+        "type": "paragraph",
+        "content": "Shutdown timing should be coordinated across every party touching the system: the chiller plant operator, the water treatment vendor, building engineering staff, and any third-party service contractor. Rather than fixing a shutdown to a specific calendar date, align it with your chiller sequencing and occupancy needs so the tower isn't taken offline while cooling demand still exists. Build in time for the water treatment vendor to perform a final chemical treatment or passivation step before the tower sits idle, and confirm who is responsible for draining, covering, or isolating components. Put the sequence in writing and share it with every vendor involved so nobody assumes another party already handled a step."
+      },
+      {
+        "type": "h2",
+        "content": "Documenting Conditions Before Shutdown"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before a cooling tower goes offline, create a dated record you can reference months later. Photograph the basin, fill media, drift eliminators, fan blades, and gearbox or motor housing from consistent angles. Record water treatment test results, motor amperage readings, and belt condition. Note any existing corrosion, debris, or leaks so they aren't mistaken for new damage at restart. This baseline protects you in vendor conversations and gives your team a clear reference point when evaluating whether a component needs attention before the tower is brought back into service."
+      },
+      {
+        "type": "h2",
+        "content": "Questions to Ask Vendors Before You Sign Off"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Send current tower make, model, tonnage, and basin capacity",
+          "Send recent water treatment logs and the last documented chemical treatment",
+          "Send photos or notes on any known mechanical issues or past repairs",
+          "Ask how they will protect the basin and fill media during the idle period",
+          "Ask what documentation they will provide at shutdown and at restart",
+          "Ask who is responsible for coordinating with your water treatment vendor",
+          "Ask how component condition will be verified before startup",
+          "Ask for a written scope that separates shutdown tasks from restart tasks"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Restart Checks Before Spring Startup"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before bringing a cooling tower back online, compare current conditions against your pre-shutdown documentation. Confirm water treatment chemistry has been reestablished, the basin has been cleaned of debris that accumulated during the idle period, and belts, bearings, and gearboxes show no signs of degradation since the last recorded readings. Verify controls and sensors are calibrated and communicating properly with the chiller plant. If any component shows a condition change from your shutdown photos or notes, address it before the tower carries full cooling load rather than discovering the issue during peak demand."
+      },
+      {
+        "type": "h2",
+        "content": "Turn Shutdown Findings Into a Maintenance Plan"
+      },
+      {
+        "type": "paragraph",
+        "content": "Use the shutdown report to separate immediate repairs from planned capital work. Ask vendors to identify the affected equipment, document the condition, explain the proposed scope, and state what remains outside their contract. Keep water treatment responsibilities with the qualified water treatment provider and coordinate mechanical work with building engineering. A written plan helps property managers schedule access, compare scopes, and prepare the next maintenance budget."
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning a cooling tower shutdown or evaluating your chiller plant's long-term reliability? Talk to Mechanical Enterprise about your building's specific system and documentation needs.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial/for-property-management"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "When should we start planning a cooling tower shutdown for an NJ building?",
+        "answer": "Timing should be coordinated with your chiller plant schedule and occupancy needs rather than a fixed calendar date. Start conversations with your water treatment vendor and service contractor early enough to sequence final treatment, draining, and documentation before cooling demand drops."
+      },
+      {
+        "question": "What should we document before taking a cooling tower offline?",
+        "answer": "Photograph the basin, fill media, fans, and motor or gearbox housing, and record water treatment test results, amperage readings, and belt condition. This baseline lets you compare conditions at restart and hold vendors accountable to the state the tower was left in."
+      },
+      {
+        "question": "What should a property manager request in a shutdown scope?",
+        "answer": "Request equipment identification, a written sequence based on the manufacturer instructions and water management program, assigned vendor responsibilities, condition documentation, and separate shutdown and restart deliverables."
+      }
+    ]
+  },
+
+  {
     "title": "Rooftop HVAC Replacement Quotes: NJ Owner Checklist",
     "slug": "rooftop-hvac-replacement-quote-checklist-nj",
     "date": "October 23, 2026",
