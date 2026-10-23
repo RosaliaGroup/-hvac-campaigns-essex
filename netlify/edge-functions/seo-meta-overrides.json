@@ -824,8 +824,8 @@
     "description": "Chester, NJ heat pump and AC installation with custom zoning and design. Free consultation—call Mechanical Enterprise at (862) 423-9396."
   },
   "/blog": {
-    "title": "NJ HVAC Blog | Repairs, Replacements & Building Guides",
-    "description": "NJ HVAC installation, repair and building maintenance guides for homeowners and property managers. Read practical planning advice from Mechanical Enterprise."
+    "title": "NJ HVAC Blog | Tips & Guides | Mechanical Enterprise",
+    "description": "HVAC tips, rebate guides, and heat pump advice for NJ homeowners. Call Mechanical Enterprise at (862) 423-9396 to schedule your assessment."
   },
   "/commercial/for-property-management": {
     "title": "NJ Property Management HVAC Services & Maintenance",
@@ -838,5 +838,45 @@
   "/commercial/for-commercial-partners": {
     "title": "NJ Commercial HVAC Partner for Brokers & Facility Teams",
     "description": "Connect building owners and occupants with commercial HVAC service, replacement assessments and planned maintenance. Discuss recurring support or a specific property."
+  },
+  "/blog/nj-heat-pump-rebates-2026": {
+    "title": "NJ Heat Pump Rebates 2026: Complete Homeowner Guide",
+    "description": "NJ heat pump rebate programs explained for 2026 — how they work, who qualifies, and how to get help applying. Call (862) 423-9396."
+  },
+  "/hvac-millburn-nj": {
+    "title": "Millburn NJ HVAC Installation | Up to $16K Rebates",
+    "description": "Millburn NJ HVAC installation with custom zoning and premium brands. NJ rebates up to $16,000. Call (862) 423-9396 for a free consultation."
+  },
+  "/hvac-rahway-nj": {
+    "title": "Rahway NJ HVAC Installation | Up to $16K PSE&G Rebates",
+    "description": "HVAC installation in Rahway, NJ with NJ rebates up to $16,000. Licensed contractor serving PSE&G territory. Call (862) 423-9396 for a free assessment."
+  },
+  "/blog/warehouse-hvac-nj": {
+    "title": "Warehouse HVAC Solutions in NJ | Mechanical Enterprise",
+    "description": "Warehouse HVAC solutions in NJ — rooftop units, HVLS fans, radiant heat & VRF systems. Free assessment: call (862) 423-9396."
+  },
+  "/hvac-teaneck-nj": {
+    "title": "Teaneck NJ HVAC Installation | Up to $16K PSE&G Rebates",
+    "description": "Teaneck NJ HVAC installation and repair with rebates up to $16,000 for PSE&G customers. Free assessment. Call (862) 423-9396 to schedule."
+  },
+  "/hvac-north-bergen-nj": {
+    "title": "North Bergen NJ HVAC Install | Up to $16K PSE&G Rebates",
+    "description": "HVAC installation in North Bergen, NJ with PSE&G rebates up to $16,000. Licensed NJ contractor. Free assessment: (862) 423-9396."
+  },
+  "/hvac-woodbridge-nj": {
+    "title": "Woodbridge NJ HVAC Contractor | Up to $16K Rebates",
+    "description": "Woodbridge NJ HVAC contractor offering heat pump and AC installation with rebates up to $16,000. Call (862) 423-9396 for a free assessment."
+  },
+  "/hvac-ridgefield-nj": {
+    "title": "Ridgefield NJ HVAC Contractor | AC & Heat Pump, Up to $16K",
+    "description": "HVAC installation in Ridgefield, NJ with PSE&G rebates up to $16,000. Licensed NJ contractor. Free assessment — call (862) 423-9396."
+  },
+  "/hvac-jersey-city-nj": {
+    "title": "Jersey City NJ HVAC Installation | Up to $16K Rebates",
+    "description": "Jersey City HVAC installation & repair with NJ rebates up to $16,000. Licensed PSE&G-area contractor. Call (862) 423-9396 for a free assessment."
+  },
+  "/hvac-linden-nj": {
+    "title": "Linden NJ HVAC Installation | Up to $16K PSE&G Rebates",
+    "description": "HVAC installation in Linden, NJ with PSE&G rebates up to $16,000. Free assessment, licensed NJ contractor. Call (862) 423-9396."
   }
 }
