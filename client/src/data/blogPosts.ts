@@ -35,7 +35,7 @@ export const blogPosts: BlogPostData[] = [
     "sections": [
       {
         "type": "intro",
-        "content": "Cooling tower shutdown season is a predictable stress point for NJ property managers overseeing multifamily high-rises, mixed-use buildings, and commercial campuses. A rushed or poorly documented shutdown can leave a tower vulnerable to corrosion, scale buildup, and mechanical surprises at restart. Mechanical Enterprise LLC has supported commercial HVAC systems across Bergen, Union, Essex, and surrounding NJ counties for 20 years, and this guide outlines how to plan a shutdown that protects your equipment and your budget without guessing at maintenance intervals that vary by system."
+        "content": "Cooling tower shutdown season is a predictable planning task for NJ property managers overseeing multifamily high-rises, mixed-use buildings, and commercial campuses. A rushed or poorly documented shutdown can leave equipment exposed to corrosion, freeze damage, and mechanical problems at restart. This guide helps owners coordinate qualified vendors, document equipment conditions, and define responsibilities. Your tower manufacturer's instructions and building-specific water management program should determine the work sequence."
       },
       {
         "type": "h2",
@@ -88,17 +88,17 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "h2",
-        "content": "Installation Quality, System Fit, and Optional Coverage"
+        "content": "Turn Shutdown Findings Into a Maintenance Plan"
       },
       {
         "type": "paragraph",
-        "content": "Shutdown and restart planning only goes as far as the underlying system allows. A tower or associated chiller plant component that was sized and installed correctly for your building's load holds up better through repeated seasonal cycles than one that was mismatched from the start. When replacing cooling plant equipment, Mechanical Enterprise focuses on correct system fit and installation quality first. New installations by Mechanical Enterprise can add optional 10-year parts and labor coverage, and eligible existing systems may qualify for the same coverage after an inspection; this coverage is a separately purchased add-on, not a standard or included feature. Rebates can offset project cost as a secondary benefit: PSE&G Direct Install (commercial) may cover up to 80% of project cost, with 0% interest On-Bill Repayment financing available for the remaining balance after rebates."
+        "content": "Use the shutdown report to separate immediate repairs from planned capital work. Ask vendors to identify the affected equipment, document the condition, explain the proposed scope, and state what remains outside their contract. Keep water treatment responsibilities with the qualified water treatment provider and coordinate mechanical work with building engineering. A written plan helps property managers schedule access, compare scopes, and prepare the next maintenance budget."
       },
       {
         "type": "cta_box",
         "content": "Planning a cooling tower shutdown or evaluating your chiller plant's long-term reliability? Talk to Mechanical Enterprise about your building's specific system and documentation needs.",
         "buttonText": "Request a Commercial Consultation",
-        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+        "buttonUrl": "https://mechanicalenterprise.com/commercial/for-property-management"
       }
     ],
     "faqSchema": [
@@ -111,8 +111,8 @@ export const blogPosts: BlogPostData[] = [
         "answer": "Photograph the basin, fill media, fans, and motor or gearbox housing, and record water treatment test results, amperage readings, and belt condition. This baseline lets you compare conditions at restart and hold vendors accountable to the state the tower was left in."
       },
       {
-        "question": "Does Mechanical Enterprise offer coverage for existing cooling plant equipment?",
-        "answer": "Eligible existing systems may qualify for optional 10-year parts and labor coverage after an inspection confirms eligibility. This coverage is a separately purchased add-on and is not automatically included with service."
+        "question": "What should a property manager request in a shutdown scope?",
+        "answer": "Request equipment identification, a written sequence based on the manufacturer instructions and water management program, assigned vendor responsibilities, condition documentation, and separate shutdown and restart deliverables."
       }
     ]
   },
