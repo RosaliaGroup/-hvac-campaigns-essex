@@ -25,6 +25,109 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Rooftop HVAC Replacement Quotes: NJ Owner Checklist",
+    "slug": "rooftop-hvac-replacement-quote-checklist-nj",
+    "date": "October 23, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC Planning",
+    "metaDescription": "Compare rooftop HVAC replacement quotes for NJ commercial buildings. Check equipment fit, roof work, shutdown planning, controls, and closeout scope.",
+    "excerpt": "A practical checklist for NJ property managers and building owners comparing rooftop HVAC replacement bids, with a clear brief to send contractors.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "A rooftop HVAC replacement quote can look complete while leaving major parts of the job unclear. An owner may see an unit model and a total price but still have no firm scope for roof work, controls, lifting, or the tenant shutdown. For commercial buildings in Essex and Hudson counties, the useful question is not just what the unit costs. It is what the contractor has inspected, what the price covers, and what remains the owner's role. Use this checklist to turn a vague request for pricing into a scope that contractors can assess and price on the same basis."
+      },
+      {
+        "type": "cta_box",
+        "content": "Have a rooftop unit that needs a replacement assessment? Send the property address, unit details, and access constraints so Mechanical Enterprise can review the project with you.",
+        "buttonText": "Request a Rooftop HVAC Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial/for-property-management"
+      },
+      {
+        "type": "h2",
+        "content": "Describe the building before selecting unit"
+      },
+      {
+        "type": "paragraph",
+        "content": "Start with the space the unit serves. Describe the current use, occupied hours, tenant concerns, and any changes since the old unit was installed. A former retail space used as an office may have different needs. So may a building where walls, tenant layouts, or operating hours have changed. Give the contractor the service history and explain the problem you want to solve. Repeated repair calls, uneven comfort, and a full unit failure are different starting points. The assessment should connect the proposed unit to the building's current needs rather than simply copy the old nameplate."
+      },
+      {
+        "type": "paragraph",
+        "content": "Ask the bidder to state what was checked during the visit and what details is still needed. The proposal should identify the unit being replaced and the areas it serves. If a final selection depends on further design or site checks, that should be clear before you approve the purchase. Keep the existing model and serial numbers in the project file. Photographs help identify unit, but they do not replace a site assessment."
+      },
+      {
+        "type": "h2",
+        "content": "Make roof and curb compatibility part of the scope"
+      },
+      {
+        "type": "paragraph",
+        "content": "The roof curb is the raised support and connection point beneath the unit. Ask whether the quote assumes the current curb will remain, calls for an adapter, or includes a new curb. The fit must be checked against the actual replacement model and site conditions. Some unit lines are designed for selected current curbs; that does not establish that any proposed unit will fit your building. The [manufacturer's replacement-platform details](https://www.carrier.com/us/en/commercial/packaged-outdoor/50feq.html) is an example of why the model and current curb details matter."
+      },
+      {
+        "type": "paragraph",
+        "content": "Also ask who is responsible for roof openings, flashing, weather protection, and any required structural review. A mechanical quote may exclude work assigned to a roofing contractor or another trade. That can be a valid division of work, but it should be written down. Confirm who coordinates those parties and who resolves an unexpected condition found when the old unit is removed. Do not assume the phrase complete installation covers every roof-related item."
+      },
+      {
+        "type": "h2",
+        "content": "Compare connections, controls, and startup work"
+      },
+      {
+        "type": "paragraph",
+        "content": "Equipment is only part of the replacement. Have each bidder describe the included duct connections, electrical work, fuel connections where applicable, drainage, and controls. Ask whether the existing thermostat or building controls will remain and what changes are needed. The scope should distinguish reuse from replacement. A proposal that assumes current connections are suitable should explain how that assumption will be confirmed. This helps the owner understand the difference between a defined project and a price that could change after another site visit."
+      },
+      {
+        "type": "paragraph",
+        "content": "Request a description of startup and functional checks, along with the records you will receive. Ask how operating schedules, setpoints, and control access will be handed over to building staff. If an outside controls vendor must participate, identify that role in advance. The goal is a working system with a clear handoff, rather than a new unit whose settings and service roles are unclear."
+      },
+      {
+        "type": "h2",
+        "content": "Plan lifting, access, and tenant disruption"
+      },
+      {
+        "type": "paragraph",
+        "content": "A rooftop project needs a site plan as well as an unit list. Ask how the old unit will be removed, how the replacement will reach the roof, and what access the contractor needs. Discuss staging areas, loading access, parking restrictions, and tenant operations that may affect the work. The proposal should identify who arranges lifting and site coordination. If permits or approvals are needed, ask who will confirm and obtain them. Do not treat a tentative work date as a firm shutdown plan."
+      },
+      {
+        "type": "paragraph",
+        "content": "Agree on how shutdown timing will be confirmed and communicated. Identify the owner's contact, the tenant or building contact, and the contractor's project contact. Ask what happens if weather, access, or unit delivery changes the plan. For an occupied property, explain which activities depend on heating or cooling and ask whether temporary measures need a separate scope. Avoid assuming that a replacement includes temporary unit or uninterrupted service unless the proposal expressly addresses it."
+      },
+      {
+        "type": "h2",
+        "content": "Send bidders a consistent project brief"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Property address, building use, occupied hours, and the person coordinating access.",
+          "Existing equipment model and serial numbers, available photos, and known service history.",
+          "Areas served, current comfort problems, and relevant tenant or layout changes.",
+          "Known roof, curb, control, and utility-connection information, with unknowns clearly marked.",
+          "Preferred project timing, shutdown constraints, and any work assigned to other trades.",
+          "A request for written inclusions, exclusions, assumptions, startup records, and change approval terms."
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "Compare the returned scopes before comparing totals. Flag an omitted item and ask whether it is excluded, included elsewhere, or awaiting inspection. Ask for any clarification in writing so the final scope is easy to review. Mechanical Enterprise can assess commercial HVAC replacement needs and help property teams define a project scope across the NJ counties we serve. Bring the brief to the assessment and use the resulting proposal to make an informed decision for the building."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Can the existing rooftop curb always be reused?",
+        "answer": "No. Reuse depends on the proposed model, the existing curb, and site conditions. Ask the contractor to confirm compatibility and identify any adapter, roof work, or further review in the scope."
+      },
+      {
+        "question": "What should an owner send before requesting a replacement quote?",
+        "answer": "Send the property address, current equipment details, service history, areas served, access contact, and shutdown constraints. Mark missing information so the contractor can confirm it during the assessment."
+      },
+      {
+        "question": "How should I compare rooftop HVAC bids?",
+        "answer": "Compare equipment selection, included connections, roof work, controls, lifting, startup, exclusions, and project coordination before comparing totals. Ask for written clarification when the scopes differ."
+      }
+    ]
+  },
+
+  {
     "title": "Multifamily HVAC Replacement Without Tenant Disruption",
     "slug": "multifamily-hvac-replacement-occupied-buildings",
     "date": "October 19, 2026",
