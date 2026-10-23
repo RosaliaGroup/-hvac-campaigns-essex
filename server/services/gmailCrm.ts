@@ -1,6 +1,6 @@
 import { pacedGmailRead } from "./gmailReadTransport";
 import { gmailQuotaRemainingMs, GmailQuotaCooldownError } from "./gmailQuotaCooldown";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import { crmCommunications, crmExternalContacts } from "../../drizzle/schema";
 import { quoteNotificationContact } from "./quoteNotification";
 import { startJob } from "./asyncLaneJob";
@@ -42,6 +42,23 @@ function plainText(part?: Part): string {
     return Buffer.from(part.body.data, "base64url").toString("utf8");
   return (part.parts ?? []).map(plainText).filter(Boolean).join("\n");
 }
+// Store text, never render untrusted email HTML. HTML-only messages are common
+// in API-sent follow-ups and must not appear blank in Communications.
+function htmlText(part?: Part): string {
+  if (!part) return "";
+  if (part.mimeType === "text/html" && part.body?.data) {
+    return Buffer.from(part.body.data, "base64url").toString("utf8")
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "")
+      .replace(/<\/?(?:p|div|br|li|tr|h[1-6])\b[^>]*>/gi, "\n")
+      .replace(/<[^>]*>/g, "")
+      .replace(/&(?:nbsp|amp|lt|gt|quot|apos|#39);/gi, entity => ({
+        "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">",
+        "&quot;": '"', "&apos;": "'", "&#39;": "'",
+      }[entity.toLowerCase()] ?? entity))
+      .replace(/\n[ \t]*\n+/g, "\n\n").trim();
+  }
+  return (part.parts ?? []).map(htmlText).filter(Boolean).join("\n");
+}
 export function parseGmailMessage(message: GmailMessage) {
   if (
     !message.id ||
@@ -70,7 +87,7 @@ export function parseGmailMessage(message: GmailMessage) {
     ].includes(CRM_MAILBOX)
   )
     return null;
-  const body = plainText(message.payload);
+  const body = plainText(message.payload) || htmlText(message.payload);
   const quoteContact =
     direction === "inbound"
       ? quoteNotificationContact(from.join(", "), header("Subject"), body)
@@ -115,6 +132,7 @@ export async function gmailCrmStatus() {
           scope => scope === GMAIL_SEND_SCOPE || scope === GMAIL_COMPOSE_SCOPE
         )
     ),
+    retryAfterMs: gmailQuotaRemainingMs(),
   };
 }
 
@@ -202,7 +220,7 @@ export async function syncGmailPage(
   if (!db) throw new Error("Database unavailable");
   await seedKnownOutreachSuppressions(db);
   const params = new URLSearchParams({
-    maxResults: "50",
+    maxResults: "20",
     q: `in:anywhere -in:spam -in:trash -in:drafts newer_than:${input.lookbackDays ?? 30}d {from:${CRM_MAILBOX} to:${CRM_MAILBOX} cc:${CRM_MAILBOX}}`,
   });
   if (input.pageToken) params.set("pageToken", input.pageToken);
@@ -210,7 +228,26 @@ export async function syncGmailPage(
   let imported = 0,
     duplicates = 0,
     skipped = 0;
+  const ids = (page.messages ?? []).map((item: { id: string }) => item.id);
+  const stored = ids.length ? await db.select({
+    providerMessageId: crmCommunications.providerMessageId,
+    externalContactId: crmCommunications.externalContactId,
+    customerId: crmCommunications.customerId,
+    body: crmCommunications.body,
+  }).from(crmCommunications).where(and(
+    eq(crmCommunications.provider, "gmail"),
+    inArray(crmCommunications.providerMessageId, ids),
+  )) : [];
+  const complete = new Set(stored.filter(row =>
+    row.externalContactId && row.customerId && row.body?.trim()
+  ).map(row => row.providerMessageId));
   for (const item of page.messages ?? []) {
+    // Unlinked or body-less records still take the repair path below. New
+    // inbound messages (including opt-outs) are NEVER skipped by thread ID.
+    if (complete.has(item.id)) {
+      duplicates++;
+      continue;
+    }
     const remote = await read(
       `messages/${encodeURIComponent(item.id)}?format=full`
     );
@@ -281,6 +318,13 @@ export async function syncGmailPage(
         sql`${crmCommunications.externalContactId} IS NULL`,
       ));
     }
+    if (parsed.body) {
+      await db.update(crmCommunications).set({ body: parsed.body }).where(and(
+        eq(crmCommunications.provider, "gmail"),
+        eq(crmCommunications.providerMessageId, parsed.providerMessageId),
+        sql`(${crmCommunications.body} IS NULL OR ${crmCommunications.body} = '')`,
+      ));
+    }
     const result = await logCommunication(db, {
       ...communication,
       externalContactId: contact?.id ?? null,
@@ -297,6 +341,30 @@ export async function syncGmailPage(
     skipped,
     nextPageToken: page.nextPageToken as string | undefined,
   };
+}
+
+/** Manual history sync yields after two pages and checkpoints the failed page.
+ * A cooldown is a resumable state, not a reason for another immediate request. */
+export async function syncGmailBatch(
+  input: { pageToken?: string },
+  syncPage = syncGmailPage,
+) {
+  let pageToken = input.pageToken;
+  const totals = { imported: 0, duplicates: 0, skipped: 0 };
+  for (let page = 0; page < 2; page++) {
+    try {
+      const result = await syncPage({ pageToken, lookbackDays: 30 });
+      totals.imported += result.imported;
+      totals.duplicates += result.duplicates;
+      totals.skipped += result.skipped;
+      pageToken = result.nextPageToken;
+      if (!pageToken) return { ...totals, nextPageToken: undefined, retryAfterMs: 0, paused: false };
+    } catch (error) {
+      if (!(error instanceof GmailQuotaCooldownError)) throw error;
+      return { ...totals, nextPageToken: pageToken, retryAfterMs: Math.max(error.retryAfterMs, gmailQuotaRemainingMs()), paused: true };
+    }
+  }
+  return { ...totals, nextPageToken: pageToken, retryAfterMs: 60_000, paused: true };
 }
 
 /** Automatically refresh recent sent mail/replies once the correct account consents. */
@@ -348,6 +416,10 @@ export function startGmailCrmScheduler() {
           return null;
         }
         try {
+          // Recent replies must not wait hours behind the historical cursor.
+          // Fully imported messages above cost no additional messages.get call.
+          const recent = await syncGmailPage({ lookbackDays: 2 });
+          console.info("[CRM Gmail] Recent sync succeeded:", JSON.stringify(recent));
           const result = await syncGmailPage({ pageToken, lookbackDays: 14 });
           pageToken = result.nextPageToken;
           console.info("[CRM Gmail] Sync succeeded:", JSON.stringify(result));
