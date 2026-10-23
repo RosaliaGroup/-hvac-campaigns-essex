@@ -1,3 +1,4 @@
+import { reserveProfileResearch } from "./dailyBudget";
 import { ProfileProviderError } from "./anthropicSearch";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import {
@@ -81,10 +82,10 @@ function withVerifiedSocialLinks(profile: ContactProfile, email: string | null |
   return {...profile,social,companySocial,status:"matched"};
 }
 
-// Successful matches remain cached for a day; provider failures get a bounded
-// cooldown so Refresh can recover without repeatedly charging/searching.
+// Reuse verified results for 30 days and unmatched results for seven days.
 export function profileCacheMs(profile: ContactProfile) {
-  return profile.message || profile.status === "unavailable" ? 5 * 60 * 1000 : 24 * 60 * 60 * 1000;
+  if (profile.message || profile.status === "unavailable") return 5 * 60 * 1000;
+  return (profile.status === "matched" ? 30 : 7) * 24 * 60 * 60 * 1000;
 }
 const running = new Map<number, Promise<ContactProfile>>();
 export async function contactProfile(
@@ -168,6 +169,10 @@ export async function contactProfile(
       .find(company => company.name);
     let profile: ContactProfile;
     try {
+      if (!await reserveProfileResearch()) {
+        return saved?.profile ?? {company: {}, social: [], checkedAt: new Date().toISOString(),
+          status: "unavailable", message: "Daily research allowance reached. Automatic research resumes tomorrow; saved contact details remain available."};
+      }
       profile = await researchContact({
         name: c.name,
         email: c.email,

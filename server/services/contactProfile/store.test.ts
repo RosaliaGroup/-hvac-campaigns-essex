@@ -1,9 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   db: vi.fn(),
+  reserve: vi.fn(),
   research: vi.fn(),
   upsert: vi.fn(),
 }));
+vi.mock("./dailyBudget", () => ({reserveProfileResearch: mocks.reserve}));
 vi.mock("../../db", () => ({ getDb: mocks.db }));
 vi.mock("./research", async importOriginal => ({
   ...(await importOriginal<typeof import("./research")>()),
@@ -12,7 +14,7 @@ vi.mock("./research", async importOriginal => ({
 vi.mock("../crmCommunications", () => ({
   upsertExternalContact: mocks.upsert,
 }));
-import { contactProfile } from "./store";
+import { contactProfile, profileCacheMs } from "./store";
 const contact = {
   id: 10,
   name: "Sample Person",
@@ -39,6 +41,7 @@ beforeEach(() => {
     onDuplicateKeyUpdate: vi.fn().mockResolvedValue({}),
   };
   mocks.db.mockResolvedValue(chain);
+  mocks.reserve.mockReset().mockResolvedValue(true);
   mocks.research.mockReset().mockResolvedValue(profile);
   mocks.upsert.mockReset();
 });
@@ -147,5 +150,18 @@ it("does not hammer a provider during a recent failure cooldown", async () => {
     profile: {...profile,status:"unavailable"},
   }]);
   await contactProfile({contactId:10},true);
+  expect(mocks.research).not.toHaveBeenCalled();
+});
+
+it("keeps successful research for 30 days and unmatched results for seven", () => {
+  expect(profileCacheMs({...profile,status:"matched"})).toBe(30*86400000);
+  expect(profileCacheMs({...profile,status:"not_found"})).toBe(7*86400000);
+});
+
+it("does not start paid research when the durable daily allowance is exhausted", async () => {
+  chain.limit.mockResolvedValueOnce([contact]).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+  mocks.reserve.mockResolvedValueOnce(false);
+  const result = await contactProfile({contactId:10},true);
+  expect(result?.message).toMatch(/Daily research allowance/);
   expect(mocks.research).not.toHaveBeenCalled();
 });

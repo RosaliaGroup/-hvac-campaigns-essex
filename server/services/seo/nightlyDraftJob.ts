@@ -50,7 +50,8 @@ function warnOnStalePriceRanges(now: Date): void {
   }
 }
 
-export const MAX_NIGHTLY_DRAFTS = 20;
+const configuredNightlyLimit = Number(process.env.SEO_NIGHTLY_MAX_DRAFTS ?? 20);
+export const MAX_NIGHTLY_DRAFTS = Number.isInteger(configuredNightlyLimit) && configuredNightlyLimit >= 0 && configuredNightlyLimit <= 20 ? configuredNightlyLimit : 20;
 
 /**
  * Owner-pinned positioning pages (2026-09-29). They bypass the 20-impression
