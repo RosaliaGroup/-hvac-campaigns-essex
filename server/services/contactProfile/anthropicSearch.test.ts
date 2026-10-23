@@ -28,7 +28,7 @@ it("collects actual search result URLs and preserves citation URLs", async () =>
     citations: ["https://example.com", "https://example.com/about"],
   });
   const request = JSON.parse(fetcher.mock.calls[0][1].body);
-  expect(request.tools[0].max_uses).toBe(3);
+  expect(request.tools[0].max_uses).toBe(2);
   expect(request.messages[0].content).toBe("sample");
 });
 it("continues a paused search with unmodified content blocks", async () => {

@@ -41,10 +41,10 @@ export async function anthropicSearch(
       },
       signal: AbortSignal.timeout(60000),
       body: JSON.stringify({
-        model: env.CRM_PROFILE_MODEL?.trim() || "claude-sonnet-5",
+        model: env.CRM_PROFILE_MODEL?.trim() || "claude-haiku-4-5",
         max_tokens: 3000,
         tools: [
-          { type: "web_search_20250305", name: "web_search", max_uses: 3 },
+          { type: "web_search_20250305", name: "web_search", max_uses: 2 },
         ],
         messages,
       }),
@@ -57,6 +57,9 @@ export async function anthropicSearch(
       );
     }
     const body = await response.json();
+    console.info("[CRM Profile Usage]", {model: env.CRM_PROFILE_MODEL?.trim() || "claude-haiku-4-5",
+      inputTokens: Number(body.usage?.input_tokens ?? 0), outputTokens: Number(body.usage?.output_tokens ?? 0),
+      webSearches: Number(body.usage?.server_tool_use?.web_search_requests ?? 0)});
     for (const block of Array.isArray(body.content) ? body.content : []) {
       if (block.type === "text") {
         text += (text ? "\n" : "") + (block.text || "");
