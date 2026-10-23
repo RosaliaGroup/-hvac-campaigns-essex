@@ -13,7 +13,7 @@ import {
   leads,
   leadCaptures,
 } from "../../drizzle/schema";
-import { gmailCrmStatus, syncGmailPage } from "../services/gmailCrm";
+import { gmailCrmStatus, syncGmailPage, syncGmailBatch } from "../services/gmailCrm";
 import { startJob, getJob } from "../services/asyncLaneJob";
 import { crmOutreachSuppressions, isOutreachSuppressed, KNOWN_OUTREACH_SUPPRESSIONS, seedKnownOutreachSuppressions } from "../services/outreachSuppression";
 import { cancelOpen30DayTasks } from "../services/crm30DayTasks";
@@ -499,8 +499,8 @@ export const crmCommunicationsRouter = router({
     .mutation(({ input }) =>
       startJob({
         kind: "crm-gmail",
-        key: "crm-gmail",
-        fn: () => syncGmailPage(input),
+        key: "crm-gmail:manual",
+        fn: () => syncGmailBatch(input),
       })
     ),
   reconcileSentOutreach: protectedProcedure
@@ -508,7 +508,7 @@ export const crmCommunicationsRouter = router({
     .mutation(({ input }) =>
       startJob({
         kind: "crm-gmail",
-        key: "crm-gmail",
+        key: "crm-gmail:reconcile",
         fn: () => syncGmailPage({ ...input, lookbackDays: 2, importOutboundContacts: true }),
       })
     ),

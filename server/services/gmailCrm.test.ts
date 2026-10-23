@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   promote: vi.fn(),
   queue: vi.fn(),
   suppressed: vi.fn(),
+  stored: [] as any[],
 }));
 vi.mock("../integrations/google/calendar", () => ({
   googleCalendarProvider: {
@@ -41,7 +42,9 @@ import {
   GMAIL_SCOPE,
   parseGmailMessage,
   syncGmailPage,
+  syncGmailBatch,
 } from "./gmailCrm";
+import { GmailQuotaCooldownError } from "./gmailQuotaCooldown";
 const message = (from = CRM_MAILBOX, to = "agent@example.com") => ({
   id: "gmail1",
   threadId: "thread1",
@@ -74,13 +77,37 @@ beforeEach(() => {
     scope: GMAIL_SCOPE,
   });
   mocks.token.mockResolvedValue({ accessToken: "private-token" });
+  mocks.stored = [];
   const chain: any = { select: () => chain, from: () => chain, where: () => chain, limit: async () => [], update: () => chain, set: () => chain };
+  chain.select = (columns?: unknown) => columns ? { from: () => ({ where: async () => mocks.stored }) } : chain;
   mocks.db.mockResolvedValue(chain);
   mocks.upsert.mockImplementation(async (_db, input) => ({id:7,...input}));
   mocks.log.mockResolvedValue({ id: 8, duplicate: false });
   mocks.promote.mockResolvedValue(10);
 });
 describe("Gmail CRM", () => {
+  it("does not download full bodies for complete saved messages", async () => {
+    mocks.stored = [{ providerMessageId: "gmail1", externalContactId: 7, customerId: 10, body: "saved" }];
+    const responses = [{ emailAddress: CRM_MAILBOX }, { messages: [{ id: "gmail1" }] }];
+    const fetcher = vi.fn(async () => ({ ok: true, json: async () => responses.shift() }));
+    expect(await syncGmailPage({}, fetcher)).toMatchObject({ duplicates: 1, imported: 0 });
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(mocks.log).not.toHaveBeenCalled();
+  });
+  it("still repairs unlinked or blank messages and reads new replies in known threads", async () => {
+    mocks.stored = [{ providerMessageId: "gmail1", externalContactId: 7, customerId: null, body: "saved" }];
+    const responses = [{ emailAddress: CRM_MAILBOX }, { messages: [{ id: "gmail1" }, { id: "gmail2" }] }, message(), { ...message("agent@example.com", CRM_MAILBOX), id: "gmail2" }];
+    const fetcher = vi.fn(async () => ({ ok: true, json: async () => responses.shift() }));
+    await syncGmailPage({}, fetcher);
+    expect(fetcher).toHaveBeenCalledTimes(4);
+    expect(mocks.log).toHaveBeenCalledTimes(2);
+    expect(mocks.log.mock.calls[1][1]).toMatchObject({ direction: "inbound", providerMessageId: "gmail2" });
+  });
+  it("shows HTML-only API messages as readable text without scripts", () => {
+    const remote = message();
+    remote.payload.parts = [{ mimeType: "text/html", body: { data: Buffer.from('<style>hidden</style><p>Hi Chris,</p><p>Service &amp; maintenance</p><script>bad()</script>').toString("base64url") } }];
+    expect(parseGmailMessage(remote)?.body).toBe("Hi Chris,\n\nService & maintenance");
+  });
   it("promotes qualifying outreach recipients even on duplicate email imports", async () => {
     mocks.log.mockResolvedValue({ duplicate: true });
     const responses = [
@@ -254,6 +281,32 @@ describe("Gmail CRM", () => {
   });
 });
 
+describe("bounded manual Gmail recovery", () => {
+  it("yields after two pages with a cursor and a one-minute pause", async () => {
+    const page = vi.fn().mockResolvedValueOnce({ imported: 2, duplicates: 3, skipped: 0, nextPageToken: "p2" })
+      .mockResolvedValueOnce({ imported: 1, duplicates: 4, skipped: 1, nextPageToken: "p3" });
+    expect(await syncGmailBatch({}, page)).toEqual({ imported: 3, duplicates: 7, skipped: 1, nextPageToken: "p3", retryAfterMs: 60_000, paused: true });
+    expect(page).toHaveBeenCalledTimes(2);
+    expect(page.mock.calls[1][0]).toEqual({ pageToken: "p2", lookbackDays: 30 });
+  });
+  it("retains the failed page and completed counts through provider cooldown", async () => {
+    const page = vi.fn().mockResolvedValueOnce({ imported: 1, duplicates: 0, skipped: 0, nextPageToken: "retry-this" })
+      .mockRejectedValueOnce(new GmailQuotaCooldownError(7_200_000));
+    expect(await syncGmailBatch({}, page)).toMatchObject({ imported: 1, nextPageToken: "retry-this", retryAfterMs: 7_200_000, paused: true });
+    expect(page).toHaveBeenCalledTimes(2);
+  });
+  it("preserves a first-page quota pause even with no next token", async () => {
+    const page = vi.fn().mockRejectedValue(new GmailQuotaCooldownError(900_000));
+    expect(await syncGmailBatch({}, page)).toMatchObject({ imported: 0, nextPageToken: undefined, retryAfterMs: 900_000, paused: true });
+    expect(page).toHaveBeenCalledTimes(1);
+  });
+  it("finishes without scheduling another batch and surfaces auth errors", async () => {
+    const page = vi.fn().mockResolvedValue({ imported: 1, duplicates: 0, skipped: 0, nextPageToken: undefined });
+    expect(await syncGmailBatch({}, page)).toMatchObject({ imported: 1, paused: false, retryAfterMs: 0 });
+    await expect(syncGmailBatch({}, vi.fn().mockRejectedValue(new Error("Reconnect Google")))).rejects.toThrow("Reconnect Google");
+  });
+});
+
 describe("website quote notification messages", () => {
   const quoteMessage = () => {
     const m = message("noreply@mechanicalenterprise.com", CRM_MAILBOX);
@@ -280,6 +333,7 @@ describe("website quote notification messages", () => {
       limit: async () => [{ id: 42 }],
       update: () => ({ set: updateSet }),
     };
+    chain.select = (columns?: unknown) => columns ? { from: () => ({ where: async () => [] }) } : chain;
     mocks.db.mockResolvedValue(chain);
 
     mocks.log.mockResolvedValue({ id: 8, duplicate: true });

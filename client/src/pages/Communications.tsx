@@ -24,6 +24,8 @@ type SyncResult = {
   duplicates: number;
   skipped: number;
   nextPageToken?: string;
+  retryAfterMs?: number;
+  paused?: boolean;
 };
 export default function Communications() {
   const [, navigate] = useLocation();
@@ -41,6 +43,7 @@ export default function Communications() {
   }, [linkedContact.data?.id]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pageToken, setPageToken] = useState<string | undefined>();
+  const [resumeAt, setResumeAt] = useState<number | null>(null);
   const handledSyncJob = useRef<string | null>(null);
   const syncTotals = useRef({ imported: 0, duplicates: 0, skipped: 0 });
   const [notice, setNotice] = useState("");
@@ -232,7 +235,7 @@ export default function Communications() {
   const sync = trpc.crmCommunications.syncGmail.useMutation({
     onSuccess: data => {
       setJobId(data.jobId);
-      setNotice("Reading Gmail…");
+      setNotice("Checking email updates…");
     },
     onError: error => setNotice(error.message),
   });
@@ -264,19 +267,29 @@ export default function Communications() {
       syncTotals.current.imported += result.imported;
       syncTotals.current.duplicates += result.duplicates;
       syncTotals.current.skipped += result.skipped;
+      const hasMore = Boolean(result.nextPageToken) || result.paused;
+      const waitMs = hasMore ? Math.max(result.retryAfterMs ?? 0, 60_000) : 0;
+      const nextResumeAt = hasMore ? Date.now() + waitMs : null;
+      setResumeAt(nextResumeAt);
       setNotice(
-        `${syncTotals.current.imported} emails added; ${syncTotals.current.duplicates} already recorded; ${syncTotals.current.skipped} skipped.${result.nextPageToken ? " Reading the next page… Keep this page open." : " Sync complete."}`
+        `${syncTotals.current.imported} emails added; ${syncTotals.current.duplicates} already recorded; ${syncTotals.current.skipped} skipped.${nextResumeAt ? ` Sync will resume automatically at ${new Date(nextResumeAt).toLocaleTimeString()} while this page stays open.` : " Sync complete."}`
       );
       setJobId(null);
       void contacts.refetch();
       if (contactId !== null) void timeline.refetch();
-      if (result.nextPageToken)
-        sync.mutate({ pageToken: result.nextPageToken });
     } else if (job.data?.status === "error") {
       setNotice(job.data.error ?? "Sync failed. Retry safely.");
       setJobId(null);
     }
   }, [job.data, jobId, job.isFetching, job.error]);
+  useEffect(() => {
+    if (!resumeAt) return;
+    const timer = window.setTimeout(() => {
+      setResumeAt(null);
+      sync.mutate({ pageToken });
+    }, Math.max(0, resumeAt - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [resumeAt, pageToken]);
   const ready =
     status.data?.connected &&
     status.data.hasReadPermission &&
@@ -335,7 +348,7 @@ export default function Communications() {
           variant="outline"
           size="sm"
           className="rounded-full bg-white text-slate-800"
-          disabled={!ready || Boolean(jobId) || sync.isPending}
+          disabled={!ready || Boolean(jobId) || sync.isPending || Boolean(resumeAt)}
           onClick={() => {
             syncTotals.current = { imported: 0, duplicates: 0, skipped: 0 };
             sync.mutate({ pageToken });
@@ -345,7 +358,9 @@ export default function Communications() {
             className={`h-4 w-4 mr-2 ${jobId ? "animate-spin" : ""}`}
           />
           {jobId || sync.isPending
-            ? "Syncing all email pages…"
+            ? "Checking email updates…"
+            : resumeAt
+              ? "Sync resumes automatically"
             : pageToken
               ? "Resume Gmail sync"
               : "Sync Gmail · last 30 days"}
