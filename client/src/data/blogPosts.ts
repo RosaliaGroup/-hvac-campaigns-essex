@@ -25,6 +25,99 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "NJ Cooling Tower Shutdown Planning Guide",
+    "slug": "nj-cooling-tower-shutdown-planning",
+    "date": "October 23, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Plan cooling tower shutdowns for NJ commercial and multifamily properties with coordination, documentation, and vendor steps that protect equipment.",
+    "excerpt": "A practical framework for NJ property managers to coordinate cooling tower shutdowns, document conditions, question vendors, and verify restart readiness.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Cooling tower shutdown season is a predictable stress point for NJ property managers overseeing multifamily high-rises, mixed-use buildings, and commercial campuses. A rushed or poorly documented shutdown can leave a tower vulnerable to corrosion, scale buildup, and mechanical surprises at restart. Mechanical Enterprise LLC has supported commercial HVAC systems across Bergen, Union, Essex, and surrounding NJ counties for 20 years, and this guide outlines how to plan a shutdown that protects your equipment and your budget without guessing at maintenance intervals that vary by system."
+      },
+      {
+        "type": "h2",
+        "content": "Why Shutdown Planning Matters for NJ Buildings"
+      },
+      {
+        "type": "paragraph",
+        "content": "An unplanned or informal shutdown creates real exposure. Standing water left in a basin over a dormant season can support scale, biological growth, and corrosion on fill media, fans, and structural components. For multifamily properties in Bergen County or commercial buildings in Union County, that exposure translates into higher restart costs, delayed cooling availability, and potential water treatment complications. A coordinated plan with clear documentation gives property managers a record to compare against at startup and a basis for holding vendors accountable to the condition the tower was in when it went offline."
+      },
+      {
+        "type": "h2",
+        "content": "Building a Coordinated Shutdown Timeline"
+      },
+      {
+        "type": "paragraph",
+        "content": "Shutdown timing should be coordinated across every party touching the system: the chiller plant operator, the water treatment vendor, building engineering staff, and any third-party service contractor. Rather than fixing a shutdown to a specific calendar date, align it with your chiller sequencing and occupancy needs so the tower isn't taken offline while cooling demand still exists. Build in time for the water treatment vendor to perform a final chemical treatment or passivation step before the tower sits idle, and confirm who is responsible for draining, covering, or isolating components. Put the sequence in writing and share it with every vendor involved so nobody assumes another party already handled a step."
+      },
+      {
+        "type": "h2",
+        "content": "Documenting Conditions Before Shutdown"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before a cooling tower goes offline, create a dated record you can reference months later. Photograph the basin, fill media, drift eliminators, fan blades, and gearbox or motor housing from consistent angles. Record water treatment test results, motor amperage readings, and belt condition. Note any existing corrosion, debris, or leaks so they aren't mistaken for new damage at restart. This baseline protects you in vendor conversations and gives your team a clear reference point when evaluating whether a component needs attention before the tower is brought back into service."
+      },
+      {
+        "type": "h2",
+        "content": "Questions to Ask Vendors Before You Sign Off"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Send current tower make, model, tonnage, and basin capacity",
+          "Send recent water treatment logs and the last documented chemical treatment",
+          "Send photos or notes on any known mechanical issues or past repairs",
+          "Ask how they will protect the basin and fill media during the idle period",
+          "Ask what documentation they will provide at shutdown and at restart",
+          "Ask who is responsible for coordinating with your water treatment vendor",
+          "Ask how component condition will be verified before startup",
+          "Ask for a written scope that separates shutdown tasks from restart tasks"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Restart Checks Before Spring Startup"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before bringing a cooling tower back online, compare current conditions against your pre-shutdown documentation. Confirm water treatment chemistry has been reestablished, the basin has been cleaned of debris that accumulated during the idle period, and belts, bearings, and gearboxes show no signs of degradation since the last recorded readings. Verify controls and sensors are calibrated and communicating properly with the chiller plant. If any component shows a condition change from your shutdown photos or notes, address it before the tower carries full cooling load rather than discovering the issue during peak demand."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality, System Fit, and Optional Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "Shutdown and restart planning only goes as far as the underlying system allows. A tower or associated chiller plant component that was sized and installed correctly for your building's load holds up better through repeated seasonal cycles than one that was mismatched from the start. When replacing cooling plant equipment, Mechanical Enterprise focuses on correct system fit and installation quality first. New installations by Mechanical Enterprise can add optional 10-year parts and labor coverage, and eligible existing systems may qualify for the same coverage after an inspection; this coverage is a separately purchased add-on, not a standard or included feature. Rebates can offset project cost as a secondary benefit: PSE&G Direct Install (commercial) may cover up to 80% of project cost, with 0% interest On-Bill Repayment financing available for the remaining balance after rebates."
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning a cooling tower shutdown or evaluating your chiller plant's long-term reliability? Talk to Mechanical Enterprise about your building's specific system and documentation needs.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "When should we start planning a cooling tower shutdown for an NJ building?",
+        "answer": "Timing should be coordinated with your chiller plant schedule and occupancy needs rather than a fixed calendar date. Start conversations with your water treatment vendor and service contractor early enough to sequence final treatment, draining, and documentation before cooling demand drops."
+      },
+      {
+        "question": "What should we document before taking a cooling tower offline?",
+        "answer": "Photograph the basin, fill media, fans, and motor or gearbox housing, and record water treatment test results, amperage readings, and belt condition. This baseline lets you compare conditions at restart and hold vendors accountable to the state the tower was left in."
+      },
+      {
+        "question": "Does Mechanical Enterprise offer coverage for existing cooling plant equipment?",
+        "answer": "Eligible existing systems may qualify for optional 10-year parts and labor coverage after an inspection confirms eligibility. This coverage is a separately purchased add-on and is not automatically included with service."
+      }
+    ]
+  },
+
+  {
     "title": "Rooftop HVAC Replacement Quotes: NJ Owner Checklist",
     "slug": "rooftop-hvac-replacement-quote-checklist-nj",
     "date": "October 23, 2026",
