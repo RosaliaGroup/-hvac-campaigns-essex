@@ -534,6 +534,15 @@ export default function CustomerDetail() {
               qbLabel={qbLabel}
               onSelectTab={setTab}
             />
+            {/* Keep customer-level QuickBooks sync visible on every tab, especially Activities.
+                This uses the existing duplicate-aware push/link/resolve workflow. */}
+            <section aria-label="QuickBooks customer sync">
+              <QuickBooksCard
+                customer={customer}
+                customerId={customerId}
+                onChange={refetch}
+              />
+            </section>
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="flex-wrap h-auto">
                 <TabsTrigger value="timeline">Activities</TabsTrigger>
@@ -554,11 +563,6 @@ export default function CustomerDetail() {
               </TabsList>
 
               <TabsContent value="summary" className="space-y-4">
-                <QuickBooksCard
-                  customer={customer}
-                  customerId={customerId}
-                  onChange={refetch}
-                />
                 <Card>
                   <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                     <div className="flex items-center gap-2">
@@ -2151,7 +2155,7 @@ function QuickBooksCard({
               ) : (
                 <RefreshCw className="h-4 w-4 mr-1" />
               )}
-              {linked ? "Re-push" : "Push to QuickBooks"}
+              {linked ? "Update QuickBooks" : "Sync to QuickBooks"}
             </Button>
             {linked && (
               <Button
