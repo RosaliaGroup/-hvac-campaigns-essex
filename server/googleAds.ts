@@ -147,6 +147,49 @@ export async function getCampaignPerformance(refreshToken: string) {
   }));
 }
 
+// Read-only search terms. Google can omit low-volume/private searches.
+export async function getSearchTermPerformance(refreshToken: string) {
+  const customer = await getClient(refreshToken);
+  const rows = await customer.query(`
+    SELECT search_term_view.search_term, campaign.id, campaign.name,
+           metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions
+    FROM search_term_view
+    WHERE segments.date DURING LAST_30_DAYS AND metrics.impressions > 0
+    ORDER BY metrics.cost_micros DESC
+    LIMIT 100
+  `);
+  return rows.map((row: any) => ({
+    searchTerm: String(row.search_term_view?.search_term ?? ""),
+    campaignId: String(row.campaign?.id ?? ""),
+    campaignName: String(row.campaign?.name ?? ""),
+    impressions: Number(row.metrics?.impressions ?? 0),
+    clicks: Number(row.metrics?.clicks ?? 0),
+    cost: Number(row.metrics?.cost_micros ?? 0) / 1_000_000,
+    conversions: Number(row.metrics?.conversions ?? 0),
+  }));
+}
+
+// Read-only conversion action events; not deduplicated qualified CRM leads.
+export async function getConversionActionPerformance(refreshToken: string) {
+  const customer = await getClient(refreshToken);
+  const rows = await customer.query(`
+    SELECT campaign.id, campaign.name, segments.conversion_action_name,
+           metrics.conversions, metrics.all_conversions
+    FROM campaign
+    WHERE segments.date DURING LAST_30_DAYS
+      AND campaign.status != 'REMOVED' AND metrics.all_conversions > 0
+    ORDER BY metrics.all_conversions DESC
+    LIMIT 100
+  `);
+  return rows.map((row: any) => ({
+    campaignId: String(row.campaign?.id ?? ""),
+    campaignName: String(row.campaign?.name ?? ""),
+    actionName: String(row.segments?.conversion_action_name ?? "Unspecified action"),
+    primaryConversions: Number(row.metrics?.conversions ?? 0),
+    allConversions: Number(row.metrics?.all_conversions ?? 0),
+  }));
+}
+
 // Get account-level summary
 export async function getAccountSummary(refreshToken: string) {
   const customer = await getClient(refreshToken);
