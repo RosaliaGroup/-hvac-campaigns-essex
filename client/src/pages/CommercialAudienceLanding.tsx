@@ -55,7 +55,10 @@ export default function CommercialAudienceLanding({ audience }: { audience: Audi
           <p className="text-sm font-semibold uppercase tracking-wide text-orange-300">{data.eyebrow}</p>
           <h1 className="text-3xl md:text-5xl font-bold mt-3 mb-5">{data.title}</h1>
           <p className="text-lg max-w-3xl text-white/90">{data.description}</p>
-          <a href="#request" className="inline-block mt-7 rounded-md bg-[#e8813a] px-6 py-3 font-semibold text-white">Request a commercial consultation</a>
+          <div className="mt-7 flex flex-wrap gap-3">
+            <a href="#request" className="inline-flex items-center justify-center rounded-md bg-[#e8813a] px-6 py-3 font-semibold text-white">Request a commercial consultation</a>
+            <a href="tel:+18624239396" className="inline-flex items-center justify-center rounded-md border border-white/70 px-6 py-3 font-semibold text-white hover:bg-white/10" aria-label="Call Mechanical Enterprise at 862 423 9396">Call (862) 423-9396</a>
+          </div>
         </div>
       </section>
       <section className="container max-w-5xl py-12">
@@ -85,6 +88,7 @@ export default function CommercialAudienceLanding({ audience }: { audience: Audi
         <div className="container max-w-xl">
           <h2 className="text-2xl font-bold text-center mb-5">{audience === "property-management" ? "Request a portfolio HVAC review" : audience === "contractors-developers" ? "Send us your HVAC project or bid scope" : "Discuss your commercial property or client needs"}</h2>
           <PortfolioPricingRequestForm pageContext={`audience-${audience}`} audienceMode={audience === "property-management" ? "portfolio" : audience === "commercial-partners" ? "partner" : "project"} />
+          <p className="text-center text-sm mt-4 text-slate-600">Prefer to speak with our team? <a href="tel:+18624239396" className="font-semibold text-blue-700 underline">Call (862) 423-9396</a>.</p>
           <p className="text-center text-sm mt-5"><Link href={data.related} className="text-blue-700 underline">Explore related HVAC services</Link></p>
         </div>
       </section>
