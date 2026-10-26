@@ -406,6 +406,56 @@ export default function CampaignPerformance() {
                     </table>
                   </div>
                 )}
+                {campaignsError && <p role="alert" className="text-sm text-orange-700">Campaign details unavailable: {campaignsError.message}</p>}
+                {campaignsLoading && <p className="text-sm text-muted-foreground">Loading campaign details…</p>}
+                <section className="space-y-2">
+                  <h3 className="font-semibold">Search terms by spend — last 30 days</h3>
+                  <p className="text-xs text-muted-foreground">Read-only. Google may omit low-volume search terms; review relevance before adding negative keywords.</p>
+                  {termsLoading ? <p className="text-sm text-muted-foreground">Loading search terms…</p> :
+                    termsError ? <p role="alert" className="text-sm text-orange-700">Search terms unavailable: {termsError.message}</p> :
+                    termsData?.terms.length ? (
+                      <div className="overflow-x-auto max-h-80 overflow-y-auto border rounded-lg">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b bg-slate-50">
+                            <th className="text-left p-2">Search term</th><th className="text-left p-2">Campaign</th>
+                            <th className="text-right p-2">Clicks</th><th className="text-right p-2">Spend</th>
+                            <th className="text-right p-2">Ad events</th>
+                          </tr></thead>
+                          <tbody>{termsData.terms.map((t, i) => (
+                            <tr key={`${t.campaignId}-${t.searchTerm}-${i}`} className="border-b">
+                              <td className="p-2">{t.searchTerm}</td><td className="p-2">{t.campaignName}</td>
+                              <td className="p-2 text-right">{t.clicks}</td>
+                              <td className="p-2 text-right">${t.cost.toFixed(2)}</td>
+                              <td className="p-2 text-right">{t.conversions.toFixed(1)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    ) : <p className="text-sm text-muted-foreground">No search-term rows returned; this does not prove zero traffic.</p>}
+                </section>
+                <section className="space-y-2">
+                  <h3 className="font-semibold">Conversion actions — last 30 days</h3>
+                  <p className="text-xs text-muted-foreground">Google Ads platform events are not deduplicated or verified qualified CRM leads. Verify forms and calls against real inquiries.</p>
+                  {actionsLoading ? <p className="text-sm text-muted-foreground">Loading conversion actions…</p> :
+                    actionsError ? <p role="alert" className="text-sm text-orange-700">Conversion actions unavailable: {actionsError.message}</p> :
+                    actionsData?.actions.length ? (
+                      <div className="overflow-x-auto max-h-80 overflow-y-auto border rounded-lg">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b bg-slate-50">
+                            <th className="text-left p-2">Action</th><th className="text-left p-2">Campaign</th>
+                            <th className="text-right p-2">Primary</th><th className="text-right p-2">All</th>
+                          </tr></thead>
+                          <tbody>{actionsData.actions.map((a, i) => (
+                            <tr key={`${a.campaignId}-${a.actionName}-${i}`} className="border-b">
+                              <td className="p-2">{a.actionName}</td><td className="p-2">{a.campaignName}</td>
+                              <td className="p-2 text-right">{a.primaryConversions.toFixed(1)}</td>
+                              <td className="p-2 text-right">{a.allConversions.toFixed(1)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    ) : <p className="text-sm text-muted-foreground">No conversion-action rows returned. Tracking completeness remains unverified.</p>}
+                </section>
                 <div className="flex justify-end">
                   <Button variant="ghost" size="sm" onClick={handleRefresh}>
                     <RefreshCw className="h-4 w-4 mr-2" /> Refresh Data
