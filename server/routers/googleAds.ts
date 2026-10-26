@@ -4,6 +4,8 @@ import {
   getGoogleAdsAuthUrl,
   exchangeCodeForTokens,
   getCampaignPerformance,
+  getSearchTermPerformance,
+  getConversionActionPerformance,
   getAccountSummary,
   createSearchCampaign,
 } from "../googleAds";
@@ -48,6 +50,19 @@ export const googleAdsRouter = router({
     if (!token) throw new Error("Google Ads not connected. Please authorize first.");
     const campaigns = await getCampaignPerformance(token);
     return { campaigns };
+  }),
+
+  // Read-only diagnostics. Never change campaigns, bids or budgets.
+  getSearchTermPerformance: protectedProcedure.query(async () => {
+    const token = await getRefreshToken();
+    if (!token) throw new Error("Google Ads not connected. Please authorize first.");
+    return { terms: await getSearchTermPerformance(token) };
+  }),
+
+  getConversionActionPerformance: protectedProcedure.query(async () => {
+    const token = await getRefreshToken();
+    if (!token) throw new Error("Google Ads not connected. Please authorize first.");
+    return { actions: await getConversionActionPerformance(token) };
   }),
 
   // Get account-level summary (last 30 days)

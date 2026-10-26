@@ -46,14 +46,19 @@ export default function CampaignPerformance() {
   );
   const googleAdsConnected = connectionStatus?.connected ?? false;
 
-  const { data: summaryData, isLoading: summaryLoading, refetch: refetchSummary } = trpc.googleAds.getAccountSummary.useQuery(
+  const { data: summaryData, isLoading: summaryLoading, error: summaryError, refetch: refetchSummary } = trpc.googleAds.getAccountSummary.useQuery(
     undefined,
     { enabled: !!(isAuthenticated && googleAdsConnected) }
   );
-  const { data: campaignsData, isLoading: campaignsLoading, refetch: refetchCampaigns } = trpc.googleAds.getCampaignPerformance.useQuery(
+  const { data: campaignsData, isLoading: campaignsLoading, error: campaignsError, refetch: refetchCampaigns } = trpc.googleAds.getCampaignPerformance.useQuery(
     undefined,
     { enabled: !!(isAuthenticated && googleAdsConnected) }
   );
+  const { data: termsData, isLoading: termsLoading, error: termsError, refetch: refetchTerms } =
+    trpc.googleAds.getSearchTermPerformance.useQuery(undefined, { enabled: !!(isAuthenticated && googleAdsConnected) });
+  const { data: actionsData, isLoading: actionsLoading, error: actionsError, refetch: refetchActions } =
+    trpc.googleAds.getConversionActionPerformance.useQuery(undefined, { enabled: !!(isAuthenticated && googleAdsConnected) });
+
   const getAuthUrl = trpc.googleAds.getAuthUrl.useQuery(
     { redirectUri: `${window.location.origin}/api/oauth/google-ads/callback` },
     { enabled: isAuthenticated }
@@ -76,6 +81,8 @@ export default function CampaignPerformance() {
     refetchStatus();
     refetchSummary();
     refetchCampaigns();
+    refetchTerms();
+    refetchActions();
     toast.success("Refreshing live data...");
   };
 
@@ -100,9 +107,7 @@ export default function CampaignPerformance() {
     return null;
   }
 
-  const totalBudget = 10000; // From budget calculator default
-  const googleAdsAllocated = totalBudget * 0.425;
-  const facebookAllocated = totalBudget * 0.275;
+  const marketingMonthlyCeiling = 2000; // Owner planning ceiling across all marketing; not actual Google Ads budget.
 
   return (
     <div className="min-h-screen bg-secondary/30">
@@ -295,8 +300,8 @@ export default function CampaignPerformance() {
                 <CardDescription>Last 30 days</CardDescription>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Monthly Budget</p>
-                <p className="text-2xl font-bold text-[#ff6b35]">${googleAdsAllocated.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Total marketing ceiling (planning)</p>
+                <p className="text-2xl font-bold text-[#ff6b35]">${marketingMonthlyCeiling.toLocaleString()}/month</p>
               </div>
             </div>
           </CardHeader>
@@ -318,6 +323,11 @@ export default function CampaignPerformance() {
             ) : summaryLoading ? (
               <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin" /> Loading live data from Google Ads...
+              </div>
+            ) : summaryError || !liveGoogleAds ? (
+              <div role="alert" className="py-8 text-sm text-orange-700">
+                Live Google Ads metrics unavailable; missing data is not zero spend or zero conversions.
+                {summaryError ? ` ${summaryError.message}` : " No account summary was returned."}
               </div>
             ) : (
               <div className="space-y-6">
@@ -356,10 +366,10 @@ export default function CampaignPerformance() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Target className="h-4 w-4" />
-                      Conversions
+                      Google Ads conversion events
                     </div>
                     <p className="text-3xl font-bold">{(liveGoogleAds?.conversions ?? 0).toFixed(1)}</p>
-                    <p className="text-xs text-green-600">Last 30 days</p>
+                    <p className="text-xs text-muted-foreground">Not verified unique qualified HVAC leads</p>
                   </div>
                 </div>
                 {campaignsData?.campaigns && campaignsData.campaigns.length > 0 && (
@@ -396,6 +406,56 @@ export default function CampaignPerformance() {
                     </table>
                   </div>
                 )}
+                {campaignsError && <p role="alert" className="text-sm text-orange-700">Campaign details unavailable: {campaignsError.message}</p>}
+                {campaignsLoading && <p className="text-sm text-muted-foreground">Loading campaign details…</p>}
+                <section className="space-y-2">
+                  <h3 className="font-semibold">Search terms by spend — last 30 days</h3>
+                  <p className="text-xs text-muted-foreground">Read-only. Google may omit low-volume search terms; review relevance before adding negative keywords.</p>
+                  {termsLoading ? <p className="text-sm text-muted-foreground">Loading search terms…</p> :
+                    termsError ? <p role="alert" className="text-sm text-orange-700">Search terms unavailable: {termsError.message}</p> :
+                    termsData?.terms.length ? (
+                      <div className="overflow-x-auto max-h-80 overflow-y-auto border rounded-lg">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b bg-slate-50">
+                            <th className="text-left p-2">Search term</th><th className="text-left p-2">Campaign</th>
+                            <th className="text-right p-2">Clicks</th><th className="text-right p-2">Spend</th>
+                            <th className="text-right p-2">Ad events</th>
+                          </tr></thead>
+                          <tbody>{termsData.terms.map((t, i) => (
+                            <tr key={`${t.campaignId}-${t.searchTerm}-${i}`} className="border-b">
+                              <td className="p-2">{t.searchTerm}</td><td className="p-2">{t.campaignName}</td>
+                              <td className="p-2 text-right">{t.clicks}</td>
+                              <td className="p-2 text-right">${t.cost.toFixed(2)}</td>
+                              <td className="p-2 text-right">{t.conversions.toFixed(1)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    ) : <p className="text-sm text-muted-foreground">No search-term rows returned; this does not prove zero traffic.</p>}
+                </section>
+                <section className="space-y-2">
+                  <h3 className="font-semibold">Conversion actions — last 30 days</h3>
+                  <p className="text-xs text-muted-foreground">Google Ads platform events are not deduplicated or verified qualified CRM leads. Verify forms and calls against real inquiries.</p>
+                  {actionsLoading ? <p className="text-sm text-muted-foreground">Loading conversion actions…</p> :
+                    actionsError ? <p role="alert" className="text-sm text-orange-700">Conversion actions unavailable: {actionsError.message}</p> :
+                    actionsData?.actions.length ? (
+                      <div className="overflow-x-auto max-h-80 overflow-y-auto border rounded-lg">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b bg-slate-50">
+                            <th className="text-left p-2">Action</th><th className="text-left p-2">Campaign</th>
+                            <th className="text-right p-2">Primary</th><th className="text-right p-2">All</th>
+                          </tr></thead>
+                          <tbody>{actionsData.actions.map((a, i) => (
+                            <tr key={`${a.campaignId}-${a.actionName}-${i}`} className="border-b">
+                              <td className="p-2">{a.actionName}</td><td className="p-2">{a.campaignName}</td>
+                              <td className="p-2 text-right">{a.primaryConversions.toFixed(1)}</td>
+                              <td className="p-2 text-right">{a.allConversions.toFixed(1)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    ) : <p className="text-sm text-muted-foreground">No conversion-action rows returned. Tracking completeness remains unverified.</p>}
+                </section>
                 <div className="flex justify-end">
                   <Button variant="ghost" size="sm" onClick={handleRefresh}>
                     <RefreshCw className="h-4 w-4 mr-2" /> Refresh Data
@@ -418,8 +478,8 @@ export default function CampaignPerformance() {
                 <CardDescription>Last 30 days</CardDescription>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">Monthly Budget</p>
-                <p className="text-2xl font-bold text-[#ff6b35]">${facebookAllocated.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">Verified paid spend</p>
+                <p className="text-xl font-bold text-[#ff6b35]">Unknown</p>
               </div>
             </div>
           </CardHeader>
@@ -480,53 +540,24 @@ export default function CampaignPerformance() {
           </CardContent>
         </Card>
 
-        {/* Budget vs Actual Spending */}
+        {/* Spend transparency: no fabricated allocation, no zero when unverified. */}
         <Card>
           <CardHeader>
-            <CardTitle>Budget vs Actual Spending</CardTitle>
-            <CardDescription>Compare allocated budget against actual campaign spend</CardDescription>
+            <CardTitle>Spend and lead quality</CardTitle>
+            <CardDescription>
+              Owner planning ceiling: ${marketingMonthlyCeiling.toLocaleString()} per calendar month across all marketing.
+              Google Ads reports a rolling 30-day window, which may not match calendar-month billing.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {/* Google Ads Budget */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Google Ads</span>
-                  <span className="text-sm text-muted-foreground">
-                    ${(liveGoogleAds?.cost ?? 0).toFixed(2)} / ${googleAdsAllocated.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[#ff6b35]" 
-                    style={{ 
-                      width: `${Math.max(0, Math.min(((liveGoogleAds?.cost ?? 0) / googleAdsAllocated) * 100, 100))}%`
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {googleAdsConnected
-                    ? `${Math.max(0, (((liveGoogleAds?.cost ?? 0) / googleAdsAllocated) * 100)).toFixed(1)}% of budget used`
-                    : "Connect to track spending"}
-                </p>
-              </div>
-
-              {/* Facebook Budget */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Facebook / Instagram</span>
-                  <span className="text-sm text-muted-foreground">
-                    $0.00 / ${facebookAllocated.toLocaleString()}
-                  </span>
-                </div>
-                <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-600" style={{ width: "0%" }} />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {facebookConnected ? "0% of budget used" : "Connect to track spending"}
-                </p>
-              </div>
-            </div>
+          <CardContent className="space-y-3 text-sm">
+            <p>Google Ads spend (last 30 days): <strong>{googleAdsConnected && liveGoogleAds ? `$${liveGoogleAds.cost.toFixed(2)}` : "Unknown"}</strong></p>
+            <p>Other marketing and Facebook/Instagram paid spend: <strong>Unknown</strong> until separately verified.</p>
+            <p>Monthly total marketing spend and remaining budget: <strong>Unknown</strong> until all actual costs are reconciled.</p>
+            <p>Verified unique qualified HVAC leads from paid ads: <strong>Unknown</strong> until CRM and call/form attribution are reconciled.</p>
+            <p className="text-muted-foreground">
+              Never count outbound prospecting, clicks, tests, spam, duplicated contacts or Google Ads conversion events as qualified leads without verification.
+              No automatic budget or bidding changes are made from this report.
+            </p>
           </CardContent>
         </Card>
       </div>
