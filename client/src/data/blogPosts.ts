@@ -25,6 +25,117 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Pump Lead-Lag Rotation: NJ Building Checklist",
+    "slug": "closed-loop-pump-rotation-checklist-nj",
+    "date": "October 26, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Lead-lag pump rotation, operating records, and controls questions for NJ property managers. What to send a mechanical contractor before bidding.",
+    "excerpt": "A practical checklist for NJ property managers on closed-loop lead-lag pump rotation, the operating records worth keeping, and what to hand a mechanical contractor before requesting bids.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Closed-loop hydronic systems—condenser water loops, boiler loops, and VRF/VRV condenser loops—rely on lead-lag pump rotation to protect equipment life and control energy use. For New Jersey commercial and multifamily buildings running these loops across Essex, Union, and Bergen County properties, poor rotation sequencing shortens pump life and can hide a failing unit until it causes a comfort complaint. This checklist covers what lead-lag rotation does, what operating records your team should keep, which controls questions to ask before calling a contractor, and what to send a mechanical contractor when it's time to service or replace loop pumps."
+      },
+      {
+        "type": "h2",
+        "content": "Why Lead-Lag Rotation Matters"
+      },
+      {
+        "type": "paragraph",
+        "content": "Lead-lag rotation alternates which pump in a closed loop runs first (lead) and which stands by (lag), either on a timer, run-hour threshold, or building automation system (BAS) schedule. Without rotation, one pump accumulates run hours while its twin sits idle—often developing seized bearings, a dry mechanical seal, or a stuck check valve that isn't discovered until the lead pump fails and the lag pump won't start. For a multifamily building with a single boiler loop serving dozens of units, that failure means no heat until a technician arrives, usually during the coldest week of the year when everyone else is calling too. Rotation also balances motor wear across both pumps and gives maintenance staff an early warning if the lag pump doesn't reach full head pressure during a scheduled swap, long before it's asked to carry the full load on its own."
+      },
+      {
+        "type": "paragraph",
+        "content": "In New Jersey's older multifamily stock—much of it concentrated in Hudson, Essex, and Union County mid-rise buildings—closed hydronic loops are common because they predate VRF becoming the default choice for new construction. These loops often run constant-speed pumps original to the building, paired with controls that were added or modified piecemeal over the years by different contractors. Property managers inheriting one of these systems should confirm whether rotation is actually happening in the field, not just programmed on a BAS graphics screen. A sequence that looks correct on-screen can fail silently if a relay sticks, a starter trips without alarming, or a prior controls change was never fully commissioned."
+      },
+      {
+        "type": "h2",
+        "content": "Operating Records to Keep for Every Closed Loop"
+      },
+      {
+        "type": "paragraph",
+        "content": "Rotation only protects equipment if it's documented. Building staff or your servicing contractor should track the following for each closed loop pump set, with at least twelve months of history kept on hand for maintenance decisions and contractor bids."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Lead/lag pump assignment and the date it last switched",
+          "Cumulative run hours on each pump since last service",
+          "Loop differential pressure readings at the pump headers",
+          "Monthly make-up water volume added (a rising trend signals a leak)",
+          "BAS alarm history for failure-to-start, low-flow, or high-vibration events",
+          "Dates of last seal, coupling, or bearing replacement on each pump"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Controls Questions to Ask Before You Call a Contractor"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before requesting service or a rotation controls retrofit, get clarity on your own system first. Is lead-lag rotation handled by the pump controller, a dedicated relay panel, or the building's BAS? What triggers a swap—a run-hour counter, a calendar schedule, or manual operator input? Does the BAS alarm if the lag pump fails to reach setpoint flow or pressure during a rotation test, or does it just switch silently with no notification? Are the pumps on variable-frequency drives, and if so, is speed being modulated to actual loop demand or simply running at a fixed percentage set years ago? Answering these questions before a site visit lets a contractor spend the visit on diagnosis and recommendations instead of basic discovery, which keeps the engagement shorter and the resulting proposal more specific to your building's actual sequence."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send a Mechanical Contractor (Bid Package)"
+      },
+      {
+        "type": "paragraph",
+        "content": "A complete information package shortens the bidding process and produces more comparable quotes across contractors. Before requesting proposals for pump service, rotation controls work, or full pump replacement, send:"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Loop schematic or as-built drawing, if available",
+          "Pump nameplate data (make, model, horsepower, GPM, head)",
+          "Current controls sequence of operation, or a note that none exists",
+          "Twelve months of run-hour and make-up water records",
+          "Recent BAS trend data or alarm logs tied to the pumps",
+          "Access constraints — mechanical room hours, union requirements, elevator-only access for high-rises",
+          "Preferred scope: repair, controls retrofit, or full pump replacement"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality, System Fit, and Optional Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "Whether you're replacing a single loop pump or re-piping a condenser water system, installation quality determines whether rotation controls perform as designed. A pump sized to the wrong head pressure, a check valve installed backwards, or a VFD programmed without loop feedback will undermine even a well-engineered lead-lag sequence. Mechanical Enterprise LLC sizes pump and controls work to your loop's actual flow and pressure requirements rather than a generic replacement-in-kind, so the rotation sequence you specify performs the way it's intended to in day-to-day operation. For buildings considering longer-term protection, optional parts and labor coverage is available as a separately purchased add-on for new pump and system installations, and eligible existing pump and loop equipment may qualify for coverage after an inspection confirms its condition and age meet program criteria. This coverage is not included with installation or with the Comfort Membership — it's a separate agreement, and terms depend on the equipment and inspection results."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get bids on closed-loop pump rotation, controls, or replacement? Send us your loop schematic and run-hour records and we'll walk the mechanical room with you.",
+        "buttonText": "Request a Commercial Site Visit",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      },
+      {
+        "type": "h2",
+        "content": "Rebates as a Secondary Benefit"
+      },
+      {
+        "type": "paragraph",
+        "content": "Pump and controls upgrades on commercial properties may qualify for PSE&G Direct Install, which can cover up to 80% of project cost for qualifying commercial equipment upgrades, with any remaining balance eligible for 0% interest financing through PSE&G On-Bill Repayment, repaid on the monthly utility bill. These programs apply to qualifying commercial projects — not residential rebates — and eligibility depends on the specific scope and equipment proposed. Ask your contractor to confirm in writing whether your rotation controls or pump replacement project qualifies before you finalize scope, since program terms and qualifying equipment lists are set by the utility, not by the contractor."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How often should lead-lag pumps rotate in a commercial closed loop?",
+        "answer": "Rotation schedules vary by building and equipment age; many NJ properties rotate on a run-hour threshold or a weekly/monthly calendar schedule set in the BAS or pump controller. The right interval depends on pump duty, loop demand, and the manufacturer's guidance for your specific equipment."
+      },
+      {
+        "question": "Can existing pumps qualify for parts and labor coverage, or only new installations?",
+        "answer": "Eligible existing pump and loop equipment may qualify for optional parts and labor coverage after an inspection confirms its condition and age meet program criteria. Coverage is a separately purchased add-on and is never automatic or included."
+      },
+      {
+        "question": "What's the first thing to check if a lag pump won't start during a rotation test?",
+        "answer": "Start with power to the motor starter, the pump controller's rotation logic, and any check or isolation valve that may be stuck closed. A BAS alarm history review often narrows down whether the fault is electrical, mechanical, or a stuck valve before a technician arrives on site."
+      }
+    ]
+  },
+
+  {
     "title": "NJ Cooling Tower Shutdown Planning Guide",
     "slug": "nj-cooling-tower-shutdown-planning",
     "date": "October 23, 2026",
