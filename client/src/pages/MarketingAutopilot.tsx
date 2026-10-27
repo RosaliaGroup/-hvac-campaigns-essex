@@ -248,7 +248,7 @@ export default function MarketingAutopilot() {
                 <div className={`text-2xl font-bold ${trendColors[trend]}`}>Appointment pace: {trend === "critical" ? "Below weekly appointment goal" : trendLabels[trend]}</div>
                 <div className="text-gray-700 mt-1">
                   <span className="text-3xl font-bold">{thisWeek}</span>
-                  <span className="text-lg"> / {WEEKLY_GOAL} appointments this week</span>
+                  <span className="text-lg"> / {WEEKLY_GOAL} new appointment bookings this week</span>
                   {gap > 0 && (
                     <span className="ml-2 text-sm font-medium text-gray-600">— need {gap} more</span>
                   )}
@@ -257,7 +257,7 @@ export default function MarketingAutopilot() {
             </div>
             <div className="md:w-64">
               <div className="flex justify-between text-sm font-medium mb-2">
-                <span>Weekly appointment progress</span>
+                <span>Weekly new-booking progress</span>
                 <span>{pct}%</span>
               </div>
               <Progress value={pct} className="h-4" />
@@ -277,7 +277,7 @@ export default function MarketingAutopilot() {
                 <Calendar className="h-8 w-8 text-[#ff6b35]" />
                 <div>
                   <div className="text-2xl font-bold text-[#1e3a5f]">{apptStats?.thisWeek ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">This Week</div>
+                  <div className="text-xs text-muted-foreground">New bookings this week</div>
                 </div>
               </div>
             </CardContent>
@@ -299,7 +299,7 @@ export default function MarketingAutopilot() {
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
                 <div>
                   <div className="text-2xl font-bold text-[#1e3a5f]">{apptStats?.confirmed ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Confirmed</div>
+                  <div className="text-xs text-muted-foreground">Confirmed (all time)</div>
                 </div>
               </div>
             </CardContent>
@@ -310,7 +310,7 @@ export default function MarketingAutopilot() {
                 <Users className="h-8 w-8 text-[#1e3a5f]" />
                 <div>
                   <div className="text-2xl font-bold text-[#1e3a5f]">{apptStats?.total ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">All Time</div>
+                  <div className="text-xs text-muted-foreground">Appointments (all time)</div>
                 </div>
               </div>
             </CardContent>
@@ -323,7 +323,7 @@ export default function MarketingAutopilot() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-[#ff6b35]" />
-                Weekly Appointment Trend (Last 8 Weeks)
+                New Appointment Bookings by Week (Last 8 Weeks)
               </CardTitle>
             </CardHeader>
             <CardContent>
