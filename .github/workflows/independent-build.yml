@@ -44,6 +44,8 @@ jobs:
         run: pnpm exec vitest run server/services/outreachSuppression.test.ts server/services/crmFollowupDeliveryPolicy.test.ts server/services/crmFollowupDeliveryLedger.test.ts
       - name: Verify Google Ads quote conversion mapping without submitting leads
         run: pnpm exec vitest run client/src/lib/conversions.test.ts
+      - name: Verify evidence-based marketing recommendations without sending leads
+        run: pnpm exec vitest run server/services/campaignEngine.evidence.test.ts
       - name: Build full frontend and backend without Railway
         run: pnpm build
       - name: Save independently built application artifact
