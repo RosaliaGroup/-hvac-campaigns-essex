@@ -28,11 +28,13 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { formatDisplayName } from "@shared/nameFormat";
+import { MAX_SMS_SELECTION, toggleContactSelection, selectContactsFromPage, deselectContactsFromPage, isOct27HvacImport } from "@/lib/customerSelection";
+import { CUSTOMER_SMS_TEMPLATES, getCustomerSmsTemplate } from "@/lib/customerSmsTemplates";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 type Filters = {
   search: string;
-  source: "all" | "gmail" | "other" | "purchased_hvac";
+  source: "all" | "gmail" | "other" | "purchased_hvac" | "hvac_import_oct27";
   status: "default" | "active" | "inactive" | "archived";
   sort: "newest" | "name";
 };
@@ -78,6 +80,7 @@ export default function Customers() {
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([]);
   const [smsOpen, setSmsOpen] = useState(false);
   const [smsBody, setSmsBody] = useState("");
+  const [smsTemplate, setSmsTemplate] = useState("custom");
   const [smsPreview, setSmsPreview] = useState<{
     text: string;
     eligible: number;
@@ -128,16 +131,24 @@ export default function Customers() {
   const previewCurrent = smsPreview && smsPreviewKey === selectionKey;
   const smsJobResult = smsJob.data?.result as { sent:number;failed:number;skipped:number;total:number } | null | undefined;
   const visibleIds = items.map(c => c.id);
-  const allPageSelected = visibleIds.length > 0 && visibleIds.every(id => selectedContactIds.includes(id));
+  const visibleSelectedCount = visibleIds.filter(id => selectedContactIds.includes(id)).length;
+  const allPageSelected = visibleIds.length > 0 && visibleSelectedCount === visibleIds.length;
+  // Any selection edit invalidates a prior eligibility preview.
   const toggleSelected = (id: number) => {
-    setSelectedContactIds(prev => prev.includes(id) ? prev.filter(x => x !== id)
-      : prev.length < 20 ? [...prev,id] : prev);
+    setSelectedContactIds(prev => toggleContactSelection(prev, id));
+    setSmsPreview(null);
   };
   const selectCurrentPage = () => {
-    setSelectedContactIds(prev => {
-      if (allPageSelected) return prev.filter(id => !visibleIds.includes(id));
-      return Array.from(new Set([...prev,...visibleIds])).slice(0,20);
-    });
+    setSelectedContactIds(prev => selectContactsFromPage(prev, visibleIds));
+    setSmsPreview(null);
+  };
+  const deselectCurrentPage = () => {
+    setSelectedContactIds(prev => deselectContactsFromPage(prev, visibleIds));
+    setSmsPreview(null);
+  };
+  const clearAllSelections = () => {
+    setSelectedContactIds([]);
+    setSmsPreview(null);
   };
   const checkSelectedSms = async () => {
     setSmsNotice("");
@@ -200,6 +211,7 @@ export default function Customers() {
             {[
               { name: "All contacts", filters: initial },
               { name: "Purchased HVAC homeowners", filters: { ...initial, source: "purchased_hvac" as const } },
+              { name: "Imported Oct 27", filters: { ...initial, source: "hvac_import_oct27" as const } },
               {
                 name: "Selected Gmail / Tasks",
                 filters: { ...initial, source: "gmail" as const },
@@ -241,6 +253,7 @@ export default function Customers() {
               <option value="all">All sources</option>
               <option value="gmail">Gmail Sent</option>
               <option value="purchased_hvac">Purchased HVAC homeowners</option>
+              <option value="hvac_import_oct27">Imported Oct 27</option>
               <option value="other">Other sources</option>
             </select>
             <select
@@ -274,12 +287,17 @@ export default function Customers() {
               <SlidersHorizontal className="h-4 w-4 mr-2" />
               Columns
             </Button>
-            <Button variant="outline" size="sm" onClick={selectCurrentPage} disabled={items.length===0}>
-              {allPageSelected ? "Deselect page" : "Select up to 20 on page"}
+            <Button variant="outline" size="sm" onClick={selectCurrentPage}
+              disabled={items.length===0 || selectedContactIds.length >= MAX_SMS_SELECTION}>
+              Select up to {MAX_SMS_SELECTION} on page
+            </Button>
+            <Button variant="outline" size="sm" onClick={deselectCurrentPage}
+              disabled={visibleSelectedCount === 0}>
+              Deselect page ({visibleSelectedCount})
             </Button>
             <span className="text-sm font-medium">{selectedContactIds.length} selected</span>
-            <Button size="sm" variant="outline" onClick={() => setSelectedContactIds([])}
-              disabled={selectedContactIds.length===0}>Clear selection</Button>
+            <Button size="sm" variant="outline" onClick={clearAllSelections}
+              disabled={selectedContactIds.length===0}>Clear all selections</Button>
             <Button size="sm" className="bg-[#007a8c] text-white hover:bg-[#006b78]"
               disabled={selectedContactIds.length===0 || user?.teamRole==="viewer"}
               onClick={() => { setSmsOpen(true);setSmsJobId(null);setSmsNotice("");setSmsPreview(null); }}>
@@ -370,9 +388,13 @@ export default function Customers() {
                 <TableHeader>
                   <TableRow className="bg-[#f5f8fa]">
                     <TableHead className="w-10">
-                      <input type="checkbox" aria-label="Select contacts on this page"
-                        checked={allPageSelected} onChange={selectCurrentPage}
-                        disabled={items.length===0} />
+                      <input type="checkbox"
+                        aria-label={visibleSelectedCount > 0 ? "Deselect selected contacts on this page" : "Select contacts on this page (up to 20)"}
+                        title={visibleSelectedCount > 0 ? "Deselect selected contacts on this page" : "Select up to 20 contacts on this page"}
+                        ref={node => { if (node) node.indeterminate = visibleSelectedCount > 0 && !allPageSelected; }}
+                        checked={allPageSelected}
+                        onChange={() => visibleSelectedCount > 0 ? deselectCurrentPage() : selectCurrentPage()}
+                        disabled={items.length===0 || (visibleSelectedCount === 0 && selectedContactIds.length >= MAX_SMS_SELECTION)} />
                     </TableHead>
                     <TableHead className="min-w-52">Contact name</TableHead>
                     {columns
@@ -405,16 +427,19 @@ export default function Customers() {
                       ),
                       "Contact role": c.contactRole,
                       "Service type": c.serviceType,
-                      Source: c.source || "—",
+                      Source: c.source === "hvac-list-07105" ? "Purchased HVAC homeowners" : c.source || "—",
                       Status: c.status,
                       Created: new Date(c.createdAt).toLocaleDateString(),
                     };
                     return (
                       <TableRow key={c.id} className="hover:bg-[#f0f7fa]">
                         <TableCell>
-                          <input type="checkbox" aria-label={`Select ${formatDisplayName(c.displayName)}`}
-                            checked={selectedContactIds.includes(c.id)} onChange={() => toggleSelected(c.id)}
-                            disabled={!selectedContactIds.includes(c.id) && selectedContactIds.length>=20} />
+                          <input type="checkbox"
+                            aria-label={`${selectedContactIds.includes(c.id) ? "Deselect" : "Select"} ${formatDisplayName(c.displayName)}`}
+                            title={selectedContactIds.includes(c.id) ? "Uncheck this contact" : "Select this contact"}
+                            checked={selectedContactIds.includes(c.id)}
+                            onChange={() => toggleSelected(c.id)}
+                            disabled={!selectedContactIds.includes(c.id) && selectedContactIds.length>=MAX_SMS_SELECTION} />
                         </TableCell>
                         <TableCell>
                           <button
@@ -423,6 +448,11 @@ export default function Customers() {
                           >
                             {formatDisplayName(c.displayName)}
                           </button>
+                          {isOct27HvacImport(c.source, c.createdAt) && (
+                            <Badge variant="outline" className="ml-2 whitespace-nowrap border-sky-300 bg-sky-50 text-sky-800 text-[10px]">
+                              Imported Oct 27
+                            </Badge>
+                          )}
                         </TableCell>
                         {columns
                           .filter(x => visible.includes(x))
@@ -487,10 +517,34 @@ export default function Customers() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <label htmlFor="customer-bulk-sms-body" className="text-sm font-medium">Text message</label>
+            <label htmlFor="customer-sms-template" className="text-sm font-medium">Choose a prewritten text message</label>
+            <select id="customer-sms-template" aria-label="Prewritten SMS message"
+              value={smsTemplate}
+              disabled={Boolean(smsJobId)}
+              onChange={e => {
+                const id = e.target.value;
+                const preset = getCustomerSmsTemplate(id);
+                setSmsTemplate(id);
+                if (preset) setSmsBody(preset.message);
+                setSmsPreview(null);
+                setSmsPreviewKey("");
+                setSmsNotice("");
+              }}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+              <option value="custom">Write my own message</option>
+              {CUSTOMER_SMS_TEMPLATES.map(template => (
+                <option key={template.id} value={template.id}>{template.label}</option>
+              ))}
+            </select>
+            {smsTemplate === "existing-inquiry-followup" && (
+              <p className="text-xs text-amber-700">
+                Only use this follow-up when a prior HVAC inquiry is confirmed. Do not imply purchased prospects contacted you.
+              </p>
+            )}
+            <label htmlFor="customer-bulk-sms-body" className="text-sm font-medium">Text message (editable)</label>
             <Textarea id="customer-bulk-sms-body" placeholder="Write the same HVAC message for your selected contacts…"
               value={smsBody} maxLength={1200} rows={5}
-              onChange={e => {setSmsBody(e.target.value);setSmsPreview(null);setSmsNotice("");}} />
+              onChange={e => {setSmsBody(e.target.value);setSmsTemplate("custom");setSmsPreview(null);setSmsNotice("");}} />
             <p className="text-xs text-slate-500">The system adds “Mechanical Enterprise:” and “Reply STOP to opt out.” automatically. {smsBody.length}/1200 characters typed.</p>
             <Button variant="outline" disabled={!smsBody.trim() || !selectedContactIds.length || smsPreviewMutation.isPending || Boolean(smsJobId)}
               onClick={checkSelectedSms}>{smsPreviewMutation.isPending ? "Checking…" : "Preview recipients & consent"}</Button>
