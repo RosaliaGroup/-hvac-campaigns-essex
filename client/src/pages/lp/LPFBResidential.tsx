@@ -37,9 +37,8 @@ export default function LPFBResidential() {
       if (typeof window !== "undefined" && (window as any).fbq) {
         (window as any).fbq("track", "Lead");
       }
-      if (typeof window !== "undefined" && (window as any).gtag) {
-        (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/fb_residential_lp" });
-      }
+      // The shared helper below sends one verified Quote Request Ads action.
+      // Do not emit the former placeholder conversion label "fb_residential_lp".
       // Additive GA4 conversion (no PII) — fires only when GA4 is configured.
       trackConversion(
         "residential_quote_request",
