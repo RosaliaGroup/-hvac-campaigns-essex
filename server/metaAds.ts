@@ -213,6 +213,16 @@ export interface MetaCampaignParams {
 }
 
 export async function createLeadCampaign(token: string, params: MetaCampaignParams) {
+  // Safety stop: the existing template's ad set targets countries: ["US"],
+  // NOT Mechanical Enterprise's NJ/NY service area. Never create a broad
+  // national campaign (even paused) until real Meta geo IDs are resolved and
+  // the exact targeting is reviewed. This check precedes ALL Meta writes.
+  const localTargetingVerified = false;
+  if (!localTargetingVerified) {
+    throw new Error(
+      "Meta campaign creation is paused: this template targets the entire US. Verify account access, configure and review NJ/NY service-area targeting, CRM instant-form lead delivery, and combined ad budgets before creating campaigns."
+    );
+  }
   const actId = `act_${params.adAccountId}`;
 
   console.log("[Meta Ads] Creating OUTCOME_LEADS campaign:", params.name, {
