@@ -3,9 +3,10 @@
  * 
  * This engine:
  * 1. Reports actual appointment counts separately from the 80 qualified-leads goal.
- * 2. Uses AI (LLM) for READ-ONLY recommendations, never campaign writes.
- * 3. Labels CRM-verified monthly unique leads UNKNOWN until deduplicated source
- *    attribution is available; appointments and Google Ads events are not leads.
+ * 2. Generates deterministic READ-ONLY recommendations from actual
+ *    recent CRM intake records; no paid LLM call and no campaign writes.
+ * 3. Labels monthly unique qualified leads UNKNOWN until cross-channel
+ *    deduplication and eligibility verification are available.
  * 4. Does not assume Google Ads is paused, Meta is connected, or budgets are free.
  * 5. Produces a weekly diagnostic plan without inventing conversion outcomes.
  */
