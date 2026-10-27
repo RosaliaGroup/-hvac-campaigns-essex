@@ -165,12 +165,20 @@ export function evaluateSpam(
     reasons.push("honeypot:company_url");
   }
 
-  // 2. Timestamp — a submit within `minMs` of page load (or with a future
-  //    timestamp, elapsed < 0) is robotic. Skipped entirely when `_ts` absent
-  //    so forms that don't send it are unaffected.
+  // 2. Timestamp — only a POSITIVE elapsed time shorter than minMs is
+  //    evidence of an unrealistically fast submit. Browser device clocks can
+  //    legitimately run ahead of the server by seconds. A small negative
+  //    elapsed time must not silently discard a real HVAC inquiry.
+  //
+  //    Timestamps >60s in the future remain an independent hard signal.
+  //    Other anti-spam layers (honeypots, disposable domains, Turnstile at the
+  //    API boundary, and content heuristics) remain unchanged. _ts itself is
+  //    client-controlled, so it is never proof that a submission is human.
+  //    Skipped entirely when _ts is absent.
+  const MAX_CLOCK_SKEW_MS = 60_000;
   if (typeof input.ts === "number" && Number.isFinite(input.ts)) {
     const elapsed = now - input.ts;
-    if (elapsed < minMs) {
+    if ((elapsed >= 0 && elapsed < minMs) || elapsed < -MAX_CLOCK_SKEW_MS) {
       score += WEIGHTS.tooFast;
       reasons.push(`too_fast:${Math.round(elapsed)}ms`);
     }
