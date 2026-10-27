@@ -123,9 +123,14 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
       // Get access token from DB credentials
       const { getAiVaCredentials } = await import("../db");
       const creds = await getAiVaCredentials("meta_ads");
-      const userToken = creds["access_token"] || process.env.META_ACCESS_TOKEN;
-      if (!userToken) {
-        console.error("[MetaLeadWebhook] No Meta access token available — cannot fetch lead data");
+      const userToken = creds["user_access_token"] ||
+        (creds["token_type"] === "page_access_token" ? null : creds["access_token"]) ||
+        process.env.META_ACCESS_TOKEN;
+      const savedPageToken = creds["page_access_token"] ||
+        (creds["token_type"] === "page_access_token" ? creds["access_token"] : null);
+      const configuredPageId = creds["page_id"];
+      if (!userToken && !savedPageToken) {
+        console.error("[MetaLeadWebhook] No usable Meta token available — cannot fetch lead data");
         return;
       }
 
@@ -135,11 +140,15 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
           if (change.field !== "leadgen") continue;
 
           const { leadgen_id, page_id } = change.value;
+          if (configuredPageId && page_id !== configuredPageId) {
+            console.warn("[MetaLeadWebhook] Ignoring unexpected Page ID");
+            continue;
+          }
           console.log(`[MetaLeadWebhook] New lead: ${leadgen_id} from page ${page_id}`);
 
           try {
-            // Get page-level access token for leads retrieval
-            const pageToken = await getPageAccessToken(page_id, userToken);
+            // Use the Page credential saved during OAuth for lead retrieval.
+            const pageToken = savedPageToken || await getPageAccessToken(page_id, userToken!);
             const lead = await fetchLeadData(leadgen_id, pageToken);
 
             const fullName = extractField(lead.field_data, "full_name") ?? "";
