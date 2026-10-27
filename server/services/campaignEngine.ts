@@ -73,12 +73,6 @@ export async function runCampaignAnalysis(): Promise<CampaignAnalysis> {
   else if (percentToGoal >= 40) trend = "behind";
   else trend = "critical";
 
-  // Calculate average over last 4 weeks
-  const last4Weeks = weeklyTrend.slice(-4);
-  const avgLast4 = last4Weeks.length > 0
-    ? Math.round(last4Weeks.reduce((sum, w) => sum + w.count, 0) / last4Weeks.length)
-    : 0;
-
   // Use actual CRM intake observations to prioritize a read-only action queue.
   // No paid AI call on page load, and no implied campaign activation.
   const crmSnapshot = await readCrmIntakeSnapshot();
