@@ -99,7 +99,7 @@ export const ADS_CONVERSION_LABELS: Record<ConversionEvent, string | null> = {
  * Never map mere visits, click-to-call, generic contacts, emergency dispatch
  * or informational downloads to this quote action.
  */
-const QUOTE_INTENT_FALLBACK_EVENTS: ReadonlySet<ConversionEvent> = new Set([
+const QUOTE_INTENT_FALLBACK_EVENTS: ReadonlySet<ConversionEvent> = new Set<ConversionEvent>([
   "commercial_quote_request",
   "residential_quote_request",
   "portfolio_pricing_request",
