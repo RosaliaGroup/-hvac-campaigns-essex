@@ -87,17 +87,21 @@ export function registerOAuthRoutes(app: Express) {
       const shortToken = await exchangeCodeForToken(code, redirectUri);
       const longUserToken = await getLongLivedToken(shortToken.access_token);
 
-      // Exchange user token for a Page Access Token (never expires, has pages_manage_ads)
-      const PAGE_ID = "844109052114327"; // Mechanical Enterprise
+      // Keep the user-level token for ad-account reads and the Page token for
+      // Instant Form lead retrieval. A Page token is not an ad-account token.
+      const existing = await db.getAiVaCredentials("meta_ads");
+      const PAGE_ID = existing["page_id"] || "844109052114327";
       const pageToken = await getPageAccessToken(longUserToken, PAGE_ID);
 
       await saveAiVaCredentials("meta_ads", {
-        access_token: pageToken,
+        access_token: longUserToken,
+        user_access_token: longUserToken,
+        page_access_token: pageToken,
         page_id: PAGE_ID,
-        token_type: "page_access_token",
+        token_type: "long_lived_user_access_token",
         token_created_at: new Date().toISOString(),
       });
-      console.log("[Meta Ads] OAuth connected with Page Access Token");
+      console.log("[Meta Ads] OAuth authorization saved for account and Page access");
       res.redirect(302, "/facebook-campaigns?connected=1");
     } catch (error) {
       console.error("[Meta Ads] OAuth callback failed", error);
