@@ -35,7 +35,9 @@ export async function prospectMailbox() {
       return Boolean(r.messages?.length);
     },
     async recipientStopped(email: string, threadId: string | null) {
-      const query = `in:anywhere -in:trash -in:spam {from:${email} from:mailer-daemon from:postmaster} newer_than:90d`;
+      // A reply or delivery failure does not expire after 90 days. Include all
+      // folders; incomplete results fail closed rather than establishing absence.
+      const query = `in:anywhere {from:${email} from:mailer-daemon from:postmaster}`;
       const r = await request(
         `messages?maxResults=100&q=${encodeURIComponent(query)}`
       );

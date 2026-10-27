@@ -27,8 +27,8 @@ export function isDirectBusinessEmail(value: string): boolean {
 }
 
 export function isExcludedProspect(input: { name: string; company: string; email: string }): boolean {
-  const combined = `${input.name} ${input.company}`.toLowerCase();
-  return /gabriel\s+lopez|giga\s+holdings/.test(combined)
+  const combined = `${input.name} ${input.company} ${input.email}`.toLowerCase();
+  return /gabriel[\s._-]*(?:lopes|lopez)|\bgiga\b|thomas[\s._-]*visaggio|\bviza\b|@onyxequities\.com\b/.test(combined)
     || !isDirectBusinessEmail(input.email);
 }
 
