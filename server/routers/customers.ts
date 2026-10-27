@@ -415,7 +415,7 @@ export const customersRouter = router({
         // Only the visible CRM Contacts page is strict. Scheduling and
         // inbound lead history still retain incomplete people.
         conditions.push(sql`(${customers.source} IS NULL OR ${customers.source} != 'Gmail Sent')`);
-        conditions.push(sql`${customers.email} LIKE '%@%.%'`);
+        conditions.push(sql`(${customers.email} LIKE '%@%.%' OR (${customers.source} = 'hvac-list-07105' AND ${customers.phone} IS NOT NULL))`);
         // Email-only outreach recipients remain visible while phone research is pending.
       }
       // Default: hide archived unless explicitly requested
