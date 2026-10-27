@@ -91,6 +91,23 @@ describe("spamGuard — honeypot + timing", () => {
     const r = evaluateSpam({ name: "Bob", ts: NOW - 9000 }, { now: NOW });
     expect(r.reasons.some((x) => x.startsWith("too_fast"))).toBe(false);
   });
+  it("does not reject a genuine-looking lead because the browser clock is 12s ahead", () => {
+    const r = evaluateSpam({
+      name: "Maria Gonzalez", email: "maria@example.com", phone: "8624239396",
+      ts: NOW + 12_417,
+    }, { now: NOW });
+    expect(r.blocked).toBe(false);
+    expect(r.reasons.some((x) => x.startsWith("too_fast"))).toBe(false);
+  });
+  it("still blocks a truly too-fast submission with a positive elapsed time", () => {
+    const r = evaluateSpam({ name: "Bob", ts: NOW - 1000 }, { now: NOW });
+    expect(r.blocked).toBe(true);
+  });
+  it("still blocks implausible future timestamps beyond one minute", () => {
+    const r = evaluateSpam({ name: "Bob", ts: NOW + 61_000 }, { now: NOW });
+    expect(r.blocked).toBe(true);
+    expect(r.reasons.some((x) => x.startsWith("too_fast"))).toBe(true);
+  });
 });
 
 describe("spamGuard — legitimate submissions must PASS (no false positives)", () => {
