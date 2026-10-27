@@ -34,9 +34,8 @@ export default function LPCommercialVRV() {
       setSubmitted(true);
       setTurnstileToken(""); // single-use token
       // Existing Google Ads conversion — left untouched.
-      if (typeof window !== "undefined" && (window as any).gtag) {
-        (window as any).gtag("event", "conversion", { send_to: "AW-17768263516/commercial_vrv_lp" });
-      }
+      // The shared helper below sends one verified Quote Request Ads action.
+      // Do not emit the former placeholder conversion label "commercial_vrv_lp".
       // Additive GA4 conversion (no PII) — fires only when GA4 is configured.
       trackConversion(
         "commercial_quote_request",
