@@ -85,5 +85,173 @@ export const commercialGrowthPosts: BlogPostData[] = [
       { question: "Is an HVAC due diligence visit a full engineering inspection?", answer: "No. Scope varies. Confirm whether testing, design analysis and concealed equipment are included, and use qualified specialists where needed." },
       { question: "What documents should buyers request?", answer: "Equipment schedules, service records, maintenance agreements, recent repairs, warranty documents and any prior condition assessments are useful starting points." }
     ]
-  }
+  },
+{
+  "title": "No Heat in a NJ Multifamily Building? A Service Checklist for Property Managers",
+  "slug": "nj-multifamily-no-heat-hvac-service-checklist",
+  "date": "October 27, 2026",
+  "readTime": "6 min read",
+  "category": "Commercial HVAC",
+  "metaDescription": "No heat in an NJ apartment building? HVAC service checklist for property managers covering equipment records, safety, access, symptoms and next steps.",
+  "excerpt": "A practical no-heat request for NJ multifamily properties: identify affected units, gather equipment details and coordinate safe contractor access.",
+  "sections": [
+    {
+      "type": "intro",
+      "content": "When apartments or common areas lose heat, property managers need to protect occupants and give qualified HVAC personnel enough information to respond effectively. A clear service request can avoid repeated calls and missed access windows. This checklist is for building operations and communication—not a do-it-yourself repair guide. Gas, electrical and heating equipment should be inspected and serviced by qualified professionals."
+    },
+    {
+      "type": "h2",
+      "content": "Identify the scope of the heating problem"
+    },
+    {
+      "type": "paragraph",
+      "content": "Record whether one unit, one floor, a common area or the whole building is affected. Note when complaints began, whether hot water or ventilation is also affected, and whether a recent repair or controls change occurred. If anyone reports a gas odor, suspected carbon monoxide, smoke or another immediate hazard, follow emergency procedures and contact the appropriate emergency or utility service rather than waiting for routine HVAC dispatch. Do not bypass equipment safeties."
+    },
+    {
+      "type": "h2",
+      "content": "Prepare the service-request information"
+    },
+    {
+      "type": "checklist",
+      "items": [
+        "Property address, on-site contact and callback number.",
+        "Affected apartments, floors or zones and when symptoms began.",
+        "Equipment type and location: PTAC, heat pump, rooftop unit, boiler, pump or controls.",
+        "Model and serial information from existing records, if available.",
+        "Observed symptoms and alarm codes without dismantling or resetting unsafe equipment.",
+        "Recent service tickets, repeat complaints and any known parts on order."
+      ]
+    },
+    {
+      "type": "h2",
+      "content": "Arrange safe equipment and tenant access"
+    },
+    {
+      "type": "paragraph",
+      "content": "Confirm who can open the mechanical room, roof hatch, equipment closet or occupied unit. Share roof-access requirements, resident notice procedures and building operating hours. If controls are managed through a building automation system, identify who can provide authorized alarm history or trend records. Clear access instructions are often as important as the initial description of the failure."
+    },
+    {
+      "type": "h2",
+      "content": "Request written findings and next steps"
+    },
+    {
+      "type": "numbered_list",
+      "items": [
+        "What failure or operating condition was confirmed, and what testing supports it?",
+        "Was normal heating restored, or does a limitation remain?",
+        "Are parts, additional diagnostics or another trade required?",
+        "What is included in the proposed repair, and what is excluded?",
+        "What follow-up verification and resident communication are needed?"
+      ]
+    },
+    {
+      "type": "h2",
+      "content": "Use repeat failures to inform capital planning"
+    },
+    {
+      "type": "paragraph",
+      "content": "A pattern of no-heat complaints involving the same equipment may justify a broader condition review. Compare repair history, downtime, equipment age, compatibility and occupied-unit disruption before planning replacements. Our [NJ condo PTAC replacement guide](/blog/nj-condo-ptac-replacement-planning) and [fall HVAC checklist](/blog/fall-hvac-maintenance-nj-property-managers) cover related planning steps."
+    },
+    {
+      "type": "cta_box",
+      "content": "Managing a New Jersey multifamily or condo property with heating complaints? Share the property, affected equipment and service needs with Mechanical Enterprise so we can discuss the next step.",
+      "buttonText": "Request a commercial HVAC service review",
+      "buttonUrl": "/commercial/for-property-management"
+    }
+  ],
+  "faqSchema": [
+    {
+      "question": "What should a property manager provide when requesting no-heat HVAC service?",
+      "answer": "The building address, affected units, equipment type and location, symptoms, access instructions, site contact and recent service history. Emergency hazards require emergency procedures first."
+    },
+    {
+      "question": "Does a no-heat complaint mean a building needs new equipment?",
+      "answer": "No. A qualified diagnosis, reliability history, system compatibility and budget should inform the repair-versus-replacement decision."
+    }
+  ]
+},
+{
+  "title": "Commercial Rooftop HVAC Repair in NJ: What to Include in a Service Request",
+  "slug": "commercial-rooftop-hvac-repair-request-nj",
+  "date": "October 27, 2026",
+  "readTime": "6 min read",
+  "category": "Commercial HVAC",
+  "metaDescription": "Commercial rooftop HVAC repair in NJ: RTU service-request checklist for building owners covering symptoms, access, controls and repair quote details.",
+  "excerpt": "Make a rooftop-unit repair request more useful with equipment identification, roof-access details, symptoms and a clear service scope.",
+  "sections": [
+    {
+      "type": "intro",
+      "content": "A rooftop HVAC unit may serve an office floor, retail space, restaurant or building common area. When heating, cooling or ventilation fails, an unclear service request can delay the assessment. Facility managers and commercial owners in New Jersey can prepare a more useful request by sharing equipment records, observed symptoms and access requirements. This is a coordination checklist, not a rooftop troubleshooting or repair procedure."
+    },
+    {
+      "type": "h2",
+      "content": "Identify the unit and the space it serves"
+    },
+    {
+      "type": "checklist",
+      "items": [
+        "Property address, business or tenant contact and site hours.",
+        "Roof or unit designation and the occupied area or zone served.",
+        "Manufacturer, model, approximate age and unit number from existing records.",
+        "Whether the complaint concerns heat, cooling, airflow, ventilation or controls.",
+        "Observed alarms, short cycling, unusual noises or other symptoms.",
+        "Previous service reports and recent equipment or controls changes."
+      ]
+    },
+    {
+      "type": "h2",
+      "content": "Confirm roof access before the visit"
+    },
+    {
+      "type": "paragraph",
+      "content": "Tell the contractor whether roof access needs an escort, key, hatch, approved ladder, fall-protection arrangements or other property authorization. Share restrictions on work near tenants and any scheduled building activities. The contractor must assess applicable safety and access requirements before work begins. Building staff should not open energized rooftop equipment or bypass safety controls."
+    },
+    {
+      "type": "h2",
+      "content": "Describe symptoms without assuming a failed component"
+    },
+    {
+      "type": "paragraph",
+      "content": "A rooftop unit that fails to heat or trips a breaker may have several possible causes. Provide observations and existing technician findings rather than directing replacement of a compressor, motor, control board or gas component without diagnosis. Ask for documented findings, proposed work and any additional testing needed before approving the repair."
+    },
+    {
+      "type": "h2",
+      "content": "Ask for a comparable repair scope"
+    },
+    {
+      "type": "numbered_list",
+      "items": [
+        "Diagnosis and equipment condition, including any safety limitations.",
+        "Parts, labor and coordination with electrical or controls trades.",
+        "Roof access, lifting or crane needs and responsibility for those costs.",
+        "Parts availability, scheduling assumptions and return-visit requirements.",
+        "Warranty terms, exclusions and post-repair operating verification."
+      ]
+    },
+    {
+      "type": "h2",
+      "content": "When replacement planning deserves a separate quote"
+    },
+    {
+      "type": "paragraph",
+      "content": "Repeated failures, hard-to-source parts, significant corrosion, poor capacity or persistent tenant disruption may justify evaluating replacement. That requires attention to load, roof access, electrical service, controls and the building's operating needs—not age alone. Review our [rooftop replacement quote checklist](/blog/rooftop-hvac-replacement-quote-checklist-nj) and [commercial repair-or-replace guide](/blog/commercial-hvac-repair-or-replace-decision-guide) for comparison questions."
+    },
+    {
+      "type": "cta_box",
+      "content": "Have a commercial rooftop HVAC problem in New Jersey? Send Mechanical Enterprise the property location, unit type, symptoms and access details to discuss service or replacement planning.",
+      "buttonText": "Request a commercial rooftop HVAC review",
+      "buttonUrl": "/commercial/for-commercial-partners"
+    }
+  ],
+  "faqSchema": [
+    {
+      "question": "What details should be in a commercial rooftop HVAC repair request?",
+      "answer": "Equipment identification, affected zones, observed symptoms, service history, building contacts, roof-access requirements and scheduling constraints."
+    },
+    {
+      "question": "Should a rooftop unit be replaced after one breakdown?",
+      "answer": "Not automatically. Confirm the cause and compare repair scope, equipment condition, reliability and replacement constraints."
+    }
+  ]
+}
 ];
