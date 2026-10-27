@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { formatDisplayName } from "@shared/nameFormat";
 import { MAX_SMS_SELECTION, toggleContactSelection, selectContactsFromPage, deselectContactsFromPage, isOct27HvacImport } from "@/lib/customerSelection";
+import { CUSTOMER_SMS_TEMPLATES, getCustomerSmsTemplate } from "@/lib/customerSmsTemplates";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 type Filters = {
@@ -79,6 +80,7 @@ export default function Customers() {
   const [selectedContactIds, setSelectedContactIds] = useState<number[]>([]);
   const [smsOpen, setSmsOpen] = useState(false);
   const [smsBody, setSmsBody] = useState("");
+  const [smsTemplate, setSmsTemplate] = useState("custom");
   const [smsPreview, setSmsPreview] = useState<{
     text: string;
     eligible: number;
@@ -515,10 +517,34 @@ export default function Customers() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <label htmlFor="customer-bulk-sms-body" className="text-sm font-medium">Text message</label>
+            <label htmlFor="customer-sms-template" className="text-sm font-medium">Choose a prewritten text message</label>
+            <select id="customer-sms-template" aria-label="Prewritten SMS message"
+              value={smsTemplate}
+              disabled={Boolean(smsJobId)}
+              onChange={e => {
+                const id = e.target.value;
+                const preset = getCustomerSmsTemplate(id);
+                setSmsTemplate(id);
+                if (preset) setSmsBody(preset.message);
+                setSmsPreview(null);
+                setSmsPreviewKey("");
+                setSmsNotice("");
+              }}
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+              <option value="custom">Write my own message</option>
+              {CUSTOMER_SMS_TEMPLATES.map(template => (
+                <option key={template.id} value={template.id}>{template.label}</option>
+              ))}
+            </select>
+            {smsTemplate === "existing-inquiry-followup" && (
+              <p className="text-xs text-amber-700">
+                Only use this follow-up when a prior HVAC inquiry is confirmed. Do not imply purchased prospects contacted you.
+              </p>
+            )}
+            <label htmlFor="customer-bulk-sms-body" className="text-sm font-medium">Text message (editable)</label>
             <Textarea id="customer-bulk-sms-body" placeholder="Write the same HVAC message for your selected contacts…"
               value={smsBody} maxLength={1200} rows={5}
-              onChange={e => {setSmsBody(e.target.value);setSmsPreview(null);setSmsNotice("");}} />
+              onChange={e => {setSmsBody(e.target.value);setSmsTemplate("custom");setSmsPreview(null);setSmsNotice("");}} />
             <p className="text-xs text-slate-500">The system adds “Mechanical Enterprise:” and “Reply STOP to opt out.” automatically. {smsBody.length}/1200 characters typed.</p>
             <Button variant="outline" disabled={!smsBody.trim() || !selectedContactIds.length || smsPreviewMutation.isPending || Boolean(smsJobId)}
               onClick={checkSelectedSms}>{smsPreviewMutation.isPending ? "Checking…" : "Preview recipients & consent"}</Button>
