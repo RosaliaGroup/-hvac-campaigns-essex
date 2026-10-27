@@ -199,21 +199,27 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
 
   // Convert eligible previously proposed demand topics into one guarded content job.
   // This does not publish directly; lint, warmup, PR checks and hold remain mandatory.
+  let contentHandoff: { queued: number; reason?: string } = { queued: 0, reason: "not_run" };
   try {
-    const queued = await autoQueueMarketIntelTopics();
-    if (queued.queued) console.log(`[MarketIntel] auto-queued ${queued.queued} evidence-backed content topic`);
+    contentHandoff = await autoQueueMarketIntelTopics();
+    if (contentHandoff.queued) {
+      console.log(`[MarketIntel] auto-queued ${contentHandoff.queued} evidence-backed topic for guarded drafting (NOT published)`);
+    } else {
+      console.log(`[MarketIntel] no new topic queued: ${contentHandoff.reason ?? "no eligible topic"}`);
+    }
   } catch (error) {
+    contentHandoff = { queued: 0, reason: "handoff_error" };
     console.error("[MarketIntel] content handoff failed:", error);
   }
 
-  const summary = buildSummary({ itemCount: itemsCreated, executed, circuitClear, circuitReason, gscStale: searchDemand.skipped });
+  const summary = buildSummary({ itemCount: itemsCreated, executed, circuitClear, circuitReason, gscStale: searchDemand.skipped, contentHandoff });
 
   await db
     .update(seoIntelReports)
     .set({ itemCount: existingKeys.size, acceptedCount: accepted + existingItems.filter(x => x.status === "accepted").length, executedCount: executed + existingItems.filter(x => x.status === "accepted").length, summary })
     .where(eq(seoIntelReports.id, reportId));
 
-  await logAudit({ actorId: null, action: "market_intel_report_generated", batchId: null, pagePath: null, before: null, after: { reportId, itemCount: itemsCreated, executed }, lintResult: null });
+  await logAudit({ actorId: null, action: "market_intel_report_generated", batchId: null, pagePath: null, before: null, after: { reportId, itemCount: itemsCreated, executed, contentHandoff }, lintResult: null });
 
   if (crawlCheck && crawlCheck.anomalies.length > 0) await sendCrawlCheckAlert({ reportId, date, result: crawlCheck }).catch(() => false);
 
@@ -224,9 +230,12 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
   return { report: finalReport, items: itemsCreated, executed, emailSent };
 }
 
-function buildSummary(input: { itemCount: number; executed: number; circuitClear: boolean; circuitReason: string | null; gscStale: boolean }): string {
-  if (!input.circuitClear) return `Paused: suggestions only (${input.circuitReason ?? "circuit breaker open"}).`;
-  if (input.gscStale) return "Search Console data is stale — search-demand analysis skipped today; competitor/positioning sections still ran.";
-  if (input.itemCount === 0) return "No material changes today.";
-  return `${input.itemCount} suggestion${input.itemCount === 1 ? "" : "s"} today, ${input.executed} executed automatically through their lane; the rest are staged for review.`;
+export function buildSummary(input: { itemCount: number; executed: number; circuitClear: boolean; circuitReason: string | null; gscStale: boolean; contentHandoff?: { queued: number; reason?: string } }): string {
+  if (!input.circuitClear) return `Paused: suggestions only (${input.circuitReason ?? "circuit breaker open"}). No changes executed.`;
+  if (input.gscStale) return "Search Console data is stale — search-demand analysis skipped today; competitor/positioning sections still ran. No indexing change is inferred.";
+  const queueNote = input.contentHandoff?.queued
+    ? ` ${input.contentHandoff.queued} evidence-backed topic queued for guarded drafting, NOT published.`
+    : "";
+  if (input.itemCount === 0) return `No material new recommendations today.${queueNote}`;
+  return `${input.itemCount} suggestion${input.itemCount === 1 ? "" : "s"} today, ${input.executed} executed through permitted SEO lanes; others are staged, report-only, or blocked by safety checks.${queueNote}`;
 }
