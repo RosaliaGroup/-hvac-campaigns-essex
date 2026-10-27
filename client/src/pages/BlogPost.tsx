@@ -21,9 +21,11 @@ import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLe
  */
 function pickBlogVariant(slug: string): InlineLeadVariant {
   const s = slug.toLowerCase();
-  if (/(emergency|repair)/.test(s)) return "emergency";
+  // Commercial repair guides must use the commercial intake, not the
+  // residential emergency card with unverified response-time claims.
+  if (/(commercial|multifamily|rooftop|vrv|vrf|ptac|property-managers|property-management|condo)/.test(s)) return "commercial";
+  if (/(emergency|repair|no-heat)/.test(s)) return "emergency";
   if (/(rebate|financing)/.test(s)) return "rebate";
-  if (/(commercial|vrv|vrf|ptac|property-managers|condo)/.test(s)) return "commercial";
   return "residential";
 }
 
