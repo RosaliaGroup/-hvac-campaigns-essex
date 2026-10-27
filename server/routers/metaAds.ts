@@ -42,7 +42,7 @@ export const metaAdsRouter = router({
   // Get OAuth URL
   getAuthUrl: protectedProcedure
     .input(z.object({ redirectUri: z.string() }))
-    .query(({ input }) => {
+    .query(() => {
       // Always use one production callback; Meta requires an exact allowlist match.
       // Do not derive redirect_uri from window.location.origin or a client hint.
       const url = getMetaAuthUrl("https://mechanicalenterprise.com/api/oauth/meta/callback");
