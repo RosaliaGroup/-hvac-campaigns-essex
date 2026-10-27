@@ -243,7 +243,7 @@ export default function GoogleAdsCampaigns() {
     }
   }
 
-  const { data: perfData, isLoading: perfLoading, refetch: refetchPerf } =
+  const { data: perfData, isLoading: perfLoading, error: perfError, refetch: refetchPerf } =
     trpc.googleAds.getCampaignPerformance.useQuery(undefined, {
       enabled: connStatus?.connected === true,
       retry: false,
@@ -320,9 +320,13 @@ export default function GoogleAdsCampaigns() {
                 <Badge variant="outline" className="gap-1.5">
                   <Loader2 className="h-3 w-3 animate-spin" /> Checking…
                 </Badge>
-              ) : connStatus?.connected ? (
+              ) : connStatus?.connected && perfData?.campaigns ? (
                 <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 gap-1.5">
-                  <CheckCircle2 className="h-3 w-3" /> Google Ads Connected
+                  <CheckCircle2 className="h-3 w-3" /> Google Ads Live Report Available
+                </Badge>
+              ) : connStatus?.connected ? (
+                <Badge variant="outline" className="gap-1.5">
+                  <AlertCircle className="h-3 w-3" /> Google Credentials Saved — Verify Data
                 </Badge>
               ) : (
                 <Badge variant="destructive" className="gap-1.5">
@@ -341,33 +345,14 @@ export default function GoogleAdsCampaigns() {
           </div>
         </div>
 
-        {/* Developer token upgrade notice — shown only when connected (Test Access) */}
-        {connStatus?.connected && <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-semibold text-amber-900">Action required: Apply for Google Ads API Standard Access</p>
-            <p className="text-amber-800 mt-1">
-              Your developer token is currently at <strong>Test Access</strong> level, which only works with test accounts.
-              To push campaigns to your live account (AW-17768263516), you need to apply for <strong>Standard Access</strong>.
-            </p>
-            <ol className="mt-2 space-y-1 text-amber-800 list-decimal list-inside">
-              <li>Go to your Google Ads account → <strong>Tools &amp; Settings → API Center</strong></li>
-              <li>Click <strong>"Apply for Standard Access"</strong> and fill out the form</li>
-              <li>Describe use: <em>"Internal campaign management tool for our HVAC business"</em></li>
-              <li>Google typically approves within <strong>1–2 business days</strong></li>
-            </ol>
-            <div className="mt-3 flex gap-3 flex-wrap">
-              <a
-                href="https://ads.google.com/aw/apicenter"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-900 underline hover:text-amber-700"
-              >
-                Open Google Ads API Center <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            </div>
+        {/* Google Ads access must be verified with actual API data, not guessed. */}
+        {connStatus?.connected && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg text-sm text-amber-900">
+            <p className="font-semibold">Google Ads campaign readiness</p>
+            <p>Saved OAuth credentials do not confirm live API access, active campaign delivery or spend. Review actual campaign status, costs, search terms and qualified CRM inquiries before enabling or increasing paid ads.</p>
+            <a href="https://ads.google.com" target="_blank" rel="noopener noreferrer" className="font-semibold underline">Open live Google Ads account</a>
           </div>
-        </div>}
+        )}
 
         {/* Not connected — OAuth connect button */}
         {!connLoading && !connStatus?.connected && (
@@ -421,6 +406,10 @@ export default function GoogleAdsCampaigns() {
                   <div key={i} className="h-16 bg-white rounded-lg border animate-pulse" />
                 ))}
               </div>
+            ) : perfError ? (
+              <div role="alert" className="bg-white border rounded-lg p-6 text-sm text-amber-800">
+                Live Google Ads report unavailable: {perfError.message}. This does not mean the account has zero campaigns, spend or leads.
+              </div>
             ) : perfData?.campaigns && perfData.campaigns.length > 0 ? (
               <div className="space-y-3">
                 {perfData.campaigns.map((c) => (
@@ -457,7 +446,7 @@ export default function GoogleAdsCampaigns() {
               </div>
             ) : (
               <div className="bg-white border rounded-lg p-6 text-center text-muted-foreground text-sm">
-                No campaign data yet. Launch campaigns below and check back after they go live.
+                No campaign rows were returned for the selected Google Ads account. Check live Google Ads for existing campaigns and spending before creating any new campaign.
               </div>
             )}
           </div>

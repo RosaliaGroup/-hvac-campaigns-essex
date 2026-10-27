@@ -66,24 +66,17 @@ export function registerOAuthRoutes(app: Express) {
       return;
     }
 
-    let redirectUri: string;
-    if (stateParam) {
-      try {
-        const decoded = Buffer.from(stateParam, "base64").toString("utf8");
-        if (decoded.startsWith("http")) {
-          redirectUri = decoded;
-        } else {
-          redirectUri = "https://mechanicalenterprise.com/api/oauth/meta/callback";
-        }
-      } catch {
-        redirectUri = "https://mechanicalenterprise.com/api/oauth/meta/callback";
-      }
-    } else {
-      redirectUri = "https://mechanicalenterprise.com/api/oauth/meta/callback";
+    const redirectUri = "https://mechanicalenterprise.com/api/oauth/meta/callback";
+    // Only accept the callback URI issued by our own Meta OAuth initiation.
+    // A base64 state is not a substitute for a nonce, but must not permit
+    // arbitrary redirects to be used for code exchange.
+    if (stateParam !== Buffer.from(redirectUri).toString("base64")) {
+      res.redirect(302, "/facebook-campaigns?error=invalid_state");
+      return;
     }
 
     try {
-      console.log("[Meta Ads] Exchanging code with redirectUri:", redirectUri);
+      console.log("[Meta Ads] Exchanging code for the canonical callback");
       const shortToken = await exchangeCodeForToken(code, redirectUri);
       const longUserToken = await getLongLivedToken(shortToken.access_token);
 

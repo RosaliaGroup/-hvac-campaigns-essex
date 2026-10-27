@@ -336,7 +336,7 @@ export default function FacebookAdsCampaigns() {
   const tokenExpiringSoon = tokenAgeDays !== null && tokenAgeDays >= 50;
 
   const authUrlQuery = trpc.metaAds.getAuthUrl.useQuery(
-    { redirectUri: `${window.location.origin}/api/oauth/meta/callback` },
+    { redirectUri: "https://mechanicalenterprise.com/api/oauth/meta/callback" },
     { enabled: false }
   );
 
@@ -468,6 +468,13 @@ export default function FacebookAdsCampaigns() {
               <p role="alert">Account verification failed or unavailable: {accountCheck?.error ?? "No live result"}. Check the selected ad account and its permissions.</p>
             )}
             <p>Campaign creation is on hold: the existing templates target the entire United States, not our local service area. Meta Instant Form → CRM webhook delivery and total paid budgets also need independent verification.</p>
+            <div className="rounded border border-amber-200 bg-white p-3 space-y-1">
+              <p className="font-semibold">Facebook says “URL Blocked”?</p>
+              <p>In Meta for Developers, select the Mechanical Enterprise app → Facebook Login → Settings. Enable Client OAuth Login and Web OAuth Login, and add this exact value to Valid OAuth Redirect URIs:</p>
+              <code className="block break-all text-xs select-all">https://mechanicalenterprise.com/api/oauth/meta/callback</code>
+              <p>Also confirm the app domain includes mechanicalenterprise.com. Save changes before selecting Reconnect Facebook Ads.</p>
+              <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Open Meta Developer Apps</a>
+            </div>
             {!isAccountVerified && (
               <Button size="sm" onClick={handleConnectMeta} disabled={connectingOAuth}>
                 <LogIn className="h-4 w-4 mr-1.5" /> Reconnect Facebook Ads
