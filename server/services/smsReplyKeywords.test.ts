@@ -49,3 +49,20 @@ describe("classifyInbound — normal messages", () => {
     expect(classifyInbound(undefined)).toBe("message");
   });
 });
+
+describe("isPotentialHvacInstallReply — qualified positive inbound interest", () => {
+  const intro = "Mechanical Enterprise: Are you interested in an HVAC replacement or upgrade? Reply YES to request an estimate.";
+  it("qualifies YES only in the context of a relevant prior outbound", async () => {
+    const { isPotentialHvacInstallReply } = await import("./smsReplyKeywords");
+    expect(isPotentialHvacInstallReply("YES", intro)).toBe(true);
+    expect(isPotentialHvacInstallReply("YES", "Your appointment is tomorrow. Reply YES to confirm.")).toBe(false);
+    expect(isPotentialHvacInstallReply("YES")).toBe(false);
+  });
+  it("recognizes explicit requested installation even without previous text", async () => {
+    const { isPotentialHvacInstallReply } = await import("./smsReplyKeywords");
+    expect(isPotentialHvacInstallReply("Yes, I need to replace my furnace")).toBe(true);
+    expect(isPotentialHvacInstallReply("I'm interested in an HVAC upgrade")).toBe(true);
+    expect(isPotentialHvacInstallReply("No thanks, not interested in replacement", intro)).toBe(false);
+    expect(isPotentialHvacInstallReply("STOP", intro)).toBe(false);
+  });
+});
