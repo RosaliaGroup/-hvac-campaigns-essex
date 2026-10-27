@@ -73,9 +73,9 @@ export default function MarketingAutopilot() {
   const { toast } = useToast();
 
   const { data: analysis, isLoading: analysisLoading, refetch: refetchAnalysis } = trpc.autopilot.analyze.useQuery(undefined, {
-    // Each analysis calls a paid AI model; refreshing every five minutes while
-    // a dashboard is open burned credits without verifying new qualified leads.
-    // Keep a periodic six-hour read-only review and a manual refresh button.
+    // Data-driven, read-only CRM and appointment recommendations.
+    // A six-hour refresh avoids needless repeat queries while CRM intake
+    // counters below refresh independently every five minutes.
     staleTime: 6 * 60 * 60 * 1000,
     refetchInterval: 6 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
@@ -83,11 +83,25 @@ export default function MarketingAutopilot() {
 
   const { data: appointments, isLoading: apptLoading, refetch: refetchAppts } = trpc.appointments.list.useQuery({ limit: 50 });
   const { data: apptStats } = trpc.appointments.stats.useQuery();
+  // Real CRM capture data, not Google Ads clicks, appointments, or AI estimates.
+  // The server intentionally labels advanced stages as unverified for lead quality.
+  const {
+    data: crmBaseline,
+    error: crmBaselineError,
+    isLoading: crmBaselineLoading,
+    refetch: refetchCrmBaseline,
+  } = trpc.leadCaptures.marketingBaseline.useQuery(undefined, {
+    enabled: isAuthenticated,
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   const refreshMutation = trpc.autopilot.refresh.useMutation({
     onSuccess: () => {
       refetchAnalysis();
-      toast({ title: "Analysis refreshed", description: "AI has re-analyzed your campaigns and updated recommendations." });
+      refetchCrmBaseline();
+      toast({ title: "Analysis refreshed", description: "Appointment recommendations and read-only CRM intake data refreshed. Lead qualification still requires review." });
     },
   });
 
@@ -134,7 +148,7 @@ export default function MarketingAutopilot() {
               <Zap className="h-6 w-6 text-[#ff6b35]" />
               <h1 className="text-3xl font-bold text-[#1e3a5f]">Marketing Autopilot</h1>
             </div>
-            <p className="text-muted-foreground">Business goal: <strong>80 unique qualified HVAC leads/month</strong>. Appointments are tracked separately.</p>
+            <p className="text-muted-foreground">Business goal: <strong>80 unique qualified HVAC leads/month</strong>. Appointments and website capture records are tracked separately.</p>
           </div>
           <Button
             onClick={() => refreshMutation.mutate()}
@@ -149,9 +163,73 @@ export default function MarketingAutopilot() {
         {/* Lead goal is not measured by this appointment-only dataset. */}
         <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 mb-5">
           <div className="font-semibold text-amber-900">Qualified HVAC leads: UNKNOWN / {analysis?.qualifiedLeadGoalMonthly ?? 80} monthly goal</div>
-          <p className="text-sm text-amber-900 mt-1">This screen does not have deduplicated CRM-qualified lead attribution. Outbound emails, clicks, platform conversions, and appointments cannot be substituted for verified unique leads. Review real CRM inquiries before deciding whether campaigns are on pace.</p>
-          <a href="/campaign-performance" className="text-sm font-semibold underline text-blue-700">Review live advertising diagnostics</a>
+          <p className="text-sm text-amber-900 mt-1">The complete cross-channel, geographically eligible and deduplicated CRM lead total has not been verified. Website captures and advanced CRM stages are shown separately below, not added to the 80-lead count.</p>
+          <div className="flex flex-wrap gap-4 mt-2">
+            <a href="/lead-dashboard" className="text-sm font-semibold underline text-blue-700">Review incoming CRM leads</a>
+            <a href="/campaign-performance" className="text-sm font-semibold underline text-blue-700">Review advertising diagnostics</a>
+          </div>
         </div>
+
+        {/* Authenticated, read-only web lead intake. This is a 30-day
+            operational sample, NOT the deduplicated monthly 80-lead KPI. */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>CRM website lead intake — last 30 days</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Actual stored form submissions and their current pipeline stages. Not all are genuine, unique, geographically eligible or qualified.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {crmBaselineLoading ? (
+              <p className="text-sm text-muted-foreground">Reading CRM intake records…</p>
+            ) : crmBaselineError ? (
+              <div role="alert" className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm">
+                CRM intake unavailable: {crmBaselineError.message}. Counts are unknown, not zero.
+              </div>
+            ) : crmBaseline ? (
+              <>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Website capture records</p>
+                    <p className="text-2xl font-semibold">{crmBaseline.totalCaptures}</p>
+                    <p className="text-xs text-muted-foreground">Raw records; duplicates may exist</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Advanced-stage records</p>
+                    <p className="text-2xl font-semibold">{crmBaseline.qualifiedStage}</p>
+                    <p className="text-xs text-muted-foreground">Not independently qualified or deduplicated</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">New, unassigned</p>
+                    <p className="text-2xl font-semibold">{crmBaseline.newUnassigned}</p>
+                    <p className="text-xs text-muted-foreground">Needs owner review</p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Overdue follow-ups</p>
+                    <p className="text-2xl font-semibold">{crmBaseline.followUpOverdue}</p>
+                    <p className="text-xs text-muted-foreground">CRM due dates; not proof of delivery</p>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(crmBaseline.byChannel).sort((a,b) => b[1] - a[1]).map(([channel,count]) => (
+                    <Badge variant="outline" key={channel}>{channel}: {count} records</Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Scope: website capture table only, rolling 30 days. This does not include every call, email reply, external ad lead or bid opportunity. An advanced stage is not proof of a unique qualified HVAC inquiry.
+                </p>
+                <div className="flex flex-wrap gap-3 items-center">
+                  <a href="/lead-dashboard" className="text-sm font-semibold text-blue-700 underline">Open CRM lead review</a>
+                  <Button variant="outline" size="sm" onClick={() => refetchCrmBaseline()}>
+                    <RefreshCw className="h-3 w-3 mr-1" /> Refresh CRM counts
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <p className="text-sm text-muted-foreground">CRM intake data unavailable — no count has been inferred.</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Appointment-only progress — not the monthly lead KPI. */}
         <div className={`rounded-xl border-2 p-6 mb-8 ${trendBg[trend]}`}>
@@ -167,10 +245,10 @@ export default function MarketingAutopilot() {
                 <AlertTriangle className="h-12 w-12 text-red-600 flex-shrink-0" />
               )}
               <div>
-                <div className={`text-2xl font-bold ${trendColors[trend]}`}>Appointment pace: {trendLabels[trend]}</div>
+                <div className={`text-2xl font-bold ${trendColors[trend]}`}>Appointment pace: {trend === "critical" ? "Below weekly appointment goal" : trendLabels[trend]}</div>
                 <div className="text-gray-700 mt-1">
                   <span className="text-3xl font-bold">{thisWeek}</span>
-                  <span className="text-lg"> / {WEEKLY_GOAL} appointments this week</span>
+                  <span className="text-lg"> / {WEEKLY_GOAL} new appointment bookings this week</span>
                   {gap > 0 && (
                     <span className="ml-2 text-sm font-medium text-gray-600">— need {gap} more</span>
                   )}
@@ -179,7 +257,7 @@ export default function MarketingAutopilot() {
             </div>
             <div className="md:w-64">
               <div className="flex justify-between text-sm font-medium mb-2">
-                <span>Weekly appointment progress</span>
+                <span>Weekly new-booking progress</span>
                 <span>{pct}%</span>
               </div>
               <Progress value={pct} className="h-4" />
@@ -199,7 +277,7 @@ export default function MarketingAutopilot() {
                 <Calendar className="h-8 w-8 text-[#ff6b35]" />
                 <div>
                   <div className="text-2xl font-bold text-[#1e3a5f]">{apptStats?.thisWeek ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">This Week</div>
+                  <div className="text-xs text-muted-foreground">New bookings this week</div>
                 </div>
               </div>
             </CardContent>
@@ -221,7 +299,7 @@ export default function MarketingAutopilot() {
                 <CheckCircle2 className="h-8 w-8 text-green-500" />
                 <div>
                   <div className="text-2xl font-bold text-[#1e3a5f]">{apptStats?.confirmed ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">Confirmed</div>
+                  <div className="text-xs text-muted-foreground">Confirmed (all time)</div>
                 </div>
               </div>
             </CardContent>
@@ -232,7 +310,7 @@ export default function MarketingAutopilot() {
                 <Users className="h-8 w-8 text-[#1e3a5f]" />
                 <div>
                   <div className="text-2xl font-bold text-[#1e3a5f]">{apptStats?.total ?? 0}</div>
-                  <div className="text-xs text-muted-foreground">All Time</div>
+                  <div className="text-xs text-muted-foreground">Appointments (all time)</div>
                 </div>
               </div>
             </CardContent>
@@ -245,7 +323,7 @@ export default function MarketingAutopilot() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-[#ff6b35]" />
-                Weekly Appointment Trend (Last 8 Weeks)
+                New Appointment Bookings by Week (Last 8 Weeks)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -283,7 +361,7 @@ export default function MarketingAutopilot() {
 
         <Tabs defaultValue="recommendations" className="space-y-4">
           <TabsList className="grid grid-cols-2 w-full max-w-md">
-            <TabsTrigger value="recommendations">AI Recommendations</TabsTrigger>
+            <TabsTrigger value="recommendations">Action recommendations</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
           </TabsList>
 
@@ -293,7 +371,7 @@ export default function MarketingAutopilot() {
               <div className="flex items-center justify-center py-16">
                 <div className="text-center">
                   <Loader2 className="h-10 w-10 animate-spin text-[#ff6b35] mx-auto mb-3" />
-                  <p className="text-muted-foreground">AI is analyzing your campaigns...</p>
+                  <p className="text-muted-foreground">Preparing read-only recommendations from available data…</p>
                 </div>
               </div>
             ) : (

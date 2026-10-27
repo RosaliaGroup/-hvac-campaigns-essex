@@ -3,14 +3,16 @@
  * 
  * This engine:
  * 1. Reports actual appointment counts separately from the 80 qualified-leads goal.
- * 2. Uses AI (LLM) for READ-ONLY recommendations, never campaign writes.
- * 3. Labels CRM-verified monthly unique leads UNKNOWN until deduplicated source
- *    attribution is available; appointments and Google Ads events are not leads.
+ * 2. Generates deterministic READ-ONLY recommendations from actual
+ *    recent CRM intake records; no paid LLM call and no campaign writes.
+ * 3. Labels monthly unique qualified leads UNKNOWN until cross-channel
+ *    deduplication and eligibility verification are available.
  * 4. Does not assume Google Ads is paused, Meta is connected, or budgets are free.
  * 5. Produces a weekly diagnostic plan without inventing conversion outcomes.
  */
 
-import { invokeLLM } from "../_core/llm";
+import { gte } from "drizzle-orm";
+import { leadCaptures } from "../../drizzle/schema";
 import * as db from "../db";
 
 const WEEKLY_GOAL = 20; // appointments; a separate operational metric, NOT the lead count
@@ -72,22 +74,10 @@ export async function runCampaignAnalysis(): Promise<CampaignAnalysis> {
   else if (percentToGoal >= 40) trend = "behind";
   else trend = "critical";
 
-  // Calculate average over last 4 weeks
-  const last4Weeks = weeklyTrend.slice(-4);
-  const avgLast4 = last4Weeks.length > 0
-    ? Math.round(last4Weeks.reduce((sum, w) => sum + w.count, 0) / last4Weeks.length)
-    : 0;
-
-  // Generate AI recommendations
-  const recommendations = await generateAIRecommendations({
-    thisWeekCount,
-    gapToGoal,
-    percentToGoal,
-    trend,
-    avgLast4,
-    totalAppointments: stats.total,
-    weeklyTrend,
-  });
+  // Use actual CRM intake observations to prioritize a read-only action queue.
+  // No paid AI call on page load, and no implied campaign activation.
+  const crmSnapshot = await readCrmIntakeSnapshot();
+  const recommendations = buildEvidenceBasedRecommendations(crmSnapshot);
 
   return {
     qualifiedLeadGoalMonthly: QUALIFIED_LEAD_GOAL_MONTHLY,
@@ -104,146 +94,97 @@ export async function runCampaignAnalysis(): Promise<CampaignAnalysis> {
   };
 }
 
-async function generateAIRecommendations(context: {
-  thisWeekCount: number;
-  gapToGoal: number;
-  percentToGoal: number;
-  trend: string;
-  avgLast4: number;
-  totalAppointments: number;
-  weeklyTrend: { week: string; count: number }[];
-}): Promise<AIRecommendation[]> {
-  const prompt = `You are a senior HVAC marketing strategist for Mechanical Enterprise LLC, a New Jersey HVAC company specializing in heat pumps, VRV/VRF systems, and PSE&G rebate programs.
+/**
+ * Website capture records only: an operational 30-day sample, not the
+ * 80/month unique qualified lead total across CRM, calls, emails and Meta.
+ */
+export type CrmIntakeSnapshot = {
+  rawCaptures: number;
+  newUnassigned: number;
+  overdueFollowUps: number;
+  unknownChannel: number;
+  advancedStageRecords: number;
+};
 
-CURRENT PERFORMANCE:
-- Business objective: at least 80 UNIQUE CRM-qualified, deduplicated HVAC inquiries per calendar month (working pace 20/week).
-- Verified monthly qualified leads: UNKNOWN — no reconciled source/eligibility/deduplication dataset is supplied to this analysis. Never infer it from appointments, clicks, platform conversion events or emails.
-- The appointment figures below are a DIFFERENT operational metric, not evidence of qualified leads.
-- Weekly appointment goal: 20 appointments
-- This week: ${context.thisWeekCount} appointments booked
-- Gap to goal: ${context.gapToGoal} more needed
-- Progress: ${context.percentToGoal}% of goal
-- Status: ${context.trend.replace("_", " ").toUpperCase()}
-- 4-week average: ${context.avgLast4} appointments/week
-- Total all-time: ${context.totalAppointments} appointments
-
-AVAILABLE CHANNELS:
-- Google Ads — live status, campaign spend and conversions UNKNOWN in this analysis. Owner screenshots for account 783-370-2890 showed traffic in Oct 20–26, 2026; do NOT claim ads are paused, and do NOT reuse that old period as current results. Recommend a read-only live search-term/spend/CRM-quality review before any changes.
-- Meta Ads — authorization and real lead delivery unverified. Do NOT claim Facebook/Instagram campaigns are running or producing leads.
-- Unpaid Facebook/Instagram content and referrals
-- Jessica (AI phone assistant) — handles inbound calls
-- SMS follow-up sequences
-- Google Business Profile posts
-- Organic SEO
-
-Generate exactly 5 specific, actionable NO-ADDITIONAL-SPEND recommendations to improve genuine qualified HVAC inquiries toward 80/month while keeping the separate appointment metric visible. You MAY recommend a READ-ONLY review of existing paid campaign search terms, verified spend, geographic fit, live conversion actions and CRM source attribution, but must NOT create/activate paid campaigns, change budgets or bids, or claim such changes have occurred. Use actionType manual or update_script and campaignData null. Do not invent results, conversion rates, lead counts or performance lift. When data is missing say UNKNOWN and specify the evidence needed.
-
-Return ONLY valid JSON in this exact format:
-{
-  "recommendations": [
-    {
-      "id": "rec_1",
-      "priority": "critical|high|medium|low",
-      "category": "budget|targeting|creative|new_campaign|jessica|seo",
-      "title": "Short action title",
-      "description": "2-3 sentence explanation of why this will work",
-      "expectedImpact": "e.g. +4 appointments/week",
-      "action": "Specific step to take right now",
-      "actionType": "push_to_google_ads|update_script|adjust_budget|create_campaign|manual",
-      "campaignData": null
-    }
-  ]
-}
-
-Do not generate paid campaignData or use actionType push_to_google_ads, adjust_budget, or create_campaign. These remain in the JSON schema for backwards compatibility only.
-
-Focus on no-additional-spend lead generation through SEO, referrals, existing CRM reactivation, opt-in follow-up and organic content. Avoid unverified rebate and service claims.`;
-
+async function readCrmIntakeSnapshot(): Promise<CrmIntakeSnapshot | null> {
   try {
-    const response = await invokeLLM({
-      messages: [
-        { role: "system", content: "You are a marketing AI that returns only valid JSON. No markdown, no explanation, just the JSON object." },
-        { role: "user", content: prompt },
-      ],
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "campaign_recommendations",
-          strict: true,
-          schema: {
-            type: "object",
-            properties: {
-              recommendations: {
-                type: "array",
-                items: {
-                  type: "object",
-                  properties: {
-                    id: { type: "string" },
-                    priority: { type: "string" },
-                    category: { type: "string" },
-                    title: { type: "string" },
-                    description: { type: "string" },
-                    expectedImpact: { type: "string" },
-                    action: { type: "string" },
-                    actionType: { type: "string" },
-                    campaignData: {
-                      anyOf: [
-                        { type: "null" },
-                        {
-                          type: "object",
-                          properties: {
-                            name: { type: "string" },
-                            type: { type: "string" },
-                            budget: { type: "number" },
-                            targetLocations: { type: "array", items: { type: "string" } },
-                            keywords: { type: "array", items: { type: "string" } },
-                            headlines: { type: "array", items: { type: "string" } },
-                            descriptions: { type: "array", items: { type: "string" } },
-                            finalUrl: { type: "string" },
-                            callToAction: { type: "string" },
-                          },
-                          required: ["name", "type", "budget", "targetLocations", "keywords", "headlines", "descriptions", "finalUrl", "callToAction"],
-                          additionalProperties: false,
-                        },
-                      ],
-                    },
-                  },
-                  required: ["id", "priority", "category", "title", "description", "expectedImpact", "action", "actionType", "campaignData"],
-                  additionalProperties: false,
-                },
-              },
-            },
-            required: ["recommendations"],
-            additionalProperties: false,
-          },
-        },
-      },
-    });
-
-    const content = response.choices?.[0]?.message?.content;
-    if (!content) return getFallbackRecommendations(context.gapToGoal);
-
-    const parsed = typeof content === "string" ? JSON.parse(content) : content;
-    return (Array.isArray(parsed.recommendations) ? parsed.recommendations.filter((r: AIRecommendation) => !["adjust_budget","push_to_google_ads","create_campaign"].includes(r.actionType) && r.campaignData == null && !/\b(ads? budget|paid ads?|ad spend|google ads campaign)\b/i.test(r.action + " " + r.description)) : []).slice(0,5).length ? (parsed.recommendations as AIRecommendation[]).filter((r) => !["adjust_budget","push_to_google_ads","create_campaign"].includes(r.actionType) && r.campaignData == null && !/\b(ads? budget|paid ads?|ad spend|google ads campaign)\b/i.test(r.action + " " + r.description)).slice(0,5) : getFallbackRecommendations(context.gapToGoal);
+    const database = await db.getDb();
+    if (!database) return null;
+    const since = new Date(Date.now() - 30 * 86400000);
+    const rows = await database.select({
+      status: leadCaptures.status,
+      assignedTo: leadCaptures.assignedTo,
+      followUpAt: leadCaptures.followUpAt,
+      channel: leadCaptures.channel,
+    }).from(leadCaptures).where(gte(leadCaptures.createdAt, since));
+    const now = Date.now();
+    const advancedStages = new Set(["qualified", "assessment_scheduled", "assessment_completed", "proposal_sent", "won", "booked"]);
+    return {
+      rawCaptures: rows.length,
+      newUnassigned: rows.filter(r => r.status === "new" && !r.assignedTo).length,
+      overdueFollowUps: rows.filter(r => r.followUpAt && new Date(r.followUpAt).getTime() < now && r.status !== "won" && r.status !== "lost").length,
+      unknownChannel: rows.filter(r => !r.channel || r.channel === "unknown").length,
+      advancedStageRecords: rows.filter(r => advancedStages.has(r.status)).length,
+    };
   } catch (err) {
-    console.error("[CampaignEngine] AI recommendation error:", err);
-    return getFallbackRecommendations(context.gapToGoal);
+    console.warn("[CampaignEngine] CRM intake unavailable; no lead count inferred:", (err as Error).message);
+    return null;
   }
 }
 
-function getFallbackRecommendations(gapToGoal: number): AIRecommendation[] {
-  const ideas: Array<[AIRecommendation["category"], string, string, string]> = [
-    ["targeting", "Audit existing paid-search lead quality", "Read actual Google Ads search terms, spend, local targeting and conversion actions, then reconcile inbound calls/forms with CRM; do not change paid settings automatically.", "Identify irrelevant search terms and tracking gaps for owner review without changing budget or bids."],
-    ["seo", "Verify organic blog publishing", "Inspect the scheduled draft-to-live pipeline and repair blocked batches without bypassing quality checks.", "Audit drafts, PR checks, independent Netlify publication and live URLs."],
-    ["targeting", "Reactivate existing qualified CRM leads", "Review prior inquiries and estimates; follow up only with eligible contacts who have not opted out.", "Create owner tasks for stale qualified opportunities and track responses."],
-    ["creative", "Publish organic service content", "Repurpose verified HVAC expertise into free website, Google Business Profile and social posts.", "Prepare useful service FAQs and factual posts for review."],
-    ["jessica", "Recover missed inbound inquiries", "Check missed-call and form follow-up paths, respecting SMS consent and opt-outs.", "Audit callback tasks, booking links and message delivery."],
-    ["targeting", "Develop referral partnerships", "Use the existing approved outreach workflow for verified property managers and GC estimators, with suppression and consent safeguards.", "Review the existing referral follow-up queue and attribute positive inbound replies."]
-  ];
-  return ideas.slice(0, 5).map(([category,title,description,action],i) => ({
-    id: "organic_fallback_" + (i+1),
-    priority: i === 0 && gapToGoal > 0 ? "high" : "medium",
-    category, title, description, expectedImpact: "Not yet measured",
-    action, actionType: "manual", campaignData: null
-  }));
+/** Pure, evidence-based priorities. No unverified conversions or invented lift. */
+export function buildEvidenceBasedRecommendations(snapshot: CrmIntakeSnapshot | null): AIRecommendation[] {
+  const recs: AIRecommendation[] = [];
+  const add = (id: string, priority: AIRecommendation["priority"], category: AIRecommendation["category"], title: string, description: string, action: string) => {
+    recs.push({ id, priority, category, title, description, action, actionType: "manual", campaignData: null, expectedImpact: "Not yet measured" });
+  };
+
+  if (snapshot?.newUnassigned) {
+    add("crm_unassigned", "high", "targeting",
+      `Review ${snapshot.newUnassigned} unassigned new website lead record(s)`,
+      "These are CRM records in the last 30 days, not yet verified as genuine or unique. Unassigned records may delay a response.",
+      "Open the existing Lead Dashboard, validate each request and assign a human owner; do not send duplicate messages.");
+  }
+  if (snapshot?.overdueFollowUps) {
+    add("crm_overdue", "high", "jessica",
+      `Review ${snapshot.overdueFollowUps} overdue website lead follow-up(s)`,
+      "These CRM follow-up dates have passed. A due date does not establish that a customer was reached.",
+      "Reconcile existing CRM communications and provider delivery before creating any owner callback tasks.");
+  }
+  if (snapshot?.unknownChannel) {
+    add("crm_attribution", "high", "targeting",
+      `Investigate ${snapshot.unknownChannel} website lead record(s) with unknown source`,
+      "Missing campaign attribution prevents reliable lead-quality and cost-per-qualified-lead comparisons.",
+      "Inspect first-touch landing URLs, gclid, UTM parameters and referrer for actual submissions; do not assign a guessed source.");
+  }
+
+  add("google_ads_audit", "high", "targeting",
+    "Reconcile Google Ads clicks with genuine CRM inquiries",
+    "The historical October 20–26 Google Ads screenshot showed clicks and zero Ads-reported conversions, but current live conversions and qualified lead counts remain unverified.",
+    "Read the current account 783-370-2890 search terms, spend, conversion diagnostics and real inbound CRM source records before changing paid settings.");
+
+  add("netlify_content", "medium", "seo",
+    "Verify commercial HVAC blogs are public and lead forms work",
+    "GitHub and Railway deployments do not confirm public Netlify publication, Google indexing or an accepted CRM inquiry.",
+    "Check live Netlify URLs, titles, service-request CTAs and authenticated Search Console inspection without test leads or repeated indexing requests.");
+
+  add("meta_auth", "medium", "creative",
+    "Restore and verify Facebook / Instagram lead capture",
+    "Meta authorization and Instant Form delivery were not verified after the URL Blocked error; campaign results and spend remain unknown.",
+    "Complete Meta's allowed redirect URI and owner authorization, then read live account and CRM attribution before enabling any campaigns.");
+
+  if (!snapshot) {
+    add("crm_unavailable", "high", "targeting",
+      "CRM intake data unavailable — qualification count unknown",
+      "The marketing analyzer cannot read current website lead records. Do not substitute appointment totals or Google Ads events.",
+      "Review the existing Lead Dashboard and its data connection; reconcile inbound calls and replies with deduplicated records.");
+  } else if (snapshot.rawCaptures > 0 && snapshot.advancedStageRecords === 0) {
+    add("crm_qualification", "medium", "targeting",
+      "Review website inquiries awaiting qualification",
+      `${snapshot.rawCaptures} website capture record(s) were stored in 30 days, but none currently has an advanced pipeline stage. This is not proof of zero qualified inquiries.`,
+      "Review genuine HVAC intent, geography and duplicates, then update stages in the existing CRM.");
+  }
+
+  // Highest priority first; cap to five actions so the page stays focused.
+  return recs.sort((a,b) => ({ critical: 0, high: 1, medium: 2, low: 3 }[a.priority] - { critical: 0, high: 1, medium: 2, low: 3 }[b.priority])).slice(0,5);
 }
