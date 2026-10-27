@@ -7,6 +7,8 @@ import AddContactModal from "@/components/AddContactModal";
 import ContactIntakePanel from "@/components/ContactIntakePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -23,13 +25,14 @@ import {
   ChevronRight,
   RefreshCw,
   SlidersHorizontal,
+  MessageSquare,
 } from "lucide-react";
 import { formatDisplayName } from "@shared/nameFormat";
 import { useAuth } from "@/_core/hooks/useAuth";
 
 type Filters = {
   search: string;
-  source: "all" | "gmail" | "other";
+  source: "all" | "gmail" | "other" | "purchased_hvac";
   status: "default" | "active" | "inactive" | "archived";
   sort: "newest" | "name";
 };
@@ -72,6 +75,24 @@ export default function Customers() {
   const [filters, setFilters] = useState<Filters>(initial);
   const [page, setPage] = useState(0);
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedContactIds, setSelectedContactIds] = useState<number[]>([]);
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [smsBody, setSmsBody] = useState("");
+  const [smsPreview, setSmsPreview] = useState<{
+    text: string;
+    eligible: number;
+    blocked: number;
+    recipients: Array<{id:number;name:string;phone:string|null;eligible:boolean;reason:string|null}>;
+  } | null>(null);
+  const [smsPreviewKey, setSmsPreviewKey] = useState("");
+  const [smsJobId, setSmsJobId] = useState<string | null>(null);
+  const [smsNotice, setSmsNotice] = useState("");
+  const smsPreviewMutation = trpc.contactBulkSms.preview.useMutation();
+  const smsSendMutation = trpc.contactBulkSms.send.useMutation();
+  const smsJob = trpc.contactBulkSms.job.useQuery(
+    { jobId: smsJobId ?? "" },
+    { enabled: !!smsJobId, refetchInterval: smsJobId ? 2500 : false }
+  );
   const [contactNotice,setContactNotice] = useState("");
   const approveContact=trpc.crmCommunications.addSelectedContact.useMutation();
   const [columnOpen, setColumnOpen] = useState(false);
@@ -103,6 +124,40 @@ export default function Customers() {
     );
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const selectionKey = JSON.stringify({ ids: [...selectedContactIds].sort((a,b)=>a-b), body: smsBody.trim() });
+  const previewCurrent = smsPreview && smsPreviewKey === selectionKey;
+  const smsJobResult = smsJob.data?.result as { sent:number;failed:number;skipped:number;total:number } | null | undefined;
+  const visibleIds = items.map(c => c.id);
+  const allPageSelected = visibleIds.length > 0 && visibleIds.every(id => selectedContactIds.includes(id));
+  const toggleSelected = (id: number) => {
+    setSelectedContactIds(prev => prev.includes(id) ? prev.filter(x => x !== id)
+      : prev.length < 20 ? [...prev,id] : prev);
+  };
+  const selectCurrentPage = () => {
+    setSelectedContactIds(prev => {
+      if (allPageSelected) return prev.filter(id => !visibleIds.includes(id));
+      return Array.from(new Set([...prev,...visibleIds])).slice(0,20);
+    });
+  };
+  const checkSelectedSms = async () => {
+    setSmsNotice("");
+    try {
+      const ids = [...selectedContactIds].sort((a,b)=>a-b);
+      const res = await smsPreviewMutation.mutateAsync({ customerIds:ids, message:smsBody });
+      setSmsPreview(res);
+      setSmsPreviewKey(JSON.stringify({ ids, body:smsBody.trim() }));
+    } catch (err) { setSmsNotice(err instanceof Error ? err.message : "Could not check recipients"); }
+  };
+  const sendSelectedSms = async () => {
+    if (!smsPreview || !previewCurrent || smsPreview.eligible === 0 || smsJobId) return;
+    try {
+      const res = await smsSendMutation.mutateAsync({
+        customerIds: [...selectedContactIds], message:smsBody, requestId:crypto.randomUUID()
+      });
+      setSmsJobId(res.jobId);
+      setSmsNotice("Sending to eligible contacts. The server re-checks consent and opt-outs before each text.");
+    } catch (err) { setSmsNotice(err instanceof Error ? err.message : "SMS send could not start"); }
+  };
   return (
     <DashboardLayout>
       <InternalNav />
@@ -144,6 +199,7 @@ export default function Customers() {
           >
             {[
               { name: "All contacts", filters: initial },
+              { name: "Purchased HVAC homeowners", filters: { ...initial, source: "purchased_hvac" as const } },
               {
                 name: "Selected Gmail / Tasks",
                 filters: { ...initial, source: "gmail" as const },
@@ -184,6 +240,7 @@ export default function Customers() {
             >
               <option value="all">All sources</option>
               <option value="gmail">Gmail Sent</option>
+              <option value="purchased_hvac">Purchased HVAC homeowners</option>
               <option value="other">Other sources</option>
             </select>
             <select
@@ -216,6 +273,17 @@ export default function Customers() {
             >
               <SlidersHorizontal className="h-4 w-4 mr-2" />
               Columns
+            </Button>
+            <Button variant="outline" size="sm" onClick={selectCurrentPage} disabled={items.length===0}>
+              {allPageSelected ? "Deselect page" : "Select up to 20 on page"}
+            </Button>
+            <span className="text-sm font-medium">{selectedContactIds.length} selected</span>
+            <Button size="sm" variant="outline" onClick={() => setSelectedContactIds([])}
+              disabled={selectedContactIds.length===0}>Clear selection</Button>
+            <Button size="sm" className="bg-[#007a8c] text-white hover:bg-[#006b78]"
+              disabled={selectedContactIds.length===0 || user?.teamRole==="viewer"}
+              onClick={() => { setSmsOpen(true);setSmsJobId(null);setSmsNotice("");setSmsPreview(null); }}>
+              <MessageSquare className="h-4 w-4 mr-1" /> Text selected ({selectedContactIds.length})
             </Button>
             <Button
               variant="ghost"
@@ -301,6 +369,11 @@ export default function Customers() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-[#f5f8fa]">
+                    <TableHead className="w-10">
+                      <input type="checkbox" aria-label="Select contacts on this page"
+                        checked={allPageSelected} onChange={selectCurrentPage}
+                        disabled={items.length===0} />
+                    </TableHead>
                     <TableHead className="min-w-52">Contact name</TableHead>
                     {columns
                       .filter(c => visible.includes(c))
@@ -338,6 +411,11 @@ export default function Customers() {
                     };
                     return (
                       <TableRow key={c.id} className="hover:bg-[#f0f7fa]">
+                        <TableCell>
+                          <input type="checkbox" aria-label={`Select ${formatDisplayName(c.displayName)}`}
+                            checked={selectedContactIds.includes(c.id)} onChange={() => toggleSelected(c.id)}
+                            disabled={!selectedContactIds.includes(c.id) && selectedContactIds.length>=20} />
+                        </TableCell>
                         <TableCell>
                           <button
                             className="text-[#007a8c] font-medium text-left hover:underline"
@@ -398,6 +476,69 @@ export default function Customers() {
           </footer>
         </div>
       </div>
+      <Dialog open={smsOpen} onOpenChange={setSmsOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Send one text to selected CRM contacts</DialogTitle>
+            <DialogDescription>
+              {selectedContactIds.length} selected across pages (maximum 20 per batch).
+              Only numbers with recorded first-party SMS consent, active status, and no opt-out can receive a text.
+              Purchased homeowners without verified consent are blocked; selecting them does not grant consent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label htmlFor="customer-bulk-sms-body" className="text-sm font-medium">Text message</label>
+            <Textarea id="customer-bulk-sms-body" placeholder="Write the same HVAC message for your selected contacts…"
+              value={smsBody} maxLength={1200} rows={5}
+              onChange={e => {setSmsBody(e.target.value);setSmsPreview(null);setSmsNotice("");}} />
+            <p className="text-xs text-slate-500">The system adds “Mechanical Enterprise:” and “Reply STOP to opt out.” automatically. {smsBody.length}/1200 characters typed.</p>
+            <Button variant="outline" disabled={!smsBody.trim() || !selectedContactIds.length || smsPreviewMutation.isPending || Boolean(smsJobId)}
+              onClick={checkSelectedSms}>{smsPreviewMutation.isPending ? "Checking…" : "Preview recipients & consent"}</Button>
+            {previewCurrent && smsPreview && (
+              <div className="rounded-md border p-3 space-y-2">
+                <p className="font-semibold text-sm">{smsPreview.eligible} eligible · {smsPreview.blocked} blocked</p>
+                <div className="rounded bg-slate-50 p-3 whitespace-pre-wrap text-sm">{smsPreview.text}</div>
+                <div className="max-h-48 overflow-y-auto text-sm space-y-1">
+                  {smsPreview.recipients.map(r => (
+                    <p key={r.id}>
+                      <span className={r.eligible ? "text-green-700" : "text-amber-700"}>
+                        {r.eligible ? "Eligible" : "Held"}
+                      </span>{" "}
+                      {r.name} {r.phone ?? "(no phone)"} {r.reason ? "— " + ({
+                        inactive:"Inactive prospect — consent not verified",
+                        no_verified_sms_consent:"No documented first-party SMS consent",
+                        opted_out:"STOP / opted out",
+                        do_not_contact:"CRM do-not-contact",
+                        missing_phone:"No valid phone",
+                        duplicate_phone:"Duplicate selected phone",
+                        recent_duplicate:"Already sent this text within 24 hours",
+                        missing_contact:"Contact missing",
+                        verification_error:"Could not verify eligibility"
+                      } as Record<string,string>)[r.reason] : ""}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+            {smsNotice && <p role="status" className="text-sm">{smsNotice}</p>}
+            {smsJobId && (
+              <div role="status" className="rounded border p-3 text-sm">
+                {smsJob.data?.status === "running" ? "Sending…" :
+                  smsJob.data?.status === "done" && smsJobResult ?
+                    `Finished: ${smsJobResult.sent} accepted, ${smsJobResult.skipped} held, ${smsJobResult.failed} failed. Check SMS Inbox for carrier delivery.` :
+                    smsJob.data?.status === "error" ? (smsJob.data.error ?? "Send job failed") : "Checking send progress…"}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSmsOpen(false)}>Close</Button>
+            <Button disabled={!previewCurrent || !smsPreview?.eligible || Boolean(smsJobId) || smsSendMutation.isPending || user?.teamRole==="viewer"}
+              onClick={sendSelectedSms}>
+              {smsSendMutation.isPending ? "Starting…" : `Send to ${previewCurrent ? smsPreview?.eligible ?? 0 : 0} eligible`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <AddContactModal
         open={createOpen}
         requireComplete
