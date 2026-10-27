@@ -376,7 +376,7 @@ export const customersRouter = router({
           type: z.enum(["residential", "commercial"]).optional(),
           status: z.enum(["active", "inactive", "archived"]).optional(),
           assignedToId: z.number().int().optional(),
-          source: z.enum(["gmail", "other"]).optional(),
+          source: z.enum(["gmail", "other", "purchased_hvac"]).optional(),
           completedOnly: z.boolean().default(false),
           sort: z.enum(["newest", "name"]).default("newest"),
           limit: z.number().int().min(1).max(100).default(50),
@@ -407,6 +407,8 @@ export const customersRouter = router({
         conditions.push(input.completedOnly
           ? sql`${customers.source} IN ('Gmail Selected','HVAC Prospecting Task')`
           : eq(customers.source, "Gmail Sent"));
+      if (input.source === "purchased_hvac")
+        conditions.push(eq(customers.source, "hvac-list-07105"));
       if (input.source === "other")
         conditions.push(input.completedOnly
           ? sql`(${customers.source} IS NULL OR ${customers.source} NOT IN ('Gmail Selected','HVAC Prospecting Task','Gmail Sent'))`
