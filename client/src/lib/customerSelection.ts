@@ -26,7 +26,7 @@ export function selectContactsFromPage(
     if (next.size >= limit) break;
     next.add(id);
   }
-  return [...next];
+  return Array.from(next);
 }
 
 export function deselectContactsFromPage(
