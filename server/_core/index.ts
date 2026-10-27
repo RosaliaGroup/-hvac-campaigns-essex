@@ -20,6 +20,7 @@ import { startScheduledSmsProcessor } from "../services/scheduledSms";
 import { startSalesDocPoller } from "../services/salesDocPoller";
 import { startDueReminderSweep } from "../services/dueReminderSweep";
 import { registerSmsWebhookRoutes, assertWebhookSecurityOrExit } from "../services/smsWebhook";
+import { registerHvacHomeownerImportRoute } from "../services/hvacHomeownerImportRoute";
 import { attachBodyParsers } from "./bodyParser";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 import { registerVapiToolRoutes } from "../services/vapiSendForm";
@@ -78,6 +79,8 @@ async function startServer() {
   registerOAuthRoutes(app);
   // SMS reply webhook — Telnyx inbound (active) + legacy TextBelt format fallback
   registerSmsWebhookRoutes(app);
+  // Temporary token-gated, outbound-disabled purchased-homeowner import.
+  registerHvacHomeownerImportRoute(app);
   // Meta Lead Gen webhook (Instant Form submissions)
   registerMetaLeadWebhookRoutes(app);
   // Vapi tool webhook — Jessica's sendForm (Mechanical booking link via Telnyx).
