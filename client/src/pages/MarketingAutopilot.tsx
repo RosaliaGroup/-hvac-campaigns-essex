@@ -73,9 +73,9 @@ export default function MarketingAutopilot() {
   const { toast } = useToast();
 
   const { data: analysis, isLoading: analysisLoading, refetch: refetchAnalysis } = trpc.autopilot.analyze.useQuery(undefined, {
-    // Each analysis calls a paid AI model; refreshing every five minutes while
-    // a dashboard is open burned credits without verifying new qualified leads.
-    // Keep a periodic six-hour read-only review and a manual refresh button.
+    // Data-driven, read-only CRM and appointment recommendations.
+    // A six-hour refresh avoids needless repeat queries while CRM intake
+    // counters below refresh independently every five minutes.
     staleTime: 6 * 60 * 60 * 1000,
     refetchInterval: 6 * 60 * 60 * 1000,
     refetchOnWindowFocus: false,
