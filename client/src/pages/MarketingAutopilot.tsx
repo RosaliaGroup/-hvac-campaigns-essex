@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -72,7 +71,6 @@ const statusColors: Record<string, string> = {
 export default function MarketingAutopilot() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { toast } = useToast();
-  const [pushingId, setPushingId] = useState<string | null>(null);
 
   const { data: analysis, isLoading: analysisLoading, refetch: refetchAnalysis } = trpc.autopilot.analyze.useQuery(undefined, {
     refetchInterval: 5 * 60 * 1000, // auto-refresh every 5 minutes
@@ -85,17 +83,6 @@ export default function MarketingAutopilot() {
     onSuccess: () => {
       refetchAnalysis();
       toast({ title: "Analysis refreshed", description: "AI has re-analyzed your campaigns and updated recommendations." });
-    },
-  });
-
-  const pushCampaignMutation = trpc.googleAds.createCampaign.useMutation({
-    onSuccess: () => {
-      toast({ title: "Campaign pushed to Google Ads!", description: "The campaign is now live in your Google Ads account as a paused campaign. Enable it to start running." });
-      setPushingId(null);
-    },
-    onError: (err) => {
-      toast({ title: "Push failed", description: err.message, variant: "destructive" });
-      setPushingId(null);
     },
   });
 
@@ -142,7 +129,7 @@ export default function MarketingAutopilot() {
               <Zap className="h-6 w-6 text-[#ff6b35]" />
               <h1 className="text-3xl font-bold text-[#1e3a5f]">Marketing Autopilot</h1>
             </div>
-            <p className="text-muted-foreground">AI-powered campaign engine — goal: <strong>20 appointments/week</strong></p>
+            <p className="text-muted-foreground">Business goal: <strong>80 unique qualified HVAC leads/month</strong>. Appointments are tracked separately.</p>
           </div>
           <Button
             onClick={() => refreshMutation.mutate()}
@@ -154,7 +141,14 @@ export default function MarketingAutopilot() {
           </Button>
         </div>
 
-        {/* Goal Progress Banner */}
+        {/* Lead goal is not measured by this appointment-only dataset. */}
+        <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 mb-5">
+          <div className="font-semibold text-amber-900">Qualified HVAC leads: UNKNOWN / {analysis?.qualifiedLeadGoalMonthly ?? 80} monthly goal</div>
+          <p className="text-sm text-amber-900 mt-1">This screen does not have deduplicated CRM-qualified lead attribution. Outbound emails, clicks, platform conversions, and appointments cannot be substituted for verified unique leads. Review real CRM inquiries before deciding whether campaigns are on pace.</p>
+          <a href="/campaign-performance" className="text-sm font-semibold underline text-blue-700">Review live advertising diagnostics</a>
+        </div>
+
+        {/* Appointment-only progress — not the monthly lead KPI. */}
         <div className={`rounded-xl border-2 p-6 mb-8 ${trendBg[trend]}`}>
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
@@ -168,7 +162,7 @@ export default function MarketingAutopilot() {
                 <AlertTriangle className="h-12 w-12 text-red-600 flex-shrink-0" />
               )}
               <div>
-                <div className={`text-2xl font-bold ${trendColors[trend]}`}>{trendLabels[trend]}</div>
+                <div className={`text-2xl font-bold ${trendColors[trend]}`}>Appointment pace: {trendLabels[trend]}</div>
                 <div className="text-gray-700 mt-1">
                   <span className="text-3xl font-bold">{thisWeek}</span>
                   <span className="text-lg"> / {WEEKLY_GOAL} appointments this week</span>
@@ -180,7 +174,7 @@ export default function MarketingAutopilot() {
             </div>
             <div className="md:w-64">
               <div className="flex justify-between text-sm font-medium mb-2">
-                <span>Weekly Progress</span>
+                <span>Weekly appointment progress</span>
                 <span>{pct}%</span>
               </div>
               <Progress value={pct} className="h-4" />
@@ -326,7 +320,7 @@ export default function MarketingAutopilot() {
                           </div>
                           {rec.campaignData && (
                             <div className="mt-3 bg-blue-50 rounded-lg p-3 border border-blue-200">
-                              <div className="text-xs font-semibold text-blue-700 mb-2">Campaign Ready to Push</div>
+                              <div className="text-xs font-semibold text-blue-700 mb-2">Draft only — NOT activated or budget-approved</div>
                               <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div><span className="text-gray-500">Name:</span> <span className="font-medium">{rec.campaignData.name}</span></div>
                                 <div><span className="text-gray-500">Budget:</span> <span className="font-medium">${rec.campaignData.budget}/day</span></div>
@@ -337,38 +331,9 @@ export default function MarketingAutopilot() {
                           )}
                         </div>
                         <div className="flex flex-col gap-2 md:min-w-36">
-                          {rec.campaignData && (rec.actionType === "push_to_google_ads" || rec.actionType === "create_campaign") ? (
-                            <Button
-                              size="sm"
-                              className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white"
-                              disabled={pushingId === rec.id}
-                              onClick={() => {
-                                if (!rec.campaignData) return;
-                                setPushingId(rec.id);
-                                pushCampaignMutation.mutate({
-                                  name: rec.campaignData.name,
-                                  dailyBudget: rec.campaignData.budget,
-                                  geoTargetNames: rec.campaignData.targetLocations,
-                                  keywords: rec.campaignData.keywords,
-                                  headlines: rec.campaignData.headlines,
-                                  descriptions: rec.campaignData.descriptions,
-                                  finalUrl: rec.campaignData.finalUrl,
-                                });
-                              }}
-                            >
-                              {pushingId === rec.id ? (
-                                <><Loader2 className="h-3 w-3 animate-spin mr-1" /> Pushing...</>
-                              ) : (
-                                <><Rocket className="h-3 w-3 mr-1" /> Push to Google Ads</>
-                              )}
-                            </Button>
-                          ) : (
-                            <Badge variant="outline" className="text-xs justify-center">
-                              {rec.actionType === "adjust_budget" ? "Manual — Google Ads" :
-                               rec.actionType === "update_script" ? "Manual — Vapi" :
-                               "Manual Action"}
-                            </Badge>
-                          )}
+                          <Badge variant="outline" className="text-xs justify-center">
+                            Review recommendation — no automatic paid change
+                          </Badge>
                         </div>
                       </div>
                     </CardContent>
