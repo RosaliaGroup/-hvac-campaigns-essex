@@ -20,6 +20,7 @@ import { sendGrowthSms } from "./growth/sms";
 import { growthSmsEnabled } from "./growth/cadenceEngine";
 import { checkGrowthCircuitBreaker } from "./growth/circuitBreaker";
 import { recordGrowthTouch } from "./growth/touchLedger";
+import { prospectWorkflowErrorKind } from "./prospectWorkflowError";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 const DAY = 86400000;
@@ -449,7 +450,7 @@ export function startProspectWorkflow() {
     try {
       await runProspectWorkflow();
     } catch (e) {
-      console.warn("[prospect-workflow]", (e as Error).message);
+      console.warn("[prospect-workflow]", prospectWorkflowErrorKind(e));
     } finally {
       running = false;
     }
