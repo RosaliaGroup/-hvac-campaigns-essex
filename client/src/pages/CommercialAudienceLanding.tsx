@@ -43,10 +43,10 @@ export default function CommercialAudienceLanding({ audience }: { audience: Audi
       ? [{ href: "/commercial-hvac-installation-nj", label: "Commercial HVAC installation in NJ" }, { href: "/vrv-vrf-installation-nj", label: "VRF and VRV HVAC installation" }]
       : [{ href: "/commercial-hvac-service-nj", label: "Commercial HVAC service in NJ" }, { href: "/commercial/property-managers", label: "Property portfolio maintenance" }];
   const guides = audience === "property-management"
-    ? [{ href: "/blog/fall-hvac-maintenance-nj-property-managers", label: "Fall HVAC checklist for NJ property managers" }, { href: "/blog/nj-condo-ptac-replacement-planning", label: "Condo PTAC replacement planning" }]
+    ? [{ href: "/blog/nj-multifamily-no-heat-hvac-service-checklist", label: "No-heat service checklist for NJ multifamily buildings" }, { href: "/blog/fall-hvac-maintenance-nj-property-managers", label: "Fall HVAC checklist for NJ property managers" }, { href: "/blog/nj-condo-ptac-replacement-planning", label: "Condo PTAC replacement planning" }]
     : audience === "contractors-developers"
       ? [{ href: "/blog/what-gcs-need-from-hvac-subcontractor", label: "What general contractors need from an HVAC subcontractor" }, { href: "/blog/commercial-property-hvac-due-diligence-nj", label: "Commercial HVAC due diligence" }]
-      : [{ href: "/blog/commercial-property-hvac-due-diligence-nj", label: "HVAC due diligence for commercial property buyers" }, { href: "/blog/fall-hvac-maintenance-nj-property-managers", label: "Fall maintenance planning for managed buildings" }];
+      : [{ href: "/blog/commercial-rooftop-hvac-repair-request-nj", label: "Commercial rooftop HVAC repair request checklist" }, { href: "/blog/commercial-property-hvac-due-diligence-nj", label: "HVAC due diligence for commercial property buyers" }, { href: "/blog/fall-hvac-maintenance-nj-property-managers", label: "Fall maintenance planning for managed buildings" }];
   return <div className="min-h-screen bg-white">
     <Navigation />
     <main>

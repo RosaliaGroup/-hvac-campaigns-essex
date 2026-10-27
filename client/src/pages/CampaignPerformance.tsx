@@ -2,8 +2,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { 
   BarChart3, 
   Facebook, 
@@ -25,19 +23,20 @@ import InternalNav from "@/components/InternalNav";
 import DashboardFooter from "@/components/DashboardFooter";
 import { getLoginUrl } from "@/const";
 import { useEffect, useState } from "react";
-import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
 export default function CampaignPerformance() {
   const { user, loading, isAuthenticated } = useAuth();
-  const [, setLocation] = useLocation();
   const [showSettings, setShowSettings] = useState(false);
-  const [facebookConnected] = useState(false);
-  const [credentials, setCredentials] = useState({
-    facebookAccessToken: "",
-    facebookAdAccountId: "",
-  });
+  // Live Meta verification; a saved token alone is not a working Ads connection.
+  const { data: metaStatus, error: metaStatusError } = trpc.metaAds.getConnectionStatus.useQuery(
+    undefined, { enabled: isAuthenticated, retry: false }
+  );
+  const { data: metaCheck, error: metaCheckError } = trpc.metaAds.testConnection.useQuery(
+    undefined, { enabled: isAuthenticated && metaStatus?.connected === true, retry: false }
+  );
+  const facebookConnected = metaStatus?.connected === true && metaCheck?.ok === true;
 
   // Real Google Ads data via tRPC
   const { data: connectionStatus, refetch: refetchStatus } = trpc.googleAds.getConnectionStatus.useQuery(
@@ -84,15 +83,6 @@ export default function CampaignPerformance() {
     refetchTerms();
     refetchActions();
     toast.success("Refreshing live data...");
-  };
-
-  const saveCredentials = () => {
-    toast.success("Facebook credentials saved (integration coming soon)");
-    setShowSettings(false);
-  };
-
-  const fetchFacebookData = async () => {
-    toast.info("Facebook API integration coming soon");
   };
 
   if (loading) {
@@ -153,8 +143,8 @@ export default function CampaignPerformance() {
                   <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <CheckCircle className="h-5 w-5 text-green-600" />
                     <div>
-                      <p className="font-medium text-green-800">Google Ads Connected</p>
-                      <p className="text-sm text-green-600">Customer ID: 332-572-0049 — Live data is being pulled automatically.</p>
+                      <p className="font-medium text-green-800">Google Ads credentials saved</p>
+                      <p className="text-sm text-green-700">Confirm the selected account and live campaign metrics below. Saved OAuth does not establish live ad delivery.</p>
                     </div>
                   </div>
                 ) : (
@@ -167,57 +157,14 @@ export default function CampaignPerformance() {
                 )}
               </div>
 
-              {/* Facebook Settings */}
-              <div className="space-y-4 pt-6 border-t">
-                <div className="flex items-center gap-2">
-                  <Facebook className="h-5 w-5 text-[#ff6b35]" />
-                  <h3 className="text-lg font-semibold">Facebook Marketing API</h3>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="facebookAccessToken">Access Token</Label>
-                    <Input
-                      id="facebookAccessToken"
-                      type="password"
-                      value={credentials.facebookAccessToken}
-                      onChange={(e) => setCredentials({ ...credentials, facebookAccessToken: e.target.value })}
-                      placeholder="Enter your Facebook access token"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="facebookAdAccountId">Ad Account ID</Label>
-                    <Input
-                      id="facebookAdAccountId"
-                      value={credentials.facebookAdAccountId}
-                      onChange={(e) => setCredentials({ ...credentials, facebookAdAccountId: e.target.value })}
-                      placeholder="act_123456789"
-                    />
-                  </div>
-                </div>
-                <div className="text-sm text-muted-foreground bg-secondary/50 p-4 rounded-lg">
-                  <p className="font-semibold mb-2">How to get Facebook API access:</p>
-                  <ol className="list-decimal list-inside space-y-1">
-                    <li>Go to <a href="https://developers.facebook.com/" target="_blank" rel="noopener noreferrer" className="text-[#ff6b35] hover:underline">Facebook for Developers</a></li>
-                    <li>Create an app and add "Marketing API" product</li>
-                    <li>Generate a User Access Token with ads_read permissions</li>
-                    <li>Find your Ad Account ID in Meta Business Suite → Settings → Ad Accounts</li>
-                  </ol>
-                </div>
+              {/* Meta Ads is managed by the existing dedicated Facebook dashboard. */}
+              <div className="space-y-3 pt-6 border-t">
+                <h3 className="text-lg font-semibold">Facebook / Instagram Ads</h3>
+                <p className="text-sm text-muted-foreground">Use the existing Meta Ads connection screen to authorize the correct account and verify live access. Do not paste tokens into this reporting page.</p>
+                <a href="/facebook-campaigns" className="inline-flex rounded-md bg-[#1877F2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1565c0]">Open Meta Ads connection &amp; performance</a>
               </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button
-                  onClick={saveCredentials}
-                  className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                >
-                  Save Credentials
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSettings(false)}
-                >
-                  Cancel
-                </Button>
+              <div className="pt-3">
+                <Button variant="outline" onClick={() => setShowSettings(false)}>Close settings</Button>
               </div>
             </CardContent>
           </Card>
@@ -264,7 +211,7 @@ export default function CampaignPerformance() {
                   <div>
                     <p className="font-semibold">Facebook / Instagram</p>
                     <p className="text-sm text-muted-foreground">
-                      {facebookConnected ? "Connected" : "Not Connected"}
+                      {facebookConnected ? "Live account verified" : metaStatus?.connected ? "Saved credentials — verify or reconnect" : "Account not verified"}
                     </p>
                   </div>
                 </div>
@@ -279,9 +226,9 @@ export default function CampaignPerformance() {
                   variant="outline"
                   size="sm"
                   className="w-full mt-4"
-                  onClick={() => setShowSettings(true)}
+                  onClick={() => { window.location.href = "/facebook-campaigns"; }}
                 >
-                  Connect Facebook
+                  Open Meta Ads Setup
                 </Button>
               )}
             </CardContent>
@@ -466,77 +413,42 @@ export default function CampaignPerformance() {
           </CardContent>
         </Card>
 
-        {/* Facebook Performance */}
+        {/* Meta results are read only in the dedicated dashboard; never render invented zero metrics. */}
         <Card className="mb-8">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Facebook className="h-5 w-5 text-[#ff6b35]" />
-                  Facebook / Instagram Performance
-                </CardTitle>
-                <CardDescription>Last 30 days</CardDescription>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Verified paid spend</p>
-                <p className="text-xl font-bold text-[#ff6b35]">Unknown</p>
-              </div>
-            </div>
+            <CardTitle className="flex items-center gap-2"><Facebook className="h-5 w-5 text-[#1877F2]" /> Facebook / Instagram performance</CardTitle>
+            <CardDescription>Live Meta account verification is separate from saved credentials.</CardDescription>
           </CardHeader>
-          <CardContent>
-            {!facebookConnected ? (
-              <div className="text-center py-12">
-                <AlertCircle className="h-12 w-12 mx-auto mb-3 text-orange-500" />
-                <p className="text-lg font-semibold mb-2">Facebook Not Connected</p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Connect your Facebook account to see real campaign performance metrics
-                </p>
-                <Button
-                  onClick={() => setShowSettings(true)}
-                  className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
-                >
-                  Connect Now
-                </Button>
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-4 gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Eye className="h-4 w-4" />
-                    Impressions
-                  </div>
-                  <p className="text-3xl font-bold">0</p>
-                  <p className="text-xs text-muted-foreground">Total ad views</p>
-                </div>
+          <CardContent className="space-y-3 text-sm">
+            <p>Account: <strong>{facebookConnected ? "Verified via Meta API" : "Not verified"}</strong></p>
+            {(metaStatusError || metaCheckError || metaCheck?.error) && <p role="alert" className="text-orange-700">Meta access issue: {metaStatusError?.message ?? metaCheckError?.message ?? metaCheck?.error}</p>}
+            <p>Paid spend, campaign leads and cost per qualified inquiry: <strong>Unknown in this combined view</strong>. Use the dedicated Meta dashboard and reconcile genuine inquiries with CRM records.</p>
+            <a href="/facebook-campaigns" className="inline-flex rounded-md border px-4 py-2 font-semibold text-[#1e3a5f] hover:bg-slate-50">Review Meta campaigns</a>
+          </CardContent>
+        </Card>
 
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <MousePointer className="h-4 w-4" />
-                    Clicks
-                  </div>
-                  <p className="text-3xl font-bold">0</p>
-                  <p className="text-xs text-green-600">—</p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <DollarSign className="h-4 w-4" />
-                    Cost
-                  </div>
-                  <p className="text-3xl font-bold">$0.00</p>
-                  <p className="text-xs text-muted-foreground">—</p>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Target className="h-4 w-4" />
-                    Conversions
-                  </div>
-                  <p className="text-3xl font-bold">0</p>
-                  <p className="text-xs text-green-600">Last 30 days</p>
+        {/* High-intent campaign review briefs — NOT new paid campaigns or a launch control. */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>80 qualified leads/month — priority campaign plays</CardTitle>
+            <CardDescription>Review-ready targeting and landing-page plan. These are NOT live campaign statuses, additional budgets, or guaranteed lead forecasts.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              { name: "Commercial repair & maintenance", intent: "Property managers with service needs", href: "/commercial/for-property-management", blog: "/blog/commercial-rooftop-hvac-repair-request-nj", keyword: '"commercial hvac repair nj"' },
+              { name: "Condo/PTAC replacement", intent: "Condo boards and multifamily owners", href: "/commercial/for-property-management", blog: "/blog/nj-condo-ptac-replacement-planning", keyword: '"ptac replacement nj"' },
+              { name: "Residential system replacement", intent: "Owners seeking installation quotes", href: "/blog/central-ac-replacement-nj-cost", blog: "/blog/central-ac-replacement-nj-cost", keyword: '"hvac replacement nj"' },
+            ].map(play => (
+              <div key={play.name} className="rounded-lg border p-4 space-y-2">
+                <p className="font-semibold text-[#1e3a5f]">{play.name}</p>
+                <p className="text-sm text-muted-foreground">{play.intent} · Search theme: {play.keyword}</p>
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <a href={play.href} className="underline text-blue-700">Lead destination</a>
+                  <a href={play.blog} className="underline text-blue-700">Supporting blog</a>
                 </div>
               </div>
-            )}
+            ))}
+            <p className="text-sm text-muted-foreground">Before reallocating any existing Google or Meta spending, verify the selected Ads account, search terms, real CRM-qualified inquiries, live Netlify conversion events, and total calendar-month marketing cost. Never add a proposed budget on top of existing campaigns.</p>
           </CardContent>
         </Card>
 
