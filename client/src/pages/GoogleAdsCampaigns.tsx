@@ -446,7 +446,7 @@ export default function GoogleAdsCampaigns() {
               </div>
             ) : (
               <div className="bg-white border rounded-lg p-6 text-center text-muted-foreground text-sm">
-                No campaign data yet. Launch campaigns below and check back after they go live.
+                No campaign rows were returned for the selected Google Ads account. Check live Google Ads for existing campaigns and spending before creating any new campaign.
               </div>
             )}
           </div>
