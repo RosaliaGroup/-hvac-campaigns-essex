@@ -90,6 +90,25 @@ export const ADS_CONVERSION_LABELS: Record<ConversionEvent, string | null> = {
   portfolio_pricing_request: envLabel("VITE_ADS_LABEL_PORTFOLIO_PRICING_REQUEST"),
 };
 
+/**
+ * A single, already verified Google Ads action ("Quote Request") can measure
+ * completed quote-intent forms without inventing new conversion labels.
+ * The GA4 event name remains specific to the service. Explicit event labels,
+ * when configured from Google Ads, always take precedence.
+ *
+ * Never map mere visits, click-to-call, generic contacts, emergency dispatch
+ * or informational downloads to this quote action.
+ */
+const QUOTE_INTENT_FALLBACK_EVENTS: ReadonlySet<ConversionEvent> = new Set<ConversionEvent>([
+  "commercial_quote_request",
+  "residential_quote_request",
+  "portfolio_pricing_request",
+  "installation_request",
+  "replacement_request",
+  "warranty_quote_request",
+  "membership_quote_request",
+]);
+
 export type CustomerSegment = "residential" | "commercial";
 
 /**
@@ -196,7 +215,8 @@ export function trackConversion(
   }
 
   // Google Ads — only when a real label is configured for this event.
-  const label = ADS_CONVERSION_LABELS[event];
+  const label = ADS_CONVERSION_LABELS[event] ??
+    (QUOTE_INTENT_FALLBACK_EVENTS.has(event) ? ADS_CONVERSION_LABELS.quote_request : null);
   if (label) {
     const adsPayload: Record<string, unknown> = {
       send_to: `${ADS_CONVERSION_ID}/${label}`,
