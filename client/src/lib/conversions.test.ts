@@ -67,8 +67,8 @@ describe("trackConversion — confirmed success fires exactly once", () => {
     });
   });
 
-  it("scopes to GA4 via send_to and never references the Ads account by default", () => {
-    trackConversion("installation_request", { service_category: "installation" }, { dedupeKey: "sub-2" });
+  it("scopes a non-quote service event to GA4 without a Google Ads quote conversion", () => {
+    trackConversion("repair_request", { service_category: "repair" }, { dedupeKey: "sub-2" });
     expect(eventParams().send_to).toBe(GA4_ID);
     expect(JSON.stringify(gtag.mock.calls)).not.toContain("AW-");
   });
@@ -216,6 +216,52 @@ describe("Google Ads label independence", () => {
     expect(gtag).toHaveBeenCalledWith("event", "conversion", {
       send_to: "AW-17768263516/DY_nCO3H4t0cENzeyJhC",
     });
+  });
+});
+
+describe("Google Ads quote-intent fallback — existing verified action only", () => {
+  beforeEach(enableGa4);
+
+  it.each([
+    "commercial_quote_request",
+    "residential_quote_request",
+    "portfolio_pricing_request",
+    "installation_request",
+    "replacement_request",
+    "warranty_quote_request",
+    "membership_quote_request",
+  ] as ConversionEvent[])("%s fires the verified Quote Request label exactly once", (event) => {
+    trackConversion(event, { service_category: "commercial" }, { dedupeKey: event });
+    trackConversion(event, { service_category: "commercial" }, { dedupeKey: event });
+    expect(gtag).toHaveBeenCalledTimes(2);
+    expect(gtag).toHaveBeenCalledWith("event", event, expect.objectContaining({ send_to: GA4_ID }));
+    expect(gtag).toHaveBeenCalledWith("event", "conversion", {
+      send_to: "AW-17768263516/DY_nCO3H4t0cENzeyJhC",
+    });
+  });
+
+  it.each(["contact_form_submit", "repair_request", "service_request", "maintenance_plan_inquiry"] as ConversionEvent[])(
+    "%s never falls back to a Quote Request", (event) => {
+      trackConversion(event, {}, { dedupeKey: event });
+      expect(gtag).toHaveBeenCalledTimes(1);
+      expect(gtag.mock.calls.some((call) => call[1] === "conversion")).toBe(false);
+    },
+  );
+
+  it("explicit per-event label overrides the quote fallback", () => {
+    const original = ADS_CONVERSION_LABELS.commercial_quote_request;
+    ADS_CONVERSION_LABELS.commercial_quote_request = "VERIFIED_SPECIFIC_LABEL";
+    try {
+      trackConversion("commercial_quote_request", {}, { dedupeKey: "override" });
+      expect(gtag).toHaveBeenCalledWith("event", "conversion", {
+        send_to: `${ADS_CONVERSION_ID}/VERIFIED_SPECIFIC_LABEL`,
+      });
+      expect(gtag).not.toHaveBeenCalledWith("event", "conversion", {
+        send_to: "AW-17768263516/DY_nCO3H4t0cENzeyJhC",
+      });
+    } finally {
+      ADS_CONVERSION_LABELS.commercial_quote_request = original;
+    }
   });
 });
 
@@ -383,8 +429,11 @@ describe("Fix 1/2 — confirmed-success firing is exactly-once and non-duplicati
   it("Contact + replacement success fires replacement_request exactly once", () => {
     const m = resolveFormConversion({ source: "contact", service: "HVAC System Replacement" });
     trackConversion(m.event, { service_category: m.service_category }, { dedupeKey: "repl-1" });
-    expect(gtag).toHaveBeenCalledTimes(1);
+    expect(gtag).toHaveBeenCalledTimes(2);
     expect(gtag).toHaveBeenCalledWith("event", "replacement_request", expect.objectContaining({ send_to: GA4_ID }));
+    expect(gtag).toHaveBeenCalledWith("event", "conversion", {
+      send_to: "AW-17768263516/DY_nCO3H4t0cENzeyJhC",
+    });
   });
 
   it("Contact + installation success fires installation_request", () => {
@@ -405,14 +454,14 @@ describe("Fix 1/2 — confirmed-success firing is exactly-once and non-duplicati
     expect(gtag).toHaveBeenCalledTimes(2);
   });
 
-  it("missing Ads label does not block the GA4 contact/replacement/warranty events", () => {
+  it("missing distinct Ads labels does not block GA4; generic contacts are not miscounted as quotes", () => {
     expect(ADS_CONVERSION_LABELS.contact_form_submit).toBeNull();
     expect(ADS_CONVERSION_LABELS.replacement_request).toBeNull();
     expect(ADS_CONVERSION_LABELS.warranty_quote_request).toBeNull();
     expect(ADS_CONVERSION_LABELS.membership_quote_request).toBeNull();
     expect(ADS_CONVERSION_LABELS.portfolio_pricing_request).toBeNull();
     trackConversion("contact_form_submit", {}, { dedupeKey: "c-noads" });
-    trackConversion("replacement_request", {}, { dedupeKey: "r-noads" });
+    trackConversion("repair_request", {}, { dedupeKey: "r-noads" });
     expect(gtag).toHaveBeenCalledTimes(2);
     expect(gtag.mock.calls.some((c) => c[1] === "conversion")).toBe(false);
   });
