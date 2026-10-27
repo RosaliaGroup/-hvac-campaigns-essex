@@ -5,7 +5,7 @@
  * are NOT evidence of promotional SMS consent.
  */
 import { z } from "zod";
-import { and, eq, inArray, gte } from "drizzle-orm";
+import { and, eq, inArray, gte, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
@@ -65,7 +65,7 @@ export async function reviewRecipients(db: Db, ids: number[], text: string): Pro
             eq(leadCaptures.customerId, id),
             eq(leadCaptures.consentStatus, "opt_in"),
             eq(leadCaptures.formVersion, TCPA_FORM_VERSION),
-            eq(leadCaptures.phone, row.phone ?? ""),
+            sql`RIGHT(REGEXP_REPLACE(${leadCaptures.phone}, '[^0-9]', ''), 10) = ${phone.slice(-10)}`,
           )).limit(1);
         if (!capture) reason = "no_verified_sms_consent";
         else if (await isSmsRecipientSuppressed(db, phone)) reason = "do_not_contact";
