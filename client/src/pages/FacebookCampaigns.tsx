@@ -183,11 +183,11 @@ export default function FacebookAdsCampaigns() {
     const params = new URLSearchParams(searchString);
     if (params.get("connected") === "1") {
       toast.success("Meta Ads connected successfully!", {
-        description: "Now enter your Ad Account ID and Page ID to finish setup.",
+        description: "Reauthorization completed. Verify live Meta ad account access before any campaign actions.",
         duration: 6000,
       });
       setShowSetup(true);
-      setSetupStep(2);
+      setSetupStep(1);
       setLocation("/facebook-campaigns", { replace: true });
     } else if (params.get("error")) {
       toast.error("Meta Ads connection failed", {
@@ -396,7 +396,7 @@ export default function FacebookAdsCampaigns() {
                 size="sm"
                 className="gap-1.5"
                 onClick={() => {
-                  setSetupStep(connStatus?.hasToken ? 2 : 1);
+                  setSetupStep(isAccountVerified ? 2 : 1);
                   setShowSetup(true);
                 }}
               >
@@ -468,6 +468,11 @@ export default function FacebookAdsCampaigns() {
               <p role="alert">Account verification failed or unavailable: {accountCheck?.error ?? "No live result"}. Check the selected ad account and its permissions.</p>
             )}
             <p>Campaign creation is on hold: the existing templates target the entire United States, not our local service area. Meta Instant Form → CRM webhook delivery and total paid budgets also need independent verification.</p>
+            {!isAccountVerified && (
+              <Button size="sm" onClick={handleConnectMeta} disabled={connectingOAuth}>
+                <LogIn className="h-4 w-4 mr-1.5" /> Reconnect Facebook Ads
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => { refetchConn(); refetchAccountCheck(); refetchPerf(); }}>
               <RefreshCw className="h-4 w-4 mr-1.5" /> Recheck Meta Account & Campaigns
             </Button>
@@ -813,7 +818,7 @@ export default function FacebookAdsCampaigns() {
       {/* Setup / Configure Dialog */}
       <Dialog open={showSetup} onOpenChange={(open) => {
         setShowSetup(open);
-        if (!open) { setSetupStep(connStatus?.hasToken ? 2 : 1); }
+        if (!open) { setSetupStep(isAccountVerified ? 2 : 1); }
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -859,7 +864,7 @@ export default function FacebookAdsCampaigns() {
 
           {setupStep === 1 ? (
             <div className="space-y-4 py-2">
-              {connStatus?.hasToken ? (
+              {isAccountVerified ? (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
                   <span>Facebook account connected{tokenAgeDays !== null ? ` (${tokenAgeDays} days ago)` : ""}.</span>
@@ -867,8 +872,7 @@ export default function FacebookAdsCampaigns() {
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    Click below to sign in with Facebook and authorize Mechanical Enterprise to manage ads.
-                    You'll be redirected back here automatically.
+                    The saved Meta credentials have not passed the live account check. Reauthorize with Facebook to restore campaign reporting. Existing campaign budgets will not be changed.
                   </p>
                   <Button
                     className="w-full bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-2"
@@ -878,7 +882,7 @@ export default function FacebookAdsCampaigns() {
                     {connectingOAuth ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting to Facebook…</>
                     ) : (
-                      <><LogIn className="h-4 w-4" /> Connect with Facebook</>
+                      <><LogIn className="h-4 w-4" /> Reconnect Facebook Ads</>
                     )}
                   </Button>
                 </div>
@@ -887,7 +891,7 @@ export default function FacebookAdsCampaigns() {
                 <Button variant="outline" onClick={() => setShowSetup(false)}>
                   Cancel
                 </Button>
-                {connStatus?.hasToken && (
+                {isAccountVerified && (
                   <Button
                     className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white"
                     onClick={() => setSetupStep(2)}
