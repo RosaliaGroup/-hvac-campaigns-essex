@@ -21,6 +21,8 @@ import { growthSmsEnabled } from "./growth/cadenceEngine";
 import { checkGrowthCircuitBreaker } from "./growth/circuitBreaker";
 import { recordGrowthTouch } from "./growth/touchLedger";
 import { prospectWorkflowErrorKind } from "./prospectWorkflowError";
+import { isExcludedProspect } from "./outreachProspectRules";
+import { isOutreachSuppressed } from "./outreachSuppression";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 const DAY = 86400000;
@@ -138,6 +140,12 @@ export async function dispatchProspects(db: Db, now: Date) {
     .limit(10);
   for (const row of rows) {
     try {
+      // Recheck saved queue entries at dispatch, not only during research.
+      if (isExcludedProspect(row) || await isOutreachSuppressed(db, row.email)) {
+        await db.update(queue).set({ state: "suppressed", nextTouchAt: null,
+          lastError: "Excluded or suppressed from automatic outreach." }).where(eq(queue.id, row.id));
+        continue;
+      }
       const stopped = await mailbox.recipientStopped(row.email, row.threadId);
       if (stopped) {
         await db

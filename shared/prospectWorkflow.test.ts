@@ -23,6 +23,23 @@ describe("CRM prospect workflow", () => {
       "2026-12-09T09"
     );
   });
+  it("never schedules the worker on Eastern weekends", () => {
+    expect(prospectHour(new Date("2026-10-10T15:00:00Z"))).toBeNull();
+    expect(prospectHour(new Date("2026-10-11T15:00:00Z"))).toBeNull();
+    expect(prospectHour(new Date("2026-10-12T15:00:00Z"))).not.toBeNull();
+  });
+  it("rejects Viza and other named exclusions", () => {
+    for (const candidate of [
+      { ...p, company: "Viza Property Management" },
+      { ...p, name: "Thomas Visaggio" },
+      { ...p, name: "Gabriel Lopes" },
+      { ...p, company: "Giga" },
+      { ...p, email: "jane@onyxequities.com" },
+    ]) {
+      candidate.evidence = `${candidate.name} ${candidate.email}`;
+      expect(verifiedCandidates([candidate], [candidate.verificationUrl])).toEqual([]);
+    }
+  });
   it("requires exact cited name and email evidence, dedupes companies", () => {
     expect(verifiedCandidates([p, p], [p.verificationUrl])).toHaveLength(1);
     expect(verifiedCandidates([p], [])).toEqual([]);

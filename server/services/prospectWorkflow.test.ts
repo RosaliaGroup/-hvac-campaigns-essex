@@ -4,7 +4,9 @@ const m = vi.hoisted(() => ({
   hasSent: vi.fn(),
   stopped: vi.fn(),
   sms: vi.fn(),
+  suppressed: vi.fn(),
 }));
+vi.mock("./outreachSuppression", () => ({ isOutreachSuppressed: m.suppressed }));
 vi.mock("./prospectGmail", () => ({
   prospectMailbox: async () => ({
     send: m.send,
@@ -84,10 +86,23 @@ function fakeDb(row: any) {
 beforeEach(() => {
   vi.clearAllMocks();
   m.stopped.mockResolvedValue(null);
+  m.suppressed.mockResolvedValue(false);
   m.hasSent.mockResolvedValue(false);
   m.send.mockResolvedValue({ id: "sent-1", threadId: "thread-1" });
 });
 describe("CRM dispatch safeguards", () => {
+  it("does not send to suppressed contacts or excluded accounts in the saved queue", async () => {
+    m.suppressed.mockResolvedValue(true);
+    const f = fakeDb(base);
+    await dispatchProspects(f.db, new Date());
+    expect(m.send).not.toHaveBeenCalled();
+    expect(f.patches).toContainEqual(expect.objectContaining({ state: "suppressed" }));
+    m.suppressed.mockResolvedValue(false);
+    const g = fakeDb({ ...base, company: "Viza Property Management" });
+    await dispatchProspects(g.db, new Date());
+    expect(m.send).not.toHaveBeenCalled();
+    expect(g.patches).toContainEqual(expect.objectContaining({ state: "suppressed" }));
+  });
   it("never sends a second introduction to an address in Gmail Sent", async () => {
     m.hasSent.mockResolvedValue(true);
     const f = fakeDb(base);

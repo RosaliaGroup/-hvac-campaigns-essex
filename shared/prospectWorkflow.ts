@@ -13,6 +13,7 @@ export function prospectHour(now: Date): string | null {
   const parts = Object.fromEntries(
     new Intl.DateTimeFormat("en-CA", {
       timeZone: "America/New_York",
+      weekday: "short",
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -23,7 +24,7 @@ export function prospectHour(now: Date): string | null {
       .map(p => [p.type, p.value])
   );
   const hour = Number(parts.hour);
-  return hour >= 9 && hour < 17
+  return !["Sat", "Sun"].includes(parts.weekday) && hour >= 9 && hour < 17
     ? `${parts.year}-${parts.month}-${parts.day}T${parts.hour}`
     : null;
 }
