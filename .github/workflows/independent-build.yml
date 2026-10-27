@@ -42,6 +42,8 @@ jobs:
         run: pnpm check
       - name: Verify CRM suppression and delivery safety
         run: pnpm exec vitest run server/services/outreachSuppression.test.ts server/services/crmFollowupDeliveryPolicy.test.ts server/services/crmFollowupDeliveryLedger.test.ts
+      - name: Verify Google Ads quote conversion mapping without submitting leads
+        run: pnpm exec vitest run client/src/lib/conversions.test.ts
       - name: Build full frontend and backend without Railway
         run: pnpm build
       - name: Save independently built application artifact
