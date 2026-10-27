@@ -31,6 +31,7 @@ import RevenueAttribution from "./pages/RevenueAttribution";
 import MarketingAnalytics from "./pages/MarketingAnalytics";
 import LocalSeo from "./pages/LocalSeo";
 import LeadTracker from "./pages/LeadTracker";
+import CommercialAudienceLanding from "./pages/CommercialAudienceLanding";
 import CampaignPerformance from "./pages/CampaignPerformance";
 import Testimonials from "./pages/Testimonials";
 import AIVADashboard from "./pages/AIVADashboard";
@@ -63,6 +64,8 @@ import LeadDashboard from "./pages/LeadDashboard";
 import GrowthDashboard from "./pages/growth/GrowthDashboard";
 import LeadDetail from "./pages/LeadDetail";
 import Communications from "./pages/Communications";
+import CrmTasks from "./pages/CrmTasks";
+import CrmOutreachReview from "./pages/CrmOutreachReview";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
@@ -157,6 +160,9 @@ function Router() {
       <Route path={"/commercial"} component={CommercialCampaigns} />
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
       <Route path={"/warranty"} component={Warranty} />
+      <Route path={"/commercial/for-property-management"} component={() => <CommercialAudienceLanding audience="property-management" />} />
+      <Route path={"/commercial/for-contractors-developers"} component={() => <CommercialAudienceLanding audience="contractors-developers" />} />
+      <Route path={"/commercial/for-commercial-partners"} component={() => <CommercialAudienceLanding audience="commercial-partners" />} />
       <Route path={"/commercial/property-managers"} component={() => <PortfolioPricingPage variant="property-managers" />} />
       <Route path={"/commercial/hvac-service-contracts"} component={() => <PortfolioPricingPage variant="service-contracts" />} />
       <Route path={"/partnerships"} component={Partnerships} />
@@ -351,6 +357,8 @@ function Router() {
       <Route path={"/lead-dashboard"} component={protect(LeadDashboard)} />
       <Route path={"/growth"} component={protect(GrowthDashboard)} />
       <Route path={"/contacts/communications"} component={protect(Communications)} />
+      <Route path={"/tasks"} component={protect(CrmTasks)} />
+      <Route path={"/outreach-review"} component={protect(CrmOutreachReview)} />
       <Route path={"/customers"} component={protect(Customers)} />
       <Route path={"/contacts"} component={protect(Customers)} />
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />

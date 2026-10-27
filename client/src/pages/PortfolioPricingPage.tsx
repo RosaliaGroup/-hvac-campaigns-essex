@@ -123,6 +123,16 @@ export default function PortfolioPricingPage({ variant }: { variant: PortfolioPr
         </div>
       </section>
 
+      <section className="py-8 bg-white">
+        <div className="container max-w-4xl">
+          <h2 className="text-xl font-bold text-[#0a1628] mb-3">Commercial HVAC services for your team</h2>
+          <div className="flex flex-wrap gap-5 text-sm">
+            <a className="text-blue-700 underline" href="/commercial/for-property-management">Property management and condo HVAC support</a>
+            <a className="text-blue-700 underline" href="/commercial/for-contractors-developers">HVAC subcontracting for general contractors and developers</a>
+            <a className="text-blue-700 underline" href="/commercial/for-commercial-partners">Commercial broker and facility partnerships</a>
+          </div>
+        </div>
+      </section>
       <section className="py-16 bg-[#f7f8fa]">
         <div className="container">
           <div className="max-w-lg mx-auto">

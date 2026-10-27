@@ -63,3 +63,14 @@ describe("resolveCustomerIdentity — other composite + plain rows", () => {
     expect(r.name).toBe("Unknown");
   });
 });
+
+
+it("shows a saved person name ahead of their company on contact details",()=>{
+ expect(resolveCustomerIdentity({firstName:"Roger",lastName:"Gross",companyName:"NIA National Realty",displayName:"NIA National Realty"}).name).toBe("Roger Gross");
+});
+it("retains project details while preferring a corrected person name",()=>{
+ const result=resolveCustomerIdentity({firstName:"Roger",lastName:"Gross",companyName:"NIA National Realty",quickbooksRawDisplayName:"PN#132 I PDC I 828 Summer Ave Newark NJ"});
+ expect(result.name).toBe("Roger Gross");
+ expect(result.projectReference).toBe("PN#132");
+ expect(result.serviceAddress).toContain("828 Summer Ave");
+});

@@ -37,11 +37,12 @@ import {
   type NavDepartment,
   type NavItem,
 } from "@/lib/navigation";
-import { Bell, ChevronRight, Inbox, LayoutDashboard, LogOut, Menu, Target, UserRound } from "lucide-react";
+import { Bell, ChevronRight, Inbox, LayoutDashboard, ListTodo, LogOut, Menu, UserRound } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import MarketingAiStatus from "./MarketingAiStatus";
 import { iconFor } from "./navIcons";
 import { Button } from "./ui/button";
 
@@ -131,13 +132,13 @@ function NotificationBell() {
 const MOBILE_TABS = [
   { label: "Home", path: "/command-center", Icon: LayoutDashboard },
   { label: "Leads", path: "/lead-dashboard", Icon: Inbox },
-  { label: "Bids", path: "/opportunities", Icon: Target },
+  { label: "Tasks", path: "/tasks", Icon: ListTodo },
   { label: "Contacts", path: "/customers", Icon: UserRound },
 ] as const;
 
 function MobileTabBar({
-  activeItemKey, onNavigate, onMore,
-}: { activeItemKey: string | null; onNavigate: (path: string) => void; onMore: () => void }) {
+  activePath, onNavigate, onMore,
+}: { activePath: string; onNavigate: (path: string) => void; onMore: () => void }) {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 flex border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur md:hidden"
@@ -145,7 +146,7 @@ function MobileTabBar({
       aria-label="Primary"
     >
       {MOBILE_TABS.map(({ label, path, Icon }) => {
-        const active = activeItemKey === path;
+        const active = activePath === path || activePath.startsWith(`${path}/`);
         return (
           <button
             key={path}
@@ -327,13 +328,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <span className="font-medium tracking-tight text-foreground truncate">
             {activeLabel}
           </span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
+            <MarketingAiStatus />
             <NotificationBell />
           </div>
         </header>
         {/* pb-24 on mobile keeps content clear of the fixed tab bar and the iOS home bar. */}
         <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:pb-4">{children}</main>
-        <MobileTabBar activeItemKey={activeItemKey} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
+        <MobileTabBar activePath={location.split("?")[0]} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
       </SidebarInset>
     </>
   );

@@ -62,6 +62,7 @@ export default function RevenueAttribution() {
 
   const overview = trpc.attribution.getOverview.useQuery(args, { enabled: isAuthenticated });
   const bySource = trpc.attribution.getBySource.useQuery(args, { enabled: isAuthenticated });
+  const commercialAudit = trpc.attribution.getCommercialLandingAudit.useQuery(undefined, { enabled: isAuthenticated });
   const byPage = trpc.attribution.getByLandingPage.useQuery(args, { enabled: isAuthenticated });
   const funnel = trpc.attribution.getFunnel.useQuery({ channel: "organic" }, { enabled: isAuthenticated });
   const unattributed = trpc.attribution.getUnattributed.useQuery(args, { enabled: isAuthenticated });
@@ -104,9 +105,9 @@ export default function RevenueAttribution() {
               Revenue Attribution
             </h1>
             <p className="text-muted-foreground max-w-2xl">
-              Does organic traffic turn into leads, estimates, won work, and revenue? Reporting is{" "}
+              Does new organic traffic turn into leads, estimates, won work, and revenue? Reporting is{" "}
               <strong>confirmed-only</strong> by default — revenue is credited to a page or source only when an explicit
-              lead→deal link exists. Everything else is preserved honestly as <em>unattributed</em>.
+              lead→deal link exists. Previously won jobs remain in the separate existing-business section and are not counted as new campaign results.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -137,7 +138,7 @@ export default function RevenueAttribution() {
           <Kpi icon={Trophy} label="Won Jobs" value={num(o?.wonJobs ?? 0)} sub="organic cohort" />
           <Kpi icon={DollarSign} label="Invoiced Revenue" value={usd(o?.invoicedRevenue ?? 0)} sub="organic cohort" />
           <Kpi icon={ShieldCheck} label="Confirmed Attributed" value={usd(o?.confirmedAttributedRevenue ?? 0)} sub="explicit links only" />
-          <Kpi icon={HelpCircle} label="Unattributed Leads" value={num(o?.unattributedLeads ?? 0)} sub={`${usd(o?.unattributedRevenue ?? 0)} won`} />
+          <Kpi icon={HelpCircle} label="Unknown-source Leads" value={num(o?.unattributedLeads ?? 0)} sub="Existing won revenue reported separately" />
         </div>
 
         {/* Weekly goal */}
@@ -303,21 +304,50 @@ export default function RevenueAttribution() {
           </Card>
         )}
 
+        {/* Live, read-only commercial landing-page audit; no synthetic leads. */}
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Commercial landing-page lead audit — last 30 days</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <p className="text-xs text-muted-foreground">Actual CRM submissions by first-touch landing page, not estimated conversions.</p>
+              <Button variant="outline" size="sm" onClick={() => commercialAudit.refetch()} disabled={commercialAudit.isFetching}>
+                <RefreshCw className="h-3 w-3 mr-1" /> Refresh
+              </Button>
+            </div>
+            {commercialAudit.isLoading ? <p className="text-sm">Loading commercial lead counts…</p>
+              : commercialAudit.isError ? <p role="alert" className="text-sm text-red-700">Unable to load commercial audit: {commercialAudit.error.message}</p>
+              : commercialAudit.data ? <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b text-left"><th className="py-2 pr-3">Landing page</th><th className="py-2 pr-3">CRM captures</th><th className="py-2 pr-3">Advanced stage</th><th className="py-2 pr-3">GSC clicks</th><th className="py-2">GSC impressions</th></tr></thead>
+                    <tbody>{commercialAudit.data.pages.map(row => <tr key={row.path} className="border-b">
+                      <td className="py-2 pr-3"><a href={row.path} className="text-blue-700 underline">{row.path.replace("/commercial/for-", "").replaceAll("-", " ")}</a><div className="text-xs text-muted-foreground">{Object.entries(row.byChannel).map(([key, value]) => `${key}: ${value}`).join(", ") || "No captured channels"}</div></td>
+                      <td className="py-2 pr-3">{row.captures}</td><td className="py-2 pr-3">{row.advancedStage}</td><td className="py-2 pr-3">{row.clicks}</td><td className="py-2">{row.impressions}</td>
+                    </tr>)}</tbody>
+                  </table>
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">{commercialAudit.data.note}</p>
+              </> : <p className="text-sm">No audit data available.</p>}
+          </CardContent>
+        </Card>
+
         {/* Unattributed */}
         <Card className="mb-6">
-          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><HelpCircle className="h-4 w-4 text-muted-foreground" /> Unattributed</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><HelpCircle className="h-4 w-4 text-muted-foreground" /> Existing business / unlinked historical revenue</CardTitle></CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-6">
-              <div><div className="text-2xl font-bold text-[#1e3a5f]">{num(unattributed.data?.wonCount ?? 0)}</div><div className="text-xs text-muted-foreground">won deals with no honest link</div></div>
-              <div><div className="text-2xl font-bold text-[#1e3a5f]">{usd(unattributed.data?.revenue ?? 0)}</div><div className="text-xs text-muted-foreground">unattributed won revenue</div></div>
+              <div><div className="text-2xl font-bold text-[#1e3a5f]">{num(unattributed.data?.wonCount ?? 0)}</div><div className="text-xs text-muted-foreground">previously won deals without a verified marketing link</div></div>
+              <div><div className="text-2xl font-bold text-[#1e3a5f]">{usd(unattributed.data?.revenue ?? 0)}</div><div className="text-xs text-muted-foreground">existing won revenue — excluded from new campaign ROI</div></div>
               <div><div className="text-2xl font-bold text-[#1e3a5f]">{num(unattributed.data?.unknownChannelLeads ?? 0)}</div><div className="text-xs text-muted-foreground">leads with unknown channel</div></div>
             </div>
-            <p className="text-xs text-muted-foreground mt-3">{unattributed.data?.note}</p>
+            <p className="text-xs text-muted-foreground mt-3">These are existing jobs, not newly generated marketing revenue. Keep them in company financial reporting, but do not assign them to SEO, campaigns or the 80-lead goal without independently verified evidence. {unattributed.data?.note}</p>
             {isAdmin && (unattributed.data?.opportunityIds.length ?? 0) > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {unattributed.data!.opportunityIds.slice(0, 20).map((id) => (
                   <Button key={id} size="sm" variant="ghost" className="text-xs" disabled={unlink.isPending}
-                    onClick={() => unlink.mutate({ opportunityId: id })} title="Clear any link (keep unattributed)">
+                    onClick={() => unlink.mutate({ opportunityId: id })} title="Remove an existing attribution link (does not delete the job)">
                     <Unlink className="h-3 w-3 mr-1" /> #{id}
                   </Button>
                 ))}

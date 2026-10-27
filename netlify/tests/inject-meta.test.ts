@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getRouteStatus, injectMeta } from "../edge-functions/inject-meta";
 import { CUSTOMER_FACING_SEND_TARGETS } from "../../shared/seoLockedRoutes";
+import { allBlogPosts } from "../../client/src/data/allBlogPosts";
 import routesManifest from "../edge-functions/routes-manifest.json";
 
 /** Minimal HTML skeleton injectMeta() expects — matches the fixture used elsewhere in this file. */
@@ -160,5 +161,19 @@ describe("injectMeta — no two public pages share a title", () => {
   it("/hvac-financing-nj and /hvac-system-replacement-nj no longer get a fabricated city title (they match the city-page regex but are registered static pages)", () => {
     expect(titleFor("/hvac-financing-nj")).not.toContain("NJ HVAC Contractor");
     expect(titleFor("/hvac-system-replacement-nj")).not.toContain("NJ HVAC Contractor");
+  });
+});
+
+// A separate commercial collection used to render in the UI but 404 at the edge.
+describe("complete published blog inventory", () => {
+  it("registers every published post at the edge, including commercial growth guides", () => {
+    for (const post of allBlogPosts) expect(getRouteStatus(`/blog/${post.slug}`).isRegistered, post.slug).toBe(true);
+  });
+
+  it("serves the revised high-impression guide titles rather than stale SEO overrides", () => {
+    for (const slug of ["central-ac-replacement-nj-cost", "pseg-on-bill-repayment-hvac"]) {
+      const post = allBlogPosts.find(p => p.slug === slug)!;
+      expect(titleFor(`/blog/${slug}`)).toBe(post.title.replace(/&/g, "&amp;"));
+    }
   });
 });

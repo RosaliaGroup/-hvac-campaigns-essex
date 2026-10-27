@@ -7,7 +7,9 @@
  */
 import fs from "fs";
 import path from "path";
-import { extractBlogSlugs, extractBlogDates } from "../shared/blogSource";
+import { extractBlogSlugs } from "../shared/blogSource";
+import { allBlogPosts } from "../client/src/data/allBlogPosts";
+import { blogDateIso } from "../shared/blogPublication";
 
 const BASE = "https://mechanicalenterprise.com";
 const root = path.resolve(import.meta.dirname, "..");
@@ -17,42 +19,9 @@ const root = path.resolve(import.meta.dirname, "..");
 // falling below this floor FAILS the build instead of silently deploying it.
 const MIN_URLS = 250;
 
-// Build date (YYYY-MM-DD). Every URL in this sitemap uses BUILD_DATE as
-// lastmod — see rationale below.
+// Static routes retain the build-date fallback. Blogs use their actual publication
+// or substantive update date below; unrelated deployments must not freshen them.
 const BUILD_DATE = new Date().toISOString().split("T")[0];
-
-// ── Lastmod strategy ────────────────────────────────────────────────────────
-// We deliberately stamp every URL with the current build date instead of the
-// last git-commit date of the source file that owns it, and instead of a
-// per-post publish `date`.
-//
-// Previous behaviour:
-//   - City / service / LP / direct-install pages used
-//     `git log -1 --format=%cs -- <source-file>`, so their lastmod was the
-//     date App.tsx (or the industries data file) was last edited — typically
-//     months stale on any static route.
-//   - Blog posts used the post's frozen publish `date`, so a post published
-//     Mar 31 2026 still advertises lastmod=2026-03-31 forever.
-//
-// Why change it:
-//   - Google treats a moving sitemap lastmod as a re-crawl hint. A sitemap
-//     stamped Mar/Apr 2026 tells Google "nothing has changed here" and
-//     de-prioritises us for re-crawl. Even when the visible page content is
-//     unchanged, surrounding structural content (nav, CTAs, footer, schema,
-//     LP internal links, tracking wiring) does change on almost every deploy,
-//     which is a legitimate signal for a re-crawl.
-//   - Every URL in this sitemap is regenerated from source on every build,
-//     so "build date" is the correct floor for "as of when do we vouch for
-//     this URL."
-//   - Blog posts don't have an `updated_at` field today (see BlogPostData in
-//     `client/src/data/blogPosts.ts`) — only a publish `date`. Per PR body:
-//     when the only per-post date is a pure publish date, prefer build date.
-//     The `date` field is still consumed by the blog UI itself; only the
-//     sitemap ignores it.
-//
-// If we ever introduce a real `updated_at` on blog posts (or a page-level
-// content hash), switch back to per-URL max(updated_at, BUILD_DATE) for that
-// subset only.
 
 function readFile(rel: string): string {
   return fs.readFileSync(path.resolve(root, rel), "utf-8");
@@ -91,10 +60,7 @@ const publicRoutes = allRoutes.filter(r => {
 
 // ── 2. Read blog posts ──────────────────────────────────────────────────────
 
-const blogSrc = readFile("client/src/data/blogPosts.ts");
-// Tolerant of quoted keys: content-lane posts are JSON-serialized ("slug": "…"), which the old /slug:\s*"…"/ missed — so they never reached the sitemap or routes-manifest.json and 404ed at the edge. See shared/blogSource.ts.
-const blogSlugs = extractBlogSlugs(blogSrc);
-const blogDates = extractBlogDates(blogSrc);
+const blogSlugs = allBlogPosts.map(post => post.slug);
 
 // ── 3. Read direct install industries ───────────────────────────────────────
 
@@ -152,22 +118,20 @@ function addUrl(urlPath: string, priority: string, changefreq: string, lastmod: 
   entries.push({ loc: `${BASE}${urlPath}`, lastmod, changefreq, priority });
 }
 
-// Static routes from App.tsx — lastmod = BUILD_DATE (see "Lastmod strategy"
-// note near the top of the file).
+// Explicit blog routes are emitted with their real dates in the inventory pass.
+const publishedBlogPaths = new Set(blogSlugs.map(slug => `/blog/${slug}`));
+// Other static routes retain the build-date fallback.
 for (const r of publicRoutes) {
+  if (publishedBlogPaths.has(r.path)) continue;
   const priority = getPriority(r.path, r.line);
   addUrl(r.path, priority, getChangefreq(priority), BUILD_DATE);
 }
 
-// Blog posts — no per-post `updated_at` exists on BlogPostData today, only a
-// frozen publish `date`, so we stamp with BUILD_DATE. When we add a real
-// updated_at field, switch this to max(updated_at, BUILD_DATE).
-for (const slug of blogSlugs) {
-  addUrl(`/blog/${slug}`, "0.8", "monthly", BUILD_DATE);
+// One published inventory for website links, sitemap, edge metadata and prerendering.
+// Blog lastmod reflects a substantive update or publication, never an unrelated build.
+for (const post of allBlogPosts) {
+  addUrl(`/blog/${post.slug}`, "0.8", "monthly", blogDateIso(post.updatedDate ?? post.date) ?? BUILD_DATE);
 }
-// blogDates is intentionally unread here — the blog UI still uses it, the
-// sitemap does not (see "Lastmod strategy" note).
-void blogDates;
 
 // Direct install industry pages — lastmod = BUILD_DATE.
 for (const slug of diSlugs) {

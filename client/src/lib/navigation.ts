@@ -101,6 +101,7 @@ export const DEPARTMENTS: NavDepartment[] = [
     items: [
       { label: "Lead Inbox", path: "/lead-dashboard", icon: "Inbox", roles: ["sales", "marketing", CRM] },
       { label: "Communications", path: "/contacts/communications", icon: "MessageSquare", roles: ["sales", "dispatcher", CRM] },
+      { label: "Tasks", path: "/tasks", icon: "ListTodo", roles: ["sales", "dispatcher", CRM] },
       { label: "Contacts", path: "/customers", icon: "UserRound", roles: ["sales", "dispatcher", CRM] },
       { label: "Opportunity Center", path: "/opportunities", icon: "Target", roles: ["sales", CRM] },
       { label: "Prospecting & Follow-up", path: "/growth", icon: "Target", roles: ["sales", "marketing", CRM] },
@@ -214,6 +215,7 @@ export const INTERNAL_ROUTE_PREFIXES: string[] = [
   "/local-seo",
   "/leads",
   "/lead-dashboard",
+  "/tasks",
   "/growth",
   "/customers",
   "/contacts",

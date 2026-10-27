@@ -16,6 +16,18 @@ import { runGbpSync, readGbpSyncStatus } from "../services/gbp/sync";
  * — the only mutation is `sync`, which just refreshes the read cache from Google.
  */
 export const gbpRouter = router({
+  oauthStatus: adminProcedure.query(async () => {
+    const { dedicatedGbpStatus } = await import("../integrations/gbpDedicatedOAuth");
+    return dedicatedGbpStatus();
+  }),
+  oauthConnectStart: adminProcedure.mutation(async () => {
+    const { startGbpAuthorization } = await import("../integrations/gbpDedicatedOAuth");
+    return { url: startGbpAuthorization() };
+  }),
+  discoverLocations: adminProcedure.query(async () => {
+    const { discoverGbpLocations } = await import("../services/gbp/locationDiscovery");
+    return discoverGbpLocations();
+  }),
   /** Top KPI figures for the dashboard cards (rating, reviews, engagement totals). */
   overview: adminProcedure.query(async () => {
     return getGbpProvider().getOverview();

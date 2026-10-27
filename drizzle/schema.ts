@@ -3973,3 +3973,12 @@ export const prospectWorkflowQueue = mysqlTable('prospectWorkflowQueue', {
   followUpAt: timestamp('followUpAt'), followUpDoneAt: timestamp('followUpDoneAt'), notifiedAt: timestamp('notifiedAt'),
   lastError: text('lastError'), createdAt: timestamp('createdAt').defaultNow().notNull(),
 }, t=>({emailUq:uniqueIndex('prospectWorkflowQueue_email_uq').on(t.email), dueIdx:index('prospectWorkflowQueue_due_idx').on(t.state,t.nextTouchAt)}));
+/** Separate Business Profile OAuth grant. Never shares or overwrites Calendar credentials. */
+export const gbpOAuthConnections = mysqlTable("gbpOAuthConnections", {
+  id: int("id").primaryKey(),
+  accessTokenEncrypted: text("accessTokenEncrypted").notNull(),
+  refreshTokenEncrypted: text("refreshTokenEncrypted").notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  scope: text("scope"),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});

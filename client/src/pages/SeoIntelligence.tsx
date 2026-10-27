@@ -1233,6 +1233,14 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
   });
   const contentJobRunning = contentJobStatusQ.data?.status === "running";
   const metaJobRunning = metaJobStatusQ.data?.status === "running";
+  const retryContent = trpc.seo.retryRejectedContentDraft.useMutation({
+    onSuccess: (res) => {
+      toast.success(res.started ? "Draft retry started. Quality checks will run automatically." : "Draft queued for retry.");
+      invalidate();
+      contentJobStatusQ.refetch();
+    },
+    onError: (e) => toast.error(e.message),
+  });
   const approveContent = trpc.seo.approveContentToPR.useMutation({
     onSuccess: (res) => { toast.success(`PR #${res.prNumber} opened`); invalidate(); },
     onError: (e) => toast.error(e.message),
@@ -1327,15 +1335,18 @@ function AutopublishPanel({ isAdmin }: { isAdmin: boolean }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className={`text-xs ${CONTENT_QUEUE_STATUS_STYLE[t.status] ?? ""}`}>{t.status.replace(/_/g, " ")}</Badge>
-                  {isAdmin && (t.status === "drafted" || t.status === "in_review") && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={approveContent.isPending}
-                      onClick={() => { setDraftingTopicId(t.id); approveContent.mutate({ topicId: t.id }); }}
-                    >
-                      {approveContent.isPending && draftingTopicId === t.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="mr-1.5 h-3.5 w-3.5" />}
-                      Approve to PR
+                  {isAdmin && t.status === "drafted" && !t.contentBatchId && (
+                    <Button size="sm" variant="outline"
+                      disabled={retryContent.isPending || contentJobRunning}
+                      onClick={() => retryContent.mutate({ topicId: t.id })}>
+                      {retryContent.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RotateCw className="mr-1.5 h-3.5 w-3.5" />}
+                      Retry Draft
+                    </Button>
+                  )}
+                  {isAdmin && t.status === "in_review" && (
+                    <Button size="sm" variant="outline" disabled={approveContent.isPending}
+                      onClick={() => { setDraftingTopicId(t.id); approveContent.mutate({ topicId: t.id }); }}>
+                      <GitPullRequest className="mr-1.5 h-3.5 w-3.5" /> Approve to PR
                     </Button>
                   )}
                 </div>
@@ -1526,6 +1537,10 @@ export default function SeoIntelligence() {
   const utils = trpc.useUtils();
 
   const overview = trpc.seo.getOverview.useQuery(undefined, { enabled: isAuthenticated });
+  const publicationIssues = trpc.seo.getPublicationIssues.useQuery(undefined, { enabled: isAuthenticated && isAdmin, refetchInterval: 300000 });
+  const publicationAuditStatus = trpc.seo.getPublicationAuditStatus.useQuery(undefined, { enabled: isAuthenticated && isAdmin, refetchInterval: 300000 });
+  const [liveAuditRequested, setLiveAuditRequested] = useState(false);
+  const liveAudit = trpc.seo.verifyRecentLiveBlogs.useQuery(undefined, { enabled: isAuthenticated && isAdmin && liveAuditRequested, retry: false });
   const opportunities = trpc.seo.getOpportunities.useQuery(undefined, { enabled: isAuthenticated });
   const syncStatus = trpc.seo.getSyncStatus.useQuery(undefined, { enabled: isAuthenticated });
   const businessImpact = trpc.seo.getBusinessImpact.useQuery(undefined, { enabled: isAuthenticated });
@@ -1751,6 +1766,18 @@ export default function SeoIntelligence() {
       <InternalNav />
 
       <div className="container py-8">
+        {isAdmin && <Card className="mb-6">
+          <CardHeader><CardTitle>Live blog publication verification</CardTitle><CardDescription>Checks production HTTP response, canonical and page-specific HTML. GitHub merge alone is not considered live publication.</CardDescription></CardHeader>
+          <CardContent className="space-y-3">
+            <Button variant="outline" disabled={liveAudit.isFetching} onClick={() => { setLiveAuditRequested(true); if (liveAuditRequested) liveAudit.refetch(); }}>{liveAudit.isFetching ? "Checking…" : "Verify Three Recent Blogs Live"}</Button>
+            {liveAudit.error && <p role="alert" className="text-sm text-red-700">{liveAudit.error.message}</p>}
+            {liveAudit.data && <div className="space-y-2">{liveAudit.data.pages.map(p => <div key={p.path} className="border-b pb-2 text-sm">
+              <div className="flex flex-wrap gap-2 items-center"><a className="underline" href={p.path} target="_blank" rel="noreferrer">{p.path}</a><Badge variant={p.status === "verified_live" ? "default" : "destructive"}>{p.status}</Badge></div>
+              <p className="text-xs text-muted-foreground">HTTP {p.httpStatus ?? "unreachable"} · canonical {p.canonicalMatches ? "matches" : "unverified"} · content {p.contentPresent ? "present" : "unverified"} — {p.reason}</p>
+            </div>)}
+            <p className="text-xs text-muted-foreground">Checked {new Date(liveAudit.data.checkedAt).toLocaleString()}. Google indexing and CRM conversions are separate.</p></div>}
+          </CardContent>
+        </Card>}
         {/* Header */}
         <div className="mb-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -2126,6 +2153,24 @@ export default function SeoIntelligence() {
         </Card>
       </div>
 
+      {isAdmin && (
+        <div className="mx-6 my-4 rounded-lg border p-4 text-sm" role="status">
+          <strong>Scheduled SEO publication audit</strong>
+          {publicationIssues.data?.status === "ready" && <p>{publicationIssues.data.issues.length} unresolved article issues from latest audit</p>}
+          {publicationIssues.data?.status === "ready" && publicationIssues.data.issues.slice(0, 30).map(issue => (
+            <div key={issue.path} className="mt-2 border-t pt-2">
+              <a href={"https://mechanicalenterprise.com" + issue.path} target="_blank" rel="noopener noreferrer" className="underline">{issue.path}</a>
+              <p>{issue.reason} — {issue.attempts ?? 1} attempts, {issue.consecutiveFailures} consecutive failed runs</p>
+              <p>Suggested fix: {issue.recommendedAction}</p>
+            </div>
+          ))}
+          {publicationIssues.data?.status === "unavailable" && <p>Per-page report unavailable: {publicationIssues.data.message}</p>}
+          <p>{publicationAuditStatus.isLoading ? "Loading latest GitHub audit..." : publicationAuditStatus.data?.message ?? "Audit status unavailable"}</p>
+          {publicationAuditStatus.data && "url" in publicationAuditStatus.data && publicationAuditStatus.data.url && (
+            <a className="underline" href={publicationAuditStatus.data.url} target="_blank" rel="noopener noreferrer">View audit run and failure report</a>
+          )}
+        </div>
+      )}
       <OpportunityDrawer
         opportunity={drawerOpportunity}
         open={drawerId !== null}

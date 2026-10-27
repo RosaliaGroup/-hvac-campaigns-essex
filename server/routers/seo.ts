@@ -127,6 +127,26 @@ async function isReindexBlocked(pageId: number): Promise<boolean> {
  * the only change needed to go live; these procedures stay identical.
  */
 export const seoRouter = router({
+  getPublicationIssues: adminProcedure.query(async () => {
+    const { getSeoPublicationIssues } = await import("../services/seo/publicationIssues");
+    return getSeoPublicationIssues();
+  }),
+  getPublicationAuditStatus: adminProcedure.query(async () => {
+    const { getLatestSeoPublicationAudit } = await import("../services/seo/publicationAuditStatus");
+    return getLatestSeoPublicationAudit();
+  }),
+  /** On-demand public HTTP check, independent of GitHub merge and content queue. */
+  verifyRecentLiveBlogs: adminProcedure.query(async () => {
+    const { verifyLiveBlogPath } = await import("../services/seo/livePublicationCheck");
+    const paths = [
+      "/blog/commercial-hvac-repair-or-replace-decision-guide",
+      "/blog/10-year-hvac-warranty-coverage-explained",
+      "/blog/essex-county-heat-pump-installation-costs",
+    ];
+    return { checkedAt: new Date().toISOString(), pages: await Promise.all(paths.map(verifyLiveBlogPath)),
+      note: "Live URL check only; Google indexing and lead attribution require separate evidence." };
+  }),
+
   /** Top KPI figures for the dashboard cards. */
   getOverview: protectedProcedure.query(async () => {
     return getSeoProvider().getOverview();
@@ -597,6 +617,26 @@ export const seoRouter = router({
     .mutation(async ({ input }) => {
       await updateContentQueueStatus(input.id, input.status);
       return { ok: true };
+    }),
+
+  retryRejectedContentDraft: adminProcedure
+    .input(z.object({ topicId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      const { findLatestContentDraft } = await import("../services/seo/contentPipeline");
+      const topic = (await listContentQueue()).find(t => t.id === input.topicId);
+      if (!topic || topic.status !== "drafted" || topic.contentBatchId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Topic is not eligible for retry." });
+      }
+      const draft = await findLatestContentDraft(topic.id);
+      if (!draft || draft.passes) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No rejected draft to retry." });
+      }
+      if (getLaneJobStatus("content")?.status === "running") {
+        throw new TRPCError({ code: "CONFLICT", message: "Content job is running." });
+      }
+      await updateContentQueueStatus(topic.id, "queued");
+      const { started } = startLaneJob("content", () => runWeeklyContentJob());
+      return { queued: true, started, topicId: topic.id };
     }),
 
   /**

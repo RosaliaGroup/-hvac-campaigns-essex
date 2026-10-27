@@ -24,6 +24,7 @@ import { metaAdsRouter } from "./routers/metaAds";
 import { teamAuthRouter } from "./routers/teamAuth";
 import { smsCampaignsRouter } from "./routers/smsCampaigns";
 import { conversationCrmRouter } from "./routers/conversationCrm";
+import { crmOutreachReviewRouter } from "./routers/crmOutreachReview";
 import { rebateCalculatorRouter } from "./routers/rebateCalculator";
 import { heygenRouter } from "./routers/heygen";
 import { runCampaignAnalysis } from "./services/campaignEngine";
@@ -55,7 +56,11 @@ import { gbpRouter } from "./routers/gbp";
 import { googleCalendarRouter } from "./routers/googleCalendar";
 import { portalRouter } from "./routers/portal";
 import { growthRouter } from "./routers/growth";
+import { marketingAiTasksRouter } from "./routers/marketingAiTasks";
 import { crmCommunicationsRouter } from "./routers/crmCommunications";
+import { crmContactEnrichmentRouter } from "./routers/crmContactEnrichment";
+import { crmFollowupsRouter } from "./routers/crmFollowups";
+import { crmTasksRouter } from "./routers/crmTasks";
 import { enrollSpeedToLead } from "./services/growth/speedToLead";
 import { stopCadenceOnBooking } from "./services/growth/cadenceEngine";
 import { ensureReviewRequestForAppointment } from "./services/growth/reviewEngine";
@@ -84,7 +89,7 @@ import {
 } from "./services/appointmentNormalization";
 import { formatPropertyAddress } from "@shared/address";
 import { APPOINTMENT_TYPE_ENUM } from "../shared/appointmentTypes";
-import { and as dAnd, eq as dEq, or as dOr, sql as dSql, gte as dGte, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
+import { and as dAnd, eq as dEq, or as dOr, sql as dSql, gte as dGte, inArray as dInArray, lte as dLte, lt as dLt, asc as dAsc, desc as dDesc, isNull as dIsNull } from "drizzle-orm";
 
 /** Zod shape for an attendee coming from the appointment dialog. */
 const attendeeInputSchema = z.object({
@@ -102,7 +107,11 @@ export const appRouter = router({
   teamAuth: teamAuthRouter,
   smsCampaigns: smsCampaignsRouter,
   conversationCrm: conversationCrmRouter,
+  crmOutreachReview: crmOutreachReviewRouter,
   crmCommunications: crmCommunicationsRouter,
+  crmContactEnrichment: crmContactEnrichmentRouter,
+  crmFollowups: crmFollowupsRouter,
+  crmTasks: crmTasksRouter,
   rebateCalculator: rebateCalculatorRouter,
   heygen: heygenRouter,
   takeoffs: takeoffsRouter,
@@ -127,6 +136,7 @@ export const appRouter = router({
   portal: portalRouter,
   // Growth system (docs/growth-system-spec.md): §7 CSV import admin + §10 scoreboard.
   growth: growthRouter,
+  marketingAiTasks: marketingAiTasksRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -370,6 +380,7 @@ export const appRouter = router({
         if (input.email) contactInfo.push(`Email: ${input.email}`);
         if (input.phone) contactInfo.push(`Phone: ${input.phone}`);
         
+        contactInfo.push(`Marketing channel: ${attribution.channel ?? "unknown"}`);
         await notifyOwner({
           title: `New Lead Capture: ${input.captureType.replace(/_/g, ' ')}`,
           content: `A visitor has submitted their contact information:\n\n${contactInfo.join('\n')}\nCapture Type: ${input.captureType}\nPage: ${input.pageUrl || 'Unknown'}\nMessage: ${input.message || 'None'}\n\nLog in to your dashboard to follow up.`,
@@ -548,6 +559,7 @@ export const appRouter = router({
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Page</td><td style="padding:6px 0">${input.pageUrl ?? "Unknown"}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Submitted</td><td style="padding:6px 0">${timestamp}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Source</td><td style="padding:6px 0">${input.captureType.replace(/_/g, " ")}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Marketing channel</td><td style="padding:6px 0">${attribution.channel ?? "unknown"}</td></tr>
                     </table>
                     <p style="color:#999;font-size:12px">Log in to the <a href="https://mechanicalenterprise.com/lead-dashboard">dashboard</a> to follow up.</p>
                   </div>
@@ -587,6 +599,246 @@ export const appRouter = router({
         );
         return leads.map((l: any) => ({ ...l, relationship: relationships.get(l.id) ?? deriveContactRelationship({ leadStages: [l.status] }) }));
       }),
+
+    /** Read-only rolling 30-day marketing baseline; no inferred qualification. */
+    marketingBaseline: protectedProcedure.query(async () => {
+      const dbi = await db.getDb();
+      if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      const rows = await dbi.select({
+        id: leadCapturesTable.id, createdAt: leadCapturesTable.createdAt,
+        status: leadCapturesTable.status, channel: leadCapturesTable.channel,
+        captureType: leadCapturesTable.captureType, followUpAt: leadCapturesTable.followUpAt,
+        assignedTo: leadCapturesTable.assignedTo, firstTouchLandingPath: leadCapturesTable.firstTouchLandingPath,
+      }).from(leadCapturesTable).where(dGte(leadCapturesTable.createdAt, since));
+      const byChannel: Record<string, number> = {};
+      const byCaptureType: Record<string, number> = {};
+      const byStage: Record<string, number> = {};
+      let qualifiedStage = 0, newUnassigned = 0, followUpOverdue = 0;
+      const qualifiedStages = new Set(["qualified", "assessment_scheduled", "assessment_completed", "proposal_sent", "won", "booked"]);
+      const now = Date.now();
+      for (const row of rows) {
+        const channel = row.channel || "unknown";
+        byChannel[channel] = (byChannel[channel] || 0) + 1;
+        byCaptureType[row.captureType] = (byCaptureType[row.captureType] || 0) + 1;
+        byStage[row.status] = (byStage[row.status] || 0) + 1;
+        if (qualifiedStages.has(row.status)) qualifiedStage++;
+        if (row.status === "new" && !row.assignedTo) newUnassigned++;
+        if (row.followUpAt && new Date(row.followUpAt).getTime() < now && !["won", "lost"].includes(row.status)) followUpOverdue++;
+      }
+      return { windowDays: 30, since: since.toISOString(), totalCaptures: rows.length,
+        qualifiedStage, qualificationDefinition: "Qualified or advanced pipeline stage; not independently verified lead quality",
+        newUnassigned, followUpOverdue, byChannel, byCaptureType, byStage };
+    }),
+
+    /** Read-only operational audit: unassigned web leads and actual cadence/touch records. */
+    followUpAudit: protectedProcedure.query(async () => {
+      const dbi = await db.getDb();
+      if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const { growthCadences, growthCadenceTasks, growthTouches } = await import("../drizzle/schema");
+      const since = new Date(Date.now() - 30 * 86400000);
+      const captures = await dbi.select({
+        id: leadCapturesTable.id, status: leadCapturesTable.status,
+        assignedTo: leadCapturesTable.assignedTo, createdAt: leadCapturesTable.createdAt,
+        captureType: leadCapturesTable.captureType, consentStatus: leadCapturesTable.consentStatus,
+        formVersion: leadCapturesTable.formVersion,
+      }).from(leadCapturesTable).where(dGte(leadCapturesTable.createdAt, since));
+      const ids = captures.map(c => c.id);
+      const cadences = ids.length ? await dbi.select({
+        id: growthCadences.id, leadId: growthCadences.leadId, status: growthCadences.status,
+      }).from(growthCadences).where(dAnd(dEq(growthCadences.leadTable, "leadCaptures"), dInArray(growthCadences.leadId, ids))) : [];
+      const cadenceIds = cadences.map(c => c.id);
+      const tasks = cadenceIds.length ? await dbi.select({
+        cadenceId: growthCadenceTasks.cadenceId, channel: growthCadenceTasks.channel,
+        status: growthCadenceTasks.status,
+      }).from(growthCadenceTasks).where(dInArray(growthCadenceTasks.cadenceId, cadenceIds)) : [];
+      const touches = ids.length ? await dbi.select({
+        leadId: growthTouches.leadId, channel: growthTouches.channel,
+        status: growthTouches.status,
+      }).from(growthTouches).where(dAnd(dEq(growthTouches.leadTable, "leadCaptures"), dInArray(growthTouches.leadId, ids))) : [];
+      const byTaskStatus: Record<string, number> = {};
+      const byTouchOutcome: Record<string, number> = {};
+      for (const t of tasks) byTaskStatus[t.status] = (byTaskStatus[t.status] || 0) + 1;
+      for (const t of touches) {
+        const key = t.channel + ":" + t.status;
+        byTouchOutcome[key] = (byTouchOutcome[key] || 0) + 1;
+      }
+      const cadenceLeadIds = new Set(cadences.map(c => c.leadId));
+      const touchLeadIds = new Set(touches.filter(t => t.status === "sent").map(t => t.leadId));
+      const missingCadenceDetails = captures.filter(c => !cadenceLeadIds.has(c.id)).map(c => ({
+        leadId: c.id,
+        captureType: c.captureType,
+        consentStatus: c.consentStatus,
+        formVersionPresent: !!c.formVersion,
+        currentFormVersion: c.formVersion === TCPA_FORM_VERSION,
+        assigned: !!c.assignedTo,
+      }));
+      const { teamMembers } = await import("../drizzle/schema");
+      const activeTeam = await dbi.select({ id: teamMembers.id, name: teamMembers.name, role: teamMembers.role })
+        .from(teamMembers).where(dEq(teamMembers.status, "active"));
+      const leadReview = captures.map(c => ({
+        leadId: c.id, status: c.status, assignedTo: c.assignedTo,
+        captureType: c.captureType, consentStatus: c.consentStatus,
+        formVersionPresent: !!c.formVersion,
+        currentFormVersion: c.formVersion === TCPA_FORM_VERSION,
+        hasCadence: cadenceLeadIds.has(c.id),
+        hasRecordedSentTouch: touchLeadIds.has(c.id),
+      }));
+      const missingByConsent: Record<string, number> = {};
+      for (const row of missingCadenceDetails) missingByConsent[row.consentStatus] = (missingByConsent[row.consentStatus] || 0) + 1;
+      return {
+        windowDays: 30, totalCaptures: captures.length,
+        unassigned: captures.filter(c => !c.assignedTo && c.status === "new").length,
+        withoutCadence: captures.filter(c => !cadenceLeadIds.has(c.id)).length,
+        withoutRecordedSentTouch: captures.filter(c => !touchLeadIds.has(c.id)).length,
+        cadenceCount: cadences.length, byTaskStatus, byTouchOutcome,
+        missingCadenceDetails, missingByConsent, activeTeam, leadReview,
+        note: "Sent touch means provider accepted/logged an outbound attempt, not recipient delivery or human contact.",
+      };
+    }),
+
+    assignWebsiteLead: adminProcedure
+      .input(z.object({ leadId: z.number().int().positive(), teamMemberId: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const { teamMembers } = await import("../drizzle/schema");
+        const [member] = await dbi.select({ id: teamMembers.id, name: teamMembers.name })
+          .from(teamMembers).where(dAnd(dEq(teamMembers.id, input.teamMemberId), dEq(teamMembers.status, "active"))).limit(1);
+        if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose an active team member." });
+        const [lead] = await dbi.select({
+          id: leadCapturesTable.id, assignedTo: leadCapturesTable.assignedTo,
+          followUpAt: leadCapturesTable.followUpAt, status: leadCapturesTable.status,
+        }).from(leadCapturesTable).where(dEq(leadCapturesTable.id, input.leadId)).limit(1);
+        if (!lead) throw new TRPCError({ code: "NOT_FOUND" });
+        if (lead.assignedTo) throw new TRPCError({ code: "CONFLICT", message: "Lead is already assigned; refresh first." });
+        // Create an immediate human follow-up due time only if one is not already set.
+        // Never send SMS, initiate calls, change consent, or claim the lead was contacted.
+        const [result] = await dbi.update(leadCapturesTable).set({
+          assignedTo: member.name,
+          ...(lead.followUpAt ? {} : { followUpAt: new Date() }),
+        }).where(dAnd(dEq(leadCapturesTable.id, input.leadId), dIsNull(leadCapturesTable.assignedTo)));
+        if (!result || result.affectedRows !== 1) {
+          throw new TRPCError({ code: "CONFLICT", message: "Lead assignment changed; refresh and try again." });
+        }
+        return { success: true, followUpDue: !lead.followUpAt };
+      }),
+
+    /** Admin-only verified OAuth user selection for outreach task ownership. */
+    outreachOwnerCandidates: adminProcedure.query(async () => {
+      const dbi = await db.getDb();
+      if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const { users, teamMembers } = await import("../drizzle/schema");
+      const logins = await dbi.select({ id: users.id, name: users.name, email: users.email, role: users.role })
+        .from(users).where(dEq(users.role, "admin")).limit(100);
+      const members = await dbi.select({ id: teamMembers.id, name: teamMembers.name, email: teamMembers.email })
+        .from(teamMembers).where(dEq(teamMembers.status, "active"));
+      const activeEmails = new Set(members.map(m => m.email.trim().toLowerCase()));
+      return logins.map(u => ({ ...u, activeTeamMatch: Boolean(u.email && activeEmails.has(u.email.trim().toLowerCase())) }));
+    }),
+
+    /** Explicit admin action; never silently assigns to a guessed user ID. */
+    reconcileOutreachOwner: adminProcedure
+      .input(z.object({ userId: z.number().int().positive() }))
+      .mutation(async ({ input }) => {
+        const dbi = await db.getDb();
+        if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const { users, teamMembers } = await import("../drizzle/schema");
+        const [user] = await dbi.select({ id: users.id, name: users.name, email: users.email })
+          .from(users).where(dAnd(dEq(users.id, input.userId), dEq(users.role, "admin"))).limit(1);
+        if (!user?.email) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose an authenticated administrator with an email." });
+        const [member] = await dbi.select({ name: teamMembers.name })
+          .from(teamMembers).where(dAnd(dEq(teamMembers.status, "active"), dSql`lower(trim(${teamMembers.email})) = ${user.email.trim().toLowerCase()}`)).limit(1);
+        if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Login email does not match an active CRM team member." });
+        const { assignAll30DayTasks } = await import("./services/crm30DayTasks");
+        const result = await assignAll30DayTasks(user.id, member.name);
+        return result;
+      }),
+
+    /** Assign to the real authenticated team session, never an unrelated OAuth user. */
+    reconcileOutreachToSelf: adminProcedure
+      .input(z.object({ teamMemberId: z.number().int().positive() }))
+      .mutation(async ({ input, ctx }) => {
+        const dbi = await db.getDb();
+        if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+        const { users, teamMembers } = await import("../drizzle/schema");
+        const openId = ctx.user.openId;
+        let assigneeId: number;
+        let assigneeName: string;
+        if (openId.startsWith("team:")) {
+          const memberId = Number(openId.slice(5));
+          if (!Number.isSafeInteger(memberId) || memberId <= 0 || memberId !== input.teamMemberId || ctx.user.id !== -memberId) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Select your own active team profile." });
+          }
+          const [member] = await dbi.select({ id: teamMembers.id, name: teamMembers.name, role: teamMembers.role })
+            .from(teamMembers).where(dAnd(dEq(teamMembers.id, memberId), dEq(teamMembers.status, "active"))).limit(1);
+          if (!member || member.role !== "admin") throw new TRPCError({ code: "FORBIDDEN", message: "Active team administrator required." });
+          assigneeId = -member.id; // SDK's documented team-session identity
+          assigneeName = member.name;
+        } else {
+          const [login] = await dbi.select({ id: users.id, name: users.name })
+            .from(users).where(dEq(users.id, ctx.user.id)).limit(1);
+          if (!login) throw new TRPCError({ code: "UNAUTHORIZED", message: "Signed-in user not found." });
+          const [member] = await dbi.select({ name: teamMembers.name })
+            .from(teamMembers).where(dAnd(dEq(teamMembers.id, input.teamMemberId), dEq(teamMembers.status, "active"))).limit(1);
+          if (!member) throw new TRPCError({ code: "BAD_REQUEST", message: "Choose an active CRM team profile." });
+          assigneeId = login.id;
+          assigneeName = member.name;
+        }
+        const { assignAll30DayTasks } = await import("./services/crm30DayTasks");
+        return assignAll30DayTasks(assigneeId, assigneeName);
+      }),
+
+    /** Inspect exact commercial URLs in GSC and count real CRM captures; no synthetic submissions. */
+    commercialAudienceAudit: adminProcedure.query(async () => {
+      const paths = [
+        "/commercial/for-property-management",
+        "/commercial/for-contractors-developers",
+        "/commercial/for-commercial-partners",
+      ] as const;
+      const dbi = await db.getDb();
+      if (!dbi) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+      const since = new Date(Date.now() - 30 * 86400000);
+      const captures = await dbi.select({
+        id: leadCapturesTable.id, pageUrl: leadCapturesTable.pageUrl,
+        firstTouchLandingPath: leadCapturesTable.firstTouchLandingPath,
+        message: leadCapturesTable.message, channel: leadCapturesTable.channel,
+        status: leadCapturesTable.status,
+      }).from(leadCapturesTable).where(dGte(leadCapturesTable.createdAt, since));
+      const { getSearchConsoleAccessToken, getSeoSiteUrl, getSiteOrigin, inspectUrl } = await import("./integrations/searchConsole");
+      const siteUrl = getSeoSiteUrl();
+      const origin = getSiteOrigin();
+      let accessToken: string | null = null;
+      let connectionError: string | null = null;
+      try { accessToken = await getSearchConsoleAccessToken(); }
+      catch (e) { connectionError = e instanceof Error ? e.message : "Search Console unavailable"; }
+      const results = [];
+      for (const path of paths) {
+        let inspection: { coverageState: string | null; lastCrawlTime: string | null } | null = null;
+        let inspectionError: string | null = connectionError;
+        if (accessToken) {
+          try {
+            const r = await inspectUrl({ accessToken, siteUrl, inspectionUrl: origin + path });
+            inspection = { coverageState: r.coverageState, lastCrawlTime: r.lastCrawlTime };
+          } catch (e) { inspectionError = e instanceof Error ? e.message : "Inspection failed"; }
+        }
+        const matched = captures.filter(row => {
+          let pagePath = "";
+          try { pagePath = row.pageUrl ? new URL(row.pageUrl, origin).pathname : ""; } catch {}
+          return row.firstTouchLandingPath === path || pagePath === path ||
+            row.message?.includes(`Page: audience-${path.slice("/commercial/for-".length)}`);
+        });
+        const byChannel: Record<string, number> = {};
+        const byStage: Record<string, number> = {};
+        for (const row of matched) {
+          byChannel[row.channel ?? "unknown"] = (byChannel[row.channel ?? "unknown"] ?? 0) + 1;
+          byStage[row.status] = (byStage[row.status] ?? 0) + 1;
+        }
+        results.push({ path, inspection, inspectionError, captures30d: matched.length, byChannel, byStage });
+      }
+      return { checkedAt: new Date().toISOString(), results,
+        note: "GSC URL Inspection is a point-in-time Google report; 30-day CRM captures are not independently verified qualified leads." };
+    }),
 
     /** Single lead capture for the full-page Lead detail (Task 8B). */
     getById: protectedProcedure
@@ -752,12 +1004,15 @@ export const appRouter = router({
       status: protectedProcedure.query(async () => {
         const [fbCreds, gbpCreds, laneState] = await Promise.all([
           db.getAiVaCredentials("facebook"),
-          db.getAiVaCredentials("google_business"),
+          Promise.resolve(null),
           getSocialLaneState(),
         ]);
         const fbConnected = !!(fbCreds as Record<string, string>)?.accessToken;
         const igConnected = fbConnected && !!(fbCreds as Record<string, string>)?.instagramAccountId;
-        const gbpConnected = !!(gbpCreds as Record<string, string>)?.accessToken;
+        const { getGbpTarget } = await import("./integrations/gbp");
+        const savedGbp = await db.getAiVaCredentials("google_business");
+        const gbpConnected = !!(savedGbp.accountId && savedGbp.locationId) || !!getGbpTarget();
+
         return {
           socialLaneEnabled: isSocialLaneEnabled(),
           circuitBreakerPaused: laneState.circuitBreakerPaused,
@@ -768,12 +1023,99 @@ export const appRouter = router({
             google_business: {
               mode: gbpConnected ? "connect" : "manual" as const,
               connected: gbpConnected,
-              note: "Falls back to the manual queue until credentials are connected AND a verified successful local-post exists (no GBP local-post has ever run in production).",
+              note: "Uses shared Google OAuth and the configured Local SEO location. Connection requires a successful access check; automatic posting remains disabled until a controlled test succeeds.",
             },
             nextdoor: { mode: "manual" as const, connected: false, note: "No public posting API — always manual queue." },
             linkedin: { mode: "manual" as const, connected: false, note: "No company-page posting API for this use — always manual queue (copy generated, pasted by hand)." },
           },
         };
+      }),
+
+      /** Read-only verification of the existing Google Business Profile posting connection.
+       * Do not assume GBP access just because Search Console or Google Ads is connected.
+       */
+      /** Discover accounts and their locations using the existing shared Google grant. */
+      discoverGoogleBusinessLocations: adminProcedure.query(async () => {
+        const { describeGbpApiFailure } = await import("./services/gbp/apiError");
+        const { getGbpAccessToken } = await import("./integrations/gbp");
+        const token = await getGbpAccessToken();
+        const headers = { Authorization: `Bearer ${token}` };
+        const accounts: Array<{ name: string; accountName: string }> = [];
+        let next = "";
+        for (let i = 0; i < 10; i++) {
+          const url = new URL("https://mybusinessaccountmanagement.googleapis.com/v1/accounts");
+          url.searchParams.set("pageSize", "20");
+          if (next) url.searchParams.set("pageToken", next);
+          const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
+          if (!res.ok) throw new Error(await describeGbpApiFailure(res, "Business Profile account discovery"));
+          const json = await res.json() as { accounts?: Array<{ name: string; accountName?: string }>; nextPageToken?: string };
+          accounts.push(...(json.accounts ?? []).map(a => ({ name: a.name, accountName: a.accountName ?? a.name })));
+          next = json.nextPageToken ?? "";
+          if (!next) break;
+        }
+        const locations: Array<{ accountId: string; locationId: string; title: string; accountName: string; address: string }> = [];
+        for (const account of accounts) {
+          let page = "";
+          for (let i = 0; i < 10; i++) {
+            const url = new URL(`https://mybusinessbusinessinformation.googleapis.com/v1/${account.name}/locations`);
+            url.searchParams.set("readMask", "name,title,storefrontAddress");
+            url.searchParams.set("pageSize", "100");
+            if (page) url.searchParams.set("pageToken", page);
+            const res = await fetch(url, { headers, signal: AbortSignal.timeout(12000) });
+            if (!res.ok) {
+              if (res.status === 403 || res.status === 404) break;
+              throw new Error(await describeGbpApiFailure(res, "Business Profile locations lookup"));
+            }
+            const json = await res.json() as { locations?: Array<{ name: string; title?: string; storefrontAddress?: { addressLines?: string[]; locality?: string; administrativeArea?: string } }>; nextPageToken?: string };
+            for (const loc of json.locations ?? []) {
+              const accountId = account.name.replace(/^accounts\//, "");
+              const locationId = loc.name.replace(/^locations\//, "");
+              if (!/^\d+$/.test(accountId) || !/^\d+$/.test(locationId)) continue;
+              locations.push({ accountId, locationId, title: loc.title ?? loc.name, accountName: account.accountName,
+                address: [...(loc.storefrontAddress?.addressLines ?? []), loc.storefrontAddress?.locality, loc.storefrontAddress?.administrativeArea].filter(Boolean).join(", ") });
+            }
+            page = json.nextPageToken ?? "";
+            if (!page) break;
+          }
+        }
+        return { locations, accountsFound: accounts.length };
+      }),
+
+      /** Persist only user-selected non-secret IDs. Never select a business automatically. */
+      selectGoogleBusinessLocation: adminProcedure
+        .input(z.object({ accountId: z.string().regex(/^\d+$/), locationId: z.string().regex(/^\d+$/) }))
+        .mutation(async ({ input }) => {
+          const { getGbpAccessToken } = await import("./integrations/gbp");
+          const token = await getGbpAccessToken();
+          const url = `https://mybusinessbusinessinformation.googleapis.com/v1/locations/${input.locationId}?readMask=name,title`;
+          const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(12000) });
+          if (!response.ok) throw new Error(`Selected Business Profile location could not be verified (HTTP ${response.status}).`);
+          const location = await response.json() as { name?: string; title?: string };
+          if (location.name !== `locations/${input.locationId}`) throw new Error("Location ID mismatch");
+          await db.saveAiVaCredentials("google_business", { accountId: input.accountId, locationId: input.locationId });
+          return { saved: true, title: location.title ?? location.name ?? "" };
+        }),
+
+      verifyGoogleBusinessPosting: adminProcedure.query(async () => {
+        const { getGbpTarget, getGbpAccessToken } = await import("./integrations/gbp");
+        const selected = await db.getAiVaCredentials("google_business");
+        const target = selected.accountId && selected.locationId ? { accountId: selected.accountId, locationId: selected.locationId, locationResource: `locations/${selected.locationId}` } : getGbpTarget();
+        if (!target) return {
+          ready: false, reason: "Existing Google connection found, but the Business Profile account/location target is not configured. Set GBP_ACCOUNT_ID and GBP_LOCATION_ID after verifying the correct profile.",
+          locationName: null, missing: ["GBP_ACCOUNT_ID", "GBP_LOCATION_ID"],
+        };
+        try {
+          const token = await getGbpAccessToken();
+          const response = await fetch(
+            `https://mybusinessbusinessinformation.googleapis.com/v1/${target.locationResource}?readMask=name,title`,
+            { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(12000) },
+          );
+          if (!response.ok) return { ready: false, reason: `Shared Google connection cannot access configured Business Profile location (HTTP ${response.status}). Reconnect Google with Business Profile permission if needed.`, locationName: null, missing: [] };
+          const location = await response.json() as { title?: string; name?: string };
+          return { ready: true, reason: "Existing Google OAuth location access verified. A controlled local-post test is still required before automated publishing.", locationName: location.title ?? location.name ?? null, missing: [] };
+        } catch (error) {
+          return { ready: false, reason: `Shared Google OAuth access failed: ${error instanceof Error ? error.message.slice(0,150) : "unknown error"}`, locationName: null, missing: [] };
+        }
       }),
 
       // Admin-only: build the Meta OAuth URL for the "Connect" button. Reuses

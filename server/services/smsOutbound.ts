@@ -17,6 +17,7 @@ import { smsContacts, smsInboxMessages } from "../../drizzle/schema";
 import { sendTelnyxSms, toE164 } from "./telnyxSms";
 import { classifyInbound } from "./smsReplyKeywords";
 import { ensureSmsExternalContact, logCommunication } from "./crmCommunications";
+import { isSmsRecipientSuppressed } from "./outreachSuppression";
 import { and, desc, eq, sql } from "drizzle-orm";
 
 type AnyDb = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -214,6 +215,9 @@ export async function sendAndRecordSms(
     sentByName?: string | null;
   },
 ): Promise<SendResult> {
+  if (await isSmsRecipientSuppressed(db, args.phone)) {
+    return { success: false, blocked: true, error: "This recipient is on the CRM do-not-contact list." };
+  }
   if (await isPhoneOptedOut(db, args.phone)) {
     return { success: false, blocked: true, error: "This number has opted out of SMS (STOP)." };
   }

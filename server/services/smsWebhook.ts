@@ -35,7 +35,10 @@ import {
 } from "../../drizzle/schema";
 import { parseTelnyxStatusEvent, type ParsedStatusEvent } from "./telnyxDeliveryStatus";
 import { applyDeliveryStatusToInbox, phoneLast10Of, mechanicalSmsFrom } from "./smsOutbound";
-import { classifyInbound } from "./smsReplyKeywords";
+import { classifyInbound, isPotentialHvacInstallReply } from "./smsReplyKeywords";
+import { sendEmail } from "./emailService";
+import { sendTelnyxSms } from "./telnyxSms";
+import { desc, gte } from "drizzle-orm";
 import { toE164 } from "./telnyxSms";
 import { authorizeTelnyxWebhook, resolveWebhookAuthMode } from "./telnyxSignature";
 import { eq, and, sql } from "drizzle-orm";
@@ -215,6 +218,65 @@ async function alertTeamOfReply(db: AnyDb, phone: string, message: string, isOpt
   }
 }
 
+
+/**
+ * Operational alert only — NEVER sends a marketing message to the prospect.
+ * The signed Telnyx webhook de-duplicates provider events before this runs.
+ * YES by itself only qualifies when the most recent outgoing SMS asked about
+ * HVAC replacement/upgrading. It does not establish marketing/AI-call consent.
+ */
+async function alertPositiveInstallationReply(
+  db: AnyDb,
+  args: { phone: string; text: string; match: InboundMatch },
+): Promise<void> {
+  try {
+    const digits = phoneLast10Of(args.phone);
+    let prior: { message: string } | undefined;
+    if (/^(yes|y|yep|yeah|sure|interested)[.!? ]*$/i.test(args.text.trim()) && digits) {
+      [prior] = await db
+        .select({ message: smsInboxMessages.message })
+        .from(smsInboxMessages)
+        .where(and(
+          eq(smsInboxMessages.phoneLast10, digits),
+          eq(smsInboxMessages.direction, "outbound"),
+          gte(smsInboxMessages.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)),
+        ))
+        .orderBy(desc(smsInboxMessages.createdAt))
+        .limit(1);
+    }
+    if (!isPotentialHvacInstallReply(args.text, prior?.message)) return;
+
+    // All customer-facing replies remain HUMAN-owned. No automarketing is
+    // enabled, and purchased contacts without consent are never auto-dialed.
+    const customer = args.match.customerId
+      ? (await db.select({
+          displayName: customers.displayName,
+          email: customers.email,
+        }).from(customers).where(eq(customers.id, args.match.customerId)).limit(1))[0]
+      : undefined;
+    const display = customer?.displayName || "New interested contact";
+    const deepLink = args.match.customerId
+      ? `https://mechanicalenterprise.com/customers/${args.match.customerId}`
+      : `https://mechanicalenterprise.com/sms-campaigns?phone=${encodeURIComponent(args.phone)}`;
+    const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const title = "Potential HVAC installation lead — reply received";
+    const summary = `${display} | ${args.phone} | ${customer?.email || "no email recorded"} | ${args.text.slice(0, 180)}`;
+    const html = `<h2>${escape(title)}</h2><p><b>Contact:</b> ${escape(display)}</p><p><b>Phone:</b> ${escape(args.phone)}</p><p><b>Email:</b> ${escape(customer?.email || "not recorded")}</p><p><b>Message:</b> ${escape(args.text.slice(0, 500))}</p><p><a href="${deepLink}">Open CRM conversation</a></p><p>Potential interest only; confirm scope and consent before any outbound contact.</p>`;
+
+    const [mail, sms] = await Promise.allSettled([
+      sendEmail({ to: "sales@mechanicalenterprise.com", subject: title, html }),
+      sendTelnyxSms("+18624239396", `Potential HVAC installation lead: ${summary}`.slice(0, 320)),
+    ]);
+    console.info("[SMSWebhook] install-interest internal alerts", {
+      emailAccepted: mail.status === "fulfilled" && mail.value === true,
+      smsAccepted: sms.status === "fulfilled" && sms.value.success === true,
+      smsMessageId: sms.status === "fulfilled" ? sms.value.messageId ?? null : null,
+    });
+  } catch (err) {
+    console.warn("[SMSWebhook] install-interest alert failed; inbound reply still saved", String(err).slice(0, 200));
+  }
+}
+
 async function markOptedOut(db: AnyDb, contactId: number): Promise<void> {
   await db.update(smsContacts).set({ optedOut: true }).where(eq(smsContacts.id, contactId));
   await db
@@ -266,6 +328,12 @@ export async function handleInboundReply(
     match,
     providerMessageId: args.providerMessageId,
   });
+
+  // Alert sales via internal email and SMS for a context-qualified positive
+  // HVAC installation reply; this does not text/call the prospect.
+  if (intent !== "stop" && intent !== "help") {
+    await alertPositiveInstallationReply(db, { phone: e164, text: args.text, match });
+  }
 
   // Mirror inbound Telnyx activity into the unified CRM timeline. Best-effort:
   // the established SMS inbox remains the source of truth and webhook intake

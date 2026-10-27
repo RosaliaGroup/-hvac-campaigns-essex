@@ -2,7 +2,8 @@
  * Weekly B2B content pipeline's topic backlog (docs/seo-automation-spec.md
  * Part 2). seedContentQueue() is idempotent (checks by title) — safe to call
  * on every boot. The model may propose new topics (status "proposed") but
- * per spec "cannot self-select them" — nextTopicToProcess() only ever picks
+ * ordinary proposals require review; the owner-authorized auto-replenishment
+ * service validates and queues fresh subjects when exhausted. nextTopicToProcess() only picks
  * up "queued" or "refresh_due" rows, which requires a human to promote a
  * proposed topic first.
  */
@@ -85,6 +86,20 @@ export async function proposeTopic(input: {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
   const { source, ...rest } = input;
+  // Idempotent market-intelligence proposals: different daily reports may
+  // suggest the same refresh with different provenance labels. Keep one row
+  // per existing page rather than multiplying review work each morning.
+  if (source?.startsWith("market-intel:")) {
+    if (input.refreshesSlug) {
+      const [existing] = await db.select().from(seoContentQueue)
+        .where(eq(seoContentQueue.refreshesSlug, input.refreshesSlug)).limit(1);
+      if (existing) return existing;
+    } else {
+      const [existing] = await db.select().from(seoContentQueue)
+        .where(eq(seoContentQueue.title, input.title)).limit(1);
+      if (existing) return existing;
+    }
+  }
   await db.insert(seoContentQueue).values({ ...rest, status: "proposed", source: source ?? "proposed" });
   const [row] = await db.select().from(seoContentQueue).where(eq(seoContentQueue.title, input.title)).limit(1);
   await logAudit({ actorId: null, action: "topic_proposed", batchId: null, pagePath: null, before: null, after: { title: input.title }, lintResult: null });
@@ -110,6 +125,30 @@ export async function hasExistingProposal(refreshesSlug: string, source: string)
   return !!row;
 }
 
+/** Promote only verified, safe market-intel proposals into the existing guarded draft lane. */
+export async function autoQueueMarketIntelTopics(): Promise<{ queued: number; reason?: string }> {
+  if (process.env.SEO_INTEL_AUTO_QUEUE_ENABLED !== "true") return { queued: 0, reason: "disabled" };
+  if (process.env.SEO_CONTENT_PIPELINE_ENABLED !== "true" || process.env.SEO_AUTOPUBLISH_ENABLED !== "true")
+    return { queued: 0, reason: "publishing_lane_disabled" };
+  const db = await getDb();
+  if (!db) return { queued: 0, reason: "no_db" };
+  // A large seeded backlog must not permanently starve evidence-backed demand.
+  // Still allow only one market-intel topic in the queue at any time.
+  const existing = await db.select({ id: seoContentQueue.id }).from(seoContentQueue)
+    .where(and(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.source, "market-intel:unserved_query"))).limit(1);
+  if (existing.length) return { queued: 0, reason: "market_topic_already_queued" };
+  const proposed = await db.select().from(seoContentQueue)
+    .where(and(eq(seoContentQueue.status, "proposed"), eq(seoContentQueue.source, "market-intel:unserved_query")))
+    .orderBy(asc(seoContentQueue.createdAt)).limit(20);
+  const safe = proposed.find(t => t.targetQuery && t.audience && t.brief && !t.refreshesSlug &&
+    !/(price|warrant|rebate|incentive|financ|free|guarantee)/i.test(t.title + " " + t.targetQuery));
+  if (!safe) return { queued: 0, reason: "no_safe_evidence_backed_topic" };
+  await db.update(seoContentQueue).set({ status: "queued" })
+    .where(and(eq(seoContentQueue.id, safe.id), eq(seoContentQueue.status, "proposed")));
+  await logAudit({ actorId: null, action: "market_intel_item_executed", batchId: null, pagePath: null, before: { id: safe.id, status: "proposed" }, after: { id: safe.id, status: "queued" }, lintResult: null });
+  return { queued: 1 };
+}
+
 export async function updateQueueStatus(id: number, status: SeoContentQueueRow["status"], contentBatchId?: number | null): Promise<void> {
   const db = await getDb();
   if (!db) return;
@@ -120,11 +159,14 @@ export async function updateQueueStatus(id: number, status: SeoContentQueueRow["
 export async function nextTopicToProcess(): Promise<SeoContentQueueRow | null> {
   const db = await getDb();
   if (!db) return null;
-  const rows = await db
-    .select()
-    .from(seoContentQueue)
+  // Prioritize one verified market-demand topic when available. This is
+  // still the same single-topic, linted and hold-gated publishing pipeline.
+  const market = await db.select().from(seoContentQueue)
+    .where(and(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.source, "market-intel:unserved_query")))
+    .orderBy(asc(seoContentQueue.createdAt)).limit(1);
+  if (market.length) return market[0];
+  const rows = await db.select().from(seoContentQueue)
     .where(or(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.status, "refresh_due")))
-    .orderBy(asc(seoContentQueue.createdAt))
-    .limit(1);
+    .orderBy(asc(seoContentQueue.createdAt)).limit(1);
   return rows[0] ?? null;
 }

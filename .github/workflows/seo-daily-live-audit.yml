@@ -1,0 +1,67 @@
+name: Daily SEO live publication audit
+on:
+  schedule:
+    - cron: "35 12 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Restore previous audit state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p artifacts/seo
+          RUN_ID=$(gh run list --workflow seo-daily-live-audit.yml --status completed --limit 15 --json databaseId --jq '.[].databaseId' | grep -v "^${{ github.run_id }}$" | head -n 1)
+          if [ -n "$RUN_ID" ]; then
+            gh run download "$RUN_ID" -n seo-publication-audit -D artifacts/seo || true
+            if [ -f artifacts/seo/publication-audit.json ]; then
+              cp artifacts/seo/publication-audit.json artifacts/seo/previous-audit.json
+            fi
+          fi
+      - name: Audit live blog pages
+        id: audit
+        continue-on-error: true
+        run: pnpm exec tsx scripts/audit-live-publications.ts
+      - name: Preserve audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seo-publication-audit
+          path: artifacts/seo/publication-audit.json
+      - name: Create or update SEO failure issue
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f artifacts/seo/publication-audit.json ]; then echo "Audit report missing; preserving existing issues"; exit 1; fi
+          node -e 'const r=require("./artifacts/seo/publication-audit.json"); const fs=require("fs"); fs.writeFileSync("/tmp/seo-audit-issue.md", "Automated production publication audit: "+r.checkedAt+"\n\nFailed: "+r.failures+" of "+r.total+"\n\n"+r.results.filter(x=>x.status!=="verified_live").slice(0,100).map(x=>"- "+x.path+" — "+x.reason+" (attempts: "+x.attempts+", failed runs: "+r.failureStreaks[x.path]+")").join("\n"));'
+          COUNT=$(node -p 'require("./artifacts/seo/publication-audit.json").failures')
+          TITLE="SEO publication audit failures"
+          ISSUE=$(gh issue list --state open --search "$TITLE in:title" --json number,title --jq '.[] | select(.title=="SEO publication audit failures") | .number' | head -n 1)
+          if [ "$COUNT" -gt 0 ]; then
+            if [ -n "$ISSUE" ]; then gh issue comment "$ISSUE" --body-file /tmp/seo-audit-issue.md
+            else gh issue create --title "$TITLE" --body-file /tmp/seo-audit-issue.md; fi
+          elif [ -n "$ISSUE" ]; then
+            gh issue close "$ISSUE" --comment "All sitemap blog URLs passed the latest production audit."
+          fi
+      - name: Create per-page repair tickets and close recovered pages
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -f artifacts/seo/publication-audit.json ]; then pnpm exec tsx scripts/seo-repair-issues.ts; fi
+      - name: Fail on unresolved publication errors
+        if: steps.audit.outcome == 'failure'
+        run: exit 1

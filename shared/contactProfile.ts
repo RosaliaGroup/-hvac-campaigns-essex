@@ -1,5 +1,6 @@
 export type ProfileFact = { value: string; source: string; evidence: string };
 export type ContactProfile = {
+  person?: { firstName: ProfileFact; lastName: ProfileFact };
   company: {
     name?: ProfileFact;
     website?: ProfileFact;
@@ -13,6 +14,7 @@ export type ContactProfile = {
     source: string;
     evidence: string;
   }>;
+  companySocial?: Array<{ platform: string; url: string; source: string; evidence: string }>;
   checkedAt: string;
   status: "matched" | "not_found" | "unavailable";
   message?: string;

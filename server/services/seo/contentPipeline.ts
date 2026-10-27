@@ -23,6 +23,8 @@
  * durable, queryable record this needs.
  */
 import fs from "fs";
+import { publicationDate } from "../../../shared/blogPublication";
+import { replenishContentTopics } from "./topicReplenishment";
 import path from "path";
 import { getDb } from "../../db";
 import { seoApprovalBatches, type SeoContentQueueRow } from "../../../drizzle/schema";
@@ -48,7 +50,8 @@ const DEFAULT_CONTENT_SCHEDULE: ScheduleSpec = { hour: 6, minute: 0, timeZone: "
 const BLOG_POSTS_PATH = "client/src/data/blogPosts.ts";
 
 function localBlogPostsSourcePath(): string {
-  return path.resolve(import.meta.dirname, "../../../client/src/data/blogPosts.ts");
+  const deployed = path.resolve(process.cwd(), BLOG_POSTS_PATH);
+  return fs.existsSync(deployed) ? deployed : path.resolve(import.meta.dirname, "../../../client/src/data/blogPosts.ts");
 }
 
 /** Existing post titles/H1s for the duplicate-topic check — read from the LOCAL checkout (this server's own deployed copy), not GitHub, since drafting/linting doesn't need the PAT. */
@@ -185,7 +188,14 @@ async function draftUntilPassing(topic: SeoContentQueueRow, facts: VerifiedFacts
  * to the next topic, up to MAX_BLOCKED_TOPICS_PER_RUN.
  */
 /** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
-export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
+let activeContentJob: Promise<ContentDraftOutcome> | null = null;
+export function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
+  if (activeContentJob) return activeContentJob;
+  activeContentJob = draftNextContent(facts).finally(() => { activeContentJob = null; });
+  return activeContentJob;
+}
+
+async function draftNextContent(facts: VerifiedFacts): Promise<ContentDraftOutcome> {
   warnOnStalePriceRanges(facts, new Date());
 
   const breaker = await checkCircuitBreakerConditions();
@@ -202,13 +212,24 @@ export async function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS)
 
   const blockedTopicIds: number[] = [];
   let lastBlocked: ContentDraftOutcome | null = null;
+  let replenished = false;
 
   while (blockedTopicIds.length < MAX_BLOCKED_TOPICS_PER_RUN) {
-    const topic = await nextTopicToProcess();
+    let topic = await nextTopicToProcess();
+    if (!topic && !replenished) {
+      replenished = true;
+      const added = await replenishContentTopics(facts, readLocalExistingTitles());
+      if (added > 0) topic = await nextTopicToProcess();
+    }
     if (!topic || blockedTopicIds.includes(topic.id)) return lastBlocked ?? { status: "no_topic" };
 
     if (isResidentialOrRebateTopic(topic)) {
-      return { status: "refused_residential_rebate", topicId: topic.id };
+      // Set aside refused topics so later eligible topics can proceed.
+      await updateQueueStatus(topic.id, "drafted");
+      console.warn("[SEO] content topic refused by safety gate; set aside:", topic.id);
+      blockedTopicIds.push(topic.id);
+      lastBlocked = { status: "refused_residential_rebate", topicId: topic.id };
+      continue;
     }
     if (!isFactsConfigured(facts)) {
       return { status: "facts_not_configured" };
@@ -315,7 +336,7 @@ export async function approveContentToPR(topicId: number, actorId: number | null
   const branch = await uniqueBranchFor(`pr-content-${yyyymmdd()}-t${topicId}`);
   await ensureBranch(branch);
   const { content: currentSource, sha } = await getFileContent(BLOG_POSTS_PATH, branch);
-  const updatedSource = insertBlogPostIntoSource(currentSource, draft.post);
+  const updatedSource = insertBlogPostIntoSource(currentSource, { ...draft.post, date: publicationDate() });
   const commitMessage = `content(blog): ${draft.post.title}\n\nTopic queue #${topicId}. Drafted by the weekly autopublish content pipeline.`;
   const commitSha = await putFileContent(BLOG_POSTS_PATH, branch, updatedSource, commitMessage, sha);
 
@@ -403,4 +424,18 @@ export function startWeeklyContentScheduler(): void {
   };
   console.log(`[SEO] Weekly content pipeline scheduled — ${process.env.SEO_CONTENT_SCHEDULE?.trim() || "Wednesdays 06:00 America/New_York (default)"}`);
   arm();
+  // Recover an exhausted queue once on startup rather than waiting for the next
+  // scheduled day. If a queue/PR already exists, keep the normal cadence.
+  if (process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
+    const recovery = setTimeout(async () => {
+      try {
+        if (await nextTopicToProcess()) return;
+        const outcome = await runWeeklyContentJob();
+        console.log(`[SEO] empty-queue recovery: ${outcome.status}${outcome.status === "drafted" && outcome.autoApproved ? `, auto-approved to batch #${outcome.batchId}` : ""}`);
+      } catch (err) {
+        console.error("[SEO] empty-queue recovery deferred to next scheduled run:", (err as Error).message);
+      }
+    }, 90_000);
+    recovery.unref();
+  }
 }

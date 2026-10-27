@@ -27,9 +27,10 @@ export interface PortfolioPricingRequestFormProps {
   /** Human-readable page identifier for CRM attribution — never sent to GA4. */
   pageContext: string;
   className?: string;
+  audienceMode?: "portfolio" | "project" | "partner";
 }
 
-export default function PortfolioPricingRequestForm({ pageContext, className }: PortfolioPricingRequestFormProps) {
+export default function PortfolioPricingRequestForm({ pageContext, className, audienceMode = "portfolio" }: PortfolioPricingRequestFormProps) {
   const unitTypes = VERIFIED_FACTS.portfolioSla.unitTypes;
 
   const [formData, setFormData] = useState({
@@ -93,13 +94,13 @@ export default function PortfolioPricingRequestForm({ pageContext, className }: 
       captureType: "inline_form",
       ...captureContext(),
       message:
-        `Portfolio pricing request\n` +
+        `${audienceMode === "portfolio" ? "Portfolio pricing request" : audienceMode === "partner" ? "Commercial broker/facility partnership inquiry" : "GC/developer HVAC bid inquiry"}\n` +
         `Page: ${pageContext}\n` +
         `Company: ${formData.companyName || "not provided"}\n` +
         `Properties: ${formData.properties || "not provided"}\n` +
-        `Unit counts by type: ${unitCountLines}\n` +
-        `Current maintenance arrangement: ${formData.currentMaintenanceArrangement || "not provided"}\n` +
-        `Desired contract start: ${formData.contractStart || "not provided"}`,
+        (audienceMode === "portfolio" ? `Unit counts by type: ${unitCountLines}\n` : "") +
+        `Additional requirements: ${formData.currentMaintenanceArrangement || "not provided"}\n` +
+        `Timeline: ${formData.contractStart || "not provided"}`,
       website: honeypot.website || undefined,
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
@@ -123,8 +124,8 @@ export default function PortfolioPricingRequestForm({ pageContext, className }: 
   return (
     <div className={`rounded-lg overflow-hidden border-2 border-[#1e3a5f]/30 bg-white shadow-lg ${className ?? ""}`}>
       <div className="bg-gradient-to-r from-[#0a1628] to-[#1e3a5f] text-white p-4 rounded-t-lg">
-        <h3 className="text-xl font-bold">Request Portfolio Pricing</h3>
-        <p className="text-sm text-white/90 mt-1">Fixed per-unit pricing, quoted for your whole portfolio.</p>
+        <h3 className="text-xl font-bold">{audienceMode === "portfolio" ? "Request Portfolio Pricing" : audienceMode === "partner" ? "Discuss a Commercial Partnership" : "Request HVAC Bid Review"}</h3>
+        <p className="text-sm text-white/90 mt-1">{audienceMode === "portfolio" ? "Fixed per-unit pricing, quoted for your whole portfolio." : audienceMode === "partner" ? "Tell us about your commercial property or client needs." : "Share the project scope, drawings available and bid deadline."}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="p-5 space-y-3 bg-white">
@@ -153,10 +154,11 @@ export default function PortfolioPricingRequestForm({ pageContext, className }: 
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="ppr-properties" className="text-xs">Properties in your portfolio</Label>
-          <Textarea id="ppr-properties" value={formData.properties} onChange={(e) => setFormData({ ...formData, properties: e.target.value })} placeholder="Number of buildings/units, locations" rows={2} />
+          <Label htmlFor="ppr-properties" className="text-xs">{audienceMode === "portfolio" ? "Properties in your portfolio" : audienceMode === "partner" ? "Client property or partnership details" : "Project scope and bid details"}</Label>
+          <Textarea id="ppr-properties" value={formData.properties} onChange={(e) => setFormData({ ...formData, properties: e.target.value })} placeholder={audienceMode === "portfolio" ? "Number of buildings/units, locations" : audienceMode === "partner" ? "Property type, location and client needs" : "Project location, HVAC scope, drawings and bid deadline"} rows={2} />
         </div>
 
+        {audienceMode === "portfolio" && (
         <div className="space-y-1.5">
           <Label className="text-xs">Unit counts by type</Label>
           <div className="grid grid-cols-2 gap-3">
@@ -174,21 +176,22 @@ export default function PortfolioPricingRequestForm({ pageContext, className }: 
             ))}
           </div>
         </div>
+        )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="ppr-maintenance" className="text-xs">Current maintenance arrangement</Label>
+          <Label htmlFor="ppr-maintenance" className="text-xs">{audienceMode === "portfolio" ? "Current maintenance arrangement" : "Additional requirements (optional)"}</Label>
           <Textarea id="ppr-maintenance" value={formData.currentMaintenanceArrangement} onChange={(e) => setFormData({ ...formData, currentMaintenanceArrangement: e.target.value })} placeholder="e.g. in-house staff, another vendor, no current plan" rows={2} />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="ppr-start" className="text-xs">Desired contract start</Label>
+          <Label htmlFor="ppr-start" className="text-xs">{audienceMode === "portfolio" ? "Desired contract start" : audienceMode === "partner" ? "Preferred follow-up timing" : "Bid deadline / project timeline"}</Label>
           <Input id="ppr-start" value={formData.contractStart} onChange={(e) => setFormData({ ...formData, contractStart: e.target.value })} placeholder="e.g. next quarter, ASAP" />
         </div>
 
         <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
 
         <Button type="submit" className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white text-base py-6" disabled={createCapture.isPending}>
-          {createCapture.isPending ? "Submitting..." : "Request Portfolio Pricing"}
+          {createCapture.isPending ? "Submitting..." : audienceMode === "portfolio" ? "Request Portfolio Pricing" : audienceMode === "partner" ? "Discuss Partnership" : "Request Bid Review"}
         </Button>
 
         <TcpaDisclosure />

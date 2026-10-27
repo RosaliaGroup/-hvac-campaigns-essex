@@ -13,6 +13,8 @@ export type BlogPostData = {
   title: string;
   slug: string;
   date: string;
+  /** Last substantive content revision; original publication date remains unchanged. */
+  updatedDate?: string;
   readTime: string;
   category: string;
   metaDescription: string;
@@ -23,9 +25,830 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Pump Lead-Lag Rotation: NJ Building Checklist",
+    "slug": "closed-loop-pump-rotation-checklist-nj",
+    "date": "October 26, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Lead-lag pump rotation, operating records, and controls questions for NJ property managers. What to send a mechanical contractor before bidding.",
+    "excerpt": "A practical checklist for NJ property managers on closed-loop lead-lag pump rotation, the operating records worth keeping, and what to hand a mechanical contractor before requesting bids.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Closed-loop hydronic systems—condenser water loops, boiler loops, and VRF/VRV condenser loops—rely on lead-lag pump rotation to protect equipment life and control energy use. For New Jersey commercial and multifamily buildings running these loops across Essex, Union, and Bergen County properties, poor rotation sequencing shortens pump life and can hide a failing unit until it causes a comfort complaint. This checklist covers what lead-lag rotation does, what operating records your team should keep, which controls questions to ask before calling a contractor, and what to send a mechanical contractor when it's time to service or replace loop pumps."
+      },
+      {
+        "type": "h2",
+        "content": "Why Lead-Lag Rotation Matters"
+      },
+      {
+        "type": "paragraph",
+        "content": "Lead-lag rotation alternates which pump in a closed loop runs first (lead) and which stands by (lag), either on a timer, run-hour threshold, or building automation system (BAS) schedule. Without rotation, one pump accumulates run hours while its twin sits idle—often developing seized bearings, a dry mechanical seal, or a stuck check valve that isn't discovered until the lead pump fails and the lag pump won't start. For a multifamily building with a single boiler loop serving dozens of units, that failure means no heat until a technician arrives, usually during the coldest week of the year when everyone else is calling too. Rotation also balances motor wear across both pumps and gives maintenance staff an early warning if the lag pump doesn't reach full head pressure during a scheduled swap, long before it's asked to carry the full load on its own."
+      },
+      {
+        "type": "paragraph",
+        "content": "In New Jersey's older multifamily stock—much of it concentrated in Hudson, Essex, and Union County mid-rise buildings—closed hydronic loops are common because they predate VRF becoming the default choice for new construction. These loops often run constant-speed pumps original to the building, paired with controls that were added or modified piecemeal over the years by different contractors. Property managers inheriting one of these systems should confirm whether rotation is actually happening in the field, not just programmed on a BAS graphics screen. A sequence that looks correct on-screen can fail silently if a relay sticks, a starter trips without alarming, or a prior controls change was never fully commissioned."
+      },
+      {
+        "type": "h2",
+        "content": "Operating Records to Keep for Every Closed Loop"
+      },
+      {
+        "type": "paragraph",
+        "content": "Rotation only protects equipment if it's documented. Building staff or your servicing contractor should track the following for each closed loop pump set, with at least twelve months of history kept on hand for maintenance decisions and contractor bids."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Lead/lag pump assignment and the date it last switched",
+          "Cumulative run hours on each pump since last service",
+          "Loop differential pressure readings at the pump headers",
+          "Monthly make-up water volume added (a rising trend signals a leak)",
+          "BAS alarm history for failure-to-start, low-flow, or high-vibration events",
+          "Dates of last seal, coupling, or bearing replacement on each pump"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Controls Questions to Ask Before You Call a Contractor"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before requesting service or a rotation controls retrofit, get clarity on your own system first. Is lead-lag rotation handled by the pump controller, a dedicated relay panel, or the building's BAS? What triggers a swap—a run-hour counter, a calendar schedule, or manual operator input? Does the BAS alarm if the lag pump fails to reach setpoint flow or pressure during a rotation test, or does it just switch silently with no notification? Are the pumps on variable-frequency drives, and if so, is speed being modulated to actual loop demand or simply running at a fixed percentage set years ago? Answering these questions before a site visit lets a contractor spend the visit on diagnosis and recommendations instead of basic discovery, which keeps the engagement shorter and the resulting proposal more specific to your building's actual sequence."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send a Mechanical Contractor (Bid Package)"
+      },
+      {
+        "type": "paragraph",
+        "content": "A complete information package shortens the bidding process and produces more comparable quotes across contractors. Before requesting proposals for pump service, rotation controls work, or full pump replacement, send:"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Loop schematic or as-built drawing, if available",
+          "Pump nameplate data (make, model, horsepower, GPM, head)",
+          "Current controls sequence of operation, or a note that none exists",
+          "Twelve months of run-hour and make-up water records",
+          "Recent BAS trend data or alarm logs tied to the pumps",
+          "Access constraints — mechanical room hours, union requirements, elevator-only access for high-rises",
+          "Preferred scope: repair, controls retrofit, or full pump replacement"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality, System Fit, and Optional Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "Whether you're replacing a single loop pump or re-piping a condenser water system, installation quality determines whether rotation controls perform as designed. A pump sized to the wrong head pressure, a check valve installed backwards, or a VFD programmed without loop feedback will undermine even a well-engineered lead-lag sequence. Mechanical Enterprise LLC sizes pump and controls work to your loop's actual flow and pressure requirements rather than a generic replacement-in-kind, so the rotation sequence you specify performs the way it's intended to in day-to-day operation. For buildings considering longer-term protection, optional parts and labor coverage is available as a separately purchased add-on for new pump and system installations, and eligible existing pump and loop equipment may qualify for coverage after an inspection confirms its condition and age meet program criteria. This coverage is not included with installation or with the Comfort Membership — it's a separate agreement, and terms depend on the equipment and inspection results."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get bids on closed-loop pump rotation, controls, or replacement? Send us your loop schematic and run-hour records and we'll walk the mechanical room with you.",
+        "buttonText": "Request a Commercial Site Visit",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      },
+      {
+        "type": "h2",
+        "content": "Rebates as a Secondary Benefit"
+      },
+      {
+        "type": "paragraph",
+        "content": "Pump and controls upgrades on commercial properties may qualify for PSE&G Direct Install, which can cover up to 80% of project cost for qualifying commercial equipment upgrades, with any remaining balance eligible for 0% interest financing through PSE&G On-Bill Repayment, repaid on the monthly utility bill. These programs apply to qualifying commercial projects — not residential rebates — and eligibility depends on the specific scope and equipment proposed. Ask your contractor to confirm in writing whether your rotation controls or pump replacement project qualifies before you finalize scope, since program terms and qualifying equipment lists are set by the utility, not by the contractor."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How often should lead-lag pumps rotate in a commercial closed loop?",
+        "answer": "Rotation schedules vary by building and equipment age; many NJ properties rotate on a run-hour threshold or a weekly/monthly calendar schedule set in the BAS or pump controller. The right interval depends on pump duty, loop demand, and the manufacturer's guidance for your specific equipment."
+      },
+      {
+        "question": "Can existing pumps qualify for parts and labor coverage, or only new installations?",
+        "answer": "Eligible existing pump and loop equipment may qualify for optional parts and labor coverage after an inspection confirms its condition and age meet program criteria. Coverage is a separately purchased add-on and is never automatic or included."
+      },
+      {
+        "question": "What's the first thing to check if a lag pump won't start during a rotation test?",
+        "answer": "Start with power to the motor starter, the pump controller's rotation logic, and any check or isolation valve that may be stuck closed. A BAS alarm history review often narrows down whether the fault is electrical, mechanical, or a stuck valve before a technician arrives on site."
+      }
+    ]
+  },
+
+  {
+    "title": "NJ Cooling Tower Shutdown Planning Guide",
+    "slug": "nj-cooling-tower-shutdown-planning",
+    "date": "October 23, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Plan cooling tower shutdowns for NJ commercial and multifamily properties with coordination, documentation, and vendor steps that protect equipment.",
+    "excerpt": "A practical framework for NJ property managers to coordinate cooling tower shutdowns, document conditions, question vendors, and verify restart readiness.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Cooling tower shutdown season is a predictable planning task for NJ property managers overseeing multifamily high-rises, mixed-use buildings, and commercial campuses. A rushed or poorly documented shutdown can leave equipment exposed to corrosion, freeze damage, and mechanical problems at restart. This guide helps owners coordinate qualified vendors, document equipment conditions, and define responsibilities. Your tower manufacturer's instructions and building-specific water management program should determine the work sequence."
+      },
+      {
+        "type": "h2",
+        "content": "Why Shutdown Planning Matters for NJ Buildings"
+      },
+      {
+        "type": "paragraph",
+        "content": "An unplanned or informal shutdown creates real exposure. Standing water left in a basin over a dormant season can support scale, biological growth, and corrosion on fill media, fans, and structural components. For multifamily properties in Bergen County or commercial buildings in Union County, that exposure translates into higher restart costs, delayed cooling availability, and potential water treatment complications. A coordinated plan with clear documentation gives property managers a record to compare against at startup and a basis for holding vendors accountable to the condition the tower was in when it went offline."
+      },
+      {
+        "type": "h2",
+        "content": "Building a Coordinated Shutdown Timeline"
+      },
+      {
+        "type": "paragraph",
+        "content": "Shutdown timing should be coordinated across every party touching the system: the chiller plant operator, the water treatment vendor, building engineering staff, and any third-party service contractor. Rather than fixing a shutdown to a specific calendar date, align it with your chiller sequencing and occupancy needs so the tower isn't taken offline while cooling demand still exists. Build in time for the water treatment vendor to perform a final chemical treatment or passivation step before the tower sits idle, and confirm who is responsible for draining, covering, or isolating components. Put the sequence in writing and share it with every vendor involved so nobody assumes another party already handled a step."
+      },
+      {
+        "type": "h2",
+        "content": "Documenting Conditions Before Shutdown"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before a cooling tower goes offline, create a dated record you can reference months later. Photograph the basin, fill media, drift eliminators, fan blades, and gearbox or motor housing from consistent angles. Record water treatment test results, motor amperage readings, and belt condition. Note any existing corrosion, debris, or leaks so they aren't mistaken for new damage at restart. This baseline protects you in vendor conversations and gives your team a clear reference point when evaluating whether a component needs attention before the tower is brought back into service."
+      },
+      {
+        "type": "h2",
+        "content": "Questions to Ask Vendors Before You Sign Off"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Send current tower make, model, tonnage, and basin capacity",
+          "Send recent water treatment logs and the last documented chemical treatment",
+          "Send photos or notes on any known mechanical issues or past repairs",
+          "Ask how they will protect the basin and fill media during the idle period",
+          "Ask what documentation they will provide at shutdown and at restart",
+          "Ask who is responsible for coordinating with your water treatment vendor",
+          "Ask how component condition will be verified before startup",
+          "Ask for a written scope that separates shutdown tasks from restart tasks"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Restart Checks Before Spring Startup"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before bringing a cooling tower back online, compare current conditions against your pre-shutdown documentation. Confirm water treatment chemistry has been reestablished, the basin has been cleaned of debris that accumulated during the idle period, and belts, bearings, and gearboxes show no signs of degradation since the last recorded readings. Verify controls and sensors are calibrated and communicating properly with the chiller plant. If any component shows a condition change from your shutdown photos or notes, address it before the tower carries full cooling load rather than discovering the issue during peak demand."
+      },
+      {
+        "type": "h2",
+        "content": "Turn Shutdown Findings Into a Maintenance Plan"
+      },
+      {
+        "type": "paragraph",
+        "content": "Use the shutdown report to separate immediate repairs from planned capital work. Ask vendors to identify the affected equipment, document the condition, explain the proposed scope, and state what remains outside their contract. Keep water treatment responsibilities with the qualified water treatment provider and coordinate mechanical work with building engineering. A written plan helps property managers schedule access, compare scopes, and prepare the next maintenance budget."
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning a cooling tower shutdown or evaluating your chiller plant's long-term reliability? Talk to Mechanical Enterprise about your building's specific system and documentation needs.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial/for-property-management"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "When should we start planning a cooling tower shutdown for an NJ building?",
+        "answer": "Timing should be coordinated with your chiller plant schedule and occupancy needs rather than a fixed calendar date. Start conversations with your water treatment vendor and service contractor early enough to sequence final treatment, draining, and documentation before cooling demand drops."
+      },
+      {
+        "question": "What should we document before taking a cooling tower offline?",
+        "answer": "Photograph the basin, fill media, fans, and motor or gearbox housing, and record water treatment test results, amperage readings, and belt condition. This baseline lets you compare conditions at restart and hold vendors accountable to the state the tower was left in."
+      },
+      {
+        "question": "What should a property manager request in a shutdown scope?",
+        "answer": "Request equipment identification, a written sequence based on the manufacturer instructions and water management program, assigned vendor responsibilities, condition documentation, and separate shutdown and restart deliverables."
+      }
+    ]
+  },
+
+  {
+    "title": "Rooftop HVAC Replacement Quotes: NJ Owner Checklist",
+    "slug": "rooftop-hvac-replacement-quote-checklist-nj",
+    "date": "October 23, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC Planning",
+    "metaDescription": "Compare rooftop HVAC replacement quotes for NJ commercial buildings. Check equipment fit, roof work, shutdown planning, controls, and closeout scope.",
+    "excerpt": "A practical checklist for NJ property managers and building owners comparing rooftop HVAC replacement bids, with a clear brief to send contractors.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "A rooftop HVAC replacement quote can look complete while leaving major parts of the job unclear. An owner may see an unit model and a total price but still have no firm scope for roof work, controls, lifting, or the tenant shutdown. For commercial buildings in Essex and Hudson counties, the useful question is not just what the unit costs. It is what the contractor has inspected, what the price covers, and what remains the owner's role. Use this checklist to turn a vague request for pricing into a scope that contractors can assess and price on the same basis."
+      },
+      {
+        "type": "cta_box",
+        "content": "Have a rooftop unit that needs a replacement assessment? Send the property address, unit details, and access constraints so Mechanical Enterprise can review the project with you.",
+        "buttonText": "Request a Rooftop HVAC Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial/for-property-management"
+      },
+      {
+        "type": "h2",
+        "content": "Describe the building before selecting unit"
+      },
+      {
+        "type": "paragraph",
+        "content": "Start with the space the unit serves. Describe the current use, occupied hours, tenant concerns, and any changes since the old unit was installed. A former retail space used as an office may have different needs. So may a building where walls, tenant layouts, or operating hours have changed. Give the contractor the service history and explain the problem you want to solve. Repeated repair calls, uneven comfort, and a full unit failure are different starting points. The assessment should connect the proposed unit to the building's current needs rather than simply copy the old nameplate."
+      },
+      {
+        "type": "paragraph",
+        "content": "Ask the bidder to state what was checked during the visit and what details is still needed. The proposal should identify the unit being replaced and the areas it serves. If a final selection depends on further design or site checks, that should be clear before you approve the purchase. Keep the existing model and serial numbers in the project file. Photographs help identify unit, but they do not replace a site assessment."
+      },
+      {
+        "type": "h2",
+        "content": "Make roof and curb compatibility part of the scope"
+      },
+      {
+        "type": "paragraph",
+        "content": "The roof curb is the raised support and connection point beneath the unit. Ask whether the quote assumes the current curb will remain, calls for an adapter, or includes a new curb. The fit must be checked against the actual replacement model and site conditions. Some unit lines are designed for selected current curbs; that does not establish that any proposed unit will fit your building. The [manufacturer's replacement-platform details](https://www.carrier.com/us/en/commercial/packaged-outdoor/50feq.html) is an example of why the model and current curb details matter."
+      },
+      {
+        "type": "paragraph",
+        "content": "Also ask who is responsible for roof openings, flashing, weather protection, and any required structural review. A mechanical quote may exclude work assigned to a roofing contractor or another trade. That can be a valid division of work, but it should be written down. Confirm who coordinates those parties and who resolves an unexpected condition found when the old unit is removed. Do not assume the phrase complete installation covers every roof-related item."
+      },
+      {
+        "type": "h2",
+        "content": "Compare connections, controls, and startup work"
+      },
+      {
+        "type": "paragraph",
+        "content": "Equipment is only part of the replacement. Have each bidder describe the included duct connections, electrical work, fuel connections where applicable, drainage, and controls. Ask whether the existing thermostat or building controls will remain and what changes are needed. The scope should distinguish reuse from replacement. A proposal that assumes current connections are suitable should explain how that assumption will be confirmed. This helps the owner understand the difference between a defined project and a price that could change after another site visit."
+      },
+      {
+        "type": "paragraph",
+        "content": "Request a description of startup and functional checks, along with the records you will receive. Ask how operating schedules, setpoints, and control access will be handed over to building staff. If an outside controls vendor must participate, identify that role in advance. The goal is a working system with a clear handoff, rather than a new unit whose settings and service roles are unclear."
+      },
+      {
+        "type": "h2",
+        "content": "Plan lifting, access, and tenant disruption"
+      },
+      {
+        "type": "paragraph",
+        "content": "A rooftop project needs a site plan as well as an unit list. Ask how the old unit will be removed, how the replacement will reach the roof, and what access the contractor needs. Discuss staging areas, loading access, parking restrictions, and tenant operations that may affect the work. The proposal should identify who arranges lifting and site coordination. If permits or approvals are needed, ask who will confirm and obtain them. Do not treat a tentative work date as a firm shutdown plan."
+      },
+      {
+        "type": "paragraph",
+        "content": "Agree on how shutdown timing will be confirmed and communicated. Identify the owner's contact, the tenant or building contact, and the contractor's project contact. Ask what happens if weather, access, or unit delivery changes the plan. For an occupied property, explain which activities depend on heating or cooling and ask whether temporary measures need a separate scope. Avoid assuming that a replacement includes temporary unit or uninterrupted service unless the proposal expressly addresses it."
+      },
+      {
+        "type": "h2",
+        "content": "Send bidders a consistent project brief"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Property address, building use, occupied hours, and the person coordinating access.",
+          "Existing equipment model and serial numbers, available photos, and known service history.",
+          "Areas served, current comfort problems, and relevant tenant or layout changes.",
+          "Known roof, curb, control, and utility-connection information, with unknowns clearly marked.",
+          "Preferred project timing, shutdown constraints, and any work assigned to other trades.",
+          "A request for written inclusions, exclusions, assumptions, startup records, and change approval terms."
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "Compare the returned scopes before comparing totals. Flag an omitted item and ask whether it is excluded, included elsewhere, or awaiting inspection. Ask for any clarification in writing so the final scope is easy to review. Mechanical Enterprise can assess commercial HVAC replacement needs and help property teams define a project scope across the NJ counties we serve. Bring the brief to the assessment and use the resulting proposal to make an informed decision for the building."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Can the existing rooftop curb always be reused?",
+        "answer": "No. Reuse depends on the proposed model, the existing curb, and site conditions. Ask the contractor to confirm compatibility and identify any adapter, roof work, or further review in the scope."
+      },
+      {
+        "question": "What should an owner send before requesting a replacement quote?",
+        "answer": "Send the property address, current equipment details, service history, areas served, access contact, and shutdown constraints. Mark missing information so the contractor can confirm it during the assessment."
+      },
+      {
+        "question": "How should I compare rooftop HVAC bids?",
+        "answer": "Compare equipment selection, included connections, roof work, controls, lifting, startup, exclusions, and project coordination before comparing totals. Ask for written clarification when the scopes differ."
+      }
+    ]
+  },
+
+  {
+    "title": "Multifamily HVAC Replacement Without Tenant Disruption",
+    "slug": "multifamily-hvac-replacement-occupied-buildings",
+    "date": "October 19, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial & Multifamily HVAC",
+    "metaDescription": "Plan multifamily HVAC replacement across occupied NJ buildings with minimal tenant disruption, quality installs, and optional 10-year coverage.",
+    "excerpt": "A practical approach to replacing HVAC systems in occupied multifamily buildings — prioritizing installation quality, system fit, and phased scheduling over disruptive all-at-once shutdowns.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Replacing HVAC systems across an occupied multifamily building is nothing like a new-construction install. Tenants still need heat, cooling, and hot water while crews work floor by floor or unit by unit. For property managers, general contractors, and building owners, the goal is a plan that prioritizes correct equipment sizing and installation quality first, then sequences the work so residents aren't displaced. Optional 10-year parts & labor coverage and utility incentive programs can support the budget, but they should never be the reason a system gets chosen over one that actually fits the building."
+      },
+      {
+        "type": "h2",
+        "content": "Why Occupied-Building Replacements Need a Different Plan"
+      },
+      {
+        "type": "paragraph",
+        "content": "In an occupied building, every unit represents a household or business that depends on continuous comfort. Replacement work has to account for access scheduling, noise windows, elevator or stairwell logistics, and advance notice to residents — constraints that simply don't exist in vacant new construction. A workable plan starts with an accurate inventory of what's in the building now: unit count, system types (PTAC, split systems, ductless mini-splits, rooftop units), and how each unit is currently zoned. From there, the replacement sequence can be built around occupancy patterns instead of forcing tenants to adjust around the contractor's convenience."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Come First"
+      },
+      {
+        "type": "paragraph",
+        "content": "The equipment that works for a garden-style apartment building won't necessarily work for a mixed-use mid-rise or a high-rise with shared risers. Mechanical Enterprise installs heat pumps, central AC, ductless mini-splits, full system replacements, and VRV/VRF systems across our New Jersey service area, matching system type to the building's layout, electrical capacity, and tenant mix. Correct sizing and a clean installation reduce callbacks, shorten punch lists, and cut down on the service calls that generate tenant complaints after turnover. Fit and workmanship, not the lowest bid line item, determine how few disruptions a building experiences over the following years."
+      },
+      {
+        "type": "h2",
+        "content": "Phasing Replacement Work Without Displacing Tenants"
+      },
+      {
+        "type": "paragraph",
+        "content": "Phasing is the tool that keeps occupied buildings livable during a replacement. Work can be broken into floors, wings, or unit clusters so that only a limited number of households are without conditioned air at any given time. Coordinating closely with on-site building staff on notice windows, common-area access, and parking for equipment staging keeps the schedule moving without last-minute surprises. For buildings with shared mechanical systems, sequencing also has to account for any shutdowns that affect multiple units simultaneously, so those windows are scheduled for the shortest practical duration."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Total unit count and a breakdown of current system types (PTAC, split, ductless, rooftop)",
+          "Approximate age and condition of existing equipment, where known",
+          "Electrical panel capacity and any known infrastructure limitations",
+          "Building access constraints: elevator availability, parking, loading areas",
+          "Tenant notification requirements and any lease or HOA notice periods",
+          "Project timeline or phasing constraints driven by budget cycles or occupancy",
+          "Whether optional parts & labor coverage should be included in the proposal",
+          "Any interest in exploring commercial rebate or financing programs"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Optional Coverage for New and Eligible Existing Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "For new installations, Mechanical Enterprise offers an optional 10-year parts & labor coverage as a separately purchased add-on, with a zero deductible and coverage available across all major brands. This is not bundled into the installation price and is not a standard feature — it's a paid agreement you select at the time of purchase. Existing equipment in a building may also qualify for the same coverage, but only after it passes an eligibility inspection; not every existing system will qualify, and eligibility is assessed unit by unit against program criteria."
+      },
+      {
+        "type": "h2",
+        "content": "Rebates and Financing: A Secondary Consideration"
+      },
+      {
+        "type": "paragraph",
+        "content": "Once the system design and phasing plan are set, commercial incentive programs can help manage the budget. PSE&G Direct Install (commercial) can cover up to 80% of eligible project costs, and PSE&G On-Bill Repayment offers 0% interest financing for the remaining balance, repaid through the monthly utility bill. These programs can meaningfully reduce out-of-pocket cost for qualifying multifamily properties, but they shouldn't drive equipment selection. A system chosen primarily to maximize a rebate, rather than to fit the building, tends to generate more service calls and tenant complaints down the line."
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning an HVAC replacement across an occupied multifamily property? Get a phased proposal built around your building and tenants.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      },
+      {
+        "type": "h2",
+        "content": "Serving Multifamily Properties Across Northern and Central NJ"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise has worked in New Jersey's mechanical trade for 20 years, serving commercial and multifamily properties throughout Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. That includes garden-style apartment complexes, mixed-use mid-rises, and high-rise multifamily buildings with shared mechanical infrastructure — each requiring a different phasing and system approach. To start planning a replacement for your building, call (862) 423-9396."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How is HVAC replacement scheduled in an occupied multifamily building?",
+        "answer": "Work is typically phased by floor, wing, or unit cluster so only a limited number of households are without conditioned air at one time, coordinated around tenant notice requirements and building access windows."
+      },
+      {
+        "question": "Can existing HVAC equipment qualify for the same coverage as new installs?",
+        "answer": "Eligible existing systems may qualify for the optional 10-year parts & labor coverage after passing an inspection, but not all existing equipment will automatically qualify."
+      },
+      {
+        "question": "What NJ counties does Mechanical Enterprise serve for commercial and multifamily projects?",
+        "answer": "We serve Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for commercial and multifamily HVAC work."
+      }
+    ]
+  },
+
+  {
+    "title": "Fixed Per-Unit HVAC Pricing for NJ Apartments",
+    "slug": "fixed-per-unit-hvac-pricing-apartment-portfolios",
+    "date": "October 12, 2026",
+    "readTime": "6 min read",
+    "category": "Multifamily HVAC",
+    "metaDescription": "Fixed per-unit HVAC pricing across PTAC, mini-split, RTU, and split systems for NJ apartment portfolios—quarterly reporting, one point of contact.",
+    "excerpt": "How fixed per-unit portfolio pricing works across PTAC, mini-split, RTU, and split systems for New Jersey apartment owners and property managers.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Property managers overseeing apartment portfolios across Essex, Hudson, Bergen, and the other counties Mechanical Enterprise serves often manage a mix of equipment — PTAC units in older garden-style buildings, mini-splits in renovated units, rooftop RTUs on mixed-use properties, and split systems scattered across different buildings. Pricing each repair or replacement one-off makes budgeting difficult and slows decisions. Fixed per-unit portfolio pricing gives owners and managers a known annual cost by unit type, quoted across the entire portfolio, with quarterly reporting and one point of contact instead of multiple vendors and inconsistent invoices. Installation quality and proper system fit still come first — flat pricing only works when the underlying work is done correctly, which is where optional extended coverage can add further protection for eligible equipment."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Come First"
+      },
+      {
+        "type": "paragraph",
+        "content": "Before pricing is discussed, correct sizing and installation matter more than any contract structure. A PTAC sized for one unit layout won't perform the same in another; a mini-split head placed poorly short-cycles and wastes energy; a rooftop RTU serving a mixed-use building in Hudson County needs load calculations specific to that roof and tenant mix. Mechanical Enterprise evaluates each unit type across the portfolio — heat pump, central AC, ductless mini-split, VRV/VRF, or full system replacement — before quoting per-unit pricing, so the flat rate reflects what each system actually needs rather than a generic number. Getting this right up front reduces callbacks and keeps quarterly reporting clean, since fewer emergency repairs mean fewer line items outside the fixed structure."
+      },
+      {
+        "type": "h2",
+        "content": "How Fixed Per-Unit Pricing Works Across System Types"
+      },
+      {
+        "type": "paragraph",
+        "content": "Per-unit pricing is quoted per unit, per year, across the portfolio, covering PTAC, mini-split, RTU, and split systems under one schedule. Rather than negotiating a separate quote every time a unit needs service, the property is billed at a set rate for each equipment type, based on the number and mix of units under contract. This lets owners and managers forecast HVAC spend across a budget cycle instead of reacting to invoices as they arrive. Because the rate is set per unit type, portfolios with a blend of equipment — PTACs in one building and an RTU serving ground-floor retail below apartments in another — can be priced accurately without averaging dissimilar systems into one misleading number."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Coverage for Eligible Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations completed by Mechanical Enterprise, and existing systems that pass an eligibility inspection, may qualify for separately purchased 10-year parts and labor coverage, administered through a third-party extended service agreement backed by A-rated insurers and available for all major brands. This coverage is purchased separately from per-unit service pricing — existing equipment must pass inspection and meet program criteria before it may qualify, and not every unit will. For portfolios planning multi-year capital cycles, adding this optional coverage to new installations across a property can extend budget predictability beyond per-unit pricing itself, without changing who owns or maintains the equipment."
+      },
+      {
+        "type": "h2",
+        "content": "Quarterly Reporting and One Point of Contact"
+      },
+      {
+        "type": "paragraph",
+        "content": "Managing a portfolio spread across Essex, Bergen, Union, and neighboring counties typically means fielding calls from multiple vendors, each with its own invoicing and service history. Fixed per-unit pricing is structured around a single point of contact at Mechanical Enterprise and quarterly reporting that tracks unit counts, service activity, and system status across the whole portfolio. That cadence gives asset managers a regular checkpoint to review equipment condition ahead of budget season, flag units nearing replacement, and confirm the portfolio's unit mix still matches what's being billed — useful when units are added, removed, or converted between PTAC and mini-split during renovations."
+      },
+      {
+        "type": "h2",
+        "content": "Rebates and Incentives as a Secondary Benefit"
+      },
+      {
+        "type": "paragraph",
+        "content": "Commercial HVAC upgrades across New Jersey may also qualify for programs separate from per-unit service pricing. PSE&G Direct Install can cover up to 80% of an eligible commercial project's cost, and any remaining balance can be financed at 0% interest through PSE&G On-Bill Repayment, repaid through the monthly utility bill. These programs apply to qualifying commercial projects and are evaluated case by case — they're a secondary consideration behind proper installation and system fit, not a reason to choose equipment that doesn't match a building's actual load. Per-unit pricing itself is set independently of whether a given project pursues these programs."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us Before Bidding"
+      },
+      {
+        "type": "paragraph",
+        "content": "When comparing per-unit pricing against a current vendor contract, having consistent information up front speeds up accurate bids and makes side-by-side comparisons meaningful. Use the list below as a starting point when requesting quotes for a mixed-equipment apartment portfolio."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Current unit count by type (PTAC, mini-split, RTU, split) per building",
+          "Age and manufacturer of existing equipment, where known",
+          "Recent service or repair history, if available",
+          "Square footage or unit mix for each building in the portfolio",
+          "Any planned renovations or unit conversions in the next 12-24 months",
+          "Current vendor contract terms and renewal dates, for comparison",
+          "County and building type for each property (garden-style, mixed-use, high-rise, etc.)"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to price out your portfolio? Request a fixed per-unit quote across your PTAC, mini-split, RTU, and split systems.",
+        "buttonText": "Request Portfolio Pricing",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Does fixed per-unit pricing cover emergency repairs?",
+        "answer": "Per-unit pricing covers scheduled service across PTAC, mini-split, RTU, and split systems; the specific repair scope and response terms for your portfolio are defined in the service agreement itself."
+      },
+      {
+        "question": "Can existing PTAC or RTU units qualify for the 10-year coverage?",
+        "answer": "Existing systems may qualify for the optional 10-year parts and labor coverage after passing an eligibility inspection against program criteria. Not every unit will qualify, and this coverage is purchased separately from per-unit service pricing."
+      },
+      {
+        "question": "How is quarterly reporting delivered to property managers?",
+        "answer": "Reporting is provided on a quarterly cadence and tracks unit counts and service activity across the portfolio, giving one consolidated view through a single point of contact instead of separate vendor invoices."
+      }
+    ]
+  },
+
+  {
+    "title": "Essex County Heat Pump Costs: What Moves the Price",
+    "slug": "essex-county-heat-pump-installation-costs",
+    "date": "October 10, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Cost Guide",
+    "metaDescription": "What drives heat pump installation costs for Essex County commercial and multifamily buildings — ductwork, electrical, permits, and equipment tier.",
+    "excerpt": "There's no single flat price for a heat pump install in Essex County. Here's what actually moves the number, and what to send bidders so quotes are comparable.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "If you manage commercial or multifamily property in Essex County, you've probably asked a few contractors what a heat pump installation costs and gotten a few different answers. That's normal. Pricing is driven by site-specific variables: existing ductwork condition, electrical service capacity, refrigerant line-set length, local permitting, and the equipment tier you select. A PTAC retrofit, a multifamily central plant upgrade, and a mixed-use building replacing aging rooftop units don't land on the same number. This guide walks through the factors that move pricing from project to project, what to send bidders before you ask for a quote, and where optional coverage and commercial incentive programs fit into the total cost picture."
+      },
+      {
+        "type": "h2",
+        "content": "Why Installed Costs Vary So Much in Essex County"
+      },
+      {
+        "type": "paragraph",
+        "content": "Essex County's building stock spans pre-war multifamily walk-ups, mid-century garden apartments, converted mixed-use storefronts, and newer commercial construction. Each comes with a different starting point for a heat pump installation. A building with existing central ductwork sized correctly for airflow is a simpler retrofit than one relying on through-wall PTAC units that need individual replacement. A property with open electrical panel capacity avoids a service upgrade; one running near capacity does not. Multifamily owners juggling unit-by-unit access and tenant scheduling face different labor logistics than a single-tenant commercial building with one point of contact. None of these differences are unusual — they're simply why a credible quote has to be based on a site walk, not a phone estimate."
+      },
+      {
+        "type": "h2",
+        "content": "Ductwork, Electrical, and Line-Set Factors"
+      },
+      {
+        "type": "paragraph",
+        "content": "Three mechanical factors tend to move pricing more than anything else. First, ductwork: reusing existing, correctly sized ducts is far more economical than modifying or replacing a system that was sized for a different type of equipment. Second, electrical capacity: heat pumps often draw differently than the system they're replacing, and some installations require a panel upgrade, new circuits, or disconnect work before the outdoor unit can even be set. Third, line-set length and routing: the distance and path between indoor and outdoor components — especially in multistory buildings or installations with roof-mounted condensers — affects both material cost and labor hours. Any bidder who quotes a number without confirming these three items on-site is guessing."
+      },
+      {
+        "type": "h2",
+        "content": "Equipment Tier and Building Type"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise installs heat pump, central AC, ductless mini-split, full system replacement, commercial, and VRV/VRF equipment, and the right tier depends on the building, not just the budget. PTAC-style units suit unit-by-unit multifamily replacements where tenants control individual comfort. Ductless mini-splits fit additions, mixed-use spaces, or buildings without ductwork. Larger commercial and multifamily properties often move toward VRF/VRV systems for zoned control across many spaces with fewer outdoor units. Rooftop unit (RTU) replacements are common for single-story commercial buildings. Equipment tier affects both upfront cost and long-term operating and maintenance planning, which is why it belongs in the same conversation as price."
+      },
+      {
+        "type": "h2",
+        "content": "Permits and Essex County Code Compliance"
+      },
+      {
+        "type": "paragraph",
+        "content": "Permitting adds time and, in some cases, cost that property owners don't always anticipate when comparing bids. Electrical work tied to a heat pump installation typically requires inspection, and commercial projects may involve additional review depending on building type, occupancy, and the scope of mechanical work. A contractor familiar with Essex County jurisdictions should be able to tell you upfront whether your project needs permits, what inspections to expect, and how that timeline affects your installation schedule. If a bid doesn't mention permitting at all, ask about it directly — it's a common place where quotes diverge after the contract is signed."
+      },
+      {
+        "type": "h2",
+        "content": "Coverage Options and Commercial Incentive Programs"
+      },
+      {
+        "type": "paragraph",
+        "content": "Installation quality and proper system fit matter more to long-term performance than the sticker price alone. For new installations by Mechanical Enterprise, optional 10-year parts and labor coverage is available as a separately purchased add-on backed by a third-party service agreement — it is not bundled into the installation price and is not automatic. Eligible existing systems may also qualify for this coverage after an inspection, though not every system will pass. On the incentive side, PSE&G's commercial Direct Install program has covered up to 80% of eligible project costs, with PSE&G's On-Bill Repayment program offering 0% interest financing on the remaining balance, repaid through the monthly utility bill. These programs can meaningfully change the net cost of a commercial heat pump project, but eligibility and amounts depend on the program's current terms — confirm specifics before you budget around them."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Building type and unit count (multifamily, mixed-use, single-tenant commercial, etc.)",
+          "Current heating/cooling system type: PTAC, split, RTU, central ducted, or none",
+          "Photos or a floor plan showing existing ductwork, if any",
+          "Electrical panel location, amperage, and approximate age",
+          "Distance between where outdoor and indoor equipment would be placed",
+          "Any known access restrictions (tenant scheduling, roof access, landmark/historic status)",
+          "Whether you're pursuing PSE&G Direct Install or On-Bill Repayment for the project"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Get a site-specific heat pump quote for your Essex County property, with ductwork, electrical, and equipment tier assessed before you're given a number.",
+        "buttonText": "Request a Commercial Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      },
+      {
+        "type": "h2",
+        "content": "Frequently Asked Questions"
+      },
+      {
+        "type": "paragraph",
+        "content": "Why can't I get a price over the phone? Because the ductwork, electrical capacity, line-set length, and permitting scope all vary by building, and each one changes labor and material costs. A number given without a site visit isn't reliable enough to budget against."
+      },
+      {
+        "type": "paragraph",
+        "content": "Does the optional 10-year coverage apply to systems we already have? Eligible existing systems may qualify for the optional parts and labor coverage after an inspection, but it's not available for every system and isn't bundled into any installation automatically."
+      },
+      {
+        "type": "paragraph",
+        "content": "Do incentive programs apply to every commercial building in Essex County? Program eligibility, amounts, and terms are set by PSE&G and NJ Clean Energy, not by Mechanical Enterprise, so it's worth confirming current eligibility for your specific property and project scope before finalizing a budget."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Why can't I get a heat pump installation price over the phone?",
+        "answer": "Because ductwork condition, electrical capacity, refrigerant line-set length, and permitting scope all vary by building and significantly change labor and material costs. A reliable quote requires a site visit."
+      },
+      {
+        "question": "Does the optional 10-year parts and labor coverage apply to our existing system?",
+        "answer": "Eligible existing systems may qualify for the optional coverage after an inspection, but not every system passes, and it is a separately purchased add-on rather than something bundled into installation."
+      },
+      {
+        "question": "Are PSE&G commercial incentive programs available for every Essex County building?",
+        "answer": "Program terms, amounts, and eligibility are set by PSE&G and NJ Clean Energy and can vary by project type, so confirm current eligibility for your specific building before budgeting around a rebate or financing figure."
+      }
+    ]
+  },
+
+  {
+    "title": "What a 10-Year HVAC Warranty Should Really Cover",
+    "slug": "10-year-hvac-warranty-coverage-explained",
+    "date": "October 9, 2026",
+    "readTime": "6 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "A 10-year HVAC parts & labor agreement is a paid add-on, not a given. Here's what coverage, exclusions, and eligibility actually mean.",
+    "excerpt": "Before comparing warranty terms, property owners need to know the difference between a manufacturer's warranty and a purchased parts & labor agreement — and what 'covered' really excludes.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "For property managers and building owners across Essex, Hudson, Bergen, and the surrounding New Jersey counties, a 10-year HVAC warranty sounds reassuring until you read the fine print. The real question isn't how many years are printed on the page — it's what the agreement actually pays for, who performs the labor, and whether your equipment even qualifies. Before comparing coverage terms, start with the installation itself: a system sized correctly for the building, installed to manufacturer specifications, and matched to the load it actually serves. Coverage is a safety net, not a substitute for correct design and workmanship. Mechanical Enterprise LLC has installed and serviced commercial and multifamily HVAC systems across New Jersey for 20 years, and we treat extended coverage as an optional layer added after installation — not a replacement for doing the job right the first time."
+      },
+      {
+        "type": "h2",
+        "content": "Start With Installation Quality and System Fit"
+      },
+      {
+        "type": "paragraph",
+        "content": "Any warranty is only as good as the system behind it. Undersized equipment, poor duct or refrigerant line sizing, and rushed commissioning create recurring problems that no service agreement can fully offset through repeated parts swaps. Before discussing coverage terms, ask how the contractor calculated load, verified refrigerant charge, and tested airflow at startup. For multifamily buildings and commercial properties running PTAC units, mini-splits, RTUs, or split systems, fit matters as much for long-term reliability as for occupant comfort. A properly installed system across Union, Middlesex, Morris, or any county we serve will generally need less warranty activity over its life — which is the actual goal, not simply having a thick coverage document on file."
+      },
+      {
+        "type": "h2",
+        "content": "Manufacturer Warranty vs. a Purchased Service Agreement"
+      },
+      {
+        "type": "paragraph",
+        "content": "These are two different things, and vendors sometimes blur the line. A manufacturer's warranty, issued by the equipment maker, typically covers defective parts for a set period and is tied to the unit itself, not the contractor who installed it. It usually does not cover labor, diagnostic time, refrigerant, or travel. A 10-year parts and labor agreement is a separate, purchased add-on — it is not free, not standard, and not bundled into the cost of installation. Our 10-Year Parts & Labor Coverage is administered as a third-party extended service agreement backed by A-rated insurers, available for new installations by Mechanical Enterprise and for eligible existing systems that pass an inspection. It supplements the manufacturer's parts warranty; it does not replace or duplicate it."
+      },
+      {
+        "type": "h2",
+        "content": "What 'Parts & Labor' Really Covers Over 10 Years"
+      },
+      {
+        "type": "paragraph",
+        "content": "When a contract says parts and labor, ask exactly which labor is included: diagnostic visits, compressor replacement, board-level repairs, refrigerant recovery and recharge, travel time? Our coverage carries a $0 deductible on covered repairs, applies across all major brands, and is structured so you aren't billed separately for technician time on a covered failure. That said, no agreement covers routine maintenance, consumables, or damage from neglect, misuse, or modifications outside the manufacturer's guidelines. Read the exclusions list as carefully as the coverage list — what's left out tells you more about an agreement's real value than its headline term length."
+      },
+      {
+        "type": "h2",
+        "content": "Existing Systems: Eligibility, Not Automatic Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "If you're trying to extend coverage onto equipment you already own, know that eligible existing systems may qualify for the 10-year parts and labor agreement only after an inspection confirms they meet program criteria — age, condition, and documented maintenance history all factor in. Coverage is never automatic for older or undocumented equipment. For portfolios with mixed system types — PTAC, mini-split, RTU, and split systems across a multifamily or commercial building — expect per-unit eligibility review rather than a blanket portfolio approval. This is also why it pays to keep service records organized; a system with a clean maintenance trail is more likely to pass inspection than one with gaps in its history."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us — or Ask Any Bidder — Before Signing"
+      },
+      {
+        "type": "paragraph",
+        "content": "Whether you're evaluating our proposal or comparing bidders, get the specifics in writing before you commit to a 10-year term. The following checklist applies regardless of which contractor you're working with."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Equipment make, model, and install date for every unit in the portfolio",
+          "Most recent maintenance records and any existing manufacturer warranty documentation",
+          "Whether the agreement is parts-only, labor-only, or genuinely both",
+          "The deductible amount per repair, if any",
+          "A full list of exclusions, not just the covered-items summary",
+          "Who performs the repair work: the installing contractor or a third-party dispatch",
+          "Whether existing equipment requires an inspection before enrollment, and what that inspection checks",
+          "How claims are filed and what documentation is required at the time of failure"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Rebates and Incentives Are a Bonus, Not the Foundation"
+      },
+      {
+        "type": "paragraph",
+        "content": "Utility incentive programs can offset part of a replacement project, but they shouldn't drive the decision on their own. PSE&G's Direct Install program covers up to 80% of eligible commercial project costs, and the remaining balance can sometimes be financed at 0% interest through PSE&G's On-Bill Repayment program, repaid through the monthly utility bill. These programs apply to qualifying commercial projects and are worth discussing with your contractor during scoping — but they're a secondary consideration behind correct system design, quality installation, and a clear understanding of what any extended coverage will and won't pay for."
+      },
+      {
+        "type": "cta_box",
+        "content": "Serving commercial and multifamily properties across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, Mechanical Enterprise LLC can walk your portfolio through system design, installation, and optional 10-year parts & labor coverage eligibility.",
+        "buttonText": "Request a Commercial HVAC Proposal",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Does a 10-year warranty mean I'll never pay for a repair?",
+        "answer": "No. A 10-year parts and labor agreement covers specific failures and components defined in the contract, subject to exclusions and, in our case, a $0 deductible on covered repairs. Items outside the covered list, routine maintenance, and damage from misuse are not included."
+      },
+      {
+        "question": "Can I add coverage to equipment we already own?",
+        "answer": "Eligible existing systems may qualify for our 10-year parts and labor coverage, but enrollment depends on passing an inspection and meeting program criteria. Age, documented maintenance, and condition all factor into eligibility."
+      },
+      {
+        "question": "Is the manufacturer's warranty the same as your 10-year coverage?",
+        "answer": "No. The manufacturer's warranty is issued by the equipment maker and generally covers parts only for a defined period. Our 10-year parts and labor coverage is a separately purchased agreement, administered as a third-party extended service agreement backed by A-rated insurers, that supplements — not replaces — the manufacturer's warranty."
+      }
+    ]
+  },
+
+  {
+    "title": "Commercial HVAC: Repair or Replace?",
+    "slug": "commercial-hvac-repair-or-replace-decision-guide",
+    "date": "October 9, 2026",
+    "readTime": "8 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "A decision framework for NJ property managers on aging commercial HVAC: when to repair, when to replace, and what to ask bidders.",
+    "excerpt": "Aging RTUs, PTACs, and VRF systems don't fail on a schedule. Here's how commercial building owners across Essex, Bergen, and Hudson counties can decide between repair and replacement with confidence.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Every facility manager hits the same wall eventually: an aging rooftop unit, PTAC fleet, or VRF system that keeps limping along but no longer runs efficiently. The question isn't just mechanical — it's financial. Mechanical Enterprise LLC has spent 20 years servicing commercial and multifamily properties across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, and the repair-versus-replace call comes down to a handful of factors you can actually measure, not guesswork."
+      },
+      {
+        "type": "h2",
+        "content": "The Real Cost of Deferring a Replacement Decision"
+      },
+      {
+        "type": "paragraph",
+        "content": "Deferred replacement rarely saves money — it shifts cost into unpredictable emergency calls, rising utility bills from declining efficiency, and tenant complaints that affect occupancy. A unit past its mid-life point tends to need more frequent service visits, and each visit carries diminishing returns as parts become harder to source. For multifamily owners and commercial landlords, the real comparison isn't repair cost versus replacement cost in isolation — it's the total cost of ownership over the next five years, including downtime risk, comfort complaints, and the likelihood of a compressor or heat exchanger failure mid-season when contractors are booked solid."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality Determines Lifecycle, Not Just Equipment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Two identical rooftop units installed by different crews can have very different service lives. Proper sizing for the actual building load, correct refrigerant charge, sealed ductwork, and commissioning that verifies airflow and controls all determine whether a system hits its expected lifespan or starts failing early. When we evaluate a property for repair versus replace, we look at how the existing system was installed as much as how old it is — a poorly matched or undersized unit from day one will keep causing problems no matter how many repairs it gets. Getting the installation right the first time is the single biggest lever a building owner has over long-term HVAC cost."
+      },
+      {
+        "type": "h2",
+        "content": "Repair vs. Replace: A Practical Framework"
+      },
+      {
+        "type": "paragraph",
+        "content": "Repair generally still makes sense when the system is relatively young, the fault is isolated, and the equipment has a track record of reliable performance. Consider repair when:"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "The unit is under roughly half its expected service life",
+          "The repair addresses a single component, not a recurring pattern of failures",
+          "Energy consumption has stayed relatively flat year over year",
+          "Replacement parts are still readily available for the model",
+          "The building has no planned renovation or load changes coming"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "Replacement becomes the stronger investment when any of the following apply:"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "The system has needed three or more service calls in the past 12 months",
+          "Refrigerant is an older type that's increasingly costly or hard to source",
+          "Utility bills have climbed without a corresponding change in occupancy or usage",
+          "The unit no longer matches current building load after renovations or tenant turnover",
+          "A failure during peak season would put tenants or operations at serious risk"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "When a replacement is the right call, protecting that investment matters as much as the installation itself. Mechanical Enterprise offers an optional 10-year parts and labor coverage plan, administered through a third-party agreement backed by A-rated insurers, available for new HVAC installations across all major brands. Existing equipment may also qualify after it passes an eligibility inspection — this coverage is not included or automatic with every system, and it's not free; it's a paid add-on with no deductible once in place. For building owners weighing a major capital expense, that structure gives a clearer picture of long-term maintenance cost before committing budget."
+      },
+      {
+        "type": "h2",
+        "content": "Rebates, Direct Install, and Financing for NJ Properties"
+      },
+      {
+        "type": "paragraph",
+        "content": "Replacement economics also depend on what's available to offset project cost. PSE&G's Direct Install program can cover up to 80% of an eligible commercial project, and the On-Bill Repayment option offers 0% interest financing on the remaining balance, repaid through the monthly utility bill. These programs are a secondary consideration behind getting the sizing, installation, and coverage right — but for a multifamily building in Union or Middlesex County weighing a multi-unit replacement, they can meaningfully change the budget conversation with ownership or the board."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us Before You Request Bids"
+      },
+      {
+        "type": "paragraph",
+        "content": "Getting an accurate repair-or-replace recommendation — and comparable bids from any contractor — starts with the right information upfront. Before you request a proposal, gather:"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Equipment nameplate data (make, model, serial number, refrigerant type)",
+          "Approximate install date or age of each unit",
+          "Service history or recent repair invoices, if available",
+          "Current utility bills for the past 12 months",
+          "Square footage served and current occupancy type (office, retail, multifamily)",
+          "Any planned renovations, tenant changes, or load additions",
+          "Portfolio scope if you're requesting pricing across multiple buildings or unit types"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Not sure whether your system needs a repair or a full replacement? Get a straight assessment from a contractor that's served NJ commercial properties for 20 years.",
+        "buttonText": "Request a Commercial HVAC Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How do you decide between repairing and replacing a commercial HVAC unit?",
+        "answer": "We look at the unit's age relative to its expected lifespan, repair frequency over the past year, refrigerant type, current utility trends, and whether the system still matches the building's actual load. A unit needing isolated repairs with a solid track record often warrants repair; one with recurring failures or rising energy costs usually points to replacement."
+      },
+      {
+        "question": "Is the 10-year parts and labor coverage included with a new system?",
+        "answer": "No — it's an optional, paid add-on available for new installations across all major brands, and existing equipment may qualify after passing an eligibility inspection. It is not automatic or free with every project."
+      },
+      {
+        "question": "Can older existing equipment qualify for extended coverage?",
+        "answer": "Existing systems may be eligible after an inspection confirms they meet program criteria. Eligibility isn't guaranteed and depends on the condition and age of the equipment at the time of inspection."
+      }
+    ]
+  },
+
+  {
     "title": "How to Compare HVAC Installation Quotes in NJ",
     "slug": "compare-hvac-installation-quotes-nj",
-    "date": "September 26, 2026",
+    "date": "September 30, 2026",
     "readTime": "7 min read",
     "category": "Commercial HVAC",
     "metaDescription": "A property manager's guide to comparing NJ HVAC installation quotes: equipment fit, labor scope, warranty terms, and permits.",
@@ -117,7 +940,7 @@ export const blogPosts: BlogPostData[] = [
   {
     "title": "What GCs Need From an HVAC Subcontractor",
     "slug": "what-gcs-need-from-hvac-subcontractor",
-    "date": "September 26, 2026",
+    "date": "September 30, 2026",
     "readTime": "7 min read",
     "category": "Commercial HVAC",
     "metaDescription": "What NJ general contractors should expect from an HVAC subcontractor: submittals, trade coordination, and close-out that doesn't bounce back.",
@@ -204,7 +1027,7 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    "date": "September 26, 2026",
+    "date": "September 30, 2026",
     "slug": "hvac-capital-budgeting-per-unit-apartment-owners",
     "title": "Per-Unit HVAC Capital Budgeting Guide for NJ Apartments",
     "excerpt": "How apartment owners across Essex, Hudson, Bergen and surrounding NJ counties can build a per-unit HVAC capital plan grounded in install quality, correct system fit, and realistic financing options.",
@@ -291,7 +1114,7 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    "date": "September 26, 2026",
+    "date": "September 30, 2026",
     "slug": "commercial-hvac-response-sla-checklist",
     "title": "What a Commercial HVAC Response SLA Should Include",
     "excerpt": "A usable HVAC service SLA is built around installation quality, a defined response window, escalation steps, and regular reporting — not a marketing number. Here's what NJ property managers should require before signing.",
@@ -2569,22 +3392,102 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "PSE&G On-Bill Repayment for HVAC: How It Works",
-    slug: "pseg-on-bill-repayment-hvac",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "PSE&G Programs",
-    metaDescription: "PSE&G On-Bill Repayment lets you finance HVAC at 0% interest through your utility bill. Save from day one. Free assessment.",
-    excerpt: "PSE&G On-Bill Repayment finances your HVAC upgrade at 0% interest through your utility bill. Most homeowners save money from day one.",
-    sections: [
-      { type: "intro", content: "PSE&G's On-Bill Repayment (OBR) program is one of the most innovative financing options for HVAC upgrades in New Jersey. After your rebate is applied, any remaining balance is added to your monthly PSE&G bill at 0% interest. Because your new heat pump reduces energy costs, most homeowners see lower total monthly bills from day one — even with the OBR payment included." },
-      { type: "h2", content: "How On-Bill Repayment Works" },
-      { type: "paragraph", content: "Here's a typical example: Your new heat pump costs $12,000. PSE&G rebates cover $14,000. In this case, you owe nothing — the rebate exceeds the cost. But even when there's a remaining balance, say $3,000 after a $9,000 rebate on a $12,000 system, that $3,000 is spread across 60 monthly payments of $50 on your PSE&G bill. Meanwhile, your energy savings are typically $100-$200 per month, meaning you're net positive from day one." },
-      { type: "stat_box", content: "Interest Rate: 0% | Term: Up to 60 months | Monthly Savings Often Exceed Payment" },
-      { type: "h2", content: "Who Qualifies for OBR" },
-      { type: "paragraph", content: "OBR is available to PSE&G residential customers with accounts in good standing. No credit check is required because the financing is through your utility bill, not a traditional loan. Mechanical Enterprise helps you apply for OBR as part of our installation process. Call (862) 423-9396 for a free assessment that includes OBR savings calculations." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+    "title": "PSE&G HVAC On-Bill Repayment: Eligibility & Next Steps",
+    "slug": "pseg-on-bill-repayment-hvac",
+    "date": "April 12, 2026",
+    "readTime": "5 min read",
+    "category": "PSE&G Programs",
+    "metaDescription": "Understand PSE&G HVAC on-bill repayment, current eligibility and project review. Request an NJ HVAC assessment before relying on incentives or approval.",
+    "excerpt": "PSE&G offers interest-free repayment for eligible HVAC projects. Learn what to confirm, how repayment differs from a rebate, and what to prepare for an assessment.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "PSE&G on-bill repayment can help eligible customers spread approved HVAC project costs across utility bills. It is a repayment obligation, separate from a rebate. Before budgeting for a replacement, establish the installation scope and confirm the program that applies to your account and equipment. An online example cannot establish your approval, project price or future energy savings."
+      },
+      {
+        "type": "h2",
+        "content": "What the current residential program says"
+      },
+      {
+        "type": "paragraph",
+        "content": "PSE&G's residential HVAC Instant Rebates page currently describes interest-free on-bill repayment, an allowance up to $25,000 for a qualifying HVAC Instant Rebates project, and repayment terms generally of 84 months. Income-qualified customers may have a 120-month option for project costs above $10,000. Separate building-decarbonization allowances and eligibility rules may apply. These limits are program allowances, not promised rebates or automatic approvals. Check [PSE&G's current HVAC program terms](https://myhomeenergy.pseg.com/appliance-offers/heatingandcooling) for the requirements that apply to your project. Information reviewed October 21, 2026; PSE&G may change its programs."
+      },
+      {
+        "type": "h2",
+        "content": "Keep project cost, rebates and repayment separate"
+      },
+      {
+        "type": "paragraph",
+        "content": "Ask for a written proposal showing the complete installation scope first. Then ask for any proposed incentive to be identified separately, with its approval status and requirements. Finally, establish the amount proposed for repayment and any amount due outside that arrangement. Do not subtract an unapproved rebate as though it were cash already received, or assume a repayment allowance means the equipment is free."
+      },
+      {
+        "type": "paragraph",
+        "content": "Your household budget should account for both the repayment installment and ongoing utility use. Equipment selection, the building and how the system is operated affect future bills. A promise that savings will always exceed the installment is not a substitute for a property-specific review. Ask what assumptions support any estimate and which charges are outside the proposal."
+      },
+      {
+        "type": "h2",
+        "content": "What to prepare before requesting an assessment"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Property town, ZIP code and whether it is a home, condo or multifamily building.",
+          "The utility serving the property and the name of the account holder.",
+          "Current heating fuel, equipment type and the reason for considering replacement.",
+          "Equipment photos and model information where safely accessible.",
+          "Any existing installation proposal, incentive estimate or program correspondence.",
+          "Your desired timing, access restrictions and any association approvals needed."
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "Use the assessment request to arrange a conversation; do not send account passwords, Social Security numbers or income documents through an ordinary website message. If further documentation is required for an application, confirm the appropriate submission process directly with the utility or authorized program representative."
+      },
+      {
+        "type": "h2",
+        "content": "Questions to resolve before installation"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
+          "Which current program applies to this utility account and proposed equipment?",
+          "What approval or enrollment steps are required before work starts?",
+          "Which project costs are included, excluded or still subject to assessment?",
+          "What rebate amounts, if any, are confirmed rather than estimated?",
+          "What repayment amount, term and customer agreement would apply?",
+          "What happens if the proposed equipment or project scope changes?"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Arrange the right HVAC review"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise can review the HVAC scope and discuss whether utility-program review is relevant to the proposed work. Start with [residential installation planning](/residential), compare [central AC replacement scopes](/blog/central-ac-replacement-nj-cost), or review [heat-pump installation](/heat-pump-installation-nj). Commercial and larger multifamily projects need their own assessment; do not apply the residential program limits above to a business property."
+      },
+      {
+        "type": "cta_box",
+        "content": "Tell Mechanical Enterprise about the property, existing equipment and proposed upgrade. Request an assessment before relying on a rebate or repayment estimate.",
+        "buttonText": "Request an HVAC assessment",
+        "buttonUrl": "#blog-assessment"
+      }
     ],
+    "faqSchema": [
+      {
+        "question": "Is PSE&G on-bill repayment the same as a rebate?",
+        "answer": "No. A rebate may reduce eligible project costs if approved; on-bill repayment is an arrangement to repay an approved balance through utility bills."
+      },
+      {
+        "question": "Does a repayment allowance guarantee my project is approved?",
+        "answer": "No. The utility account, equipment, program requirements and proposed project must be reviewed. Confirm the applicable approval and enrollment steps before work starts."
+      },
+      {
+        "question": "Can a business use the residential repayment limits in this guide?",
+        "answer": "Do not assume residential terms apply to a commercial property. Request a review under the program that matches the property and utility account."
+      }
+    ],
+    "updatedDate": "October 21, 2026"
   },
   {
     title: "PSE&G Clean Heat Program NJ: Complete Guide",
@@ -2939,23 +3842,103 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "Central AC Replacement Cost in NJ 2026",
-    slug: "central-ac-replacement-nj-cost",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Guides",
-    metaDescription: "Central AC replacement costs $8K-$15K in NJ before rebates. PSE&G rebates cover up to $16K. Free assessment and quote available.",
-    excerpt: "How much does central AC replacement cost in NJ? $8K-$15K before rebates, but PSE&G can cover up to $16K. Get a free quote.",
-    sections: [
-      { type: "intro", content: "If your central air conditioning needs replacement in New Jersey, you're probably wondering about costs. The good news: while replacement prices range from $8,000 to $15,000 depending on system type and home size, PSE&G rebates can cover up to $16,000 — meaning many homeowners pay $0 out of pocket for a brand new system." },
-      { type: "h2", content: "Cost Breakdown" },
-      { type: "stat_box", content: "Basic Central Heat Pump: $8K-$10K | Mid-Range: $10K-$13K | Premium/Variable Speed: $13K-$15K | After Rebates: Often $0" },
-      { type: "h2", content: "What Affects the Price" },
-      { type: "paragraph", content: "System size (tonnage), efficiency rating (SEER2), brand, and installation complexity all affect pricing. Homes needing ductwork modifications cost more. Higher-efficiency systems cost more upfront but qualify for larger rebates, often making them cheaper after incentives. Mechanical Enterprise provides detailed quotes with all costs itemized before any work begins." },
-      { type: "h2", content: "Get Your Free Quote" },
-      { type: "paragraph", content: "Call (862) 423-9396 for a free assessment and quote. We'll calculate your exact cost after all applicable rebates." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+    "title": "Central AC Replacement Cost in NJ: Quote Checklist",
+    "slug": "central-ac-replacement-nj-cost",
+    "date": "April 12, 2026",
+    "readTime": "5 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "Compare central AC replacement quotes in NJ: equipment, ductwork, electrical, permits and installation scope. Request a property-specific assessment.",
+    "excerpt": "Understand what changes a central AC replacement quote in New Jersey, which costs to ask bidders to separate, and what to send for a useful assessment.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "The useful answer to 'What does central AC replacement cost in NJ?' starts with the property and installation scope. A condenser price alone is not an installed-system quote. Equipment selection, the existing indoor unit, ducts, electrical work, access and required approvals all need review. Mechanical Enterprise can assess the property and prepare a scope; this guide explains how to compare the resulting proposals without treating an online estimate as a binding price."
+      },
+      {
+        "type": "h2",
+        "content": "What should a replacement quote include?"
+      },
+      {
+        "type": "paragraph",
+        "content": "Ask each bidder to identify the proposed equipment, the work included and the assumptions behind the proposal. Is the indoor equipment part of the replacement? Are controls, removal and disposal, startup checks and documentation included? If a line item is excluded, ask who will handle it. A lower total may describe a smaller scope rather than the same installation at a lower price."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Equipment models and the proposed system configuration.",
+          "Installation labor, removal and disposal responsibilities.",
+          "Duct, drain, refrigerant-line and electrical work included or excluded.",
+          "Access requirements and protection of the occupied property.",
+          "Permits, inspections and who coordinates them where required.",
+          "Startup checks, operating instructions and closeout documents.",
+          "Manufacturer warranty terms and any separately priced coverage.",
+          "Payment milestones, assumptions and change-order process."
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Why two NJ properties can need different scopes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A straightforward equipment replacement and a project requiring duct changes, difficult access or electrical work should not be priced as identical jobs. Share known comfort problems and prior repairs with the contractor, rather than asking only for the same equipment size. A site assessment helps establish which existing components can remain and which need further evaluation. In a condo or multifamily building, confirm equipment ownership and coordinate access with management before scheduling work."
+      },
+      {
+        "type": "h2",
+        "content": "Separate the installation price from possible incentives"
+      },
+      {
+        "type": "paragraph",
+        "content": "Keep the full project price, any confirmed incentive and the amount you must pay as separate figures. An incentive estimate is not approval, and central AC and heat-pump projects may have different requirements. Ask which program applies to the actual equipment and utility account, what must happen before installation, and what evidence confirms eligibility. Review current options through our [NJ rebate guide](/rebate-guide). Do not assume a rebate makes every replacement free."
+      },
+      {
+        "type": "h2",
+        "content": "What to send for a useful replacement assessment"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Property town and ZIP code, property type and the area served by the system.",
+          "Photos of outdoor and indoor equipment, including readable model labels where accessible.",
+          "Approximate equipment age and a description of current comfort or reliability problems.",
+          "Recent repair findings or an existing proposal you want help comparing.",
+          "Access restrictions, association approvals and your intended project timing."
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "These details help organize the assessment; they do not replace a site visit or confirm a final equipment selection. Ask for a written scope that identifies unresolved items. If a component cannot be inspected before the quote, agree how it will be evaluated and how additional work would be approved."
+      },
+      {
+        "type": "h2",
+        "content": "Choose the next step that fits your property"
+      },
+      {
+        "type": "paragraph",
+        "content": "For replacement planning, see [central AC installation in NJ](/central-ac-installation-nj). If you are deciding whether to keep an existing system, start with [AC repair and assessment](/ac-repair-nj). Property managers coordinating multiple units can use our [commercial property management services](/commercial/for-property-management). The assessment form below lets you request help without assuming a particular rebate, price or installation date."
+      },
+      {
+        "type": "cta_box",
+        "content": "Send your property details and current equipment information to discuss a central AC replacement scope with Mechanical Enterprise.",
+        "buttonText": "Request an installation assessment",
+        "buttonUrl": "#blog-assessment"
+      }
     ],
+    "faqSchema": [
+      {
+        "question": "Can I get a final central AC replacement price from equipment photos?",
+        "answer": "Photos help prepare an assessment, but access, system compatibility and installation requirements may need a site review before a final scope is confirmed."
+      },
+      {
+        "question": "Should I compare quotes only by their total price?",
+        "answer": "Compare the equipment and scope, exclusions, startup documentation, warranty terms and payment milestones alongside the total price."
+      },
+      {
+        "question": "Does every central AC replacement qualify for a rebate?",
+        "answer": "No. Eligibility depends on the current program, utility account, equipment and project requirements. Confirm it before relying on an incentive in your budget."
+      }
+    ],
+    "updatedDate": "October 21, 2026"
   },
   {
     title: "HVAC Financing Options in NJ",

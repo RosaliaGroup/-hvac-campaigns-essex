@@ -108,6 +108,7 @@ export function normalizeBlogPost(post: BlogPostData): BlogPostData {
     title: post.title, slug: post.slug, date: post.date, readTime: post.readTime, category: post.category,
     metaDescription: post.metaDescription, excerpt: post.excerpt, sections,
   };
+  if (typeof post.updatedDate === "string") out.updatedDate = post.updatedDate;
   if (Array.isArray(post.faqSchema)) out.faqSchema = post.faqSchema.map((f) => ({ question: str(f?.question), answer: str(f?.answer) }));
   return out;
 }

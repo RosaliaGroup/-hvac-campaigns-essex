@@ -6,6 +6,7 @@
  * "each degrades gracefully if unavailable").
  */
 import { loadReportNotes } from "./notes";
+import { autoQueueMarketIntelTopics } from "../contentQueue";
 import { collectCrawlCheck } from "./crawlCheck";
 import { collectExperimentReadout } from "./experiment";
 import { eq } from "drizzle-orm";
@@ -126,6 +127,14 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
     reportId = existing?.id ?? 0;
   }
 
+  // Daily reruns update the same report row. Avoid appending repeated items:
+  // retain prior decisions/dismissals and insert only genuinely new findings.
+  const existingItems = await db.select({
+    suggestionKey: seoIntelItems.suggestionKey,
+    status: seoIntelItems.status,
+  }).from(seoIntelItems).where(eq(seoIntelItems.reportId, reportId));
+  const existingKeys = new Set(existingItems.map(x => x.suggestionKey).filter((x): x is string => !!x));
+
   let counts = emptyExecutionCounts();
   let executed = 0;
   let accepted = 0;
@@ -133,6 +142,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
 
   for (const draft of drafts) {
     const key = suggestionKeyFor(draft.kind, draft.title, draft.targetQueue);
+    if (existingKeys.has(key)) continue;
     if (await isSuppressed(key, now)) continue; // §7: dismissed-as-wrong/off_brand within 90 days — not re-suggested.
 
     const { result, counts: nextCounts } = await executeItem(draft as ItemDraft, { counts, metaWarmedUp, circuitClear, now });
@@ -157,14 +167,50 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
       executedBatchId: executedNow && "batchId" in result ? result.batchId : null,
       executedPrId: executedNow && "prNumber" in result && result.prNumber ? String(result.prNumber) : null,
     });
+    existingKeys.add(key);
     itemsCreated++;
+  }
+
+  // Research-to-content bridge: use only measured, unserved search demand.
+  // Skip local landing-page gaps, which belong to the separate page-PR backlog.
+  try {
+    const { proposeTopic, listContentQueue } = await import("../contentQueue");
+    const existingTitles = new Set((await listContentQueue()).map(t => t.title.toLowerCase()));
+    const opportunities = drafts.filter(d => d.kind === "unserved_query" && d.targetQueue === "content_queue").slice(0, 5);
+    for (const item of opportunities) {
+      const evidence = item.evidence as { query?: string; impressions?: number };
+      const query = evidence.query?.trim();
+      if (!query || query.length > 90 || (evidence.impressions ?? 0) < 20) continue;
+      if (!/hvac|ptac|heat pump|rooftop|mechanical|vrf|maintenance/i.test(query)) continue;
+      if (/(free|rebate|incentive|warranty|financing|discount|coupon|price guarantee)/i.test(query)) continue;
+      const title = `NJ Commercial HVAC Guide: ${query}`.slice(0, 120);
+      if (existingTitles.has(title.toLowerCase())) continue;
+      await proposeTopic({
+        title, audience: "NJ commercial property managers, building owners and contractors",
+        targetQuery: query,
+        brief: `Search Console identified ${evidence.impressions} impressions for this under-served commercial HVAC query. Write a practical, original B2B guide, link to the relevant existing commercial service page, and avoid unverified claims.`,
+        source: "market-intel:unserved_query",
+      });
+      existingTitles.add(title.toLowerCase());
+    }
+  } catch (error) {
+    console.error("[MarketIntel] opportunity proposal failed:", error);
+  }
+
+  // Convert eligible previously proposed demand topics into one guarded content job.
+  // This does not publish directly; lint, warmup, PR checks and hold remain mandatory.
+  try {
+    const queued = await autoQueueMarketIntelTopics();
+    if (queued.queued) console.log(`[MarketIntel] auto-queued ${queued.queued} evidence-backed content topic`);
+  } catch (error) {
+    console.error("[MarketIntel] content handoff failed:", error);
   }
 
   const summary = buildSummary({ itemCount: itemsCreated, executed, circuitClear, circuitReason, gscStale: searchDemand.skipped });
 
   await db
     .update(seoIntelReports)
-    .set({ itemCount: itemsCreated, acceptedCount: accepted, executedCount: executed, summary })
+    .set({ itemCount: existingKeys.size, acceptedCount: accepted + existingItems.filter(x => x.status === "accepted").length, executedCount: executed + existingItems.filter(x => x.status === "accepted").length, summary })
     .where(eq(seoIntelReports.id, reportId));
 
   await logAudit({ actorId: null, action: "market_intel_report_generated", batchId: null, pagePath: null, before: null, after: { reportId, itemCount: itemsCreated, executed }, lintResult: null });

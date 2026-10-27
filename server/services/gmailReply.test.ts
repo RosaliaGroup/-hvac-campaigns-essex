@@ -15,6 +15,7 @@ vi.mock("../integrations/google/calendar", () => ({
   googleCalendarProvider: { getValidAccessToken: mocks.token },
 }));
 vi.mock("./crmCommunications", () => ({ logCommunication: mocks.log }));
+vi.mock("./outreachSuppression", () => ({ assertOutreachNotSuppressed: vi.fn().mockResolvedValue(undefined) }));
 import { replyMime, sendGmailReply } from "./gmailReply";
 beforeEach(() => {
   mocks.status.mockResolvedValue({

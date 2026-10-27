@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="color-scheme" content="light">
+  <title>Service Request | Mechanical Enterprise</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#142335;background:#f4f7fb}
+    *{box-sizing:border-box}body{margin:0}
+    header{background:#112b44;color:white;padding:24px max(20px,calc((100vw - 740px)/2))}
+    header strong{font-size:1.15rem;letter-spacing:.02em}
+    main{max-width:740px;margin:32px auto;padding:0 18px 56px}
+    section{background:#fff;border:1px solid #dce5ee;border-radius:12px;padding:28px}
+    h1{font-size:1.7rem;margin:0 0 12px}p{line-height:1.55}
+    .notice{padding:13px 16px;background:#f1f5f9;border-left:4px solid #3c607b;margin:20px 0}
+    .call{font-size:1.1rem;font-weight:700}
+    form{display:grid;gap:15px;margin-top:20px}
+    label{display:grid;gap:7px;font-weight:600;font-size:.94rem}
+    input,select,textarea{font:inherit;width:100%;padding:11px 12px;border:1px solid #b6c4d0;border-radius:7px;background:#fff;color:#12263d}
+    textarea{min-height:120px;resize:vertical}
+    button{border:0;border-radius:8px;padding:14px 18px;background:#134e70;color:white;font-weight:700;font:inherit;cursor:pointer}
+    button:hover{background:#0e3951}
+    a{color:#12618d}small{color:#4f6171}
+    .trap{position:absolute;left:-9999px;opacity:0}
+    @media(max-width:520px){section{padding:20px}h1{font-size:1.5rem}}
+  </style>
+</head>
+<body>
+  <header><strong>Mechanical Enterprise LLC</strong></header>
+  <main>
+    <section>
+      <h1>Request HVAC service</h1>
+      <p>This alternate request page is available if our main scheduling or customer portal is temporarily unavailable.</p>
+      <div class="notice"><strong>Emergency assistance:</strong> Call <a class="call" href="tel:+18624239396">(862) 423-9396</a>. This online form is not continuously monitored and does not guarantee an emergency response or a confirmed appointment.</div>
+      <p>Submit your information below and our team will review it when available. You can also email <a href="mailto:sales@mechanicalenterprise.com">sales@mechanicalenterprise.com</a>.</p>
+      <form name="mechanical-continuity-request" method="POST" action="/continuity-received.html" data-netlify="true" data-netlify-honeypot="website">
+        <input type="hidden" name="form-name" value="mechanical-continuity-request">
+        <p class="trap"><label>Leave this field blank <input name="website" autocomplete="off" tabindex="-1"></label></p>
+        <label>Your name <input name="contact_name" autocomplete="name" required maxlength="120"></label>
+        <label>Email address <input type="email" name="email" autocomplete="email" required maxlength="254"></label>
+        <label>Phone number <input type="tel" name="phone" autocomplete="tel" maxlength="40"></label>
+        <label>City in New Jersey <input name="city" maxlength="120" required></label>
+        <label>Type of service
+          <select name="service_type" required>
+            <option value="">Select one</option>
+            <option>HVAC repair or emergency</option>
+            <option>Installation or replacement</option>
+            <option>Preventive maintenance</option>
+            <option>Commercial or multifamily assessment</option>
+            <option>Other inquiry</option>
+          </select>
+        </label>
+        <label>Request details <textarea name="message" maxlength="3000" required placeholder="Describe the equipment or service needed. Do not include payment details, passwords, or confidential records."></textarea></label>
+        <button type="submit">Submit service request</button>
+        <small>Sending this form requests contact only. It does not opt you into marketing or SMS campaigns. We will not treat a form submission as an appointment confirmation.</small>
+      </form>
+      <p><small>See our <a href="/privacy-policy">privacy policy</a>. If the form is unavailable, please use the phone number or email above.</small></p>
+    </section>
+  </main>
+</body>
+</html>

@@ -7,6 +7,7 @@ import { Building2, Zap, Award, ArrowRight, CheckCircle, Wrench, Clock, Shield, 
 import { Link } from "wouter";
 import Navigation from "@/components/Navigation";
 import Footer from "@/components/Footer";
+import GoogleBusinessShowcase from "@/components/GoogleBusinessShowcase";
 import ExitIntentPopup from "@/components/ExitIntentPopup";
 import BuyFinanceMemberComparison from "@/components/BuyFinanceMemberComparison";
 
@@ -451,6 +452,7 @@ export default function Home() {
         </div>
       </section>
 
+      <GoogleBusinessShowcase compact />
       <Footer />
     </div>
   );

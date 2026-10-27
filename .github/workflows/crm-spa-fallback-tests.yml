@@ -1,0 +1,26 @@
+name: Railway CRM SPA fallback tests
+
+on:
+  pull_request:
+    paths:
+      - "server/_core/vite.ts"
+      - "server/_core/vite.test.ts"
+      - ".github/workflows/crm-spa-fallback-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  crm-routing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify homepage, prerendered routes, CRM SPA shell and asset 404s
+        run: pnpm exec vitest run server/_core/vite.test.ts
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit

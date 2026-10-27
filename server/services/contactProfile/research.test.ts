@@ -114,3 +114,29 @@ it("accepts equivalent cited URL variants and bare company domains", () => {
   expect(result.company.website?.value).toBe("https://example.com/");
   expect(result.social).toHaveLength(1);
 });
+
+it("accepts cited Google business listings with domain evidence, rejects searches and namesakes", () => {
+  const listing = "https://www.google.com/maps/place/Example+Company";
+  const query = "https://www.google.com/maps/search/Example+Company";
+  const input = (url:string,evidence:string) => ({company,companySocial:[{url,source:url,evidence}]});
+  const identity={name:"Sample Person",email:"sample@example.com",company:"Example Company"};
+  expect(validateResearch(input(listing,"Example Company example.com"),[companySource,listing],identity).companySocial?.[0].platform).toBe("Google Business Profile");
+  expect(validateResearch(input(query,"Example Company example.com"),[companySource,query],identity).companySocial).toBeUndefined();
+  expect(validateResearch(input(listing,"Example Company unrelated.com"),[companySource,listing],identity).companySocial).toBeUndefined();
+  expect(validateResearch(input(listing,"Example Company example.com"),[companySource],identity).companySocial).toBeUndefined();
+});
+it("accepts a cited professional directory with matching employer and domain", () => {
+  const url="https://www.zillow.com/profile/example";
+  const result=validateResearch({company,companySocial:[{url,source:url,evidence:"Example Company example.com"}]},[companySource,url],{name:"Sample Person",email:"sample@example.com"});
+  expect(result.companySocial?.[0].platform).toBe("Zillow");
+});
+
+it("requires a cited exact-email identity before filling an unknown person's name",()=>{
+ const source="https://example.com/team";
+ const named=(evidence:string)=>({person:{firstName:{value:"Mary Ann",source,evidence},lastName:{value:"Smith",source,evidence}}});
+ const identity={name:"person@example.com",email:"person@example.com",company:"Example Company"};
+ expect(validateResearch(named("Mary Ann Smith person@example.com"),[source],identity).person?.firstName.value).toBe("Mary Ann");
+ expect(validateResearch(named("Mary Ann Smith Example Company"),[source],identity).person).toBeUndefined();
+ expect(validateResearch(named("Mary Ann Smith person@example.com"),[],identity).person).toBeUndefined();
+ expect(validateResearch(named("Other Person person@example.com"),[source],identity).person).toBeUndefined();
+});

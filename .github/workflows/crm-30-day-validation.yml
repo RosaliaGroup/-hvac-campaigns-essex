@@ -1,0 +1,39 @@
+name: CRM 30-day cadence validation
+on:
+  pull_request:
+    paths:
+      - "server/services/crm30Day*.ts"
+      - "server/services/crmFollowupDeliveryPolicy*.ts"
+      - "server/services/crmFollowupDeliveryLedger*.ts"
+      - "server/services/crmFollowupDeliveryReconciliation*.ts"
+      - "server/routers/crmFollowups.ts"
+      - "client/src/components/FollowupDeliveryDiagnostics.tsx"
+      - "client/src/pages/CrmTasks.tsx"
+      - "server/services/outreachSuppression*.ts"
+      - "server/services/crmFollowupGmail.ts"
+      - "server/services/gmailCrm*.ts"
+      - "server/services/gmailCompose*.ts"
+      - "server/services/gmailReply*.ts"
+      - "server/services/smsOutbound*.ts"
+      - "server/routers/crmFollowups.ts"
+      - "server/_core/index.ts"
+      - "client/src/components/CrmFollowupTasks.tsx"
+      - ".github/workflows/crm-30-day-validation.yml"
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: TypeScript typecheck
+        run: pnpm check
+      - name: Cadence unit tests
+        run: pnpm exec vitest run server/services/crmFollowupDeliveryLedger.test.ts server/services/crmFollowupDeliveryPolicy.test.ts server/services/crm30DayRules.test.ts server/services/outreachSuppression.test.ts server/services/gmailCrm.test.ts server/services/gmailCompose.test.ts server/services/gmailReply.test.ts server/services/smsOutbound.test.ts

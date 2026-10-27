@@ -183,11 +183,11 @@ export default function FacebookAdsCampaigns() {
     const params = new URLSearchParams(searchString);
     if (params.get("connected") === "1") {
       toast.success("Meta Ads connected successfully!", {
-        description: "Now enter your Ad Account ID and Page ID to finish setup.",
+        description: "Reauthorization completed. Verify live Meta ad account access before any campaign actions.",
         duration: 6000,
       });
       setShowSetup(true);
-      setSetupStep(2);
+      setSetupStep(1);
       setLocation("/facebook-campaigns", { replace: true });
     } else if (params.get("error")) {
       toast.error("Meta Ads connection failed", {
@@ -203,7 +203,13 @@ export default function FacebookAdsCampaigns() {
   const { data: connStatus, isLoading: connLoading, refetch: refetchConn } =
     trpc.metaAds.getConnectionStatus.useQuery();
 
-  const { data: perfData, isLoading: perfLoading, refetch: refetchPerf } =
+  const { data: accountCheck, isLoading: accountCheckLoading, error: accountCheckError, refetch: refetchAccountCheck } =
+    trpc.metaAds.testConnection.useQuery(undefined, {
+      enabled: connStatus?.connected === true,
+      retry: false,
+    });
+
+  const { data: perfData, isLoading: perfLoading, error: perfError, refetch: refetchPerf } =
     trpc.metaAds.getCampaignPerformance.useQuery(undefined, {
       enabled: connStatus?.connected === true,
       retry: false,
@@ -315,7 +321,12 @@ export default function FacebookAdsCampaigns() {
   }
 
   const isLaunching = createCampaign.isPending;
+  // Stored credentials are not proof the selected Meta ad account is accessible.
   const isConnected = connStatus?.connected === true;
+  const isAccountVerified = isConnected && accountCheck?.ok === true;
+  // Creation remains disabled until Meta-local targeting and CRM lead delivery
+  // are verified; the backend independently enforces this safety check.
+  const launchReadinessVerified = false;
   const allLaunched = CAMPAIGNS.every((c) => !!launched[c.id]);
 
   // Token age for expiry warning (Meta tokens last ~60 days)
@@ -325,7 +336,7 @@ export default function FacebookAdsCampaigns() {
   const tokenExpiringSoon = tokenAgeDays !== null && tokenAgeDays >= 50;
 
   const authUrlQuery = trpc.metaAds.getAuthUrl.useQuery(
-    { redirectUri: `${window.location.origin}/api/oauth/meta/callback` },
+    { redirectUri: "https://mechanicalenterprise.com/api/oauth/meta/callback" },
     { enabled: false }
   );
 
@@ -367,9 +378,13 @@ export default function FacebookAdsCampaigns() {
                 <Badge variant="outline" className="gap-1.5">
                   <Loader2 className="h-3 w-3 animate-spin" /> Checking…
                 </Badge>
-              ) : isConnected ? (
+              ) : isAccountVerified ? (
                 <Badge className="bg-[#1877F2]/10 text-[#1877F2] border-[#1877F2]/20 gap-1.5">
-                  <CheckCircle2 className="h-3 w-3" /> Meta Ads Connected
+                  <CheckCircle2 className="h-3 w-3" /> Meta Ad Account Verified
+                </Badge>
+              ) : isConnected ? (
+                <Badge variant="outline" className="gap-1.5">
+                  <AlertCircle className="h-3 w-3" /> Meta Credentials Saved — Verify Account
                 </Badge>
               ) : (
                 <Badge variant="destructive" className="gap-1.5">
@@ -381,7 +396,7 @@ export default function FacebookAdsCampaigns() {
                 size="sm"
                 className="gap-1.5"
                 onClick={() => {
-                  setSetupStep(connStatus?.hasToken ? 2 : 1);
+                  setSetupStep(isAccountVerified ? 2 : 1);
                   setShowSetup(true);
                 }}
               >
@@ -439,12 +454,44 @@ export default function FacebookAdsCampaigns() {
           </div>
         )}
 
+        {/* Verified account and launch preflight: never confuse saved credentials with valid access. */}
+        {isConnected && (
+          <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm space-y-2">
+            <p className="font-semibold text-amber-900">Meta Ads preflight — no new spending</p>
+            {accountCheckLoading ? (
+              <p>Checking live Meta ad account access…</p>
+            ) : accountCheckError ? (
+              <p role="alert">Account verification unavailable: {accountCheckError.message}</p>
+            ) : accountCheck?.ok ? (
+              <p>Account verified: <strong>{accountCheck.account?.name ?? "Unnamed account"}</strong> ({accountCheck.account?.currency ?? "currency unknown"}). Account status code: {accountCheck.account?.status ?? "unknown"}.</p>
+            ) : (
+              <p role="alert">Account verification failed or unavailable: {accountCheck?.error ?? "No live result"}. Check the selected ad account and its permissions.</p>
+            )}
+            <p>Campaign creation is on hold: the existing templates target the entire United States, not our local service area. Meta Instant Form → CRM webhook delivery and total paid budgets also need independent verification.</p>
+            <div className="rounded border border-amber-200 bg-white p-3 space-y-1">
+              <p className="font-semibold">Facebook says “URL Blocked”?</p>
+              <p>In Meta for Developers, select the Mechanical Enterprise app → Facebook Login → Settings. Enable Client OAuth Login and Web OAuth Login, and add this exact value to Valid OAuth Redirect URIs:</p>
+              <code className="block break-all text-xs select-all">https://mechanicalenterprise.com/api/oauth/meta/callback</code>
+              <p>Also confirm the app domain includes mechanicalenterprise.com. Save changes before selecting Reconnect Facebook Ads.</p>
+              <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Open Meta Developer Apps</a>
+            </div>
+            {!isAccountVerified && (
+              <Button size="sm" onClick={handleConnectMeta} disabled={connectingOAuth}>
+                <LogIn className="h-4 w-4 mr-1.5" /> Reconnect Facebook Ads
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => { refetchConn(); refetchAccountCheck(); refetchPerf(); }}>
+              <RefreshCw className="h-4 w-4 mr-1.5" /> Recheck Meta Account & Campaigns
+            </Button>
+          </div>
+        )}
+
         {/* Live Performance */}
         {isConnected && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-semibold text-[#1e3a5f]">Account Performance (Last 30 Days)</h2>
-              <Button variant="ghost" size="sm" onClick={() => refetchPerf()} disabled={perfLoading}>
+              <Button variant="ghost" size="sm" onClick={() => { refetchAccountCheck(); refetchPerf(); }} disabled={perfLoading || accountCheckLoading}>
                 <RefreshCw className={`h-4 w-4 mr-1.5 ${perfLoading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
@@ -454,6 +501,10 @@ export default function FacebookAdsCampaigns() {
                 {[...Array(2)].map((_, i) => (
                   <div key={i} className="h-16 bg-white rounded-lg border animate-pulse" />
                 ))}
+              </div>
+            ) : perfError ? (
+              <div role="alert" className="bg-white border rounded-lg p-6 text-center text-amber-800 text-sm">
+                Meta campaign report unavailable: {perfError.message}. This does not establish that the account has no campaigns or zero spend.
               </div>
             ) : perfData?.campaigns && perfData.campaigns.length > 0 ? (
               <div className="space-y-3">
@@ -482,7 +533,7 @@ export default function FacebookAdsCampaigns() {
                         <p className="font-semibold">${c.spend.toFixed(2)}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground text-xs">Leads</p>
+                        <p className="text-muted-foreground text-xs">Meta lead events (unverified)</p>
                         <p className="font-semibold">{c.conversions.toFixed(0)}</p>
                       </div>
                     </div>
@@ -491,7 +542,7 @@ export default function FacebookAdsCampaigns() {
               </div>
             ) : (
               <div className="bg-white border rounded-lg p-6 text-center text-muted-foreground text-sm">
-                No campaign data yet. Launch campaigns below and check back after they go live.
+                No campaigns were returned for this connected account. Check Meta Ads Manager to confirm the selected account and whether other campaigns are running. Do not treat this as verified zero spend or zero leads.
               </div>
             )}
           </div>
@@ -504,7 +555,7 @@ export default function FacebookAdsCampaigns() {
             <Button
               className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-2"
               onClick={handleLaunchAll}
-              disabled={!isConnected || allLaunched || launchingAll || launchCooldown || isLaunching}
+              disabled={!isAccountVerified || !launchReadinessVerified || allLaunched || launchingAll || launchCooldown || isLaunching}
             >
               {launchingAll ? (
                 <><Loader2 className="h-4 w-4 animate-spin" /> Launching All…</>
@@ -522,17 +573,17 @@ export default function FacebookAdsCampaigns() {
               <p className="text-xs text-muted-foreground">${TOTAL_BUDGET * 30}/month</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Projected Leads</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Illustrative leads (not verified)</p>
               <p className="text-xl font-bold text-emerald-600">{PROJECTED_LEADS_LOW}–{PROJECTED_LEADS_HIGH}/mo</p>
               <p className="text-xs text-muted-foreground">across all 5 campaigns</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Est. CPL</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Illustrative CPL</p>
               <p className="text-xl font-bold text-[#1e3a5f]">$8–15</p>
               <p className="text-xs text-muted-foreground">cost per lead</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Projected Installs</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Illustrative installs</p>
               <p className="text-xl font-bold text-blue-600">{PROJECTED_INSTALLS_LOW}–{PROJECTED_INSTALLS_HIGH}/mo</p>
               <p className="text-xs text-muted-foreground">at 25% close rate</p>
             </div>
@@ -544,7 +595,7 @@ export default function FacebookAdsCampaigns() {
           </div>
           <div className="mt-4 pt-3 border-t">
             <p className="text-xs text-muted-foreground">
-              Running all 5 at ${TOTAL_BUDGET}/day leaves budget for Google Search ads on PSE&G keywords — recommended split for $600/month.
+              Proposed Meta budgets total ${TOTAL_BUDGET}/day (${TOTAL_BUDGET * 30}/30 days), NOT actual spend. The $2,000/month limit applies across Google, Meta, and all paid marketing. Live Google spending and Meta lead quality must be reconciled before any activation.
             </p>
           </div>
         </div>
@@ -637,7 +688,7 @@ export default function FacebookAdsCampaigns() {
                         size="sm"
                         className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-1.5"
                         onClick={() => setConfirmCampaign(camp)}
-                        disabled={wasLaunched || !isConnected}
+                        disabled={wasLaunched || !isAccountVerified || !launchReadinessVerified}
                       >
                         {wasLaunched ? (
                           <><CheckCircle2 className="h-4 w-4" /> Launched</>
@@ -751,7 +802,7 @@ export default function FacebookAdsCampaigns() {
           <div className="mt-4 pt-4 border-t flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Total Meta Ads spend</span>
             <span className="font-bold text-[#1e3a5f]">
-              ${TOTAL_BUDGET}/day · ${TOTAL_BUDGET * 30}/month
+              Proposed only: ${TOTAL_BUDGET}/day · ${TOTAL_BUDGET * 30}/30 days
             </span>
           </div>
         </div>
@@ -774,7 +825,7 @@ export default function FacebookAdsCampaigns() {
       {/* Setup / Configure Dialog */}
       <Dialog open={showSetup} onOpenChange={(open) => {
         setShowSetup(open);
-        if (!open) { setSetupStep(connStatus?.hasToken ? 2 : 1); }
+        if (!open) { setSetupStep(isAccountVerified ? 2 : 1); }
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -820,7 +871,7 @@ export default function FacebookAdsCampaigns() {
 
           {setupStep === 1 ? (
             <div className="space-y-4 py-2">
-              {connStatus?.hasToken ? (
+              {isAccountVerified ? (
                 <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800 flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
                   <span>Facebook account connected{tokenAgeDays !== null ? ` (${tokenAgeDays} days ago)` : ""}.</span>
@@ -828,8 +879,7 @@ export default function FacebookAdsCampaigns() {
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    Click below to sign in with Facebook and authorize Mechanical Enterprise to manage ads.
-                    You'll be redirected back here automatically.
+                    The saved Meta credentials have not passed the live account check. Reauthorize with Facebook to restore campaign reporting. Existing campaign budgets will not be changed.
                   </p>
                   <Button
                     className="w-full bg-[#1877F2] hover:bg-[#1877F2]/90 text-white gap-2"
@@ -839,7 +889,7 @@ export default function FacebookAdsCampaigns() {
                     {connectingOAuth ? (
                       <><Loader2 className="h-4 w-4 animate-spin" /> Redirecting to Facebook…</>
                     ) : (
-                      <><LogIn className="h-4 w-4" /> Connect with Facebook</>
+                      <><LogIn className="h-4 w-4" /> Reconnect Facebook Ads</>
                     )}
                   </Button>
                 </div>
@@ -848,7 +898,7 @@ export default function FacebookAdsCampaigns() {
                 <Button variant="outline" onClick={() => setShowSetup(false)}>
                   Cancel
                 </Button>
-                {connStatus?.hasToken && (
+                {isAccountVerified && (
                   <Button
                     className="bg-[#1877F2] hover:bg-[#1877F2]/90 text-white"
                     onClick={() => setSetupStep(2)}

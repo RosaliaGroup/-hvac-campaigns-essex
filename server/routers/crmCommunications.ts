@@ -1,5 +1,7 @@
+import { TRPCError } from "@trpc/server";
 import { contactProfile } from "../services/contactProfile/store";
 import { saveVerifiedProspect } from "../services/saveVerifiedProspect";
+import { createSelectedContact, listGmailContactCandidates } from "../services/crmContactIntake";
 import { and, desc, eq, isNotNull, like, or, sql } from "drizzle-orm";
 import { composeGmail } from "../services/gmailCompose";
 import { sendGmailReply } from "../services/gmailReply";
@@ -11,8 +13,11 @@ import {
   leads,
   leadCaptures,
 } from "../../drizzle/schema";
-import { gmailCrmStatus, syncGmailPage } from "../services/gmailCrm";
+import { gmailCrmStatus, syncGmailPage, syncGmailBatch } from "../services/gmailCrm";
 import { startJob, getJob } from "../services/asyncLaneJob";
+import { crmOutreachSuppressions, isOutreachSuppressed, KNOWN_OUTREACH_SUPPRESSIONS, seedKnownOutreachSuppressions } from "../services/outreachSuppression";
+import { cancelOpen30DayTasks } from "../services/crm30DayTasks";
+import { followupDatabase, followupTasks } from "../services/crmFollowupTasks";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
@@ -41,15 +46,13 @@ export const crmCommunicationsRouter = router({
   profile: protectedProcedure
     .input(profileInput)
     .query(({ input }) => contactProfile(input)),
-  enrichProfile: protectedProcedure
-    .input(profileInput)
-    .mutation(({ input }) =>
-      startJob({
-        kind: "crm-profile",
-        key: `crm-profile:${input.contactId ? "contact:" + input.contactId : "customer:" + input.customerId}`,
-        fn: () => contactProfile(input, true),
-      })
-    ),
+  enrichProfile: protectedProcedure.input(profileInput).mutation(({ input }) =>
+    startJob({
+      kind: "crm-profile",
+      key: `crm-profile:${input.contactId ? "contact:" + input.contactId : "customer:" + input.customerId}`,
+      fn: () => contactProfile(input, true),
+    })
+  ),
   profileJob: protectedProcedure
     .input(z.object({ jobId: z.string() }))
     .query(({ input }) => {
@@ -197,6 +200,108 @@ export const crmCommunicationsRouter = router({
         source: "crm",
       });
     }),
+  leadOptions: protectedProcedure
+    .input(z.object({ search: z.string().max(255).optional() }))
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      const term = `%${input.search ?? ""}%`;
+      const [manual, captures] = await Promise.all([
+        db
+          .select()
+          .from(leads)
+          .where(or(like(leads.name, term), like(leads.contact, term)))
+          .orderBy(desc(leads.updatedAt))
+          .limit(100),
+        db
+          .select()
+          .from(leadCaptures)
+          .where(
+            or(
+              like(leadCaptures.name, term),
+              like(leadCaptures.firstName, term),
+              like(leadCaptures.lastName, term),
+              like(leadCaptures.email, term),
+              like(leadCaptures.phone, term)
+            )
+          )
+          .orderBy(desc(leadCaptures.createdAt))
+          .limit(100),
+      ]);
+      return [
+        ...manual.map(l => ({
+          id: l.id,
+          kind: "lead" as const,
+          name: l.name,
+          email: l.contactType === "email" ? l.contact : null,
+          phone: l.contactType === "phone" ? l.contact : null,
+        })),
+        ...captures.map(l => ({
+          id: l.id,
+          kind: "capture" as const,
+          name:
+            l.name ||
+            [l.firstName, l.lastName].filter(Boolean).join(" ") ||
+            l.email ||
+            l.phone ||
+            "Lead",
+          email: l.email,
+          phone: l.phone,
+        })),
+      ];
+    }),
+  openLeadContact: protectedProcedure
+    .input(
+      z.object({
+        id: z.number().int().positive(),
+        kind: z.enum(["lead", "capture"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const db = await dbOrThrow();
+      const [linked] = await db
+        .select()
+        .from(crmExternalContacts)
+        .where(
+          input.kind === "lead"
+            ? eq(crmExternalContacts.leadId, input.id)
+            : eq(crmExternalContacts.leadCaptureId, input.id)
+        )
+        .limit(1);
+      if (linked) return linked;
+      if (input.kind === "lead") {
+        const [lead] = await db
+          .select()
+          .from(leads)
+          .where(eq(leads.id, input.id))
+          .limit(1);
+        if (!lead) throw new Error("Lead not found");
+        return upsertExternalContact(db, {
+          name: lead.name,
+          email: lead.contactType === "email" ? lead.contact : null,
+          phone: lead.contactType === "phone" ? lead.contact : null,
+          leadId: lead.id,
+          source: "crm",
+        });
+      }
+      const [lead] = await db
+        .select()
+        .from(leadCaptures)
+        .where(eq(leadCaptures.id, input.id))
+        .limit(1);
+      if (!lead) throw new Error("Lead not found");
+      return upsertExternalContact(db, {
+        name:
+          lead.name ||
+          [lead.firstName, lead.lastName].filter(Boolean).join(" ") ||
+          lead.email ||
+          lead.phone ||
+          "Lead",
+        email: lead.email,
+        phone: lead.phone,
+        leadCaptureId: lead.id,
+        source: "crm",
+      });
+    }),
   composeEmail: protectedProcedure
     .input(
       z.object({
@@ -296,6 +401,20 @@ export const crmCommunicationsRouter = router({
         ? job
         : null;
     }),
+  gmailContactCandidates: protectedProcedure
+    .input(z.object({search:z.string().max(120).default("")}))
+    .query(({input})=>listGmailContactCandidates(input.search)),
+  addSelectedContact: protectedProcedure
+    .input(z.object({
+      from:z.enum(["manual","gmail"]),
+      name:z.string().trim().min(2).max(255),
+      email:z.string().trim().email().max(320),
+      phone:z.string().trim().min(10).max(50),
+      company:z.string().trim().max(255).optional(),
+      title:z.string().trim().max(255).optional(),
+      propertyName:z.string().trim().max(255).optional(),
+    }))
+    .mutation(({input})=>createSelectedContact(input,input.from)),
   contacts: protectedProcedure
     .input(z.object({ search: z.string().max(255).optional() }))
     .query(async ({ input }) => {
@@ -306,16 +425,26 @@ export const crmCommunicationsRouter = router({
         .from(crmExternalContacts)
         .where(
           and(
-            or(
-              isNotNull(crmExternalContacts.customerId),
-              isNotNull(crmExternalContacts.leadId),
-              isNotNull(crmExternalContacts.leadCaptureId),
-              // Include contacts imported from Gmail Sent, even before they become leads.
-              sql`exists (select 1 from ${crmCommunications} where ${crmCommunications.externalContactId} = ${crmExternalContacts.id} and ${crmCommunications.direction} = 'outbound' and ${crmCommunications.channel} = 'email')`,
-              sql`exists (select 1 from ${customers} where ${customers.email} = ${crmExternalContacts.email} or ${customers.phone} = ${crmExternalContacts.phone})`,
-              sql`exists (select 1 from ${leads} where (${leads.contactType} = 'email' and ${leads.contact} = ${crmExternalContacts.email}) or (${leads.contactType} = 'phone' and ${leads.contact} = ${crmExternalContacts.phone}))`,
-              sql`exists (select 1 from ${leadCaptures} where ${leadCaptures.email} = ${crmExternalContacts.email} or ${leadCaptures.phone} = ${crmExternalContacts.phone})`
-            ),
+            // Only TASK-generated, explicitly selected Gmail, or manual
+            // contacts belong in Contacts. Never promote generic Gmail sync.
+            sql`(
+              ${crmExternalContacts.source} IN
+                ('gmail-prospecting','verified-hvac-prospect','gmail-selected','crm-manual','crm')
+              OR (${crmExternalContacts.source} IS NULL AND
+                  ${crmExternalContacts.customerId} IS NOT NULL)
+            )`,
+            // Incomplete imported contacts remain in Contact Enrichment,
+            // not the completed Contacts list. Linked customer phones count.
+            sql`${crmExternalContacts.email} LIKE '%@%.%'`,
+            sql`(
+              CHAR_LENGTH(REGEXP_REPLACE(
+                COALESCE(
+                  NULLIF(TRIM(${crmExternalContacts.phone}), ''),
+                  (SELECT NULLIF(TRIM(c.phone),'') FROM customers c
+                   WHERE c.id = ${crmExternalContacts.customerId} LIMIT 1)
+                ), '[^0-9]', ''
+              )) BETWEEN 10 AND 15
+            )`,
             or(
               like(crmExternalContacts.name, term),
               like(crmExternalContacts.email, term),
@@ -328,14 +457,59 @@ export const crmCommunicationsRouter = router({
         .orderBy(desc(crmExternalContacts.updatedAt))
         .limit(100);
     }),
+  enrichmentStatus: protectedProcedure
+    .input(z.object({contactId:z.number().int().positive()}))
+    .query(async ({input})=>{
+      const {contactEnrichmentStatus}=await import("../services/automaticContactEnrichment");
+      return contactEnrichmentStatus(input.contactId);
+    }),
+  outreachSuppression: protectedProcedure
+    .input(z.object({ email: z.string().email().max(320) }))
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      const email = input.email.trim().toLowerCase();
+      const suppressed = await isOutreachSuppressed(db, email);
+      const [record] = await db.select().from(crmOutreachSuppressions)
+        .where(eq(crmOutreachSuppressions.email, email)).limit(1);
+      return { email, suppressed, persisted: Boolean(record), reason: record?.reason ?? null };
+    }),
+  syncOutreachSuppressions: protectedProcedure.mutation(async () => {
+    const db = await dbOrThrow();
+    await seedKnownOutreachSuppressions(db);
+    await followupDatabase();
+    let cancelled = 0;
+    for (const entry of KNOWN_OUTREACH_SUPPRESSIONS) {
+      cancelled += await cancelOpen30DayTasks(entry.email, "Do not contact / delivery failure.");
+      const result = await db.update(followupTasks)
+        .set({ status: "cancelled", note: "Do not contact / delivery failure." })
+        .where(and(eq(followupTasks.recipientEmail, entry.email), eq(followupTasks.status, "open")));
+      cancelled += Number((result as any)?.[0]?.affectedRows ?? 0);
+    }
+    const records = await db.select().from(crmOutreachSuppressions);
+    const confirmed = KNOWN_OUTREACH_SUPPRESSIONS.filter(entry =>
+      records.some(row => row.email === entry.email &&
+        (entry.reason !== "opt_out" || row.reason === "opt_out")));
+    if (confirmed.length !== KNOWN_OUTREACH_SUPPRESSIONS.length)
+      throw new Error("CRM suppression readback incomplete");
+    return { verified: confirmed.length, cancelled, persisted: true };
+  }),
   gmailStatus: protectedProcedure.query(() => gmailCrmStatus()),
   syncGmail: protectedProcedure
     .input(z.object({ pageToken: z.string().max(2048).optional() }))
     .mutation(({ input }) =>
       startJob({
         kind: "crm-gmail",
-        key: "crm-gmail",
-        fn: () => syncGmailPage(input),
+        key: "crm-gmail:manual",
+        fn: () => syncGmailBatch(input),
+      })
+    ),
+  reconcileSentOutreach: protectedProcedure
+    .input(z.object({ pageToken: z.string().max(2048).optional() }))
+    .mutation(({ input }) =>
+      startJob({
+        kind: "crm-gmail",
+        key: "crm-gmail:reconcile",
+        fn: () => syncGmailPage({ ...input, lookbackDays: 2, importOutboundContacts: true }),
       })
     ),
   gmailSyncJob: protectedProcedure
@@ -360,9 +534,19 @@ export const crmCommunicationsRouter = router({
         leadCaptureId: z.number().int().nullish(),
       })
     )
-    .mutation(async ({ input }) =>
-      upsertExternalContact(await dbOrThrow(), input)
-    ),
+    .mutation(async ({ input }) => {
+      const db=await dbOrThrow();
+      const email=input.email?.trim().toLowerCase();
+      if(!email)throw new TRPCError({code:"BAD_REQUEST",
+        message:"An email address is required for CRM contacts."});
+      const [existing]=await db.select().from(crmExternalContacts)
+        .where(sql`lower(trim(${crmExternalContacts.email})) = ${email}`).limit(1);
+      if(!existing)throw new TRPCError({code:"BAD_REQUEST",
+        message:"Use Add Contact to create a new record with both email and phone."});
+      // Existing task-stage identities may be corrected before enrichment;
+      // they remain staged until both email and phone are verified.
+      return upsertExternalContact(db,{...input,source:existing.source});
+    }),
 
   log: protectedProcedure
     .input(

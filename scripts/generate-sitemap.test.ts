@@ -15,6 +15,8 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
+import { allBlogPosts } from "../client/src/data/allBlogPosts";
+import { blogDateIso } from "../shared/blogPublication";
 
 const BASE = "https://mechanicalenterprise.com";
 const MIN_URLS = 250;
@@ -35,7 +37,7 @@ beforeAll(() => {
   originalSitemap = fs.existsSync(sitemapPath) ? fs.readFileSync(sitemapPath, "utf-8") : null;
   // Runs the actual build step. Throws (failing the suite) if the generator's
   // own <250-URL guard trips — which is exactly the collapse we want to catch.
-  execSync("npx tsx scripts/generate-sitemap.ts", { cwd: root, stdio: "pipe" });
+  execSync("node --import tsx scripts/generate-sitemap.ts", { cwd: root, stdio: "pipe" });
   const xml = fs.readFileSync(sitemapPath, "utf-8");
   locs = new Set(Array.from(xml.matchAll(/<loc>([^<]+)<\/loc>/g)).map((m) => m[1]));
 });
@@ -57,10 +59,18 @@ describe("generate-sitemap — coverage", () => {
   });
 
   it("includes every blog post from blogPosts.ts", () => {
-    const slugs = slugsIn("client/src/data/blogPosts.ts");
+    const slugs = allBlogPosts.map(post => post.slug);
     expect(slugs.length).toBeGreaterThan(0);
     const missing = slugs.filter((s) => !locs.has(`${BASE}/blog/${s}`));
     expect(missing).toEqual([]);
+  });
+
+  it("uses actual blog publication/update dates instead of freshening every post on each build", () => {
+    const xml = fs.readFileSync(sitemapPath, "utf-8");
+    for (const post of allBlogPosts) {
+      const block = xml.split("<url>").find(part => part.includes(`<loc>${BASE}/blog/${post.slug}</loc>`));
+      expect(block, post.slug).toContain(`<lastmod>${blogDateIso(post.updatedDate ?? post.date)}</lastmod>`);
+    }
   });
 
   it("includes every industry from directInstallIndustries.ts", () => {

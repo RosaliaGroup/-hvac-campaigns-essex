@@ -55,7 +55,9 @@ function metricHash(locationName: string, date: string): string {
 function parseTime(iso: string | null): Date | null {
   if (!iso) return null;
   const t = Date.parse(iso);
-  return Number.isNaN(t) ? null : new Date(t);
+  // Google media can contain sentinel dates (e.g. year 0001). These are
+  // valid JS Dates but outside MySQL TIMESTAMP's supported UTC range.
+  return !Number.isFinite(t) || t < 1000 || t > 2_147_483_647_000 ? null : new Date(t);
 }
 
 export type SyncResult =
@@ -130,29 +132,39 @@ async function performSync(
   try {
     const accessToken = await getGbpAccessToken();
 
-    // Best-effort per resource: one failing endpoint must not lose the others.
-    const location = await safe(() => fetchLocation({ accessToken, target }));
-    const reviewsResult = await safe(() => fetchReviews({ accessToken, target }));
-    const insights = (await safe(() => fetchDailyMetrics({ accessToken, target, start, end }))) ?? [];
-    const media = (await safe(() => fetchMedia({ accessToken, target }))) ?? [];
-    const posts = (await safe(() => fetchPosts({ accessToken, target }))) ?? [];
+    // Keep successful resources, but never substitute failed downloads with
+    // zero totals or report a partial download as a successful sync.
+    const failures: string[] = [];
+    const read = async <T>(resource: string, fn: () => Promise<T>): Promise<T | null> => {
+      try {
+        return await fn();
+      } catch (err) {
+        const message = `${resource}: ${(err as Error).message}`;
+        failures.push(message);
+        console.warn("[GBP] fetch failed:", message);
+        return null;
+      }
+    };
+    const location = await read("location", () => fetchLocation({ accessToken, target }));
+    const reviewsResult = await read("reviews", () => fetchReviews({ accessToken, target }));
+    const insights = await read("performance", () => fetchDailyMetrics({ accessToken, target, start, end }));
+    const media = await read("photos", () => fetchMedia({ accessToken, target }));
+    const posts = await read("posts", () => fetchPosts({ accessToken, target }));
 
-    const rating = reviewsResult?.averageRating ?? 0;
-    const reviewCount = reviewsResult?.totalReviewCount ?? reviewsResult?.reviews.length ?? 0;
+    const rating = reviewsResult?.averageRating ?? null;
+    const reviewCount = reviewsResult?.totalReviewCount ?? null;
 
-    // ── Location snapshot ──
-    await upsertLocation(db, target, {
-      title: location?.title ?? null,
-      storefrontAddress: location?.storefrontAddress ?? null,
-      primaryPhone: location?.primaryPhone ?? null,
-      websiteUrl: location?.websiteUrl ?? null,
-      rating,
-      totalReviews: reviewCount,
-      totalPhotos: media.length,
-      totalPosts: posts.length,
-    });
+    // Only update columns whose source was fetched successfully. Omitted
+    // columns retain their existing values on duplicate-key updates.
+    const snapshot = {
+      ...(location ? location : {}),
+      ...(reviewsResult ? { rating: reviewsResult.averageRating.toFixed(2), totalReviews: reviewsResult.totalReviewCount } : {}),
+      ...(media ? { totalPhotos: media.length } : {}),
+      ...(posts ? { totalPosts: posts.length } : {}),
+      ...(failures.length === 0 ? { lastSyncedAt: new Date() } : {}),
+    };
+    if (Object.keys(snapshot).length > 0) await upsertLocation(db, target, snapshot);
 
-    // ── Daily performance + rating snapshot ──
     const metricsSynced = await upsertDailyMetrics(db, target.locationName, insights, end, rating, reviewCount);
 
     // ── Reviews ──
@@ -187,29 +199,42 @@ async function performSync(
     }
 
     // ── Photos ──
+    // Isolate individual bad media records so they cannot block post persistence.
     let photosSynced = 0;
-    for (const m of media) {
-      await db
-        .insert(gbpPhotos)
-        .values({
-          locationName: target.locationName,
-          mediaName: m.mediaName,
-          mediaHash: sha256(m.mediaName),
-          category: m.category ?? undefined,
-          googleUrl: m.googleUrl ?? undefined,
-          viewCount: m.viewCount,
-          createTime: parseTime(m.createTime) ?? undefined,
-          syncedAt: new Date(),
-        })
-        .onDuplicateKeyUpdate({
-          set: { category: m.category ?? null, googleUrl: m.googleUrl ?? null, viewCount: m.viewCount, syncedAt: new Date() },
+    let photosFailed = 0;
+    for (const m of media ?? []) {
+      try {
+        await db
+          .insert(gbpPhotos)
+          .values({
+            locationName: target.locationName,
+            mediaName: m.mediaName,
+            mediaHash: sha256(m.mediaName),
+            category: m.category ?? undefined,
+            googleUrl: m.googleUrl ?? undefined,
+            viewCount: m.viewCount,
+            createTime: parseTime(m.createTime) ?? undefined,
+            syncedAt: new Date(),
+          })
+          .onDuplicateKeyUpdate({
+            set: { category: m.category ?? null, googleUrl: m.googleUrl ?? null, viewCount: m.viewCount, syncedAt: new Date() },
+          });
+        photosSynced++;
+      } catch (err) {
+        photosFailed++;
+        const cause = (err as Error & { cause?: { code?: string; errno?: number; sqlState?: string } }).cause;
+        console.warn("[GBP] photo upsert failed", {
+          mediaHashPrefix: sha256(m.mediaName).slice(0, 12),
+          code: cause?.code ?? "unknown",
+          errno: cause?.errno ?? null,
+          sqlState: cause?.sqlState ?? null,
         });
-      photosSynced++;
+      }
     }
 
     // ── Local posts ──
     let postsSynced = 0;
-    for (const p of posts) {
+    for (const p of posts ?? []) {
       await db
         .insert(gbpPosts)
         .values({
@@ -235,13 +260,15 @@ async function performSync(
       postsSynced++;
     }
 
+    if (photosFailed > 0) failures.push(`${photosFailed} photo record(s) failed to save`);
+    const error = failures.length > 0 ? failures.join("; ").slice(0, 2000) : null;
     if (historyId > 0) {
       await db
         .update(gbpSyncHistory)
-        .set({ status: "success", completedAt: new Date(), reviewsSynced, metricsSynced, photosSynced, postsSynced })
+        .set({ status: error ? "error" : "success", error, completedAt: new Date(), reviewsSynced, metricsSynced, photosSynced, postsSynced })
         .where(eq(gbpSyncHistory.id, historyId));
     }
-    return { ok: true, reviewsSynced, metricsSynced, photosSynced, postsSynced };
+    return error ? { ok: false, reason: "error", error } : { ok: true, reviewsSynced, metricsSynced, photosSynced, postsSynced };
   } catch (err) {
     const message = (err as Error).message ?? "unknown error";
     if (historyId > 0) {
@@ -256,45 +283,15 @@ async function performSync(
   }
 }
 
-/** Run a fetch, swallowing failures to null so one bad endpoint can't fail the whole sync. */
-async function safe<T>(fn: () => Promise<T>): Promise<T | null> {
-  try {
-    return await fn();
-  } catch (err) {
-    console.warn("[GBP] fetch failed (best-effort):", (err as Error).message);
-    return null;
-  }
-}
-
 async function upsertLocation(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   target: GbpTarget,
-  data: {
-    title: string | null;
-    storefrontAddress: string | null;
-    primaryPhone: string | null;
-    websiteUrl: string | null;
-    rating: number;
-    totalReviews: number;
-    totalPhotos: number;
-    totalPosts: number;
-  },
+  data: Partial<Omit<typeof gbpLocations.$inferInsert, "id" | "accountId" | "locationId" | "locationName">>,
 ): Promise<void> {
-  const shared = {
-    title: data.title ?? undefined,
-    storefrontAddress: data.storefrontAddress ?? undefined,
-    primaryPhone: data.primaryPhone ?? undefined,
-    websiteUrl: data.websiteUrl ?? undefined,
-    rating: data.rating.toFixed(2),
-    totalReviews: data.totalReviews,
-    totalPhotos: data.totalPhotos,
-    totalPosts: data.totalPosts,
-    lastSyncedAt: new Date(),
-  };
   await db
     .insert(gbpLocations)
-    .values({ accountId: target.accountId, locationId: target.locationId, locationName: target.locationName, ...shared })
-    .onDuplicateKeyUpdate({ set: shared });
+    .values({ ...data, accountId: target.accountId, locationId: target.locationId, locationName: target.locationName })
+    .onDuplicateKeyUpdate({ set: data });
 }
 
 /**
@@ -306,41 +303,32 @@ async function upsertLocation(
 async function upsertDailyMetrics(
   db: NonNullable<Awaited<ReturnType<typeof getDb>>>,
   locationName: string,
-  insights: DailyInsight[],
+  insights: DailyInsight[] | null,
   today: string,
-  rating: number,
-  reviewCount: number,
+  rating: number | null,
+  reviewCount: number | null,
 ): Promise<number> {
-  const byDate = new Map<string, DailyInsight>();
-  for (const row of insights) byDate.set(row.date, row);
-  // Guarantee a datapoint for today so the rating trend always advances.
-  if (!byDate.has(today)) {
-    byDate.set(today, { date: today, callClicks: 0, directionRequests: 0, websiteClicks: 0, searchViews: 0, mapsViews: 0 });
-  }
+  const byDate = new Map<string, DailyInsight | null>();
+  for (const row of insights ?? []) byDate.set(row.date, row);
+  // A rating-only update must not overwrite existing performance with zeros.
+  if (rating !== null && reviewCount !== null && !byDate.has(today)) byDate.set(today, null);
 
   let count = 0;
-  for (const row of Array.from(byDate.values())) {
-    const isToday = row.date === today;
-    const metricCols = {
+  for (const [date, row] of Array.from(byDate.entries())) {
+    const metricCols = row ? {
       callClicks: row.callClicks,
       directionRequests: row.directionRequests,
       websiteClicks: row.websiteClicks,
       searchViews: row.searchViews,
       mapsViews: row.mapsViews,
-      syncedAt: new Date(),
-    };
-    // Only today's row updates the rating/review snapshot; earlier snapshots are preserved.
-    const snapshotCols = isToday ? { rating: rating.toFixed(2), reviewCount } : {};
+    } : {};
+    const snapshotCols = date === today && rating !== null && reviewCount !== null
+      ? { rating: rating.toFixed(2), reviewCount } : {};
+    const columns = { ...metricCols, ...snapshotCols, syncedAt: new Date() };
     await db
       .insert(gbpDailyMetrics)
-      .values({
-        locationName,
-        date: row.date,
-        metricHash: metricHash(locationName, row.date),
-        ...metricCols,
-        ...(isToday ? { rating: rating.toFixed(2), reviewCount } : {}),
-      })
-      .onDuplicateKeyUpdate({ set: { ...metricCols, ...snapshotCols } });
+      .values({ locationName, date, metricHash: metricHash(locationName, date), ...columns })
+      .onDuplicateKeyUpdate({ set: columns });
     count++;
   }
   return count;

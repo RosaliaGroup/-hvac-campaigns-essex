@@ -58,3 +58,29 @@ export function classifyInbound(text: string | null | undefined): InboundIntent 
 export function isOptOutMessage(text: string): boolean {
   return classifyInbound(text) === "stop";
 }
+
+/**
+ * Detect an inbound HVAC replacement/upgrade INSTALLATION inquiry.
+ * A bare carrier keyword YES is not proof of purchase interest. It only
+ * qualifies after a recent sent HVAC installation/replacement-specific
+ * question. No outbound sends or consent assumptions are made here.
+ */
+export function isPotentialHvacInstallReply(
+  text: string,
+  priorOutboundText?: string | null,
+): boolean {
+  const reply = text.trim().toLowerCase().replace(/[.!?]+$/g, "").trim();
+  if (!reply || /\b(stop|unsubscribe|not interested|no thanks|remove|cancel)\b/i.test(reply)) return false;
+
+  const shortYes = /^(yes|y|yep|yeah|sure|interested)$/i.test(reply);
+  if (shortYes) {
+    const context = priorOutboundText ?? "";
+    return /\b(hvac|heating|cooling|air conditioning|furnace|heat pump)\b/i.test(context)
+      && /\b(replace|replacing|replacement|upgrade|upgrading|installation|install|new system)\b/i.test(context)
+      && /\b(reply yes|text yes|interested|would you like|are you considering|do you want)\b/i.test(context);
+  }
+
+  const action = /\b(want|need|interested|looking|quote|estimate|price|schedule|yes)\b/i.test(reply);
+  const project = /\b(replace|replacement|replacing|upgrade|upgrading|install|installation|new furnace|new ac|new air conditioner|new hvac|new heat pump)\b/i.test(reply);
+  return action && project;
+}

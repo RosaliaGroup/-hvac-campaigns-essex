@@ -6,6 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Phone, MessageSquare, Share2, TrendingUp, Settings, CheckCircle, Clock, AlertCircle, Target } from "lucide-react";
 import { Link } from "wouter";
+import { useState } from "react";
+import { toast } from "sonner";
+import { OCTOBER_B2B_SOCIAL_POSTS, buildOctoberSocialContent } from "@/data/octoberB2BSocialCampaign";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 
@@ -343,48 +348,164 @@ function SmsConversations() {
  * Social Posts Component
  */
 function SocialPosts() {
-  const { data: posts, isLoading } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 });
+  const utils = trpc.useUtils();
+  const { data: posts, isLoading, error } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 });
+  const { data: lane } = trpc.aiVa.socialLane.status.useQuery();
+  const [gbpDiscoveryRequested, setGbpDiscoveryRequested] = useState(false);
+  const [selectedGbp, setSelectedGbp] = useState("");
+  const gbpDiscovery = trpc.aiVa.socialLane.discoverGoogleBusinessLocations.useQuery(undefined, { enabled: gbpDiscoveryRequested, retry: false });
+  const gbpSelect = trpc.aiVa.socialLane.selectGoogleBusinessLocation.useMutation({
+    onSuccess: r => { toast.success(`Business Profile selected: ${r.title}`); utils.aiVa.socialLane.status.invalidate(); gbpCheck.refetch(); },
+    onError: e => toast.error(e.message),
+  });
+  const [gbpCheckRequested, setGbpCheckRequested] = useState(false);
+  const gbpCheck = trpc.aiVa.socialLane.verifyGoogleBusinessPosting.useQuery(undefined, { enabled: gbpCheckRequested, retry: false });
 
-  if (isLoading) {
-    return <div>Loading social posts...</div>;
-  }
+  const [platform, setPlatform] = useState<"facebook" | "instagram">("facebook");
+  const [content, setContent] = useState("");
+  const [campaignKey, setCampaignKey] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [bulkStart, setBulkStart] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState("");
 
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Social Media Posts</CardTitle>
-        <CardDescription>AI-generated content across all platforms</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {posts && posts.length > 0 ? (
-            posts.map((post: any) => (
-              <div key={post.id} className="p-4 border rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <Badge>{post.platform}</Badge>
-                  <Badge variant={
-                    post.status === "posted" ? "default" :
-                    post.status === "scheduled" ? "secondary" :
-                    post.status === "failed" ? "destructive" : "outline"
-                  }>
-                    {post.status}
-                  </Badge>
-                </div>
-                <p className="text-sm">{post.content}</p>
-                {post.postedAt && (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Posted {new Date(post.postedAt).toLocaleString()}
-                  </p>
-                )}
-              </div>
-            ))
-          ) : (
-            <p className="text-center text-muted-foreground py-8">No social posts yet. Configure social media credentials to start posting.</p>
-          )}
+  const refresh = () => utils.aiVa.listSocialPosts.invalidate();
+  const schedule = trpc.aiVa.schedulePost.useMutation({
+    onSuccess: () => { toast.success("Post scheduled"); setContent(""); setCampaignKey(""); setImageUrl(""); refresh(); },
+    onError: e => toast.error(e.message),
+  });
+  const publish = trpc.aiVa.publishPost.useMutation({
+    onSuccess: result => { toast.success(result.success ? "Publishing request completed" : "Publishing request returned an error"); refresh(); setBusyId(null); },
+    onError: e => { toast.error(e.message); setBusyId(null); refresh(); },
+  });
+  const bulkSchedule = async () => {
+    if (!lane?.platforms?.facebook?.connected || bulkBusy) return;
+    const start = new Date(bulkStart);
+    if (!bulkStart || Number.isNaN(start.getTime()) || start.getTime() <= Date.now()) {
+      toast.error("Choose a future start date and time."); return;
+    }
+    const existing = new Set((posts ?? []).filter(p => p.platform === "facebook" && p.status !== "failed").map(p => p.content));
+    const pending = OCTOBER_B2B_SOCIAL_POSTS.slice(1).filter(p => !existing.has(buildOctoberSocialContent(p, "facebook")));
+    if (!pending.length) { toast.info("All seven remaining Facebook posts are already saved."); return; }
+    setBulkBusy(true);
+    let saved = 0;
+    try {
+      for (const post of pending) {
+        // Twice weekly, starting at the user-selected local time.
+        const at = new Date(start.getTime() + saved * 4 * 86400000);
+        setBulkProgress(`Scheduling ${saved + 1} of ${pending.length}: ${post.label}`);
+        await utils.client.aiVa.schedulePost.mutate({
+          platform: "facebook", content: buildOctoberSocialContent(post, "facebook"),
+          contentType: "commercial_campaign", scheduledAt: at.toISOString(),
+        });
+        saved++;
+      }
+      toast.success(`Scheduled ${saved} Facebook campaign posts`);
+      await refresh();
+    } catch (err) {
+      toast.error(`Saved ${saved} posts; scheduling stopped: ${err instanceof Error ? err.message : String(err)}`);
+      await refresh();
+    } finally { setBulkBusy(false); setBulkProgress(""); }
+  };
+  const connected = lane?.platforms?.[platform]?.connected === true;
+  const validDate = scheduledAt && !Number.isNaN(Date.parse(scheduledAt)) && Date.parse(scheduledAt) > Date.now();
+  return <Card>
+    <CardHeader>
+      <CardTitle>Social Media Posts</CardTitle>
+      <CardDescription>Schedule approved Facebook and Instagram content using your existing connected accounts.</CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-5">
+      <div className="rounded-lg border p-4 space-y-2">
+        <p className="font-medium text-sm">Google Business Profile — existing location</p>
+        <p className="text-xs text-muted-foreground">Check whether the existing business profile has separate organic posting authorization. Google Ads, Search Console and a public Business Profile do not automatically authorize posting.</p>
+        <Button size="sm" variant="outline" onClick={() => { setGbpCheckRequested(true); if (gbpCheckRequested) gbpCheck.refetch(); }} disabled={gbpCheck.isFetching}>
+          {gbpCheck.isFetching ? "Checking…" : "Verify Google Business Profile Connection"}
+        </Button>
+        {gbpCheck.data && <p role="status" className="text-sm">{gbpCheck.data.ready ? "Location verified: " + (gbpCheck.data.locationName ?? "Connected location") : "Not ready: "}{gbpCheck.data.reason}</p>}
+        {gbpCheck.data && !gbpCheck.data.ready && <div className="text-xs space-y-2">
+          {"missing" in gbpCheck.data && Array.isArray(gbpCheck.data.missing) && <p>Missing posting authorization fields: {gbpCheck.data.missing.join(", ")}. Secret values are never displayed.</p>}
+          <p>The existing Local SEO Google connection is separate from the legacy posting credentials. Do not create another Business Profile or assume Google Ads authorization grants posting access.</p>
+          <a className="text-blue-700 underline" href="/settings/integrations">Review existing Google integrations</a>
+          <span className="mx-2">·</span>
+          <a className="text-blue-700 underline" href="/ai-va-settings">Review posting settings</a>
+        </div>}
+        {gbpCheck.error && <p role="alert" className="text-sm text-red-700">Connection check failed: {gbpCheck.error.message}</p>}
+        <div className="space-y-2 border-t pt-3">
+          <Button size="sm" variant="outline" onClick={() => { setGbpDiscoveryRequested(true); if (gbpDiscoveryRequested) gbpDiscovery.refetch(); }} disabled={gbpDiscovery.isFetching}>Find My Existing Google Business Profiles</Button>
+          {gbpDiscovery.error && <p role="alert" className="text-xs text-red-700">{gbpDiscovery.error.message}</p>}
+          {gbpDiscovery.data && <p className="text-xs">{gbpDiscovery.data.locations.length} accessible locations found across {gbpDiscovery.data.accountsFound} accounts.</p>}
+          {!!gbpDiscovery.data?.locations.length && <>
+            <select aria-label="Choose existing Google Business Profile" className="w-full rounded-md border bg-background p-2 text-sm" value={selectedGbp} onChange={e => setSelectedGbp(e.target.value)}>
+              <option value="">Select your existing business location</option>
+              {gbpDiscovery.data.locations.map(loc => <option key={loc.accountId + ":" + loc.locationId} value={loc.accountId + ":" + loc.locationId}>{loc.title} — {loc.address || loc.accountName}</option>)}
+            </select>
+            <Button size="sm" disabled={!selectedGbp || gbpSelect.isPending} onClick={() => {
+              const [accountId, locationId] = selectedGbp.split(":");
+              gbpSelect.mutate({ accountId, locationId });
+            }}>Save Selected Business Profile</Button>
+          </>}
         </div>
-      </CardContent>
-    </Card>
-  );
+        <p className="text-xs text-muted-foreground">Automatic Google Business Profile posting stays disabled until a controlled test succeeds. Configure credentials in AI Settings if this check reports missing access.</p>
+      </div>
+      <div className="rounded-lg border p-4 space-y-3">
+        <div className="flex flex-wrap gap-2">
+          {(["facebook", "instagram"] as const).map(p => <Button key={p} size="sm" variant={platform === p ? "default" : "outline"} onClick={() => { setPlatform(p); const selected = OCTOBER_B2B_SOCIAL_POSTS.find(post => post.key === campaignKey); if (selected) setContent(buildOctoberSocialContent(selected, p)); }}>{p === "facebook" ? "Facebook" : "Instagram"}</Button>)}
+        </div>
+        <p className="text-xs text-muted-foreground">{connected ? `${platform} connected` : `${platform} not connected — check AI Settings`}. Scheduled publishing uses the existing automation.</p>
+        <label className="block text-sm">Load October commercial campaign post
+          <select aria-label="Select prepared campaign post" className="mt-1 w-full rounded-md border bg-background p-2 text-sm" value={campaignKey}
+            onChange={e => {
+              const key = e.target.value;
+              setCampaignKey(key);
+              const selected = OCTOBER_B2B_SOCIAL_POSTS.find(p => p.key === key);
+              if (selected) setContent(buildOctoberSocialContent(selected, platform));
+            }}>
+            <option value="">Choose one of eight prepared posts</option>
+            {OCTOBER_B2B_SOCIAL_POSTS.map(post => <option key={post.key} value={post.key}>{post.label}</option>)}
+          </select>
+        </label>
+        <Textarea aria-label="Post content" value={content} onChange={e => setContent(e.target.value)} placeholder="Write an approved HVAC campaign post..." rows={5} />
+        {platform === "instagram" && <label className="block text-sm">Public image URL (required for Instagram)
+          <Input type="url" value={imageUrl} onChange={e => setImageUrl(e.target.value)} placeholder="https://mechanicalenterprise.com/images/campaign.jpg" className="mt-1" />
+          <span className="block text-xs text-muted-foreground mt-1">Use an image hosted at a publicly accessible HTTPS URL. Uploading local files is not supported in this form.</span>
+        </label>}
+        <label className="block text-sm">Schedule date and time (local)
+          <Input type="datetime-local" value={scheduledAt} onChange={e => setScheduledAt(e.target.value)} className="mt-1" />
+        </label>
+        <Button disabled={!connected || !content.trim() || !validDate || schedule.isPending || (platform === "instagram" && !/^https:\/\/[^\s]+\.[a-z0-9]+(?:\?[^\s]*)?$/i.test(imageUrl.trim()))} onClick={() => schedule.mutate({ platform, content: content.trim(), scheduledAt: new Date(scheduledAt).toISOString(), contentType: "commercial_campaign", mediaUrls: platform === "instagram" ? [imageUrl.trim()] : undefined })}>
+          {schedule.isPending ? "Scheduling…" : "Schedule Post"}
+        </Button>
+        {platform === "facebook" && <div className="rounded-md border p-3 space-y-2">
+          <p className="font-medium text-sm">Schedule remaining seven October B2B posts</p>
+          <p className="text-xs text-muted-foreground">Uses the seven posts after the verified property-manager test. Twice-weekly spacing, existing saved posts skipped. Review each caption in the campaign selector above before scheduling.</p>
+          <label className="block text-sm">First post date and time (local)
+            <Input type="datetime-local" value={bulkStart} onChange={e => setBulkStart(e.target.value)} className="mt-1" />
+          </label>
+          <Button variant="outline" disabled={!lane?.platforms?.facebook?.connected || !bulkStart || bulkBusy || isLoading} onClick={bulkSchedule}>
+            {bulkBusy ? "Scheduling…" : "Schedule Remaining 7 Facebook Posts"}
+          </Button>
+          {bulkProgress && <p role="status" className="text-xs">{bulkProgress}</p>}
+          <p className="text-xs text-amber-700">These are saved as scheduled posts. Verify that the production due-post worker is running before relying on unattended publishing.</p>
+        </div>}
+        {platform === "instagram" && <p className="text-xs text-amber-700">Instagram publishing requires a public image URL. Schedule one test post and confirm it appears on the connected Instagram account before bulk scheduling.</p>}
+      </div>
+      {isLoading ? <p>Loading social posts...</p> : error ? <p role="alert" className="text-red-700">Unable to load social posts: {error.message}</p> :
+        !posts?.length ? <p className="text-sm text-muted-foreground">No social posts saved yet. Use the form above to schedule your first approved campaign post.</p> :
+        <div className="space-y-3">{posts.map(post => <div key={post.id} className="p-4 border rounded-lg">
+          <div className="flex items-center justify-between gap-2 mb-2"><Badge>{post.platform}</Badge><Badge variant={post.status === "posted" ? "default" : post.status === "failed" ? "destructive" : "secondary"}>{post.status}</Badge></div>
+          <p className="text-sm whitespace-pre-wrap">{post.content}</p>
+          {post.scheduledAt && <p className="text-xs text-muted-foreground mt-2">Scheduled: {new Date(post.scheduledAt).toLocaleString()}</p>}
+          {post.postedAt && <p className="text-xs text-muted-foreground">Posted: {new Date(post.postedAt).toLocaleString()}</p>}
+          {post.errorMessage && <p role="alert" className="text-xs text-red-700 mt-2">{post.errorMessage}</p>}
+          {post.status === "scheduled" && (post.platform === "facebook" || post.platform === "instagram") &&
+            <Button className="mt-3" size="sm" variant="outline" disabled={publish.isPending} onClick={() => { setBusyId(post.id); publish.mutate({ id: post.id, platform: post.platform as "facebook" | "instagram", content: post.content, mediaUrls: post.mediaUrls ? JSON.parse(post.mediaUrls) as string[] : undefined, approved: true }); }}>
+              {publish.isPending && busyId === post.id ? "Publishing…" : "Publish Now"}
+            </Button>}
+        </div>)}</div>}
+    </CardContent>
+  </Card>;
 }
 
 /**

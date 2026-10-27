@@ -59,10 +59,12 @@ describe("evaluateAutoMergeReadiness (pure)", () => {
 });
 
 vi.mock("../../db", () => ({ getDb: vi.fn() }));
+vi.mock("./contentQueue", () => ({ listContentQueue: vi.fn(async () => []) }));
+vi.mock("./reconcileContentQueue", () => ({ reconcileMergedContentTopics: vi.fn(async () => ({ checked: 0, published: 0, held: 0 })) }));
 vi.mock("./bulkApprove", () => ({ laneForBatch: vi.fn(() => "meta"), refreshBatchStatus: vi.fn(), approveBatchToPR: vi.fn() }));
 vi.mock("./warmupGate", () => ({ isWarmedUp: vi.fn(), advanceWarmup: vi.fn() }));
 vi.mock("./circuitBreaker", () => ({ checkCircuitBreakerConditions: vi.fn() }));
-vi.mock("./github", () => ({ getNetlifyCheckState: vi.fn(), hasAnyPRComments: vi.fn(), mergePR: vi.fn() }));
+vi.mock("./github", () => ({ getNetlifyCheckState: vi.fn(), hasAnyPRComments: vi.fn(), mergePR: vi.fn(), getFileContent: vi.fn(async () => ({ content: `{"slug":"commercial-hvac-repair-or-replace-decision-guide"}`, sha: "test" })) }));
 vi.mock("./actionLinks", () => ({ signActionLink: vi.fn(() => "fake-token") }));
 vi.mock("./auditLog", () => ({ logAudit: vi.fn() }));
 vi.mock("../emailService", () => ({ sendEmail: vi.fn(async () => true) }));

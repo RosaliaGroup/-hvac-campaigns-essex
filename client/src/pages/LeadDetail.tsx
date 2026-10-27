@@ -41,6 +41,19 @@ export default function LeadDetail() {
   const leadId = parseInt(params.id || "0");
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const qboStatus = trpc.quickbooks.getStatus.useQuery();
+  const qboPush = trpc.quickbooks.pushCustomer.useMutation({
+    onSuccess: result => {
+      if (result.outcome === "conflict") {
+        toast({ title: "Possible QuickBooks duplicate", description: "Open the customer record to review and link the matching customer." });
+      } else {
+        toast({ title: "QuickBooks customer " + result.outcome });
+        void refetch();
+      }
+    },
+    onError: error => toast({ title: "QuickBooks sync failed", description: error.message, variant: "destructive" }),
+  });
+
 
   const { data: lead, isLoading, refetch } = trpc.leadCaptures.getById.useQuery(
     { id: leadId },
@@ -142,7 +155,7 @@ export default function LeadDetail() {
                     ? <div className="flex items-center gap-2"><PhoneCall className="h-4 w-4 text-[#ff6b35]" /><a href={`tel:${cap.phone}`} className="font-medium text-[#ff6b35] hover:underline">{cap.phone}</a></div>
                     : <div className="text-muted-foreground">No phone</div>}
                   {cap.email
-                    ? <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#1e3a5f]" /><a href={`mailto:${cap.email}`} className="text-[#1e3a5f] hover:underline break-all">{cap.email}</a></div>
+                    ? <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-[#1e3a5f]" /><a href={`/contacts/communications?leadCaptureId=${leadId}`} className="text-[#1e3a5f] hover:underline break-all">{cap.email}</a></div>
                     : <div className="text-muted-foreground">No email</div>}
                   {cap.pageUrl && (
                     <div className="flex items-center gap-2 min-w-0"><ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -179,9 +192,21 @@ export default function LeadDetail() {
                 <Button size="sm" variant="outline" onClick={() => setScheduleOpen(true)}>
                   <CalendarPlus className="h-3.5 w-3.5 mr-1" /> Schedule Assessment
                 </Button>
-                <Button asChild size="sm" variant="outline" disabled={!cap.email}>
-                  <a href={cap.email ? `mailto:${cap.email}` : undefined}><Mail className="h-3.5 w-3.5 mr-1" /> Email</a>
+                <Button size="sm" variant="outline" disabled={!cap.email} onClick={() => navigate(`/contacts/communications?leadCaptureId=${leadId}`)}>
+                  <Mail className="h-3.5 w-3.5 mr-1" /> Email
                 </Button>
+                {cap.customerId ? (
+                  <Button size="sm" variant="outline"
+                    disabled={!qboStatus.data?.connected || qboPush.isPending}
+                    onClick={() => qboPush.mutate({ customerId: cap.customerId! })}>
+                    {qboPush.isPending ? "Syncing..." : "Push to QuickBooks"}
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => toast({
+                    title: "Customer record required",
+                    description: "Create an estimate to link this lead to a CRM customer, then use Push to QuickBooks.",
+                  })}>QuickBooks: Link Customer First</Button>
+                )}
                 {/* Task 8B — Create Estimate is available at ANY stage. Converts the lead
                     to a customer (dedupe) if needed, then opens the Good/Better/Best builder. */}
                 {cap.customerId

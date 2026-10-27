@@ -51,10 +51,10 @@ function ScoreboardSection() {
       )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatTile label="Leads MTD" value={`${data.leadsMtd} / ${data.target}`} sub={`Run-rate ${data.runRatePerDay}/day`} />
-        <StatTile label="Projected month-end" value={data.projectedMonthEnd} />
-        <StatTile label="Qualified rate" value={data.qualifiedRate != null ? `${Math.round(data.qualifiedRate * 100)}%` : "—"} />
-        <StatTile label="Booked rate" value={data.bookedRate != null ? `${Math.round(data.bookedRate * 100)}%` : "—"} />
+        <StatTile label="Captured records MTD (raw)" value={data.leadsMtd} sub={`Raw capture pace ${data.runRatePerDay}/day; may include duplicates`} />
+        <StatTile label="Qualified leads / month target" value={`Unknown / ${data.target}`} sub="Requires verified need, geography, contact and deduplication" />
+        <StatTile label="Stage advanced (not qualified)" value={data.qualifiedRate != null ? `${Math.round(data.qualifiedRate * 100)}%` : "—"} sub="Proxy: records beyond 'new', not proof of qualification" />
+        <StatTile label="Booked-stage rate (raw)" value={data.bookedRate != null ? `${Math.round(data.bookedRate * 100)}%` : "—"} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -74,17 +74,21 @@ function ScoreboardSection() {
         <StatTile label="Quotes open/won/lost" value="—" sub={data.quotesDeferredReason ? "Deferred — see below" : undefined} />
       </div>
 
+      <p className="text-xs text-muted-foreground">
+        The backend counts rows from two capture tables. Raw captured records and pipeline-stage proxies are not a verified count of 80 unique, service-area-qualified HVAC inquiries.
+        Do not use the raw month-end projection or stage percentage to claim goal progress.
+      </p>
       {data.gapPlan && (
         <Card className="border-l-4 border-l-[#ff6b35]">
           <CardContent className="p-4">
-            <p className="text-sm font-semibold flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> Gap plan</p>
+            <p className="text-sm font-semibold flex items-center gap-1.5"><TrendingUp className="h-4 w-4" /> Raw capture-volume gap (not qualified leads)</p>
             <p className="text-sm text-muted-foreground mt-1">{data.gapPlan}</p>
           </CardContent>
         </Card>
       )}
 
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Leads by source</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Captured records by source (raw)</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-1.5">
             {data.bySource.length === 0 && <p className="text-sm text-muted-foreground">No leads this month yet.</p>}

@@ -20,5 +20,5 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec vitest run server/services/seo/circuitBreaker.test.ts server/services/seo/autoMerge.test.ts server/services/seo/warmupGate.test.ts server/services/seo/github.test.ts
+      - run: pnpm exec vitest run server/services/seo/circuitBreaker.test.ts server/services/seo/autoMerge.test.ts server/services/seo/warmupGate.test.ts server/services/seo/github.test.ts server/services/seo/repairIssueLifecycle.test.ts server/services/seo/publicationRepairPlan.test.ts server/services/seo/livePublicationCheck.test.ts server/integrations/gbpOAuthConfig.test.ts
       - run: pnpm build

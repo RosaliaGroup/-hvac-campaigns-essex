@@ -189,6 +189,49 @@ export const attributionRouter = router({
     };
   }),
 
+  /**
+   * Real 30-day commercial landing-page conversion audit.
+   * No synthetic submissions, no inferred leads, no writes.
+   */
+  getCommercialLandingAudit: protectedProcedure.query(async () => {
+    const db = await getDb();
+    if (!db) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Database unavailable" });
+    const paths = [
+      "/commercial/for-property-management",
+      "/commercial/for-contractors-developers",
+      "/commercial/for-commercial-partners",
+    ];
+    const since = new Date(Date.now() - 30 * 86400000);
+    const { gte } = await import("drizzle-orm");
+    const [captures, pages] = await Promise.all([
+      db.select({
+        id: leadCaptures.id, createdAt: leadCaptures.createdAt,
+        landingPath: leadCaptures.firstTouchLandingPath, channel: leadCaptures.channel,
+        captureType: leadCaptures.captureType, status: leadCaptures.status,
+      }).from(leadCaptures).where(gte(leadCaptures.createdAt, since)),
+      db.select({ page: seoPages.page, clicks: seoPages.clicks, impressions: seoPages.impressions }).from(seoPages),
+    ]);
+    const { normalizePath } = await import("@shared/attribution");
+    const advanced = new Set(["qualified", "assessment_scheduled", "assessment_completed", "proposal_sent", "won", "booked"]);
+    return {
+      windowDays: 30,
+      note: "CRM captures are actual records, not test leads. Search Console metrics use the most recent SEO sync and may cover a different reporting window. Advanced stage is not independently verified qualification.",
+      pages: paths.map(path => {
+        const leads = captures.filter(x => x.landingPath && normalizePath(x.landingPath) === path);
+        const traffic = pages.filter(x => normalizePath(x.page) === path);
+        const byChannel: Record<string, number> = {};
+        for (const lead of leads) byChannel[lead.channel ?? "unknown"] = (byChannel[lead.channel ?? "unknown"] ?? 0) + 1;
+        return {
+          path, captures: leads.length,
+          advancedStage: leads.filter(x => advanced.has(x.status)).length,
+          byChannel, clicks: traffic.reduce((n, x) => n + (x.clicks ?? 0), 0),
+          impressions: traffic.reduce((n, x) => n + (x.impressions ?? 0), 0),
+          captureIds: leads.map(x => x.id),
+        };
+      }),
+    };
+  }),
+
   /** Revenue-by-landing-page (organic clicks joined by normalized path). */
   getByLandingPage: protectedProcedure.input(reportInput).query(async ({ input }) => {
     const report = await buildReport(input);

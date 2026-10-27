@@ -1,0 +1,27 @@
+name: CRM contact phone coverage
+
+on:
+  pull_request:
+    paths:
+      - "server/services/crmContactEnrichment.ts"
+      - "server/services/crmContactEnrichmentPhone.test.ts"
+      - "client/src/components/ContactEnrichmentQueue.tsx"
+      - ".github/workflows/crm-contact-phone-coverage.yml"
+  workflow_dispatch:
+
+jobs:
+  contact-phone-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Verify phone coverage query
+        run: pnpm exec vitest run server/services/crmContactEnrichmentPhone.test.ts
+      - name: Typecheck CRM
+        run: pnpm exec tsc --noEmit

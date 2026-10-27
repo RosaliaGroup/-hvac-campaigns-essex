@@ -1,0 +1,45 @@
+name: CRM Selective Contact Enrichment
+
+on:
+  pull_request:
+    paths:
+      - "server/services/automaticContactEnrichment*"
+      - "server/services/crmContactIntake.ts"
+      - "server/services/crmContactEnrichment.ts"
+      - "server/services/gmailCrm.ts"
+      - "server/services/crm30DaySync.ts"
+      - "server/services/crmCommunications.ts"
+      - "server/routers/crmCommunications.ts"
+      - "client/src/components/ContactIntakePanel.tsx"
+      - "client/src/components/ContactEnrichmentQueue.tsx"
+      - "client/src/pages/Communications.tsx"
+      - "client/src/pages/Customers.tsx"
+      - "client/src/components/AddContactModal.tsx"
+      - "server/routers/customers.ts"
+      - "server/services/sentEmailContact.ts"
+      - ".github/workflows/crm-selective-contact-enrichment.yml"
+  workflow_dispatch:
+
+jobs:
+  selective-intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Test approved sources and required contact fields
+        run: pnpm exec vitest run server/services/automaticContactEnrichment.test.ts
+      - name: Validate selective Gmail intake and immediate outreach contact creation
+        run: pnpm exec vitest run server/services/gmailCrm.test.ts server/services/sentEmailContact.test.ts
+      - name: Guard completed Contacts page validation
+        run: |
+          grep -q 'completedOnly: true' client/src/pages/Customers.tsx
+          grep -q 'requireComplete' client/src/pages/Customers.tsx
+          grep -q "Gmail Sent" server/routers/customers.ts
+      - name: Typecheck CRM
+        run: pnpm exec tsc --noEmit

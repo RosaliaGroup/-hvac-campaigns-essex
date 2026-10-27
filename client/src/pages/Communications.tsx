@@ -6,7 +6,8 @@ import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { internalSmsConversationPath } from "@/lib/internalSms";
 import {
   ArrowLeft,
   Inbox,
@@ -23,8 +24,11 @@ type SyncResult = {
   duplicates: number;
   skipped: number;
   nextPageToken?: string;
+  retryAfterMs?: number;
+  paused?: boolean;
 };
 export default function Communications() {
+  const [, navigate] = useLocation();
   const customerId = Number(
     new URLSearchParams(window.location.search).get("customerId")
   );
@@ -33,12 +37,13 @@ export default function Communications() {
     { enabled: customerId > 0 }
   );
   const [search, setSearch] = useState("");
-  const [contactId, setContactId] = useState<number | null>(null);
+  const [contactId, setContactId] = useState<number | null>(() => Number(new URLSearchParams(window.location.search).get("contactId")) || null);
   useEffect(() => {
     if (linkedContact.data) setContactId(linkedContact.data.id);
   }, [linkedContact.data?.id]);
   const [jobId, setJobId] = useState<string | null>(null);
   const [pageToken, setPageToken] = useState<string | undefined>();
+  const [resumeAt, setResumeAt] = useState<number | null>(null);
   const handledSyncJob = useRef<string | null>(null);
   const syncTotals = useRef({ imported: 0, duplicates: 0, skipped: 0 });
   const [notice, setNotice] = useState("");
@@ -68,6 +73,25 @@ export default function Communications() {
       openCustomer.mutate({ customerId });
     }
   }, [customerId, linkedContact.data]);
+  const openingLead = useRef<string | null>(null);
+  const openLead = trpc.crmCommunications.openLeadContact.useMutation({
+    onSuccess: contact => {
+      setContactId(contact.id);
+      void contacts.refetch();
+    },
+    onError: error => setNotice(error.message),
+  });
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search);
+    const captureId = Number(query.get("leadCaptureId"));
+    const leadId = Number(query.get("leadId"));
+    const id = captureId || leadId;
+    const kind = captureId ? "capture" : "lead";
+    if (id > 0 && openingLead.current !== `${kind}:${id}`) {
+      openingLead.current = `${kind}:${id}`;
+      openLead.mutate({ id, kind });
+    }
+  }, []);
   const [compose, setCompose] = useState<"email" | "newEmail" | "sms" | null>(
     null
   );
@@ -151,9 +175,22 @@ export default function Communications() {
     limit: 100,
     offset: 0,
   });
-  const availableContacts = [
+  const leadOptions = trpc.crmCommunications.leadOptions.useQuery({ search });
+  const availableContacts: {
+    id: number;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    company?: string | null;
+    leadOption?: { id: number; kind: "lead" | "capture" };
+  }[] = [
     ...(contacts.data ?? []),
     ...(crmContacts.data?.items ?? [])
+      // Historical Gmail Sent auto-imports are not approved CRM contacts.
+      // Existing clients remain visible only with both email and phone.
+      .filter(c => c.source !== "Gmail Sent" &&
+        Boolean(c.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email)) &&
+        Boolean(c.phone && c.phone.replace(/\D/g,"").length >= 10))
       .filter(
         c =>
           !(contacts.data ?? []).some(
@@ -169,6 +206,26 @@ export default function Communications() {
         phone: c.phone,
         company: c.companyName,
       })),
+    ...(leadOptions.data ?? [])
+      .filter(
+        l =>
+          !(contacts.data ?? []).some(
+            c =>
+              (l.kind === "lead"
+                ? c.leadId === l.id
+                : c.leadCaptureId === l.id) ||
+              (l.email && c.email?.toLowerCase() === l.email.toLowerCase()) ||
+              (l.phone &&
+                c.phone?.replace(/[^0-9+]/g, "") ===
+                  l.phone.replace(/[^0-9+]/g, ""))
+          )
+      )
+      .map(l => ({
+        ...l,
+        id: -(1000000000 + l.id * 2 + (l.kind === "capture" ? 1 : 0)),
+        leadOption: { id: l.id, kind: l.kind },
+        company: null,
+      })),
   ];
   const status = trpc.crmCommunications.gmailStatus.useQuery();
   const timeline = trpc.crmCommunications.timeline.useQuery(
@@ -178,7 +235,7 @@ export default function Communications() {
   const sync = trpc.crmCommunications.syncGmail.useMutation({
     onSuccess: data => {
       setJobId(data.jobId);
-      setNotice("Reading Gmail…");
+      setNotice("Checking email updates…");
     },
     onError: error => setNotice(error.message),
   });
@@ -210,19 +267,29 @@ export default function Communications() {
       syncTotals.current.imported += result.imported;
       syncTotals.current.duplicates += result.duplicates;
       syncTotals.current.skipped += result.skipped;
+      const hasMore = Boolean(result.nextPageToken) || result.paused;
+      const waitMs = hasMore ? Math.max(result.retryAfterMs ?? 0, 60_000) : 0;
+      const nextResumeAt = hasMore ? Date.now() + waitMs : null;
+      setResumeAt(nextResumeAt);
       setNotice(
-        `${syncTotals.current.imported} emails added; ${syncTotals.current.duplicates} already recorded; ${syncTotals.current.skipped} skipped.${result.nextPageToken ? " Reading the next page… Keep this page open." : " Sync complete."}`
+        `${syncTotals.current.imported} emails added; ${syncTotals.current.duplicates} already recorded; ${syncTotals.current.skipped} skipped.${nextResumeAt ? ` Sync will resume automatically at ${new Date(nextResumeAt).toLocaleTimeString()} while this page stays open.` : " Sync complete."}`
       );
       setJobId(null);
       void contacts.refetch();
       if (contactId !== null) void timeline.refetch();
-      if (result.nextPageToken)
-        sync.mutate({ pageToken: result.nextPageToken });
     } else if (job.data?.status === "error") {
       setNotice(job.data.error ?? "Sync failed. Retry safely.");
       setJobId(null);
     }
   }, [job.data, jobId, job.isFetching, job.error]);
+  useEffect(() => {
+    if (!resumeAt) return;
+    const timer = window.setTimeout(() => {
+      setResumeAt(null);
+      sync.mutate({ pageToken });
+    }, Math.max(0, resumeAt - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [resumeAt, pageToken]);
   const ready =
     status.data?.connected &&
     status.data.hasReadPermission &&
@@ -262,8 +329,8 @@ export default function Communications() {
           <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-500" />
           <Input
             className="h-12 pl-12 rounded-full border-0 bg-[#eaf1fb] text-slate-800"
-            aria-label="Search contacts, companies or email"
-            placeholder="Search contacts, companies or email"
+            aria-label="Search contacts, leads, companies or email"
+            placeholder="Search contacts, leads, companies or email"
             value={search}
             onChange={e => {
               setSearch(e.target.value);
@@ -281,7 +348,7 @@ export default function Communications() {
           variant="outline"
           size="sm"
           className="rounded-full bg-white text-slate-800"
-          disabled={!ready || Boolean(jobId) || sync.isPending}
+          disabled={!ready || Boolean(jobId) || sync.isPending || Boolean(resumeAt)}
           onClick={() => {
             syncTotals.current = { imported: 0, duplicates: 0, skipped: 0 };
             sync.mutate({ pageToken });
@@ -291,7 +358,9 @@ export default function Communications() {
             className={`h-4 w-4 mr-2 ${jobId ? "animate-spin" : ""}`}
           />
           {jobId || sync.isPending
-            ? "Syncing all email pages…"
+            ? "Checking email updates…"
+            : resumeAt
+              ? "Sync resumes automatically"
             : pageToken
               ? "Resume Gmail sync"
               : "Sync Gmail · last 30 days"}
@@ -303,7 +372,7 @@ export default function Communications() {
           Connection settings
         </Link>
         <span className="text-xs text-slate-500">
-          Leads, clients and sent-email contacts · refreshes every 5 minutes
+          CRM contacts and leads · Gmail sync does not add people automatically
         </span>
         {!ready && (
           <p className="text-sm">
@@ -342,6 +411,10 @@ export default function Communications() {
               <button
                 key={item.id}
                 onClick={() => {
+                  if (item.id === "sms") {
+                    navigate(internalSmsConversationPath(selectedContact?.phone));
+                    return;
+                  }
                   setFolder(item.id);
                   setMessageId(null);
                 }}
@@ -414,20 +487,12 @@ export default function Communications() {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={
-                    sending ||
-                    !contacts.data?.find(contact => contact.id === contactId)
-                      ?.phone
-                  }
-                  onClick={() => {
-                    setCompose("sms");
-                    setDraft("");
-                  }}
+                  disabled={!selectedContact?.phone}
+                  onClick={() => navigate(internalSmsConversationPath(selectedContact?.phone))}
                 >
                   Send text message
                 </Button>
-                {!contacts.data?.find(contact => contact.id === contactId)
-                  ?.phone && (
+                {!selectedContact?.phone && (
                   <span className="text-xs text-slate-500 self-center">
                     Save the contact with a phone number to enable texting.
                   </span>
@@ -464,7 +529,7 @@ export default function Communications() {
               <p className="text-xs text-slate-500 truncate">
                 {selectedContact?.email ??
                   selectedContact?.phone ??
-                  "Select a contact to view communications"}
+                  "Select a contact or lead to view communications"}
               </p>
             </div>
             {contactId !== null && (
@@ -476,46 +541,58 @@ export default function Communications() {
           {contactId === null ? (
             <div className="flex flex-col items-center justify-center gap-4 py-8 px-6 text-center text-slate-500">
               <Inbox className="h-10 w-10 mb-4 text-blue-300" />
-              <p>Select a contact to view messages or compose a new email.</p>
-          <details
-            open
-            className="w-full max-w-2xl rounded-xl border bg-white text-left"
-          >
-            <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-xs uppercase tracking-wide text-slate-500">
-              <Users className="h-4 w-4" />
-              Select a contact
-            </summary>
-            <section className="max-h-64 overflow-y-auto space-y-1">
-              {contacts.isLoading && <p>Loading contacts…</p>}
-              {availableContacts.length === 0 && (
-                <p>
-                  No matching contacts. Search by name or email, or add a
-                  contact to the CRM.
-                </p>
-              )}
-              {availableContacts.map(contact => (
-                <button
-                  key={contact.id}
-                  onClick={() => {
-                    if (contact.id < 0)
-                      openCustomer.mutate({ customerId: -contact.id });
-                    else setContactId(contact.id);
-                    setMessageId(null);
-                  }}
-                  aria-pressed={contactId === contact.id}
-                  className={`block w-full text-left rounded-xl px-4 py-3 ${contactId === contact.id ? "bg-[#d3e3fd]" : "hover:bg-slate-200"}`}
-                >
-                  <strong className="block break-words">{contact.name}</strong>
-                  {contact.company && (
-                    <p className="text-sm break-words">{contact.company}</p>
+              <p>
+                Select a contact or lead to view messages or compose a new
+                email.
+              </p>
+              <details
+                open
+                className="w-full max-w-2xl rounded-xl border bg-white text-left"
+              >
+                <summary className="flex cursor-pointer items-center gap-2 px-4 py-3 text-xs uppercase tracking-wide text-slate-500">
+                  <Users className="h-4 w-4" />
+                  Select a contact or lead
+                </summary>
+                <section className="max-h-64 overflow-y-auto space-y-1">
+                  {contacts.isLoading && <p>Loading contacts…</p>}
+                  {availableContacts.length === 0 && (
+                    <p>
+                      No matching contacts. Search by name or email, or add a
+                      contact to the CRM.
+                    </p>
                   )}
-                  <p className="text-sm break-all">
-                    {contact.email ?? contact.phone}
-                  </p>
-                </button>
-              ))}
-            </section>
-          </details>
+                  {availableContacts.map(contact => (
+                    <button
+                      key={contact.id}
+                      onClick={() => {
+                        if (contact.leadOption)
+                          openLead.mutate(contact.leadOption);
+                        else if (contact.id < 0)
+                          openCustomer.mutate({ customerId: -contact.id });
+                        else setContactId(contact.id);
+                        setMessageId(null);
+                      }}
+                      aria-pressed={contactId === contact.id}
+                      className={`block w-full text-left rounded-xl px-4 py-3 ${contactId === contact.id ? "bg-[#d3e3fd]" : "hover:bg-slate-200"}`}
+                    >
+                      <strong className="block break-words">
+                        {contact.name}
+                        {contact.leadOption && (
+                          <span className="ml-2 text-xs font-normal text-blue-700">
+                            Lead
+                          </span>
+                        )}
+                      </strong>
+                      {contact.company && (
+                        <p className="text-sm break-words">{contact.company}</p>
+                      )}
+                      <p className="text-sm break-all">
+                        {contact.email ?? contact.phone}
+                      </p>
+                    </button>
+                  ))}
+                </section>
+              </details>
             </div>
           ) : timeline.isLoading ? (
             <p className="p-6 text-slate-500">Loading messages…</p>

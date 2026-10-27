@@ -4,6 +4,7 @@ import { getDb } from "../db";
 import { googleCalendarProvider } from "../integrations/google/calendar";
 import { CRM_MAILBOX, gmailCrmStatus } from "./gmailCrm";
 import { logCommunication } from "./crmCommunications";
+import { assertOutreachNotSuppressed } from "./outreachSuppression";
 export function composeMime(to: string, subject: string, body: string) {
   if (
     !/^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/.test(to) ||
@@ -55,6 +56,7 @@ export async function composeGmail(
     .limit(1);
   const to = contact?.email?.trim().toLowerCase();
   if (!to) throw new Error("Save a valid contact email address first.");
+  await assertOutreachNotSuppressed(db, to);
   const raw = composeMime(to, input.subject, input.body);
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function request(path: string, init: RequestInit = {}) {
@@ -89,6 +91,22 @@ export async function composeGmail(
     method: "POST",
     body: JSON.stringify({ raw }),
   });
+  // A successful CRM outreach send must always be represented in Contacts.
+  // This is scoped to the CRM send action, not arbitrary Gmail correspondence.
+  let contactWarning: string | undefined;
+  try {
+    const { ensureSentEmailContact } = await import("./sentEmailContact");
+    await ensureSentEmailContact(db, {...contact,source:"gmail-prospecting"});
+    const { queueContactEnrichment } = await import("./automaticContactEnrichment");
+    await db.update(crmExternalContacts)
+      .set({source:"gmail-prospecting"})
+      .where(eq(crmExternalContacts.id,contact.id));
+    await queueContactEnrichment(contact.id);
+  } catch(error) {
+    contactWarning = "Email sent, but CRM contact promotion needs reconciliation: " +
+      (error instanceof Error ? error.message : "unknown error");
+    console.error("[CRM Outreach Contact] Post-send promotion failed",contact.id,error);
+  }
   let warning: string | undefined;
   try {
     await logCommunication(db, {
@@ -110,5 +128,5 @@ export async function composeGmail(
   } catch {
     warning = "Email sent. Its CRM history will appear after Gmail sync.";
   }
-  return { sent: true, warning };
+  return { sent: true, warning: [warning,contactWarning].filter(Boolean).join(" ") || undefined };
 }

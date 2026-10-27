@@ -1,4 +1,11 @@
+import { startContactNameBackfill } from "../services/backfillContactNames";
 import { startGmailCrmScheduler } from "../services/gmailCrm";
+import { start30DayCadenceScheduler } from "../services/crm30DaySync";
+import { startVerifiedProspectPhoneBackfill } from "../services/backfillVerifiedProspectPhones";
+import { startVerifiedSocialBackfill } from "../services/contactProfile/store";
+import { startScheduledSocialPostWorker } from "../services/social/scheduledPostWorker";
+import { startLushaConnectionProbe } from "../services/lushaCredentialProbe";
+import { startAutomaticContactEnrichment } from "../services/automaticContactEnrichment";
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
@@ -18,6 +25,8 @@ import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 import { registerVapiToolRoutes } from "../services/vapiSendForm";
 import { registerQuickbooksRoutes } from "../integrations/accounting/routes";
 import { registerGoogleCalendarRoutes } from "../integrations/google/routes";
+import { registerPublicGbpRoutes } from "../services/gbp/publicRoutes";
+import { registerDedicatedGbpRoutes } from "../integrations/gbpDedicatedRoutes";
 import { registerSeoSyncRoutes, startSeoSyncScheduler } from "../services/seo/routes";
 import { registerActionLinkRoutes } from "../services/seo/actionLinkRoutes";
 import { startNightlyDraftScheduler } from "../services/seo/nightlyDraftJob";
@@ -78,6 +87,8 @@ async function startServer() {
   registerQuickbooksRoutes(app);
   // Google Calendar OAuth callback (/api/integrations/google-calendar/callback)
   registerGoogleCalendarRoutes(app);
+  registerPublicGbpRoutes(app);
+  registerDedicatedGbpRoutes(app);
   // SEO Intelligence — Search Console sync (POST /api/seo/sync)
   registerSeoSyncRoutes(app);
   // SEO autopublish — unauthenticated veto link (GET/POST /api/seo/action)
@@ -125,6 +136,13 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    // Codespaces/standby safety: run the app UI and API against an isolated
+    // development database, but never start a second automated sender or any
+    // background side-effect pollers while in independent-development mode.
+    if (process.env.STANDBY_DISABLE_AUTOMATION === "true") {
+      console.warn("[STANDBY] All background automation/schedulers are disabled");
+      return;
+    }
     // Start background SMS scheduler (checks every 5 min for due sends)
     startScheduledSmsProcessor();
     // Start QuickBooks sales-document poller (incremental sync + follow-up dispatch)
@@ -134,6 +152,13 @@ async function startServer() {
     // Start daily Search Console → cache sync for SEO Intelligence
     startSeoSyncScheduler();
     startGmailCrmScheduler();
+    start30DayCadenceScheduler();
+    startVerifiedProspectPhoneBackfill();
+    startVerifiedSocialBackfill();
+    startScheduledSocialPostWorker();
+    startLushaConnectionProbe();
+    startAutomaticContactEnrichment();
+    startContactNameBackfill();
     // Start daily GA4 Analytics Data API → cache sync for Marketing Analytics
     startGa4SyncScheduler();
     // Start daily Business Profile → cache sync for Local SEO

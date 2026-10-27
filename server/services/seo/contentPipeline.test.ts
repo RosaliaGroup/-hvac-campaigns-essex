@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../../db", () => ({ getDb: vi.fn() }));
 vi.mock("fs", () => ({ default: { readFileSync: vi.fn(() => "export const blogPosts = [];") } }));
 vi.mock("./contentQueue", () => ({ nextTopicToProcess: vi.fn(), updateQueueStatus: vi.fn() }));
+vi.mock("./topicReplenishment", () => ({ replenishContentTopics: vi.fn(async () => 0) }));
 vi.mock("./contentDrafting", () => ({ draftContentPost: vi.fn(), ContentDraftParseError: class ContentDraftParseError extends Error {} }));
 vi.mock("./criticPass", () => ({ runCriticPass: vi.fn() }));
 vi.mock("./circuitBreaker", () => ({ checkCircuitBreakerConditions: vi.fn() }));
@@ -26,6 +27,7 @@ vi.mock("./autoMerge", () => ({ armHold: vi.fn() }));
 
 import { getDb } from "../../db";
 import { nextTopicToProcess, updateQueueStatus } from "./contentQueue";
+import { replenishContentTopics } from "./topicReplenishment";
 import { draftContentPost, ContentDraftParseError } from "./contentDrafting";
 import { runCriticPass } from "./criticPass";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
@@ -76,6 +78,7 @@ const factsWithIncentive = { ...VERIFIED_FACTS, incentives: [{ program: "PSE&G r
 beforeEach(() => {
   vi.mocked(getDb).mockReset();
   vi.mocked(nextTopicToProcess).mockReset();
+  vi.mocked(replenishContentTopics).mockReset().mockResolvedValue(0);
   vi.mocked(updateQueueStatus).mockReset();
   vi.mocked(draftContentPost).mockReset();
   vi.mocked(runCriticPass).mockReset();
@@ -94,6 +97,8 @@ beforeEach(() => {
   process.env.SEO_AUTOPUBLISH_ENABLED = "true";
 });
 
+afterEach(() => vi.useRealTimers());
+
 describe("runWeeklyContentJob", () => {
   it("short-circuits when the circuit breaker is paused, before touching the queue", async () => {
     vi.mocked(checkCircuitBreakerConditions).mockResolvedValue({ shouldPause: true, reason: "veto" });
@@ -106,6 +111,26 @@ describe("runWeeklyContentJob", () => {
     vi.mocked(nextTopicToProcess).mockResolvedValue(null);
     const result = await runWeeklyContentJob(factsWithIncentive);
     expect(result).toEqual({ status: "no_topic" });
+    expect(replenishContentTopics).toHaveBeenCalledTimes(1);
+  });
+
+  it("replenishes an empty queue and drafts immediately through the existing quality gates", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValueOnce(null).mockResolvedValue(topic);
+    vi.mocked(replenishContentTopics).mockResolvedValue(6);
+    vi.mocked(draftContentPost).mockResolvedValue(goodPost as never);
+    vi.mocked(runCriticPass).mockResolvedValue({ passes: true, unsupportedClaims: [], model: "test" });
+    const result = await runWeeklyContentJob(factsWithIncentive);
+    expect(result).toMatchObject({ status: "drafted", topicId: topic.id, passes: true });
+    expect(replenishContentTopics).toHaveBeenCalledTimes(1);
+  });
+
+  it("coalesces concurrent runs so they cannot draft two posts from the same queue", async () => {
+    vi.mocked(nextTopicToProcess).mockResolvedValue(null);
+    const first = runWeeklyContentJob(factsWithIncentive);
+    const second = runWeeklyContentJob(factsWithIncentive);
+    expect(first).toBe(second);
+    await Promise.all([first, second]);
+    expect(replenishContentTopics).toHaveBeenCalledTimes(1);
   });
 
   it("refuses a residential/rebate-tagged topic without drafting", async () => {
@@ -247,7 +272,9 @@ describe("approveContentToPR", () => {
     expect(ensureBranch).not.toHaveBeenCalled();
   });
 
-  it("commits to blogPosts.ts, opens a PR, and records a batch for a clean draft", async () => {
+  it("commits with today’s Eastern date rather than the saved draft date, opens a PR, and records a batch", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-22T01:00:00Z"));
     vi.mocked(getDb).mockResolvedValue({
       insert: () => ({ values: () => Promise.resolve([{ insertId: 42 }]) }),
     } as never);
@@ -260,6 +287,9 @@ describe("approveContentToPR", () => {
     expect(result).toEqual({ batchId: 42, prUrl: "https://github.com/x/pull/1", prNumber: 1 });
     expect(ensureBranch).toHaveBeenCalledWith("pr-content-20260926-t5");
     expect(putFileContent).toHaveBeenCalledWith("client/src/data/blogPosts.ts", expect.any(String), expect.stringContaining(goodPost.slug), expect.any(String), "sha1");
+    const source = vi.mocked(putFileContent).mock.calls[0][2];
+    expect(source).toContain("October 21, 2026");
+    expect(source).not.toContain(goodPost.date);
     expect(updateQueueStatus).toHaveBeenCalledWith(5, "pr_open", 42);
   });
 });

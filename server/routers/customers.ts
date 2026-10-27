@@ -1,3 +1,4 @@
+import { contactDisplayName } from "../../shared/contactName";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -88,7 +89,7 @@ export function appointmentMatchesLead(
   return false;
 }
 
-/** displayName = companyName, else "First Last", else email/phone fallback. Never empty. */
+/** Prefer the person name; company stays in its own field. */
 export function buildDisplayName(c: {
   companyName?: string | null;
   firstName?: string | null;
@@ -96,10 +97,7 @@ export function buildDisplayName(c: {
   email?: string | null;
   phone?: string | null;
 }): string {
-  if (c.companyName?.trim()) return c.companyName.trim();
-  const name = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
-  if (name) return name;
-  return c.email?.trim() || c.phone?.trim() || "Unnamed Customer";
+  return contactDisplayName(c);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -379,11 +377,12 @@ export const customersRouter = router({
           status: z.enum(["active", "inactive", "archived"]).optional(),
           assignedToId: z.number().int().optional(),
           source: z.enum(["gmail", "other"]).optional(),
+          completedOnly: z.boolean().default(false),
           sort: z.enum(["newest", "name"]).default("newest"),
           limit: z.number().int().min(1).max(100).default(50),
           offset: z.number().int().min(0).default(0),
         })
-        .default({ limit: 50, offset: 0, sort: "newest" })
+        .default({ limit: 50, offset: 0, sort: "newest", completedOnly: false })
     )
     .query(async ({ input }) => {
       const db = await getDb();
@@ -395,6 +394,8 @@ export const customersRouter = router({
         conditions.push(
           or(
             like(customers.displayName, q),
+            like(customers.firstName, q),
+            like(customers.lastName, q),
             like(customers.email, q),
             like(customers.phone, q),
             like(customers.companyName, q)
@@ -403,11 +404,20 @@ export const customersRouter = router({
       }
       if (input.type) conditions.push(eq(customers.type, input.type));
       if (input.source === "gmail")
-        conditions.push(eq(customers.source, "Gmail Sent"));
+        conditions.push(input.completedOnly
+          ? sql`${customers.source} IN ('Gmail Selected','HVAC Prospecting Task')`
+          : eq(customers.source, "Gmail Sent"));
       if (input.source === "other")
-        conditions.push(
-          sql`(${customers.source} IS NULL OR ${customers.source} != 'Gmail Sent')`
-        );
+        conditions.push(input.completedOnly
+          ? sql`(${customers.source} IS NULL OR ${customers.source} NOT IN ('Gmail Selected','HVAC Prospecting Task','Gmail Sent'))`
+          : sql`(${customers.source} IS NULL OR ${customers.source} != 'Gmail Sent')`);
+      if (input.completedOnly) {
+        // Only the visible CRM Contacts page is strict. Scheduling and
+        // inbound lead history still retain incomplete people.
+        conditions.push(sql`(${customers.source} IS NULL OR ${customers.source} != 'Gmail Sent')`);
+        conditions.push(sql`${customers.email} LIKE '%@%.%'`);
+        // Email-only outreach recipients remain visible while phone research is pending.
+      }
       // Default: hide archived unless explicitly requested
       conditions.push(
         input.status

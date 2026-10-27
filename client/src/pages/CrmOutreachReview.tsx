@@ -1,0 +1,227 @@
+import { useState } from "react";
+import { trpc } from "@/lib/trpc";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { outreachCampaignTemplates, type OutreachCampaignKey } from "@/lib/outreachCampaignTemplates";
+import { parseProspectCsv } from "@/lib/prospectImport";
+import { publicProspectSources } from "@/lib/publicProspectSources";
+
+export default function CrmOutreachReview() {
+  const [filter, setFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "needs_human_approval" | "approved" | "rejected">("all");
+  const [form, setForm] = useState({
+    email: "", company: "", decisionMaker: "", sourceUrl: "",
+    draftSubject: "", draftBody: "",
+  });
+  const [intakeResult, setIntakeResult] = useState("");
+  const [batchText, setBatchText] = useState("");
+  const [csvText, setCsvText] = useState("");
+  const [csvResult, setCsvResult] = useState("");
+  const [batchResult, setBatchResult] = useState("");
+
+  const enqueue = trpc.crmOutreachReview.enqueue.useMutation({
+    onSuccess: result => {
+      if ("eligible" in result && result.eligible === false) {
+        setIntakeResult(`Not queued: ${result.reason}`);
+      } else {
+        setIntakeResult("Draft saved for human approval. No message sent.");
+        setForm({ email: "", company: "", decisionMaker: "", sourceUrl: "", draftSubject: "", draftBody: "" });
+        void drafts.refetch();
+        void summary.refetch();
+      }
+    },
+    onError: error => setIntakeResult(`Queue error: ${error.message}`),
+  });
+  const drafts = trpc.crmOutreachReview.list.useQuery(undefined, { retry: false });
+  const enqueueBatch = trpc.crmOutreachReview.enqueueBatch.useMutation({
+    onSuccess: result => {
+      setBatchResult(`Queued ${result.queued} of ${result.results.length} for review. ` +
+        result.results.map(row => `${row.email}: ${row.status}`).join(" | "));
+      void drafts.refetch();
+      void summary.refetch();
+    },
+    onError: error => setBatchResult(`Batch failed: ${error.message}`),
+  });
+  function submitBatch() {
+    try {
+      const parsed: unknown = JSON.parse(batchText);
+      if (!Array.isArray(parsed) || parsed.length < 1 || parsed.length > 10) {
+        setBatchResult("Provide a JSON array of 1–10 verified prospects.");
+        return;
+      }
+      const fields = ["email", "company", "decisionMaker", "sourceUrl", "draftSubject", "draftBody"];
+      if (!parsed.every(item => item && typeof item === "object" &&
+        fields.every(key => typeof item[key] === "string" && item[key].trim()))) {
+        setBatchResult("Every prospect needs email, company, decisionMaker, sourceUrl, draftSubject and draftBody.");
+        return;
+      }
+      enqueueBatch.mutate(parsed.map(item => ({
+        email: item.email, company: item.company, decisionMaker: item.decisionMaker,
+        sourceUrl: item.sourceUrl, draftSubject: item.draftSubject,
+        draftBody: item.draftBody, verifiedAt: new Date(),
+      })));
+    } catch {
+      setBatchResult("Invalid JSON. Provide an array of prospect objects.");
+    }
+  }
+
+  const summary = trpc.crmOutreachReview.summary.useQuery(undefined, { retry: false });
+  const decide = trpc.crmOutreachReview.decide.useMutation({ onSuccess: () => { void drafts.refetch(); void summary.refetch(); } });
+  const counts = {
+    pending: (drafts.data ?? []).filter(row => row.status === "needs_human_approval").length,
+    approved: (drafts.data ?? []).filter(row => row.status === "approved").length,
+    rejected: (drafts.data ?? []).filter(row => row.status === "rejected").length,
+  };
+  const rows = (drafts.data ?? []).filter(row =>
+    (statusFilter === "all" || row.status === statusFilter) &&
+
+    [row.email, row.company, row.decisionMaker, row.draftSubject]
+      .some(value => (value ?? "").toLowerCase().includes(filter.toLowerCase()))
+  );
+  return (
+    <main className="mx-auto max-w-5xl space-y-5 p-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Outreach Review Queue</h1>
+          <p className="text-sm text-muted-foreground">Review-only drafts. No automatic emails are sent from this page.</p>
+        </div>
+        <Button variant="outline" onClick={() => { void drafts.refetch(); void summary.refetch(); }} disabled={drafts.isFetching}>Refresh</Button>
+      </div>
+      <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Add a verified prospect for review</h2>
+        <p className="text-sm text-muted-foreground">Enter a verified direct business email and its public HTTPS verification source. The CRM checks suppressions and previous outreach before saving a draft. Approval never sends an email.</p>
+        <label className="block space-y-1 text-sm">
+          <span>Optional campaign draft template</span>
+          <select className="w-full rounded-md border bg-background p-2" defaultValue=""
+            onChange={event => {
+              const key = event.target.value as OutreachCampaignKey;
+              const template = outreachCampaignTemplates[key];
+              if (template) setForm(current => ({
+                ...current, draftSubject: template.subject, draftBody: template.body,
+              }));
+            }}>
+            <option value="">Start with a blank draft</option>
+            {Object.entries(outreachCampaignTemplates).map(([key, template]) => (
+              <option key={key} value={key}>{template.label}</option>
+            ))}
+          </select>
+        </label>
+        <p className="text-xs text-muted-foreground">Replace all bracketed placeholders with verified details. Templates do not send emails.</p>
+        <form className="grid gap-3 md:grid-cols-2" onSubmit={event => {
+          event.preventDefault();
+          setIntakeResult("");
+          enqueue.mutate({ ...form, verifiedAt: new Date() });
+        }}>
+          {(["company","decisionMaker","email","sourceUrl","draftSubject"] as const).map(key => (
+            <label key={key} className="text-sm space-y-1">
+              <span>{({company:"Company",decisionMaker:"Decision-maker name",email:"Verified business email",sourceUrl:"Public verification URL (HTTPS)",draftSubject:"Personalized email subject"})[key]}</span>
+              <Input required type={key === "email" ? "email" : key === "sourceUrl" ? "url" : "text"}
+                value={form[key]} onChange={e => setForm(current => ({...current,[key]:e.target.value}))}/>
+            </label>
+          ))}
+          <label className="text-sm space-y-1 md:col-span-2">
+            <span>Personalized outreach draft</span>
+            <Textarea required rows={6} value={form.draftBody}
+              onChange={e => setForm(current => ({...current,draftBody:e.target.value}))}/>
+          </label>
+          <div className="md:col-span-2 flex flex-wrap items-center gap-3">
+            <Button type="submit" disabled={enqueue.isPending}>{enqueue.isPending ? "Checking…" : "Check eligibility and queue draft"}</Button>
+            <span className="text-xs text-muted-foreground">Review only · No automatic sending</span>
+          </div>
+        </form>
+        {intakeResult && <p role="status" className="text-sm">{intakeResult}</p>}
+      </section>
+      <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Public-source prospect research — no paid provider</h2>
+        <p className="text-sm text-muted-foreground">Start with these public New Jersey business directories. Verify a named decision-maker and their published direct business email before entering a draft. Do not guess email addresses or contact suppressed recipients.</p>
+        <div className="grid gap-3 md:grid-cols-2">
+          {publicProspectSources.map(source => (
+            <article key={source.id} className="rounded-md border p-3 space-y-1">
+              <a href={source.url} target="_blank" rel="noopener noreferrer" className="font-medium underline">{source.name}</a>
+              <p className="text-xs font-medium">{source.audience}</p>
+              <p className="text-xs text-muted-foreground">{source.note}</p>
+            </article>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">A directory link is only a starting point. Replace it with the specific public page verifying the contact before queueing.</p>
+      </section>
+      <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Import business-contact research</h2>
+        <p className="text-sm text-muted-foreground">Paste a permitted CSV export from your business-contact research provider. Required columns: email, company, decisionMaker, sourceUrl, draftSubject, draftBody. Direct business emails, HTTPS verification sources and personalized drafts are required. Import only prepares review drafts; it does not send messages.</p>
+        <Textarea aria-label="Prospect research CSV" rows={5} value={csvText}
+          placeholder="email,company,decisionMaker,sourceUrl,draftSubject,draftBody"
+          onChange={event => setCsvText(event.target.value)} />
+        <Button type="button" variant="outline" disabled={!csvText.trim()} onClick={() => {
+          const result = parseProspectCsv(csvText);
+          if (result.rows.length > 10) {
+            setCsvResult("Import is limited to 10 verified prospects per batch. Split the export into smaller batches.");
+            return;
+          }
+          if (result.errors.length) {
+            setCsvResult(result.errors.join(" | "));
+            return;
+          }
+          setBatchText(JSON.stringify(result.rows, null, 2));
+          setCsvResult(`Prepared ${result.rows.length} prospects. Review the JSON below, then use Check and queue batch.`);
+        }}>Prepare CSV for review</Button>
+        {csvResult && <p role="status" className="text-sm">{csvResult}</p>}
+      </section>
+      <section className="rounded-lg border p-4 space-y-3">
+        <h2 className="text-lg font-semibold">Batch intake — up to 10 verified prospects</h2>
+        <p className="text-sm text-muted-foreground">Paste a JSON array of prospect drafts. Each requires email, company, decisionMaker, sourceUrl, draftSubject, and draftBody. Every recipient is checked independently for duplicate outreach and opt-outs. This only queues drafts; it never sends emails.</p>
+        <Textarea aria-label="Batch prospect JSON" rows={6} value={batchText}
+          placeholder={'[{"email":"contact@example.com","company":"Example Properties","decisionMaker":"Jane Smith","sourceUrl":"https://example.com/team","draftSubject":"HVAC planning","draftBody":"Hi Jane, ..."}]'}
+          onChange={event => setBatchText(event.target.value)} />
+        <Button type="button" disabled={enqueueBatch.isPending || !batchText.trim()} onClick={submitBatch}>
+          {enqueueBatch.isPending ? "Checking prospects…" : "Check and queue batch"}
+        </Button>
+        {batchResult && <p role="status" className="text-sm whitespace-pre-wrap">{batchResult}</p>}
+      </section>
+      <div className="flex flex-wrap gap-2" aria-label="Filter review drafts by status">
+        {([
+          ["all", "All", (drafts.data ?? []).length],
+          ["needs_human_approval", "Needs review", counts.pending],
+          ["approved", "Approved", counts.approved],
+          ["rejected", "Rejected", counts.rejected],
+        ] as const).map(([value, label, count]) => (
+          <Button key={value} type="button" size="sm"
+            variant={statusFilter === value ? "default" : "outline"}
+            aria-pressed={statusFilter === value}
+            onClick={() => setStatusFilter(value)}>
+            {label} ({count})
+          </Button>
+        ))}
+      </div>
+      {summary.data && (
+        <p className="text-sm text-muted-foreground" role="status">
+          Database verified: {summary.data.total} drafts · {summary.data.needsReview} pending · {summary.data.approved} approved · {summary.data.rejected} rejected
+        </p>
+      )}
+      <Input aria-label="Search outreach drafts" placeholder="Search company, contact or subject" value={filter} onChange={event => setFilter(event.target.value)} />
+      {drafts.isLoading && <p role="status">Loading drafts…</p>}
+      {drafts.error && <p role="alert" className="text-destructive">Unable to load review queue. Administrator access may be required.</p>}
+      {!drafts.isLoading && !drafts.error && rows.length === 0 && <p>No matching drafts in the review queue.</p>}
+      {decide.error && <p role="alert" className="text-destructive">Could not save review decision.</p>}
+      <div className="space-y-4">
+        {rows.map(row => (
+          <article key={row.id} className="rounded-lg border p-4 space-y-2">
+            <div className="flex justify-between gap-2">
+              <div><h2 className="font-semibold">{row.company}</h2><p className="text-sm">{row.decisionMaker} · {row.email}</p></div>
+              <span className="text-xs text-muted-foreground">{row.status.replaceAll("_", " ")}</span>
+            </div>
+            <p className="font-medium">{row.draftSubject}</p>
+            <p className="whitespace-pre-wrap text-sm">{row.draftBody}</p>
+            <a className="text-sm underline" href={row.sourceUrl} target="_blank" rel="noopener noreferrer">Verification source</a>
+            {row.status === "needs_human_approval" && (
+              <div className="flex gap-2">
+                <Button disabled={decide.isPending} onClick={() => decide.mutate({ id: row.id, decision: "approved" })}>Approve draft</Button>
+                <Button variant="outline" disabled={decide.isPending} onClick={() => decide.mutate({ id: row.id, decision: "rejected" })}>Reject</Button>
+              </div>
+            )}
+          </article>
+        ))}
+      </div>
+    </main>
+  );
+}

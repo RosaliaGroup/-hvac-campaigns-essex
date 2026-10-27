@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Building2, ExternalLink, RefreshCw, Users } from "lucide-react";
+import { Building2, ExternalLink, RefreshCw } from "lucide-react";
 import type { ContactProfile, ProfileFact } from "@shared/contactProfile";
+import ContactEnrichmentControls from "./ContactEnrichmentControls";
 function Fact({ label, fact }: { label: string; fact?: ProfileFact }) {
   if (!fact) return null;
   return (
@@ -128,43 +129,7 @@ export default function ContactProfilePanel({
           )}
         </div>
       </section>
-      <section className="rounded-md border bg-white">
-        <h2 className="font-semibold px-4 py-3 border-b flex items-center gap-2">
-          <Users size={16} />
-          Person’s social profiles
-        </h2>
-        <div className="p-4 space-y-3">
-          {data?.social.map(s => (
-            <div key={s.url}>
-              <a
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[#007a8c] flex items-center gap-2"
-              >
-                {s.platform}
-                <ExternalLink size={13} />
-              </a>
-              <a
-                href={s.source}
-                target="_blank"
-                rel="noopener noreferrer"
-                title={s.evidence}
-                className="text-xs text-slate-500"
-              >
-                Match source
-              </a>
-            </div>
-          ))}
-          {!data?.social.length && (
-            <p className="text-sm text-slate-500">
-              {busy
-                ? "Checking public profiles…"
-                : "No confirmed person profiles found."}
-            </p>
-          )}
-        </div>
-      </section>
+      {contactId && <ContactEnrichmentControls contactId={contactId} profile={data} />}
       {data && (
         <p className="text-xs text-slate-400 px-1">
           Checked {new Date(data.checkedAt).toLocaleDateString()}. Public

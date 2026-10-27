@@ -6,6 +6,7 @@
  * title/meta pair), so it lives in its own module rather than extending that
  * provider's narrow title/meta scope.
  */
+import { publicationDate } from "../../../shared/blogPublication";
 import { callAnthropicModelChain } from "../../_core/anthropic";
 import type { BlogPostData } from "../../../client/src/data/blogPosts";
 import { normalizeBlogPost } from "../../../shared/blogPostRendering";
@@ -64,6 +65,12 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
     "- Include a \"what to send us / what to ask bidders\" checklist or paragraph somewhere in the body.",
     "- NEVER include: case studies, a specific count of completed projects, any named client/customer, any dollar figure not in VERIFIED FACTS incentives, rebate promises, certification claims, superlatives (\"#1\", \"best\", \"award-winning\", etc.), expired tax-credit references (25C, IRA credit), or competitor names.",
     "- Warranty/coverage claims: never imply the optional 10-year parts & labor coverage is included, free, or standard — it's a paid add-on. Never say \"lifetime\", \"unlimited\", or \"guaranteed for life\". Never use a year count other than 10 next to \"warranty\"/\"coverage\". Never present a manufacturer's warranty as Mechanical Enterprise's own coverage. Never name the coverage administrator or insurer. Never mention existing-system coverage without \"eligible\"/\"qualify\" in the same sentence.",
+    "- Coverage must be described as an optional paid add-on, never as included or standard. Avoid using the word included in any sentence about warranties or coverage.",
+    "- For existing systems, explicitly state eligible existing systems may qualify in the same sentence as any coverage claim. Do not imply blanket eligibility.",
+    "- Do not mix manufacturer warranties with separately purchased coverage. Do not invent durations, pricing, or guaranteed outcomes.",
+    "- Before returning JSON, verify title length at most 60 characters and meta description at most 155 characters; target 55 and 145 to leave a margin.",
+    "- Before returning JSON, verify rendered body length 900-1400 words and no more than six h2 headings. Use clear, concise language rather than filler.",
+    "- Never invent $0 offers or specific maintenance frequency; use only the verified facts provided.",
     "- Comfort Membership: the customer owns the system — never say \"lease\", \"rent\", \"subscription includes the equipment\", or \"$0 down for everything\".",
     "- Never offer a comfort/refund guarantee: no \"money-back\", \"refund if\", \"remove it and refund\", or \"satisfaction guarantee\" — none of that is offered.",
     "- Never say \"guaranteed uptime\" or \"never fail\". Never state an SLA response-hour figure unless it matches VERIFIED_FACTS.portfolioSla.responseHours exactly. Never say \"24/7 monitoring\" unless VERIFIED_FACTS.monitoring.is24x7 is true. Never say \"guaranteed detection\".",
@@ -71,7 +78,7 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
     "- Only include a `faqSchema` array if you have 3 or more genuinely distinct, real questions for this exact topic — otherwise omit it.",
     "",
     'Respond with ONLY a JSON object, no markdown fences, no prose outside it, matching exactly:',
-    '{ "title": string, "slug": string (kebab-case), "date": string (e.g. "September 26, 2026"), "readTime": string (e.g. "8 min read"), "category": string, "metaDescription": string (<=155 chars), "excerpt": string, "sections": [ { "type": "intro"|"h2"|"paragraph"|"stat_box"|"checklist"|"numbered_list"|"cta_box", "content"?: string, "items"?: string[], "buttonText"?: string, "buttonUrl"?: string } ], "faqSchema"?: [ { "question": string, "answer": string } ] }',
+    '{ "title": string, "slug": string (kebab-case), "date": string (the actual current publication date; server stamps the final date), "readTime": string (e.g. "8 min read"), "category": string, "metaDescription": string (<=155 chars), "excerpt": string, "sections": [ { "type": "intro"|"h2"|"paragraph"|"stat_box"|"checklist"|"numbered_list"|"cta_box", "content"?: string, "items"?: string[], "buttonText"?: string, "buttonUrl"?: string } ], "faqSchema"?: [ { "question": string, "answer": string } ] }',
   ].join("\n");
 }
 
@@ -149,5 +156,5 @@ export async function draftContentPost(topic: SeoContentQueueRow, facts: Verifie
   if (!result.ok || result.text === undefined) {
     throw new Error(`Content drafting call failed: ${result.error ?? "no response text"}`);
   }
-  return parseContentDraftResponse(result.text);
+  return { ...parseContentDraftResponse(result.text), date: publicationDate() };
 }

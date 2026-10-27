@@ -66,38 +66,35 @@ export function registerOAuthRoutes(app: Express) {
       return;
     }
 
-    let redirectUri: string;
-    if (stateParam) {
-      try {
-        const decoded = Buffer.from(stateParam, "base64").toString("utf8");
-        if (decoded.startsWith("http")) {
-          redirectUri = decoded;
-        } else {
-          redirectUri = "https://mechanicalenterprise.com/api/oauth/meta/callback";
-        }
-      } catch {
-        redirectUri = "https://mechanicalenterprise.com/api/oauth/meta/callback";
-      }
-    } else {
-      redirectUri = "https://mechanicalenterprise.com/api/oauth/meta/callback";
+    const redirectUri = "https://mechanicalenterprise.com/api/oauth/meta/callback";
+    // Only accept the callback URI issued by our own Meta OAuth initiation.
+    // A base64 state is not a substitute for a nonce, but must not permit
+    // arbitrary redirects to be used for code exchange.
+    if (stateParam !== Buffer.from(redirectUri).toString("base64")) {
+      res.redirect(302, "/facebook-campaigns?error=invalid_state");
+      return;
     }
 
     try {
-      console.log("[Meta Ads] Exchanging code with redirectUri:", redirectUri);
+      console.log("[Meta Ads] Exchanging code for the canonical callback");
       const shortToken = await exchangeCodeForToken(code, redirectUri);
       const longUserToken = await getLongLivedToken(shortToken.access_token);
 
-      // Exchange user token for a Page Access Token (never expires, has pages_manage_ads)
-      const PAGE_ID = "844109052114327"; // Mechanical Enterprise
+      // Keep the user-level token for ad-account reads and the Page token for
+      // Instant Form lead retrieval. A Page token is not an ad-account token.
+      const existing = await db.getAiVaCredentials("meta_ads");
+      const PAGE_ID = existing["page_id"] || "844109052114327";
       const pageToken = await getPageAccessToken(longUserToken, PAGE_ID);
 
       await saveAiVaCredentials("meta_ads", {
-        access_token: pageToken,
+        access_token: longUserToken,
+        user_access_token: longUserToken,
+        page_access_token: pageToken,
         page_id: PAGE_ID,
-        token_type: "page_access_token",
+        token_type: "long_lived_user_access_token",
         token_created_at: new Date().toISOString(),
       });
-      console.log("[Meta Ads] OAuth connected with Page Access Token");
+      console.log("[Meta Ads] OAuth authorization saved for account and Page access");
       res.redirect(302, "/facebook-campaigns?connected=1");
     } catch (error) {
       console.error("[Meta Ads] OAuth callback failed", error);

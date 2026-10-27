@@ -338,7 +338,14 @@ function SocialPostManager() {
 export default function MarketingDashboard() {
   const { user, loading, isAuthenticated } = useAuth();
   const [, setLocation] = useLocation();
-  const [monthlyBudget, setMonthlyBudget] = useState([10000]);
+  const [monthlyBudget, setMonthlyBudget] = useState([600]);
+  const { data: socialLane, isLoading: socialLaneLoading } = trpc.aiVa.socialLane.status.useQuery(undefined, { enabled: isAuthenticated });
+  const { data: socialPosts, isLoading: socialPostsLoading } = trpc.aiVa.listSocialPosts.useQuery({ limit: 50 }, { enabled: isAuthenticated });
+  const { data: leadBaseline } = trpc.leadCaptures.marketingBaseline.useQuery(undefined, { enabled: isAuthenticated });
+  const recentSocialPosts = [...(socialPosts ?? [])].sort((a, b) => new Date(b.postedAt ?? b.createdAt).getTime() - new Date(a.postedAt ?? a.createdAt).getTime()).slice(0, 5);
+  const platformLabel = (platform: "facebook" | "instagram" | "google_business") =>
+    socialLaneLoading ? "Checking" : socialLane?.platforms?.[platform]?.connected ? "Connected" : "Manual";
+
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -377,7 +384,7 @@ export default function MarketingDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Globe className="h-5 w-5 text-[#ff6b35]" />
-                <Badge variant="outline" className="text-xs">Manual</Badge>
+                <Badge variant="outline" className="text-xs">{platformLabel("google_business")}</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -399,7 +406,7 @@ export default function MarketingDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <BarChart3 className="h-5 w-5 text-[#ff6b35]" />
-                <Badge variant="outline" className="text-xs">Manual</Badge>
+                <Badge variant="outline" className="text-xs">Ads Manager</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -421,7 +428,7 @@ export default function MarketingDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Facebook className="h-5 w-5 text-[#ff6b35]" />
-                <Badge variant="outline" className="text-xs">Manual</Badge>
+                <Badge variant="outline" className="text-xs">{platformLabel("facebook")}</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -443,7 +450,7 @@ export default function MarketingDashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <Instagram className="h-5 w-5 text-[#ff6b35]" />
-                <Badge variant="outline" className="text-xs">Manual</Badge>
+                <Badge variant="outline" className="text-xs">{platformLabel("instagram")}</Badge>
               </div>
             </CardHeader>
             <CardContent>
@@ -473,33 +480,34 @@ export default function MarketingDashboard() {
             {isCanaryAdmin(user) && <TabsTrigger value="canary">Canary</TabsTrigger>}
           </TabsList>
 
+          {/* Single-source operational summary; avoid counting scheduled posts as published. */}
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Quick Stats</CardTitle>
-                  <CardDescription>Last 30 days performance</CardDescription>
+                  <CardDescription>CRM captures from the last 30 days; SEO metrics available in SEO Intelligence.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Total Impressions</p>
-                      <p className="text-2xl font-bold">--</p>
+                      <p className="text-2xl font-bold">See SEO Intelligence</p>
                     </div>
                     <TrendingUp className="h-8 w-8 text-green-600" />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Click-Through Rate</p>
-                      <p className="text-2xl font-bold">--</p>
+                      <p className="text-2xl font-bold">Not available</p>
                     </div>
                     <BarChart3 className="h-8 w-8 text-[#ff6b35]" />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Leads Generated</p>
-                      <p className="text-2xl font-bold">--</p>
+                      <p className="text-sm text-muted-foreground">CRM Lead Captures (30 days)</p>
+                      <p className="text-2xl font-bold">{leadBaseline?.totalCaptures ?? "—"}</p>
                     </div>
                     <MessageSquare className="h-8 w-8 text-blue-600" />
                   </div>
@@ -512,10 +520,14 @@ export default function MarketingDashboard() {
                   <CardDescription>Latest campaign updates</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Calendar className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>No recent activity</p>
-                    <p className="text-sm">Connect your platforms to see updates</p>
+                  <div className="space-y-3">
+                    {socialPostsLoading ? <p className="text-sm text-muted-foreground">Loading social activity…</p> :
+                      recentSocialPosts.length ? recentSocialPosts.map(post => <div key={post.id} className="border-b pb-2 text-sm">
+                        <div className="flex justify-between gap-2"><span className="font-medium capitalize">{post.platform}</span><Badge variant="outline">{post.status}</Badge></div>
+                        <p className="text-muted-foreground line-clamp-2">{post.content}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(post.postedAt ?? post.createdAt).toLocaleString()}</p>
+                      </div>) : <p className="text-sm text-muted-foreground">No saved social posts yet.</p>}
+                    <Button variant="outline" size="sm" onClick={() => setLocation("/ai-va-dashboard")}>Open Social Publisher</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -530,7 +542,7 @@ export default function MarketingDashboard() {
                       <DollarSign className="h-5 w-5 text-[#ff6b35]" />
                       Monthly Budget Calculator
                     </CardTitle>
-                    <CardDescription>Recommended allocation across platforms ($8K-15K strategy)</CardDescription>
+                    <CardDescription>Optional budget scenario — not actual ad spend. Defaults to $600.</CardDescription>
                   </div>
                   <Button
                     variant="outline"
@@ -554,13 +566,13 @@ export default function MarketingDashboard() {
                   <Slider
                     value={monthlyBudget}
                     onValueChange={setMonthlyBudget}
-                    min={8000}
+                    min={0}
                     max={15000}
-                    step={500}
+                    step={50}
                     className="w-full"
                   />
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>$8,000</span>
+                    <span>$0</span>
                     <span>$15,000</span>
                   </div>
                 </div>

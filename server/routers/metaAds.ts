@@ -18,8 +18,12 @@ const SERVICE_KEY = "meta_ads";
 async function getToken(): Promise<string | null> {
   // First try DB (user-provided via OAuth flow)
   const creds = await getAiVaCredentials(SERVICE_KEY);
-  if (creds["access_token"]) return creds["access_token"];
-  // Fall back to environment variable (set via secrets manager)
+  if (creds["user_access_token"]) return creds["user_access_token"];
+  if (creds["token_type"] !== "page_access_token" && creds["access_token"]) {
+    return creds["access_token"];
+  }
+  // Legacy Page-only credentials cannot read ad-account insights.
+  // A valid environment-provided user/system token may still be used.
   if (ENV.metaAccessToken) return ENV.metaAccessToken;
   return null;
 }
@@ -38,8 +42,10 @@ export const metaAdsRouter = router({
   // Get OAuth URL
   getAuthUrl: protectedProcedure
     .input(z.object({ redirectUri: z.string() }))
-    .query(({ input }) => {
-      const url = getMetaAuthUrl(input.redirectUri);
+    .query(() => {
+      // Always use one production callback; Meta requires an exact allowlist match.
+      // Do not derive redirect_uri from window.location.origin or a client hint.
+      const url = getMetaAuthUrl("https://mechanicalenterprise.com/api/oauth/meta/callback");
       return { url };
     }),
 
@@ -50,17 +56,19 @@ export const metaAdsRouter = router({
       const shortToken = await exchangeCodeForToken(input.code, input.redirectUri);
       const longUserToken = await getLongLivedToken(shortToken.access_token);
 
-      // Exchange user token for a Page Access Token (never expires, has pages_manage_ads)
-      const PAGE_ID = "844109052114327"; // Mechanical Enterprise
+      const current = await getAiVaCredentials(SERVICE_KEY);
+      const PAGE_ID = current["page_id"] || "844109052114327";
       const pageToken = await getPageAccessToken(longUserToken, PAGE_ID);
 
       await saveAiVaCredentials(SERVICE_KEY, {
-        access_token: pageToken,
+        access_token: longUserToken,
+        user_access_token: longUserToken,
+        page_access_token: pageToken,
         page_id: PAGE_ID,
-        token_type: "page_access_token",
+        token_type: "long_lived_user_access_token",
         token_created_at: new Date().toISOString(),
       });
-      return { success: true, message: "Meta Ads connected with Page Access Token!" };
+      return { success: true, message: "Meta Ads reauthorized; account and Page access saved." };
     }),
 
   // Save ad account ID and page ID manually

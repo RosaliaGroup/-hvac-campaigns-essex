@@ -30,12 +30,13 @@ const EMPTY = {
 };
 
 export default function AddContactModal({
-  open, onClose, onCreated, initialType,
+  open, onClose, onCreated, initialType, requireComplete = false,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated?: (c: CreatedContact) => void;
   initialType?: "residential" | "commercial";
+  requireComplete?: boolean;
 }) {
   const { toast } = useToast();
   const [form, setForm] = useState({ ...EMPTY });
@@ -59,6 +60,19 @@ export default function AddContactModal({
   });
 
   const submit = () => {
+    if(requireComplete) {
+      if(!form.firstName.trim()&&!form.lastName.trim()&&!form.companyName.trim()){
+        toast({title:"Name or company required",description:"Add a verified contact name or company before saving.",variant:"destructive"});
+        return;
+      }
+      const emailOk=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim());
+      const digits=form.phone.replace(/\D/g,"");
+      const phoneOk=digits.length>=10&&digits.length<=15&&/^\+?[\d\s().-]+$/.test(form.phone.trim());
+      if(!emailOk||!phoneOk){
+        toast({title:"Email and phone are required",description:"A completed CRM Contact must have a valid email and phone number.",variant:"destructive"});
+        return;
+      }
+    }
     if (!form.firstName && !form.lastName && !form.companyName && !form.email && !form.phone) {
       toast({ title: "Add at least a name, email, or phone", variant: "destructive" });
       return;

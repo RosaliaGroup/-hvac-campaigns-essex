@@ -89,14 +89,13 @@ describe("gbp router — admin only", () => {
 });
 
 describe("gbp router — read-only shape", () => {
-  it("exposes exactly one mutation (sync); everything else is a query", () => {
-    // tRPC records the procedure type on each def. The only write-shaped
-    // procedure is `sync` (which refreshes the read cache, not Business Profile).
+  it("allows connection setup and read-cache sync without publishing mutations", () => {
+    // OAuth setup and cache refresh are mutations; neither publishes to GBP.
     const defs = (gbpRouter as unknown as { _def: { procedures: Record<string, { _def: { type: string } }> } })._def
       .procedures;
     const mutations = Object.entries(defs)
       .filter(([, p]) => p._def.type === "mutation")
       .map(([name]) => name);
-    expect(mutations).toEqual(["sync"]);
+    expect(mutations).toEqual(["oauthConnectStart", "sync"]);
   });
 });
