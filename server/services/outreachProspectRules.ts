@@ -28,7 +28,8 @@ export function isDirectBusinessEmail(value: string): boolean {
 
 export function isExcludedProspect(input: { name: string; company: string; email: string }): boolean {
   const combined = `${input.name} ${input.company} ${input.email}`.toLowerCase();
-  return /gabriel[\s._-]*(?:lopes|lopez)|\bgiga\b|thomas[\s._-]*visaggio|\bviza\b|@onyxequities\.com\b/.test(combined)
+  // Permanent exclusions (by person, company or domain). Onyx Equities stays blocked until removed here.
+  return /gabriel[\s._-]*(?:lopes|lopez)|\bgiga\b|thomas[\s._-]*visaggio|\bviza\b|@onyxequities\.com\b|\bonyx[\s._-]*equities\b|dennis[\s._-]*mcconnell|\bdmcconnell@|jhana[\s._-]*silva|carriage[\s._-]*club/.test(combined)
     || !isDirectBusinessEmail(input.email);
 }
 
