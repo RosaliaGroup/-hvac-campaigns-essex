@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb } from "../db";
 import {
   prospectWorkflowSettings as settings,
@@ -6,26 +6,22 @@ import {
   leads,
   teamMembers,
   notifications,
+  appointments,
+  customers,
+  crmCommunications,
 } from "../../drizzle/schema";
 import { anthropicSearch } from "./contactProfile/anthropicSearch";
-import {
-  introduction,
-  prospectHour,
-  verifiedCandidates,
-} from "../../shared/prospectWorkflow";
-import { saveVerifiedProspect } from "./saveVerifiedProspect";
+import { introduction, verifiedCandidates } from "../../shared/prospectWorkflow";
 import { logCommunication, upsertExternalContact } from "./crmCommunications";
 import { prospectMailbox } from "./prospectGmail";
-import { sendGrowthSms } from "./growth/sms";
-import { growthSmsEnabled } from "./growth/cadenceEngine";
-import { checkGrowthCircuitBreaker } from "./growth/circuitBreaker";
 import { recordGrowthTouch } from "./growth/touchLedger";
 import { prospectWorkflowErrorKind } from "./prospectWorkflowError";
-import { isExcludedProspect } from "./outreachProspectRules";
-import { isOutreachSuppressed } from "./outreachSuppression";
+import { isOutreachSuppressed, recordOutreachSuppression } from "./outreachSuppression";
+import { saveVerifiedProspect } from "./saveVerifiedProspect";
+import { CRM_MAILBOX } from "./gmailCrm";
+import { runCycle, type CycleStore, type QueueRow } from "./prospectCycle";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
-const DAY = 86400000;
 const affected = (r: unknown) => Number((r as any)[0]?.affectedRows ?? 0);
 export async function prospectWorkflowStatus(db: Db) {
   const [config] = await db.select().from(settings).where(eq(settings.id, 1));
@@ -104,352 +100,134 @@ async function research(db: Db, ownerId: number) {
   }
   return added;
 }
-async function notifyOwner(
-  db: Db,
-  row: typeof queue.$inferSelect,
-  title: string
-) {
-  await db
-    .insert(notifications)
-    .values({
-      teamMemberId: row.ownerId,
-      type: "prospect_followup",
-      title,
-      body: `${row.name} — ${row.company}. Follow up personally and record the outcome.`,
-      entityType: "lead",
-      entityId: row.leadId,
-      link: "/growth",
-    });
+
+// ---------------------------------------------------------------------------
+// Single automated HVAC email sender (2026-10-28 repair).
+// Railway runs exactly ONE cycle per Eastern clock hour (claimed in the DB), so
+// the 60-second tick is a cheap DB check, never a Gmail scan. No SMS or calls are
+// sent from this workflow. See server/services/prospectCycle.ts for the order of
+// operations and stop conditions.
+// ---------------------------------------------------------------------------
+function asRow(r: typeof queue.$inferSelect): QueueRow {
+  return { ...r, followUpAt: r.followUpAt ?? null, nextTouchAt: r.nextTouchAt ?? null };
 }
-export async function dispatchProspects(db: Db, now: Date) {
-  const config = (
-    await db.select().from(settings).where(eq(settings.id, 1))
-  )[0];
-  if (!config?.enabled) return;
-  const mailbox = await prospectMailbox(); // Fail closed on disconnected CRM account.
-  const breaker = await checkGrowthCircuitBreaker(db, now); // Failure does not bypass the breaker.
-  const rows = await db
-    .select()
-    .from(queue)
-    .where(
-      and(
-        inArray(queue.state, ["queued", "waiting", "nurture"]),
-        lte(queue.nextTouchAt, now)
-      )
-    )
-    .limit(10);
-  for (const row of rows) {
-    try {
-      // Recheck saved queue entries at dispatch, not only during research.
-      if (isExcludedProspect(row) || await isOutreachSuppressed(db, row.email)) {
-        await db.update(queue).set({ state: "suppressed", nextTouchAt: null,
-          lastError: "Excluded or suppressed from automatic outreach." }).where(eq(queue.id, row.id));
-        continue;
+export function createCycleStore(db: Db): CycleStore {
+  return {
+    async claimHour(hour, now) {
+      const r = await db.update(settings).set({ lastHour: hour, lastRunAt: now })
+        .where(and(eq(settings.id, 1), eq(settings.enabled, true), sql`COALESCE(${settings.lastHour}, '') <> ${hour}`));
+      return affected(r) === 1;
+    },
+    async config() {
+      const [c] = await db.select().from(settings).where(eq(settings.id, 1));
+      return { enabled: Boolean(c?.enabled), ownerId: c?.ownerId ?? null };
+    },
+    async followUpPool(now) {
+      const rows = await db.select().from(queue).where(and(
+        inArray(queue.state, ["waiting", "nurture"]),
+        sql`${queue.followUpAt} IS NOT NULL`,
+        sql`${queue.touchCount} BETWEEN 1 AND 4`,
+        sql`(${queue.nextTouchAt} IS NULL OR ${queue.nextTouchAt} <= ${now})`,
+      )).orderBy(asc(queue.followUpAt)).limit(300);
+      return rows.map(asRow);
+    },
+    async queuedIntros(limit) {
+      return (await db.select().from(queue).where(eq(queue.state, "queued")).orderBy(asc(queue.createdAt)).limit(limit)).map(asRow);
+    },
+    research: ownerId => research(db, ownerId),
+    isSuppressed: email => isOutreachSuppressed(db, email),
+    async recordSuppression(email, reason) { await recordOutreachSuppression(db, email, reason); },
+    async relationshipHold(row, phase) {
+      const email = row.email.toLowerCase();
+      const [appt] = await db.select({ id: appointments.id }).from(appointments)
+        .where(and(sql`LOWER(${appointments.email}) = ${email}`, sql`${appointments.status} <> 'cancelled'`)).limit(1);
+      if (appt) return "appointment_scheduled";
+      const [cust] = await db.select({ id: customers.id }).from(customers).where(sql`LOWER(${customers.email}) = ${email}`).limit(1);
+      if (cust) return "existing_customer";
+      if (row.leadId) {
+        const [lead] = await db.select({ status: leads.status }).from(leads).where(eq(leads.id, row.leadId)).limit(1);
+        if (lead && ["quoted", "won", "lost"].includes(lead.status)) return "active_opportunity";
       }
-      const stopped = await mailbox.recipientStopped(row.email, row.threadId);
-      if (stopped) {
-        await db
-          .update(queue)
-          .set({
-            state: stopped,
-            nextTouchAt: null,
-            lastError:
-              stopped === "delivery_failed"
-                ? "Delivery failure; permanently suppressed"
-                : null,
-          })
-          .where(eq(queue.id, row.id));
-        await notifyOwner(
-          db,
-          row,
-          stopped === "replied"
-            ? "Prospect replied — personal follow-up needed"
-            : "Prospect email failed — verify a replacement"
-        );
-        continue;
-      }
-      if (row.state === "waiting") {
-        // Waiting for a human follow-up outcome. Only consent-backed intro SMS is eligible.
-        if (
-          row.smsConsent &&
-          row.consentEvidence &&
-          row.phone &&
-          row.smsState === "ready" &&
-          growthSmsEnabled() &&
-          !breaker.smsPaused
-        ) {
-          const claim = await db
-            .update(queue)
-            .set({ smsState: "sending" })
-            .where(and(eq(queue.id, row.id), eq(queue.smsState, "ready")));
-          if (affected(claim)) {
-            const r = await sendGrowthSms({
-              db,
-              phone: row.phone,
-              message: `Hi ${row.name.split(" ")[0]}, Ana from Mechanical Enterprise here. I emailed an introduction about HVAC support for ${row.company}. Happy to connect when convenient. Reply STOP to opt out.`,
-              consentStatus: "opt_in",
-              campaignType: "prospect_intro",
-              leadTable: "leads",
-              leadId: row.leadId,
-              now,
-            });
-            await db
-              .update(queue)
-              .set({
-                smsState:
-                  r.outcome === "sent"
-                    ? "sent"
-                    : r.outcome === "held"
-                      ? "ready"
-                      : r.outcome,
-                lastError: r.outcome === "failed" ? r.error : null,
-              })
-              .where(eq(queue.id, row.id));
-          }
-        }
-        continue;
-      }
-      if (breaker.emailPaused) {
-        await db
-          .update(queue)
-          .set({ lastError: breaker.emailReason })
-          .where(eq(queue.id, row.id));
-        continue;
-      }
-      if (row.state === "queued" && (await mailbox.hasSent(row.email))) {
-        await db
-          .update(queue)
-          .set({
-            state: "duplicate",
-            nextTouchAt: null,
-            lastError: "Already present in Gmail Sent — introduction skipped.",
-          })
-          .where(eq(queue.id, row.id));
-        continue;
-      }
-      if (row.state === "queued") {
-        const hour = prospectHour(now);
-        if (!hour) continue;
-        await db
-          .update(settings)
-          .set({ sendHour: hour, sentThisHour: 0 })
-          .where(
-            and(
-              eq(settings.id, 1),
-              sql`COALESCE(${settings.sendHour}, '') <> ${hour}`
-            )
-          );
-        const slot = await db
-          .update(settings)
-          .set({ sentThisHour: sql`${settings.sentThisHour} + 1` })
-          .where(
-            and(
-              eq(settings.id, 1),
-              eq(settings.enabled, true),
-              eq(settings.sendHour, hour),
-              sql`${settings.sentThisHour} < 10`
-            )
-          );
-        if (!affected(slot)) continue;
-      }
-      let contactId = row.externalContactId,
-        leadId = row.leadId;
-      if (!contactId) {
-        const c = await saveVerifiedProspect({
-          name: row.name,
-          title: row.title,
-          company: row.company,
-          email: row.email,
-          verificationUrl: row.verificationUrl,
-          phone: row.phone ?? undefined,
-        });
-        contactId = c.contactId;
-      }
+      const engaged = await db.select({ id: queue.id, company: queue.company }).from(queue)
+        .where(and(inArray(queue.state, ["replied", "opted_out", "human_owned"]), sql`LOWER(${queue.company}) = ${row.company.toLowerCase()}`, sql`${queue.id} <> ${row.id}`)).limit(1);
+      if (engaged[0]) return "company_engaged";
+      void phase;
+      return null;
+    },
+    async existingLeadFor(email) {
+      const [l] = await db.select({ id: leads.id }).from(leads).where(and(eq(leads.contact, email), eq(leads.contactType, "email"))).limit(1);
+      return l?.id ?? null;
+    },
+    async update(id, patch, expectState) {
+      const { phone: _p, ...set } = patch as any;
+      const r = await db.update(queue).set(set)
+        .where(expectState ? and(eq(queue.id, id), eq(queue.state, expectState)) : eq(queue.id, id));
+      return affected(r) === 1;
+    },
+    async ensureCrmRecords(row) {
+      let contactId = row.externalContactId, leadId = row.leadId;
+      if (!contactId) contactId = (await saveVerifiedProspect({
+        name: row.name, title: row.title, company: row.company, email: row.email,
+        verificationUrl: row.verificationUrl, phone: row.phone ?? undefined,
+      })).contactId;
       if (!leadId) {
-        // Unique queue row serializes creation through the DB claim below, before any sends.
-        const claim = await db
-          .update(queue)
-          .set({ state: "preparing", externalContactId: contactId })
-          .where(and(eq(queue.id, row.id), eq(queue.state, row.state)));
-        if (!affected(claim)) continue;
-        const existing = await db
-          .select({ id: leads.id })
-          .from(leads)
-          .where(
-            and(eq(leads.contact, row.email), eq(leads.contactType, "email"))
-          )
-          .limit(1);
-        if (existing[0]) {
-          await db
-            .update(queue)
-            .set({
-              state: "duplicate",
-              leadId: existing[0].id,
-              nextTouchAt: null,
-              lastError: "Existing CRM lead — skipped cold introduction.",
-            })
-            .where(eq(queue.id, row.id));
-          continue;
-        }
-        const r = await db
-          .insert(leads)
-          .values({
-            name: row.name,
-            contact: row.email,
-            contactType: "email",
-            source: "verified-hvac-prospect",
-            service: "Commercial HVAC partnership",
-            consentStatus: "unknown",
-            notes: `Company: ${row.company}\nRole: ${row.title}\nSource: ${row.verificationUrl}\n${row.evidence}`,
-          });
-        leadId = Number((r as any)[0]?.insertId);
-        await upsertExternalContact(db, {
-          name: row.name,
-          email: row.email,
-          leadId,
+        const r = await db.insert(leads).values({
+          name: row.name, contact: row.email, contactType: "email", source: "verified-hvac-prospect",
+          service: "Commercial HVAC partnership", consentStatus: "unknown",
+          notes: `Company: ${row.company}\nRole: ${row.title}\nSource: ${row.verificationUrl}`,
         });
-        await db
-          .update(queue)
-          .set({ leadId, state: "queued" })
-          .where(eq(queue.id, row.id));
+        leadId = Number((r as any)[0]?.insertId);
+        await upsertExternalContact(db, { name: row.name, email: row.email, leadId });
+        await db.update(queue).set({ leadId, externalContactId: contactId }).where(eq(queue.id, row.id));
       }
-      const claim = await db
-        .update(queue)
-        .set({
-          state: "email_sending",
-          externalContactId: contactId,
-          leadId,
-          lastError: null,
-        })
-        .where(and(eq(queue.id, row.id), eq(queue.state, row.state)));
-      if (!affected(claim)) continue;
-      // Ambiguous timeout/logging failures remain email_sending: never retry automatically.
-      const body =
-        row.state === "queued"
-          ? row.emailBody
-          : `Hi ${row.name.split(" ")[0]},\n\nChecking in from Mechanical Enterprise. If ${row.company} needs HVAC service, preventive maintenance, or replacement planning, I’d be happy to connect.\n\nAna Haynes | 862-423-9396\nsales@mechanicalenterprise.com\nReply if you prefer no further outreach.`;
-      const sent = await mailbox.send(row.email, body, row.threadId);
-      const followUpAt = new Date(now.getTime() + DAY);
-      const count = row.touchCount + 1;
-      await db
-        .update(queue)
-        .set({
-          state:
-            row.state === "queued"
-              ? "waiting"
-              : count >= 3
-                ? "complete"
-                : "nurture",
-          emailMessageId: sent.id,
-          threadId: sent.threadId,
-          touchCount: count,
-          followUpAt: row.state === "queued" ? followUpAt : row.followUpAt,
-          nextTouchAt:
-            row.state === "queued"
-              ? now
-              : count >= 3
-                ? null
-                : new Date(now.getTime() + 30 * DAY),
-        })
-        .where(eq(queue.id, row.id));
-      await db
-        .update(leads)
-        .set({
-          status: "contacted",
-          lastInteractionAt: now,
-          interactionCount: count,
-        })
-        .where(eq(leads.id, leadId!));
-      await logCommunication(db, {
-        externalContactId: contactId,
-        leadId,
-        channel: "email",
-        direction: "outbound",
-        provider: "gmail",
-        providerMessageId: sent.id,
-        providerThreadId: sent.threadId,
-        fromAddress: "sales@mechanicalenterprise.com",
-        toAddress: row.email,
-        subject: "HVAC service partnership — Mechanical Enterprise",
-        body,
-        status: "sent",
-        occurredAt: now,
+      return { contactId: contactId!, leadId: leadId! };
+    },
+    async logSent(row, sent, subject, body, kind, now) {
+      try {
+        if (row.leadId) await db.update(leads).set({ status: "contacted", lastInteractionAt: now, interactionCount: sql`${leads.interactionCount} + 1` }).where(eq(leads.id, row.leadId));
+        await logCommunication(db, {
+          externalContactId: row.externalContactId, leadId: row.leadId, channel: "email", direction: "outbound",
+          provider: "gmail", providerMessageId: sent.id, providerThreadId: sent.threadId,
+          fromAddress: CRM_MAILBOX, toAddress: row.email, subject, body, status: "sent", occurredAt: now,
+        });
+        await recordGrowthTouch(db, {
+          channel: "email", contactEmail: row.email, leadTable: "leads", leadId: row.leadId,
+          campaignType: kind === "intro" ? "prospect_intro" : "prospect_follow_up", status: "sent",
+          providerMessageId: sent.id, body,
+        });
+        const [back] = await db.select({ id: crmCommunications.id }).from(crmCommunications)
+          .where(and(eq(crmCommunications.provider, "gmail"), eq(crmCommunications.providerMessageId, sent.id))).limit(1);
+        return Boolean(back);
+      } catch (e) {
+        console.warn("[prospect-workflow] CRM save failed", prospectWorkflowErrorKind(e));
+        return false;
+      }
+    },
+    async notifyOwner(row, title) {
+      await db.insert(notifications).values({
+        teamMemberId: row.ownerId, type: "prospect_followup", title,
+        body: `${row.name} — ${row.company}. Follow up personally and record the outcome.`,
+        entityType: "lead", entityId: row.leadId, link: "/growth",
       });
-      await recordGrowthTouch(db, {
-        channel: "email",
-        contactEmail: row.email,
-        leadTable: "leads",
-        leadId,
-        campaignType: "prospect_intro",
-        status: "sent",
-        providerMessageId: sent.id,
-        body,
-      });
-      if (row.state === "queued")
-        await notifyOwner(
-          db,
-          { ...row, leadId },
-          "New prospect — follow up tomorrow"
-        );
-    } catch (e) {
-      await db
-        .update(queue)
-        .set({ lastError: (e as Error).message.slice(0, 1000) })
-        .where(eq(queue.id, row.id));
-    }
-  }
-  const due = await db
-    .select()
-    .from(queue)
-    .where(
-      and(
-        eq(queue.state, "waiting"),
-        lte(queue.followUpAt, now),
-        sql`${queue.notifiedAt} IS NULL`
-      )
-    )
-    .limit(50);
-  for (const row of due) {
-    const claim = await db
-      .update(queue)
-      .set({ notifiedAt: now })
-      .where(and(eq(queue.id, row.id), sql`${queue.notifiedAt} IS NULL`));
-    if (affected(claim))
-      await notifyOwner(db, row, "Prospect follow-up due today");
-  }
+    },
+    async saveRunSummary(hour, sentCount, summary, now) {
+      await db.update(settings).set({ sendHour: hour, sentThisHour: sentCount, lastRunAt: now, lastError: summary.slice(0, 60000) })
+        .where(eq(settings.id, 1));
+    },
+  };
 }
+
 export async function runProspectWorkflow(now = new Date()) {
   const db = await getDb();
   if (!db) throw new Error("CRM database unavailable");
-  const hour = prospectHour(now);
-  if (!hour) return { skipped: "outside_9_5_ET" };
-  const [config] = await db.select().from(settings).where(eq(settings.id, 1));
-  if (!config?.enabled || !config.ownerId)
-    return { skipped: "disabled_or_owner_missing" };
-  let added = 0;
-  const claim = await db
-    .update(settings)
-    .set({ lastHour: hour, lastRunAt: now, lastError: null })
-    .where(
-      and(
-        eq(settings.id, 1),
-        eq(settings.enabled, true),
-        sql`COALESCE(${settings.lastHour}, '') <> ${hour}`
-      )
-    );
-  if (affected(claim)) {
-    try {
-      added = await research(db, config.ownerId);
-    } catch (e) {
-      await db
-        .update(settings)
-        .set({ lastError: (e as Error).message.slice(0, 1000) })
-        .where(eq(settings.id, 1));
-    }
-  }
-  await dispatchProspects(db, now);
-  return { added };
+  const result = await runCycle(createCycleStore(db), prospectMailbox, now);
+  if (!result.skipped) console.info("[prospect-workflow]", JSON.stringify({
+    hour: result.hour, mode: result.mode, gmail: result.gmail, sent: result.sent.length,
+    held: result.held.length, stopped: result.stopped.length, report: result.report?.status,
+  }));
+  return result;
 }
+
 export function startProspectWorkflow() {
   let running = false;
   const tick = async () => {

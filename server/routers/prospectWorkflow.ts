@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { prospectWorkflowQueue as queue } from "../../drizzle/schema";
@@ -50,7 +50,8 @@ export const prospectWorkflowRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await dbOrThrow();
-      // Human follow-up must be completed before automated nurture is allowed.
+      // A human outcome always overrides automation: allowed while the automated
+      // weekday cadence is active (waiting = intro sent, nurture = follow-ups in progress).
       await db
         .update(queue)
         .set({
@@ -62,7 +63,7 @@ export const prospectWorkflowRouter = router({
               : null,
           lastError: input.note,
         })
-        .where(and(eq(queue.id, input.id), eq(queue.state, "waiting")));
+        .where(and(eq(queue.id, input.id), inArray(queue.state, ["waiting", "nurture"])));
       return { success: true };
     }),
   smsConsent: adminProcedure
