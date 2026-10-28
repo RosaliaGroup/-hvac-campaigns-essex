@@ -1,12 +1,21 @@
 # Mechanical Enterprise LLC
 
-> Mechanical Enterprise LLC installs and services residential and commercial HVAC systems in New Jersey (Essex County, Hudson County, Bergen County, Passaic County, Union County, Middlesex County, Morris County, Sussex County, Somerset County). Optional 10-year parts and labor coverage is available. Phone: (862) 423-9396.
+> Mechanical Enterprise LLC installs and services residential and commercial HVAC systems in New Jersey (Essex County, Hudson County, Bergen County, Passaic County, Union County, Middlesex County, Morris County, Sussex County, Somerset County). Commercial work includes HVAC repair, rooftop unit service, maintenance agreements and replacement planning for property managers, building owners and multifamily operators. Optional 10-year parts and labor coverage is available. Phone: (862) 423-9396.
 
 ## Company facts
 
 - [Company facts and contact details](https://mechanicalenterprise.com/company): legal name, phone, counties served, services, coverage
 - [10-Year Parts & Labor Coverage](https://mechanicalenterprise.com/warranty): optional coverage, what it covers and how it works
 - [Commercial HVAC](https://mechanicalenterprise.com/commercial): commercial installation and service
+
+## Commercial and property-management services
+
+- [HVAC for NJ property managers](https://mechanicalenterprise.com/commercial/for-property-management): repairs, maintenance and replacement planning for managed buildings
+- [Commercial HVAC service and repair](https://mechanicalenterprise.com/commercial-hvac-service-nj): service calls for commercial and multifamily buildings
+- [Rooftop unit (RTU) service and repair](https://mechanicalenterprise.com/commercial-rtu-service-nj): commercial rooftop equipment
+- [Commercial HVAC maintenance agreements](https://mechanicalenterprise.com/commercial-hvac-maintenance-nj): preventive maintenance plans
+- [Portfolio HVAC service contracts](https://mechanicalenterprise.com/commercial/hvac-service-contracts): multi-property service agreements
+- [Emergency HVAC repair](https://mechanicalenterprise.com/emergency-hvac-repair-nj): no heat / no cooling calls
 
 ## Installation pages
 
@@ -15,6 +24,15 @@
 - [Central AC installation](https://mechanicalenterprise.com/central-ac-installation-nj)
 - [Ductless mini-split installation](https://mechanicalenterprise.com/ductless-mini-split-installation-nj)
 - [VRV/VRF system installation](https://mechanicalenterprise.com/vrv-vrf-installation-nj)
+
+## Guides for property managers
+
+- [No heat in a NJ multifamily building: service checklist](https://mechanicalenterprise.com/blog/nj-multifamily-no-heat-hvac-service-checklist)
+- [Commercial rooftop HVAC repair: what to include in a service request](https://mechanicalenterprise.com/blog/commercial-rooftop-hvac-repair-request-nj)
+- [What a commercial HVAC response SLA should include](https://mechanicalenterprise.com/blog/commercial-hvac-response-sla-checklist)
+- [Fall HVAC maintenance checklist for NJ property managers](https://mechanicalenterprise.com/blog/fall-hvac-maintenance-nj-property-managers)
+- [Rooftop HVAC replacement quotes: owner checklist](https://mechanicalenterprise.com/blog/rooftop-hvac-replacement-quote-checklist-nj)
+- [NJ cooling tower shutdown planning](https://mechanicalenterprise.com/blog/nj-cooling-tower-shutdown-planning)
 
 ## Contact
 
