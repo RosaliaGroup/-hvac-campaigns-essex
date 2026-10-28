@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "fs";
 import path from "path";
 import { VERIFIED_FACTS } from "./verifiedFacts";
-import { buildLlmsTxt, INSTALL_PAGES, LLMS_BASE } from "./llmsTxt";
+import { buildLlmsTxt, INSTALL_PAGES, COMMERCIAL_SERVICE_PAGES, PROPERTY_MANAGER_GUIDES, LLMS_BASE } from "./llmsTxt";
 import { buildEntityRows, buildEntityJsonLd } from "./companyEntity";
 
 const txt = buildLlmsTxt(VERIFIED_FACTS);
@@ -13,6 +13,11 @@ describe("llms.txt", () => {
       expect(txt).toContain(`(${LLMS_BASE}${p})`);
     }
     expect(INSTALL_PAGES).toHaveLength(5);
+  });
+  it("links every commercial service page and property-manager guide (absolute URLs)", () => {
+    for (const p of [...COMMERCIAL_SERVICE_PAGES, ...PROPERTY_MANAGER_GUIDES]) expect(txt).toContain(`(${LLMS_BASE}${p.path})`);
+    expect(txt).toContain("## Commercial and property-management services");
+    expect(txt).not.toMatch(/rebate/i);
   });
   it("states the verified name, phone and counties — and nothing about fields that are still null", () => {
     expect(txt.startsWith("# Mechanical Enterprise LLC")).toBe(true);
