@@ -139,6 +139,36 @@ export async function resolveDefaultOwner(db: Db): Promise<number | null> {
 function asRow(r: typeof queue.$inferSelect): QueueRow {
   return { ...r, followUpAt: r.followUpAt ?? null, nextTouchAt: r.nextTouchAt ?? null };
 }
+/**
+ * Migration 0082 is "apply manually" and was missing in production after the Oct 27
+ * database restore, so every cycle failed at its first read. Create the two tables
+ * idempotently at runtime (same additive SQL as drizzle/0082_prospect_workflow.sql),
+ * the same pattern used for the outreach suppression and enrichment tables.
+ */
+let tablesReady: Promise<void> | undefined;
+export function ensureProspectTables(db: Db): Promise<void> {
+  tablesReady ??= (async () => {
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS prospectWorkflowSettings (
+      id INT PRIMARY KEY, enabled BOOLEAN NOT NULL DEFAULT FALSE, ownerId INT NULL,
+      sendHour VARCHAR(32) NULL, sentThisHour INT NOT NULL DEFAULT 0,
+      lastHour VARCHAR(32) NULL, lastRunAt TIMESTAMP NULL, lastError TEXT NULL)`);
+    await db.execute(sql`INSERT IGNORE INTO prospectWorkflowSettings (id, enabled) VALUES (1, FALSE)`);
+    await db.execute(sql`CREATE TABLE IF NOT EXISTS prospectWorkflowQueue (
+      id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(320) NOT NULL,
+      name VARCHAR(255) NOT NULL, company VARCHAR(255) NOT NULL, title VARCHAR(255) NOT NULL,
+      verificationUrl TEXT NOT NULL, evidence TEXT NOT NULL, phone VARCHAR(50) NULL,
+      smsConsent BOOLEAN NOT NULL DEFAULT FALSE, consentEvidence TEXT NULL,
+      externalContactId INT NULL, leadId INT NULL, ownerId INT NOT NULL,
+      state VARCHAR(32) NOT NULL DEFAULT 'queued', emailBody TEXT NOT NULL,
+      emailMessageId VARCHAR(255) NULL, threadId VARCHAR(255) NULL,
+      smsState VARCHAR(32) NOT NULL DEFAULT 'consent_required', nextTouchAt TIMESTAMP NULL,
+      touchCount INT NOT NULL DEFAULT 0, followUpAt TIMESTAMP NULL, followUpDoneAt TIMESTAMP NULL,
+      notifiedAt TIMESTAMP NULL, lastError TEXT NULL, createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY prospectWorkflowQueue_email_uq (email), KEY prospectWorkflowQueue_due_idx (state,nextTouchAt))`);
+  })().catch(error => { tablesReady = undefined; throw error; });
+  return tablesReady;
+}
+
 export function createCycleStore(db: Db): CycleStore {
   return {
     async claimHour(hour, now) {
@@ -150,6 +180,7 @@ export function createCycleStore(db: Db): CycleStore {
       return affected(r) === 1;
     },
     async config() {
+      await ensureProspectTables(db);
       const [c] = await db.select().from(settings).where(eq(settings.id, 1));
       const override = workflowEnabledOverride();
       const enabled = override ?? Boolean(c?.enabled);
@@ -260,7 +291,7 @@ export async function runProspectWorkflow(now = new Date()) {
     held: result.held.length, stopped: result.stopped.length, report: result.report?.status,
   }));
   else if (shouldLogSkip(result.hour, result.skipped)) console.warn("[prospect-workflow] skipped", JSON.stringify({
-    hour: result.hour, reason: result.skipped,
+    hour: result.hour, reason: result.skipped, ...(result.crmError ? { error: result.crmError } : {}),
   }));
   return result;
 }

@@ -378,3 +378,15 @@ describe("prospect search runs every sending hour", () => {
     expect(log.researchCalls).toBe(1);
   });
 });
+
+describe("CRM unavailable", () => {
+  it("reports the database error instead of a bare skip", async () => {
+    const { store } = makeStore([]);
+    store.config = async () => { throw new Error("Table 'railway.prospectWorkflowSettings' doesn't exist"); };
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(r.skipped).toBe("crm_unavailable");
+    expect(r.crmError).toMatch(/doesn't exist/);
+    expect(sends).toHaveLength(0);
+  });
+});
