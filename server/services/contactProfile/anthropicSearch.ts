@@ -26,8 +26,11 @@ export function profileProviderReason(body: unknown): string {
 export async function anthropicSearch(
   query: string,
   env: NodeJS.ProcessEnv = process.env,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: typeof fetch = fetch,
+  /** Per-call budget. Defaults keep single-contact profile lookups small and cheap. */
+  opts: { maxSearches?: number; maxTokens?: number; model?: string } = {}
 ): Promise<{ text: string; citations: string[] }> {
+  const model = opts.model?.trim() || env.CRM_PROFILE_MODEL?.trim() || "claude-haiku-4-5";
   const messages: any[] = [{ role: "user", content: query }];
   const citations = new Set<string>();
   let text = "";
@@ -41,10 +44,10 @@ export async function anthropicSearch(
       },
       signal: AbortSignal.timeout(60000),
       body: JSON.stringify({
-        model: env.CRM_PROFILE_MODEL?.trim() || "claude-haiku-4-5",
-        max_tokens: 3000,
+        model,
+        max_tokens: opts.maxTokens ?? 3000,
         tools: [
-          { type: "web_search_20250305", name: "web_search", max_uses: 2 },
+          { type: "web_search_20250305", name: "web_search", max_uses: opts.maxSearches ?? 2 },
         ],
         messages,
       }),
@@ -57,7 +60,7 @@ export async function anthropicSearch(
       );
     }
     const body = await response.json();
-    console.info("[CRM Profile Usage]", {model: env.CRM_PROFILE_MODEL?.trim() || "claude-haiku-4-5",
+    console.info("[CRM Profile Usage]", {model,
       inputTokens: Number(body.usage?.input_tokens ?? 0), outputTokens: Number(body.usage?.output_tokens ?? 0),
       webSearches: Number(body.usage?.server_tool_use?.web_search_requests ?? 0)});
     for (const block of Array.isArray(body.content) ? body.content : []) {
