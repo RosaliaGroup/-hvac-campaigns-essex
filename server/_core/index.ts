@@ -21,6 +21,7 @@ import { startSalesDocPoller } from "../services/salesDocPoller";
 import { startDueReminderSweep } from "../services/dueReminderSweep";
 import { registerSmsWebhookRoutes, assertWebhookSecurityOrExit } from "../services/smsWebhook";
 import { registerHvacHomeownerImportRoute } from "../services/hvacHomeownerImportRoute";
+import { registerHomeownerUnsubscribeRoute, startHomeownerEmailLane } from "../services/homeownerEmailLane";
 import { attachBodyParsers } from "./bodyParser";
 import { registerMetaLeadWebhookRoutes } from "../services/metaLeadWebhook";
 import { registerVapiToolRoutes } from "../services/vapiSendForm";
@@ -81,6 +82,8 @@ async function startServer() {
   registerSmsWebhookRoutes(app);
   // Temporary token-gated, outbound-disabled purchased-homeowner import.
   registerHvacHomeownerImportRoute(app);
+  // Public, token-verified unsubscribe for the homeowner email campaign (link + one-click POST).
+  registerHomeownerUnsubscribeRoute(app);
   // Meta Lead Gen webhook (Instant Form submissions)
   registerMetaLeadWebhookRoutes(app);
   // Vapi tool webhook — Jessica's sendForm (Mechanical booking link via Telnyx).
@@ -182,6 +185,8 @@ async function startServer() {
     // step (day-0 call, day-1/3/7/14) plus the review engine + §7 import release.
     startGrowthCadencePoller();
     startProspectWorkflow();
+    // Purchased-homeowner email lane — inert until HOMEOWNER_EMAIL_ENABLED + postal address are set.
+    startHomeownerEmailLane();
     startReviewEnginePoller();
     startImportReleaseSweep();
     // Daily Market Intelligence Report (docs/market-intel-spec.md) — gated
