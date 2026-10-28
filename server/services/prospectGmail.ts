@@ -140,15 +140,22 @@ export function createProspectMailbox(accessToken: string, fetchImpl: typeof fet
         originalSubject: header(messages[0], "subject"),
       };
     },
-    async send(input: { to: string; subject: string; body: string; threadId?: string | null; inReplyTo?: string | null }) {
+    async send(input: { to: string; subject: string; body: string; threadId?: string | null; inReplyTo?: string | null;
+      /** Extra RFC 5322 headers (e.g. List-Unsubscribe). Names/values may not contain line breaks. */
+      extraHeaders?: Record<string, string> }) {
       const to = safeEmail(input.to);
       if (/[\r\n]/.test(input.subject)) throw new Error("Invalid subject");
+      const extra = Object.entries(input.extraHeaders ?? {}).map(([k, v]) => {
+        if (!/^[A-Za-z][A-Za-z0-9-]*$/.test(k) || /[\r\n]/.test(v)) throw new Error("Invalid header");
+        return `${k}: ${v}`;
+      });
       if (input.threadId && !input.inReplyTo) throw new Error("Cannot safely thread the follow-up email.");
       const raw = Buffer.from([
         `From: ${CRM_MAILBOX}`,
         `To: ${to}`,
         `Subject: =?UTF-8?B?${Buffer.from(input.subject).toString("base64")}?=`,
         ...(input.inReplyTo ? [`In-Reply-To: ${input.inReplyTo}`, `References: ${input.inReplyTo}`] : []),
+        ...extra,
         "MIME-Version: 1.0",
         "Content-Type: text/plain; charset=UTF-8",
         "Content-Transfer-Encoding: base64",

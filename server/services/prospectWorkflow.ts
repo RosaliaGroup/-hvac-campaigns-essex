@@ -123,7 +123,7 @@ async function isActiveOwner(db: Db, id: number) {
   return Boolean(m);
 }
 /** Follow-up owner when none is set: CRM_FOLLOWUP_ASSIGNEE_EMAIL, else Ana Haynes, else the first active admin. */
-async function resolveDefaultOwner(db: Db): Promise<number | null> {
+export async function resolveDefaultOwner(db: Db): Promise<number | null> {
   const active = and(eq(teamMembers.status, "active"), inArray(teamMembers.role, ["admin", "member"]));
   const email = process.env.CRM_FOLLOWUP_ASSIGNEE_EMAIL?.trim().toLowerCase();
   if (email) {

@@ -31,6 +31,7 @@ export default function SmsConsentAudit() {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
   const audit = trpc.smsConsent.cohortAudit.useQuery({ source: "hvac-list-07105" }, { staleTime: 60_000 });
+  const email = trpc.homeownerEmail.status.useQuery(undefined, { refetchInterval: 120_000 });
   const [filter, setFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [target, setTarget] = useState<{ id: number; name: string; phone: string | null } | null>(null);
@@ -97,7 +98,7 @@ export default function SmsConsentAudit() {
       <div className="p-4 md:p-6 space-y-4 max-w-6xl">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h1 className="text-2xl font-semibold">SMS consent audit — purchased homeowner list</h1>
+            <h1 className="text-2xl font-semibold">Purchased homeowner list — email &amp; SMS</h1>
             <p className="text-sm text-slate-600">Source <code>hvac-list-07105</code> (Dataman). Every contact is checked the same way the
               “Text selected” send is checked. Being on a purchased list is not consent.</p>
           </div>
@@ -107,6 +108,31 @@ export default function SmsConsentAudit() {
               {audit.isFetching ? "Checking…" : "Re-run audit"}</Button>
             <Button size="sm" onClick={downloadCsv} disabled={!audit.data}>Download CSV</Button>
           </div>
+        </div>
+
+        <div className="rounded border p-3 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-medium">Homeowner email campaign (sales@)</p>
+            {email.data && <span className={email.data.enabled ? "text-green-700 text-sm" : "text-amber-700 text-sm"}>
+              {email.data.enabled ? `Running — up to ${email.data.perHour}/hour, ${email.data.perDay}/day, weekdays 9–5 ET` : "Not running"}</span>}
+          </div>
+          {email.error && <p className="text-sm text-red-700">{email.error.message}</p>}
+          {email.data && !email.data.enabled && (
+            <p className="text-sm text-amber-700">Needs Railway setting{email.data.missing.length > 1 ? "s" : ""}: {email.data.missing.join(", ")}.</p>)}
+          {email.data && (
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-sm">
+              {([
+                ["Real emails", email.data.contactsWithEmail], ["Not yet contacted", email.data.notYetContacted],
+                ["Intros sent", email.data.introsSent], ["Follow-ups sent", email.data.followUpsSent],
+                ["Replies", email.data.statusCounts.replied ?? 0], ["Unsubscribed", email.data.statusCounts.unsubscribed ?? 0],
+                ["Bounced", email.data.statusCounts.bounced ?? 0], ["Skipped (emailed before)", email.data.statusCounts.skipped ?? 0],
+              ] as Array<[string, number]>).map(([label, n]) => (
+                <div key={label} className="rounded bg-slate-50 p-2"><div className="text-xs text-slate-500">{label}</div>
+                  <div className="text-lg font-semibold">{n.toLocaleString()}</div></div>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-slate-500">Counts come from Gmail-confirmed sends and actual thread replies. Each homeowner gets one intro and one follow-up; replies are handed to you as a notification.</p>
         </div>
 
         {audit.error && <p className="text-red-700 text-sm">Audit failed: {audit.error.message}</p>}
