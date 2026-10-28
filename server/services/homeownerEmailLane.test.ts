@@ -71,3 +71,14 @@ describe("gating", () => {
     expect((await runHomeownerEmailHour(noDb, { env, now: new Date("2026-10-29T15:10:00Z") })).skipped).toBe("waiting_for_commercial_cycle");
   });
 });
+
+describe("signature", () => {
+  it("uses the owner's signature, with \\n escapes as line breaks, else the default", async () => {
+    const { normalizeSignature, introEmail, DEFAULT_SIGNATURE } = await import("../../shared/homeownerEmail");
+    expect(normalizeSignature("Ana Haynes\\nPresident")).toBe("Ana Haynes\nPresident");
+    expect(normalizeSignature("")).toBe(DEFAULT_SIGNATURE);
+    const { body } = introEmail({ firstName: "Jane", unsubscribeUrl: "https://x/u", postalAddress: ADDRESS, signature: "Ana H.\nCEO" });
+    expect(body).toContain("Thank you,\nAna H.\nCEO\n");
+    expect(body).toContain(ADDRESS);
+  });
+});

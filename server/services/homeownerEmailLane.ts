@@ -21,7 +21,7 @@ import { customers, notifications } from "../../drizzle/schema";
 import {
   DEFAULT_HOMEOWNER_PER_DAY, DEFAULT_HOMEOWNER_PER_HOUR, HOMEOWNER_FOLLOW_UP_BUSINESS_DAYS,
   HOMEOWNER_SOURCE, HOMEOWNER_START_MINUTE, firstNameFor, followUpEmail, homeownerAllowance,
-  introEmail, isRealEmail,
+  introEmail, isRealEmail, normalizeSignature,
 } from "../../shared/homeownerEmail";
 import { addBusinessDays, easternHourStartEpochSec, easternParts, sendingHour } from "../../shared/prospectCadence";
 import { GmailIncompleteError, GmailStopError, prospectMailbox, type ProspectMailbox } from "./prospectGmail";
@@ -36,7 +36,7 @@ const affected = (r: unknown) => Number((r as any)[0]?.affectedRows ?? 0);
 const PUBLIC_BASE = "https://mechanicalenterprise.com";
 const MAX_REPLY_CHECKS_PER_RUN = 8;
 
-export type HomeownerConfig = { enabled: boolean; postalAddress: string; secret: string; perHour: number; perDay: number; missing: string[] };
+export type HomeownerConfig = { enabled: boolean; postalAddress: string; secret: string; perHour: number; perDay: number; signature: string; missing: string[] };
 export function homeownerConfig(env: NodeJS.ProcessEnv = process.env): HomeownerConfig {
   const postalAddress = (env.HOMEOWNER_EMAIL_POSTAL_ADDRESS ?? "").trim();
   const secret = env.JWT_SECRET ?? "";
@@ -49,6 +49,7 @@ export function homeownerConfig(env: NodeJS.ProcessEnv = process.env): Homeowner
   };
   return {
     enabled: missing.length === 0, postalAddress, secret, missing,
+    signature: normalizeSignature(env.HOMEOWNER_EMAIL_SIGNATURE),
     perHour: n(env.HOMEOWNER_EMAIL_PER_HOUR, DEFAULT_HOMEOWNER_PER_HOUR, 15),
     perDay: n(env.HOMEOWNER_EMAIL_PER_DAY, DEFAULT_HOMEOWNER_PER_DAY, 100),
   };
@@ -206,7 +207,7 @@ export async function runHomeownerEmailHour(db: Db, opts: { now?: Date; mailbox?
       if (state.outboundCount >= 2) { await upsertState(db, row.customerId, row.email, { step: 2 }); continue; }
       if (!state.lastMessageIdHeader) { result.skippedContacts.push({ email: row.email, reason: "cannot thread follow-up" }); continue; }
       const mail = followUpEmail({ firstName: firstNameFor(row.firstName, row.displayName),
-        unsubscribeUrl: unsubscribeUrl(row.email, cfg.secret), postalAddress: cfg.postalAddress,
+        unsubscribeUrl: unsubscribeUrl(row.email, cfg.secret), postalAddress: cfg.postalAddress, signature: cfg.signature,
         originalSubject: state.originalSubject || row.subject || "" });
       const sent = await mailbox.send({ to: row.email, subject: mail.subject, body: mail.body,
         threadId: row.threadId, inReplyTo: state.lastMessageIdHeader, extraHeaders: listUnsubHeaders(row.email, cfg.secret) });
@@ -240,7 +241,7 @@ export async function runHomeownerEmailHour(db: Db, opts: { now?: Date; mailbox?
         if (await mailbox.hasInboundFrom(email)) { await skip("replied", "Has written to sales@ — handled by a person"); continue; }
         if (await mailbox.hasBounce(email)) { await recordOutreachSuppression(db, email, "hard_bounce"); await skip("bounced", "Previous delivery failure"); continue; }
         const mail = introEmail({ firstName: firstNameFor(c.firstName, c.displayName),
-          unsubscribeUrl: unsubscribeUrl(email, cfg.secret), postalAddress: cfg.postalAddress });
+          unsubscribeUrl: unsubscribeUrl(email, cfg.secret), postalAddress: cfg.postalAddress, signature: cfg.signature });
         // Reserve the row before sending so a crash can never cause a duplicate intro.
         await upsertState(db, c.customerId, email, { status: "sending", step: 0, subject: mail.subject });
         const sent = await mailbox.send({ to: email, subject: mail.subject, body: mail.body, extraHeaders: listUnsubHeaders(email, cfg.secret) });
