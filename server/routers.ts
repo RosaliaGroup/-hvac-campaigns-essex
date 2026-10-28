@@ -39,6 +39,7 @@ import { getSocialLaneState } from "./services/social/socialLaneStateRepo";
 import { takeoffsRouter } from "./routers/takeoffs";
 import { customersRouter, findCustomerIdByPhone, normalizePhone, computeRelationships } from "./routers/customers";
 import { contactBulkSmsRouter } from "./routers/contactBulkSms";
+import { smsConsentRouter } from "./routers/smsConsent";
 import { jobsRouter } from "./routers/jobs";
 import { dispatchAuditRouter } from "./routers/dispatchAudit";
 import { dispatchRouter } from "./routers/dispatch";
@@ -118,6 +119,7 @@ export const appRouter = router({
   takeoffs: takeoffsRouter,
   customers: customersRouter,
   contactBulkSms: contactBulkSmsRouter,
+  smsConsent: smsConsentRouter,
   jobs: jobsRouter,
   dispatchAudit: dispatchAuditRouter,
   dispatch: dispatchRouter,
