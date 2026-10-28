@@ -51,7 +51,9 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
     JSON.stringify(facts, null, 2),
     "",
     // docs/positioning-warranty-spec.md §6 — verbatim positioning sentence, added to both the content lane (here) and the meta lane (ai/anthropicProvider.ts).
-    "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Mention rebates only as a secondary benefit and only using figures from VERIFIED_FACTS. Never describe coverage as included or free.",
+    "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Never describe coverage as included or free.",
+    // Owner direction (Oct 28, 2026): B2B posts sell paid commercial work; rebate sections were diluting the lead ask.
+    "This is the B2B lane: center the post on the paid work the reader needs — repair response, preventive maintenance agreements and replacement planning — and make the cta_box a request for a service visit or consultation. Do NOT include a rebates, incentives or financing section, and do not mention rebate, incentive, Direct Install or On-Bill Repayment programs anywhere in the post.",
     ...findingsBlock,
     "",
     "Rules:",
