@@ -225,7 +225,22 @@ export async function runProspectWorkflow(now = new Date()) {
     hour: result.hour, mode: result.mode, gmail: result.gmail, sent: result.sent.length,
     held: result.held.length, stopped: result.stopped.length, report: result.report?.status,
   }));
+  else if (shouldLogSkip(result.hour, result.skipped)) console.warn("[prospect-workflow] skipped", JSON.stringify({
+    hour: result.hour, reason: result.skipped,
+  }));
   return result;
+}
+
+/** A skipped cycle must never be silent, but the 60s tick must not spam: log each
+ * (hour, reason) once. Outside-schedule skips are expected and never logged. */
+const loggedSkips = new Set<string>();
+export function shouldLogSkip(hour: string | null, reason: string): boolean {
+  if (!hour || reason === "outside_weekday_9_17_ET") return false;
+  const key = `${hour}|${reason}`;
+  if (loggedSkips.has(key)) return false;
+  if (loggedSkips.size > 200) loggedSkips.clear();
+  loggedSkips.add(key);
+  return true;
 }
 
 export function startProspectWorkflow() {
