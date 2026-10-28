@@ -11,23 +11,8 @@ import { Redirect } from "wouter";
 import { Link } from "wouter";
 import { ALL_CITIES, pickDeterministic } from "@/data/njCounties";
 import { directInstallIndustries } from "@/data/directInstallIndustries";
-import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
-
-/**
- * Pick the intent-aware lead-capture variant from the blog post slug. Matches
- * the routing rules called out in the PR description so an emergency-repair
- * post surfaces the red urgent card, a rebate post surfaces the green one, and
- * commercial guides surface the navy variant.
- */
-function pickBlogVariant(slug: string): InlineLeadVariant {
-  const s = slug.toLowerCase();
-  // Commercial repair guides must use the commercial intake, not the
-  // residential emergency card with unverified response-time claims.
-  if (/(commercial|multifamily|rooftop|vrv|vrf|ptac|property-managers|property-management|condo)/.test(s)) return "commercial";
-  if (/(emergency|repair|no-heat)/.test(s)) return "emergency";
-  if (/(rebate|financing)/.test(s)) return "rebate";
-  return "residential";
-}
+import InlineLeadCapture from "@/components/InlineLeadCapture";
+import { pickBlogVariant, isCommercialVariant } from "./blogVariant";
 
 const BASE = "https://mechanicalenterprise.com";
 const PHONE = "(862) 423-9396";
@@ -116,6 +101,8 @@ export default function BlogPost({ slug }: { slug: string }) {
 
   if (!post) return <Redirect to="/blog" />;
 
+  const commercial = isCommercialVariant(pickBlogVariant(slug, post.category));
+
   return (
     <div className="min-h-screen">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -153,7 +140,7 @@ export default function BlogPost({ slug }: { slug: string }) {
               <span>Mechanical Enterprise Team</span>
             </div>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
-              <a href="#blog-assessment" className="rounded-md bg-[#e8813a] px-5 py-3 font-semibold text-white hover:bg-[#d5732f]">Request an HVAC assessment</a>
+              <a href="#blog-assessment" className="rounded-md bg-[#e8813a] px-5 py-3 font-semibold text-white hover:bg-[#d5732f]">{commercial ? "Request a commercial consultation" : "Request an HVAC assessment"}</a>
               <a href={PHONE_TEL} className="rounded-md border border-white/40 px-5 py-3 font-semibold text-white">Call {PHONE}</a>
             </div>
           </div>
@@ -167,7 +154,7 @@ export default function BlogPost({ slug }: { slug: string }) {
             {/* Main Content */}
             <article className="flex-1 max-w-[800px]">
               {(() => {
-                const variant = pickBlogVariant(slug);
+                const variant = pickBlogVariant(slug, post.category);
                 const pageContext = `blog:${slug}`;
                 // Insert the inline capture immediately after the FIRST h2 so it
                 // sits above the fold on most devices without pushing intro copy
@@ -196,7 +183,7 @@ export default function BlogPost({ slug }: { slug: string }) {
               {/* Bottom-of-article inline capture — replaces the old /contact CTA */}
               <div id="blog-assessment" className="mt-10 scroll-mt-24">
                 <InlineLeadCapture
-                  variant={pickBlogVariant(slug)}
+                  variant={pickBlogVariant(slug, post.category)}
                   pageContext={`blog:${slug}:bottom`}
                 />
               </div>
@@ -205,7 +192,7 @@ export default function BlogPost({ slug }: { slug: string }) {
             {/* Sidebar — desktop-only sticky inline lead capture */}
             <aside className="lg:w-[320px] shrink-0 hidden md:block">
               <InlineLeadCapture
-                variant={pickBlogVariant(slug)}
+                variant={pickBlogVariant(slug, post.category)}
                 pageContext={`blog:${slug}:sidebar`}
                 sticky
               />
@@ -277,12 +264,12 @@ export default function BlogPost({ slug }: { slug: string }) {
       <section className="py-16 bg-[#e8813a]">
         <div className="container">
           <div className="max-w-2xl mx-auto text-center text-white">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Claim Your NJ Rebates?</h2>
-            <p className="text-lg text-white/90 mb-8">Free assessment — we handle all paperwork</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{commercial ? "Need Commercial HVAC Service or a Replacement Review?" : "Ready to Claim Your NJ Rebates?"}</h2>
+            <p className="text-lg text-white/90 mb-8">{commercial ? "Repairs, maintenance contracts and replacement planning for NJ property managers and building owners." : "Free assessment — we handle all paperwork"}</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href={BASE}>
+              <a href={commercial ? `${BASE}/commercial/for-property-management` : BASE}>
                 <Button size="lg" className="bg-[#0a1628] hover:bg-[#0a1628]/90 text-white px-8 py-6 text-lg w-full sm:w-auto">
-                  📅 Book Free Assessment <ArrowRight className="ml-2 h-5 w-5" />
+                  {commercial ? "Request a Commercial Consultation" : "📅 Book Free Assessment"} <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </a>
               <a href={PHONE_TEL}>
