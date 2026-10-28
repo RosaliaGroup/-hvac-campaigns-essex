@@ -106,6 +106,17 @@ describe("draftContentPost", () => {
   });
 });
 
+describe("draftContentPost — B2B rebate exclusion", () => {
+  it("tells the writer not to add a rebates/incentives/financing section and to lead with paid service", async () => {
+    vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(validPost)));
+    await draftContentPost(topic, VERIFIED_FACTS);
+    const call = vi.mocked(callAnthropicModelChain).mock.calls[0][0];
+    expect(call.system).toContain("Do NOT include a rebates, incentives or financing section");
+    expect(call.system).toContain("repair response, preventive maintenance agreements and replacement planning");
+    expect(call.system).not.toContain("Mention rebates only as a secondary benefit");
+  });
+});
+
 describe("draftContentPost — findings feedback + budget", () => {
   it("requests the 16k token ceiling and a 180s per-attempt timeout (thinking tokens count against maxTokens)", async () => {
     vi.mocked(callAnthropicModelChain).mockResolvedValue(ok(JSON.stringify(validPost)));
