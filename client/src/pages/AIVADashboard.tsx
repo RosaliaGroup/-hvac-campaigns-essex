@@ -9,6 +9,15 @@ import { Link } from "wouter";
 import { useState } from "react";
 import { toast } from "sonner";
 import { OCTOBER_B2B_SOCIAL_POSTS, buildOctoberSocialContent } from "@/data/octoberB2BSocialCampaign";
+import { NOVEMBER_B2B_SOCIAL_POSTS, buildNovemberSocialContent, novemberDayOffset } from "@/data/novemberB2BSocialCampaign";
+
+/** Caption for any prepared campaign post (October or November) by key. */
+function buildPreparedPost(key: string, platform: "facebook" | "instagram"): string | null {
+  const nov = NOVEMBER_B2B_SOCIAL_POSTS.find(p => p.key === key);
+  if (nov) return buildNovemberSocialContent(nov, platform);
+  const oct = OCTOBER_B2B_SOCIAL_POSTS.find(p => p.key === key);
+  return oct ? buildOctoberSocialContent(oct, platform) : null;
+}
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
@@ -409,6 +418,35 @@ function SocialPosts() {
       await refresh();
     } finally { setBulkBusy(false); setBulkProgress(""); }
   };
+  const bulkScheduleNovember = async () => {
+    if (!lane?.platforms?.facebook?.connected || bulkBusy) return;
+    const start = new Date(bulkStart);
+    if (!bulkStart || Number.isNaN(start.getTime()) || start.getTime() <= Date.now()) {
+      toast.error("Choose a future start date and time."); return;
+    }
+    const existing = new Set((posts ?? []).filter(p => p.platform === "facebook" && p.status !== "failed").map(p => p.content));
+    const all = NOVEMBER_B2B_SOCIAL_POSTS.map((post, i) => ({ post, i })).filter(({ post }) => !existing.has(buildNovemberSocialContent(post, "facebook")));
+    if (!all.length) { toast.info("All twelve November Facebook posts are already saved."); return; }
+    setBulkBusy(true);
+    let saved = 0;
+    try {
+      for (const { post, i } of all) {
+        // Three per week (Mon/Wed/Fri pattern) from the chosen start, keeping each post's slot.
+        const at = new Date(start.getTime() + novemberDayOffset(i) * 86400000);
+        setBulkProgress(`Scheduling ${saved + 1} of ${all.length}: ${post.label}`);
+        await utils.client.aiVa.schedulePost.mutate({
+          platform: "facebook", content: buildNovemberSocialContent(post, "facebook"),
+          contentType: "commercial_campaign", scheduledAt: at.toISOString(),
+        });
+        saved++;
+      }
+      toast.success(`Scheduled ${saved} November Facebook posts`);
+      await refresh();
+    } catch (err) {
+      toast.error(`Saved ${saved} posts; scheduling stopped: ${err instanceof Error ? err.message : String(err)}`);
+      await refresh();
+    } finally { setBulkBusy(false); setBulkProgress(""); }
+  };
   const connected = lane?.platforms?.[platform]?.connected === true;
   const validDate = scheduledAt && !Number.isNaN(Date.parse(scheduledAt)) && Date.parse(scheduledAt) > Date.now();
   return <Card>
@@ -451,19 +489,24 @@ function SocialPosts() {
       </div>
       <div className="rounded-lg border p-4 space-y-3">
         <div className="flex flex-wrap gap-2">
-          {(["facebook", "instagram"] as const).map(p => <Button key={p} size="sm" variant={platform === p ? "default" : "outline"} onClick={() => { setPlatform(p); const selected = OCTOBER_B2B_SOCIAL_POSTS.find(post => post.key === campaignKey); if (selected) setContent(buildOctoberSocialContent(selected, p)); }}>{p === "facebook" ? "Facebook" : "Instagram"}</Button>)}
+          {(["facebook", "instagram"] as const).map(p => <Button key={p} size="sm" variant={platform === p ? "default" : "outline"} onClick={() => { setPlatform(p); const built = buildPreparedPost(campaignKey, p); if (built) setContent(built); }}>{p === "facebook" ? "Facebook" : "Instagram"}</Button>)}
         </div>
         <p className="text-xs text-muted-foreground">{connected ? `${platform} connected` : `${platform} not connected — check AI Settings`}. Scheduled publishing uses the existing automation.</p>
-        <label className="block text-sm">Load October commercial campaign post
+        <label className="block text-sm">Load a prepared commercial campaign post
           <select aria-label="Select prepared campaign post" className="mt-1 w-full rounded-md border bg-background p-2 text-sm" value={campaignKey}
             onChange={e => {
               const key = e.target.value;
               setCampaignKey(key);
-              const selected = OCTOBER_B2B_SOCIAL_POSTS.find(p => p.key === key);
-              if (selected) setContent(buildOctoberSocialContent(selected, platform));
+              const built = buildPreparedPost(key, platform);
+              if (built) setContent(built);
             }}>
-            <option value="">Choose one of eight prepared posts</option>
-            {OCTOBER_B2B_SOCIAL_POSTS.map(post => <option key={post.key} value={post.key}>{post.label}</option>)}
+            <option value="">Choose a prepared post</option>
+            <optgroup label="November 2026 — heating season & maintenance">
+              {NOVEMBER_B2B_SOCIAL_POSTS.map(post => <option key={post.key} value={post.key}>{post.label}</option>)}
+            </optgroup>
+            <optgroup label="October 2026 (already published)">
+              {OCTOBER_B2B_SOCIAL_POSTS.map(post => <option key={post.key} value={post.key}>{post.label}</option>)}
+            </optgroup>
           </select>
         </label>
         <Textarea aria-label="Post content" value={content} onChange={e => setContent(e.target.value)} placeholder="Write an approved HVAC campaign post..." rows={5} />
@@ -478,11 +521,16 @@ function SocialPosts() {
           {schedule.isPending ? "Scheduling…" : "Schedule Post"}
         </Button>
         {platform === "facebook" && <div className="rounded-md border p-3 space-y-2">
-          <p className="font-medium text-sm">Schedule remaining seven October B2B posts</p>
-          <p className="text-xs text-muted-foreground">Uses the seven posts after the verified property-manager test. Twice-weekly spacing, existing saved posts skipped. Review each caption in the campaign selector above before scheduling.</p>
           <label className="block text-sm">First post date and time (local)
             <Input type="datetime-local" value={bulkStart} onChange={e => setBulkStart(e.target.value)} className="mt-1" />
           </label>
+          <p className="font-medium text-sm">Schedule the twelve November B2B posts</p>
+          <p className="text-xs text-muted-foreground">Three posts a week for four weeks (start day, +2, +4 days each week). Already-saved posts are skipped. Review captions in the selector above first.</p>
+          <Button disabled={!lane?.platforms?.facebook?.connected || !bulkStart || bulkBusy || isLoading} onClick={bulkScheduleNovember}>
+            {bulkBusy ? "Scheduling…" : "Schedule 12 November Facebook Posts"}
+          </Button>
+          <p className="font-medium text-sm pt-2 border-t">Schedule remaining seven October B2B posts</p>
+          <p className="text-xs text-muted-foreground">Uses the seven posts after the verified property-manager test. Twice-weekly spacing, existing saved posts skipped. Review each caption in the campaign selector above before scheduling.</p>
           <Button variant="outline" disabled={!lane?.platforms?.facebook?.connected || !bulkStart || bulkBusy || isLoading} onClick={bulkSchedule}>
             {bulkBusy ? "Scheduling…" : "Schedule Remaining 7 Facebook Posts"}
           </Button>
