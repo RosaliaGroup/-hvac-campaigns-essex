@@ -26,6 +26,18 @@ export function firstNameFor(firstName: string | null | undefined, displayName: 
   return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 }
 
+export const DEFAULT_SIGNATURE = [
+  "Ana Haynes",
+  "President, Mechanical Enterprise LLC",
+  `${BUSINESS_PHONE} | mechanicalenterprise.com`,
+].join("\n");
+
+/** Owner-supplied plain-text signature (HOMEOWNER_EMAIL_SIGNATURE); "\\n" sequences become line breaks. */
+export function normalizeSignature(raw: string | null | undefined): string {
+  const s = (raw ?? "").replace(/\\n/g, "\n").replace(/\r/g, "").trim();
+  return s.length >= 3 ? s.slice(0, 1000) : DEFAULT_SIGNATURE;
+}
+
 function footer(unsubscribeUrl: string, postalAddress: string) {
   return [
     "",
@@ -36,7 +48,7 @@ function footer(unsubscribeUrl: string, postalAddress: string) {
   ].join("\n");
 }
 
-export function introEmail(input: { firstName: string; unsubscribeUrl: string; postalAddress: string }) {
+export function introEmail(input: { firstName: string; unsubscribeUrl: string; postalAddress: string; signature?: string }) {
   const body = [
     `Hi ${input.firstName},`,
     "",
@@ -47,15 +59,13 @@ export function introEmail(input: { firstName: string; unsubscribeUrl: string; p
     `Interested? Just reply to this email or call ${BUSINESS_PHONE}.`,
     "",
     "Thank you,",
-    "Ana Haynes",
-    "President, Mechanical Enterprise LLC",
-    `${BUSINESS_PHONE} | mechanicalenterprise.com`,
+    input.signature ?? DEFAULT_SIGNATURE,
     footer(input.unsubscribeUrl, input.postalAddress),
   ].join("\n");
   return { subject: HOMEOWNER_INTRO_SUBJECT, body };
 }
 
-export function followUpEmail(input: { firstName: string; unsubscribeUrl: string; postalAddress: string; originalSubject: string }) {
+export function followUpEmail(input: { firstName: string; unsubscribeUrl: string; postalAddress: string; originalSubject: string; signature?: string }) {
   const subject = /^re:/i.test(input.originalSubject) ? input.originalSubject : `Re: ${input.originalSubject}`;
   const body = [
     `Hi ${input.firstName},`,
@@ -64,8 +74,7 @@ export function followUpEmail(input: { firstName: string; unsubscribeUrl: string
     "",
     `Our in-home assessment is free. Reply here or call ${BUSINESS_PHONE} and we'll find a time that works for you.`,
     "",
-    "Ana Haynes",
-    "Mechanical Enterprise LLC",
+    input.signature ?? DEFAULT_SIGNATURE,
     footer(input.unsubscribeUrl, input.postalAddress),
   ].join("\n");
   return { subject, body };
