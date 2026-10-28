@@ -338,3 +338,43 @@ describe("signature", () => {
     }
   });
 });
+
+describe("prospect search runs every sending hour", () => {
+  it("searches even when the follow-up backlog is large, and still sends follow-ups first", async () => {
+    const rows = Array.from({ length: 8 }, () => followUp());
+    const { store, log } = makeStore(rows, { research: () => [intro()] });
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(log.researchCalls).toBe(1);
+    expect(r.researched).toBe(1);
+    expect(outreach(sends).every((s: any) => s.threadId)).toBe(true); // follow-ups only while backlog remains
+  });
+  it("does not search when 10 prospects are already waiting", async () => {
+    const rows = Array.from({ length: 10 }, () => intro());
+    const { store, log } = makeStore(rows);
+    const { mb } = makeMailbox();
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(log.researchCalls).toBe(0);
+  });
+  it("never searches in the 5 PM report-only hour", async () => {
+    const { store, log } = makeStore([]);
+    const { mb } = makeMailbox();
+    await runCycle(store, async () => mb, WED_5PM);
+    expect(log.researchCalls).toBe(0);
+  });
+  it("a failed search is reported but does not block sending", async () => {
+    const { store } = makeStore([followUp()]);
+    store.research = async () => { throw new Error("web search unavailable"); };
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(r.researchError).toMatch(/web search unavailable/);
+    expect(outreach(sends)).toHaveLength(1);
+    expect(reports(sends)[0].body).toMatch(/research FAILED: web search unavailable/);
+  });
+  it("still searches when Gmail is blocked (search never sends)", async () => {
+    const { store, log } = makeStore([]);
+    const { mb } = makeMailbox({ verifyIdentity: vi.fn(async () => { throw new GmailStopError("rate_limited", 429); }) });
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(log.researchCalls).toBe(1);
+  });
+});
