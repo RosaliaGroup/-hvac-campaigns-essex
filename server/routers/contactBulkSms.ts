@@ -1,11 +1,12 @@
 /**
  * Contact-page SMS selection. Only explicit first-party, form-versioned
- * consent linked to this customer permits an SMS send. Purchased lists,
+ * consent linked to this customer — or a documented consent record with
+ * retrievable evidence (services/smsConsentEvidence) — permits an SMS send. Purchased lists,
  * generic 'active' contacts, carrier START, and leads with default opt_in
  * are NOT evidence of promotional SMS consent.
  */
 import { z } from "zod";
-import { and, eq, inArray, gte, sql } from "drizzle-orm";
+import { and, eq, inArray, gte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../_core/trpc";
 import { getDb } from "../db";
@@ -15,12 +16,18 @@ import { toE164 } from "../services/telnyxSms";
 import { isPhoneOptedOut, inboxPhoneMatch, sendAndRecordSms } from "../services/smsOutbound";
 import { isSmsRecipientSuppressed } from "../services/outreachSuppression";
 import { getJob, startJob } from "../services/asyncLaneJob";
+import { activeConsentByCustomer, phone10 } from "../services/smsConsentEvidence";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
-type Reason = "missing_contact" | "inactive" | "missing_phone" |
+export type Reason = "missing_contact" | "archived" | "missing_phone" |
   "no_verified_sms_consent" | "duplicate_phone" | "opted_out" |
   "do_not_contact" | "recent_duplicate" | "verification_error";
-type Recipient = { id: number; name: string; phone: string | null; eligible: boolean; reason: Reason | null };
+export type ConsentSource = "web_form" | "documented_record";
+export type Recipient = {
+  id: number; name: string; phone: string | null; eligible: boolean; reason: Reason | null;
+  status: string | null; purchasedList: boolean; consentSource: ConsentSource | null;
+};
+export const PURCHASED_LIST_SOURCES = new Set(["hvac-list-07105"]);
 
 const base = z.object({
   customerIds: z.array(z.number().int().positive()).min(1).max(20)
@@ -38,53 +45,89 @@ function outgoingText(raw: string): string {
     ? noFoot : BRAND_PREFIX + noFoot) + STOP_FOOTER;
 }
 
-/** This is intentionally far stricter than an SMS delivery opt-out check. */
-export async function reviewRecipients(db: Db, ids: number[], text: string): Promise<Recipient[]> {
+/**
+ * This is intentionally far stricter than an SMS delivery opt-out check.
+ * Consent — not CRM status — is the gate: an "inactive" prospect with
+ * documented consent may be texted; an "active" contact without it may not.
+ * Pass `text` = null to skip the 24h identical-message check (audits).
+ */
+export async function reviewRecipients(db: Db, ids: number[], text: string | null): Promise<Recipient[]> {
+  if (!ids.length) return [];
   const records = await db.select({
     id: customers.id, name: customers.displayName, phone: customers.phone,
     status: customers.status, source: customers.source,
   }).from(customers).where(inArray(customers.id, ids));
   const byId = new Map(records.map(r => [r.id, r]));
+
+  // Batch consent lookups (one query each) so a 1,100-row audit stays fast.
+  // 1) First-party versioned web-form opt-in linked to the customer.
+  const formPhones = new Map<number, Set<string>>();
+  // 2) Documented consent records (smsConsentEvidence).
+  let documented = new Map<number, unknown>();
+  let consentLookupFailed = false;
+  try {
+    const captures = await db.select({ customerId: leadCaptures.customerId, phone: leadCaptures.phone })
+      .from(leadCaptures).where(and(
+        inArray(leadCaptures.customerId, ids),
+        eq(leadCaptures.consentStatus, "opt_in"),
+        eq(leadCaptures.formVersion, TCPA_FORM_VERSION),
+      ));
+    for (const c of captures) {
+      if (c.customerId == null) continue;
+      const set = formPhones.get(c.customerId) ?? new Set<string>();
+      set.add(phone10(c.phone));
+      formPhones.set(c.customerId, set);
+    }
+    documented = await activeConsentByCustomer(db, records.map(r => ({ id: r.id, phone: r.phone })));
+  } catch {
+    consentLookupFailed = true;
+  }
+
   const seenPhone = new Set<string>();
   const recipients: Recipient[] = [];
   for (const id of ids) {
     const row = byId.get(id);
-    if (!row) { recipients.push({ id, name: "Contact unavailable", phone: null, eligible: false, reason: "missing_contact" }); continue; }
+    if (!row) {
+      recipients.push({ id, name: "Contact unavailable", phone: null, eligible: false, reason: "missing_contact",
+        status: null, purchasedList: false, consentSource: null });
+      continue;
+    }
     const phone = toE164(row.phone);
     let reason: Reason | null = null;
+    let consentSource: ConsentSource | null = null;
     if (!phone) reason = "missing_phone";
     else if (seenPhone.has(phone)) reason = "duplicate_phone";
-    else if (row.status !== "active") reason = "inactive";
+    else if (row.status === "archived") reason = "archived";
+    else if (consentLookupFailed) reason = "verification_error";
     else {
-      try {
-        // Opt-in is established by a first-party form the recipient submitted,
-        // with the TCPA disclosure version and an exact customer/phone match.
-        // A purchased data record (which has no form evidence) never passes.
-        const [capture] = await db.select({ id: leadCaptures.id })
-          .from(leadCaptures).where(and(
-            eq(leadCaptures.customerId, id),
-            eq(leadCaptures.consentStatus, "opt_in"),
-            eq(leadCaptures.formVersion, TCPA_FORM_VERSION),
-            sql`RIGHT(REGEXP_REPLACE(${leadCaptures.phone}, '[^0-9]', ''), 10) = ${phone.slice(-10)}`,
-          )).limit(1);
-        if (!capture) reason = "no_verified_sms_consent";
-        else if (await isSmsRecipientSuppressed(db, phone)) reason = "do_not_contact";
-        else if (await isPhoneOptedOut(db, phone)) reason = "opted_out";
-        else {
-          const [recent] = await db.select({ id: smsInboxMessages.id })
-            .from(smsInboxMessages).where(and(
-              inboxPhoneMatch(phone), eq(smsInboxMessages.direction, "outbound"),
-              eq(smsInboxMessages.message, text),
-              gte(smsInboxMessages.createdAt, new Date(Date.now() - 24 * 60 * 60_000)),
-            )).limit(1);
-          if (recent) reason = "recent_duplicate";
+      // A purchased data record (which has no per-person evidence) never passes.
+      if (formPhones.get(id)?.has(phone.slice(-10))) consentSource = "web_form";
+      else if (documented.has(id)) consentSource = "documented_record";
+      if (!consentSource) reason = "no_verified_sms_consent";
+      else {
+        try {
+          if (await isSmsRecipientSuppressed(db, phone)) reason = "do_not_contact";
+          else if (await isPhoneOptedOut(db, phone)) reason = "opted_out";
+          else if (text !== null) {
+            const [recent] = await db.select({ id: smsInboxMessages.id })
+              .from(smsInboxMessages).where(and(
+                inboxPhoneMatch(phone), eq(smsInboxMessages.direction, "outbound"),
+                eq(smsInboxMessages.message, text),
+                gte(smsInboxMessages.createdAt, new Date(Date.now() - 24 * 60 * 60_000)),
+              )).limit(1);
+            if (recent) reason = "recent_duplicate";
+          }
+        } catch {
+          reason = "verification_error";
         }
-      } catch {
-        reason = "verification_error";
       }
     }
     if (phone) seenPhone.add(phone);
-    recipients.push({ id, name: row.name, phone, eligible: reason === null, reason });
+    recipients.push({
+      id, name: row.name, phone, eligible: reason === null, reason, status: row.status,
+      purchasedList: PURCHASED_LIST_SOURCES.has(row.source ?? ""),
+      consentSource: reason === null ? consentSource : null,
+    });
   }
   return recipients;
 }

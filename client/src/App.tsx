@@ -67,6 +67,7 @@ import Communications from "./pages/Communications";
 import CrmTasks from "./pages/CrmTasks";
 import CrmOutreachReview from "./pages/CrmOutreachReview";
 import Customers from "./pages/Customers";
+import SmsConsentAudit from "./pages/SmsConsentAudit";
 import CustomerDetail from "./pages/CustomerDetail";
 import AppointmentCalendar from "./pages/AppointmentCalendar";
 import Jobs from "./pages/Jobs";
@@ -361,6 +362,7 @@ function Router() {
       <Route path={"/outreach-review"} component={protect(CrmOutreachReview)} />
       <Route path={"/customers"} component={protect(Customers)} />
       <Route path={"/contacts"} component={protect(Customers)} />
+      <Route path={"/customers/sms-consent"} component={protect(SmsConsentAudit)} />
       <Route path={"/customers/:id"} component={protect(CustomerDetail)} />
       <Route path={"/settings/alerts"} component={protect(AlertSettings)} />
       <Route path={"/settings/integrations"} component={protect(Integrations)} />

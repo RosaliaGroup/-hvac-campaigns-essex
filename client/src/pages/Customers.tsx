@@ -296,6 +296,7 @@ export default function Customers() {
               Deselect page ({visibleSelectedCount})
             </Button>
             <span className="text-sm font-medium">{selectedContactIds.length} selected</span>
+            <Button size="sm" variant="ghost" onClick={() => navigate("/customers/sms-consent")}>SMS consent audit</Button>
             <Button size="sm" variant="outline" onClick={clearAllSelections}
               disabled={selectedContactIds.length===0}>Clear all selections</Button>
             <Button size="sm" className="bg-[#007a8c] text-white hover:bg-[#006b78]"
@@ -559,8 +560,8 @@ export default function Customers() {
                         {r.eligible ? "Eligible" : "Held"}
                       </span>{" "}
                       {r.name} {r.phone ?? "(no phone)"} {r.reason ? "— " + ({
-                        inactive:"Inactive prospect — consent not verified",
-                        no_verified_sms_consent:"No documented first-party SMS consent",
+                        archived:"Archived contact",
+                        no_verified_sms_consent:"No documented SMS consent for this person and number",
                         opted_out:"STOP / opted out",
                         do_not_contact:"CRM do-not-contact",
                         missing_phone:"No valid phone",
@@ -573,6 +574,12 @@ export default function Customers() {
                   ))}
                 </div>
               </div>
+            )}
+            {previewCurrent && smsPreview && smsPreview.recipients.some(r => r.reason === "no_verified_sms_consent") && (
+              <p className="text-xs text-slate-600">
+                Contacts without documented consent stay held. If you have a person's own signed or recorded opt-in,
+                record it on the <a className="underline" href="/customers/sms-consent">SMS consent audit</a> page; purchased-list records are not consent.
+              </p>
             )}
             {smsNotice && <p role="status" className="text-sm">{smsNotice}</p>}
             {smsJobId && (
