@@ -66,6 +66,7 @@ export type CycleResult = {
   skipped?: string;
   mode?: "send" | "report_only";
   crm: "ok" | "unavailable";
+  crmError?: string;
   gmail: "ok" | "not_checked" | GmailStopError["kind"];
   gmailError?: string;
   cap?: number;
@@ -112,7 +113,9 @@ export async function runCycle(
   if (!hour) return { ...result, skipped: "outside_weekday_9_17_ET" };
 
   let config: Awaited<ReturnType<CycleStore["config"]>>;
-  try { config = await store.config(); } catch { return { ...result, crm: "unavailable", skipped: "crm_unavailable" }; }
+  try { config = await store.config(); } catch (e) {
+    return { ...result, crm: "unavailable", skipped: "crm_unavailable", crmError: (e as Error)?.message?.slice(0, 300) };
+  }
   if (!config.enabled || !config.ownerId) return { ...result, skipped: "disabled_or_owner_missing" };
   // One cycle per Eastern clock hour across all processes and manual "Run now" clicks.
   if (!(await store.claimHour(hour, now))) return { ...result, skipped: "hour_already_run" };
