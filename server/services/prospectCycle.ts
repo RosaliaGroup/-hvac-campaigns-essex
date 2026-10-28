@@ -26,6 +26,8 @@ import { CRM_MAILBOX } from "./gmailCrm";
 
 export const INTRO_SUBJECT = "HVAC service partnership — Mechanical Enterprise";
 const DAY = 86_400_000;
+/** Keep this many researched prospects waiting for introductions. */
+export const QUEUE_TARGET = 10;
 
 export type QueueRow = {
   id: number; email: string; name: string; company: string; title: string;
@@ -73,6 +75,7 @@ export type CycleResult = {
   stopped: HeldEntry[];
   pending: number;
   researched: number;
+  researchError?: string;
   overdueBacklog: number;
   report?: { subject: string; status: "sent" | "already_sent" | "not_sent"; gmailId?: string; readback?: boolean; reason?: string };
 };
@@ -121,6 +124,17 @@ export async function runCycle(
     if (e instanceof GmailStopError) { result.gmail = e.kind; result.gmailError = e.message; return true; }
     return false;
   };
+
+  // Prospect search runs EVERY sending hour, independent of the follow-up backlog and of Gmail
+  // health: it only fills the queue (and triggers contact enrichment); it never sends.
+  if (sendAllowed) {
+    try {
+      const queued = await store.queuedIntros(QUEUE_TARGET);
+      if (queued.length < QUEUE_TARGET) result.researched = await store.research(config.ownerId);
+    } catch (e) {
+      result.researchError = (e as Error).message.slice(0, 300);
+    }
+  }
 
   // Follow-up pool + backlog (DB only, no Gmail).
   const pool = (await store.followUpPool(now))
@@ -231,15 +245,9 @@ export async function runCycle(
       }
       const followUpsRemaining = pool.length - inspected;
 
-      // ---- Phase B: new introductions, only when the follow-up cohort has nothing more ready ----
+      // ---- Phase B: new introductions, sent only when the follow-up cohort has nothing more ready ----
       if (remaining > 0 && followUpsRemaining <= 0) {
-        let intros = await store.queuedIntros(MAX_CANDIDATES_PER_PHASE);
-        if (intros.length < MAX_CANDIDATES_PER_PHASE) {
-          try { result.researched = await store.research(config.ownerId); } catch (e) {
-            result.held.push({ email: "-", company: "-", reason: `prospect research failed: ${(e as Error).message.slice(0, 200)}` });
-          }
-          if (result.researched) intros = await store.queuedIntros(MAX_CANDIDATES_PER_PHASE);
-        }
+        const intros = await store.queuedIntros(MAX_CANDIDATES_PER_PHASE);
         for (const row of intros) {
           if (remaining <= 0) break;
           if (!(await gates(row, "intro"))) continue;
@@ -331,7 +339,7 @@ export function renderReport(r: CycleResult, subject: string): string {
     ...r.sent.map(line),
     "", `Held (${r.held.length}):`, ...r.held.map(hl),
     "", `Stopped / suppressed / replied / bounced (${r.stopped.length}):`, ...r.stopped.map(hl),
-    "", `New prospects researched into queue: ${r.researched}`,
+    "", `New prospects researched into queue: ${r.researched}${r.researchError ? ` — research FAILED: ${r.researchError}` : ""}`,
     `CRM readback failures: ${r.sent.filter(s => !s.crmSaved).length}`,
     "Monthly unique qualified HVAC leads toward 80: UNKNOWN (no verified qualification attribution in this job)",
     "Paid-ad spend: UNKNOWN (not verifiable from this job)",

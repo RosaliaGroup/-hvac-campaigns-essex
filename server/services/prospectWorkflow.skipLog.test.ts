@@ -16,3 +16,13 @@ describe("skipped cycles are never silent, but are not spammed", () => {
     expect(shouldLogSkip(null, "outside_weekday_9_17_ET")).toBe(false);
   });
 });
+
+import { workflowEnabledOverride } from "./prospectWorkflow";
+describe("PROSPECT_WORKFLOW_ENABLED master switch", () => {
+  it("true forces on, false forces off, unset defers to the CRM toggle", () => {
+    expect(workflowEnabledOverride({ PROSPECT_WORKFLOW_ENABLED: "true" } as any)).toBe(true);
+    expect(workflowEnabledOverride({ PROSPECT_WORKFLOW_ENABLED: " FALSE " } as any)).toBe(false);
+    expect(workflowEnabledOverride({} as any)).toBeNull();
+    expect(workflowEnabledOverride({ PROSPECT_WORKFLOW_ENABLED: "yes" } as any)).toBeNull();
+  });
+});

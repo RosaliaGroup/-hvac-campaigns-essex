@@ -108,19 +108,53 @@ async function research(db: Db, ownerId: number) {
 // sent from this workflow. See server/services/prospectCycle.ts for the order of
 // operations and stop conditions.
 // ---------------------------------------------------------------------------
+/**
+ * PROSPECT_WORKFLOW_ENABLED on Railway is the master switch: "true" runs outreach even when
+ * the CRM toggle is off or missing (e.g. after a database restore), "false" stops it.
+ * Unset → the CRM Growth → Prospecting toggle decides.
+ */
+export function workflowEnabledOverride(env: NodeJS.ProcessEnv = process.env): boolean | null {
+  const v = env.PROSPECT_WORKFLOW_ENABLED?.trim().toLowerCase();
+  return v === "true" ? true : v === "false" ? false : null;
+}
+async function isActiveOwner(db: Db, id: number) {
+  const [m] = await db.select({ id: teamMembers.id }).from(teamMembers)
+    .where(and(eq(teamMembers.id, id), eq(teamMembers.status, "active"), inArray(teamMembers.role, ["admin", "member"]))).limit(1);
+  return Boolean(m);
+}
+/** Follow-up owner when none is set: CRM_FOLLOWUP_ASSIGNEE_EMAIL, else Ana Haynes, else the first active admin. */
+async function resolveDefaultOwner(db: Db): Promise<number | null> {
+  const active = and(eq(teamMembers.status, "active"), inArray(teamMembers.role, ["admin", "member"]));
+  const email = process.env.CRM_FOLLOWUP_ASSIGNEE_EMAIL?.trim().toLowerCase();
+  if (email) {
+    const [m] = await db.select({ id: teamMembers.id }).from(teamMembers).where(and(active, sql`LOWER(TRIM(${teamMembers.email})) = ${email}`)).limit(1);
+    if (m) return m.id;
+  }
+  const [ana] = await db.select({ id: teamMembers.id }).from(teamMembers).where(and(active, sql`LOWER(TRIM(${teamMembers.name})) = 'ana haynes'`)).limit(1);
+  if (ana) return ana.id;
+  const [admin] = await db.select({ id: teamMembers.id }).from(teamMembers)
+    .where(and(eq(teamMembers.status, "active"), eq(teamMembers.role, "admin"))).orderBy(asc(teamMembers.id)).limit(1);
+  return admin?.id ?? null;
+}
 function asRow(r: typeof queue.$inferSelect): QueueRow {
   return { ...r, followUpAt: r.followUpAt ?? null, nextTouchAt: r.nextTouchAt ?? null };
 }
 export function createCycleStore(db: Db): CycleStore {
   return {
     async claimHour(hour, now) {
+      // The settings row may be missing after a database restore; create it (disabled) so the claim can work.
+      await db.insert(settings).values({ id: 1, enabled: false }).onDuplicateKeyUpdate({ set: { id: sql`${settings.id}` } });
+      const override = workflowEnabledOverride();
       const r = await db.update(settings).set({ lastHour: hour, lastRunAt: now })
-        .where(and(eq(settings.id, 1), eq(settings.enabled, true), sql`COALESCE(${settings.lastHour}, '') <> ${hour}`));
+        .where(and(eq(settings.id, 1), ...(override === null ? [eq(settings.enabled, true)] : []), sql`COALESCE(${settings.lastHour}, '') <> ${hour}`));
       return affected(r) === 1;
     },
     async config() {
       const [c] = await db.select().from(settings).where(eq(settings.id, 1));
-      return { enabled: Boolean(c?.enabled), ownerId: c?.ownerId ?? null };
+      const override = workflowEnabledOverride();
+      const enabled = override ?? Boolean(c?.enabled);
+      const ownerId = (c?.ownerId && await isActiveOwner(db, c.ownerId)) ? c.ownerId : await resolveDefaultOwner(db);
+      return { enabled, ownerId };
     },
     async followUpPool(now) {
       const rows = await db.select().from(queue).where(and(
