@@ -11,7 +11,8 @@ import {
   crmCommunications,
 } from "../../drizzle/schema";
 import { anthropicSearch, parseJsonObject } from "./contactProfile/anthropicSearch";
-import { introduction, verifiedCandidates } from "../../shared/prospectWorkflow";
+import { introduction, verifiedCandidates, type ResearchedProspect } from "../../shared/prospectWorkflow";
+import { apolloEnabled, createApolloClient, createApolloStore, findApolloProspects } from "./apolloProspects";
 import { logCommunication, upsertExternalContact } from "./crmCommunications";
 import { prospectMailbox } from "./prospectGmail";
 import { recordGrowthTouch } from "./growth/touchLedger";
@@ -97,9 +98,37 @@ export function researchSegment(now: Date, offset = 0): string {
   const dayIndex = Math.floor(Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day)) / 86_400_000);
   return RESEARCH_SEGMENTS[(dayIndex * 8 + p.hour + offset) % RESEARCH_SEGMENTS.length];
 }
+/** Queue one researched prospect; true when it was new. SMS consent is never inferred. */
+async function queueProspect(db: Db, ownerId: number, p: ResearchedProspect & { phone?: string }): Promise<boolean> {
+  const r = await db.insert(queue).values({
+    email: p.email.trim().toLowerCase(), name: p.name, title: p.title, company: p.company,
+    verificationUrl: p.verificationUrl, evidence: p.evidence, emailBody: introduction(p),
+    ownerId, state: "queued", nextTouchAt: new Date(), smsState: "consent_required",
+    ...(p.phone ? { phone: p.phone } : {}),
+  }).onDuplicateKeyUpdate({ set: { email: sql`${queue.email}` } });
+  return affected(r) === 1;
+}
 async function research(db: Db, ownerId: number, needed: number,
   opts: { attempts?: number; startAttempt?: number } = {}, now = new Date()): Promise<number> {
   let added = 0;
+  // Apollo first (private sector, verified work emails); web search fills any remaining gap.
+  if (apolloEnabled()) {
+    try {
+      const known = await db.select({ company: queue.company }).from(queue).orderBy(desc(queue.createdAt)).limit(1000);
+      const norm = (c: string) => c.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\b(llc|inc|corp|co|company|group|the|ltd|lp)\b/g, " ").replace(/\s+/g, " ").trim();
+      const r = await findApolloProspects({
+        client: createApolloClient(process.env.APOLLO_API_KEY!.trim()), store: createApolloStore(db), now, needed,
+        attemptOffset: opts.startAttempt ?? 0,
+        knownCompanies: new Set(known.map(k => norm(k.company))),
+        accept: p => queueProspect(db, ownerId, p),
+      });
+      added += r.added;
+      console.info("[prospect-apollo]", JSON.stringify(r));
+    } catch (e) {
+      console.warn("[prospect-apollo]", JSON.stringify({ error: (e as Error).message.slice(0, 160) }));
+    }
+    if (added >= needed) return added;
+  }
   const first = opts.startAttempt ?? 0, last = first + (opts.attempts ?? RESEARCH_ATTEMPTS_PER_HOUR);
   for (let attempt = first; attempt < last && added < needed; attempt++) {
     try {
@@ -135,25 +164,7 @@ async function researchSegmentOnce(db: Db, ownerId: number, segment: string, cou
   const returned = Array.isArray(raw?.prospects) ? raw.prospects.length : 0;
   const verified = verifiedCandidates(raw?.prospects, result.citations);
   let added = 0;
-  for (const p of verified) {
-    const r = await db
-      .insert(queue)
-      .values({
-        email: p.email.trim().toLowerCase(),
-        name: p.name,
-        title: p.title,
-        company: p.company,
-        verificationUrl: p.verificationUrl,
-        evidence: p.evidence,
-        emailBody: introduction(p),
-        ownerId,
-        state: "queued",
-        nextTouchAt: new Date(),
-        smsState: "consent_required",
-      })
-      .onDuplicateKeyUpdate({ set: { email: sql`${queue.email}` } });
-    if (affected(r) === 1) added++;
-  }
+  for (const p of verified) if (await queueProspect(db, ownerId, p)) added++;
   console.info("[prospect-research]", JSON.stringify({ attempt, segment, county, parsed, returned, verified: verified.length, added, citations: result.citations.length }));
   return added;
 }
