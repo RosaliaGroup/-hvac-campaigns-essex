@@ -139,3 +139,34 @@ describe("resumeCircuitBreaker", () => {
     );
   });
 });
+
+describe("critic-blocked drafts are counted from the last resume", () => {
+  const blocked = (ts: string) => ({ id: 1, ts: new Date(ts), action: "draft_generated", after: { lane: "content", criticBlocked: true } });
+  const resumed = (ts: string) => ({ id: 2, ts: new Date(ts), action: "circuit_breaker_resumed", after: { note: "n" } });
+
+  it("three blocked drafts BEFORE the last resume do not re-pause", async () => {
+    vi.mocked(listAuditLog).mockImplementation(async (filter) => {
+      if (filter?.action === "circuit_breaker_resumed") return [resumed("2026-10-29T15:00:00Z")] as never;
+      if (filter?.action === "draft_generated") {
+        const rows = [blocked("2026-10-29T14:29:00Z"), blocked("2026-10-29T14:24:00Z"), blocked("2026-10-29T14:20:00Z")];
+        return (filter.since ? rows.filter((r) => r.ts >= filter.since!) : rows) as never;
+      }
+      return [];
+    });
+    expect((await checkCircuitBreakerConditions()).shouldPause).toBe(false);
+  });
+
+  it("three blocked drafts AFTER the last resume still pause", async () => {
+    vi.mocked(listAuditLog).mockImplementation(async (filter) => {
+      if (filter?.action === "circuit_breaker_resumed") return [resumed("2026-10-29T15:00:00Z")] as never;
+      if (filter?.action === "draft_generated") {
+        const rows = [blocked("2026-10-29T16:20:00Z"), blocked("2026-10-29T16:10:00Z"), blocked("2026-10-29T16:00:00Z")];
+        return (filter.since ? rows.filter((r) => r.ts >= filter.since!) : rows) as never;
+      }
+      return [];
+    });
+    const r = await checkCircuitBreakerConditions();
+    expect(r.shouldPause).toBe(true);
+    expect(r.reason).toMatch(/critic/i);
+  });
+});

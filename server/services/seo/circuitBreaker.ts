@@ -88,7 +88,12 @@ async function lastTwoAutoLaneNetlifyStates(): Promise<CircuitBreakerSignals["la
 
 /** Last 3 content-lane draft_generated audit rows' critic verdicts, most-recent-first. */
 async function last3ContentCriticBlocked(): Promise<boolean[]> {
-  const rows = await listAuditLog({ action: "draft_generated", limit: 50 });
+  // Count only drafts written since the last admin resume. A resume acknowledges the drafts that
+  // caused the pause; without this, the same three old drafts re-trip the breaker on the very next
+  // run, before a new draft can ever be written (seen Oct 2-7 and Oct 29, 2026).
+  const [lastResume] = await listAuditLog({ action: "circuit_breaker_resumed", limit: 1 });
+  const resumedAt = lastResume ? new Date(lastResume.ts) : undefined;
+  const rows = await listAuditLog({ action: "draft_generated", limit: 50, ...(resumedAt ? { since: resumedAt } : {}) });
   const contentRows = rows
     .filter((r) => (r.after as { lane?: string } | null)?.lane === "content")
     .slice(0, 3);
