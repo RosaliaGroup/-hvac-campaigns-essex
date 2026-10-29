@@ -45,3 +45,42 @@ describe("published business phone", () => {
     expect(p.phone?.value).toBe("(201) 555-0199");
   });
 });
+
+describe("lookup robustness", () => {
+  const reply = (body: any) => new Response(JSON.stringify({ usage: {}, ...body }), { status: 200 });
+  it("a search-limit error result keeps the answer instead of failing the lookup", async () => {
+    const fetchImpl = vi.fn(async () => reply({ stop_reason: "end_turn", content: [
+      { type: "web_search_tool_result", content: [{ type: "web_search_result", url: "https://acme.com/team" }] },
+      { type: "web_search_tool_result", content: { type: "web_search_tool_result_error", error_code: "max_uses_exceeded" } },
+      { type: "text", text: '{"company":{}}' },
+    ] }));
+    const r = await anthropicSearch("q", { ANTHROPIC_API_KEY: "k" } as any, fetchImpl as any);
+    expect(parseJsonObject(r.text)).toEqual({ company: {} });
+    expect(r.citations).toContain("https://acme.com/team");
+  });
+  it("a reply cut off at the length limit is used when it still holds a complete object", async () => {
+    const ok = vi.fn(async () => reply({ stop_reason: "max_tokens", content: [{ type: "text", text: '{"company":{}} and then more' }] }));
+    expect(parseJsonObject((await anthropicSearch("q", { ANTHROPIC_API_KEY: "k" } as any, ok as any)).text)).toEqual({ company: {} });
+    const cut = vi.fn(async () => reply({ stop_reason: "max_tokens", content: [{ type: "text", text: '{"company":{"name":' }] }));
+    await expect(anthropicSearch("q", { ANTHROPIC_API_KEY: "k" } as any, cut as any)).rejects.toMatchObject({ name: "ProfileLookupError", category: "truncated" });
+  });
+  it("pause_turn resumes by sending the paused turn back without an extra user message", async () => {
+    const bodies: any[] = [];
+    const fetchImpl = vi.fn(async (_u: string, init: any) => {
+      bodies.push(JSON.parse(init.body));
+      return bodies.length === 1
+        ? reply({ stop_reason: "pause_turn", content: [{ type: "server_tool_use", id: "s1", name: "web_search", input: {} }] })
+        : reply({ stop_reason: "end_turn", content: [{ type: "text", text: '{"company":{}}' }] });
+    });
+    await anthropicSearch("q", { ANTHROPIC_API_KEY: "k" } as any, fetchImpl as any);
+    expect(bodies[1].messages.map((m: any) => m.role)).toEqual(["user", "assistant"]);
+  });
+  it("contact research asks for up to 5 searches", async () => {
+    const { researchContact } = await import("./research");
+    let body: any;
+    const fetchImpl = vi.fn(async (_u: string, init: any) => { body = JSON.parse(init.body); return reply({ stop_reason: "end_turn", content: [{ type: "text", text: '{"company":{}}' }] }); });
+    await researchContact({ name: "Jane Smith", email: "jsmith@acme.com", company: "Acme" }, { ANTHROPIC_API_KEY: "k" } as any, fetchImpl as any);
+    expect(body.tools[0].max_uses).toBe(5);
+    expect(body.max_tokens).toBe(4000);
+  });
+});

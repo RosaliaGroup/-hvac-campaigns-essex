@@ -7,6 +7,13 @@ export class ProfileProviderError extends Error {
     this.name = "ProfileProviderError";
   }
 }
+/** A lookup that reached the provider but produced no usable answer; `category` is safe to log. */
+export class ProfileLookupError extends Error {
+  constructor(public readonly category: "search_error" | "truncated" | "not_finished" | "unreadable" | "timed_out", message: string) {
+    super(message);
+    this.name = "ProfileLookupError";
+  }
+}
 // Return only fixed categories; never expose provider text or request identifiers.
 export function profileProviderReason(body: unknown): string {
   const error = (body as any)?.error;
@@ -36,7 +43,8 @@ export async function anthropicSearch(
   // Text blocks are fragments of ONE answer, split wherever a citation starts or ends
   // (often inside a JSON string). Join them as-is: inserting a separator corrupts the JSON.
   let text = "";
-  for (let turn = 0; turn < 2; turn++) {
+  let searchErrors = 0, searchResults = 0;
+  for (let turn = 0; turn < 3; turn++) {
     let turnText = "";
     const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -73,10 +81,10 @@ export async function anthropicSearch(
           if (typeof citation.url === "string") citations.add(citation.url);
       }
       if (block.type === "web_search_tool_result") {
-        if (!Array.isArray(block.content))
-          throw new Error(
-            "Public profile search is unavailable. Try again later."
-          );
+        // An error result (e.g. max_uses_exceeded when the model asks for one search too
+        // many) is normal: keep the results already found instead of discarding the lookup.
+        if (!Array.isArray(block.content)) { searchErrors++; continue; }
+        searchResults++;
         for (const result of block.content)
           if (
             result.type === "web_search_result" &&
@@ -87,20 +95,25 @@ export async function anthropicSearch(
     }
     // A continuation turn restates the answer; prefer the latest turn that holds an object.
     if (turnText.includes("{") || !text) text = turnText;
-    if (body.stop_reason === "end_turn")
+    // Every search failed and nothing was found: that is an outage, not "no match".
+    const searchFailed = () => searchErrors > 0 && searchResults === 0 && citations.size === 0;
+    if (body.stop_reason === "end_turn") {
+      if (searchFailed() && !parseJsonObject(text))
+        throw new ProfileLookupError("search_error", "Public profile search is unavailable. Try again later.");
       return { text, citations: Array.from(citations) };
+    }
+    if (body.stop_reason === "max_tokens") {
+      // Use a cut-off reply only if it still holds a complete object.
+      if (parseJsonObject(text)) return { text, citations: Array.from(citations) };
+      throw new ProfileLookupError("truncated", "Profile lookup reply was cut off. Try again later.");
+    }
     if (body.stop_reason !== "pause_turn")
-      throw new Error("Profile lookup did not finish. Try again later.");
+      throw new ProfileLookupError(searchErrors && !searchResults ? "search_error" : "not_finished",
+        "Profile lookup did not finish. Try again later.");
+    // pause_turn: send the paused turn back unchanged and the provider resumes it.
     messages.push({ role: "assistant", content: body.content });
-    messages.push({
-      role: "user",
-      content:
-        "Finish the requested JSON using only the verified search results already found.",
-    });
   }
-  throw new Error(
-    "Profile lookup timed out before finishing. Try again later."
-  );
+  throw new ProfileLookupError("timed_out", "Profile lookup timed out before finishing. Try again later.");
 }
 
 /**
