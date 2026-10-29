@@ -16,6 +16,7 @@
  * already documents for its own "week-over-week" clicks check. Flagged here
  * and in the PR/build report rather than silently treated as exact.
  */
+import { gscPropertyUrl } from "../../../../shared/gscLinks";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { and, eq, gte, lte } from "drizzle-orm";
@@ -254,10 +255,14 @@ export type PageIndexPoint = {
   indexStatus: "indexed" | "crawled_not_indexed" | "discovered_not_indexed" | "excluded";
 };
 
-/** Deep link into Search Console's URL Inspection for one URL of the property. */
-export function buildInspectUrl(siteUrl: string, origin: string, page: string): string {
-  const full = `${origin.replace(/\/+$/, "")}${page.startsWith("/") ? page : `/${page}`}`;
-  return `https://search.google.com/search-console/inspect?resource_id=${encodeURIComponent(siteUrl)}&id=${encodeURIComponent(full)}`;
+/**
+ * Link for checking one page in Search Console. Google's /inspect deep link no
+ * longer accepts a page URL (see shared/gscLinks.ts), so this opens the
+ * property, as SEO_GSC_ACCOUNT_EMAIL when set; the CRM copies the page URL to
+ * paste into "Inspect any URL". `origin`/`page` are kept for the caller's sake.
+ */
+export function buildInspectUrl(siteUrl: string, _origin: string, _page: string, accountEmail: string | null | undefined = process.env.SEO_GSC_ACCOUNT_EMAIL): string {
+  return gscPropertyUrl(siteUrl, accountEmail || null);
 }
 
 /** `from` → `to` for every exact-path redirect rule in a netlify.toml (wildcard/splat rules are skipped). */

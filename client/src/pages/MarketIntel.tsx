@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import type { MarketIntelSections } from "@shared/marketIntelTypes";
 import AiVisibilityCard from "@/components/AiVisibilityCard";
+import { absolutePageUrl, normalizeGscLink, originFromGscLink } from "@shared/gscLinks";
 
 const DISMISS_REASONS = ["wrong", "not_now", "off_brand", "already_done"] as const;
 
@@ -197,7 +198,7 @@ export default function MarketIntel() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Possibly de-indexed ({flagged.length})</CardTitle>
-                  <CardDescription>Pages that lost almost all search visibility (or that Google reports as not indexed). A pointer to check, not a verdict — open URL Inspection to confirm.</CardDescription>
+                  <CardDescription>Pages that lost almost all search visibility (or that Google reports as not indexed). A pointer to check, not a verdict. "URL Inspection" copies the page URL and opens Search Console; paste it into "Inspect any URL" to confirm.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {flagged.map((f) => (
@@ -207,7 +208,22 @@ export default function MarketIntel() {
                         <span className="ml-2 text-muted-foreground">{f.previousImpressions.toLocaleString()} → {f.impressions.toLocaleString()} impressions ({(f.pctDown * 100).toFixed(0)}% down){f.indexStatus !== "indexed" ? `, Google: ${f.indexStatus.replace(/_/g, " ")}` : ""}</span>
                         {f.redirectsTo && <Badge variant="outline" className="ml-2">301 → {f.redirectsTo} (expected)</Badge>}
                       </div>
-                      <a href={f.inspectUrl} target="_blank" rel="noreferrer" className="shrink-0 inline-flex items-center gap-1 text-primary hover:underline">
+                      <a
+                        href={normalizeGscLink(f.inspectUrl) ?? f.inspectUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={() => {
+                          const pageUrl = absolutePageUrl(originFromGscLink(f.inspectUrl) ?? window.location.origin, f.page);
+                          try {
+                            void navigator.clipboard?.writeText(pageUrl);
+                            toast.success("Page URL copied. Paste it into \u201cInspect any URL\u201d at the top of Search Console.");
+                          } catch {
+                            toast.message(`In Search Console, inspect: ${pageUrl}`);
+                          }
+                        }}
+                        className="shrink-0 inline-flex items-center gap-1 text-primary hover:underline"
+                        title="Copies the page URL and opens Search Console"
+                      >
                         URL Inspection <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </div>

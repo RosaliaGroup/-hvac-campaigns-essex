@@ -14,7 +14,15 @@ describe("market-intel summary distinguishes recommendations from actual changes
   it("identifies an auto-queued topic as pending drafting, not a published article", () => {
     const result = buildSummary({ ...base, contentHandoff: { queued: 1 } });
     expect(result).toContain("1 evidence-backed topic queued");
-    expect(result).toContain("NOT published");
+    expect(result).toContain("not published yet");
+  });
+
+  it("reports queued refreshes as pending, not as executed or published", () => {
+    const result = buildSummary({ ...base, refreshesQueued: 3 });
+    expect(result).toContain("0 executed");
+    expect(result).toContain("3 decaying posts queued for automatic refresh");
+    expect(result).toContain("not published yet");
+    expect(buildSummary({ ...base, refreshesQueued: 1 })).toContain("1 decaying post queued");
   });
 
   it("does not claim a ranking change when Search Console data is stale", () => {

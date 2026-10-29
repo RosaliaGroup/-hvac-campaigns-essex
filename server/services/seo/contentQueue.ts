@@ -5,7 +5,8 @@
  * ordinary proposals require review; the owner-authorized auto-replenishment
  * service validates and queues fresh subjects when exhausted. nextTopicToProcess() only picks
  * up "queued" or "refresh_due" rows, which requires a human to promote a
- * proposed topic first.
+ * proposed topic first. Market-intel decaying-page refreshes are queued as
+ * "refresh_due" directly by queueRefresh() (owner decision 2026-10-29).
  */
 import { and, asc, eq, or } from "drizzle-orm";
 import { getDb } from "../../db";
@@ -125,6 +126,33 @@ export async function hasExistingProposal(refreshesSlug: string, source: string)
   return !!row;
 }
 
+/**
+ * Queue an automatic in-place refresh of an existing blog post (owner decision 2026-10-29: decaying posts
+ * are refreshed automatically). Creates — or promotes an earlier "proposed" row to — status "refresh_due",
+ * which nextTopicToProcess picks up; the content lane then drafts, lints, critic-checks, holds and
+ * publishes it like any post, and the PR can be reverted. Returns what happened, never throws on a
+ * duplicate: a slug already queued/drafted/in a PR is left alone.
+ */
+export async function queueRefresh(input: { slug: string; brief: string; source: string }): Promise<"queued" | "promoted" | "already_in_progress"> {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable.");
+  // Earlier market-intel proposals stored the path form ("blog/<slug>"); match both.
+  const [existing] = await db.select().from(seoContentQueue)
+    .where(or(eq(seoContentQueue.refreshesSlug, input.slug), eq(seoContentQueue.refreshesSlug, `blog/${input.slug}`))).limit(1);
+  if (existing) {
+    // A finished refresh (published) or a set-aside one (drafted) may be retried once the page decays again.
+    if (existing.status === "proposed" || existing.status === "published" || existing.status === "drafted") {
+      await db.update(seoContentQueue).set({ status: "refresh_due", brief: input.brief, refreshesSlug: input.slug, source: input.source }).where(eq(seoContentQueue.id, existing.id));
+      await logAudit({ actorId: null, action: "market_intel_item_executed", batchId: null, pagePath: `/blog/${input.slug}`, before: { id: existing.id, status: existing.status }, after: { id: existing.id, status: "refresh_due" }, lintResult: null });
+      return "promoted";
+    }
+    return "already_in_progress";
+  }
+  await db.insert(seoContentQueue).values({ title: `Refresh: /blog/${input.slug}`, brief: input.brief, refreshesSlug: input.slug, status: "refresh_due", source: input.source });
+  await logAudit({ actorId: null, action: "market_intel_item_executed", batchId: null, pagePath: `/blog/${input.slug}`, before: null, after: { status: "refresh_due" }, lintResult: null });
+  return "queued";
+}
+
 /** Promote only verified, safe market-intel proposals into the existing guarded draft lane. */
 export async function autoQueueMarketIntelTopics(): Promise<{ queued: number; reason?: string }> {
   if (process.env.SEO_INTEL_AUTO_QUEUE_ENABLED !== "true") return { queued: 0, reason: "disabled" };
@@ -165,6 +193,11 @@ export async function nextTopicToProcess(): Promise<SeoContentQueueRow | null> {
     .where(and(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.source, "market-intel:unserved_query")))
     .orderBy(asc(seoContentQueue.createdAt)).limit(1);
   if (market.length) return market[0];
+  // Then one market-intel refresh of a decaying post, ahead of the seeded backlog.
+  const refresh = await db.select().from(seoContentQueue)
+    .where(and(eq(seoContentQueue.status, "refresh_due"), eq(seoContentQueue.source, "market-intel:decaying_page")))
+    .orderBy(asc(seoContentQueue.createdAt)).limit(1);
+  if (refresh.length) return refresh[0];
   const rows = await db.select().from(seoContentQueue)
     .where(or(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.status, "refresh_due")))
     .orderBy(asc(seoContentQueue.createdAt)).limit(1);

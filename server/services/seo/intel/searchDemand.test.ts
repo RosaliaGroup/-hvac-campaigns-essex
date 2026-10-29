@@ -308,11 +308,14 @@ describe("possibly de-indexed flag", () => {
     expect(classifyPossiblyDeindexed(many, ctx)).toHaveLength(15);
   });
 
-  it("buildInspectUrl deep-links URL Inspection for the exact page, encoding property and URL", () => {
-    expect(buildInspectUrl("https://mechanicalenterprise.com/", "https://mechanicalenterprise.com/", "/blog/a b?x=1")).toBe(
-      "https://search.google.com/search-console/inspect?resource_id=https%3A%2F%2Fmechanicalenterprise.com%2F&id=" + encodeURIComponent("https://mechanicalenterprise.com/blog/a b?x=1"),
+  it("buildInspectUrl opens the property (Google's /inspect deep link no longer takes a page URL)", () => {
+    expect(buildInspectUrl("https://mechanicalenterprise.com/", "https://mechanicalenterprise.com/", "/blog/a b?x=1", null)).toBe(
+      "https://search.google.com/search-console?resource_id=https%3A%2F%2Fmechanicalenterprise.com%2F",
     );
-    expect(classifyPossiblyDeindexed([pt("/blog/a", 0, 500)], ctx)[0].inspectUrl).toContain("inspect?resource_id=");
+    expect(buildInspectUrl("https://mechanicalenterprise.com/", "", "/x", "owner@example.com")).toBe(
+      "https://search.google.com/search-console?resource_id=https%3A%2F%2Fmechanicalenterprise.com%2F&authuser=owner%40example.com",
+    );
+    expect(classifyPossiblyDeindexed([pt("/blog/a", 0, 500)], ctx)[0].inspectUrl).not.toContain("/inspect");
   });
 
   describe("parseNetlifyRedirects", () => {

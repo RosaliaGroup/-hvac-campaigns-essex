@@ -139,6 +139,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
   let executed = 0;
   let accepted = 0;
   let itemsCreated = 0;
+  let refreshesQueued = 0;
 
   for (const draft of drafts) {
     const key = suggestionKeyFor(draft.kind, draft.title, draft.targetQueue);
@@ -150,6 +151,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
 
     const executedNow = result.status === "executed";
     if (executedNow) { executed++; accepted++; }
+    if (result.status === "staged" && result.reason.startsWith("queued for automatic refresh")) refreshesQueued++;
 
     await db.insert(seoIntelItems).values({
       reportId, kind: draft.kind as never,
@@ -212,7 +214,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
     console.error("[MarketIntel] content handoff failed:", error);
   }
 
-  const summary = buildSummary({ itemCount: itemsCreated, executed, circuitClear, circuitReason, gscStale: searchDemand.skipped, contentHandoff });
+  const summary = buildSummary({ itemCount: itemsCreated, executed, circuitClear, circuitReason, gscStale: searchDemand.skipped, contentHandoff, refreshesQueued });
 
   await db
     .update(seoIntelReports)
@@ -230,12 +232,14 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
   return { report: finalReport, items: itemsCreated, executed, emailSent };
 }
 
-export function buildSummary(input: { itemCount: number; executed: number; circuitClear: boolean; circuitReason: string | null; gscStale: boolean; contentHandoff?: { queued: number; reason?: string } }): string {
+export function buildSummary(input: { itemCount: number; executed: number; circuitClear: boolean; circuitReason: string | null; gscStale: boolean; contentHandoff?: { queued: number; reason?: string }; refreshesQueued?: number }): string {
   if (!input.circuitClear) return `Paused: suggestions only (${input.circuitReason ?? "circuit breaker open"}). No changes executed.`;
   if (input.gscStale) return "Search Console data is stale — search-demand analysis skipped today; competitor/positioning sections still ran. No indexing change is inferred.";
-  const queueNote = input.contentHandoff?.queued
-    ? ` ${input.contentHandoff.queued} evidence-backed topic queued for guarded drafting, NOT published.`
-    : "";
+  const queueNote = (input.contentHandoff?.queued
+    ? ` ${input.contentHandoff.queued} evidence-backed topic queued for the auto content lane — not published yet; it publishes after lint, fact-check and hold.`
+    : "") + (input.refreshesQueued
+    ? ` ${input.refreshesQueued} decaying post${input.refreshesQueued === 1 ? "" : "s"} queued for automatic refresh — not published yet; each publishes after lint, fact-check and hold, and can be reverted.`
+    : "");
   if (input.itemCount === 0) return `No material new recommendations today.${queueNote}`;
   return `${input.itemCount} suggestion${input.itemCount === 1 ? "" : "s"} today, ${input.executed} executed through permitted SEO lanes; others are staged, report-only, or blocked by safety checks.${queueNote}`;
 }

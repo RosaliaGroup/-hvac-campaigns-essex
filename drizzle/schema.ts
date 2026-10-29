@@ -3690,7 +3690,7 @@ export const seoIntelAiVisibility = mysqlTable(
     id: int("id").autoincrement().primaryKey(),
     /** Monday of the America/New_York week, YYYY-MM-DD. */
     weekOf: varchar("weekOf", { length: 10 }).notNull(),
-    engine: mysqlEnum("engine", ["perplexity", "openai", "google_ai_overview"]).notNull(),
+    engine: mysqlEnum("engine", ["perplexity", "openai", "google_ai_overview", "claude"]).notNull(),
     query: varchar("query", { length: 512 }).notNull(),
     obsKey: varchar("obsKey", { length: 64 }).notNull(),
     status: mysqlEnum("status", ["ok", "no_overview", "error"]).default("ok").notNull(),

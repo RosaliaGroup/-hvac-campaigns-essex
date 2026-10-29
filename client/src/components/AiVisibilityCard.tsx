@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import type { AiVisibilitySection } from "@shared/aiVisibility";
 
-const ENGINE_LABEL: Record<string, string> = { perplexity: "Perplexity", openai: "OpenAI (web search)", google_ai_overview: "Google AI Overviews" };
+const ENGINE_LABEL: Record<string, string> = { perplexity: "Perplexity", openai: "OpenAI (web search)", google_ai_overview: "Google AI Overviews", claude: "Claude (web search)" };
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
 
 /** Weekly AI-visibility card for the market-intel report: named-for counts per engine, week-over-week, competitors, cited sources, gaps. */

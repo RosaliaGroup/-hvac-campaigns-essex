@@ -41,7 +41,7 @@ import { getDb } from "../../../db";
 import { seoPages } from "../../../../drizzle/schema";
 import { regenerateUnlockedDrafts } from "../draftManagement";
 import { approveBatchToPR, yyyymmdd } from "../bulkApprove";
-import { proposeTopic, hasExistingProposal } from "../contentQueue";
+import { proposeTopic, hasExistingProposal, queueRefresh } from "../contentQueue";
 import {
   DAILY_CAPS,
   withinDailyCaps,
@@ -290,6 +290,24 @@ export async function executeItem(
     const source = "market-intel:decaying_page"; // encodes (page, kind) — see hasExistingProposal's doc
     if (isHeldForExperiment(evidence.page, ctx.now)) {
       return { result: { status: "staged", reason: `held: ${evidence.page} is inside the re-indexing test hold (docs/pr1/july-collapse.md) — no refresh queued` }, counts: ctx.counts };
+    }
+    // Auto refresh (owner decision 2026-10-29): a decaying BLOG post is queued for an in-place rewrite
+    // through the content lane (lint + critic + hold + revert). City/service pages are not rewritten.
+    if (process.env.SEO_INTEL_AUTO_QUEUE_ENABLED === "true") {
+      const slug = refreshesSlug.startsWith("blog/") ? refreshesSlug.slice("blog/".length) : null;
+      if (!slug || slug.includes("/")) {
+        return { result: { status: "staged", reason: `${evidence.page} is not a blog post — only blog posts are refreshed automatically` }, counts: ctx.counts };
+      }
+      try {
+        const brief = `clicks down ${(evidence.pctDown * 100).toFixed(0)}% vs the prior window (${evidence.previousClicks} → ${evidence.clicks})`;
+        const outcome = await queueRefresh({ slug, brief, source });
+        const reason = outcome === "already_in_progress"
+          ? `refresh of ${evidence.page} already in progress`
+          : `queued for automatic refresh — rewritten in place on the next content run (fact-checked, 6h hold, revertable)`;
+        return { result: { status: "staged", reason }, counts: outcome === "already_in_progress" ? ctx.counts : recordExecution(ctx.counts, kind) };
+      } catch (err) {
+        return { result: { status: "staged", reason: `refresh queueing failed: ${(err as Error).message}` }, counts: ctx.counts };
+      }
     }
     try {
       // The intel job re-finds the SAME decaying page on every run until it's
