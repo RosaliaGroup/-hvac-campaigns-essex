@@ -43,7 +43,7 @@ export async function anthropicSearch(
   // Text blocks are fragments of ONE answer, split wherever a citation starts or ends
   // (often inside a JSON string). Join them as-is: inserting a separator corrupts the JSON.
   let text = "";
-  let searchErrors = 0, searchResults = 0;
+  let searchErrors = 0, searchResults = 0, askedForJson = false;
   for (let turn = 0; turn < 3; turn++) {
     let turnText = "";
     const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
@@ -100,6 +100,13 @@ export async function anthropicSearch(
     if (body.stop_reason === "end_turn") {
       if (searchFailed() && !parseJsonObject(text))
         throw new ProfileLookupError("search_error", "Public profile search is unavailable. Try again later.");
+      // A prose answer with no JSON: ask once, in the same conversation, for the JSON only.
+      if (!parseJsonObject(text) && !askedForJson && turn < 2) {
+        askedForJson = true;
+        messages.push({ role: "assistant", content: body.content });
+        messages.push({ role: "user", content: "Reply with ONLY the JSON object requested, using the results you already found. If nothing was found, return the JSON with empty fields." });
+        continue;
+      }
       return { text, citations: Array.from(citations) };
     }
     if (body.stop_reason === "max_tokens") {

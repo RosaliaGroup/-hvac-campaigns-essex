@@ -84,3 +84,25 @@ describe("lookup robustness", () => {
     expect(body.max_tokens).toBe(4000);
   });
 });
+
+describe("prose answers", () => {
+  it("asks once for the JSON when the reply is prose, keeping citations", async () => {
+    const bodies: any[] = [];
+    const fetchImpl = vi.fn(async (_u: string, init: any) => {
+      bodies.push(JSON.parse(init.body));
+      return new Response(JSON.stringify({ usage: {}, stop_reason: "end_turn", content: bodies.length === 1
+        ? [{ type: "web_search_tool_result", content: [{ type: "web_search_result", url: "https://acme.com/team" }] }, { type: "text", text: "I found Acme's team page." }]
+        : [{ type: "text", text: '{"company":{}}' }] }), { status: 200 });
+    });
+    const r = await anthropicSearch("q", { ANTHROPIC_API_KEY: "k" } as any, fetchImpl as any);
+    expect(parseJsonObject(r.text)).toEqual({ company: {} });
+    expect(r.citations).toContain("https://acme.com/team");
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1].messages.map((m: any) => m.role)).toEqual(["user", "assistant", "user"]);
+  });
+  it("asks only once", async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ usage: {}, stop_reason: "end_turn", content: [{ type: "web_search_tool_result", content: [{ type: "web_search_result", url: "https://a.com" }] }, { type: "text", text: "No data." }] }), { status: 200 }));
+    await anthropicSearch("q", { ANTHROPIC_API_KEY: "k" } as any, fetchImpl as any);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+});
