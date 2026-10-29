@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyRefreshLintRules } from "./contentPipeline";
-import { buildRefreshSystemPrompt, isResidentialPost, pinRefreshIdentity } from "./refreshDrafting";
+import { buildRefreshSystemPrompt, isResidentialPost, pinRefreshIdentity, stripUnverifiedAmounts } from "./refreshDrafting";
 import { VERIFIED_FACTS } from "../../../shared/verifiedFacts";
 import { blogPosts, type BlogPostData } from "../../../client/src/data/blogPosts";
 import type { ContentLintResult } from "../../../shared/contentLinter";
@@ -57,5 +57,24 @@ describe("refresh drafting", () => {
     expect(prompt).toContain("mechanicalenterprise.com/contact");
     expect(prompt).toContain("950-2000 words");
     expect(prompt).toContain("Why it was picked: clicks down 96%");
+  });
+});
+
+describe("unverified amounts never reach the model", () => {
+  const facts = { incentives: [{ program: "p", amountText: "Up to $16,000", verifiedOn: "x", source: "s" }] };
+
+  it("replaces unverified dollar amounts and keeps verified ones", () => {
+    const out = stripUnverifiedAmounts({ a: "Install runs $8,000 to $14,000; rebates up to $16,000. Save $2k or $1.5 million.", b: ["$7,000 Whole-Home"] }, facts);
+    expect(out.a).toBe("Install runs [amount removed] to [amount removed]; rebates up to $16,000. Save [amount removed] or [amount removed].");
+    expect(out.b[0]).toBe("[amount removed] Whole-Home");
+  });
+
+  it("scrubs the real rebate guide and the prompt built from it", () => {
+    const post = blogPosts.find((p) => p.slug === "heat-pump-vs-gas-furnace-nj-2026") ?? blogPosts.find((p) => p.slug === "nj-heat-pump-rebates-2026")!;
+    const prompt = buildRefreshSystemPrompt({ current: post, maxWords: 2000 }, VERIFIED_FACTS);
+    const currentJson = prompt.slice(prompt.indexOf("CURRENT POST"), prompt.indexOf("VERIFIED FACTS"));
+    const verified = VERIFIED_FACTS.incentives.map((i) => i.amountText);
+    for (const m of currentJson.match(/\$\s?\d[\d,]*/g) ?? []) expect(verified.some((v) => v.includes(m.replace(/,+$/, "")))).toBe(true);
+    expect(prompt).toContain('"hear"');
   });
 });
