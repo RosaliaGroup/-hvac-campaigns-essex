@@ -136,9 +136,12 @@ export async function hasExistingProposal(refreshesSlug: string, source: string)
 export async function queueRefresh(input: { slug: string; brief: string; source: string }): Promise<"queued" | "promoted" | "already_in_progress"> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
-  // Earlier market-intel proposals stored the path form ("blog/<slug>"); match both.
-  const [existing] = await db.select().from(seoContentQueue)
-    .where(or(eq(seoContentQueue.refreshesSlug, input.slug), eq(seoContentQueue.refreshesSlug, `blog/${input.slug}`))).limit(1);
+  // Earlier market-intel proposals stored the path form ("blog/<slug>"); match both. Older reports could
+  // leave several rows for one post, so look at all of them: any live one means "in progress".
+  const rows = await db.select().from(seoContentQueue)
+    .where(or(eq(seoContentQueue.refreshesSlug, input.slug), eq(seoContentQueue.refreshesSlug, `blog/${input.slug}`)));
+  if (rows.some((r) => ["refresh_due", "queued", "in_review", "pr_open"].includes(r.status))) return "already_in_progress";
+  const existing = rows.find((r) => r.status === "proposed") ?? rows.find((r) => r.status === "published" || r.status === "drafted");
   if (existing) {
     // A finished refresh (published) or a set-aside one (drafted) may be retried once the page decays again.
     if (existing.status === "proposed" || existing.status === "published" || existing.status === "drafted") {
