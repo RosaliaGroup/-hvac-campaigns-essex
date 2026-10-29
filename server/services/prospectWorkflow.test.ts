@@ -48,6 +48,7 @@ function makeStore(rows: QueueRow[], opts: { enabled?: boolean; claimed?: Set<st
     notifyOwner: async (_r, title) => { log.notifications.push(title); },
     scheduleHumanTasks: async row => { log.tasks.push(row.email); return 5; },
     cancelHumanTasks: async email => { log.cancelled.push(email); },
+    sweepPublicEntities: async () => 0,
     saveRunSummary: async (_h, _n, summary) => { log.summaries.push(summary); },
   };
   return { store, log, rows };
@@ -505,5 +506,33 @@ describe("same-hour top-up toward the 10-introduction target", () => {
     const r = await runCycle(store, async () => mb, WED_11AM);
     expect(outreach(sends)).toHaveLength(1);
     expect(r.held.filter(h => h.email === b.email)).toHaveLength(1);
+  });
+});
+
+describe("public bodies and schools are never contacted (public bidding)", () => {
+  it("a queued school-district contact is stopped before any Gmail check or send", async () => {
+    const row = intro({ email: "jdoe@westorange.k12.nj.us", company: "West Orange Public Schools" });
+    const { store } = makeStore([row]);
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(0);
+    expect(row.state).toBe("suppressed");
+    expect(r.stopped[0].reason).toMatch(/public bidding/);
+    expect((mb.hasSent as any).mock.calls).toHaveLength(0);
+  });
+  it("an already-introduced town contact gets no follow-up and its call tasks are cancelled", async () => {
+    const row = followUp({ email: "facilities@townofexample.org", company: "Township of Example" });
+    const { store, log } = makeStore([row]);
+    const { mb, sends } = makeMailbox();
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(0);
+    expect(log.cancelled).toEqual([row.email]);
+  });
+  it("the hourly sweep count appears in the report", async () => {
+    const { store } = makeStore([]);
+    store.sweepPublicEntities = async () => 9;
+    const { mb, sends } = makeMailbox();
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(reports(sends)[0].body).toMatch(/Public bodies\/schools removed from outreach \(public bidding\): 9/);
   });
 });

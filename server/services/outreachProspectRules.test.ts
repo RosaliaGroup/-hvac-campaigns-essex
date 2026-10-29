@@ -33,3 +33,28 @@ describe("HVAC prospect qualification", () => {
     expect(categorizeProspect("Development Director")).toBe("Developer");
   });
 });
+
+import { isPublicBidEntity as isPublic } from "./outreachProspectRules";
+describe("public bodies and schools (public bidding)", () => {
+  it.each([
+    ["jsmith@essexcountynj.gov", "Essex County"],
+    ["jsmith@state.nj.us", "NJ Department of Treasury"],
+    ["jsmith@westorange.k12.nj.us", "West Orange"],
+    ["jsmith@montclair.edu", "Montclair State University"],
+    ["jsmith@wops.org", "West Orange Public Schools"],
+    ["jsmith@twp.example.org", "Township of Livingston"],
+    ["jsmith@nhha.org", "Newark Housing Authority"],
+    ["jsmith@school.org", "Seton Hall Preparatory School"],
+    ["jsmith@ccm.org", "County College of Morris"],
+  ])("%s / %s is excluded", (email, company) => {
+    expect(isPublic({ email, company })).toBe(true);
+  });
+  it.each([
+    ["jsmith@acmeproperties.com", "Acme Properties LLC"],
+    ["ops@hiltonnewark.com", "Hilton Newark Penn Station"],
+    ["fm@stbarnabas.org", "Saint Barnabas Medical Center"],
+    ["jdoe@prologis.com", "Prologis"],
+  ])("%s / %s is allowed", (email, company) => {
+    expect(isPublic({ email, company })).toBe(false);
+  });
+});
