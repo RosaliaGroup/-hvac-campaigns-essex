@@ -32,3 +32,17 @@ describe("hourly research segment rotation", () => {
     expect(researchSegment(new Date("2026-10-28T19:01:00Z"))).toBe(researchSegment(new Date("2026-10-28T19:59:00Z")));
   });
 });
+
+describe("second search in the same hour", () => {
+  it("the fallback search uses a different segment than the first", async () => {
+    const { RESEARCH_ATTEMPTS_PER_HOUR } = await import("./prospectWorkflow");
+    expect(RESEARCH_ATTEMPTS_PER_HOUR).toBe(2);
+    for (let h = 13; h <= 20; h++) {
+      const t = new Date(`2026-10-29T${h}:05:00Z`);
+      expect(researchSegment(t, 1)).not.toBe(researchSegment(t, 0));
+    }
+  });
+  it("no longer targets building superintendents (rarely publish emails)", () => {
+    expect(RESEARCH_SEGMENTS.join(" ")).not.toMatch(/superintendent/i);
+  });
+});
