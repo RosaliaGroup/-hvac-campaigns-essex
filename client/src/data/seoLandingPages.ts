@@ -50,11 +50,27 @@ export interface SeoLandingPageData {
   related: LpLink[];
   ctaHeading: string;
   ctaSub: string;
+  /**
+   * Service-led commercial pages: hides the financing/rebate block, the
+   * incentive stat and the rebate CTA, and swaps in service-only "why us"
+   * points (owner direction Oct 2026: these pages sell paid service work).
+   */
+  serviceOnly?: boolean;
+  /** Page-specific long-form sections rendered after the service cards (unique copy for search). */
+  deepDive?: LpSection[];
+  /** "What to send us" checklist so a request can be scoped on the first call. */
+  sendUs?: { heading: string; items: string[] };
+}
+export interface LpSection {
+  heading: string;
+  paragraphs: string[];
+  bullets?: string[];
 }
 
 const HUB_RES: LpLink = { href: "/residential", label: "All Residential HVAC", sub: "Browse home services" };
 const HUB_COM: LpLink = { href: "/commercial", label: "All Commercial HVAC", sub: "Browse business services" };
 const REBATE_LINK: LpLink = { href: "/rebate-calculator", label: "Rebate Calculator", sub: "See your NJ savings" };
+const PM_HUB: LpLink = { href: "/commercial/for-property-management", label: "HVAC for Property Managers", sub: "Request a portfolio review" };
 
 export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
   // ─────────────────────────── RESIDENTIAL ───────────────────────────
@@ -340,85 +356,171 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
   },
   {
     slug: "emergency-hvac-repair-nj",
-    category: "residential",
+    category: "commercial",
     service: "Emergency HVAC Repair",
     serviceType: "Emergency HVAC Repair",
     formCaptureType: "lp_emergency",
-    h1: "No Heat? No AC? We Answer Live and Roll a Tech Now.",
+    serviceOnly: true,
+    h1: "Emergency HVAC Repair for Occupied NJ Buildings",
     heroSub:
-      "24/7 emergency HVAC repair across New Jersey. When your heat fails in winter or your AC dies in a heat wave, we respond fast — nights, weekends, and holidays.",
-    metaTitle: "Emergency HVAC Repair NJ | 24/7 No Heat / No AC | Mechanical Enterprise",
+      "No heat in an apartment building, cooling down in an office or store, a rooftop unit that won't restart — call (862) 423-9396 and tell us what failed. We'll triage the problem, tell you when a technician can be on site, and work the repair around the people inside.",
+    metaTitle: "Emergency HVAC Repair NJ | Buildings & Multifamily",
     metaDescription:
-      "24/7 emergency HVAC repair across New Jersey. No heat, no AC, sudden breakdowns — fast local response. Call (862) 423-9396 now.",
-    introHeading: "24/7 Emergency HVAC Service in New Jersey",
+      "Emergency HVAC repair for NJ apartment, office and retail buildings: no heat, no cooling, failed RTUs and boilers. Call (862) 423-9396 to report a failure.",
+    introHeading: "When Heat or Cooling Fails in a Building People Depend On",
     intro:
-      "HVAC emergencies don't wait for business hours — and neither do we. Call any time and reach a real person who dispatches a licensed technician to get your home safe and comfortable again, fast.",
+      "A failure in an occupied building is different from a failure in a single home. Residents call the management office, commercial occupants lose a workday, and every hour adds pressure on the person responsible for the property. Mechanical Enterprise works with property managers, superintendents and building owners across northern and central New Jersey to get failed heating and cooling equipment diagnosed and repaired, and to keep the people in the building informed while it happens.",
     cards: [
-      { icon: "🚨", title: "No Heat in Winter", desc: "Furnace, boiler, and heat-pump failures handled as a priority when it's freezing." },
-      { icon: "🔥", title: "No AC in a Heat Wave", desc: "Rapid cooling repair to protect seniors, infants, and anyone at risk in the heat." },
-      { icon: "💧", title: "Leaks & Water Damage", desc: "Condensate floods and refrigerant leaks stopped before they spread." },
-      { icon: "⚡", title: "Electrical & No Power", desc: "Tripping breakers, burning smells, and control failures diagnosed safely." },
-      { icon: "⚠️", title: "Gas or CO Concern", desc: "If you smell gas, leave and call 911 and your utility first — then call us to repair." },
-      { icon: "🕐", title: "Nights, Weekends & Holidays", desc: "Live dispatch around the clock, every day of the year." },
+      { icon: "🔥", title: "No Heat in a Multifamily Building", desc: "Boiler lockouts, failed circulator pumps, ignition and flame-safeguard faults, and zone valves that leave whole lines of apartments cold." },
+      { icon: "❄️", title: "Cooling Down in Offices and Stores", desc: "Rooftop units, split systems and VRF equipment that stop cooling occupied commercial space." },
+      { icon: "🏢", title: "Rooftop Unit Won't Restart", desc: "Tripped safeties, failed compressors, burnt contactors, economizer faults and control failures on packaged equipment." },
+      { icon: "🌀", title: "PTACs and Ductless Systems", desc: "Individual unit failures in apartments, hotels and condo buildings, including units that keep tripping breakers." },
+      { icon: "💧", title: "Leaks and Frozen Equipment", desc: "Condensate overflows, frozen coils and refrigerant leaks that threaten ceilings, finishes and equipment." },
+      { icon: "🎛️", title: "Controls and Thermostat Failures", desc: "Building controls, timeclocks and thermostats that lock out equipment even though the hardware still works." },
     ],
+    deepDive: [
+      {
+        heading: "How an Emergency Call Works",
+        paragraphs: [
+          "Call (862) 423-9396 and describe what stopped working, which part of the building is affected and who is on site. We ask a few triage questions up front — is the whole building affected or one zone, are any breakers or safeties tripped, is water leaking — because the answers decide which technician and which parts should be sent.",
+          "Before anyone is dispatched we tell you when a technician can realistically be there. When the technician arrives, they confirm the cause, explain the options and get approval before repair work starts. If a part has to be ordered, you get a plan for temporary heat or cooling where it is practical, and a clear next step rather than an open-ended wait.",
+        ],
+      },
+      {
+        heading: "Keeping Residents and Tenants Informed",
+        paragraphs: [
+          "Most of the stress in a building outage comes from silence. We give the property manager or superintendent a plain-language status after diagnosis and again after the repair, written so it can be forwarded to residents or commercial occupants without editing.",
+          "For multifamily buildings we ask which lines or floors are affected so updates match what residents are actually experiencing. For offices, retail and medical space we ask about business hours, alarm codes and who can approve work, so a repair doesn't stall waiting for a decision.",
+        ],
+      },
+      {
+        heading: "After the Repair: Preventing the Next Emergency",
+        paragraphs: [
+          "Every emergency call ends with a short written record: what failed, what was replaced, and what else the technician saw that is likely to cause the next call. That record is what lets you separate a one-off failure from equipment that is wearing out.",
+          "If the same building keeps generating emergency calls, a preventive maintenance agreement is usually the cheaper path. Agreements are priced per unit per year and quoted for your portfolio, with quarterly reporting so you can see equipment condition before it fails.",
+        ],
+        bullets: [
+          "Written summary of the failure and the repair",
+          "Notes on related equipment that needs attention",
+          "Recommendation: repair, monitor, or plan a replacement",
+        ],
+      },
+    ],
+    sendUs: {
+      heading: "What to Have Ready When You Call",
+      items: [
+        "Building address and the affected units, floors or zones",
+        "Type of equipment if known (boiler, rooftop unit, split system, PTAC, VRF)",
+        "What the occupants are reporting and when it started",
+        "Any error codes, tripped breakers or alarms on the equipment",
+        "Roof, mechanical room and after-hours access contacts",
+        "Who can approve repair work on site",
+      ],
+    },
     faqs: [
-      { q: "How fast can you get to me?", a: "We answer live 24/7 and dispatch as quickly as possible across New Jersey. Call (862) 423-9396 and we'll give you a real ETA." },
-      { q: "What counts as an HVAC emergency?", a: "No heat in freezing weather, no cooling during dangerous heat, active leaks, electrical or burning smells, and anything affecting safety. When in doubt, call — we'll advise you." },
-      { q: "I smell gas — what should I do?", a: "Leave the building immediately, don't switch anything on or off, and call 911 and your gas utility first. Once it's safe, call us to diagnose and repair." },
-      { q: "Do you charge more after hours?", a: "After-hours emergency rates may apply; we quote you upfront before any work so there are no surprises." },
-      { q: "Do you serve weekends and holidays?", a: "Yes — 24/7/365 across New Jersey, including weekends and holidays." },
-      { q: "What if my system needs replacement?", a: "We'll get you comfortable first, then show you replacement options and any NJ rebates and financing that apply — no pressure." },
+      { q: "What kinds of buildings do you handle emergency HVAC repairs for?", a: "Multifamily and condo buildings, offices, retail, restaurants, medical space, warehouses and mixed-use properties in northern and central New Jersey." },
+      { q: "How do I report a heating or cooling failure?", a: "Call (862) 423-9396. Tell us the address, what failed, which areas are affected and who is on site. We triage on the phone and tell you when a technician can be there." },
+      { q: "Will you tell me the repair cost before you start?", a: "Yes. The technician diagnoses the problem first, explains the options and gets approval from the person you designate before repair work begins." },
+      { q: "What if a part has to be ordered?", a: "We tell you what part is needed and the next step, and where practical we help plan temporary heat or cooling for the affected area while it is on order." },
+      { q: "Can you help us avoid repeat emergency calls?", a: "Yes. Every call ends with notes on related equipment, and a preventive maintenance agreement, priced per unit per year with quarterly reporting, can catch failures before they happen." },
+      { q: "Do you write updates we can send to residents?", a: "Yes. We give the manager a plain-language status after diagnosis and after the repair that can be forwarded to residents or occupants." },
     ],
     related: [
-      { href: "/heating-repair-nj", label: "Heating Repair", sub: "No-heat service" },
-      { href: "/ac-repair-nj", label: "AC Repair", sub: "No-cooling service" },
-      { href: "/furnace-repair-nj", label: "Furnace Repair", sub: "Gas & electric" },
-      { href: "/boiler-repair-nj", label: "Boiler Repair", sub: "Steam & hot-water" },
+      PM_HUB,
+      { href: "/commercial-hvac-service-nj", label: "Commercial HVAC Service", sub: "Repairs & service calls" },
+      { href: "/blog/nj-multifamily-no-heat-hvac-service-checklist", label: "No-Heat Checklist", sub: "Guide for multifamily managers" },
+      { href: "/blog/commercial-hvac-response-sla-checklist", label: "Response Agreements", sub: "What an SLA should include" },
     ],
-    ctaHeading: "HVAC Emergency? Call Now.",
-    ctaSub: "Live 24/7 dispatch across New Jersey. A licensed technician is ready to help.",
+    ctaHeading: "Report a Heating or Cooling Failure",
+    ctaSub: "Call (862) 423-9396 with the address and what failed, and we'll tell you when a technician can be on site.",
   },
-
-  // ─────────────────────────── COMMERCIAL ───────────────────────────
   {
     slug: "commercial-hvac-service-nj",
     category: "commercial",
     service: "Commercial HVAC Service",
     serviceType: "Commercial HVAC Service and Repair",
     formCaptureType: "lp_commercial_vrv",
-    h1: "Keep Your Facility Running — With Zero Unplanned Downtime.",
+    serviceOnly: true,
+    h1: "Commercial HVAC Service and Repair for NJ Buildings",
     heroSub:
-      "Commercial HVAC service and repair across New Jersey for every property type — rooftop units, split systems, VRF/VRV, and controls. Service agreements and 24/7 response.",
-    metaTitle: "Commercial HVAC Service & Repair NJ | Mechanical Enterprise",
+      "Service calls, diagnostics and repairs for rooftop units, split systems, VRF, PTACs and building controls in offices, retail, multifamily and mixed-use properties across northern and central New Jersey.",
+    metaTitle: "Commercial HVAC Service & Repair NJ | RTU, VRF, PTAC",
     metaDescription:
-      "Commercial HVAC service & repair across NJ — RTUs, splits, VRF, controls. Service agreements & 24/7 response. Call (862) 423-9396.",
-    introHeading: "Commercial HVAC Service for New Jersey Businesses",
+      "Commercial HVAC repair and service calls for NJ offices, retail and multifamily buildings: RTUs, splits, VRF, PTACs and controls. Call (862) 423-9396.",
+    introHeading: "One Service Contractor for the Whole Building",
     intro:
-      "Downtime costs money and comfort. We service and repair every kind of commercial system, respond fast, and offer planned maintenance agreements that keep your equipment running and your budget predictable.",
+      "Property managers rarely deal with one type of equipment. A single mixed-use building can have packaged rooftop units over the retail floor, split systems in offices, PTACs or ductless units in apartments, and a set of controls nobody has documented. Mechanical Enterprise services all of it, so you have one number to call, one service history and one contractor accountable for finding the real cause of a problem instead of resetting it until the next failure.",
     cards: [
-      { icon: "🏢", title: "Rooftop Units (RTUs)", desc: "Repair, maintenance, and change-outs for packaged rooftop systems." },
-      { icon: "🌀", title: "VRF / VRV Systems", desc: "Expert service for variable-refrigerant multi-zone commercial systems." },
-      { icon: "🧊", title: "Splits & Chillers", desc: "Ductless, split, and chilled-water systems maintained and repaired." },
-      { icon: "🎛️", title: "Controls & Thermostats", desc: "Building controls, zoning, and smart-thermostat troubleshooting." },
-      { icon: "📋", title: "Service Agreements", desc: "Planned maintenance that reduces breakdowns and extends equipment life." },
-      { icon: "🕐", title: "24/7 Emergency Response", desc: "Priority dispatch to minimize downtime when systems fail." },
+      { icon: "🏢", title: "Rooftop Units", desc: "Diagnostics and repair of packaged RTUs: compressors, fan motors, belts, economizers, gas heat sections and safeties." },
+      { icon: "🌀", title: "VRF / VRV Systems", desc: "Troubleshooting variable-refrigerant systems serving multi-zone offices and mixed-use floors." },
+      { icon: "🧊", title: "Split and Ductless Systems", desc: "Condensers, air handlers, mini-splits and heat pumps in tenant spaces, lobbies and common areas." },
+      { icon: "🛏️", title: "PTACs", desc: "Repair and replacement of packaged terminal units in apartments, condos and hotel-style buildings." },
+      { icon: "🎛️", title: "Controls and Thermostats", desc: "Schedules, zoning, timeclocks and thermostats that waste energy or lock equipment out." },
+      { icon: "📋", title: "Service Records", desc: "Written findings after every visit so you can track equipment condition across buildings." },
     ],
+    deepDive: [
+      {
+        heading: "What a Commercial Service Call Includes",
+        paragraphs: [
+          "A service call starts with the symptom you or your occupants reported, but the technician's job is to find the cause. That means checking electrical components, refrigerant circuits, airflow, controls and the conditions around the equipment — a clogged condensate line or a failing contactor is a quick fix, while a compressor drawing high amps is a planning conversation.",
+          "Before repair work starts you get the diagnosis, the recommended fix and any alternatives, and the person you designate approves the work. After the visit you receive a written summary you can file against the unit, share with ownership or forward to an occupant.",
+        ],
+      },
+      {
+        heading: "Repair or Replace? Getting a Straight Answer",
+        paragraphs: [
+          "Older rooftop units and split systems reach a point where each repair buys less time. When a technician sees that pattern — repeated compressor or motor failures, corroded coils, refrigerant that is expensive or hard to source — we say so, and we separate what has to be fixed today from what belongs in next year's capital plan.",
+          "If replacement makes sense, we can scope it with you: equipment sizing, curb and access requirements, electrical needs and the schedule that least disrupts the building. Optional 10-year parts and labor coverage is available as a separately purchased add-on for new installations.",
+        ],
+      },
+      {
+        heading: "Mixed-Use and Older Buildings",
+        paragraphs: [
+          "Many New Jersey properties have equipment that was added one tenant or one renovation at a time. A building might have a newer rooftop unit next to one that is decades old, split systems installed by different contractors, and thermostats wired in ways nobody remembers. Part of a first service call in a building like that is simply documenting what is there: where each unit is, what it serves and what condition it is in.",
+          "That inventory makes every later call faster and cheaper, and it gives ownership an honest picture of which equipment is reliable and which is living on borrowed time.",
+        ],
+      },
+      {
+        heading: "Built for Property Managers and Building Owners",
+        paragraphs: [
+          "Managing several buildings means juggling access, approvals and occupants. We work with superintendents, on-site staff and ownership so the right person is reached at the right time, and we schedule disruptive work around business hours or resident needs whenever the repair allows.",
+          "For portfolios, a single service relationship across buildings gives you consistent records and one point of contact. Maintenance agreements are priced per unit per year and quoted for your portfolio, with quarterly reporting on the equipment we look after.",
+        ],
+        bullets: [
+          "Offices and professional buildings",
+          "Retail, restaurants and mixed-use properties",
+          "Multifamily, condo and co-op buildings",
+          "Warehouses and light industrial space",
+        ],
+      },
+    ],
+    sendUs: {
+      heading: "What to Send Us With a Service Request",
+      items: [
+        "Property address and the unit, suite or zone affected",
+        "Equipment type, plus make, model and serial if available",
+        "What occupants are reporting and when it started",
+        "Recent service history or previous repairs on the unit",
+        "Roof and mechanical room access details and contacts",
+        "Who approves repairs and any purchase-order requirements",
+      ],
+    },
     faqs: [
-      { q: "Do you offer commercial service contracts?", a: "Yes — planned maintenance agreements tailored to your equipment and site, with priority response and member pricing. See our commercial maintenance page." },
-      { q: "What property types do you serve?", a: "Offices, retail, restaurants, medical, warehouses, and industrial facilities across New Jersey." },
-      { q: "Can you work after hours to avoid disrupting my business?", a: "Yes — we schedule around your operations, including nights and weekends, to keep disruption to a minimum." },
-      { q: "How fast can you respond to a breakdown?", a: "We offer 24/7 emergency dispatch and prioritize contract customers. Call (862) 423-9396." },
-      { q: "Do commercial upgrades qualify for incentives?", a: "Many do — PSE&G Direct Install can cover up to 80% of qualifying commercial HVAC costs. We handle the paperwork." },
-      { q: "Are you licensed, insured, and able to provide a COI?", a: "Yes — fully licensed and insured NJ commercial contractor, WMBE/SBE certified, and we provide certificates of insurance on request." },
+      { q: "What commercial HVAC equipment do you service?", a: "Packaged rooftop units, split and ductless systems, heat pumps, VRF/VRV systems, PTACs and the controls and thermostats that run them." },
+      { q: "Which areas of New Jersey do you cover?", a: "Buildings in Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex and Somerset counties." },
+      { q: "Do I approve the repair before work starts?", a: "Yes. The technician diagnoses the problem, explains the recommended fix and alternatives, and the person you designate approves the work before it begins." },
+      { q: "Can you schedule work around our business hours or residents?", a: "Yes. Tell us the building's hours and constraints when you call, and we plan access and any shutdowns around them whenever the repair allows." },
+      { q: "Will I get a written record of the visit?", a: "Yes. Every service call ends with a written summary of what was found, what was done and any equipment that needs attention." },
+      { q: "Do you offer service agreements for multiple buildings?", a: "Yes. Maintenance agreements are priced per unit per year, quoted by portfolio, with quarterly reporting. See our commercial maintenance page for details." },
     ],
     related: [
-      { href: "/commercial-rtu-service-nj", label: "RTU Service", sub: "Rooftop units" },
-      { href: "/commercial-hvac-maintenance-nj", label: "Maintenance Plans", sub: "PM agreements" },
-      { href: "/commercial-hvac-installation-nj", label: "Commercial Install", sub: "New systems" },
-      { href: "/direct-install", label: "Direct Install", sub: "Up to 80% covered" },
+      PM_HUB,
+      { href: "/commercial-hvac-maintenance-nj", label: "Maintenance Agreements", sub: "Planned service" },
+      { href: "/blog/commercial-rooftop-hvac-repair-request-nj", label: "RTU Repair Requests", sub: "What to include" },
+      { href: "/blog/commercial-hvac-response-sla-checklist", label: "Response Agreements", sub: "What an SLA should include" },
     ],
-    ctaHeading: "Keep Your Business Comfortable and Running",
-    ctaSub: "Commercial HVAC service and 24/7 support across New Jersey. Ask about a service agreement.",
+    ctaHeading: "Request Commercial HVAC Service",
+    ctaSub: "Call (862) 423-9396 or send a request with the address and equipment, and we'll schedule a technician.",
   },
   {
     slug: "commercial-rtu-service-nj",
@@ -426,39 +528,82 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     service: "Commercial RTU Service",
     serviceType: "Rooftop Unit (RTU) Service and Repair",
     formCaptureType: "lp_commercial_vrv",
-    h1: "RTU Down? We Service Every Rooftop Unit in NJ.",
+    serviceOnly: true,
+    h1: "Rooftop Unit (RTU) Service and Repair in New Jersey",
     heroSub:
-      "Rooftop unit service, repair, and replacement across New Jersey — economizers, compressors, motors, and controls. Keep your facility comfortable and running.",
-    metaTitle: "Commercial RTU Service & Repair NJ | Rooftop Units | Mechanical Enterprise",
+      "Diagnostics, repair and planned service for packaged rooftop units on NJ retail, office, restaurant and multifamily buildings — cooling, gas heat, economizers, fans and controls.",
+    metaTitle: "Rooftop Unit (RTU) Repair & Service NJ | Commercial",
     metaDescription:
-      "Rooftop unit (RTU) service, repair & replacement across NJ. Economizers, compressors, PM programs. Minimize downtime. Call (862) 423-9396.",
-    introHeading: "Rooftop Unit (RTU) Experts Across New Jersey",
+      "Commercial rooftop unit repair and service in NJ: compressors, gas heat, economizers, belts and controls on packaged RTUs. Call (862) 423-9396.",
+    introHeading: "Packaged Rooftop Units, Serviced by People Who Go on the Roof",
     intro:
-      "Packaged rooftop units are the workhorses of NJ commercial buildings. We repair, maintain, and replace RTUs of every tonnage and brand — with crane coordination for change-outs and preventive programs to prevent failures.",
+      "Rooftop units are out of sight until they fail, and then they affect everyone below them. A single packaged unit can carry the heating, cooling and ventilation for a store, a restaurant dining room or an office floor. Mechanical Enterprise diagnoses and repairs RTUs across northern and central New Jersey and keeps records by unit, so you can see which equipment is healthy, which needs work, and which is heading toward replacement.",
     cards: [
-      { icon: "🔧", title: "RTU Repair", desc: "Compressors, capacitors, motors, boards, and refrigerant faults fixed fast." },
-      { icon: "🏗️", title: "Change-Outs & Replacement", desc: "Full unit replacements with crane coordination and curb adapters." },
-      { icon: "🌬️", title: "Economizer Service", desc: "Economizer repair and calibration to cut energy use and pass inspections." },
-      { icon: "⚙️", title: "Belts, Bearings & Motors", desc: "Preventive replacement of wear parts before they cause downtime." },
-      { icon: "📋", title: "Rooftop PM Programs", desc: "Scheduled maintenance that catches problems early and extends unit life." },
-      { icon: "🧰", title: "All Packaged Brands", desc: "Carrier, Trane, York, Lennox, Daikin, and more — every tonnage." },
+      { icon: "❄️", title: "Cooling Failures", desc: "Compressors, condenser fans, contactors, capacitors, refrigerant leaks and dirty or damaged coils." },
+      { icon: "🔥", title: "Gas Heat Sections", desc: "Ignition, inducer motors, flame sensing, limit switches and heat exchanger inspection." },
+      { icon: "🌬️", title: "Economizers and Ventilation", desc: "Dampers, actuators and sensors that bring in outside air — a common source of comfort complaints and wasted energy." },
+      { icon: "⚙️", title: "Fans, Belts and Motors", desc: "Blower motors, belts, pulleys and bearings that wear out on high-run-time equipment." },
+      { icon: "🎛️", title: "Controls and Thermostats", desc: "Unit controllers, thermostats, schedules and safeties that shut units down or keep them from staging." },
+      { icon: "🧾", title: "Unit-by-Unit Records", desc: "Findings recorded against each RTU's make, model and serial so condition is easy to track." },
     ],
+    deepDive: [
+      {
+        heading: "Common RTU Problems We Diagnose",
+        paragraphs: [
+          "Most rooftop unit calls fall into a handful of patterns: a unit that runs but doesn't cool, a heat section that won't light, a unit that trips its safeties and shuts down, or one that runs constantly while the space stays uncomfortable. Each has several possible causes, and the repair that lasts is the one aimed at the actual cause.",
+          "Our technicians check the electrical side, the refrigerant circuit, the gas heat section, airflow and the economizer, then explain what they found. If one failure was caused by another — a seized condenser fan that overheated a compressor, for example — we tell you, so the same failure doesn't repeat.",
+        ],
+        bullets: [
+          "Unit running but blowing warm air",
+          "No heat or repeated ignition lockouts",
+          "Short cycling or tripping on safeties",
+          "Noise, vibration or belt squeal",
+          "Water leaking through the roof deck or ceiling",
+        ],
+      },
+      {
+        heading: "Roof Access, Safety and Scheduling",
+        paragraphs: [
+          "RTU work depends on getting to the roof safely. When you request service, tell us how the roof is reached — hatch, stairs or ladder — and whether keys, escorts or building notices are needed. That detail saves a wasted trip and gets the technician to the unit faster.",
+          "For restaurants and retail we plan work around opening hours whenever the repair allows. For office and multifamily buildings we coordinate with the superintendent or property manager so occupants know if heating or cooling will be off during the repair.",
+          "If your buildings have several rooftop units, we label findings by unit location as well as nameplate data, so the next technician — or your own maintenance staff — can find the right unit on a crowded roof without guessing.",
+        ],
+      },
+      {
+        heading: "When an RTU Should Be Replaced",
+        paragraphs: [
+          "Every rooftop unit reaches a point where repairs stop making sense: a failed compressor on an aging unit, a cracked heat exchanger, coils corroded past cleaning, or a unit that is undersized for how the space is used today. We give you a straight recommendation and, where it applies, a replacement scope that covers curb fit, crane or rigging needs, electrical requirements and scheduling.",
+          "New rooftop installations can be paired with optional 10-year parts and labor coverage, purchased separately, and with a maintenance agreement so the new equipment is looked after from day one.",
+        ],
+      },
+    ],
+    sendUs: {
+      heading: "What to Send Us About Your Rooftop Units",
+      items: [
+        "Property address and which RTU or area is affected",
+        "Make, model and serial from the unit nameplate, if available",
+        "Symptoms and when they started",
+        "How the roof is accessed and who provides keys or escorts",
+        "Recent repairs or service reports for the unit",
+        "Business hours or occupancy constraints for the space below",
+      ],
+    },
     faqs: [
-      { q: "How much does RTU replacement cost in NJ?", a: "It varies by tonnage, crane access, and curb adaptation. We provide a detailed quote after a site assessment, and many upgrades qualify for commercial incentives." },
-      { q: "Do you handle the crane and rigging for change-outs?", a: "Yes — we coordinate crane, rigging, curb adapters, and permits for a turnkey replacement." },
-      { q: "Can you service all RTU brands?", a: "We service Carrier, Trane, York, Lennox, Daikin, and all major packaged rooftop brands." },
-      { q: "What's included in a rooftop PM program?", a: "Scheduled inspections, filter and belt changes, coil cleaning, economizer checks, and refrigerant/electrical testing — tailored to your unit count." },
-      { q: "How quickly can you respond to a down RTU?", a: "We offer 24/7 emergency dispatch and prioritize contract customers. Call (862) 423-9396." },
-      { q: "Do RTU upgrades qualify for rebates?", a: "Often — PSE&G Direct Install can cover up to 80% of qualifying commercial HVAC. We handle the paperwork." },
+      { q: "What brands of rooftop units do you service?", a: "We service packaged rooftop units from the major commercial manufacturers. Send the make and model from the nameplate when you request service so the technician can prepare." },
+      { q: "Do you repair both the cooling and gas heat sections of an RTU?", a: "Yes. We diagnose and repair the refrigeration circuit, condenser and evaporator sections, the gas heat section, economizers, fans and unit controls." },
+      { q: "What do you need to know about roof access?", a: "How the roof is reached, any keys, escorts or ladder requirements, and who on site can let the technician in. That avoids delays when the technician arrives." },
+      { q: "How do I know whether to repair or replace an old RTU?", a: "We look at the age and condition of the unit, the cost of the failed component and the repair history, then give you a recommendation and a replacement scope if it makes sense." },
+      { q: "Can you service every RTU in our portfolio?", a: "Yes. A maintenance agreement priced per unit per year, quoted by portfolio, covers scheduled service with quarterly reporting across your buildings." },
+      { q: "Do you handle rooftop unit replacements, including crane lifts?", a: "Yes. A replacement scope covers curb fit, rigging or crane needs, electrical work, permits and scheduling around the building's occupants." },
     ],
     related: [
-      { href: "/commercial-hvac-service-nj", label: "Commercial HVAC", sub: "Full-service repair" },
-      { href: "/commercial-hvac-maintenance-nj", label: "Maintenance Plans", sub: "PM agreements" },
-      { href: "/warehouse-hvac-nj", label: "Warehouse HVAC", sub: "Large facilities" },
-      { href: "/office-building-hvac-nj", label: "Office HVAC", sub: "Multi-zone comfort" },
+      PM_HUB,
+      { href: "/commercial-hvac-maintenance-nj", label: "RTU Maintenance Plans", sub: "Scheduled service" },
+      { href: "/blog/commercial-rooftop-hvac-repair-request-nj", label: "RTU Repair Requests", sub: "What to include" },
+      { href: "/blog/rooftop-hvac-replacement-quote-checklist-nj", label: "RTU Replacement Quotes", sub: "Owner checklist" },
     ],
-    ctaHeading: "Get Your Rooftop Unit Back Online",
-    ctaSub: "RTU service, repair, and replacement across New Jersey with 24/7 emergency response.",
+    ctaHeading: "Get a Rooftop Unit Looked At",
+    ctaSub: "Call (862) 423-9396 or send the address, unit details and roof access information to request RTU service.",
   },
   {
     slug: "commercial-hvac-maintenance-nj",
@@ -466,39 +611,82 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     service: "Commercial HVAC Maintenance",
     serviceType: "Commercial HVAC Preventive Maintenance",
     formCaptureType: "lp_maintenance",
-    h1: "Fewer Breakdowns. Predictable Budgets. One Maintenance Partner.",
+    serviceOnly: true,
+    h1: "Commercial HVAC Maintenance Agreements in New Jersey",
     heroSub:
-      "Commercial HVAC preventive maintenance agreements across New Jersey. Scheduled tune-ups that reduce emergency costs, extend equipment life, and keep your facility comfortable.",
-    metaTitle: "Commercial HVAC Maintenance NJ | PM Agreements | Mechanical Enterprise",
+      "Planned maintenance for rooftop units, split systems, mini-splits, PTACs and VRF across your NJ buildings — priced per unit per year, quoted by portfolio, with quarterly reporting on every unit we maintain.",
+    metaTitle: "Commercial HVAC Maintenance Agreements NJ | Portfolios",
     metaDescription:
-      "Commercial HVAC preventive maintenance plans across NJ. Fewer breakdowns, longer equipment life, priority service. Call (862) 423-9396.",
-    introHeading: "Preventive Maintenance That Pays for Itself",
+      "Preventive HVAC maintenance agreements for NJ commercial and multifamily buildings, priced per unit per year with quarterly reports. (862) 423-9396.",
+    introHeading: "Planned Maintenance Instead of Surprise Breakdowns",
     intro:
-      "Most commercial HVAC failures are preventable. Our planned maintenance agreements catch small problems before they become expensive emergencies, lower energy costs, and give you predictable, budget-friendly service.",
+      "Most HVAC emergencies start as small problems nobody was looking for: a belt fraying, a drain line slowly clogging, a coil packed with debris, a capacitor drifting out of range. A maintenance agreement puts a technician in front of every unit on a schedule, so those problems are caught on a planned visit instead of during a heat wave or the first cold night. For property managers, it also produces something just as valuable — a written record of what every unit in the portfolio looks like.",
     cards: [
-      { icon: "📋", title: "Scheduled Tune-Ups", desc: "Regular multi-point inspections tuned to your equipment and season." },
-      { icon: "🧹", title: "Filter & Coil Programs", desc: "Filter, belt, and coil-cleaning schedules that protect efficiency." },
-      { icon: "⚡", title: "Electrical & Refrigerant Checks", desc: "Catch failing capacitors, contactors, and refrigerant issues early." },
-      { icon: "🚨", title: "Priority Emergency Response", desc: "Members get front-of-line dispatch and preferred pricing." },
-      { icon: "💰", title: "Lower Energy Bills", desc: "Well-maintained systems run efficiently and cost less to operate." },
-      { icon: "🏢", title: "Multi-Site Programs", desc: "One partner and one report across all your NJ locations." },
+      { icon: "🏢", title: "Rooftop Units", desc: "Filters, belts, coils, drains, electrical connections, gas heat and economizer checks on packaged equipment." },
+      { icon: "🧊", title: "Split Systems and Mini-Splits", desc: "Indoor and outdoor sections cleaned and inspected, refrigerant circuit and controls checked." },
+      { icon: "🛏️", title: "PTACs", desc: "Filter and coil cleaning, drain checks and operating tests on apartment and condo units." },
+      { icon: "🌀", title: "VRF / VRV", desc: "Scheduled checks on variable-refrigerant systems and the indoor units they serve." },
+      { icon: "📊", title: "Quarterly Reporting", desc: "Condition reports by unit and by building so ownership can see what is healthy and what needs budget." },
+      { icon: "🗓️", title: "Seasonal Scheduling", desc: "Visits timed ahead of cooling and heating seasons, coordinated with on-site staff." },
     ],
+    deepDive: [
+      {
+        heading: "How Portfolio Pricing Works",
+        paragraphs: [
+          "Maintenance agreements are priced per unit per year and quoted for your portfolio as a whole. That keeps the cost predictable for budgeting, and it scales cleanly as buildings or units are added. Unit types we cover include PTACs, mini-splits, rooftop units and split systems.",
+          "To prepare a quote we need an equipment list — even a rough one — with building addresses, unit types and approximate counts. If you don't have a current list, the first round of visits can build one for you, with make, model and serial recorded against each unit.",
+        ],
+      },
+      {
+        heading: "What a Maintenance Visit Covers",
+        paragraphs: [
+          "Each visit follows a checklist for the type of equipment: cleaning and inspecting coils, changing or checking filters, clearing condensate drains, checking belts, motors and electrical connections, testing safeties and controls, and checking heating and cooling operation. Anything that needs repair is written up with a recommendation rather than left for the next breakdown.",
+          "Visits are timed ahead of the seasons that stress equipment most — cooling checks before summer, heating checks before the first cold weather — and coordinated with superintendents or on-site staff so access to roofs, mechanical rooms and occupied apartments is arranged in advance. Small fixes found during a visit, like a worn belt or a blocked drain, can often be handled on the spot with your approval.",
+        ],
+        bullets: [
+          "Coil, filter and drain service",
+          "Belt, motor and electrical connection checks",
+          "Safety and control testing",
+          "Heating and cooling operating checks",
+          "Written findings and repair recommendations by unit",
+        ],
+      },
+      {
+        heading: "Quarterly Reports for Owners and Managers",
+        paragraphs: [
+          "The quarterly report is where maintenance pays off for a property manager. It shows each building, each unit, what was done and what condition the equipment is in, so you can answer ownership's questions, plan next year's repairs and replacements, and spot the units that keep generating service calls.",
+          "Reports can go to the property manager, the owner's asset manager or both, and the same unit identifiers are used every quarter, so trends are easy to follow. If a building changes hands or management, the history stays with the equipment instead of leaving with a person.",
+          "When a unit is approaching the end of its useful life, the report says so early enough to plan a replacement on your schedule. New installations can be paired with optional 10-year parts and labor coverage, purchased separately, and eligible existing systems may qualify for that coverage after an inspection.",
+        ],
+      },
+    ],
+    sendUs: {
+      heading: "What to Send Us for a Maintenance Quote",
+      items: [
+        "Building addresses in the portfolio",
+        "Equipment list or approximate counts by type (RTU, split, mini-split, PTAC, VRF)",
+        "Any recent service reports or known problem units",
+        "Preferred visit timing and occupancy constraints",
+        "On-site contacts for access at each building",
+        "Who receives the quarterly reports",
+      ],
+    },
     faqs: [
-      { q: "What's included in a commercial maintenance agreement?", a: "Scheduled visits, multi-point inspections, filter/belt changes, coil cleaning, electrical and refrigerant checks, and priority emergency response — customized to your equipment." },
-      { q: "How often should commercial HVAC be serviced?", a: "Most systems benefit from two to four visits per year depending on equipment, runtime, and property type. We'll recommend the right cadence." },
-      { q: "Does a maintenance plan really save money?", a: "Yes — preventive maintenance reduces costly emergency repairs, extends equipment life, and cuts energy use, typically paying for itself." },
-      { q: "Do members get priority service?", a: "Absolutely — agreement customers get front-of-line dispatch and preferred pricing on any additional repairs." },
-      { q: "Can you cover multiple locations?", a: "Yes — we run multi-site programs with consolidated scheduling and reporting across all your NJ properties." },
-      { q: "Are you licensed, insured, and able to provide a COI?", a: "Fully licensed and insured NJ commercial contractor, WMBE/SBE certified, with COIs on request." },
+      { q: "How are commercial HVAC maintenance agreements priced?", a: "Per unit per year, quoted for your portfolio. Send us your building list and equipment counts and we'll prepare a quote." },
+      { q: "What equipment can be covered under an agreement?", a: "PTACs, mini-splits, rooftop units and split systems, plus VRF systems on request, across commercial and multifamily buildings." },
+      { q: "What do the quarterly reports include?", a: "Each building and unit serviced, the work performed, the equipment's condition and any recommended repairs or replacements." },
+      { q: "We don't have an equipment list. Can you still quote?", a: "Yes. Give us the addresses and rough counts, and the first round of visits records make, model and serial for each unit so you end up with a complete list." },
+      { q: "Which New Jersey counties do you cover for maintenance?", a: "Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex and Somerset counties." },
+      { q: "Does maintenance include the optional 10-year coverage?", a: "No — coverage is a separate, optional purchase. It is available on new installations, and eligible existing systems may qualify after an inspection." },
     ],
     related: [
-      { href: "/commercial-hvac-service-nj", label: "Commercial HVAC", sub: "Service & repair" },
-      { href: "/commercial-rtu-service-nj", label: "RTU Service", sub: "Rooftop units" },
-      { href: "/office-building-hvac-nj", label: "Office HVAC", sub: "Tenant comfort" },
-      { href: "/direct-install", label: "Direct Install", sub: "Up to 80% covered" },
+      PM_HUB,
+      { href: "/commercial/hvac-service-contracts", label: "Portfolio Service Contracts", sub: "Multi-building agreements" },
+      { href: "/blog/fall-hvac-maintenance-nj-property-managers", label: "Fall Maintenance Checklist", sub: "For property managers" },
+      { href: "/blog/closed-loop-pump-rotation-checklist-nj", label: "Pump Rotation Checklist", sub: "For building engineers" },
     ],
-    ctaHeading: "Protect Your Equipment and Your Budget",
-    ctaSub: "Ask about a commercial HVAC maintenance agreement for your New Jersey facility.",
+    ctaHeading: "Get a Maintenance Quote for Your Buildings",
+    ctaSub: "Send your building list and equipment counts, or call (862) 423-9396, and we'll prepare a per-unit annual quote.",
   },
   {
     slug: "restaurant-hvac-nj",
