@@ -21,6 +21,9 @@ import { saveVerifiedProspect } from "./saveVerifiedProspect";
 import { CRM_MAILBOX } from "./gmailCrm";
 import { runCycle, type CycleStore, type QueueRow } from "./prospectCycle";
 import { easternParts } from "../../shared/prospectCadence";
+import { THIRTY_DAY_STEPS, cadenceDueAt } from "./crm30DayRules";
+import { cancelOpen30DayTasks, insert30DayTask } from "./crm30DayTasks";
+import { resolveCadenceAssignee } from "./crm30DayAssignee";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
 const affected = (r: unknown) => Number((r as any)[0]?.affectedRows ?? 0);
@@ -292,6 +295,26 @@ export function createCycleStore(db: Db): CycleStore {
         console.warn("[prospect-workflow] CRM save failed", prospectWorkflowErrorKind(e));
         return false;
       }
+    },
+    async scheduleHumanTasks(row, sent, introAt) {
+      if (!row.externalContactId) throw new Error("CRM contact missing");
+      const { user } = await resolveCadenceAssignee();
+      let created = 0;
+      for (const step of THIRTY_DAY_STEPS) {
+        if (step.kind !== "human") continue; // email steps are sent automatically by this workflow
+        const ok = await insert30DayTask({
+          contactId: row.externalContactId, email: row.email.toLowerCase(),
+          introMessageId: sent.id, introThreadId: sent.threadId, introAt,
+          touchNumber: step.touch, kind: "human", dueAt: cadenceDueAt(introAt, step.touch),
+          assignedToUserId: user?.id ?? null, status: "open",
+          note: `Touch ${step.touch}/10, day ${step.day}: ${step.label} — ${row.name}, ${row.title} at ${row.company}. Introduction emailed automatically from sales@. Log the call attempt and outcome; a reply or opt-out cancels the remaining calls.`,
+        });
+        if (ok) created++;
+      }
+      return created;
+    },
+    async cancelHumanTasks(email, reason) {
+      await cancelOpen30DayTasks(email.toLowerCase(), reason.slice(0, 500));
     },
     async notifyOwner(row, title) {
       await db.insert(notifications).values({

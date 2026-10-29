@@ -25,8 +25,8 @@ function intro(over: Partial<QueueRow> = {}): QueueRow {
 
 function makeStore(rows: QueueRow[], opts: { enabled?: boolean; claimed?: Set<string>; suppressed?: string[]; holds?: Record<string, HoldReason>; crmReadback?: boolean; research?: () => QueueRow[] } = {}) {
   const claimed = opts.claimed ?? new Set<string>();
-  const log: { suppressions: string[]; notifications: string[]; summaries: string[]; logged: string[]; researchCalls: number } =
-    { suppressions: [], notifications: [], summaries: [], logged: [], researchCalls: 0 };
+  const log: { suppressions: string[]; notifications: string[]; summaries: string[]; logged: string[]; researchCalls: number; tasks: string[]; cancelled: string[] } =
+    { suppressions: [], notifications: [], summaries: [], logged: [], researchCalls: 0, tasks: [], cancelled: [] };
   const store: CycleStore = {
     claimHour: async hour => (claimed.has(hour) ? false : (claimed.add(hour), true)),
     config: async () => ({ enabled: opts.enabled ?? true, ownerId: 7 }),
@@ -46,6 +46,8 @@ function makeStore(rows: QueueRow[], opts: { enabled?: boolean; claimed?: Set<st
     ensureCrmRecords: async row => ({ contactId: row.externalContactId ?? 1, leadId: row.leadId ?? 2 }),
     logSent: async (row, sent) => { log.logged.push(sent.id); return opts.crmReadback ?? true; },
     notifyOwner: async (_r, title) => { log.notifications.push(title); },
+    scheduleHumanTasks: async row => { log.tasks.push(row.email); return 5; },
+    cancelHumanTasks: async email => { log.cancelled.push(email); },
     saveRunSummary: async (_h, _n, summary) => { log.summaries.push(summary); },
   };
   return { store, log, rows };
@@ -388,5 +390,50 @@ describe("CRM unavailable", () => {
     expect(r.skipped).toBe("crm_unavailable");
     expect(r.crmError).toMatch(/doesn't exist/);
     expect(sends).toHaveLength(0);
+  });
+});
+
+describe("human call tasks", () => {
+  it("each new introduction gets its call tasks and an owner notification", async () => {
+    const row = intro();
+    const { store, log } = makeStore([row]);
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(1);
+    expect(log.tasks).toEqual([row.email]);
+    expect(r.humanTasks).toBe(5);
+    expect(log.notifications).toContain("New prospect emailed — call tasks scheduled");
+    expect(reports(sends)[0].body).toMatch(/Human call tasks created: 5/);
+  });
+  it("follow-up emails do not create duplicate call tasks", async () => {
+    const { store, log } = makeStore([followUp()]);
+    const { mb } = makeMailbox();
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(log.tasks).toHaveLength(0);
+  });
+  it("a reply cancels the remaining call tasks", async () => {
+    const row = followUp();
+    const { store, log } = makeStore([row]);
+    const { mb } = makeMailbox({ thread: { replied: true } });
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(log.cancelled).toEqual([row.email]);
+  });
+  it("an already-emailed duplicate keeps any existing tasks", async () => {
+    const row = intro();
+    const { store, log } = makeStore([row]);
+    const { mb } = makeMailbox({ hasSent: vi.fn(async () => true) });
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(row.state).toBe("duplicate");
+    expect(log.cancelled).toHaveLength(0);
+  });
+  it("a task failure is reported but does not undo the sent introduction", async () => {
+    const row = intro();
+    const { store } = makeStore([row]);
+    store.scheduleHumanTasks = async () => { throw new Error("CRM contact missing"); };
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(1);
+    expect(row.state).toBe("waiting");
+    expect(r.held.some(h => /call tasks could not be created/.test(h.reason))).toBe(true);
   });
 });

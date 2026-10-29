@@ -56,6 +56,10 @@ export interface CycleStore {
   /** Logs the outbound communication and reads it back. Returns false on readback failure. */
   logSent(row: QueueRow, sent: { id: string; threadId: string }, subject: string, body: string, kind: "intro" | "follow_up", now: Date): Promise<boolean>;
   notifyOwner(row: QueueRow, title: string): Promise<void>;
+  /** Human call tasks (30-day cadence call steps) for a prospect just introduced. Returns how many were created. */
+  scheduleHumanTasks(row: QueueRow, sent: { id: string; threadId: string }, introAt: Date): Promise<number>;
+  /** Cancel open human tasks when a prospect replies, opts out, bounces or becomes human-owned. */
+  cancelHumanTasks(email: string, reason: string): Promise<void>;
   saveRunSummary(hour: string, sentCount: number, summary: string, now: Date): Promise<void>;
 }
 
@@ -76,6 +80,7 @@ export type CycleResult = {
   stopped: HeldEntry[];
   pending: number;
   researched: number;
+  humanTasks: number;
   researchError?: string;
   overdueBacklog: number;
   report?: { subject: string; status: "sent" | "already_sent" | "not_sent"; gmailId?: string; readback?: boolean; reason?: string };
@@ -109,7 +114,7 @@ export async function runCycle(
   now: Date,
 ): Promise<CycleResult> {
   const hour = cycleHour(now);
-  const result: CycleResult = { hour, crm: "ok", gmail: "not_checked", sent: [], held: [], stopped: [], pending: 0, researched: 0, overdueBacklog: 0 };
+  const result: CycleResult = { hour, crm: "ok", gmail: "not_checked", sent: [], held: [], stopped: [], pending: 0, researched: 0, humanTasks: 0, overdueBacklog: 0 };
   if (!hour) return { ...result, skipped: "outside_weekday_9_17_ET" };
 
   let config: Awaited<ReturnType<CycleStore["config"]>>;
@@ -174,6 +179,8 @@ export async function runCycle(
       const stop = async (row: QueueRow, state: string, reason: string, notify?: string) => {
         result.stopped.push({ email: row.email, company: row.company, reason });
         await store.update(row.id, { state, nextTouchAt: null, lastError: reason });
+        // A reply, opt-out, bounce or human-owned relationship ends the call cadence too.
+        if (state !== "duplicate") await store.cancelHumanTasks(row.email, reason).catch(() => undefined);
         if (notify) await store.notifyOwner(row, notify);
       };
       /** Shared pre-Gmail gates. Returns false when the row was held/stopped. */
@@ -289,6 +296,13 @@ export async function runCycle(
           });
           const crmSaved = await store.logSent(ready, sent, INTRO_SUBJECT, row.emailBody, "intro", now);
           result.sent.push({ kind: "intro", to: row.email, company: row.company, subject: INTRO_SUBJECT, gmailId: sent.id, threadId: sent.threadId, crmSaved });
+          // Human follow-up: call tasks on cadence days 2, 7, 14, 22 and 30, assigned in the CRM.
+          try {
+            result.humanTasks += await store.scheduleHumanTasks(ready, sent, now);
+            await store.notifyOwner(ready, "New prospect emailed — call tasks scheduled");
+          } catch (e) {
+            result.held.push({ email: row.email, company: row.company, reason: `introduced, but call tasks could not be created: ${(e as Error).message.slice(0, 160)}` });
+          }
         }
         result.pending = Math.max(0, followUpsRemaining);
       } else {
@@ -342,7 +356,8 @@ export function renderReport(r: CycleResult, subject: string): string {
     ...r.sent.map(line),
     "", `Held (${r.held.length}):`, ...r.held.map(hl),
     "", `Stopped / suppressed / replied / bounced (${r.stopped.length}):`, ...r.stopped.map(hl),
-    "", `New prospects researched into queue: ${r.researched}${r.researchError ? ` — research FAILED: ${r.researchError}` : ""}`,
+    "", `Human call tasks created: ${r.humanTasks}`,
+    `New prospects researched into queue: ${r.researched}${r.researchError ? ` — research FAILED: ${r.researchError}` : ""}`,
     `CRM readback failures: ${r.sent.filter(s => !s.crmSaved).length}`,
     "Monthly unique qualified HVAC leads toward 80: UNKNOWN (no verified qualification attribution in this job)",
     "Paid-ad spend: UNKNOWN (not verifiable from this job)",
