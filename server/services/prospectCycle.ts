@@ -20,7 +20,7 @@ import {
   MAX_CANDIDATES_PER_PHASE, MAX_INTRO_CANDIDATES, introsPerHour, cycleHour, easternHourStartEpochSec, hourlyCap,
   nextFollowUpDue, normalizeCompany, remainingAllowance, replySubject, reportSubject, sendingHour,
 } from "../../shared/prospectCadence";
-import { isExcludedProspect } from "./outreachProspectRules";
+import { isExcludedProspect, isPublicBidEntity } from "./outreachProspectRules";
 import { GmailIncompleteError, GmailStopError, type ProspectMailbox, type ThreadState } from "./prospectGmail";
 import { CRM_MAILBOX } from "./gmailCrm";
 
@@ -63,6 +63,8 @@ export interface CycleStore {
   scheduleHumanTasks(row: QueueRow, sent: { id: string; threadId: string }, introAt: Date): Promise<number>;
   /** Cancel open human tasks when a prospect replies, opts out, bounces or becomes human-owned. */
   cancelHumanTasks(email: string, reason: string): Promise<void>;
+  /** Suppress queued/active prospects that are public bodies or schools and cancel their call tasks. */
+  sweepPublicEntities(): Promise<number>;
   saveRunSummary(hour: string, sentCount: number, summary: string, now: Date): Promise<void>;
 }
 
@@ -84,6 +86,7 @@ export type CycleResult = {
   pending: number;
   researched: number;
   humanTasks: number;
+  publicExcluded?: number;
   introTarget?: number;
   introsSent?: number;
   topUpSearched?: boolean;
@@ -130,6 +133,8 @@ export async function runCycle(
   if (!config.enabled || !config.ownerId) return { ...result, skipped: "disabled_or_owner_missing" };
   // One cycle per Eastern clock hour across all processes and manual "Run now" clicks.
   if (!(await store.claimHour(hour, now))) return { ...result, skipped: "hour_already_run" };
+  // Stop everything already started for public bodies/schools: no follow-ups, call tasks cancelled.
+  try { result.publicExcluded = await store.sweepPublicEntities(); } catch { result.publicExcluded = 0; }
 
   const sendAllowed = Boolean(sendingHour(now));
   result.mode = sendAllowed ? "send" : "report_only";
@@ -191,6 +196,10 @@ export async function runCycle(
       };
       /** Shared pre-Gmail gates. Returns false when the row was held/stopped. */
       const gates = async (row: QueueRow, phase: "follow_up" | "intro") => {
+        if (isPublicBidEntity(row)) {
+          await stop(row, "suppressed", "Public body or school (public bidding) — excluded from outreach.");
+          return false;
+        }
         if (isExcludedProspect(row) || await suppressed(row.email)) {
           await stop(row, "suppressed", "Excluded, opted out or bounced — permanently suppressed.");
           return false;
@@ -386,6 +395,7 @@ export function renderReport(r: CycleResult, subject: string): string {
     "", `Held (${r.held.length}):`, ...r.held.map(hl),
     "", `Stopped / suppressed / replied / bounced (${r.stopped.length}):`, ...r.stopped.map(hl),
     "", `Human call tasks created: ${r.humanTasks}`,
+    ...(r.publicExcluded ? [`Public bodies/schools removed from outreach (public bidding): ${r.publicExcluded}`] : []),
     `New prospects researched into queue: ${r.researched}${r.researchError ? ` — research FAILED: ${r.researchError}` : ""}`,
     `CRM readback failures: ${r.sent.filter(s => !s.crmSaved).length}`,
     "Monthly unique qualified HVAC leads toward 80: UNKNOWN (no verified qualification attribution in this job)",
