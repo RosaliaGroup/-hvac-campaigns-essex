@@ -66,13 +66,20 @@ export async function configureProspecting(
     .onDuplicateKeyUpdate({ set: { enabled, ownerId } });
 }
 /** One focused North Jersey segment per hour, rotating, so each search is specific enough to find published emails. */
+/**
+ * Eight segments, one per sending hour, weighted toward sources that PUBLISH staff emails.
+ * Oct 29 results (18 searches): public facilities directories and commercial owners found
+ * people every time; property-management team pages and multifamily owners returned none.
+ */
 export const RESEARCH_SEGMENTS = [
-  "property managers and portfolio managers at property management companies (company 'Our Team' / staff pages)",
-  "condominium association and HOA community managers at community association management firms",
-  "facilities directors, directors of buildings and grounds, and plant/operations managers at school districts, colleges, hospitals and municipalities (public staff directories)",
-  "owners, principals and asset managers of multifamily apartment portfolios",
+  "facilities directors, buildings and grounds supervisors and business administrators at public school districts (district staff directories)",
+  "facilities, physical plant and operations directors at colleges, universities and county colleges (staff directories)",
+  "public works directors, buildings and grounds managers and facilities managers at municipalities and counties (town and county staff directories)",
   "owners, principals and building/engineering managers of commercial office, retail and industrial properties",
-  "facilities, maintenance and operations directors at private schools, houses of worship, nonprofits and senior-living communities (staff pages)",
+  "executive directors, maintenance directors and modernization/capital-projects managers at public housing authorities",
+  "facilities, engineering and plant operations directors at hospitals, nursing homes and senior-living communities",
+  "facilities, maintenance and operations directors at private schools, houses of worship and nonprofits (staff pages)",
+  "property managers and condominium/HOA community managers at property and community-association management firms (team pages)",
 ] as const;
 /** Up to 4 searches per hour, each a different segment and county, until enough prospects are queued. */
 export const RESEARCH_ATTEMPTS_PER_HOUR = 4;

@@ -63,3 +63,13 @@ describe("county rotation", () => {
     expect(introsPerHour({ PROSPECT_INTROS_PER_HOUR: "6" })).toBe(6);
   });
 });
+
+describe("segment mix", () => {
+  it("covers all eight segments across a sending day and drops multifamily-owner searches", () => {
+    expect(RESEARCH_SEGMENTS).toHaveLength(8);
+    expect(RESEARCH_SEGMENTS.join(" ")).not.toMatch(/multifamily/i);
+    const seen = new Set<string>();
+    for (let h = 13; h <= 20; h++) seen.add(researchSegment(new Date(`2026-10-30T${h}:05:00Z`)));
+    expect(seen.size).toBe(8);
+  });
+});
