@@ -17,7 +17,7 @@
  * Pure orchestration: every side effect goes through `CycleStore` / `ProspectMailbox`.
  */
 import {
-  MAX_CANDIDATES_PER_PHASE, cycleHour, easternHourStartEpochSec, hourlyCap,
+  MAX_CANDIDATES_PER_PHASE, MAX_INTRO_CANDIDATES, introsPerHour, cycleHour, easternHourStartEpochSec, hourlyCap,
   nextFollowUpDue, normalizeCompany, remainingAllowance, replySubject, reportSubject, sendingHour,
 } from "../../shared/prospectCadence";
 import { isExcludedProspect } from "./outreachProspectRules";
@@ -26,8 +26,8 @@ import { CRM_MAILBOX } from "./gmailCrm";
 
 export const INTRO_SUBJECT = "HVAC service partnership — Mechanical Enterprise";
 const DAY = 86_400_000;
-/** Keep this many researched prospects waiting for introductions. */
-export const QUEUE_TARGET = 10;
+/** Keep this many researched prospects waiting: about half are stopped by safety checks, so 20 feeds 10 introductions. */
+export const QUEUE_TARGET = 20;
 
 export type QueueRow = {
   id: number; email: string; name: string; company: string; title: string;
@@ -45,7 +45,8 @@ export interface CycleStore {
   /** Cadence-active rows (waiting/nurture, 1 ≤ touchCount ≤ 4), prefiltered nextTouchAt ≤ now. */
   followUpPool(now: Date): Promise<QueueRow[]>;
   queuedIntros(limit: number): Promise<QueueRow[]>;
-  research(ownerId: number): Promise<number>;
+  /** Research until about `needed` new prospects are queued (bounded searches). Returns how many were added. */
+  research(ownerId: number, needed: number): Promise<number>;
   isSuppressed(email: string): Promise<boolean>;
   recordSuppression(email: string, reason: "hard_bounce" | "opt_out"): Promise<void>;
   relationshipHold(row: QueueRow, phase: "follow_up" | "intro"): Promise<HoldReason>;
@@ -138,7 +139,7 @@ export async function runCycle(
   if (sendAllowed) {
     try {
       const queued = await store.queuedIntros(QUEUE_TARGET);
-      if (queued.length < QUEUE_TARGET) result.researched = await store.research(config.ownerId);
+      if (queued.length < QUEUE_TARGET) result.researched = await store.research(config.ownerId, QUEUE_TARGET - queued.length);
     } catch (e) {
       result.researchError = (e as Error).message.slice(0, 300);
     }
@@ -257,9 +258,11 @@ export async function runCycle(
 
       // ---- Phase B: new introductions, sent only when the follow-up cohort has nothing more ready ----
       if (remaining > 0 && followUpsRemaining <= 0) {
-        const intros = await store.queuedIntros(MAX_CANDIDATES_PER_PHASE);
+        const intros = await store.queuedIntros(MAX_INTRO_CANDIDATES);
+        const introTarget = introsPerHour();
+        let introsSent = 0;
         for (const row of intros) {
-          if (remaining <= 0) break;
+          if (remaining <= 0 || introsSent >= introTarget) break;
           if (!(await gates(row, "intro"))) continue;
           const existingLead = await store.existingLeadFor(row.email);
           if (existingLead && existingLead !== row.leadId) {
@@ -289,6 +292,7 @@ export async function runCycle(
             throw e;
           }
           remaining--;
+          introsSent++;
           companiesThisRun.add(normalizeCompany(row.company));
           await store.update(row.id, {
             state: "waiting", touchCount: 1, threadId: sent.threadId, emailMessageId: sent.id,

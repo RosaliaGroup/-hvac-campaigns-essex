@@ -25,14 +25,14 @@ function intro(over: Partial<QueueRow> = {}): QueueRow {
 
 function makeStore(rows: QueueRow[], opts: { enabled?: boolean; claimed?: Set<string>; suppressed?: string[]; holds?: Record<string, HoldReason>; crmReadback?: boolean; research?: () => QueueRow[] } = {}) {
   const claimed = opts.claimed ?? new Set<string>();
-  const log: { suppressions: string[]; notifications: string[]; summaries: string[]; logged: string[]; researchCalls: number; tasks: string[]; cancelled: string[] } =
+  const log: { suppressions: string[]; notifications: string[]; summaries: string[]; logged: string[]; researchCalls: number; tasks: string[]; cancelled: string[]; needed?: number } =
     { suppressions: [], notifications: [], summaries: [], logged: [], researchCalls: 0, tasks: [], cancelled: [] };
   const store: CycleStore = {
     claimHour: async hour => (claimed.has(hour) ? false : (claimed.add(hour), true)),
     config: async () => ({ enabled: opts.enabled ?? true, ownerId: 7 }),
     followUpPool: async () => rows.filter(r => ["waiting", "nurture"].includes(r.state) && r.touchCount >= 1 && r.touchCount <= 4 && r.followUpAt),
     queuedIntros: async limit => rows.filter(r => r.state === "queued").slice(0, limit),
-    research: async () => { log.researchCalls++; const added = opts.research?.() ?? []; rows.push(...added); return added.length; },
+    research: async (_owner: number, needed: number) => { log.researchCalls++; log.needed = needed; const added = opts.research?.() ?? []; rows.push(...added); return added.length; },
     isSuppressed: async e => (opts.suppressed ?? []).includes(e),
     recordSuppression: async e => { log.suppressions.push(e); },
     relationshipHold: async row => opts.holds?.[row.email] ?? null,
@@ -351,8 +351,8 @@ describe("prospect search runs every sending hour", () => {
     expect(r.researched).toBe(1);
     expect(outreach(sends).every((s: any) => s.threadId)).toBe(true); // follow-ups only while backlog remains
   });
-  it("does not search when 10 prospects are already waiting", async () => {
-    const rows = Array.from({ length: 10 }, () => intro());
+  it("does not search when 20 prospects are already waiting", async () => {
+    const rows = Array.from({ length: 20 }, () => intro());
     const { store, log } = makeStore(rows);
     const { mb } = makeMailbox();
     await runCycle(store, async () => mb, WED_11AM);
@@ -435,5 +435,38 @@ describe("human call tasks", () => {
     expect(outreach(sends)).toHaveLength(1);
     expect(row.state).toBe("waiting");
     expect(r.held.some(h => /call tasks could not be created/.test(h.reason))).toBe(true);
+  });
+});
+
+describe("10 introductions per hour", () => {
+  it("sends 10 introductions from a full queue, then stops", async () => {
+    const rows = Array.from({ length: 25 }, () => intro());
+    const { store } = makeStore(rows);
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(10);
+    expect(r.sent.every(s => s.kind === "intro")).toBe(true);
+  });
+  it("keeps going past stopped candidates to reach 10", async () => {
+    const rows = Array.from({ length: 22 }, () => intro());
+    const { store } = makeStore(rows);
+    let n = 0;
+    const { mb, sends } = makeMailbox({ hasSent: vi.fn(async () => n++ % 2 === 0) }); // every other one already emailed
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(10);
+  });
+  it("never exceeds the shared hourly cap (manual + homeowner sends count)", async () => {
+    const rows = Array.from({ length: 25 }, () => intro());
+    const { store } = makeStore(rows);
+    const { mb, sends } = makeMailbox({ outreachSentSince: vi.fn(async () => 6) });
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(4);
+  });
+  it("asks research for enough prospects to refill the queue to 20", async () => {
+    const rows = Array.from({ length: 7 }, () => intro());
+    const { store, log } = makeStore(rows);
+    const { mb } = makeMailbox();
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(log.needed).toBe(13);
   });
 });
