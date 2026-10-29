@@ -32,7 +32,7 @@ function makeStore(rows: QueueRow[], opts: { enabled?: boolean; claimed?: Set<st
     config: async () => ({ enabled: opts.enabled ?? true, ownerId: 7 }),
     followUpPool: async () => rows.filter(r => ["waiting", "nurture"].includes(r.state) && r.touchCount >= 1 && r.touchCount <= 4 && r.followUpAt),
     queuedIntros: async limit => rows.filter(r => r.state === "queued").slice(0, limit),
-    research: async (_owner: number, needed: number) => { log.researchCalls++; log.needed = needed; const added = opts.research?.() ?? []; rows.push(...added); return added.length; },
+    research: async (_owner: number, needed: number) => { log.researchCalls++; log.needed ??= needed; const added = opts.research?.() ?? []; rows.push(...added); return added.length; },
     isSuppressed: async e => (opts.suppressed ?? []).includes(e),
     recordSuppression: async e => { log.suppressions.push(e); },
     relationshipHold: async row => opts.holds?.[row.email] ?? null,
@@ -276,8 +276,9 @@ describe("introductions", () => {
     const { store, log } = makeStore([followUp()], { research: () => [intro()] });
     const { mb, sends } = makeMailbox();
     const r = await runCycle(store, async () => mb, WED_11AM);
-    expect(r.sent.map(s => s.kind)).toEqual(["follow_up", "intro"]);
-    expect(log.researchCalls).toBe(1);
+    // First search before sending; one same-hour top-up because 1 intro is short of 10.
+    expect(r.sent.map(s => s.kind)).toEqual(["follow_up", "intro", "intro"]);
+    expect(log.researchCalls).toBe(2);
     expect(outreach(sends)[1].threadId).toBeUndefined();
   });
   it("skips addresses already in Gmail Sent (exact-address duplicate prevention)", async () => {
@@ -468,5 +469,41 @@ describe("10 introductions per hour", () => {
     const { mb } = makeMailbox();
     await runCycle(store, async () => mb, WED_11AM);
     expect(log.needed).toBe(13);
+  });
+});
+
+describe("same-hour top-up toward the 10-introduction target", () => {
+  it("searches again and keeps sending when the first pass falls short", async () => {
+    let calls = 0;
+    const { store, log } = makeStore([], { research: () => (++calls === 1 ? Array.from({ length: 4 }, () => intro()) : Array.from({ length: 8 }, () => intro())) });
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(log.researchCalls).toBe(2);
+    expect(outreach(sends)).toHaveLength(10);
+    expect(r.introsSent).toBe(10);
+  });
+  it("does not top up when the target is already reached", async () => {
+    const rows = Array.from({ length: 20 }, () => intro());
+    const { store, log } = makeStore(rows);
+    const { mb } = makeMailbox();
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(log.researchCalls).toBe(0);
+  });
+  it("reports the shortfall honestly when the top-up finds nobody", async () => {
+    let calls = 0;
+    const { store } = makeStore([], { research: () => (++calls === 1 ? Array.from({ length: 3 }, () => intro()) : []) });
+    const { mb, sends } = makeMailbox();
+    await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(3);
+    expect(reports(sends)[0].body).toMatch(/Introduction target this hour: 10; reached: 3 — short by 7 after a top-up search/);
+  });
+  it("never re-inspects a candidate held in the first pass", async () => {
+    let calls = 0;
+    const a = intro({ company: "Same Co" }), b = intro({ company: "Same Co" });
+    const { store } = makeStore([a, b], { research: () => (++calls >= 1 ? [] : []) });
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(outreach(sends)).toHaveLength(1);
+    expect(r.held.filter(h => h.email === b.email)).toHaveLength(1);
   });
 });
