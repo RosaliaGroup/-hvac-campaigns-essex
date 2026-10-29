@@ -33,8 +33,11 @@ export async function anthropicSearch(
   const model = opts.model?.trim() || env.CRM_PROFILE_MODEL?.trim() || "claude-haiku-4-5";
   const messages: any[] = [{ role: "user", content: query }];
   const citations = new Set<string>();
+  // Text blocks are fragments of ONE answer, split wherever a citation starts or ends
+  // (often inside a JSON string). Join them as-is: inserting a separator corrupts the JSON.
   let text = "";
   for (let turn = 0; turn < 2; turn++) {
+    let turnText = "";
     const response = await fetchImpl("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -65,7 +68,7 @@ export async function anthropicSearch(
       webSearches: Number(body.usage?.server_tool_use?.web_search_requests ?? 0)});
     for (const block of Array.isArray(body.content) ? body.content : []) {
       if (block.type === "text") {
-        text += (text ? "\n" : "") + (block.text || "");
+        turnText += block.text || "";
         for (const citation of block.citations || [])
           if (typeof citation.url === "string") citations.add(citation.url);
       }
@@ -82,6 +85,8 @@ export async function anthropicSearch(
             citations.add(result.url);
       }
     }
+    // A continuation turn restates the answer; prefer the latest turn that holds an object.
+    if (turnText.includes("{") || !text) text = turnText;
     if (body.stop_reason === "end_turn")
       return { text, citations: Array.from(citations) };
     if (body.stop_reason !== "pause_turn")
@@ -96,4 +101,18 @@ export async function anthropicSearch(
   throw new Error(
     "Profile lookup timed out before finishing. Try again later."
   );
+}
+
+/**
+ * Extract the JSON object from a model reply: strips code fences, takes the outermost
+ * braces, and on failure retries with control characters (raw line breaks or tabs that
+ * would be invalid inside JSON strings) replaced by spaces. Returns null when unparseable.
+ */
+export function parseJsonObject(reply: string): any | null {
+  const text = reply.replace(/```(?:json)?/g, "").trim();
+  const start = text.indexOf("{"), end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  const slice = text.slice(start, end + 1);
+  try { return JSON.parse(slice); } catch { /* fall through */ }
+  try { return JSON.parse(slice.replace(/[\u0000-\u001f]+/g, " ")); } catch { return null; }
 }

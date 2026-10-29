@@ -10,7 +10,7 @@ import {
   customers,
   crmCommunications,
 } from "../../drizzle/schema";
-import { anthropicSearch } from "./contactProfile/anthropicSearch";
+import { anthropicSearch, parseJsonObject } from "./contactProfile/anthropicSearch";
 import { introduction, verifiedCandidates } from "../../shared/prospectWorkflow";
 import { logCommunication, upsertExternalContact } from "./crmCommunications";
 import { prospectMailbox } from "./prospectGmail";
@@ -104,13 +104,9 @@ async function researchSegmentOnce(db: Db, ownerId: number, segment: string, att
     fetch,
     { maxSearches: 8, maxTokens: 4000, model: process.env.PROSPECT_RESEARCH_MODEL }
   );
-  const text = result.text.replace(/```(?:json)?/g, "").trim();
-  const start = text.indexOf("{"), end = text.lastIndexOf("}");
-  let raw: any = { prospects: [] };
-  let parsed = false;
-  if (start >= 0 && end > start) {
-    try { raw = JSON.parse(text.slice(start, end + 1)); parsed = true; } catch { raw = { prospects: [] }; }
-  }
+  const obj = parseJsonObject(result.text);
+  const parsed = obj !== null;
+  const raw: any = obj ?? { prospects: [] };
   const returned = Array.isArray(raw?.prospects) ? raw.prospects.length : 0;
   const verified = verifiedCandidates(raw?.prospects, result.citations);
   let added = 0;

@@ -1,6 +1,8 @@
 export type ProfileFact = { value: string; source: string; evidence: string };
 export type ContactProfile = {
   person?: { firstName: ProfileFact; lastName: ProfileFact };
+  /** Published business phone, formatted (NNN) NNN-NNNN, with its cited source. Never implies SMS consent. */
+  phone?: ProfileFact;
   company: {
     name?: ProfileFact;
     website?: ProfileFact;
