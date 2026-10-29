@@ -212,7 +212,10 @@ export function lintClaims(body: string, facts: VerifiedFacts): ContentLintFindi
   }
   const verifiedAmounts = facts.incentives.map((i) => i.amountText.toLowerCase());
   for (const raw of dollarMatches) {
-    const found = verifiedAmounts.some((amt) => amt.includes(raw.toLowerCase()) || raw.toLowerCase().includes(amt));
+    // DOLLAR_FIGURE_RE's optional "\s?[kK]?" also captures a plain trailing space ("$16,000 "), and
+    // "[\d,]*" a trailing comma ("$16,000,"); compare without them, or a verified "Up to $16,000" never matches.
+    const figure = raw.trim().replace(/,+$/, "").toLowerCase();
+    const found = verifiedAmounts.some((amt) => amt.includes(figure) || figure.includes(amt));
     if (!found) findings.push(blockFinding("unverified_dollar_figure", `Dollar figure "${raw}" is not present in any verified incentive.`));
   }
   if (!isFactsConfigured(facts) && dollarMatches.length > 0) {

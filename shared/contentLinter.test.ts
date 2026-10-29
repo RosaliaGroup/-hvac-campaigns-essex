@@ -314,3 +314,20 @@ describe("lintContent — unverified numeric claims (owner decision 2026-09-30)"
     expect(c("Serving 9 counties.")).toContain("unverified_numeric_claim");
   });
 });
+
+describe("lintContent — verified dollar figures match regardless of what follows them", () => {
+  const facts = { ...VERIFIED_FACTS, incentives: [{ program: "PSE&G residential rebate", amountText: "Up to $16,000", verifiedOn: "2026-09-26", source: "owner" }] };
+  const codes = (body: string) => lintContent({ ...cleanInput, body: words(1000) + " " + body }, facts).findings.map((f) => f.code);
+
+  it("accepts the verified figure followed by a space, comma or period", () => {
+    for (const body of ["Homeowners may qualify for up to $16,000 in rebates.", "Up to $16,000, depending on the system.", "The cap is $16,000."]) {
+      expect(codes(body), body).not.toContain("unverified_dollar_figure");
+    }
+  });
+
+  it("still blocks any other figure", () => {
+    expect(codes("Installs run $8,000 to $14,000 in NJ.")).toContain("unverified_dollar_figure");
+    expect(codes("Save $1,600 a year.")).toContain("unverified_dollar_figure");
+    expect(codes("A $160 rebate.")).toContain("unverified_dollar_figure");
+  });
+});
