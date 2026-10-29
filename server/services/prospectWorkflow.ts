@@ -90,15 +90,17 @@ export function researchSegment(now: Date, offset = 0): string {
   const dayIndex = Math.floor(Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day)) / 86_400_000);
   return RESEARCH_SEGMENTS[(dayIndex * 8 + p.hour + offset) % RESEARCH_SEGMENTS.length];
 }
-async function research(db: Db, ownerId: number, needed: number, now = new Date()): Promise<number> {
+async function research(db: Db, ownerId: number, needed: number,
+  opts: { attempts?: number; startAttempt?: number } = {}, now = new Date()): Promise<number> {
   let added = 0;
-  for (let attempt = 0; attempt < RESEARCH_ATTEMPTS_PER_HOUR && added < needed; attempt++) {
+  const first = opts.startAttempt ?? 0, last = first + (opts.attempts ?? RESEARCH_ATTEMPTS_PER_HOUR);
+  for (let attempt = first; attempt < last && added < needed; attempt++) {
     try {
       added += await researchSegmentOnce(db, ownerId, researchSegment(now, attempt), researchCounty(now, attempt), attempt);
     } catch (e) {
       // One failed search must not cost the hour; the next attempt uses a different segment.
       console.warn("[prospect-research]", JSON.stringify({ attempt, error: (e as Error).message.slice(0, 160) }));
-      if (attempt === RESEARCH_ATTEMPTS_PER_HOUR - 1 && added === 0) throw e;
+      if (attempt === last - 1 && added === 0) throw e;
     }
   }
   return added;
@@ -247,7 +249,7 @@ export function createCycleStore(db: Db): CycleStore {
     async queuedIntros(limit) {
       return (await db.select().from(queue).where(eq(queue.state, "queued")).orderBy(asc(queue.createdAt)).limit(limit)).map(asRow);
     },
-    research: (ownerId, needed) => research(db, ownerId, needed),
+    research: (ownerId, needed, opts) => research(db, ownerId, needed, opts),
     isSuppressed: email => isOutreachSuppressed(db, email),
     async recordSuppression(email, reason) { await recordOutreachSuppression(db, email, reason); },
     async relationshipHold(row, phase) {

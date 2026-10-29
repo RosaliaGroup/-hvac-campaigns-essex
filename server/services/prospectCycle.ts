@@ -28,6 +28,8 @@ export const INTRO_SUBJECT = "HVAC service partnership — Mechanical Enterprise
 const DAY = 86_400_000;
 /** Keep this many researched prospects waiting: about half are stopped by safety checks, so 20 feeds 10 introductions. */
 export const QUEUE_TARGET = 20;
+/** Extra searches allowed in the same hour when the first pass falls short of the intro target. */
+export const TOP_UP_SEARCHES = 2;
 
 export type QueueRow = {
   id: number; email: string; name: string; company: string; title: string;
@@ -46,7 +48,7 @@ export interface CycleStore {
   followUpPool(now: Date): Promise<QueueRow[]>;
   queuedIntros(limit: number): Promise<QueueRow[]>;
   /** Research until about `needed` new prospects are queued (bounded searches). Returns how many were added. */
-  research(ownerId: number, needed: number): Promise<number>;
+  research(ownerId: number, needed: number, opts?: { attempts?: number; startAttempt?: number }): Promise<number>;
   isSuppressed(email: string): Promise<boolean>;
   recordSuppression(email: string, reason: "hard_bounce" | "opt_out"): Promise<void>;
   relationshipHold(row: QueueRow, phase: "follow_up" | "intro"): Promise<HoldReason>;
@@ -82,6 +84,9 @@ export type CycleResult = {
   pending: number;
   researched: number;
   humanTasks: number;
+  introTarget?: number;
+  introsSent?: number;
+  topUpSearched?: boolean;
   researchError?: string;
   overdueBacklog: number;
   report?: { subject: string; status: "sent" | "already_sent" | "not_sent"; gmailId?: string; readback?: boolean; reason?: string };
@@ -258,11 +263,27 @@ export async function runCycle(
 
       // ---- Phase B: new introductions, sent only when the follow-up cohort has nothing more ready ----
       if (remaining > 0 && followUpsRemaining <= 0) {
-        const intros = await store.queuedIntros(MAX_INTRO_CANDIDATES);
         const introTarget = introsPerHour();
         let introsSent = 0;
+        const inspectedIds = new Set<number>();
+        // Round 2 tops up: when the first pass falls short of the target, search again
+        // (new segments and counties) and keep sending within the same hour.
+        for (let round = 0; round < 2 && remaining > 0 && introsSent < introTarget; round++) {
+        if (round > 0) {
+          try {
+            const added = await store.research(config.ownerId, (introTarget - introsSent) * 2, { attempts: TOP_UP_SEARCHES, startAttempt: 4 });
+            result.researched += added;
+            result.topUpSearched = true;
+            if (!added) break;
+          } catch (e) {
+            result.researchError ??= (e as Error).message.slice(0, 300);
+            break;
+          }
+        }
+        const intros = (await store.queuedIntros(MAX_INTRO_CANDIDATES)).filter(r => !inspectedIds.has(r.id));
         for (const row of intros) {
           if (remaining <= 0 || introsSent >= introTarget) break;
+          inspectedIds.add(row.id);
           if (!(await gates(row, "intro"))) continue;
           const existingLead = await store.existingLeadFor(row.email);
           if (existingLead && existingLead !== row.leadId) {
@@ -308,6 +329,9 @@ export async function runCycle(
             result.held.push({ email: row.email, company: row.company, reason: `introduced, but call tasks could not be created: ${(e as Error).message.slice(0, 160)}` });
           }
         }
+        }
+        result.introTarget = introTarget;
+        result.introsSent = introsSent;
         result.pending = Math.max(0, followUpsRemaining);
       } else {
         result.pending = Math.max(0, followUpsRemaining);
@@ -357,6 +381,7 @@ export function renderReport(r: CycleResult, subject: string): string {
     `Overdue follow-up backlog: ${r.overdueBacklog}; pending after this run: ${r.pending}`,
     "",
     `Sent this run: ${r.sent.length} (${intros} introductions, ${r.sent.length - intros} follow-ups)`,
+    ...(r.introTarget ? [`Introduction target this hour: ${r.introTarget}; reached: ${intros}${intros < r.introTarget ? ` — short by ${r.introTarget - intros}${r.topUpSearched ? " after a top-up search" : ""} (not enough verified people or hourly cap)` : ""}`] : []),
     ...r.sent.map(line),
     "", `Held (${r.held.length}):`, ...r.held.map(hl),
     "", `Stopped / suppressed / replied / bounced (${r.stopped.length}):`, ...r.stopped.map(hl),
