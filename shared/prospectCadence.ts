@@ -14,7 +14,15 @@
 export const FOLLOW_UP_BUSINESS_DAYS = [4, 10, 18, 26] as const;
 export const CATCH_UP_HOURLY_CAP = 20;
 export const NORMAL_HOURLY_CAP = 10;
-export const MAX_CANDIDATES_PER_PHASE = 5;
+export const MAX_CANDIDATES_PER_PHASE = 5; // follow-ups inspected per hour
+/** New introductions per hour (PROSPECT_INTROS_PER_HOUR, 1–15). Still bounded by the shared hourly cap. */
+export const DEFAULT_INTROS_PER_HOUR = 10;
+export function introsPerHour(env: Record<string, string | undefined> = process.env): number {
+  const n = Number(env.PROSPECT_INTROS_PER_HOUR);
+  return Number.isInteger(n) && n >= 1 ? Math.min(n, 15) : DEFAULT_INTROS_PER_HOUR;
+}
+/** Queued candidates inspected per hour to reach the intro target (about half are stopped by safety checks). */
+export const MAX_INTRO_CANDIDATES = 30;
 export const REPORT_SUBJECT_PREFIX = "Mechanical Enterprise Hourly Outreach Report";
 
 type EtParts = { weekday: string; year: string; month: string; day: string; hour: number; minute: number; second: number };
