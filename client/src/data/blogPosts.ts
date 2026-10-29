@@ -101,7 +101,7 @@ export const blogPosts: BlogPostData[] = [
         "type": "cta_box",
         "content": "Planning a rooftop HVAC replacement for your NJ property? Schedule a site survey with Mechanical Enterprise and get a documented access and lifting plan before bids go out.",
         "buttonText": "Request a Commercial Consultation",
-        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+        "buttonUrl": "https://mechanicalenterprise.com/commercial/for-property-management"
       }
     ],
     "faqSchema": [
