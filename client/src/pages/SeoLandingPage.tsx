@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { SeoLandingPageData } from "@/data/seoLandingPages";
 import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
 import { PHONE_DISPLAY, PHONE_TEL } from "@shared/business";
+import { VERIFIED_FACTS } from "@shared/verifiedFacts";
 
 /**
  * SeoLandingPage — data-driven service/repair landing page.
@@ -51,6 +52,25 @@ const WHY_US_COMMERCIAL = [
   { icon: "🛡️", title: "Licensed, Insured & Certified", desc: "Fully licensed NJ commercial contractor. WMBE/SBE certified. PSE&G Trade Ally." },
 ];
 
+// Service-led commercial pages (data.serviceOnly): only claims backed by
+// shared/verifiedFacts.ts — no incentive figures, no 24/7 or same-day claims
+// (serviceHours not owner-confirmed), no certification wording.
+const WHY_US_COMMERCIAL_SERVICE = [
+  { icon: "🏢", title: "One Contractor for Every Building", desc: "Rooftop units, split systems, mini-splits, PTACs and VRF serviced under one relationship across your NJ properties." },
+  { icon: "🧾", title: "Written Records After Every Visit", desc: "Findings and recommendations by unit, so you can separate today's repairs from next year's capital plan." },
+  { icon: "📊", title: "Portfolio Maintenance Pricing", desc: "Maintenance agreements priced per unit per year, quoted by portfolio, with quarterly reporting." },
+  { icon: "🛡️", title: "Optional 10-Year Coverage", desc: "Parts and labor coverage is available as a separately purchased add-on for new installations; eligible existing systems may qualify after an inspection." },
+];
+
+const SERVICE_ONLY_STATS = [
+  { big: "RTU · Split · PTAC", small: "Mini-split & VRF too" },
+  { big: `${VERIFIED_FACTS.business.serviceCounties.length} NJ Counties`, small: "Northern & central NJ" },
+  { big: "Per Unit / Year", small: "Portfolio maintenance pricing" },
+  { big: "Quarterly", small: "Equipment condition reports" },
+];
+
+const COUNTY_LIST = VERIFIED_FACTS.business.serviceCounties.join(", ").replace(/, ([^,]+)$/, " and $1");
+
 // Choose the correct inline-lead variant for a given SEO page. Emergency
 // keywords in slug or service override the category default so hot leads see
 // the red 24/7 CTA. Rebate/heat-pump copy surfaces the rebate-focused variant.
@@ -58,6 +78,9 @@ const WHY_US_COMMERCIAL = [
 // is hoisted above the component body (PR #110 hotfix: previously undefined at
 // call site, causing a runtime ReferenceError on all 15 SEO pages).
 function leadCaptureVariant(data: SeoLandingPageData): InlineLeadVariant {
+  // Service-led pages use the commercial intake: the emergency card's same-day /
+  // "call in 60 seconds" wording is not an owner-verified claim.
+  if (data.serviceOnly) return "commercial";
   const s = `${data.slug} ${data.service} ${data.serviceType}`.toLowerCase();
   if (/emergency|24[- ]?7|no[- ]?heat/.test(s)) return "emergency";
   if (/rebate|heat[- ]?pump|pseg|incentive/.test(s)) return "rebate";
@@ -68,7 +91,8 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
   const isCommercial = data.category === "commercial";
   const phone = isCommercial ? PHONE_COMMERCIAL : PHONE_RESIDENTIAL;
   const phoneTel = isCommercial ? PHONE_COMMERCIAL_TEL : PHONE_RESIDENTIAL_TEL;
-  const whyUs = isCommercial ? WHY_US_COMMERCIAL : WHY_US_RESIDENTIAL;
+  const serviceOnly = data.serviceOnly === true;
+  const whyUs = serviceOnly ? WHY_US_COMMERCIAL_SERVICE : isCommercial ? WHY_US_COMMERCIAL : WHY_US_RESIDENTIAL;
   const canonical = `${BASE}/${data.slug}`;
 
   useSEO({
@@ -105,7 +129,9 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
     })),
   };
 
-  const stats = isCommercial
+  const stats = serviceOnly
+    ? SERVICE_ONLY_STATS
+    : isCommercial
     ? [
         { big: "24/7", small: "Emergency Service" },
         { big: "Up to 80%", small: "Covered by Direct Install" },
@@ -140,11 +166,19 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
                   <Phone className="mr-2 h-5 w-5" /> Call {phone}
                 </Button>
               </a>
-              <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
-                  💰 Check Rebate Eligibility
-                </Button>
-              </a>
+              {serviceOnly ? (
+                <a href="#request-service">
+                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
+                    Request Service
+                  </Button>
+                </a>
+              ) : (
+                <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
+                    💰 Check Rebate Eligibility
+                  </Button>
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -183,6 +217,51 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
         </div>
       </section>
 
+      {/* Page-specific long-form content (unique per page) */}
+      {data.deepDive && data.deepDive.length > 0 && (
+        <section className="py-16 bg-white">
+          <div className="container">
+            <div className="max-w-3xl mx-auto space-y-12">
+              {data.deepDive.map((sec, i) => (
+                <div key={i}>
+                  <h2 className="text-2xl md:text-3xl font-bold text-[#0a1628] mb-4">{sec.heading}</h2>
+                  {sec.paragraphs.map((para, j) => (
+                    <p key={j} className="text-gray-600 leading-relaxed mb-4">{para}</p>
+                  ))}
+                  {sec.bullets && sec.bullets.length > 0 && (
+                    <ul className="list-disc pl-6 space-y-1 text-gray-700">
+                      {sec.bullets.map((b, k) => <li key={k}>{b}</li>)}
+                    </ul>
+                  )}
+                </div>
+              ))}
+              {serviceOnly && (
+                <p className="text-gray-600 leading-relaxed">
+                  We serve buildings in {COUNTY_LIST} counties. Property managers can also{" "}
+                  <Link href="/commercial/for-property-management" className="text-[#e8813a] font-medium hover:underline">request a portfolio HVAC review</Link>.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {data.sendUs && (
+        <section className="py-12 bg-[#f7f8fa]">
+          <div className="container">
+            <div className="max-w-3xl mx-auto bg-white rounded-xl border p-8">
+              <h2 className="text-2xl font-bold text-[#0a1628] mb-4">{data.sendUs.heading}</h2>
+              <ul className="space-y-2">
+                {data.sendUs.items.map((item, i) => (
+                  <li key={i} className="flex gap-3 text-gray-700"><span className="text-[#e8813a]" aria-hidden="true">✓</span><span>{item}</span></li>
+                ))}
+              </ul>
+              <p className="text-gray-600 mt-6">Call <a href={phoneTel} className="font-semibold text-[#0a1628]">{phone}</a> or use the request form below.</p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Why Choose Us */}
       <section className="py-16 bg-[#0a1628]">
         <div className="container">
@@ -203,8 +282,8 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
         </div>
       </section>
 
-      {/* Financing + Rebates */}
-      <section className="py-16 bg-white">
+      {/* Financing + Rebates (not on service-led commercial pages) */}
+      {!serviceOnly && <section className="py-16 bg-white">
         <div className="container">
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <div className="rounded-xl p-8 bg-gradient-to-br from-[#0a1628] to-[#1e3a5f] text-white">
@@ -238,7 +317,7 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
             what you qualify for at no cost during your assessment.
           </p>
         </div>
-      </section>
+      </section>}
 
       {/* FAQ */}
       <section className="py-16 bg-[#f7f8fa]">
@@ -255,9 +334,8 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
                   <span className="pr-4">{faq.q}</span>
                   <span className="text-[#e8813a] text-xl shrink-0" aria-hidden="true">{openFaq === i ? "−" : "+"}</span>
                 </button>
-                {openFaq === i && (
-                  <div className="px-5 pb-5 text-sm text-gray-600 leading-relaxed border-t pt-4">{faq.a}</div>
-                )}
+                {/* Always rendered (hidden when collapsed) so answers are in the prerendered HTML crawlers read. */}
+                <div hidden={openFaq !== i} className="px-5 pb-5 text-sm text-gray-600 leading-relaxed border-t pt-4">{faq.a}</div>
               </div>
             ))}
           </div>
@@ -284,7 +362,7 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
       </section>
 
       {/* Inline Lead Capture — Stage 2 wiring (fixes the "SEO page → no form" gap) */}
-      <section className="py-16 bg-white">
+      <section id="request-service" className="py-16 bg-white scroll-mt-24">
         <div className="container">
           <div className="max-w-2xl mx-auto">
             <InlineLeadCapture
@@ -308,11 +386,19 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
                   <Phone className="mr-2 h-5 w-5" /> Call {phone}
                 </Button>
               </a>
-              <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
-                  Check Rebate Eligibility <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </a>
+              {serviceOnly ? (
+                <Link href="/commercial/for-property-management">
+                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
+                    Request a Consultation <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              ) : (
+                <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
+                    Check Rebate Eligibility <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </a>
+              )}
             </div>
           </div>
         </div>
