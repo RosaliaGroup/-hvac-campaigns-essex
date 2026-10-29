@@ -181,7 +181,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
       const evidence = item.evidence as { query?: string; impressions?: number };
       const query = evidence.query?.trim();
       if (!query || query.length > 90 || (evidence.impressions ?? 0) < 20) continue;
-      if (!/hvac|ptac|heat pump|rooftop|mechanical|vrf|maintenance/i.test(query)) continue;
+      if (!/hvac|ptac|heat pump|rooftop|mechanical|vrf|maintenance|air condition|\bac\b|a\/c|furnace|boiler|ductless|mini.?split|cooling|heating/i.test(query)) continue;
       if (/(free|rebate|incentive|warranty|financing|discount|coupon|price guarantee)/i.test(query)) continue;
       const title = `NJ Commercial HVAC Guide: ${query}`.slice(0, 120);
       if (existingTitles.has(title.toLowerCase())) continue;

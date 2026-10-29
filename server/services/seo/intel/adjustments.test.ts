@@ -11,8 +11,13 @@ import { proposeTopic, hasExistingProposal } from "../contentQueue";
 const EMPTY = { rising: [], unserved: [], decaying: [], cannibalization: [], seasonality: [], competitorDiffs: [], differentiatorMatches: [], staleClaims: [] };
 
 describe("buildItemDrafts (§3d suggestion routing)", () => {
-  it("routes an unserved query with no page to the page-PR backlog, never auto-built", () => {
+  it("routes a general unserved query with no page to the content queue (auto lane)", () => {
     const items = buildItemDrafts({ ...EMPTY, unserved: [{ query: "x", page: null, position: 0, impressions: 30, reason: "no_page" }] });
+    expect(items.find((i) => i.kind === "unserved_query")?.targetQueue).toBe("content_queue");
+  });
+
+  it("still routes a no-page town cluster to the page-PR backlog, never auto-built", () => {
+    const items = buildItemDrafts({ ...EMPTY, unserved: [{ query: "hvac linden nj", page: null, position: 0, impressions: 30, reason: "no_page", clusterTown: "Linden", clusterQueries: ["hvac linden nj"] }] });
     expect(items.find((i) => i.kind === "unserved_query")?.targetQueue).toBe("page_pr_backlog");
   });
 
