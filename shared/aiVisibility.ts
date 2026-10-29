@@ -6,7 +6,7 @@
  */
 import type { WatchedCompetitor } from "./competitorWatchlist";
 
-export const AI_ENGINES = ["perplexity", "openai", "google_ai_overview"] as const;
+export const AI_ENGINES = ["perplexity", "openai", "google_ai_overview", "claude"] as const;
 export type AiEngine = (typeof AI_ENGINES)[number];
 
 export const OWN_BRAND_RE = /mechanical\s+enterprise/i;

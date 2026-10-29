@@ -3,6 +3,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const store: Array<Record<string, unknown>> = [];
 vi.mock("../../../db", () => ({
   getDb: vi.fn(async () => ({
+    // ensureAiVisibilityTable: CREATE TABLE IF NOT EXISTS + SHOW COLUMNS (enum already has 'claude').
+    execute: vi.fn(async () => [[{ Type: "enum('perplexity','openai','google_ai_overview','claude')" }]]),
     select: (cols?: unknown) => ({
       from: () => {
         const rows = () => (cols ? store.map((r) => ({ key: r.obsKey })) : store.map((r) => ({ ...r })));
@@ -23,7 +25,7 @@ vi.mock("../../../db", () => ({
 }));
 
 import {
-  enginesConfigured, makePerplexityAsk, makeOpenAiAsk, makeSerpApiOverviewAsk, runAiVisibilityCheck, collectAiVisibility, obsKey,
+  enginesConfigured, makePerplexityAsk, makeOpenAiAsk, makeSerpApiOverviewAsk, makeClaudeAsk, runAiVisibilityCheck, collectAiVisibility, obsKey,
 } from "./aiVisibility";
 import { buildAiVisibilityDrafts } from "./adjustments";
 import type { AiVisibilitySection } from "../../../../shared/aiVisibility";
@@ -160,5 +162,51 @@ describe("buildAiVisibilityDrafts (suggestions route to existing lanes; nothing 
   it("nothing when the section did not run", () => {
     expect(buildAiVisibilityDrafts(undefined)).toEqual([]);
     expect(buildAiVisibilityDrafts(section({ checked: false, current: null }))).toEqual([]);
+  });
+});
+
+describe("Claude engine (existing ANTHROPIC_API_KEY)", () => {
+  it("is configured by ANTHROPIC_API_KEY and can be switched off", () => {
+    expect(enginesConfigured({ ANTHROPIC_API_KEY: "k" } as never)).toEqual(["claude"]);
+    expect(enginesConfigured({ ANTHROPIC_API_KEY: "k", SEO_AI_VISIBILITY_CLAUDE: "false" } as never)).toEqual([]);
+  });
+
+  it("sends a web-search request and collects text, citations and search results", async () => {
+    const calls: Array<{ url: string; init: RequestInit }> = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      calls.push({ url, init });
+      return jsonRes({
+        stop_reason: "end_turn",
+        content: [
+          { type: "server_tool_use", name: "web_search", input: { query: "hvac newark" } },
+          { type: "web_search_tool_result", content: [{ type: "web_search_result", url: "https://www.yelp.com/x" }, { type: "web_search_result", url: "https://ajperri.com/" }] },
+          { type: "text", text: "A.J. Perri and Mechanical Enterprise both serve Newark.", citations: [{ type: "web_search_result_location", url: "https://mechanicalenterprise.com/hvac-newark-nj" }] },
+        ],
+      });
+    }) as unknown as typeof fetch;
+    const ans = await makeClaudeAsk({ ANTHROPIC_API_KEY: "secret" } as never, fetchImpl)("HVAC Newark NJ");
+    expect(ans).not.toBe("no_overview");
+    if (ans === "no_overview") return;
+    expect(ans.text).toContain("Mechanical Enterprise");
+    expect(ans.citations).toEqual(expect.arrayContaining(["https://mechanicalenterprise.com/hvac-newark-nj", "https://www.yelp.com/x", "https://ajperri.com/"]));
+    expect(calls[0].url).toBe("https://api.anthropic.com/v1/messages");
+    const body = JSON.parse(String(calls[0].init.body));
+    expect(body.tools[0].type).toBe("web_search_20250305");
+    expect((calls[0].init.headers as Record<string, string>)["x-api-key"]).toBe("secret");
+  });
+
+  it("continues a paused server-tool turn, then stops", async () => {
+    let n = 0;
+    const fetchImpl = (async () => jsonRes(n++ === 0
+      ? { stop_reason: "pause_turn", content: [{ type: "text", text: "Looking… " }] }
+      : { stop_reason: "end_turn", content: [{ type: "text", text: "Done." }] })) as unknown as typeof fetch;
+    const ans = await makeClaudeAsk({ ANTHROPIC_API_KEY: "k" } as never, fetchImpl)("q");
+    expect(n).toBe(2);
+    expect(ans !== "no_overview" && ans.text).toBe("Looking… Done.");
+  });
+
+  it("surfaces API errors so the run records an error row", async () => {
+    const fetchImpl = (async () => jsonRes({ error: { type: "authentication_error" } }, false, 401)) as unknown as typeof fetch;
+    await expect(makeClaudeAsk({ ANTHROPIC_API_KEY: "bad" } as never, fetchImpl)("q")).rejects.toThrow(/anthropic 401/);
   });
 });

@@ -32,7 +32,9 @@ import { VERIFIED_FACTS, isFactsConfigured, isPriceRangeStale, type VerifiedFact
 import { lintPageMeta, type LintResult } from "../../../shared/seoLinter";
 import { lintContent, isResidentialOrRebateTopic, type ContentLintResult } from "../../../shared/contentLinter";
 import { countPostStructure, renderPostPlainText, extractInternalLinkPaths, extractExistingTitles, insertBlogPostIntoSource } from "../../../shared/blogPostRendering";
-import type { BlogPostData } from "../../../client/src/data/blogPosts";
+import { replaceBlogPostInSource } from "../../../shared/blogSourceEdit";
+import { blogPosts, type BlogPostData } from "../../../client/src/data/blogPosts";
+import { draftRefreshPost, isResidentialPost } from "./refreshDrafting";
 import { nextTopicToProcess, updateQueueStatus } from "./contentQueue";
 import { draftContentPost, ContentDraftParseError } from "./contentDrafting";
 import { runCriticPass, type CriticVerdict } from "./criticPass";
@@ -70,6 +72,8 @@ export type ContentDraftOutcome =
   /** The lane would auto-publish but a content PR is still open: drafting waits, so two PRs never edit the same blogPosts.ts anchor and conflict. */
   | { status: "open_pr"; batchId: number; prNumber: number | null }
   | { status: "refused_residential_rebate"; topicId: number }
+  /** A refresh_due row whose slug is no longer a blog post — set aside. */
+  | { status: "refresh_target_missing"; topicId: number; slug: string }
   | {
       status: "drafted";
       topicId: number;
@@ -103,7 +107,23 @@ export const MAX_BLOCKED_TOPICS_PER_RUN = 3;
 
 type EvaluatedDraft = { post: BlogPostData; metaLint: LintResult; contentLint: ContentLintResult; critic: CriticVerdict; passes: boolean };
 
-async function evaluateDraft(post: BlogPostData, facts: VerifiedFacts): Promise<EvaluatedDraft> {
+/** Refresh-lane differences from a new post: its own old title isn't a "duplicate", long guides may stay long, and residential posts link to residential pages. */
+export type RefreshEvalOptions = { ownTitle: string; maxWords: number; residential: boolean };
+
+/** Adjust the linter's findings for a refresh. Every claim/fact rule is untouched; only the three new-post-only rules above are relaxed. */
+export function applyRefreshLintRules(contentLint: ContentLintResult, opts: RefreshEvalOptions): ContentLintResult {
+  const findings = contentLint.findings.filter((f) => {
+    if (f.code === "no_b2b_link" && opts.residential) return false;
+    if (f.code === "word_count") {
+      const n = Number(f.message.match(/Body is (\d+) words/)?.[1]);
+      if (Number.isFinite(n) && n >= 900 && n <= opts.maxWords) return false;
+    }
+    return true;
+  });
+  return { findings, passes: findings.every((f) => f.severity !== "block") };
+}
+
+async function evaluateDraft(post: BlogPostData, facts: VerifiedFacts, refresh?: RefreshEvalOptions): Promise<EvaluatedDraft> {
   const pagePath = `/blog/${post.slug}`;
   const structure = countPostStructure(post);
   const body = renderPostPlainText(post);
@@ -119,12 +139,13 @@ async function evaluateDraft(post: BlogPostData, facts: VerifiedFacts): Promise<
       h3Count: structure.h3Count,
       faqQuestionCount: structure.faqQuestionCount,
       internalLinkPaths: extractInternalLinkPaths(post),
-      existingTitlesAndH1s: readLocalExistingTitles(),
+      existingTitlesAndH1s: refresh ? readLocalExistingTitles().filter((t) => t.trim().toLowerCase() !== refresh.ownTitle.trim().toLowerCase()) : readLocalExistingTitles(),
     },
     facts,
   );
+  const lint = refresh ? applyRefreshLintRules(contentLint, refresh) : contentLint;
   const critic = await runCriticPass(body, facts);
-  return { post, metaLint, contentLint, critic, passes: metaLint.passes && contentLint.passes && critic.passes };
+  return { post, metaLint, contentLint: lint, critic, passes: metaLint.passes && lint.passes && critic.passes };
 }
 
 /** Blocking (non-warn) findings from every gate, phrased as instructions for the next draft attempt. */
@@ -157,21 +178,27 @@ export function collectBlockingFindings(e: Pick<EvaluatedDraft, "metaLint" | "co
 }
 
 /** First draft + up to MAX_CONTENT_RETRIES retries, stopping at the first passing draft. Never weakens a gate — a topic that never passes is reported, not forced. */
-async function draftUntilPassing(topic: SeoContentQueueRow, facts: VerifiedFacts): Promise<EvaluatedDraft & { attempts: number }> {
+async function draftUntilPassing(
+  topic: SeoContentQueueRow,
+  facts: VerifiedFacts,
+  refresh?: { current: BlogPostData; opts: RefreshEvalOptions; reason: string | null },
+): Promise<EvaluatedDraft & { attempts: number }> {
   let findings: string[] = [];
   let last: EvaluatedDraft | null = null;
   let parseError: unknown = null;
   for (let attempt = 1; attempt <= 1 + MAX_CONTENT_RETRIES; attempt++) {
     let post: BlogPostData;
     try {
-      post = await draftContentPost(topic, facts, findings);
+      post = refresh
+        ? await draftRefreshPost({ current: refresh.current, reason: refresh.reason, maxWords: refresh.opts.maxWords }, facts, findings)
+        : await draftContentPost(topic, facts, findings);
     } catch (err) {
       if (!(err instanceof ContentDraftParseError)) throw err;
       parseError = err;
       findings = [...findings, `invalid_json: your previous response was not the required JSON object (${(err as Error).message.replace(/^Content draft response was not parseable as the expected JSON shape:\s*/, "").slice(0, 200)}) — respond with ONLY that JSON object, every section complete.`];
       continue;
     }
-    last = await evaluateDraft(post, facts);
+    last = await evaluateDraft(post, facts, refresh?.opts);
     if (last.passes) return { ...last, attempts: attempt };
     findings = collectBlockingFindings(last);
   }
@@ -187,8 +214,8 @@ async function draftUntilPassing(topic: SeoContentQueueRow, facts: VerifiedFacts
  * status stays "drafted" so nextTopicToProcess skips it) and the run moves on
  * to the next topic, up to MAX_BLOCKED_TOPICS_PER_RUN.
  */
-/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 let activeContentJob: Promise<ContentDraftOutcome> | null = null;
+/** @slow expected to exceed the ~20s gateway timeout — never await from a tRPC .mutation(); start it with startJob (server/services/asyncLaneJob.ts). */
 export function runWeeklyContentJob(facts: VerifiedFacts = VERIFIED_FACTS): Promise<ContentDraftOutcome> {
   if (activeContentJob) return activeContentJob;
   activeContentJob = draftNextContent(facts).finally(() => { activeContentJob = null; });
@@ -223,7 +250,26 @@ async function draftNextContent(facts: VerifiedFacts): Promise<ContentDraftOutco
     }
     if (!topic || blockedTopicIds.includes(topic.id)) return lastBlocked ?? { status: "no_topic" };
 
-    if (isResidentialOrRebateTopic(topic)) {
+    // Refresh of an existing post (market-intel decaying page, owner decision 2026-10-29). The B2B-only
+    // topic gate is for NEW topics; a refresh keeps the post's own audience. Every claim/fact gate stays.
+    let refresh: { current: BlogPostData; opts: RefreshEvalOptions; reason: string | null } | undefined;
+    if (topic.refreshesSlug) {
+      const slug = topic.refreshesSlug.replace(/^\/?blog\//, "").replace(/^\//, "");
+      const current = blogPosts.find((p) => p.slug === slug);
+      if (!current) {
+        await updateQueueStatus(topic.id, "drafted");
+        console.warn(`[SEO] refresh topic #${topic.id}: /blog/${slug} is not a blog post — set aside.`);
+        blockedTopicIds.push(topic.id);
+        lastBlocked = { status: "refresh_target_missing", topicId: topic.id, slug };
+        continue;
+      }
+      const currentWords = countPostStructure(current).wordCount;
+      refresh = {
+        current,
+        reason: topic.brief ?? null,
+        opts: { ownTitle: current.title, maxWords: Math.max(1400, Math.round(currentWords * 1.15)), residential: isResidentialPost(current) },
+      };
+    } else if (isResidentialOrRebateTopic(topic)) {
       // Set aside refused topics so later eligible topics can proceed.
       await updateQueueStatus(topic.id, "drafted");
       console.warn("[SEO] content topic refused by safety gate; set aside:", topic.id);
@@ -235,7 +281,7 @@ async function draftNextContent(facts: VerifiedFacts): Promise<ContentDraftOutco
       return { status: "facts_not_configured" };
     }
 
-    const { post, metaLint, contentLint, critic, passes, attempts } = await draftUntilPassing(topic, facts);
+    const { post, metaLint, contentLint, critic, passes, attempts } = await draftUntilPassing(topic, facts, refresh);
     const pagePath = `/blog/${post.slug}`;
 
     await updateQueueStatus(topic.id, "drafted");
@@ -245,7 +291,7 @@ async function draftNextContent(facts: VerifiedFacts): Promise<ContentDraftOutco
       batchId: null,
       pagePath,
       before: null,
-      after: { lane: "content", topicId: topic.id, post, metaLint, contentLint, criticBlocked: !critic.passes, criticClaims: critic.unsupportedClaims, passes, attempts, ...(passes ? {} : { blocked: true }) },
+      after: { lane: "content", topicId: topic.id, post, metaLint, contentLint, criticBlocked: !critic.passes, criticClaims: critic.unsupportedClaims, passes, attempts, ...(refresh ? { refreshOf: refresh.current.slug, previousTitle: refresh.current.title, previousMetaDescription: refresh.current.metaDescription } : {}), ...(passes ? {} : { blocked: true }) },
       lintResult: null,
     });
 
@@ -290,6 +336,10 @@ export type StoredContentDraft = {
   /** True iff every retry failed and the topic was set aside (see runWeeklyContentJob). */
   blocked?: boolean;
   attempts?: number;
+  /** Set when this draft rewrites an existing post in place (the slug being replaced). */
+  refreshOf?: string;
+  previousTitle?: string;
+  previousMetaDescription?: string;
   generatedAt: Date;
 };
 
@@ -303,6 +353,7 @@ export async function findLatestContentDraft(topicId: number): Promise<StoredCon
   if (!match) return null;
   const after = match.after as {
     post: BlogPostData; metaLint: LintResult; contentLint: ContentLintResult; criticBlocked: boolean; criticClaims: string[]; passes: boolean; blocked?: boolean; attempts?: number;
+    refreshOf?: string; previousTitle?: string; previousMetaDescription?: string;
   };
   return { topicId, ...after, generatedAt: match.ts instanceof Date ? match.ts : new Date(match.ts) };
 }
@@ -336,11 +387,24 @@ export async function approveContentToPR(topicId: number, actorId: number | null
   const branch = await uniqueBranchFor(`pr-content-${yyyymmdd()}-t${topicId}`);
   await ensureBranch(branch);
   const { content: currentSource, sha } = await getFileContent(BLOG_POSTS_PATH, branch);
-  const updatedSource = insertBlogPostIntoSource(currentSource, { ...draft.post, date: publicationDate() });
-  const commitMessage = `content(blog): ${draft.post.title}\n\nTopic queue #${topicId}. Drafted by the weekly autopublish content pipeline.`;
+  const isRefresh = !!draft.refreshOf;
+  const updatedSource = isRefresh
+    ? replaceBlogPostInSource(currentSource, draft.refreshOf!, { ...draft.post, slug: draft.refreshOf!, updatedDate: publicationDate() })
+    : insertBlogPostIntoSource(currentSource, { ...draft.post, date: publicationDate() });
+  const commitMessage = isRefresh
+    ? `content(blog): refresh /blog/${draft.refreshOf}\n\nTopic queue #${topicId}. Rewritten in place by the content pipeline (market-intel decaying page). Revert this PR to restore the previous version exactly.`
+    : `content(blog): ${draft.post.title}\n\nTopic queue #${topicId}. Drafted by the weekly autopublish content pipeline.`;
   const commitSha = await putFileContent(BLOG_POSTS_PATH, branch, updatedSource, commitMessage, sha);
 
-  const prBody = [
+  const prBody = isRefresh ? [
+    `## Refresh of /blog/${draft.refreshOf}`,
+    "",
+    `**Title:** ${draft.previousTitle ?? "(unknown)"} → ${draft.post.title}`,
+    "",
+    `> ${draft.post.excerpt}`,
+    "",
+    "Rewritten in place (same slug, original publication date kept, updatedDate stamped). Passed the claims linter and the critic pass; only the figures in VERIFIED_FACTS are used. Reverting this PR restores the previous version byte-for-byte.",
+  ].join("\n") : [
     `## New B2B post: ${draft.post.title}`,
     "",
     `**Slug:** \`${draft.post.slug}\`  **Category:** ${draft.post.category}`,
@@ -356,8 +420,8 @@ export async function approveContentToPR(topicId: number, actorId: number | null
 
   const inserted = await db.insert(seoApprovalBatches).values({
     label: label ?? draft.post.title,
-    pages: [`/blog/${draft.post.slug}`],
-    diff: [{ pagePath: `/blog/${draft.post.slug}`, pageId: topicId, before: { title: null, description: null }, after: { title: draft.post.title, description: draft.post.metaDescription }, hasBodyChanges: true, lint: draft.metaLint }],
+    pages: [`/blog/${draft.refreshOf ?? draft.post.slug}`],
+    diff: [{ pagePath: `/blog/${draft.refreshOf ?? draft.post.slug}`, pageId: topicId, before: { title: draft.previousTitle ?? null, description: draft.previousMetaDescription ?? null }, after: { title: draft.post.title, description: draft.post.metaDescription }, hasBodyChanges: true, lint: draft.metaLint }],
     actorId,
     branch,
     commitSha,

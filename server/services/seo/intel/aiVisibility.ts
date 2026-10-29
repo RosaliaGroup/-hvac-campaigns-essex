@@ -1,7 +1,8 @@
 /**
  * Weekly AI-visibility check (market-intel addition). For each of the 20 target queries, ask each CONFIGURED
  * engine — Perplexity (API), OpenAI (API, web search tool), Google AI Overviews (via SerpAPI, when
- * SEO_SERP_PROVIDER=serpapi) — and record whether Mechanical Enterprise is named, which competitors are, and
+ * SEO_SERP_PROVIDER=serpapi), Claude (Anthropic API, web search tool; uses the existing ANTHROPIC_API_KEY,
+ * off with SEO_AI_VISIBILITY_CLAUDE=false) — and record whether Mechanical Enterprise is named, which competitors are, and
  * which sources are cited, one seoIntelAiVisibility row per (week, engine, query).
  *
  * Cost control: WEEKLY, never daily. A (week, engine, query) that already has a row is never re-asked, so a
@@ -25,7 +26,7 @@ async function ensureAiVisibilityTable(db: NonNullable<Awaited<ReturnType<typeof
   await db.execute(sql.raw(`CREATE TABLE IF NOT EXISTS \`seoIntelAiVisibility\` (
     \`id\` int NOT NULL AUTO_INCREMENT,
     \`weekOf\` varchar(10) NOT NULL,
-    \`engine\` enum('perplexity','openai','google_ai_overview') NOT NULL,
+    \`engine\` enum('perplexity','openai','google_ai_overview','claude') NOT NULL,
     \`query\` varchar(512) NOT NULL,
     \`obsKey\` varchar(64) NOT NULL,
     \`status\` enum('ok','no_overview','error') NOT NULL DEFAULT 'ok',
@@ -43,6 +44,13 @@ async function ensureAiVisibilityTable(db: NonNullable<Awaited<ReturnType<typeof
     UNIQUE KEY \`seoIntelAiVisibility_key_uq\` (\`obsKey\`),
     KEY \`seoIntelAiVisibility_week_engine_idx\` (\`weekOf\`,\`engine\`)
   )`));
+  // Additive: tables created before the Claude engine existed lack 'claude' in the enum.
+  // Widening an ENUM by appending a value keeps every existing row as-is.
+  const cols = await db.execute(sql.raw(`SHOW COLUMNS FROM \`seoIntelAiVisibility\` LIKE 'engine'`));
+  const type = String(((cols as unknown as [Array<{ Type?: string }>])[0]?.[0]?.Type) ?? "");
+  if (type && !type.includes("'claude'")) {
+    await db.execute(sql.raw(`ALTER TABLE \`seoIntelAiVisibility\` MODIFY \`engine\` enum('perplexity','openai','google_ai_overview','claude') NOT NULL`));
+  }
 }
 
 
@@ -62,6 +70,7 @@ export function enginesConfigured(env: NodeJS.ProcessEnv = process.env): AiEngin
   if (env.PERPLEXITY_API_KEY?.trim()) out.push("perplexity");
   if (env.OPENAI_API_KEY?.trim()) out.push("openai");
   if (env.SEO_SERP_PROVIDER?.trim().toLowerCase() === "serpapi" && (env.SERPAPI_KEY?.trim() || env.SEO_SERP_API_KEY?.trim())) out.push("google_ai_overview");
+  if (env.ANTHROPIC_API_KEY?.trim() && env.SEO_AI_VISIBILITY_CLAUDE?.trim().toLowerCase() !== "false") out.push("claude");
   return out;
 }
 
@@ -137,9 +146,45 @@ export function makeSerpApiOverviewAsk(env: NodeJS.ProcessEnv = process.env, fet
   };
 }
 
+/**
+ * Anthropic Messages API with the server-side web search tool (same request shape as
+ * server/services/contactProfile/anthropicSearch.ts, already used in production). Text blocks carry
+ * url citations; web_search_tool_result blocks list the pages read. A `pause_turn` stop means the
+ * server tool loop paused — resend with the partial assistant turn to let it finish (max 3 rounds).
+ */
+export function makeClaudeAsk(env: NodeJS.ProcessEnv = process.env, fetchImpl: typeof fetch = fetch): AskFn {
+  return async (query) => {
+    const model = env.CLAUDE_VISIBILITY_MODEL?.trim() || "claude-sonnet-5";
+    const messages: Array<{ role: "user" | "assistant"; content: unknown }> = [{ role: "user", content: query }];
+    let text = "";
+    const citations: string[] = [];
+    const addCitation = (u: unknown) => { if (typeof u === "string" && !citations.includes(u)) citations.push(u); };
+    for (let round = 0; round < 3; round++) {
+      const body = await json(await fetchImpl("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": env.ANTHROPIC_API_KEY ?? "", "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
+        body: JSON.stringify({ model, max_tokens: 1500, system: SYSTEM, tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 3, user_location: { type: "approximate", region: "New Jersey", country: "US", timezone: "America/New_York" } }], messages }),
+      }), "anthropic");
+      for (const block of Array.isArray(body?.content) ? body.content : []) {
+        if (block?.type === "text" && typeof block.text === "string") {
+          text += block.text;
+          for (const c of Array.isArray(block.citations) ? block.citations : []) addCitation(c?.url);
+        }
+        if (block?.type === "web_search_tool_result" && Array.isArray(block.content)) {
+          for (const r of block.content) if (r?.type === "web_search_result") addCitation(r.url);
+        }
+      }
+      if (body?.stop_reason !== "pause_turn") break;
+      messages.push({ role: "assistant", content: body.content });
+    }
+    return { text: text.trim(), citations };
+  };
+}
+
 export function askFor(engine: AiEngine, env: NodeJS.ProcessEnv = process.env, fetchImpl: typeof fetch = fetch): AskFn {
   if (engine === "perplexity") return makePerplexityAsk(env, fetchImpl);
   if (engine === "openai") return makeOpenAiAsk(env, fetchImpl);
+  if (engine === "claude") return makeClaudeAsk(env, fetchImpl);
   return makeSerpApiOverviewAsk(env, fetchImpl);
 }
 
@@ -172,8 +217,8 @@ export async function runAiVisibilityCheck(opts: RunOptions = {}): Promise<RunRe
   const now = opts.now ?? new Date();
   const weekOf = weekStartET(now);
   const engines = opts.engines ?? enginesConfigured(env);
-  console.log("[AIVis] engines configured (presence only):", JSON.stringify({ perplexity: engines.includes("perplexity"), openai: engines.includes("openai"), google_ai_overview: engines.includes("google_ai_overview") }));
-  if (engines.length === 0) return { skipped: true, reason: "No AI-visibility engine configured (set PERPLEXITY_API_KEY and/or OPENAI_API_KEY; Google AI Overviews also need SEO_SERP_PROVIDER=serpapi + SERPAPI_KEY)." };
+  console.log("[AIVis] engines configured (presence only):", JSON.stringify({ perplexity: engines.includes("perplexity"), openai: engines.includes("openai"), google_ai_overview: engines.includes("google_ai_overview"), claude: engines.includes("claude") }));
+  if (engines.length === 0) return { skipped: true, reason: "No AI-visibility engine configured (ANTHROPIC_API_KEY runs the Claude engine; PERPLEXITY_API_KEY / OPENAI_API_KEY add those; Google AI Overviews need SEO_SERP_PROVIDER=serpapi + SERPAPI_KEY)." };
   const db = await getDb();
   if (!db) return { skipped: true, reason: "Database unavailable." };
 
@@ -226,7 +271,7 @@ export async function collectAiVisibility(now: Date = new Date(), env: NodeJS.Pr
     if (!db) return empty("Database unavailable.");
     await ensureAiVisibilityTable(db);
     const rows = await db.select().from(seoIntelAiVisibility);
-    if (rows.length === 0) return empty(configured.length ? "Configured, but the first weekly run hasn't happened yet." : "No AI-visibility engine configured (PERPLEXITY_API_KEY / OPENAI_API_KEY).");
+    if (rows.length === 0) return empty(configured.length ? "Configured, but the first weekly run hasn't happened yet." : "No AI-visibility engine configured (ANTHROPIC_API_KEY / PERPLEXITY_API_KEY / OPENAI_API_KEY).");
     const weeks = Array.from(new Set(rows.map((r) => r.weekOf))).sort().reverse();
     const byWeek = (w: string) => rows.filter((r) => r.weekOf === w).map(toObs);
     const curObs = byWeek(weeks[0]);

@@ -84,7 +84,7 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
   ].join("\n");
 }
 
-function parseContentDraftResponse(text: string): BlogPostData {
+export function parseContentDraftResponse(text: string): BlogPostData {
   const trimmed = text.trim();
   const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new ContentDraftParseError(trimmed);
