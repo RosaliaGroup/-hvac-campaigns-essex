@@ -204,6 +204,19 @@ export async function contactProfile(
           await ensureSentEmailContact(db,{...c,name:`${firstName} ${lastName}`});
       }
     }
+    // Save a verified published business phone onto the contact when it has none.
+    // Provenance goes to the phone metadata; type stays "unknown" (never implies SMS consent).
+    if (profile.phone && (!c.phone || c.phone.replace(/\D/g, "").length < 10)) {
+      try {
+        await db.update(crmExternalContacts).set({ phone: profile.phone.value }).where(eq(crmExternalContacts.id, c.id));
+        await db.execute(sql`INSERT INTO crmContactPhoneMetadata (contactId, phone, type, sourceUrl)
+          VALUES (${c.id}, ${profile.phone.value}, 'unknown', ${profile.phone.source.slice(0, 2000)})
+          ON DUPLICATE KEY UPDATE phone = VALUES(phone), type = 'unknown', sourceUrl = VALUES(sourceUrl), verifiedAt = NULL`);
+        console.info("[CRM Profile Research]", { contactId: c.id, phone: "saved_from_public_source" });
+      } catch (error) {
+        console.warn("[CRM Profile Research]", { contactId: c.id, phone: "save_failed", reason: error instanceof Error ? error.message.slice(0, 120) : "unknown" });
+      }
+    }
     profile.company = { ...signature, ...profile.company };
     profile = withVerifiedSocialLinks(profile, c.email);
     if (Object.keys(profile.company).length || profile.social.length)
