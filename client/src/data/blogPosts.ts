@@ -25,6 +25,102 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Rooftop HVAC Access Planning for NJ Buildings",
+    "slug": "rooftop-hvac-access-planning-nj",
+    "date": "October 29, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Planning a rooftop HVAC replacement in NJ? Learn access, crane coordination, occupancy planning and bidder questions before the crew arrives.",
+    "excerpt": "Rooftop HVAC replacements succeed or fail long before install day. Here's how NJ property managers should plan access, lifting and occupancy.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Rooftop HVAC replacement on a multifamily or commercial building in New Jersey involves far more than swapping equipment. Crane access, roof load limits, tenant notices, and parking restrictions can derail a project before a single unit is unbolted. Mechanical Enterprise LLC has served commercial and multifamily properties across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for 20 years, and most delays we see trace back to access planning that started too late. This guide walks through what property managers and general contractors should resolve before a replacement is scheduled."
+      },
+      {
+        "type": "h2",
+        "content": "Why Rooftop Access Planning Comes First"
+      },
+      {
+        "type": "paragraph",
+        "content": "Installation quality depends on getting the right equipment to the right location without damaging the roof membrane, parapet walls, or building facade. Before any proposal is finalized, the contractor needs to know roof access points, structural load capacity, and whether existing curbs match the replacement unit's footprint. Mismatched curb dimensions are one of the most common causes of mid-project change orders. A proper site visit also identifies whether rooftop screening, fall-protection anchors, or walkway pads already exist or need to be added to the scope, which affects both cost and timeline before work begins."
+      },
+      {
+        "type": "h2",
+        "content": "Crane and Hoist Coordination for Rooftop Units"
+      },
+      {
+        "type": "paragraph",
+        "content": "Most rooftop unit replacements over a certain tonnage require a crane lift, and in dense NJ municipalities that means street closures, police details, or utility line clearance coordination. Property managers should ask bidders early whether the project requires a crane, rigging crew, or helicopter lift, and who is responsible for permits tied to lane closures or sidewalk shed access. Lift day scheduling also needs a weather contingency, since wind speed limits can ground a crane with little notice. Confirming a backup date avoids a stalled project with an old unit disconnected and no replacement staged."
+      },
+      {
+        "type": "h2",
+        "content": "Tenant and Occupancy Planning"
+      },
+      {
+        "type": "paragraph",
+        "content": "Rooftop work rarely stays quiet. Crane rigging, rooftop foot traffic, and temporary HVAC shutdowns affect tenants directly below the work area and sometimes entire floors on a shared system. Property managers should map which units or common areas lose conditioning during changeover and for how long, then issue notices with enough lead time for residents or commercial tenants to plan around it. For multifamily buildings, coordinating with on-site staff about elevator use for material staging and rooftop access hours reduces conflict during the workday. Building a communication plan alongside the technical scope keeps occupants informed and reduces service complaints during the transition."
+      },
+      {
+        "type": "h2",
+        "content": "Site-Survey Questions to Ask Every Bidder"
+      },
+      {
+        "type": "paragraph",
+        "content": "A thorough site survey separates a contractor who understands rooftop logistics from one quoting off a photo. Before signing a proposal, property managers should require a documented walkthrough that covers roof access, structural review, electrical capacity, and staging areas. The questions below help standardize what every bidder should answer in writing."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Roof plans or as-built drawings showing existing unit locations and curb dimensions",
+          "Most recent structural assessment or roof load capacity documentation, if available",
+          "Electrical single-line diagrams or panel schedules near the rooftop units",
+          "Confirmation of whether a crane, hoist, or rigging crew is required and who pulls related permits",
+          "Expected rooftop access hours and any building-specific safety or insurance requirements",
+          "A written plan for occupant notification and HVAC downtime during changeover",
+          "Staging and material lay-down area availability on-site or at street level"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Scheduling Around NJ Weather and Building Codes"
+      },
+      {
+        "type": "paragraph",
+        "content": "Rooftop replacements in New Jersey carry seasonal risk. Winter lifts face wind and ice concerns, while summer scheduling competes with peak cooling demand, making any delay more disruptive to tenants. Local permitting and inspection timelines also vary by municipality, so a realistic schedule should account for permit review before crane dates are locked in. Property managers should ask contractors how they sequence inspections with lift day so equipment isn't sitting disconnected while paperwork clears. Building this buffer into the schedule protects against the compounding cost of an extended HVAC outage on an occupied building."
+      },
+      {
+        "type": "h2",
+        "content": "Maintenance Agreements to Protect Your Investment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Once new rooftop equipment is installed, a maintenance agreement helps protect the investment and catch issues before they become tenant complaints. Mechanical Enterprise offers portfolio maintenance pricing for PTAC, mini-split, RTU, and split systems, quoted per unit per year, with quarterly reporting so property managers can track service history across a building or portfolio. For new installations, optional 10-year parts and labor coverage is available as a separately purchased add-on; eligible existing systems may also qualify for this coverage after an inspection, but eligibility is never assumed. Pairing a new install with a maintenance plan is one of the most effective ways to extend equipment life on a commercial roof."
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning a rooftop HVAC replacement for your NJ property? Schedule a site survey with Mechanical Enterprise and get a documented access and lifting plan before bids go out.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial/for-property-management"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Who is responsible for crane permits on a rooftop HVAC replacement in NJ?",
+        "answer": "This varies by municipality and contract terms, so property managers should confirm in writing during the site survey whether the contractor or the building handles permits for lane closures or street-level crane staging."
+      },
+      {
+        "question": "How far in advance should tenants be notified about rooftop HVAC work?",
+        "answer": "Lead time depends on the building and local notice requirements, but property managers should build a communication plan into the project schedule as soon as the lift date and expected downtime are confirmed with the contractor."
+      },
+      {
+        "question": "Does the 10-year coverage apply to existing rooftop units?",
+        "answer": "Eligible existing systems may qualify for the optional parts and labor coverage after an inspection, but it is not automatic and is sold separately from the installation itself."
+      }
+    ]
+  },
+
+  {
     "title": "Pump Lead-Lag Rotation: NJ Building Checklist",
     "slug": "closed-loop-pump-rotation-checklist-nj",
     "date": "October 26, 2026",
