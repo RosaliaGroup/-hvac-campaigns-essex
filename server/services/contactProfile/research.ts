@@ -1,5 +1,5 @@
 import { splitContactPersonName } from "../../../shared/contactName";
-import { anthropicSearch, parseJsonObject } from "./anthropicSearch";
+import { anthropicSearch, parseJsonObject, ProfileLookupError } from "./anthropicSearch";
 import { makeOpenAiAsk, makePerplexityAsk } from "../seo/intel/aiVisibility";
 import type {
   ContactProfile,
@@ -240,7 +240,7 @@ export async function researchContact(
   fetchImpl: typeof fetch = fetch
 ): Promise<ContactProfile> {
   const ask = env.ANTHROPIC_API_KEY
-    ? (query: string) => anthropicSearch(query, env, fetchImpl)
+    ? (query: string) => anthropicSearch(query, env, fetchImpl, { maxSearches: 5, maxTokens: 4000 })
     : env.OPENAI_API_KEY
       ? makeOpenAiAsk(env, fetchImpl)
       : env.PERPLEXITY_API_KEY
@@ -265,6 +265,6 @@ export async function researchContact(
       status: "not_found",
     };
   const raw = parseJsonObject(result.text);
-  if (raw === null) throw new Error("Profile lookup returned unreadable data. Try again later.");
+  if (raw === null) throw new ProfileLookupError("unreadable", "Profile lookup returned unreadable data. Try again later.");
   return validateResearch(raw, result.citations, identity);
 }

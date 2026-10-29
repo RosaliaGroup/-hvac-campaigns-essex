@@ -1,5 +1,5 @@
 import { reserveProfileResearch } from "./dailyBudget";
-import { ProfileProviderError } from "./anthropicSearch";
+import { ProfileLookupError, ProfileProviderError } from "./anthropicSearch";
 import { and, desc, eq, or, sql } from "drizzle-orm";
 import {
   int,
@@ -181,7 +181,10 @@ export async function contactProfile(
     } catch (error) {
       // Never log request bodies, keys, contact identifiers or provider text.
       const status = error instanceof Error ? error.message.match(/\((\d{3})\)/)?.[1] : undefined;
-      const reason = error instanceof ProfileProviderError ? error.reason : "lookup_failed";
+      const reason = error instanceof ProfileProviderError ? error.reason
+        : error instanceof ProfileLookupError ? error.category
+        : error instanceof Error && error.name === "TimeoutError" ? "request_timeout"
+        : "lookup_failed";
       console.warn("[CRM Profile Research]", { contactId: c.id, status: status || "lookup_failed", reason });
       profile = {
         company: {},
