@@ -16,6 +16,27 @@ import { callAnthropicModelChain } from "../../_core/anthropic";
 import type { BlogPostData } from "../../../client/src/data/blogPosts";
 import type { VerifiedFacts } from "../../../shared/verifiedFacts";
 import { ContentDraftUnavailableError, parseContentDraftResponse } from "./contentDrafting";
+import { EXPIRED_INCENTIVES, SUPERLATIVES, CERTIFICATION_WORDS, COMPETITOR_BRANDS } from "../../../shared/seoLinter";
+
+const MONEY_RE = /\$\s?\d[\d,]*(?:\.\d+)?(?:\s?(?:k|K|million|M))?\b/g;
+
+/**
+ * The model copies whatever figures it sees in the old post, even when told not to (first live refresh,
+ * Oct 29: install-cost ranges like "$8,000 to $14,000" survived three attempts and blocked the draft).
+ * So it never sees them: every dollar amount that isn't part of a VERIFIED_FACTS.incentives amount is
+ * replaced before the old post goes into the prompt. Verified amounts ("Up to $16,000") are kept.
+ */
+export function stripUnverifiedAmounts<T>(value: T, facts: Pick<VerifiedFacts, "incentives">): T {
+  const verified = facts.incentives.flatMap((i) => i.amountText.match(MONEY_RE) ?? []).map((m) => m.replace(/\s/g, ""));
+  const scrub = (text: string) => text.replace(MONEY_RE, (m) => (verified.includes(m.replace(/\s/g, "")) ? m : "[amount removed]"));
+  const walk = (v: unknown): unknown => {
+    if (typeof v === "string") return scrub(v);
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    return v;
+  };
+  return walk(value) as T;
+}
 
 const DEFAULT_MODEL = "claude-sonnet-5";
 const FALLBACK_MODELS = ["claude-haiku-4-5"];
@@ -46,8 +67,8 @@ export function buildRefreshSystemPrompt(ctx: RefreshContext, facts: VerifiedFac
     "The post is live and has lost search visibility. Rewrite it so it is accurate, current and more useful for the SAME reader and the SAME search intent. This is a refresh, not a new topic.",
     ...(ctx.reason ? [`Why it was picked: ${ctx.reason}`] : []),
     "",
-    "CURRENT POST (JSON):",
-    JSON.stringify(current, null, 2),
+    "CURRENT POST (JSON). Unverified dollar amounts have already been replaced with \"[amount removed]\" — do not restore, estimate or replace them with any other number:",
+    JSON.stringify(stripUnverifiedAmounts(current, facts), null, 2),
     "",
     "VERIFIED FACTS — the ONLY source of truth for any number, program, service, county or credential:",
     JSON.stringify(facts, null, 2),
@@ -61,7 +82,10 @@ export function buildRefreshSystemPrompt(ctx: RefreshContext, facts: VerifiedFac
     "- The `title` field IS the page's one H1 — do not repeat it as a section. At most 6 `h2` sections; no other headings.",
     "- Keep any accurate, still-useful content and structure from the current post. Update anything dated. Remove anything you cannot support with VERIFIED FACTS.",
     "- Dollar figures: use ONLY amounts that appear in VERIFIED_FACTS.incentives (e.g. \"Up to $16,000\" for the PSE&G / NJ Clean Energy residential rebate, \"Up to 80%\" for commercial Direct Install). Drop every other program-specific dollar amount, tier or stacking total from the old copy — describe those programs without numbers and tell the reader eligibility and amounts are confirmed during the assessment.",
+    "- The ONLY \"$\" figures allowed anywhere in the post are the exact amount strings in VERIFIED_FACTS.incentives. No installed prices, cost ranges, savings estimates, utility-bill figures or example budgets — explain what drives cost in words instead.",
     "- Never mention the federal 25C credit, the IRA tax credit, HEAR/HOMES or HEEHRA rebates (expired or unverified).",
+    `- These words and phrases are blocked by the checker in ANY sense, so never use them (rephrase instead): ${[...EXPIRED_INCENTIVES, ...SUPERLATIVES, ...CERTIFICATION_WORDS].map((w) => `"${w}"`).join(", ")}. For example write "you may be told" instead of "you'll hear".`,
+    `- Never name these companies: ${COMPETITOR_BRANDS.join(", ")}.`,
     "- Rebates are never promised: say a household \"may qualify\" and that eligibility is confirmed at the assessment.",
     residential
       ? "- Include exactly one `cta_box` for a free in-home assessment; buttonUrl must be https://mechanicalenterprise.com/contact or https://mechanicalenterprise.com/rebate-calculator."
