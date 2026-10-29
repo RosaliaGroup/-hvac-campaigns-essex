@@ -133,13 +133,18 @@ export function buildItemDrafts(input: {
         u.reason === "no_page"
           ? u.clusterTown
             ? `${(u.clusterQueries ?? []).length} "{service} ${u.clusterTown}" queries (${u.impressions} impressions, top: "${u.query}") have no city page — routed to the PR-3 backlog (never auto-built).`
-            : `No page currently answers "${u.query}" — routed to the PR-3 backlog (never auto-built).`
+            : `No page currently answers "${u.query}" — queued as a blog topic for the auto content lane (fact-checked, held, revertable).`
           : u.reason === "intent_mismatch"
           ? `"${u.query}" looks commercial-intent but lands on ${u.page} — content-queue proposal or PR-3 backlog candidate.`
           : u.clusterQueries && u.clusterQueries.length > 1
           ? `${u.clusterQueries.length} "{service} ${u.clusterTown}" queries (${u.impressions} impressions, top: "${u.query}") cluster onto ${u.page}, which ranks worse than 30 for all of them — content-queue proposal candidate.`
           : `"${u.query}" lands on ${u.page} at position ${u.position.toFixed(1)} (worse than 30) — content-queue proposal candidate.`,
-      targetQueue: u.reason === "no_page" ? "page_pr_backlog" : "content_queue", factsBlocked: false,
+      // Owner decision 2026-10-29 ("this needs to run in auto"): a general
+      // unserved query becomes a blog topic, which the existing content lane
+      // drafts, lints, critic-checks, holds and publishes on its own. Only
+      // town clusters still go to the page-PR backlog — new templated city
+      // pages are the doorway-page risk docs/pr1/july-collapse.md points at.
+      targetQueue: u.reason === "no_page" && u.clusterTown ? "page_pr_backlog" : "content_queue", factsBlocked: false,
     });
   }
 
