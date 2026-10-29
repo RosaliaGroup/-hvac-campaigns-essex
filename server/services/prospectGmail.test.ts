@@ -104,3 +104,30 @@ describe("prospect Gmail transport", () => {
     expect((await replied.threadState("t1", "jane@acme.com")).replied).toBe(true);
   });
 });
+
+describe("HTML email and Gmail signature", () => {
+  it("sends multipart/alternative with both parts when html is given", async () => {
+    const { createProspectMailbox } = await load();
+    let body: any;
+    const fetchImpl = vi.fn(async (_u: string, init: any) => { body = JSON.parse(init.body); return json(200, { id: "m1", threadId: "t1" }); });
+    await createProspectMailbox("t", fetchImpl as any).send({ to: "jane@acme.com", subject: "Hi", body: "plain text", html: "<p>rich</p>" });
+    const mime = Buffer.from(body.raw, "base64url").toString();
+    expect(mime).toMatch(/Content-Type: multipart\/alternative; boundary="me_alt_[0-9a-f]+"/);
+    expect(mime).toContain("Content-Type: text/plain; charset=UTF-8");
+    expect(mime).toContain("Content-Type: text/html; charset=UTF-8");
+    expect(mime).toContain(Buffer.from("<p>rich</p>").toString("base64"));
+  });
+  it("stays plain text when no html is given", async () => {
+    const { mimeBody } = await load();
+    expect(mimeBody("x").at(0)).toBe("Content-Type: text/plain; charset=UTF-8");
+  });
+  it("reads the sales@ signature from Gmail settings; falls back to null when unavailable", async () => {
+    const { createProspectMailbox } = await load();
+    const ok = vi.fn(async () => json(200, { sendAsEmail: "sales@mechanicalenterprise.com", signature: "<b>Ana Haynes</b>" }));
+    expect(await createProspectMailbox("t", ok as any).signatureHtml()).toBe("<b>Ana Haynes</b>");
+    const none = vi.fn(async () => json(200, { signature: "" }));
+    expect(await createProspectMailbox("t", none as any).signatureHtml()).toBeNull();
+    const denied = vi.fn(async () => json(403, { error: { status: "PERMISSION_DENIED" } }));
+    expect(await createProspectMailbox("t", denied as any).signatureHtml()).toBeNull();
+  });
+});

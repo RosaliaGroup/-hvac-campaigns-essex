@@ -158,6 +158,8 @@ export async function runHomeownerEmailHour(db: Db, opts: { now?: Date; mailbox?
   try {
     const mailbox = opts.mailbox ?? await prospectMailbox();
     await mailbox.verifyIdentity();
+    // The owner's real Gmail signature, read once per run; text signature is the fallback.
+    const signatureHtml = await mailbox.signatureHtml().catch(e => { if (e instanceof GmailStopError) throw e; return null; });
     const sentThisHour = await mailbox.outreachSentSince(easternHourStartEpochSec(now)).catch(e => {
       if (e instanceof GmailIncompleteError) return null; throw e;
     });
@@ -208,8 +210,8 @@ export async function runHomeownerEmailHour(db: Db, opts: { now?: Date; mailbox?
       if (!state.lastMessageIdHeader) { result.skippedContacts.push({ email: row.email, reason: "cannot thread follow-up" }); continue; }
       const mail = followUpEmail({ firstName: firstNameFor(row.firstName, row.displayName),
         unsubscribeUrl: unsubscribeUrl(row.email, cfg.secret), postalAddress: cfg.postalAddress, signature: cfg.signature,
-        originalSubject: state.originalSubject || row.subject || "" });
-      const sent = await mailbox.send({ to: row.email, subject: mail.subject, body: mail.body,
+        signatureHtml, originalSubject: state.originalSubject || row.subject || "" });
+      const sent = await mailbox.send({ to: row.email, subject: mail.subject, body: mail.body, html: mail.html,
         threadId: row.threadId, inReplyTo: state.lastMessageIdHeader, extraHeaders: listUnsubHeaders(row.email, cfg.secret) });
       allowance--;
       // Stays 'active' so replies to the follow-up are still detected for 45 days.
@@ -241,10 +243,10 @@ export async function runHomeownerEmailHour(db: Db, opts: { now?: Date; mailbox?
         if (await mailbox.hasInboundFrom(email)) { await skip("replied", "Has written to sales@ — handled by a person"); continue; }
         if (await mailbox.hasBounce(email)) { await recordOutreachSuppression(db, email, "hard_bounce"); await skip("bounced", "Previous delivery failure"); continue; }
         const mail = introEmail({ firstName: firstNameFor(c.firstName, c.displayName),
-          unsubscribeUrl: unsubscribeUrl(email, cfg.secret), postalAddress: cfg.postalAddress, signature: cfg.signature });
+          unsubscribeUrl: unsubscribeUrl(email, cfg.secret), postalAddress: cfg.postalAddress, signature: cfg.signature, signatureHtml });
         // Reserve the row before sending so a crash can never cause a duplicate intro.
         await upsertState(db, c.customerId, email, { status: "sending", step: 0, subject: mail.subject });
-        const sent = await mailbox.send({ to: email, subject: mail.subject, body: mail.body, extraHeaders: listUnsubHeaders(email, cfg.secret) });
+        const sent = await mailbox.send({ to: email, subject: mail.subject, body: mail.body, html: mail.html, extraHeaders: listUnsubHeaders(email, cfg.secret) });
         allowance--;
         await upsertState(db, c.customerId, email, { status: "active", step: 1, threadId: sent.threadId, lastMessageId: sent.id,
           firstSentAt: now, lastSentAt: now });

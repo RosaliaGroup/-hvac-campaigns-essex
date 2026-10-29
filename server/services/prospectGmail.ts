@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 /**
  * Gmail access for the single automated HVAC email sender (Railway prospect workflow).
  *
@@ -38,6 +39,19 @@ function safeEmail(email: string): string {
 const header = (msg: any, name: string): string =>
   msg?.payload?.headers?.find((h: any) => String(h.name).toLowerCase() === name.toLowerCase())?.value ?? "";
 const MAX_SENT_PAGES = 5; // 500 messages — far above any hourly cap; beyond this we fail closed.
+
+const b64lines = (text: string) => Buffer.from(text).toString("base64").match(/.{1,76}/g)?.join("\r\n") ?? "";
+/** Body lines after MIME-Version: plain text, or multipart/alternative when an HTML version is given. */
+export function mimeBody(text: string, html?: string | null): string[] {
+  if (!html) return ["Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64lines(text)];
+  const boundary = `me_alt_${crypto.randomUUID().replace(/-/g, "")}`;
+  return [
+    `Content-Type: multipart/alternative; boundary="${boundary}"`, "",
+    `--${boundary}`, "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64lines(text),
+    `--${boundary}`, "Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64lines(html),
+    `--${boundary}--`,
+  ];
+}
 
 export type ThreadState = {
   outboundCount: number;
@@ -142,7 +156,9 @@ export function createProspectMailbox(accessToken: string, fetchImpl: typeof fet
     },
     async send(input: { to: string; subject: string; body: string; threadId?: string | null; inReplyTo?: string | null;
       /** Extra RFC 5322 headers (e.g. List-Unsubscribe). Names/values may not contain line breaks. */
-      extraHeaders?: Record<string, string> }) {
+      extraHeaders?: Record<string, string>;
+      /** Optional HTML version; the message is then sent as multipart/alternative (text + HTML). */
+      html?: string | null }) {
       const to = safeEmail(input.to);
       if (/[\r\n]/.test(input.subject)) throw new Error("Invalid subject");
       const extra = Object.entries(input.extraHeaders ?? {}).map(([k, v]) => {
@@ -157,16 +173,24 @@ export function createProspectMailbox(accessToken: string, fetchImpl: typeof fet
         ...(input.inReplyTo ? [`In-Reply-To: ${input.inReplyTo}`, `References: ${input.inReplyTo}`] : []),
         ...extra,
         "MIME-Version: 1.0",
-        "Content-Type: text/plain; charset=UTF-8",
-        "Content-Transfer-Encoding: base64",
-        "",
-        Buffer.from(input.body).toString("base64").match(/.{1,76}/g)?.join("\r\n") ?? "",
+        ...mimeBody(input.body, input.html),
       ].join("\r\n")).toString("base64url");
       const sent = await request("messages/send", {
         method: "POST",
         body: JSON.stringify({ raw, ...(input.threadId ? { threadId: input.threadId } : {}) }),
       });
       return { id: String(sent.id), threadId: String(sent.threadId) };
+    },
+    /** The sales@ Gmail signature (HTML) as set in Gmail settings, or null when none is set or it cannot be read. */
+    async signatureHtml(): Promise<string | null> {
+      try {
+        const r = await request(`settings/sendAs/${encodeURIComponent(CRM_MAILBOX)}`);
+        const sig = typeof r?.signature === "string" ? r.signature.trim() : "";
+        return sig.length >= 3 ? sig : null;
+      } catch (e) {
+        if (e instanceof GmailStopError && e.kind === "rate_limited") throw e;
+        return null; // missing permission or not set: fall back to the text signature
+      }
     },
     /** Exact-subject lookup in Sent (report de-duplication). */
     async findSentBySubject(subject: string): Promise<string | null> {

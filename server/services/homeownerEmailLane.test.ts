@@ -9,13 +9,16 @@ const ADDRESS = "123 Example St, Newark, NJ 07105";
 
 describe("homeowner email copy (CAN-SPAM)", () => {
   const url = unsubscribeUrl("Jane@Example.com", SECRET);
-  it("intro identifies sender, explains source, has unsubscribe + postal address, correct phone", () => {
-    const { subject, body } = introEmail({ firstName: "Jane", unsubscribeUrl: url, postalAddress: ADDRESS });
+  it("intro identifies sender, has unsubscribe + postal address, correct phone, no list-source wording", () => {
+    const { subject, body, html } = introEmail({ firstName: "Jane", unsubscribeUrl: url, postalAddress: ADDRESS });
     expect(subject).toMatch(/Mechanical Enterprise/);
+    for (const part of [body, html]) {
+      expect(part).toContain(ADDRESS);
+      expect(part).toMatch(/Unsubscribe/);
+      expect(part).not.toMatch(/mailing list|obtained|purchased|you are receiving this/i);
+    }
     expect(body).toContain(url);
-    expect(body).toContain(ADDRESS);
-    expect(body).toMatch(/reply "unsubscribe"/);
-    expect(body).toMatch(/mailing list we obtained/);
+    expect(html).toContain(`href="${url.replace(/&/g, "&amp;")}"`);
     expect(body).toContain("(862) 423-9396");
     expect(body).not.toContain("449-6850");
     expect(body).not.toMatch(/you (requested|inquired|contacted us)/i);
@@ -80,5 +83,23 @@ describe("signature", () => {
     const { body } = introEmail({ firstName: "Jane", unsubscribeUrl: "https://x/u", postalAddress: ADDRESS, signature: "Ana H.\nCEO" });
     expect(body).toContain("Thank you,\nAna H.\nCEO\n");
     expect(body).toContain(ADDRESS);
+  });
+  it("uses the real Gmail HTML signature in both parts when available", async () => {
+    const { introEmail, followUpEmail } = await import("../../shared/homeownerEmail");
+    const sig = '<div><b>Ana Haynes</b><br>President | Mechanical Enterprise LLC<br><a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a> | <a href="tel:8624239396">(862) 423-9396</a></div>';
+    const intro = introEmail({ firstName: "Jane", unsubscribeUrl: "https://x/u", postalAddress: ADDRESS, signatureHtml: sig });
+    expect(intro.html).toContain(sig);
+    expect(intro.body).toContain("Ana Haynes\nPresident | Mechanical Enterprise LLC\nmechanicalenterprise.com | (862) 423-9396");
+    expect(intro.body).not.toMatch(/<[a-z]/i);
+    const fu = followUpEmail({ firstName: "Jane", unsubscribeUrl: "https://x/u", postalAddress: ADDRESS, signatureHtml: sig, originalSubject: "Hi" });
+    expect(fu.html).toContain(sig);
+    expect(fu.body).toContain(ADDRESS);
+  });
+  it("escapes purchased-list data in the HTML part", async () => {
+    const { introEmail } = await import("../../shared/homeownerEmail");
+    const { html } = introEmail({ firstName: "<script>x</script>", unsubscribeUrl: "https://x/u?a=1&b=2", postalAddress: ADDRESS });
+    expect(html).not.toContain("<script>");
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain('href="https://x/u?a=1&amp;b=2"');
   });
 });
