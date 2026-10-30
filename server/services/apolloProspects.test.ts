@@ -100,3 +100,10 @@ describe("query rotation", () => {
     for (const l of [...a.locations, ...b.locations]) expect(APOLLO_LOCATIONS).toContain(l);
   });
 });
+
+describe("Apollo error detail", () => {
+  it("logs the HTTP status, endpoint and Apollo's own reason", async () => {
+    const c = createApolloClient("k", vi.fn(async () => new Response('{"error":"api/v1/mixed_people/api_search is not accessible with this api_key on a free plan"}', { status: 403 })) as any);
+    await expect(c.search(["x"], ["y"], 1)).rejects.toThrow(/HTTP 403, mixed_people\/api_search\).*free plan/);
+  });
+});
