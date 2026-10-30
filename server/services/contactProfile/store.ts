@@ -82,6 +82,37 @@ function withVerifiedSocialLinks(profile: ContactProfile, email: string | null |
   return {...profile,social,companySocial,status:"matched"};
 }
 
+type SocialLink = ContactProfile["social"][number];
+function union(next: SocialLink[], prev: SocialLink[]): SocialLink[] {
+  return [...next, ...prev.filter(p => !next.some(n => n.url === p.url))];
+}
+export function mergeSocial(profile: ContactProfile, previous: ContactProfile): ContactProfile {
+  const social = union(profile.social ?? [], previous.social ?? []);
+  const companySocial = union(profile.companySocial ?? [], previous.companySocial ?? []);
+  return { ...profile, social, ...(companySocial.length ? { companySocial } : {}),
+    status: social.length || companySocial.length ? "matched" : profile.status };
+}
+
+/**
+ * Attach a verified profile link from a trusted source (e.g. Apollo's LinkedIn URL for the
+ * person it matched by verified work email). checkedAt stays at epoch so full public
+ * research still runs; the link survives that research via mergeSocial.
+ */
+export async function addVerifiedSocialLink(contactId: number, link: SocialLink & { kind?: "person" | "company" }) {
+  const db = await database();
+  const [contact] = await db.select().from(crmExternalContacts).where(eq(crmExternalContacts.id, contactId)).limit(1);
+  if (!contact) throw new Error("Contact not found");
+  const [stored] = await db.select().from(profiles).where(eq(profiles.contactId, contactId)).limit(1);
+  const base: ContactProfile = stored?.profile ?? { company: {}, social: [], checkedAt: new Date(0).toISOString(), status: "not_found" };
+  const entry = { platform: link.platform, url: link.url, source: link.source, evidence: link.evidence.slice(0, 2000) };
+  const merged = mergeSocial(link.kind === "company"
+    ? { ...base, companySocial: [entry] , social: [] } : { ...base, social: [entry] }, base);
+  const identity = stored?.identity ?? JSON.stringify({ version: 3, name: contact.name, email: contact.email, company: contact.company });
+  await db.insert(profiles).values({ contactId, identity, profile: merged })
+    .onDuplicateKeyUpdate({ set: { profile: merged, updatedAt: new Date() } });
+  return merged;
+}
+
 // Reuse verified results for 30 days and unmatched results for seven days.
 export function profileCacheMs(profile: ContactProfile) {
   if (profile.message || profile.status === "unavailable") return 5 * 60 * 1000;
@@ -222,6 +253,11 @@ export async function contactProfile(
     }
     profile.company = { ...signature, ...profile.company };
     profile = withVerifiedSocialLinks(profile, c.email);
+    // Keep links verified earlier (e.g. the LinkedIn profile from Apollo) when a new lookup misses them.
+    // Re-read just before writing: a link may have been attached while this lookup was running.
+    const latestRows = await db.select().from(profiles).where(eq(profiles.contactId, c.id)).limit(1);
+    const latest = Array.isArray(latestRows) ? latestRows[0] : undefined;
+    if (latest?.profile) profile = mergeSocial(profile, latest.profile);
     if (Object.keys(profile.company).length || profile.social.length)
       profile.status = "matched";
     await db
