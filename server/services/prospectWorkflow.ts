@@ -457,4 +457,19 @@ export function startProspectWorkflow() {
   };
   setTimeout(tick, 60000);
   setInterval(tick, 60000);
+  // One-time catch-up of this week's outreach changes for existing leads (runs once ever).
+  if (process.env.NODE_ENV === "production" && process.env.OUTREACH_BACKFILL_ENABLED !== "false") {
+    setTimeout(() => void (async () => {
+      try {
+        const db = await getDb();
+        if (!db) return;
+        const { runOutreachBackfill } = await import("./outreachBackfill");
+        const { queueContactEnrichment } = await import("./automaticContactEnrichment");
+        const summary = await runOutreachBackfill(db, { store: createCycleStore(db), queueResearch: id => queueContactEnrichment(id) });
+        console.info("[outreach-backfill]", summary ? JSON.stringify(summary) : "already ran");
+      } catch (e) {
+        console.warn("[outreach-backfill] failed", (e as Error).message.slice(0, 200));
+      }
+    })(), 180_000).unref?.();
+  }
 }
