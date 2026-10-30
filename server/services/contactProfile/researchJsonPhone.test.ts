@@ -106,3 +106,15 @@ describe("prose answers", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("keeping verified social links", () => {
+  it("a new lookup keeps links verified earlier (e.g. Apollo LinkedIn) and adds new ones", async () => {
+    const { mergeSocial } = await import("./store");
+    const prev: any = { company: {}, social: [{ platform: "LinkedIn", url: "https://www.linkedin.com/in/jane", source: "s", evidence: "e" }], checkedAt: "x", status: "matched" };
+    const next: any = { company: {}, social: [{ platform: "Facebook", url: "https://facebook.com/jane", source: "s", evidence: "e" }], checkedAt: "y", status: "not_found" };
+    const m = mergeSocial(next, prev);
+    expect(m.social.map((s: any) => s.platform)).toEqual(["Facebook", "LinkedIn"]);
+    expect(m.status).toBe("matched");
+    expect(mergeSocial(prev, prev).social).toHaveLength(1);
+  });
+});

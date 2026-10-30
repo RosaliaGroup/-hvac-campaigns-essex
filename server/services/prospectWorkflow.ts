@@ -22,7 +22,8 @@ import { isPublicBidEntity } from "./outreachProspectRules";
 import { saveVerifiedProspect } from "./saveVerifiedProspect";
 import { CRM_MAILBOX } from "./gmailCrm";
 import { runCycle, type CycleStore, type QueueRow } from "./prospectCycle";
-import { easternParts } from "../../shared/prospectCadence";
+import { addBusinessDays, easternParts } from "../../shared/prospectCadence";
+import { addVerifiedSocialLink } from "./contactProfile/store";
 import { THIRTY_DAY_STEPS, cadenceDueAt } from "./crm30DayRules";
 import { cancelOpen30DayTasks, insert30DayTask } from "./crm30DayTasks";
 import { resolveCadenceAssignee } from "./crm30DayAssignee";
@@ -318,6 +319,12 @@ export function createCycleStore(db: Db): CycleStore {
         name: row.name, title: row.title, company: row.company, email: row.email,
         verificationUrl: row.verificationUrl, phone: row.phone ?? undefined,
       })).contactId;
+      // Apollo matches a person by verified work email; its LinkedIn URL is their profile.
+      if (contactId && /^https:\/\/(www\.)?linkedin\.com\/in\//i.test(row.verificationUrl)) {
+        await addVerifiedSocialLink(contactId, { platform: "LinkedIn", url: row.verificationUrl.replace(/\/$/, ""),
+          source: row.verificationUrl, evidence: `Apollo.io match for ${row.name}, ${row.title} at ${row.company} (verified work email ${row.email})` })
+          .catch(e => console.warn("[prospect-workflow] LinkedIn save failed", (e as Error).message.slice(0, 120)));
+      }
       if (!leadId) {
         const r = await db.insert(leads).values({
           name: row.name, contact: row.email, contactType: "email", source: "verified-hvac-prospect",
@@ -355,6 +362,16 @@ export function createCycleStore(db: Db): CycleStore {
       if (!row.externalContactId) throw new Error("CRM contact missing");
       const { user } = await resolveCadenceAssignee();
       let created = 0;
+      // Day 1: follow the person and company from our own social accounts (done by a person:
+      // LinkedIn/Facebook/Instagram do not allow automated following).
+      const linkedin = /^https:\/\/(www\.)?linkedin\.com\/in\//i.test(row.verificationUrl) ? row.verificationUrl : null;
+      if (await insert30DayTask({
+        contactId: row.externalContactId, email: row.email.toLowerCase(),
+        introMessageId: sent.id, introThreadId: sent.threadId, introAt,
+        touchNumber: 1, kind: "human", dueAt: addBusinessDays(introAt, 1),
+        assignedToUserId: user?.id ?? null, status: "open",
+        note: `Day 1: Follow on social — ${row.name}, ${row.title} at ${row.company}. ${linkedin ? `LinkedIn: ${linkedin}. ` : ""}Open the contact's Social section for all verified profiles (person and company) and click "Mark followed" after following from the Mechanical Enterprise accounts.`,
+      })) created++;
       for (const step of THIRTY_DAY_STEPS) {
         if (step.kind !== "human") continue; // email steps are sent automatically by this workflow
         const ok = await insert30DayTask({
