@@ -181,6 +181,11 @@ async function researchSegmentOnce(db: Db, ownerId: number, segment: string, cou
  * the CRM toggle is off or missing (e.g. after a database restore), "false" stops it.
  * Unset → the CRM Growth → Prospecting toggle decides.
  */
+/** One-time rerun of a cycle hour, e.g. "2026-10-30T15" (Eastern). Ignored for any other hour. */
+export function rerunHourOverride(env: NodeJS.ProcessEnv = process.env): string | null {
+  const v = env.PROSPECT_RERUN_HOUR?.trim();
+  return v && /^\d{4}-\d{2}-\d{2}T\d{2}$/.test(v) ? v : null;
+}
 export function workflowEnabledOverride(env: NodeJS.ProcessEnv = process.env): boolean | null {
   const v = env.PROSPECT_WORKFLOW_ENABLED?.trim().toLowerCase();
   return v === "true" ? true : v === "false" ? false : null;
@@ -243,8 +248,18 @@ export function createCycleStore(db: Db): CycleStore {
       // The settings row may be missing after a database restore; create it (disabled) so the claim can work.
       await db.insert(settings).values({ id: 1, enabled: false }).onDuplicateKeyUpdate({ set: { id: sql`${settings.id}` } });
       const override = workflowEnabledOverride();
+      const enabledGate = override === null ? [eq(settings.enabled, true)] : [];
+      const rerun = `${hour}#rerun`;
+      // Owner-requested one-time rerun of the CURRENT hour (PROSPECT_RERUN_HOUR=YYYY-MM-DDTHH, Eastern).
+      // Allowed once: it moves lastHour to "<hour>#rerun", which neither path can claim again.
+      if (rerunHourOverride() === hour) {
+        const again = await db.update(settings).set({ lastHour: rerun, lastRunAt: now })
+          .where(and(eq(settings.id, 1), ...enabledGate, eq(settings.lastHour, hour)));
+        if (affected(again) === 1) return true;
+      }
       const r = await db.update(settings).set({ lastHour: hour, lastRunAt: now })
-        .where(and(eq(settings.id, 1), ...(override === null ? [eq(settings.enabled, true)] : []), sql`COALESCE(${settings.lastHour}, '') <> ${hour}`));
+        .where(and(eq(settings.id, 1), ...enabledGate,
+          sql`COALESCE(${settings.lastHour}, '') NOT IN (${hour}, ${rerun})`));
       return affected(r) === 1;
     },
     async config() {

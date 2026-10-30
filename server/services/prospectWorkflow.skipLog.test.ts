@@ -26,3 +26,12 @@ describe("PROSPECT_WORKFLOW_ENABLED master switch", () => {
     expect(workflowEnabledOverride({ PROSPECT_WORKFLOW_ENABLED: "yes" } as any)).toBeNull();
   });
 });
+
+import { rerunHourOverride } from "./prospectWorkflow";
+describe("one-time hour rerun", () => {
+  it("accepts only a well-formed Eastern hour key", () => {
+    expect(rerunHourOverride({ PROSPECT_RERUN_HOUR: "2026-10-30T15" } as any)).toBe("2026-10-30T15");
+    expect(rerunHourOverride({ PROSPECT_RERUN_HOUR: "3pm" } as any)).toBeNull();
+    expect(rerunHourOverride({} as any)).toBeNull();
+  });
+});
