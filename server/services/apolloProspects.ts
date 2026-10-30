@@ -83,7 +83,15 @@ export function createApolloClient(apiKey: string, fetchImpl: typeof fetch = fet
       headers: { "x-api-key": apiKey, "Content-Type": "application/json", "Cache-Control": "no-cache" },
       signal: AbortSignal.timeout(20000),
     });
-    if (!r.ok) throw new ApolloError(r.status, r.status === 429 ? "Apollo rate limit reached" : r.status === 401 || r.status === 403 ? "Apollo key rejected or endpoint not in the key's scope" : `Apollo request failed (${r.status})`);
+    if (!r.ok) {
+      // Apollo's own error text (e.g. plan or scope) is safe to log; it never echoes the key.
+      const detail = (await r.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
+      const base = r.status === 429 ? "Apollo rate limit reached"
+        : r.status === 401 || r.status === 403 ? "Apollo key rejected or endpoint not in the key's scope"
+        : r.status === 402 || r.status === 422 ? "Apollo plan or credits do not allow this request"
+        : "Apollo request failed";
+      throw new ApolloError(r.status, `${base} (HTTP ${r.status}, ${path})${detail ? `: ${detail}` : ""}`);
+    }
     return r.json() as Promise<any>;
   };
   return {
