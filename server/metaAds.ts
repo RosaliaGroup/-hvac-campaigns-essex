@@ -67,8 +67,9 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────
 
-// pages_show_list is what makes the Facebook dialog list the Pages to choose from (owner, Oct 31: "cant find my business page").
-const ADS_SCOPES = "ads_management,ads_read,business_management,leads_retrieval,pages_show_list,pages_manage_metadata,pages_read_engagement,pages_manage_ads";
+// Do NOT add pages_show_list here until it is enabled for the ME Ads Manager app (App Review > Permissions and features):
+// requesting a permission the app lacks makes Facebook show "It looks like this app isn't available" (Oct 31).
+const ADS_SCOPES = "ads_management,ads_read,business_management,leads_retrieval,pages_manage_metadata,pages_read_engagement,pages_manage_ads";
 
 // Social Lane "Connect" (docs/social-lane-spec.md, owner build instruction #5)
 // reuses this SAME OAuth app/dialog with the scopes it actually needs to
