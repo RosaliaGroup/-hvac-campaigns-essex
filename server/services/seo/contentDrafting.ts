@@ -41,7 +41,7 @@ export function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: Verif
     ? ["", "A PREVIOUS DRAFT OF THIS TOPIC WAS BLOCKED FOR THE FOLLOWING FINDINGS. Your new draft MUST fix every one of them:", ...priorFindings.map((f) => `- ${f}`)]
     : [];
   return [
-    "You are an SEO content writer for Mechanical Enterprise LLC, a licensed HVAC contractor in New Jersey.",
+    "You are an SEO content writer for Mechanical Enterprise LLC, an HVAC contractor in New Jersey.",
     "Write B2B content for property managers, general contractors, or commercial/multifamily building owners — NEVER for homeowners, and NEVER about residential rebates.",
     "",
     `Topic: ${topic.title}`,

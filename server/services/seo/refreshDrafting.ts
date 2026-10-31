@@ -63,7 +63,7 @@ export function buildRefreshSystemPrompt(ctx: RefreshContext, facts: VerifiedFac
     ? ["", "A PREVIOUS DRAFT OF THIS REFRESH WAS BLOCKED FOR THE FOLLOWING FINDINGS. Your new draft MUST fix every one of them:", ...priorFindings.map((f) => `- ${f}`)]
     : [];
   return [
-    "You are refreshing an EXISTING blog post for Mechanical Enterprise LLC, a licensed HVAC contractor in New Jersey.",
+    "You are refreshing an EXISTING blog post for Mechanical Enterprise LLC, an HVAC contractor in New Jersey.",
     "The post is live and has lost search visibility. Rewrite it so it is accurate, current and more useful for the SAME reader and the SAME search intent. This is a refresh, not a new topic.",
     ...(ctx.reason ? [`Why it was picked: ${ctx.reason}`] : []),
     "",
@@ -86,6 +86,9 @@ export function buildRefreshSystemPrompt(ctx: RefreshContext, facts: VerifiedFac
     "- Never mention the federal 25C credit, the IRA tax credit, HEAR/HOMES or HEEHRA rebates (expired or unverified).",
     `- These words and phrases are blocked by the checker in ANY sense, so never use them (rephrase instead): ${[...EXPIRED_INCENTIVES, ...SUPERLATIVES, ...CERTIFICATION_WORDS].map((w) => `"${w}"`).join(", ")}. For example write "you may be told" instead of "you'll hear".`,
     `- Never name these companies: ${COMPETITOR_BRANDS.join(", ")}.`,
+    // A separate fact-checker rejects ANY checkable claim that is not in VERIFIED FACTS (Oct 30: the rebate guides
+    // were blocked for "licensed contractor", SEER2/HSPF2 thresholds, brand names, PSE&G territory, "registered installer").
+    "- A separate fact-checker rejects any checkable statement that is not in VERIFIED FACTS. So do NOT state: a license, certification, registration, \"participating contractor\" or \"trade ally\" status (unless VERIFIED FACTS lists it); equipment brand names; efficiency ratings or thresholds (SEER2, HSPF2, ENERGY STAR tiers); which towns or counties a utility serves; program rules, deadlines or eligibility criteria; industry statistics or typical savings. Areas WE serve may only be the VERIFIED_FACTS serviceCounties. Explain what to ask, what affects eligibility in plain words, and that eligibility is confirmed at the assessment — without specific criteria.",
     "- Rebates are never promised: say a household \"may qualify\" and that eligibility is confirmed at the assessment.",
     residential
       ? "- Include exactly one `cta_box` for a free in-home assessment; buttonUrl must be https://mechanicalenterprise.com/contact or https://mechanicalenterprise.com/rebate-calculator."
