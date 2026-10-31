@@ -110,4 +110,21 @@ describe("past outreach leads", () => {
     expect(await runPastLeadsApollo(fakeDb(rows, { usedToday: 40 }) as any, { match, reserveReveal: async () => true,
       normalize: () => null, isSuppressed: async () => false, now: new Date("2026-10-31T14:00:00Z"), perDay: 40 })).toBeNull();
   });
+
+  it("spreads the older follow backlog 20 per business day from Monday 9 AM", async () => {
+    const { spreadFollowBacklog } = await import("./pastLeadsEnrichment");
+    const due: string[] = [];
+    const db: any = { execute: vi.fn(async (q: any) => {
+      const t = JSON.stringify(q);
+      if (t.includes("INSERT IGNORE INTO crmBackfillRuns")) return [{ affectedRows: 1 }];
+      if (t.includes("SELECT id FROM crmOutreach30DayTasks")) return [Array.from({ length: 45 }, (_, i) => ({ id: i + 1 }))];
+      if (t.includes("SET dueAt")) due.push(q.queryChunks.find((c: any) => c instanceof Date)?.toISOString());
+      return [{}];
+    }) };
+    const out = await spreadFollowBacklog(db, new Date("2026-10-31T03:00:00Z"));
+    expect(out).toEqual({ spread: 45, businessDays: 3 });
+    expect(due[0]).toBe("2026-11-02T14:00:00.000Z");
+    expect(due[20]).toBe("2026-11-03T14:00:00.000Z");
+    expect(due[44]).toBe("2026-11-04T14:00:00.000Z");
+  });
 });

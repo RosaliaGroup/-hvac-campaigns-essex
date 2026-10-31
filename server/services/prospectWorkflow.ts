@@ -481,6 +481,9 @@ export function startProspectWorkflow() {
         const past = await runPastLeadsCatchUp(db, { isSuppressed: e => isOutreachSuppressed(db, e),
           queueResearch: id => queueContactEnrichment(id) });
         console.info("[past-leads]", past ? JSON.stringify(past) : "already ran");
+        const { spreadFollowBacklog } = await import("./pastLeadsEnrichment");
+        const spread = await spreadFollowBacklog(db);
+        console.info("[follow-backlog]", spread ? JSON.stringify(spread) : "already ran");
       } catch (e) {
         console.warn("[outreach-backfill] failed", (e as Error).message.slice(0, 200));
       }
