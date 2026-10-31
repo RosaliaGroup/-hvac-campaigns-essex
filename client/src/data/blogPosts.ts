@@ -25,6 +25,94 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Affordable Commercial HVAC in NJ: A Property Owner's Guide",
+    "slug": "affordable-commercial-hvac-nj-guide",
+    "date": "October 30, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "A practical guide to value-driven commercial HVAC in NJ — installation quality, maintenance agreements, and replacement planning for owners and GCs.",
+    "excerpt": "Affordable commercial HVAC isn't about the lowest bid — it's about total cost of ownership. Here's what NJ property managers and GCs should evaluate before signing a contract.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Property managers searching for \"affordable HVAC\" in New Jersey often find pages built for homeowners. Commercial buildings run on different math. A rooftop unit serving a Union County retail strip, a bank of PTACs in a Hudson County mid-rise, or a VRF system in an Essex County office building each carry different load profiles, service access challenges, and failure costs. This guide covers what actually drives value in commercial HVAC — installation quality, system fit, maintenance planning, and replacement timing — so you can evaluate bids with more than a price tag."
+      },
+      {
+        "type": "h2",
+        "content": "What \"Affordable\" Really Means for a Commercial Building"
+      },
+      {
+        "type": "paragraph",
+        "content": "The lowest installed price rarely produces the lowest total cost of ownership. A unit sized incorrectly for your square footage, duct layout, or tenant mix will short-cycle, run longer hours, and wear out faster — all of which show up as higher utility bills and more service calls over the equipment's life. Value in commercial HVAC comes from matching equipment to the building's actual load, installing it correctly, and maintaining it on a schedule that catches problems before they become emergencies. When you compare proposals, ask what assumptions went into the sizing and whether a load calculation was performed, not just a rule-of-thumb estimate based on the old unit's tonnage."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Come First"
+      },
+      {
+        "type": "paragraph",
+        "content": "For multifamily, office, and retail properties across Bergen, Passaic, and Morris counties, the equipment selection matters less than how it's specified and installed. Mechanical Enterprise LLC works across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, installing heat pumps, central AC, ductless mini-splits, and VRV/VRF systems sized to the building rather than the catalog. Proper refrigerant charge, correct ductwork or line-set routing, and commissioning that verifies airflow and temperature split are what separate a system that performs for years from one that generates repeat service calls in its first season."
+      },
+      {
+        "type": "h2",
+        "content": "Repair Response and Preventive Maintenance Agreements"
+      },
+      {
+        "type": "paragraph",
+        "content": "Unplanned downtime is the real cost driver in commercial HVAC — a failed RTU in a leased retail space or a dead PTAC in an occupied unit creates tenant complaints and lost revenue, not just a repair bill. A maintenance agreement shifts the pattern from reactive to planned: scheduled visits, documented readings, and a technician who already knows your equipment history when something does fail. For portfolios with multiple properties or unit types — PTAC, mini-split, RTU, or split systems — service is typically quoted per unit, per year, scaled to the portfolio, with reporting provided on a quarterly cadence so owners and managers can track conditions across sites without chasing paperwork after every visit."
+      },
+      {
+        "type": "h2",
+        "content": "Replacement Planning for Aging Commercial Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "Commercial rooftop units and PTAC fleets have a finite service life, and replacement costs rise sharply if a system fails mid-season rather than on a planned schedule. Budgeting ahead — by county, building, or unit type — lets you phase replacements across a fiscal year instead of absorbing one large emergency cost. If you manage a mixed portfolio, start by listing equipment age, refrigerant type, and any recurring repair patterns; that inventory becomes the basis for a multi-year capital plan and makes it easier to compare like-for-like bids when the time comes. As part of a full system replacement, eligible installations may also qualify for optional third-party parts and labor coverage, discussed below."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New HVAC installations performed by Mechanical Enterprise may qualify for an optional 10-year parts and labor coverage plan, administered through a third-party extended service agreement backed by A-rated insurers and available across all major brands. This is a separately purchased add-on, not a feature bundled into the installation price. Existing equipment may also be eligible for this coverage, but only after it passes an inspection against program criteria — not every system will qualify, and eligibility should be confirmed before you budget around it. For buildings under a Comfort Membership, coverage and membership payments can count toward the cost of your next system with Mechanical Enterprise, which is worth factoring into long-range capital planning."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Square footage, ceiling height, and current equipment tonnage or BTU rating for each unit or zone",
+          "Unit type and count across the portfolio: PTAC, mini-split, RTU, or split system",
+          "Age of existing equipment and refrigerant type (R-410A, R-22, or newer)",
+          "Any recurring repair history, nuisance alarms, or tenant comfort complaints by location",
+          "Access constraints — roof access, electrical capacity, parking lot or loading dock restrictions",
+          "Whether you need a single-visit repair, a maintenance agreement, or a replacement plan with phased timing",
+          "Current reporting expectations — do you need documentation per visit, or a quarterly portfolio summary"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning a repair, maintenance agreement, or replacement for your commercial property? Request a service visit or consultation with Mechanical Enterprise LLC.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "What drives the cost of commercial HVAC installation in New Jersey?",
+        "answer": "Load sizing, ductwork or line-set complexity, access and crane needs for rooftop units, and the number of zones all affect price. A proper load calculation, not just matching the old unit's size, is the first step to getting an accurate quote."
+      },
+      {
+        "question": "Is the 10-year parts and labor coverage included with every installation?",
+        "answer": "No. It is an optional, separately purchased third-party service agreement available on new installations and on eligible existing systems that pass an inspection. It is not bundled into the base installation cost."
+      },
+      {
+        "question": "Do you work with multifamily and portfolio properties across multiple NJ counties?",
+        "answer": "Yes. Mechanical Enterprise LLC services Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, including multifamily buildings, office space, and retail properties with PTAC, mini-split, RTU, and split systems."
+      }
+    ]
+  },
+
+  {
     "title": "Rooftop HVAC Access Planning for NJ Buildings",
     "slug": "rooftop-hvac-access-planning-nj",
     "date": "October 29, 2026",
