@@ -132,15 +132,18 @@ export const googleAdsRouter = router({
         descriptions: z.array(z.string()),
         finalUrl: z.string().url(),
         geoTargetNames: z.array(z.string()).default(["New Jersey"]),
+        /** Google geo target constant IDs. New Jersey = 21164. Defaults (in createSearchCampaign) to Essex County only. */
+        geoTargetIds: z.array(z.number().int().positive()).max(25).optional(),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const token = await getRefreshToken();
       if (!token) throw new Error("Google Ads not connected. Please authorize first.");
       const result = await createSearchCampaign(token, {
         ...input,
-        dailyBudgetMicros: input.dailyBudget * 1_000_000,
+        dailyBudgetMicros: Math.round(input.dailyBudget * 100) * 10_000,
       });
+      await logAdsChange("campaign_created", ctx.user, { name: input.name, dailyBudget: input.dailyBudget, geoTargetIds: input.geoTargetIds ?? [1023191], finalUrl: input.finalUrl, ...result });
       return result;
     }),
 });
