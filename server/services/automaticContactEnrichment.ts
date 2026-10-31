@@ -207,10 +207,8 @@ export async function processContactEnrichment(contactId:number) {
     catch(error) { console.warn("[CRM Auto Enrich] Public research failed",contactId,error); }
     const after=await getContactEnrichment(contactId);
 
-    // Optional social/company public research; do not fabricate social links.
-    try{await contactProfile({contactId},true);}
-    catch(error){console.warn("[CRM Auto Enrich] Public profile research skipped",contactId,
-      error instanceof Error?error.message:"unknown");}
+    // (The research above already covers company, social and phone; a second call
+    // would spend another research slot for the same answer.)
     // Preserve task-only intake and keep unrelated Gmail correspondents excluded.
     if(approvedContactSource(c.source)){
       const {ensureSentEmailContact}=await import("./sentEmailContact");
@@ -264,6 +262,10 @@ export async function runContactEnrichmentBatch(limit=3) {
       ))
       .orderBy(asc(crmExternalContacts.id)).limit(25);
     for(const item of missing)await queueContactEnrichment(item.id);
+    // When today's research allowance is used up, leave jobs waiting: claiming them
+    // would only use up their attempts without researching anything.
+    const {profileResearchRemaining}=await import("./contactProfile/dailyBudget");
+    if(await profileResearchRemaining()<=0)return {processed:0,skipped:"daily-research-allowance-reached"};
     const jobs=await db.select({id:contactEnrichmentJobs.contactId}).from(contactEnrichmentJobs)
       .where(and(eq(contactEnrichmentJobs.status,"pending"),
         lte(contactEnrichmentJobs.nextAttemptAt,new Date())))

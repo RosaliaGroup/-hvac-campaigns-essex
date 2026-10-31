@@ -105,6 +105,11 @@ export function createApolloClient(apiKey: string, fetchImpl: typeof fetch = fet
       return Array.isArray(r?.people) ? r.people : [];
     },
     /** 1 credit when data is found. Work email only: never personal emails or mobile phones. */
+    /** 1 credit when found: look a known contact up by work email (past-lead enrichment). */
+    async matchByEmail(email: string): Promise<MatchPerson | null> {
+      const r = await call("people/match", { email, reveal_personal_emails: "false", reveal_phone_number: "false" });
+      return r?.person ?? null;
+    },
     async reveal(id: string): Promise<MatchPerson | null> {
       const r = await call("people/match", { id, reveal_personal_emails: "false", reveal_phone_number: "false" });
       return r?.person ?? null;

@@ -23,3 +23,17 @@ export async function reserveProfileResearch(now = new Date()): Promise<boolean>
   }
   return false;
 }
+
+/** Research slots still free today (0 when the allowance is used up or the table is missing). */
+export async function profileResearchRemaining(now = new Date()): Promise<number> {
+  const limit = dailyResearchLimit();
+  if (limit === 0) return 0;
+  const db = await getDb();
+  if (!db) return 0;
+  try {
+    const r = await db.execute(sql`SELECT COUNT(*) AS n FROM crmProfileResearchBudget WHERE day = ${now.toISOString().slice(0, 10)}`);
+    return Math.max(0, limit - Number((r as any)?.[0]?.[0]?.n ?? 0));
+  } catch {
+    return limit; // table not created yet: nothing used today
+  }
+}
