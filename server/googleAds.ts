@@ -110,6 +110,11 @@ async function getClient(refreshToken: string) {
   });
 }
 
+/** The authenticated Customer client, for server/googleAdsOperator.ts. */
+export async function getAdsCustomer(refreshToken: string) {
+  return getClient(refreshToken);
+}
+
 // Get campaign performance metrics
 export async function getCampaignPerformance(refreshToken: string) {
   const customer = await getClient(refreshToken);
