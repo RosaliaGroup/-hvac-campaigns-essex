@@ -25,6 +25,112 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "NJ Commercial AC Installation Cost Guide",
+    "slug": "nj-commercial-ac-installation-cost-guide",
+    "date": "October 31, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "A practical look at what drives commercial AC installation costs in NJ, how to vet bidders, and what to plan for after install day.",
+    "excerpt": "Property managers and building owners searching for commercial AC installation costs in NJ need more than a number — they need to know what drives that number and how to protect the investment afterward.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "If you manage commercial or multifamily property in New Jersey, 'air conditioning installation cost' is really a shorthand for a bigger question: will this system fit the building, hold up under heavy use, and avoid surprise failures during the next heat wave? This guide breaks down what actually moves the price on a commercial job, what to send bidders for an accurate quote, and how ongoing maintenance and optional coverage factor into total cost of ownership."
+      },
+      {
+        "type": "h2",
+        "content": "What Drives Commercial AC Installation Costs in NJ"
+      },
+      {
+        "type": "paragraph",
+        "content": "Commercial installation pricing depends on more variables than a residential job. Building type matters — a garden-style apartment complex in Essex County has different ductwork and electrical needs than a retail strip in Bergen County or an office building in Hudson County. System type is another factor: rooftop units (RTUs), central AC, ductless mini-splits, and VRV/VRF systems all carry different equipment, labor, and rigging requirements. Access also drives cost — rooftop crane work, tight mechanical rooms, and occupied-building scheduling all add labor hours. Electrical capacity, existing ductwork condition, and local permitting through your municipality round out the list. Because every one of these variables is site-specific, we don't publish flat pricing online; instead, we quote after reviewing your building's actual conditions."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Come First"
+      },
+      {
+        "type": "paragraph",
+        "content": "A lower bid that ignores proper load calculations or ductwork sizing usually costs more over time — in comfort complaints, short-cycling equipment, and early replacement. Correct sizing, airflow design, and equipment selection (central AC, heat pump, ductless mini-split, or VRF/VRV depending on the space) matter more to long-term cost than the number on page one of a proposal. For multi-tenant buildings, uneven cooling or recurring service calls are often a sign the original installation wasn't matched to the building's actual load, not a defect in the equipment itself. When comparing bids, ask each contractor to walk through how they sized the system and why they recommended that equipment type for your specific floor plan."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage for New and Qualifying Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations through Mechanical Enterprise can be paired with an optional, separately purchased 10-year parts and labor coverage plan, administered through a third-party agreement backed by A-rated insurers. This is not a manufacturer warranty and it is not automatically included with installation — it's an add-on you choose and pay for. Existing commercial systems may also qualify, but only after an eligibility inspection confirms the equipment meets program criteria; not every system will pass. If protecting your capital investment is a priority, ask about coverage terms and eligibility requirements before — not after — your installation or inspection date."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us When Requesting a Bid"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Building type and approximate square footage per zone or unit",
+          "Current system age, brand, and type (central AC, RTU, mini-split, VRF/VRV)",
+          "Number of units or tenant spaces served",
+          "Existing mechanical drawings or as-builts, if available",
+          "Roof access details and any crane or rigging restrictions for RTU swaps",
+          "Electrical panel capacity and any known limitations",
+          "Recent maintenance history or recurring complaint logs",
+          "Occupancy constraints or scheduling windows for installation work",
+          "Whether you need single-building pricing or portfolio-wide quoting"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "When comparing bidders, also ask: Are you a licensed NJ Master HVACR contractor? How do you calculate load for commercial spaces? What does your labor warranty actually cover, and is it separate from any optional extended coverage? Do you offer quarterly reporting for multi-unit portfolios? Clear answers up front save disputes later."
+      },
+      {
+        "type": "h2",
+        "content": "Maintenance Agreements, Repair Response and Replacement Planning"
+      },
+      {
+        "type": "paragraph",
+        "content": "Installation is only the starting point. Our Comfort Membership includes two maintenance visits per year, priority scheduling, and a replacement credit that applies toward your next system — billed monthly, with the equipment remaining yours. For portfolios managing PTAC, mini-split, RTU, or split systems across multiple buildings, we quote maintenance on a per-unit, per-year basis and provide quarterly reporting so you can track equipment condition and budget for replacements before they become emergencies. We also offer 24/7 emergency service with same-day response for active HVAC failures, so a down unit in a tenant space doesn't turn into a multi-day outage. Pairing a maintenance agreement with proactive replacement planning is typically the most cost-effective way to manage HVAC across a commercial or multifamily portfolio in New Jersey."
+      },
+      {
+        "type": "cta_box",
+        "content": "Request a site visit or consultation to get an accurate installation quote for your building or portfolio.",
+        "buttonText": "Request a Commercial HVAC Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      },
+      {
+        "type": "h2",
+        "content": "Frequently Asked Questions"
+      },
+      {
+        "type": "paragraph",
+        "content": "How long does commercial AC installation take in NJ? Timelines vary widely by system type and access — a rooftop unit swap on an existing curb moves faster than a new VRF installation requiring refrigerant piping through multiple floors. We provide a project timeline as part of every quote."
+      },
+      {
+        "type": "paragraph",
+        "content": "Can existing commercial systems qualify for extended coverage? Eligible systems may qualify for the optional 10-year parts and labor coverage after an inspection confirms they meet program criteria. Coverage is a separate paid agreement, not an automatic benefit of ownership."
+      },
+      {
+        "type": "paragraph",
+        "content": "Do you serve multifamily and commercial buildings across North and Central Jersey? Yes — we work in Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, covering office, retail, and multifamily properties."
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How long does commercial AC installation take in NJ?",
+        "answer": "Timelines vary by system type and building access. Rooftop unit replacements are typically faster than new VRF/VRV installations requiring refrigerant piping through multiple floors. A project timeline is provided with every quote."
+      },
+      {
+        "question": "Can existing commercial systems qualify for extended coverage?",
+        "answer": "Eligible existing systems may qualify for optional 10-year parts and labor coverage after passing an inspection. This is a separate paid agreement, not an automatic benefit of ownership."
+      },
+      {
+        "question": "Do you serve multifamily and commercial buildings across North and Central Jersey?",
+        "answer": "Yes. Mechanical Enterprise serves Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for commercial and multifamily HVAC projects."
+      }
+    ]
+  },
+
+  {
     "title": "Compressor Failures in Years 5-8: Protect Your Budget",
     "slug": "compressor-failures-years-5-8-protect-your-budget",
     "date": "October 31, 2026",
