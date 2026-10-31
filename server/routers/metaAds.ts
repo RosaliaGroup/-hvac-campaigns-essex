@@ -10,7 +10,7 @@ import {
   createLeadCampaign,
   testAdAccount,
   createNjTrafficCampaign,
-  setMetaCampaignStatus,
+  setMetaCampaignStatus, getOrCreateAdAccountPixel,
 } from "../metaAds";
 import { saveAiVaCredentials, getAiVaCredentials, getAiVaCredentialTimestamp } from "../db";
 import { ENV } from "../_core/env";
@@ -176,6 +176,18 @@ export const metaAdsRouter = router({
         console.error("[Meta Ads] nj_traffic_campaign_failed", (err as Error).message.slice(0, 1000));
         throw err;
       }
+    }),
+
+  /** The ad account's Meta pixel; creates one when none exists and createIfMissing is set. Admin-only. */
+  adAccountPixel: adminProcedure
+    .input(z.object({ createIfMissing: z.boolean().default(false), name: z.string().min(3).max(100).default("mechanicalenterprise.com") }))
+    .mutation(async ({ input, ctx }) => {
+      const token = await getToken();
+      const adAccountId = await getAdAccountId();
+      if (!token || !adAccountId) throw new Error("Meta Ads not fully configured.");
+      const r = await getOrCreateAdAccountPixel(token, adAccountId, input);
+      console.log("[Meta Ads] ad_account_pixel", JSON.stringify({ actor: (ctx.user as { email?: string } | null)?.email ?? null, created: r.created, ids: r.pixels.map((p) => p.id) }));
+      return r;
     }),
 
   setCampaignStatus: adminProcedure

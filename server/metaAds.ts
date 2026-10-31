@@ -465,3 +465,21 @@ export async function setMetaCampaignStatus(token: string, campaignId: string, s
   const now = await metaGet(`/${campaignId}`, token, { fields: "name,status,effective_status" });
   return { campaignId, name: now.name, status: now.status, effectiveStatus: now.effective_status };
 }
+
+/**
+ * The ad account's Meta pixel (dataset). Returns the existing ones; when `createIfMissing` and the account
+ * has none, creates one named `name`. The id goes into the site build as VITE_META_PIXEL_ID.
+ */
+export async function getOrCreateAdAccountPixel(token: string, adAccountId: string, opts: { createIfMissing: boolean; name: string }) {
+  const act = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+  const list = async () => {
+    const r = await metaGet(`/${act}/adspixels`, token, { fields: "id,name,last_fired_time,creation_time" });
+    return ((r.data ?? []) as Array<{ id: string; name: string; last_fired_time?: string; creation_time?: string }>).map((p) => ({
+      id: String(p.id), name: p.name, lastFiredTime: p.last_fired_time ?? null, creationTime: p.creation_time ?? null,
+    }));
+  };
+  const existing = await list();
+  if (existing.length || !opts.createIfMissing) return { pixels: existing, created: false };
+  await metaPost(`/${act}/adspixels`, token, { name: opts.name });
+  return { pixels: await list(), created: true };
+}
