@@ -467,6 +467,15 @@ export function startProspectWorkflow() {
         const { queueContactEnrichment } = await import("./automaticContactEnrichment");
         const summary = await runOutreachBackfill(db, { store: createCycleStore(db), queueResearch: id => queueContactEnrichment(id) });
         console.info("[outreach-backfill]", summary ? JSON.stringify(summary) : "already ran");
+        if (process.env.APOLLO_API_KEY?.trim()) {
+          const { runApolloLinkedInRecovery } = await import("./outreachBackfill");
+          const { createApolloClient, createApolloStore, normalizeLinkedIn } = await import("./apolloProspects");
+          const client = createApolloClient(process.env.APOLLO_API_KEY.trim());
+          const apolloStore = createApolloStore(db);
+          const rec = await runApolloLinkedInRecovery(db, { reveal: id => client.reveal(id),
+            reserveReveal: () => apolloStore.reserveReveal(new Date()), normalize: normalizeLinkedIn });
+          console.info("[apollo-linkedin-recovery]", rec ? JSON.stringify(rec) : "already ran");
+        }
       } catch (e) {
         console.warn("[outreach-backfill] failed", (e as Error).message.slice(0, 200));
       }

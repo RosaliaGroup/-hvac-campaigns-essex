@@ -109,3 +109,49 @@ export async function runOutreachBackfill(db: Db, deps: {
   await db.execute(sql`UPDATE crmBackfillRuns SET summary = ${JSON.stringify(s)} WHERE name = ${BACKFILL_NAME}`);
   return s;
 }
+
+/**
+ * One-time recovery (Oct 30): Apollo leads queued before the LinkedIn fix kept Apollo's own
+ * profile link because Apollo returns http:// LinkedIn URLs. Look each person up again by
+ * Apollo id (within the daily reveal cap), save the LinkedIn profile, update the lead's source
+ * link and add it to the follow task. Sends no email.
+ */
+export const LINKEDIN_RECOVERY_NAME = "apollo-linkedin-recovery-2026-10-30";
+export async function runApolloLinkedInRecovery(db: Db, deps: {
+  reveal: (apolloId: string) => Promise<{ linkedin_url?: string | null } | null>;
+  reserveReveal: () => Promise<boolean>;
+  normalize: (url: string | null | undefined) => string | null;
+}): Promise<{ checked: number; saved: number; noLinkedIn: number; capped: boolean; errors: number } | null> {
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS crmBackfillRuns (
+    name varchar(64) NOT NULL PRIMARY KEY, ranAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, summary text NULL)`);
+  const claim = await db.execute(sql`INSERT IGNORE INTO crmBackfillRuns (name) VALUES (${LINKEDIN_RECOVERY_NAME})`);
+  if (Number((claim as any)?.[0]?.affectedRows ?? 0) !== 1) return null;
+  const out = { checked: 0, saved: 0, noLinkedIn: 0, capped: false, errors: 0 };
+  const rows = await db.select().from(queue)
+    .where(and(sql`${queue.verificationUrl} LIKE 'https://app.apollo.io/#/people/%'`,
+      inArray(queue.state, ["queued", "waiting", "nurture", "complete"])))
+    .limit(200);
+  for (const r of rows) {
+    const id = decodeURIComponent(r.verificationUrl.split("/people/")[1] ?? "");
+    if (!id) continue;
+    if (!(await deps.reserveReveal())) { out.capped = true; break; }
+    out.checked++;
+    try {
+      const url = deps.normalize((await deps.reveal(id))?.linkedin_url);
+      if (!url) { out.noLinkedIn++; continue; }
+      // Not yet emailed: the corrected source link is saved to the contact when it is created.
+      if (r.externalContactId)
+        await addVerifiedSocialLink(r.externalContactId, { platform: "LinkedIn", url, source: url,
+          evidence: `Apollo.io match for ${r.name}, ${r.title} at ${r.company} (verified work email ${r.email})` });
+      await db.update(queue).set({ verificationUrl: url }).where(eq(queue.id, r.id));
+      await db.execute(sql`UPDATE crmOutreach30DayTasks SET note = CONCAT(note, ${` LinkedIn: ${url}`})
+        WHERE recipientEmail = ${r.email.toLowerCase()} AND touchNumber = 1 AND status = 'open' AND note NOT LIKE '%linkedin.com/in/%'`);
+      out.saved++;
+    } catch (e) {
+      out.errors++;
+      console.warn("[apollo-linkedin-recovery]", r.id, (e as Error).message.slice(0, 160));
+    }
+  }
+  await db.execute(sql`UPDATE crmBackfillRuns SET summary = ${JSON.stringify(out)} WHERE name = ${LINKEDIN_RECOVERY_NAME}`);
+  return out;
+}

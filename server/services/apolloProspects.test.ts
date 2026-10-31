@@ -107,3 +107,21 @@ describe("Apollo error detail", () => {
     await expect(c.search(["x"], ["y"], 1)).rejects.toThrow(/HTTP 403, mixed_people\/api_search\).*free plan/);
   });
 });
+
+import { normalizeLinkedIn } from "./apolloProspects";
+describe("LinkedIn URLs from Apollo", () => {
+  it.each([
+    ["http://www.linkedin.com/in/jane-smith-123", "https://www.linkedin.com/in/jane-smith-123"],
+    ["https://linkedin.com/in/jane/", "https://www.linkedin.com/in/jane"],
+    ["https://uk.linkedin.com/in/jane?trk=x", "https://www.linkedin.com/in/jane"],
+  ])("%s -> %s", (input, out) => expect(normalizeLinkedIn(input)).toBe(out));
+  it("rejects company pages and other sites", () => {
+    expect(normalizeLinkedIn("https://www.linkedin.com/company/acme")).toBeNull();
+    expect(normalizeLinkedIn("https://evil.com/linkedin.com/in/x")).toBeNull();
+    expect(normalizeLinkedIn(null)).toBeNull();
+  });
+  it("an http LinkedIn URL from Apollo becomes the lead's source link", () => {
+    expect(apolloToProspect(verified({ linkedin_url: "http://www.linkedin.com/in/janesmith" })).prospect!.verificationUrl)
+      .toBe("https://www.linkedin.com/in/janesmith");
+  });
+});
