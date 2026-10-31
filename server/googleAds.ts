@@ -264,7 +264,8 @@ export async function createSearchCampaign(
   // 1. Create budget
   const budgetRes = await customer.campaignBudgets.create([
     {
-      name: `${params.name} Budget`,
+      // Unique suffix: a failed earlier attempt can leave an orphan budget with the plain name (DUPLICATE_NAME).
+      name: `${params.name} Budget ${Date.now()}`,
       amount_micros: params.dailyBudgetMicros,
       delivery_method: enums.BudgetDeliveryMethod.STANDARD,
     },
@@ -278,7 +279,11 @@ export async function createSearchCampaign(
       status: enums.CampaignStatus.PAUSED,
       advertising_channel_type: enums.AdvertisingChannelType.SEARCH,
       campaign_budget: budgetResourceName,
-      bidding_strategy_type: enums.BiddingStrategyType.MAXIMIZE_CONVERSIONS,
+      // The bidding strategy is set by its own field; bidding_strategy_type is read-only in the API.
+      // Maximize clicks (target_spend) with a CPC ceiling — the account has no conversion history yet.
+      target_spend: { cpc_bid_ceiling_micros: 4_000_000 },
+      // Required on every new campaign since Google Ads API v19.2 (2025).
+      contains_eu_political_advertising: enums.EuPoliticalAdvertisingStatus.DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING,
       network_settings: {
         target_google_search: true,
         target_search_network: false,

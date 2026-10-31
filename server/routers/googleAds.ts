@@ -139,10 +139,19 @@ export const googleAdsRouter = router({
     .mutation(async ({ input, ctx }) => {
       const token = await getRefreshToken();
       if (!token) throw new Error("Google Ads not connected. Please authorize first.");
-      const result = await createSearchCampaign(token, {
-        ...input,
-        dailyBudgetMicros: Math.round(input.dailyBudget * 100) * 10_000,
-      });
+      let result: Awaited<ReturnType<typeof createSearchCampaign>>;
+      try {
+        result = await createSearchCampaign(token, {
+          ...input,
+          dailyBudgetMicros: Math.round(input.dailyBudget * 100) * 10_000,
+        });
+      } catch (err) {
+        // google-ads-api errors carry the real reason in .errors[] — surface it instead of a bare 500.
+        const e = err as { message?: string; errors?: Array<{ message?: string; error_code?: unknown; location?: unknown }> };
+        const detail = (e.errors ?? []).map((x) => `${x.message ?? ""} ${JSON.stringify(x.error_code ?? {})}`).join(" | ") || e.message || String(err);
+        console.error("[GoogleAds] campaign_create_failed", JSON.stringify({ name: input.name, detail: detail.slice(0, 1500) }));
+        throw new Error(`Google Ads rejected the campaign: ${detail.slice(0, 500)}`);
+      }
       await logAdsChange("campaign_created", ctx.user, { name: input.name, dailyBudget: input.dailyBudget, geoTargetIds: input.geoTargetIds ?? [1023191], finalUrl: input.finalUrl, ...result });
       return result;
     }),
