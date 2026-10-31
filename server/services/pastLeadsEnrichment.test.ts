@@ -13,7 +13,7 @@ const row = (over: any = {}) => ({ email: "pm@private.com", contactId: 2, introM
   introAt: new Date("2026-09-01T14:00:00Z"), status: "done", outcome: "attempted_no_answer", touchNumber: 2,
   name: "Chris Doe", company: "Private Co", title: "PM", ...over });
 
-function fakeDb(rows: any[], opts: { alreadyRan?: boolean; looked?: string[]; linked?: number[]; contactPhone?: string | null } = {}) {
+function fakeDb(rows: any[], opts: { alreadyRan?: boolean; looked?: string[]; linked?: number[]; contactPhone?: string | null; usedToday?: number } = {}) {
   const executed: string[] = [];
   const updates: any[] = [];
   const chain: any = {
@@ -28,6 +28,7 @@ function fakeDb(rows: any[], opts: { alreadyRan?: boolean; looked?: string[]; li
     if (text.includes("SELECT email FROM crmApolloEmailLookups")) return [(opts.looked ?? []).map(email => ({ email }))];
     if (text.includes("SELECT contactId FROM crmContactProfiles")) return [(opts.linked ?? []).map(contactId => ({ contactId }))];
     if (text.includes("UPDATE crmContactEnrichmentJobs")) return [{ affectedRows: 1 }];
+    if (text.includes("COUNT(*) AS n FROM crmApolloEmailLookups")) return [[{ n: opts.usedToday ?? 0 }]];
     return [{}];
   }) };
 }
@@ -98,5 +99,15 @@ describe("past outreach leads", () => {
     expect(await runPastLeadsApollo(fakeDb([row()]) as any, { match, reserveReveal: async () => true,
       normalize: () => null, isSuppressed: async () => false, now: new Date("2026-10-30T14:00:00Z") })).toBeNull();
     expect(match).not.toHaveBeenCalled();
+  });
+
+  it("resumes after a restart and stops once the day's lookups are used", async () => {
+    const match = vi.fn(async () => null);
+    const rows = [row(), row({ email: "b@co.com", contactId: 3 }), row({ email: "c@co.com", contactId: 4 })];
+    const out = await runPastLeadsApollo(fakeDb(rows, { usedToday: 38 }) as any, { match, reserveReveal: async () => true,
+      normalize: () => null, isSuppressed: async () => false, now: new Date("2026-10-31T14:00:00Z"), perDay: 40 });
+    expect(out).toMatchObject({ checked: 2 });
+    expect(await runPastLeadsApollo(fakeDb(rows, { usedToday: 40 }) as any, { match, reserveReveal: async () => true,
+      normalize: () => null, isSuppressed: async () => false, now: new Date("2026-10-31T14:00:00Z"), perDay: 40 })).toBeNull();
   });
 });
