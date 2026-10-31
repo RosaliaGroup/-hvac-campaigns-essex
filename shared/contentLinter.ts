@@ -14,6 +14,7 @@
  *     (no dictionary), which is the conventional approximation everywhere
  *     this formula is implemented without a syllable dictionary.
  */
+import { EXCLUDED_PROGRAM_RE } from "./excludedPrograms";
 import {
   SUPERLATIVES,
   EXPIRED_INCENTIVES,
@@ -230,6 +231,10 @@ export function lintContent(input: ContentLintInput, facts: VerifiedFacts): Cont
   const bodyLower = body.toLowerCase();
 
   findings.push(...lintClaims(body, facts));
+  // Owner exclusion (2026-10-30): no PSE&G On-Bill Repayment / OBR in new content, title or meta.
+  if (EXCLUDED_PROGRAM_RE.test(`${input.title} ${input.metaDescription} ${body}`)) {
+    findings.push(blockFinding("excluded_program", `Mentions PSE&G On-Bill Repayment (OBR), which the owner excluded from marketing copy — remove every mention.`));
+  }
 
   const wordCount = countWords(bodyLower);
   if (wordCount < WORD_COUNT_MIN || wordCount > WORD_COUNT_MAX) {

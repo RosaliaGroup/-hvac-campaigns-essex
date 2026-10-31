@@ -6,6 +6,7 @@
  * title/meta pair), so it lives in its own module rather than extending that
  * provider's narrow title/meta scope.
  */
+import { factsForWriters } from "../../../shared/excludedPrograms";
 import { publicationDate } from "../../../shared/blogPublication";
 import { callAnthropicModelChain } from "../../_core/anthropic";
 import type { BlogPostData } from "../../../client/src/data/blogPosts";
@@ -153,7 +154,7 @@ export async function draftContentPost(topic: SeoContentQueueRow, facts: Verifie
   const result = await callAnthropicModelChain({
     apiKey,
     models: modelChain(),
-    system: buildContentSystemPrompt(topic, facts, priorFindings),
+    system: buildContentSystemPrompt(topic, factsForWriters(facts), priorFindings),
     messages: [{ role: "user", content: "Draft the post now." }],
     maxTokens: 16000, // thinking tokens count against this; 8000 could leave no room for the JSON
     retry: { timeoutMs: 180_000 }, // a 900-1400 word JSON post can exceed the 60s default
