@@ -9,6 +9,8 @@ import {
   getCampaignPerformance,
   createLeadCampaign,
   testAdAccount,
+  createNjTrafficCampaign,
+  setMetaCampaignStatus,
 } from "../metaAds";
 import { saveAiVaCredentials, getAiVaCredentials, getAiVaCredentialTimestamp } from "../db";
 import { ENV } from "../_core/env";
@@ -149,6 +151,42 @@ export const metaAdsRouter = router({
     const campaigns = await getCampaignPerformance(token, adAccountId);
     return { campaigns };
   }),
+
+  /** NJ-only website-traffic campaign to a mechanicalenterprise.com landing page (created PAUSED). Admin-only. */
+  createNjTrafficCampaign: adminProcedure
+    .input(z.object({
+      name: z.string().min(3).max(120),
+      dailyBudget: z.number().min(1).max(50),
+      landingUrl: z.string().url(),
+      imageUrl: z.string().url(),
+      primaryText: z.string().min(10).max(600),
+      headline: z.string().min(3).max(60),
+      description: z.string().max(120).default(""),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const token = await getToken();
+      const adAccountId = await getAdAccountId();
+      const pageId = await getPageId();
+      if (!token || !adAccountId || !pageId) throw new Error("Meta Ads not fully configured.");
+      try {
+        const r = await createNjTrafficCampaign(token, { ...input, dailyBudgetCents: Math.round(input.dailyBudget * 100), adAccountId, pageId });
+        console.log("[Meta Ads] nj_traffic_campaign_created", JSON.stringify({ actor: (ctx.user as { email?: string } | null)?.email ?? null, name: input.name, dailyBudget: input.dailyBudget, ...r }));
+        return r;
+      } catch (err) {
+        console.error("[Meta Ads] nj_traffic_campaign_failed", (err as Error).message.slice(0, 1000));
+        throw err;
+      }
+    }),
+
+  setCampaignStatus: adminProcedure
+    .input(z.object({ campaignId: z.string().regex(/^\d+$/), status: z.enum(["ACTIVE", "PAUSED"]) }))
+    .mutation(async ({ input, ctx }) => {
+      const token = await getToken();
+      if (!token) throw new Error("Meta Ads not connected.");
+      const r = await setMetaCampaignStatus(token, input.campaignId, input.status);
+      console.log("[Meta Ads] campaign_status_changed", JSON.stringify({ actor: (ctx.user as { email?: string } | null)?.email ?? null, ...r }));
+      return r;
+    }),
 
   // Create a lead generation campaign (OUTCOME_LEADS with Instant Form)
   createCampaign: adminProcedure
