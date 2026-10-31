@@ -28,16 +28,15 @@ export async function postToFacebook(
     throw new Error("Missing Facebook credentials");
   }
 
-  const url = `https://graph.facebook.com/v18.0/${pageId}/feed`;
-  
-  const body: any = {
-    message: content,
-    access_token: accessToken,
-  };
+  // An image file is posted as a photo (shows the picture with the text as its caption). Any other URL is
+  // posted as a link post. Before Oct 31, 2026 an image URL was sent as `link`, which published a bare
+  // link to the .png instead of the picture.
+  const isImage = !!imageUrl && /\.(png|jpe?g|gif|webp)(\?|$)/i.test(imageUrl);
+  const url = `https://graph.facebook.com/v18.0/${pageId}/${isImage ? "photos" : "feed"}`;
 
-  if (imageUrl) {
-    body.link = imageUrl;
-  }
+  const body: any = isImage
+    ? { url: imageUrl, caption: content, access_token: accessToken }
+    : { message: content, access_token: accessToken, ...(imageUrl ? { link: imageUrl } : {}) };
 
   const response = await fetch(url, {
     method: "POST",
@@ -52,7 +51,10 @@ export async function postToFacebook(
     throw new Error(`Facebook API error: ${JSON.stringify(error)}`);
   }
 
+  // A photo returns { id: <photo id>, post_id: <page>_<post> }; the feed post id is what boosting and
+  // deleting the Page post use.
   const data = await response.json();
+  if (data.post_id) data.id = data.post_id;
 
   console.log("[Facebook] Post published:", data.id);
   return String(data.id) as string;
