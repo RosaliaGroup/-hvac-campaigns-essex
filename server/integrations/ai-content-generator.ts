@@ -109,7 +109,7 @@ ${FACTUAL_RULES}`;
  */
 export async function generateSocialPost(
   contentType: ContentType,
-  platform: "facebook" | "instagram" | "google_business" | "linkedin" | "nextdoor",
+  platform: import("../services/socialPublisher").Platform,
   opts: GenerateSocialPostOptions = {}
 ): Promise<GeneratedContent> {
   const invoke = opts.invoke ?? invokeLLM;
@@ -230,6 +230,10 @@ function getPlatformCharLimit(platform: string): number {
     google_business: 1500,
     linkedin: 3000,
     nextdoor: 2000,
+    youtube: 1000, // Shorts title + description; keep it short
+    apple_business: 300, // Apple Maps Showcase description
+    houzz: 1000, // project description
+    pinterest: 500, // pin description limit
     twitter: 280,
   };
   

@@ -9,7 +9,9 @@
  * scheduled more than 7x/week, and each platform's configured cadence is
  * clamped to it. This is a judgment call — flagged in the build report.
  */
-export type SocialPlatformKey = "facebook" | "instagram" | "google_business" | "nextdoor";
+import type { Platform } from "../socialPublisher";
+
+export type SocialPlatformKey = Platform;
 
 export const HARD_MAX_POSTS_PER_WEEK = 7;
 
@@ -18,6 +20,12 @@ export const PLATFORM_WEEKLY_DEFAULTS: Record<SocialPlatformKey, number> = {
   instagram: 3,
   google_business: 2,
   nextdoor: 1,
+  // Manual-queue channels added Oct 31, 2026 (owner: "all of the ones that we can post").
+  linkedin: 1, // B2B / property-manager angle
+  youtube: 1, // Shorts; only useful once a video source exists
+  apple_business: 1, // Apple Maps Showcase
+  houzz: 1, // consented job photos only
+  pinterest: 2, // tips / before-after pins linking to blog posts
 };
 
 function envInt(name: string, fallback: number): number {
