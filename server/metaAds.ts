@@ -377,3 +377,91 @@ export async function boostPost(_params: BoostPostParams): Promise<{ externalCam
       "SOCIAL_BOOST_ENABLED should stay false, or boost calls should go through the mock platform client, until this is built against a live ad account.",
   );
 }
+
+/* ── New Jersey website-traffic campaign (owner, Oct 31, 2026) ───────────────────────────────
+ * The instant-form builder above stays disabled (US-wide targeting, CRM delivery unverified). This one
+ * sends people to a mechanicalenterprise.com landing page, so leads arrive through the site's own lead
+ * form (TCPA + CRM capture already verified). Targeting is the New Jersey region only. Optimizes for
+ * link clicks because the site has no Meta pixel configured (VITE_META_PIXEL_ID unset).
+ * Created PAUSED; the caller enables it after review. */
+export interface NjTrafficCampaignParams {
+  adAccountId: string;
+  pageId: string;
+  name: string;
+  dailyBudgetCents: number;
+  landingUrl: string;
+  imageUrl: string;
+  primaryText: string;
+  headline: string;
+  description: string;
+  ageMin?: number;
+  ageMax?: number;
+}
+
+/** Meta's region key for New Jersey, looked up live rather than hard-coded. */
+export async function findNewJerseyRegionKey(token: string): Promise<string> {
+  const json = await metaGet("/search", token, { type: "adgeolocation", location_types: JSON.stringify(["region"]), q: "New Jersey", country_code: "US" });
+  const hit = (json.data ?? []).find((d: { name?: string; country_code?: string; type?: string }) => d.name === "New Jersey" && d.country_code === "US" && d.type === "region");
+  if (!hit?.key) throw new Error("Could not find Meta's region key for New Jersey.");
+  return String(hit.key);
+}
+
+export async function createNjTrafficCampaign(token: string, p: NjTrafficCampaignParams) {
+  const landing = new URL(p.landingUrl);
+  if (landing.protocol !== "https:" || !/(^|\.)mechanicalenterprise\.com$/.test(landing.hostname)) throw new Error("Landing URL must be https://mechanicalenterprise.com/…");
+  if (p.dailyBudgetCents < 100 || p.dailyBudgetCents > 5000) throw new Error("Daily budget must be $1-$50.");
+  const actId = `act_${p.adAccountId}`;
+  const region = await findNewJerseyRegionKey(token);
+
+  const campaign = await metaPost(`/${actId}/campaigns`, token, {
+    name: p.name,
+    objective: "OUTCOME_TRAFFIC",
+    status: "PAUSED",
+    special_ad_categories: [],
+    is_adset_budget_sharing_enabled: false,
+  });
+  const adSet = await metaPost(`/${actId}/adsets`, token, {
+    name: `${p.name} — NJ ${p.ageMin ?? 30}-${p.ageMax ?? 65}`,
+    campaign_id: campaign.id,
+    daily_budget: String(p.dailyBudgetCents),
+    billing_event: "IMPRESSIONS",
+    optimization_goal: "LINK_CLICKS",
+    bid_strategy: "LOWEST_COST_WITHOUT_CAP",
+    destination_type: "WEBSITE",
+    targeting: {
+      geo_locations: { regions: [{ key: region }], location_types: ["home"] },
+      age_min: p.ageMin ?? 30,
+      age_max: p.ageMax ?? 65,
+      targeting_automation: { advantage_audience: 0 },
+    },
+    status: "ACTIVE",
+  });
+  const creative = await metaPost(`/${actId}/adcreatives`, token, {
+    name: `${p.name} — Creative`,
+    object_story_spec: {
+      page_id: p.pageId,
+      link_data: {
+        link: p.landingUrl,
+        message: p.primaryText,
+        name: p.headline,
+        description: p.description,
+        picture: p.imageUrl,
+        call_to_action: { type: "LEARN_MORE", value: { link: p.landingUrl } },
+      },
+    },
+  });
+  const ad = await metaPost(`/${actId}/ads`, token, {
+    name: `${p.name} — Ad`,
+    adset_id: adSet.id,
+    creative: { creative_id: creative.id },
+    status: "ACTIVE",
+  });
+  return { campaignId: String(campaign.id), adSetId: String(adSet.id), creativeId: String(creative.id), adId: String(ad.id), regionKey: region, status: "PAUSED" as const };
+}
+
+/** Enable or pause a campaign by id. */
+export async function setMetaCampaignStatus(token: string, campaignId: string, status: "ACTIVE" | "PAUSED") {
+  await metaPost(`/${campaignId}`, token, { status });
+  const now = await metaGet(`/${campaignId}`, token, { fields: "name,status,effective_status" });
+  return { campaignId, name: now.name, status: now.status, effectiveStatus: now.effective_status };
+}
