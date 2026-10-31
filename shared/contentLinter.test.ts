@@ -331,3 +331,15 @@ describe("lintContent — verified dollar figures match regardless of what follo
     expect(codes("A $160 rebate.")).toContain("unverified_dollar_figure");
   });
 });
+
+describe("lintContent — owner-excluded program (PSE&G On-Bill Repayment)", () => {
+  const codes = (body: string, title = cleanInput.title) => lintContent({ ...cleanInput, title, body: words(1000) + " " + body }, factsWithIncentive).findings.map((f) => f.code);
+  it("blocks On-Bill Repayment / OBR / on-bill financing anywhere", () => {
+    expect(codes("Finance the rest through PSE&G's On-Bill Repayment.")).toContain("excluded_program");
+    expect(codes("Ask about OBR at the assessment.")).toContain("excluded_program");
+    expect(codes("plain body", "On-bill financing explained")).toContain("excluded_program");
+  });
+  it("does not trip on ordinary words", () => {
+    expect(codes("Your monthly bill and the billing cycle; robust obrigado.")).not.toContain("excluded_program");
+  });
+});

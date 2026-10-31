@@ -11,6 +11,7 @@
  *    program amounts in the old copy are dropped, not carried over.
  *  - Slug and original publication date are kept; `updatedDate` is stamped by the server.
  */
+import { factsForWriters } from "../../../shared/excludedPrograms";
 import { publicationDate } from "../../../shared/blogPublication";
 import { callAnthropicModelChain } from "../../_core/anthropic";
 import type { BlogPostData } from "../../../client/src/data/blogPosts";
@@ -84,6 +85,7 @@ export function buildRefreshSystemPrompt(ctx: RefreshContext, facts: VerifiedFac
     "- Dollar figures: use ONLY amounts that appear in VERIFIED_FACTS.incentives (e.g. \"Up to $16,000\" for the PSE&G / NJ Clean Energy residential rebate, \"Up to 80%\" for commercial Direct Install). Drop every other program-specific dollar amount, tier or stacking total from the old copy — describe those programs without numbers and tell the reader eligibility and amounts are confirmed during the assessment.",
     "- The ONLY \"$\" figures allowed anywhere in the post are the exact amount strings in VERIFIED_FACTS.incentives. No installed prices, cost ranges, savings estimates, utility-bill figures or example budgets — explain what drives cost in words instead.",
     "- Never mention the federal 25C credit, the IRA tax credit, HEAR/HOMES or HEEHRA rebates (expired or unverified).",
+    "- Never mention PSE&G On-Bill Repayment, \"OBR\", on-bill financing or 0% utility-bill financing — the owner excluded it. Remove every mention that is in the current post.",
     `- These words and phrases are blocked by the checker in ANY sense, so never use them (rephrase instead): ${[...EXPIRED_INCENTIVES, ...SUPERLATIVES, ...CERTIFICATION_WORDS].map((w) => `"${w}"`).join(", ")}. For example write "you may be told" instead of "you'll hear".`,
     `- Never name these companies: ${COMPETITOR_BRANDS.join(", ")}.`,
     // A separate fact-checker rejects ANY checkable claim that is not in VERIFIED FACTS (Oct 30: the rebate guides
@@ -112,7 +114,7 @@ export async function draftRefreshPost(ctx: RefreshContext, facts: VerifiedFacts
   const result = await callAnthropicModelChain({
     apiKey,
     models: [primary, ...FALLBACK_MODELS.filter((m) => m !== primary)],
-    system: buildRefreshSystemPrompt(ctx, facts, priorFindings),
+    system: buildRefreshSystemPrompt(ctx, factsForWriters(facts), priorFindings),
     messages: [{ role: "user", content: "Write the refreshed post now." }],
     maxTokens: 16000,
     retry: { timeoutMs: 180_000 },
