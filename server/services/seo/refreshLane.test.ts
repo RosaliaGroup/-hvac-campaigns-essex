@@ -88,3 +88,11 @@ describe("new-post drafter knows the checker's blocked words", () => {
     expect(prompt).toContain("A.J. Perri");
   });
 });
+
+describe("refresh prompt warns about fact-checker rejects", () => {
+  it("bans unverified credentials, brands, efficiency thresholds and utility territory", () => {
+    const post = blogPosts.find((p) => p.slug === "nj-heat-pump-rebates-2026")!;
+    const prompt = buildRefreshSystemPrompt({ current: post, maxWords: 2000 }, VERIFIED_FACTS);
+    for (const w of ["license", "brand names", "SEER2", "which towns or counties a utility serves", "serviceCounties"]) expect(prompt).toContain(w);
+  });
+});
