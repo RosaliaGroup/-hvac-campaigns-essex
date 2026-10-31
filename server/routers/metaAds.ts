@@ -12,6 +12,7 @@ import {
   createNjTrafficCampaign,
   setMetaCampaignStatus, getOrCreateAdAccountPixel, searchMetaTargeting,
 } from "../metaAds";
+import { publishSocialPost } from "../services/socialPublisher";
 import { saveAiVaCredentials, getAiVaCredentials, getAiVaCredentialTimestamp } from "../db";
 import { ENV } from "../_core/env";
 
@@ -166,6 +167,8 @@ export const metaAdsRouter = router({
       ageMax: z.number().int().min(18).max(65).optional(),
       interests: z.array(z.object({ id: z.string().regex(/^\d+$/), name: z.string() })).max(25).optional(),
       workPositions: z.array(z.object({ id: z.string().regex(/^\d+$/), name: z.string() })).max(25).optional(),
+      /** Owner Oct 31, 2026: "always post on fb page" — every ad also goes up as a regular Page post. */
+      postToPage: z.boolean().default(true),
     }))
     .mutation(async ({ input, ctx }) => {
       const token = await getToken();
@@ -175,7 +178,9 @@ export const metaAdsRouter = router({
       try {
         const r = await createNjTrafficCampaign(token, { ...input, dailyBudgetCents: Math.round(input.dailyBudget * 100), adAccountId, pageId });
         console.log("[Meta Ads] nj_traffic_campaign_created", JSON.stringify({ actor: (ctx.user as { email?: string } | null)?.email ?? null, name: input.name, dailyBudget: input.dailyBudget, ...r }));
-        return r;
+        // A failed Page post never undoes the campaign; it is reported back and persisted as a failed socialPosts row.
+        const pagePost = input.postToPage ? await postAdToPage(input) : null;
+        return { ...r, pagePost };
       } catch (err) {
         console.error("[Meta Ads] nj_traffic_campaign_failed", (err as Error).message.slice(0, 1000));
         throw err;
@@ -193,6 +198,11 @@ export const metaAdsRouter = router({
       console.log("[Meta Ads] ad_account_pixel", JSON.stringify({ actor: (ctx.user as { email?: string } | null)?.email ?? null, created: r.created, ids: r.pixels.map((p) => p.id) }));
       return r;
     }),
+
+  /** Post an ad's image + text + landing link on the Facebook Page (organic). Admin-only. */
+  postAdToPage: adminProcedure
+    .input(z.object({ landingUrl: z.string().url(), imageUrl: z.string().url(), primaryText: z.string().min(10).max(2000) }))
+    .mutation(async ({ input }) => postAdToPage(input)),
 
   /** Detailed-targeting lookup (interests / job titles) for createNjTrafficCampaign. Admin-only. */
   searchTargeting: adminProcedure
@@ -245,3 +255,25 @@ export const metaAdsRouter = router({
       return result;
     }),
 });
+
+/** Organic twin of an ad: same image and text on the Page, landing link tagged as organic social. */
+export function pagePostFromAd(ad: { landingUrl: string; primaryText: string }): string {
+  const u = new URL(ad.landingUrl);
+  if (u.searchParams.has("utm_source")) {
+    u.searchParams.set("utm_source", "facebook");
+    u.searchParams.set("utm_medium", "organic_social");
+  }
+  return `${ad.primaryText.trim()}\n\n${u.toString()}`;
+}
+
+async function postAdToPage(ad: { landingUrl: string; imageUrl: string; primaryText: string }) {
+  try {
+    const r = await publishSocialPost({ platform: "facebook", content: pagePostFromAd(ad), contentType: "ad_twin", mediaUrls: [ad.imageUrl], approved: true });
+    console.log("[Meta Ads] page_post_published", JSON.stringify({ postId: r.postId, rowId: r.id, alreadyPosted: r.alreadyPosted }));
+    return { ok: true as const, postId: r.postId, alreadyPosted: r.alreadyPosted };
+  } catch (err) {
+    const message = (err as Error).message.slice(0, 500);
+    console.error("[Meta Ads] page_post_failed", message);
+    return { ok: false as const, error: message };
+  }
+}
