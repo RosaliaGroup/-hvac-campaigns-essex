@@ -58,7 +58,7 @@
 # 302 (not 301) because the target moves when a new version publishes. ──
 [[redirects]]
   from = "/terms"
-  to = "/terms/v1.0"
+  to = "/terms/v1.1"
   status = 302
   force = true
 
