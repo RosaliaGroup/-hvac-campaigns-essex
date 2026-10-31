@@ -9,6 +9,7 @@ import {
   assign30DayTask, assignAll30DayTasks, list30DayTasks, complete30DayTask,
 } from "../services/crm30DayTasks";
 import { sync30DayFromGmail } from "../services/crm30DaySync";
+import { closeFollowTask, followProfilesFor } from "../services/crmContactEnrichment";
 import { preflightFollowupTask } from "../services/crmFollowupDeliveryPreflight";
 import { inspectFollowupDelivery } from "../services/crmFollowupDeliveryReconciliation";
 
@@ -49,7 +50,16 @@ export const crmFollowupsRouter = router({
       status: z.enum(["open", "done", "cancelled"]).optional(),
       contactId: z.number().int().positive().optional(),
     }).default({}))
-    .query(({ input }) => list30DayTasks(input)),
+    .query(async ({ input }) => {
+      const tasks = await list30DayTasks(input);
+      // "Follow on social" tasks carry the contact's verified profiles for one-click following.
+      const profiles = await followProfilesFor(tasks.filter(t => t.touchNumber === 1).map(t => t.externalContactId))
+        .catch(() => new Map());
+      return tasks.map(t => ({ ...t, followProfiles: t.touchNumber === 1 ? profiles.get(t.externalContactId) ?? [] : undefined }));
+    }),
+  closeFollowTask: protectedProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(({ input }) => closeFollowTask(input.id)),
   complete: protectedProcedure
     .input(z.object({
       id: z.number().int().positive(),
