@@ -162,10 +162,17 @@ export async function runPastLeadsApollo(db: Db, deps: {
   const now = deps.now ?? new Date();
   const perDay = deps.perDay ?? pastLeadsApolloPerDay();
   if (perDay === 0 || !pastLeadsApolloWindow(now)) return null;
-  const p = easternParts(now);
-  if (!(await claim(db, `past-leads-apollo-${p.year}-${p.month}-${p.day}`))) return null;
+  if (running) return null;
+  running = true;
+  try {
   await db.execute(sql`CREATE TABLE IF NOT EXISTS crmApolloEmailLookups (
     email varchar(320) NOT NULL PRIMARY KEY, lookedUpAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, result varchar(32) NOT NULL)`);
+  // The allowance is counted from recorded lookups (rolling 24 hours), so a restart mid-run
+  // simply resumes where it stopped instead of losing the day.
+  const usedRes = await db.execute(sql`SELECT COUNT(*) AS n FROM crmApolloEmailLookups
+    WHERE lookedUpAt >= ${new Date(now.getTime() - 24 * 3_600_000)}`);
+  const left = perDay - Number((usedRes as any)?.[0]?.[0]?.n ?? 0);
+  if (left <= 0) return null;
   const done = new Set((((await db.execute(sql`SELECT email FROM crmApolloEmailLookups`)) as any)?.[0] ?? [])
     .map((r: any) => String(r.email).toLowerCase()));
   const withLinkedIn = new Set((((await db.execute(sql`SELECT contactId FROM crmContactProfiles
@@ -174,7 +181,7 @@ export async function runPastLeadsApollo(db: Db, deps: {
   const { keep } = pastLeadsInGoodStanding(await allTaskRows(db));
   const out = { checked: 0, linkedinSaved: 0, phonesSaved: 0, notFound: 0, capped: false, errors: 0 };
   for (const lead of keep) {
-    if (out.checked >= perDay) break;
+    if (out.checked >= left) break;
     if (!lead.contactId || done.has(lead.email) || withLinkedIn.has(lead.contactId)) continue;
     if (await deps.isSuppressed(lead.email)) continue;
     if (!(await deps.reserveReveal())) { out.capped = true; break; }
@@ -218,6 +225,7 @@ export async function runPastLeadsApollo(db: Db, deps: {
     }
     await db.execute(sql`INSERT IGNORE INTO crmApolloEmailLookups (email, result) VALUES (${lead.email}, ${result})`);
   }
-  await db.execute(sql`UPDATE crmBackfillRuns SET summary = ${JSON.stringify(out)} WHERE name = ${`past-leads-apollo-${p.year}-${p.month}-${p.day}`}`);
-  return out;
+  return out.checked || out.capped ? out : null;
+  } finally { running = false; }
 }
+let running = false;
