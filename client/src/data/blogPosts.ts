@@ -1398,58 +1398,113 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    title: "NJ Heat Pump Rebates 2026: Complete Guide to Getting Up to $16,000",
-    slug: "nj-heat-pump-rebates-2026",
-    date: "March 31, 2026",
-    readTime: "14 min read",
-    category: "Rebates & Incentives",
-    metaDescription: "Every NJ heat pump rebate in 2026: PSE&G Whole-Home ($7,000), Clean Heat ($4,000), NJCEP ($4,000), HEEHRA ($8,000 income-qualified). How to stack them. Free assessment.",
-    excerpt: "NJ homeowners can stack heat pump rebate programs in 2026 for up to $16,000 in total savings (more for income-qualified households via HEEHRA). Here's every program, who qualifies, and how to claim them.",
-    sections: [
-      { type: "intro", content: "New Jersey has more heat pump rebate programs available in 2026 than any previous year — and most homeowners don't realize they can stack multiple programs together. Between PSE&G's Whole-Home Energy Solutions program, the NJ Clean Energy Program (NJCEP), and the HEEHRA income-qualified rebates, a typical NJ homeowner can receive $8,000-$16,000 back on a heat pump installation. This guide breaks down every single program, the exact dollar amounts, who qualifies, and how [Mechanical Enterprise](https://mechanicalenterprise.com) handles all of it for free." },
-      { type: "h2", content: "Overview: Every NJ Heat Pump Rebate Program in 2026" },
-      { type: "paragraph", content: "There are four distinct incentive programs available to NJ homeowners installing heat pumps in 2026. Each has different funding sources, eligibility requirements, and application processes. The key insight is that most of these programs stack — meaning you can claim multiple rebates on the same installation. Here's the full breakdown:" },
-      { type: "stat_box", content: "PSE&G Whole-Home: Up to $7,000 | PSE&G Heat Pump: Up to $4,000 | NJCEP: Up to $4,000 | HEEHRA: Up to $8,000" },
-      { type: "h2", content: "1. PSE&G Whole-Home Energy Solutions — Up to $7,000" },
-      { type: "paragraph", content: "PSE&G's Whole-Home Energy Solutions program is the most generous single-rebate program available to NJ homeowners in 2026. The program provides up to $7,000 in direct rebates for homeowners who complete a comprehensive energy upgrade that includes a qualifying heat pump system. The program starts with a free home energy assessment (conducted by a PSE&G-approved contractor like Mechanical Enterprise) that evaluates your entire home's energy usage, insulation, air sealing, and HVAC equipment." },
-      { type: "paragraph", content: "What makes this program unique is that it takes a whole-home approach — the rebate amount increases when you combine a heat pump with other efficiency measures like insulation and air sealing. The free assessment identifies every improvement your home would benefit from, and the rebate covers a significant portion of the total cost. PSE&G administers this directly, and approved contractors submit the application on your behalf after installation is complete. Rebate checks typically arrive within 6-8 weeks." },
-      { type: "checklist", items: ["Available to all PSE&G electric or gas customers in NJ", "Starts with a free whole-home energy assessment", "Rebate amount scales with the scope of improvements", "Must use a PSE&G-approved contractor (Mechanical Enterprise is approved)", "Stacks with other state programs", "No income restrictions — available to all PSE&G customers regardless of household income"] },
-      { type: "h2", content: "2. PSE&G Heat Pump Rebate — Up to $4,000" },
-      { type: "paragraph", content: "In addition to the Whole-Home program, PSE&G offers a standalone heat pump rebate of up to $4,000 through the NJ Clean Heat program. This rebate applies specifically to the heat pump equipment and is available even if you don't participate in the broader Whole-Home program. The rebate amount depends on the type and efficiency of the heat pump installed. Cold-climate heat pumps (rated for operation at 5°F and below) qualify for the highest amounts because they fully replace fossil fuel heating without a backup system." },
-      { type: "paragraph", content: "Ductless mini-split heat pumps typically qualify for $1,000-$2,500 depending on the number of zones and efficiency rating. Central ducted heat pumps qualify for $2,000-$4,000. The highest amounts go to systems that completely replace existing gas or oil heating — PSE&G specifically incentivizes fuel-switching because it reduces overall carbon emissions and gas infrastructure demand. This rebate is applied at the point of sale by approved contractors, meaning your upfront cost is reduced immediately rather than waiting for a rebate check." },
-      { type: "h2", content: "3. NJ Clean Energy Program (NJCEP) — Up to $4,000" },
-      { type: "paragraph", content: "The New Jersey Clean Energy Program is a state-administered program funded by a surcharge on utility bills. It provides rebates of up to $4,000 for qualifying heat pump installations regardless of which utility serves your property. This means even homeowners served by JCP&L, Atlantic City Electric, or other utilities can access these incentives — not just PSE&G customers. The NJCEP rebate stacks with PSE&G's programs for customers in PSE&G territory, effectively doubling the state-level incentive." },
-      { type: "paragraph", content: "NJCEP rebates are tiered based on system efficiency. Systems meeting the minimum ENERGY STAR threshold qualify for the base rebate. Systems exceeding ENERGY STAR Most Efficient specifications qualify for enhanced rebates. The difference can be $1,000-$2,000, so equipment selection matters significantly. Mechanical Enterprise always recommends systems that qualify for the maximum NJCEP tier — the slightly higher equipment cost is more than offset by the increased rebate amount." },
-      { type: "h2", content: "4. HEEHRA (Home Efficiency Rebates) — Up to $8,000 for Income-Qualified" },
-      { type: "paragraph", content: "The High-Efficiency Electric Home Rebate Act (HEEHRA) is a federal program created by the Inflation Reduction Act that provides point-of-sale rebates of up to $8,000 specifically for heat pump installations in income-qualified households. HEEHRA rebates are applied immediately at the time of purchase — you never pay the full price. This is the single largest individual incentive available and can make a complete heat pump installation nearly free for qualifying families." },
-      { type: "paragraph", content: "HEEHRA eligibility is based on household income relative to your area's median income (AMI). Households earning less than 80% of AMI qualify for rebates covering 100% of costs up to the $8,000 cap. Households earning 80-150% of AMI qualify for rebates covering 50% of costs up to the cap. In New Jersey, where the median household income varies significantly by county, a surprising number of middle-class families qualify for at least the 50% tier. For example, a family of four earning $95,000 in Essex County would likely qualify for the 80-150% AMI tier, receiving up to $4,000 in point-of-sale rebates." },
-      { type: "paragraph", content: "HEEHRA is administered through the state (NJ Board of Public Utilities), and participating contractors must be registered with the program. Mechanical Enterprise is a registered HEEHRA contractor, which means we can apply the rebate at the point of sale — you see the reduced price before you sign anything. We also screen every customer for HEEHRA eligibility during our free assessment, because many families who qualify don't realize it." },
-      { type: "h2", content: "How to Stack Multiple Programs — Real Math" },
-      { type: "paragraph", content: "The most powerful aspect of NJ's 2026 rebate landscape is that most programs stack. Here's a realistic example: a family in Newark replaces an aging gas furnace with a cold-climate central heat pump system. Total installation cost: $18,000. They apply for and receive: PSE&G Whole-Home rebate ($5,000) + PSE&G Heat Pump rebate ($3,500) + NJCEP rebate ($2,500). Their net cost: $7,000 for a brand-new, high-efficiency system that heats and cools their entire home. If that same family is income-qualified for HEEHRA, the HEEHRA rebate replaces some of the other programs (it doesn't double-stack with certain state incentives), but their out-of-pocket could drop to nearly zero." },
-      { type: "stat_box", content: "Example Total: $16,000 install | $11,000 rebates | $7,000 net cost | Payback: 2-3 years from energy savings" },
-      { type: "h2", content: "Who Qualifies for Maximum NJ Heat Pump Rebates?" },
-      { type: "paragraph", content: "While most NJ homeowners qualify for some level of rebate, certain situations qualify for maximum amounts. You're likely to receive the highest total rebates if you currently heat with oil (oil-to-heat-pump conversions receive premium incentives), have an older system (15+ years), live in a single-family home, are served by PSE&G, and install a cold-climate heat pump that completely replaces your fossil fuel system. The worst-case scenario — even if you're replacing a relatively new gas system with a standard efficiency heat pump — still typically qualifies for $4,000-$6,000 in combined incentives." },
-      { type: "checklist", items: ["Oil heat homeowners — highest priority, maximum rebate amounts", "Systems 15+ years old — qualify for replacement incentives", "PSE&G customers — access to the broadest set of utility programs", "Income-qualified households — HEEHRA covers up to $8,000 at point of sale", "Complete fuel-switching (gas/oil to electric heat pump) — premium incentives", "Cold-climate heat pump installation — highest efficiency tier rebates"] },
-      { type: "h2", content: "What Types of Heat Pumps Qualify in 2026?" },
-      { type: "paragraph", content: "Not all heat pumps qualify for maximum rebates. To receive the highest amounts across all programs, your system must meet specific efficiency requirements that vary by program. Central ducted heat pumps must meet ENERGY STAR Most Efficient specifications — currently a minimum SEER2 of 16 and HSPF2 of 9.0. Ductless mini-splits must meet SEER2 of 16 and HSPF2 of 9.5. Cold-climate models (designed to operate efficiently at 5°F and below) qualify for premium tiers across all programs." },
-      { type: "paragraph", content: "The equipment brands we most commonly install that qualify for maximum rebates include Mitsubishi (Hyper Heat series), Daikin (Fit and Aurora series), Carrier (Infinity with Greenspeed), and LG (Multi V). Equipment selection should be driven by your home's specific needs — size, insulation level, ductwork availability, and personal preferences — but Mechanical Enterprise always ensures the selected equipment qualifies for every available rebate tier. We will never recommend a system that leaves incentive money on the table." },
-      { type: "h2", content: "Heat Pump vs Gas Furnace: Is It Worth Switching in NJ?" },
-      { type: "paragraph", content: "Many NJ homeowners wonder whether switching from a gas furnace to a heat pump makes financial sense. The answer depends on your specific situation, but in the vast majority of cases — especially with 2026 rebates — the math strongly favors switching. Modern cold-climate heat pumps operate at 250-300% efficiency (meaning they produce 2.5-3x more heat energy than the electrical energy they consume), compared to even high-efficiency gas furnaces that max out at 96-98%. You also get air conditioning included — a heat pump is both your heater and your AC in one system." },
-      { type: "paragraph", content: "The financial case: a typical NJ home spends $2,500-$3,500/year on gas heating plus $500-$800/year on AC electricity. A heat pump replaces both for approximately $1,200-$1,800/year in electricity. That's $1,000-$2,500/year in energy savings. If your net installation cost after rebates is $5,000-$8,000, the payback period is 2-5 years — after which you save $1,000-$2,500 every single year for the 15-20 year lifespan of the system. And NJ natural gas prices have increased 40% over the past five years, a trend expected to continue." },
-      { type: "h2", content: "How to Apply: The Easy Way" },
-      { type: "paragraph", content: "The rebate application process involves 4-5 different programs, each with their own forms, documentation requirements, and deadlines. Doing this yourself means coordinating with PSE&G, the NJ Board of Public Utilities, and the IRS — each with different processing timelines. This complexity is why an estimated 40% of eligible NJ homeowners never claim rebates they're entitled to. Mechanical Enterprise handles every single application as part of our standard installation — at no additional cost. Here's our process:" },
-      { type: "numbered_list", items: ["Free assessment — we visit your home, evaluate your current system, and calculate your exact rebate eligibility across all 4 programs", "Equipment recommendation — we spec equipment that qualifies for maximum rebate tiers while meeting your home's heating/cooling needs", "Pre-approval — for HEEHRA and certain PSE&G programs, we submit pre-approval applications before installation begins", "Installation — our licensed technicians install your system, pull all necessary permits, and pass all inspections", "Rebate submission — we complete and submit all PSE&G, NJCEP, and HEEHRA paperwork within 48 hours of installation completion"] },
-      { type: "cta_box", content: "Want to know exactly how much you qualify for? Our free assessment calculates your exact rebate amount across all 4 programs — no cost, no obligation.", buttonText: "Check My Rebate Eligibility →", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-      { type: "h2", content: "Rebates by NJ County and Utility Provider" },
-      { type: "paragraph", content: "Your rebate total depends partly on which utility serves your property. PSE&G customers (covering most of Essex, Bergen, Hudson, Union, Passaic, Morris, Mercer, and parts of Middlesex and Somerset counties) have access to the richest set of utility-specific rebates. JCP&L customers (Monmouth, Ocean, Morris, Sussex, Warren counties) have their own incentive programs with slightly different amounts but similar total potential. Atlantic City Electric serves southern NJ with comparable programs. Regardless of your utility, the NJCEP state rebates are available statewide." },
-      { type: "paragraph", content: "Mechanical Enterprise serves all NJ counties and is approved by all major NJ utilities. Whether you're in [Jersey City](/hvac-jersey-city-nj) (PSE&G), [Morristown](/hvac-morristown-nj) (JCP&L territory edges), or anywhere else in the state, we know exactly which programs apply and how to maximize your total. Our free assessment includes a complete rebate calculation specific to your property, utility provider, and current equipment. See our full [PSE&G rebate contractor page](/pseg-rebate-contractor-nj) for more on how we handle the process." },
-      { type: "h2", content: "2026 Rebate Deadlines and Funding Availability" },
-      { type: "paragraph", content: "NJ rebate programs operate on annual funding cycles. PSE&G's programs are funded for the full year but can be modified mid-year if demand exceeds projections. NJCEP programs have historically run out of enhanced-tier funding by Q3, with only base-tier amounts available for the remainder of the year. HEEHRA funding is allocated per state and renewed annually — NJ received its full 2026 allocation, but once it's claimed, it's gone until 2027." },
-      { type: "paragraph", content: "The practical takeaway: homeowners who complete installations in the first half of the year historically receive the highest total rebates. By late summer, some programs may have reduced availability. We've already seen increased demand in early 2026 compared to previous years, likely driven by awareness of the new HEEHRA program. If you're considering a heat pump installation, scheduling your free assessment now ensures you lock in 2026 rates and availability." },
-      { type: "h2", content: "Get Your Free Rebate Assessment Today" },
-      { type: "paragraph", content: "Mechanical Enterprise serves all 15 NJ counties and specializes in maximizing rebate amounts for every customer. Our free assessment includes a full evaluation of your current system, a calculation of every rebate you qualify for across all 4 programs, and a no-obligation quote showing your actual out-of-pocket cost after all incentives. There is no cost and no pressure — just clear numbers showing what you qualify for. Most NJ homeowners are surprised by how much they're eligible for. Check our [heat pump rebates landing page](/lp/heat-pump-rebates) for more details or book your assessment below." },
-      { type: "cta_box", content: "Free assessment — we calculate your exact rebate amount across PSE&G, NJCEP, and HEEHRA. No cost, no obligation. Most NJ homeowners qualify for $8,000-$16,000.", buttonText: "Book Free Rebate Assessment →", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+    "title": "NJ Heat Pump Rebates 2026: Up to $16,000 Guide",
+    "slug": "nj-heat-pump-rebates-2026",
+    "date": "March 31, 2026",
+    "readTime": "7 min read",
+    "category": "Rebates & Incentives",
+    "metaDescription": "See which NJ heat pump rebates you may qualify for in 2026 — up to $16,000 via PSE&G/NJ Clean Energy. Free in-home assessment, no obligation.",
+    "excerpt": "NJ homeowners and businesses have real heat pump incentive options in 2026, led by a PSE&G / NJ Clean Energy rebate of up to $16,000. Here's how the programs work, what affects your amount, and how to find out exactly what you qualify for.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "New Jersey homeowners looking at a heat pump installation in 2026 have one main residential program to know about: the PSE&G / NJ Clean Energy rebate, which can provide up to $16,000 toward a qualifying project. Businesses and multifamily property owners have their own path through PSE&G's Direct Install program, which can cover up to 80% of project costs, plus 0% interest financing on whatever balance remains through PSE&G's On-Bill Repayment option. This guide explains how these programs generally work, what can move your number up or down, and how Mechanical Enterprise — working across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for two decades — handles the application process for customers."
+      },
+      {
+        "type": "h2",
+        "content": "Overview: NJ Heat Pump Incentives in 2026"
+      },
+      {
+        "type": "paragraph",
+        "content": "There are two main incentive paths available right now. Homeowners installing a qualifying heat pump system can pursue the PSE&G / NJ Clean Energy residential rebate. Businesses, landlords, and multifamily property owners can pursue PSE&G's commercial Direct Install program, which can be combined with 0% financing for any remaining cost through On-Bill Repayment. Neither program's final number is fixed in advance — the amount a specific property qualifies for depends on the equipment, the scope of work, and details confirmed during an in-home or on-site assessment."
+      },
+      {
+        "type": "stat_box",
+        "content": "Residential (PSE&G / NJ Clean Energy): Up to $16,000 | Commercial Direct Install: Up to 80% of project cost | On-Bill Repayment: 0% interest on the remaining balance"
+      },
+      {
+        "type": "h2",
+        "content": "PSE&G / NJ Clean Energy Residential Rebate — Up to $16,000"
+      },
+      {
+        "type": "paragraph",
+        "content": "This is the primary incentive most NJ homeowners pursue when installing a heat pump. It can provide up to $16,000 toward a qualifying installation, but the exact figure for your home depends on factors like the type of system you install and how much of your current heating load it replaces. Rather than guessing at a number from a blog post, the most reliable way to know what your household qualifies for is a free in-home assessment, where we review your current equipment, your utility account, and the scope of work before giving you a specific figure."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Type and size of heat pump system being installed",
+          "Whether the heat pump fully replaces an existing furnace, boiler, or AC, or supplements it",
+          "Age and condition of your current heating and cooling equipment",
+          "Whether additional efficiency work (insulation, air sealing) is part of the project",
+          "Your utility provider and account status",
+          "Property type — single-family, multifamily, condo, or townhouse"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Commercial Heat Pump Incentives: Direct Install & On-Bill Repayment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Businesses, property managers, and owners of multifamily buildings in PSE&G territory have a separate incentive path. The Direct Install program can cover up to 80% of the cost of a qualifying commercial project, which can include heat pump, VRV/VRF, or rooftop unit replacements. For the portion of the cost that isn't covered, PSE&G's On-Bill Repayment option allows the remaining balance to be financed at 0% interest and paid back gradually through the monthly utility bill rather than upfront. This combination is especially useful for owners managing aging rooftop or split systems across multiple units, where a large upfront outlay would otherwise be a barrier to upgrading."
+      },
+      {
+        "type": "h2",
+        "content": "What Determines Your Rebate Amount"
+      },
+      {
+        "type": "paragraph",
+        "content": "No two properties get the same number, because every program bases its calculation on the specifics of the project. A Morris County homeowner replacing an oil-fired boiler with a ducted heat pump and a Union County landlord upgrading rooftop units across a multifamily building will each go through very different calculations — which is exactly why we don't quote rebate amounts over the phone or in a blog post. During your free assessment, we look at your existing system, the proposed replacement, your utility account, and the overall scope of the project, then give you a specific number before you commit to anything."
+      },
+      {
+        "type": "h2",
+        "content": "How We Handle the Rebate Process For You"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
+          "Free assessment — we visit your home or property, review your current system, and walk through the programs that may apply",
+          "Equipment recommendation — we propose a system sized correctly for your space and suited to the project's goals",
+          "Paperwork preparation — we prepare the documentation these programs require before and after installation",
+          "Installation — our technicians complete the install, pull any required permits, and confirm everything is ready for inspection",
+          "Submission and follow-up — we submit the completed paperwork and stay on top of it until it's processed"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Serving Your County, Whatever Your Utility"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise works with homeowners and property owners across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. Because program details can vary by utility account and property type, we don't publish a single blanket rebate figure that applies to every household — we calculate it property by property during the assessment. If you're unsure whether your home or building qualifies, or how a heat pump installation compares to simply replacing your current system, that's exactly what the free assessment is for."
+      },
+      {
+        "type": "cta_box",
+        "content": "Want to know what your property specifically qualifies for? Our free assessment reviews your current system and calculates your rebate eligibility — no cost, no obligation.",
+        "buttonText": "Book My Free Rebate Assessment →",
+        "buttonUrl": "https://mechanicalenterprise.com/rebate-calculator"
+      }
     ],
+    "updatedDate": "October 30, 2026",
+    "faqSchema": [
+      {
+        "question": "How much can I get through the PSE&G / NJ Clean Energy heat pump rebate?",
+        "answer": "Eligible NJ homeowners may qualify for up to $16,000, but the exact amount depends on your current equipment, the proposed system, and your utility account. A free in-home assessment confirms the specific figure for your property."
+      },
+      {
+        "question": "Do commercial properties and multifamily buildings qualify for heat pump incentives?",
+        "answer": "Yes. PSE&G's Direct Install program can cover up to 80% of the cost of a qualifying commercial project, and any remaining balance can be financed at 0% interest through On-Bill Repayment, paid back through the monthly utility bill."
+      },
+      {
+        "question": "What if I can't cover the remaining cost after rebates upfront?",
+        "answer": "For qualifying commercial projects, PSE&G's On-Bill Repayment lets you finance the remaining balance at 0% interest, with payments added to your regular monthly utility bill instead of paying a lump sum."
+      },
+      {
+        "question": "Which NJ counties does Mechanical Enterprise serve?",
+        "answer": "We work with homeowners and businesses in Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties."
+      }
+    ]
   },
 
   // Post 1: Complete Guide to NJ HVAC Rebates in 2026
