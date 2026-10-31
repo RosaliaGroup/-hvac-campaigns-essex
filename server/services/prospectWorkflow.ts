@@ -484,6 +484,9 @@ export function startProspectWorkflow() {
         const { spreadFollowBacklog } = await import("./pastLeadsEnrichment");
         const spread = await spreadFollowBacklog(db);
         console.info("[follow-backlog]", spread ? JSON.stringify(spread) : "already ran");
+        const { backfillHomeownerCallTasks } = await import("./homeownerCallTask");
+        const calls = await backfillHomeownerCallTasks(db);
+        console.info("[homeowner-calls]", calls ? JSON.stringify(calls) : "already ran");
       } catch (e) {
         console.warn("[outreach-backfill] failed", (e as Error).message.slice(0, 200));
       }

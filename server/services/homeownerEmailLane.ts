@@ -9,7 +9,7 @@
  * Per contact: one introduction, one in-thread follow-up 5 business days later.
  * Never emails anyone sales@ has emailed before, anyone who has written to us,
  * anyone suppressed/unsubscribed, or any address with a bounce. A reply hands
- * the homeowner to a person (notification) and stops the sequence.
+ * the homeowner to a person (notification + a call task for the owner) and stops the sequence.
  *
  * Gated: HOMEOWNER_EMAIL_ENABLED=true, HOMEOWNER_EMAIL_POSTAL_ADDRESS set, JWT_SECRET set.
  */
@@ -113,13 +113,20 @@ async function upsertState(db: Db, customerId: number, email: string, patch: Rec
     ON DUPLICATE KEY UPDATE ${sql.raw(cols.map(c => `${c} = VALUES(${c})`).join(", "))}`);
 }
 
-async function notifyReply(db: Db, row: { customerId: number; displayName: string; email: string }) {
+async function notifyReply(db: Db, row: { customerId: number; displayName: string; email: string; threadId?: string | null }) {
+  // They wrote back, so a personal call is a reply to their inquiry: task it to the owner.
+  try {
+    const { createHomeownerCallTask } = await import("./homeownerCallTask");
+    await createHomeownerCallTask(db, row);
+  } catch (e) {
+    console.warn("[homeowner-email] call task not created", (e as Error).message.slice(0, 160));
+  }
   const ownerId = await resolveDefaultOwner(db);
   if (!ownerId) return;
   await db.insert(notifications).values({
     teamMemberId: ownerId, type: "homeowner_email_reply",
     title: `Homeowner replied: ${row.displayName}`,
-    body: `${row.displayName} (${row.email}) replied to the homeowner HVAC email. Read the reply in sales@ and follow up personally.`,
+    body: `${row.displayName} (${row.email}) replied to the homeowner HVAC email. A call task is in your CRM follow-up tasks — read the reply in sales@, then call them.`,
     entityType: "customer", entityId: row.customerId, link: `/customers/${row.customerId}`,
   });
 }
