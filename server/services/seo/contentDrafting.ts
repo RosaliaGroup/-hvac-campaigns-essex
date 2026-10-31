@@ -12,6 +12,7 @@ import type { BlogPostData } from "../../../client/src/data/blogPosts";
 import { normalizeBlogPost } from "../../../shared/blogPostRendering";
 import type { VerifiedFacts } from "../../../shared/verifiedFacts";
 import type { SeoContentQueueRow } from "../../../drizzle/schema";
+import { EXPIRED_INCENTIVES, SUPERLATIVES, CERTIFICATION_WORDS, COMPETITOR_BRANDS } from "../../../shared/seoLinter";
 
 const DEFAULT_MODEL = "claude-sonnet-5"; // matches this repo's existing drafting tier (anthropicProvider.ts)
 const FALLBACK_MODELS = ["claude-haiku-4-5"];
@@ -35,7 +36,7 @@ export class ContentDraftParseError extends Error {
   }
 }
 
-function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFacts, priorFindings: string[] = []): string {
+export function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFacts, priorFindings: string[] = []): string {
   const findingsBlock = priorFindings.length
     ? ["", "A PREVIOUS DRAFT OF THIS TOPIC WAS BLOCKED FOR THE FOLLOWING FINDINGS. Your new draft MUST fix every one of them:", ...priorFindings.map((f) => `- ${f}`)]
     : [];
@@ -70,6 +71,9 @@ function buildContentSystemPrompt(topic: SeoContentQueueRow, facts: VerifiedFact
     "- Coverage must be described as an optional paid add-on, never as included or standard. Avoid using the word included in any sentence about warranties or coverage.",
     "- For existing systems, explicitly state eligible existing systems may qualify in the same sentence as any coverage claim. Do not imply blanket eligibility.",
     "- Do not mix manufacturer warranties with separately purchased coverage. Do not invent durations, pricing, or guaranteed outcomes.",
+    // The checker blocks these words in ANY sense (Oct 30: "affordable hvac new jersey" was blocked 3x for "cheapest").
+    `- These words and phrases are blocked by the checker in ANY sense, so never use them anywhere, including the title, meta and FAQ (rephrase instead): ${[...EXPIRED_INCENTIVES, ...SUPERLATIVES, ...CERTIFICATION_WORDS].map((w) => `"${w}"`).join(", ")}. For "affordable"/"low-cost" topics, talk about value, total cost of ownership and what drives price — never "cheapest" or "lowest price". Write "you may be told" instead of "you'll hear".`,
+    `- Never name these companies: ${COMPETITOR_BRANDS.join(", ")}.`,
     "- Before returning JSON, verify title length at most 60 characters and meta description at most 155 characters; target 55 and 145 to leave a margin.",
     "- Before returning JSON, verify rendered body length 900-1400 words and no more than six h2 headings. Use clear, concise language rather than filler.",
     "- Never invent $0 offers or specific maintenance frequency; use only the verified facts provided.",

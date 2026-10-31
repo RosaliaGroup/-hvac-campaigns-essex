@@ -78,3 +78,13 @@ describe("unverified amounts never reach the model", () => {
     expect(prompt).toContain('"hear"');
   });
 });
+
+describe("new-post drafter knows the checker's blocked words", () => {
+  it("lists superlatives like 'cheapest' and the competitor names", async () => {
+    const { buildContentSystemPrompt } = await import("./contentDrafting");
+    const prompt = buildContentSystemPrompt({ id: 41, title: "NJ Commercial HVAC Guide: affordable hvac new jersey", targetQuery: "affordable hvac new jersey", audience: "NJ property managers", brief: "b" } as never, VERIFIED_FACTS);
+    expect(prompt).toContain('"cheapest"');
+    expect(prompt).toContain('"hear"');
+    expect(prompt).toContain("A.J. Perri");
+  });
+});
