@@ -381,8 +381,10 @@ export async function boostPost(_params: BoostPostParams): Promise<{ externalCam
 /* ── New Jersey website-traffic campaign (owner, Oct 31, 2026) ───────────────────────────────
  * The instant-form builder above stays disabled (US-wide targeting, CRM delivery unverified). This one
  * sends people to a mechanicalenterprise.com landing page, so leads arrive through the site's own lead
- * form (TCPA + CRM capture already verified). Targeting is the New Jersey region only. Optimizes for
- * link clicks because the site has no Meta pixel configured (VITE_META_PIXEL_ID unset).
+ * form (TCPA + CRM capture already verified). Targeting is the New Jersey region, optionally narrowed to
+ * people matching ANY of the given interests / job titles (Oct 31: property managers for maintenance
+ * contracts). Optimizes for link clicks; the site's pixel (904145668726251) went live Oct 31, so a later
+ * campaign can switch to lead optimization once Lead events accumulate.
  * Created PAUSED; the caller enables it after review. */
 export interface NjTrafficCampaignParams {
   adAccountId: string;
@@ -396,6 +398,19 @@ export interface NjTrafficCampaignParams {
   description: string;
   ageMin?: number;
   ageMax?: number;
+  /** Detailed targeting from searchMetaTargeting; a person matching ANY entry qualifies. */
+  interests?: TargetingEntry[];
+  workPositions?: TargetingEntry[];
+}
+
+export type TargetingEntry = { id: string; name: string };
+
+/** Look up detailed-targeting options (interests or job titles) by keyword. */
+export async function searchMetaTargeting(token: string, type: "adinterest" | "adworkposition", q: string) {
+  const json = await metaGet("/search", token, { type, q, limit: "25" });
+  return ((json.data ?? []) as Array<{ id: string; name: string; audience_size_lower_bound?: number; audience_size_upper_bound?: number; path?: string[] }>).map((d) => ({
+    id: String(d.id), name: d.name, audienceLower: d.audience_size_lower_bound ?? null, audienceUpper: d.audience_size_upper_bound ?? null, path: d.path ?? [],
+  }));
 }
 
 /** Meta's region key for New Jersey, looked up live rather than hard-coded. */
@@ -432,6 +447,9 @@ export async function createNjTrafficCampaign(token: string, p: NjTrafficCampaig
       geo_locations: { regions: [{ key: region }], location_types: ["home"] },
       age_min: p.ageMin ?? 30,
       age_max: p.ageMax ?? 65,
+      ...((p.interests?.length || p.workPositions?.length)
+        ? { flexible_spec: [{ ...(p.interests?.length ? { interests: p.interests } : {}), ...(p.workPositions?.length ? { work_positions: p.workPositions } : {}) }] }
+        : {}),
       targeting_automation: { advantage_audience: 0 },
     },
     status: "ACTIVE",

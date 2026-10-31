@@ -10,7 +10,7 @@ import {
   createLeadCampaign,
   testAdAccount,
   createNjTrafficCampaign,
-  setMetaCampaignStatus, getOrCreateAdAccountPixel,
+  setMetaCampaignStatus, getOrCreateAdAccountPixel, searchMetaTargeting,
 } from "../metaAds";
 import { saveAiVaCredentials, getAiVaCredentials, getAiVaCredentialTimestamp } from "../db";
 import { ENV } from "../_core/env";
@@ -162,6 +162,10 @@ export const metaAdsRouter = router({
       primaryText: z.string().min(10).max(600),
       headline: z.string().min(3).max(60),
       description: z.string().max(120).default(""),
+      ageMin: z.number().int().min(18).max(65).optional(),
+      ageMax: z.number().int().min(18).max(65).optional(),
+      interests: z.array(z.object({ id: z.string().regex(/^\d+$/), name: z.string() })).max(25).optional(),
+      workPositions: z.array(z.object({ id: z.string().regex(/^\d+$/), name: z.string() })).max(25).optional(),
     }))
     .mutation(async ({ input, ctx }) => {
       const token = await getToken();
@@ -188,6 +192,15 @@ export const metaAdsRouter = router({
       const r = await getOrCreateAdAccountPixel(token, adAccountId, input);
       console.log("[Meta Ads] ad_account_pixel", JSON.stringify({ actor: (ctx.user as { email?: string } | null)?.email ?? null, created: r.created, ids: r.pixels.map((p) => p.id) }));
       return r;
+    }),
+
+  /** Detailed-targeting lookup (interests / job titles) for createNjTrafficCampaign. Admin-only. */
+  searchTargeting: adminProcedure
+    .input(z.object({ type: z.enum(["adinterest", "adworkposition"]), q: z.string().min(2).max(80) }))
+    .query(async ({ input }) => {
+      const token = await getToken();
+      if (!token) throw new Error("Meta Ads not connected.");
+      return { results: await searchMetaTargeting(token, input.type, input.q) };
     }),
 
   setCampaignStatus: adminProcedure
