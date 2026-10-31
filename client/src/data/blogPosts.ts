@@ -25,6 +25,95 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Compressor Failures in Years 5-8: Protect Your Budget",
+    "slug": "compressor-failures-years-5-8-protect-your-budget",
+    "date": "October 31, 2026",
+    "readTime": "6 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Why compressor failures hit commercial HVAC budgets hardest in years 5-8, and how optional 10-year coverage changes the cost for NJ property managers.",
+    "excerpt": "For property managers and general contractors, a compressor failure is a budget event, not just a repair. Here's how installation quality and optional 10-year parts & labor coverage change what that failure costs.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Property managers, general contractors, and commercial building owners across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties know that a compressor failure never happens at a convenient time. Whether it's a rooftop unit serving a multifamily building in Union County or a split system across an office portfolio in Morris County, a failed compressor means tenant complaints, emergency service calls, and spending that wasn't on this quarter's budget. The equipment you install today, and the coverage you choose to carry on it afterward, determines how much control you have when that failure eventually happens. Mechanical Enterprise LLC, an NJ Master HVACR Contractor serving the region for 20 years, works with property managers and general contractors on installation quality, system sizing, and optional paid coverage designed to change what a compressor failure costs you."
+      },
+      {
+        "type": "h2",
+        "content": "The Real Cost of an Unplanned Compressor Failure"
+      },
+      {
+        "type": "paragraph",
+        "content": "When a compressor fails outside of any paid coverage, the bill usually includes the part itself, refrigerant, labor, and often a premium for a service call placed under time pressure. For a multifamily building or commercial tenant space, there's also the cost that doesn't show up on an invoice: tenant complaints, vacancy risk, and staff hours spent managing the situation instead of their regular work. A capital plan built only around the original purchase price of a system leaves those costs unaccounted for. Property managers who treat a compressor failure as a single line-item repair often underestimate the full disruption, because the real cost includes everything happening around that repair, not just the part replaced. Planning ahead of that moment, through installation choices made at the start and coverage decisions made along the way, is what keeps a compressor failure from becoming a budget emergency instead of a planned expense."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Set the Foundation"
+      },
+      {
+        "type": "paragraph",
+        "content": "How a system is installed affects how it performs across its working life. Correct sizing for the space, proper refrigerant charge, and attention to ductwork or line-set design all affect how hard a compressor has to work to meet a building's load. Mechanical Enterprise installs Heat Pump, Central AC, Ductless Mini-Split, Full HVAC System Replacement, Commercial HVAC, and VRV/VRF systems across our service counties, matching equipment to the building type — whether that's a mid-rise multifamily property, an office suite, or a mixed-use commercial space. Getting the system fit right at installation is the most direct way to protect the equipment you're responsible for, and it's something you can verify directly during bidding. Ask any contractor proposing a new system for the load calculations and equipment selection behind their quote before work begins, not after the system is already running."
+      },
+      {
+        "type": "h2",
+        "content": "What Optional 10-Year Parts & Labor Coverage Changes"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise offers an optional 10-Year Parts & Labor Coverage program, administered through a third-party extended service agreement backed by A-rated insurers. It's available for new HVAC installations completed by Mechanical Enterprise, and for eligible existing systems that may qualify following a Mechanical Enterprise inspection. This is not a manufacturer warranty, and it is not an included feature of installation — it's a separately purchased coverage option, available across all major brands, with no deductible. What it changes is straightforward: if a covered compressor or other major component fails during the coverage term, the parts and labor cost of that repair is addressed under the agreement instead of landing on your property's budget as an unplanned expense. For a property manager overseeing multiple buildings, that turns a potential large one-time repair into a known, planned line item instead of a surprise."
+      },
+      {
+        "type": "h2",
+        "content": "Preventive Maintenance Agreements That Catch Problems Early"
+      },
+      {
+        "type": "paragraph",
+        "content": "Beyond one-time coverage, Comfort Membership gives property managers an ongoing way to manage HVAC risk on an owned system — you own the equipment outright; membership is a paid coverage and service fee, not a lease and not a subscription that includes the equipment itself. Membership includes parts and labor coverage for a term length you select, two maintenance visits per year, priority scheduling when you call for service, and a replacement credit that applies toward your next system with Mechanical Enterprise. Billing is monthly, which makes it easier to plan into an operating budget rather than a capital one. For a portfolio with multiple PTAC, mini-split, RTU, or split systems spread across different buildings, this kind of agreement keeps maintenance consistent instead of reactive, and keeps our team already familiar with your equipment before an unplanned call comes in."
+      },
+      {
+        "type": "h2",
+        "content": "Planning Replacement Before It's an Emergency"
+      },
+      {
+        "type": "paragraph",
+        "content": "For portfolios with multiple properties, we price ongoing service per unit per year and report on a quarterly cadence, giving property managers and general contractors visibility into system age, service history, and condition across buildings throughout Essex, Bergen, Hudson, and the rest of our service area. That visibility is what allows replacement to be planned on a timeline your organization controls, rather than decided by whichever unit fails first. If you're managing a multifamily property, an office portfolio, or a mixed commercial site, building a simple record of unit age, service calls, and current coverage status for each piece of equipment gives you a real basis for capital planning conversations with ownership or finance, instead of reacting unit by unit as failures happen."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Building type and unit count (multifamily, office, mixed-use, etc.)",
+          "Make, model, and approximate install date for each existing unit",
+          "Service address(es) and county",
+          "Any available maintenance or service records",
+          "Current coverage or manufacturer warranty status, if known",
+          "For bidders: request load calculations and equipment sizing before installation begins",
+          "For bidders: ask whether optional parts & labor coverage is available and what it covers",
+          "For bidders: ask what eligibility inspection is required before existing equipment can qualify for coverage"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Get a service visit scheduled or talk through replacement and coverage options for your property.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Does the optional 10-year coverage apply to equipment we already have installed?",
+        "answer": "Eligible existing systems may qualify for the optional coverage after a Mechanical Enterprise inspection confirms they meet the program's eligibility criteria; coverage is not automatic for existing equipment."
+      },
+      {
+        "question": "Does the Comfort Membership mean Mechanical Enterprise owns the equipment?",
+        "answer": "No. You own the system outright. Comfort Membership is a paid coverage and maintenance fee that includes service visits, priority scheduling, and a replacement credit — not equipment ownership."
+      },
+      {
+        "question": "Do you provide service outside normal business hours for commercial properties?",
+        "answer": "Yes. We offer 24/7 emergency service and same-day service for commercial and multifamily properties across our New Jersey service counties."
+      }
+    ]
+  },
+
+  {
     "title": "Heat Pump vs. Furnace: 10-Year Cost Comparison",
     "slug": "heat-pump-vs-furnace-total-cost-of-ownership-nj",
     "date": "October 30, 2026",
