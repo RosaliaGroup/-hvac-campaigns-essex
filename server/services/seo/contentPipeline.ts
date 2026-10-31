@@ -488,6 +488,29 @@ export function startWeeklyContentScheduler(): void {
   };
   console.log(`[SEO] Weekly content pipeline scheduled — ${process.env.SEO_CONTENT_SCHEDULE?.trim() || "Wednesdays 06:00 America/New_York (default)"}`);
   arm();
+  // Optional second daily slot (owner, Oct 30: "more blogs"). Same job, same guards: one open content PR at a
+  // time, lint + critic + hold, circuit breaker. runWeeklyContentJob() also dedupes a concurrent call.
+  const extraRaw = process.env.SEO_CONTENT_SCHEDULE_EXTRA?.trim();
+  if (extraRaw) {
+    let extra: ScheduleSpec | null = null;
+    try {
+      extra = parseCronToSchedule(extraRaw, DEFAULT_CONTENT_SCHEDULE.timeZone);
+    } catch (err) {
+      console.error(`[SEO] SEO_CONTENT_SCHEDULE_EXTRA is invalid, ignored: ${(err as Error).message}`);
+    }
+    if (extra) {
+      const armExtra = () => {
+        setTimeout(() => {
+          runWeeklyContentJob()
+            .then((outcome) => console.log(`[SEO] weekly content job (extra slot): ${outcome.status}${outcome.status === "drafted" && outcome.autoApproved ? `, auto-approved to batch #${outcome.batchId}` : ""}`))
+            .catch((err) => console.error("[SEO] weekly content job (extra slot) error:", err))
+            .finally(armExtra);
+        }, msUntilNextRun(extra!));
+      };
+      console.log(`[SEO] Content pipeline extra slot scheduled — ${extraRaw}`);
+      armExtra();
+    }
+  }
   // Recover an exhausted queue once on startup rather than waiting for the next
   // scheduled day. If a queue/PR already exists, keep the normal cadence.
   if (process.env.SEO_AUTOPUBLISH_ENABLED === "true") {
