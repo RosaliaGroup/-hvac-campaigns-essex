@@ -170,7 +170,9 @@ describe("6. warranty_wrong_year_count — only a year count attached to the cov
 });
 
 describe("7. sla_hours_mismatch / 24-7 / same-day — quoted and negated mentions are discussing the phrase, not claiming it", () => {
-  const f = (t: string) => codes(lintDifferentiationFactClaims(t, VERIFIED_FACTS));
+  // Pinned to UNVERIFIED service hours: these cases test the quoted/negated logic, which only matters
+  // while the claim is unverified (the owner confirmed 24/7 and same-day on 2026-10-30).
+  const f = (t: string) => codes(lintDifferentiationFactClaims(t, { ...VERIFIED_FACTS, serviceHours: { emergency24x7: false, sameDay: false } }));
 
   it("#8: a quoted, critical '24-hour response'", () => {
     expect(f("Most commercial HVAC contracts advertise a '24-hour response' without ever defining what that phrase actually obligates the contractor to do.")).not.toContain("sla_hours_mismatch");

@@ -24,7 +24,7 @@ describe("llms.txt", () => {
     expect(txt).toContain(VERIFIED_FACTS.business.phone);
     for (const c of VERIFIED_FACTS.business.serviceCounties) expect(txt).toContain(`${c} County`);
     expect(VERIFIED_FACTS.business.address).toBeNull();
-    expect(txt).not.toMatch(/Address:|License:|Hours:/);
+    expect(txt).not.toMatch(/Address:|Hours:/);
   });
   it("renders address/license/hours lines once the owner supplies them", () => {
     const facts = {
@@ -57,21 +57,22 @@ describe("company entity", () => {
     expect(get("Services")).toBe(VERIFIED_FACTS.services.join(", "));
     expect(get("Coverage")).toMatch(/Optional 10-year parts and labor coverage \(not included by default/);
   });
-  it("omits License/Address/Hours rows (and JSON-LD fields) while those facts are null", () => {
-    expect(rows.map((r) => r.label)).not.toEqual(expect.arrayContaining(["License"]));
+  it("shows the owner-supplied license (2026-10-30)", () => {
+    expect(rows.find((r) => r.label === "License")?.value ?? JSON.stringify(rows)).toContain("19HC00400700");
+  });
+  it("omits Address/Hours rows (and JSON-LD fields) while those facts are null", () => {
     expect(rows.map((r) => r.label)).not.toContain("Address");
     expect(rows.map((r) => r.label)).not.toContain("Hours");
     const ld = buildEntityJsonLd(VERIFIED_FACTS);
     expect(ld).not.toHaveProperty("address");
     expect(ld).not.toHaveProperty("openingHours");
-    expect(ld).not.toHaveProperty("hasCredential");
     expect(ld["@type"]).toBe("HVACBusiness");
     expect(ld.telephone).toBe("+18624239396");
   });
   it("never contains a number the facts don't hold (no invented counts or years)", () => {
     const all = JSON.stringify(rows) + JSON.stringify(buildEntityJsonLd(VERIFIED_FACTS));
     const nums = all.match(/\d+/g) ?? [];
-    const allowed = new Set(["1", "862", "423", "9396", "10", "20", "18624239396"]);
+    const allowed = new Set(["1", "862", "423", "9396", "10", "20", "18624239396", "19", "00400700", "19HC00400700"]);
     for (const n of nums) expect(allowed.has(n) || n.length >= 10).toBe(true);
   });
 });

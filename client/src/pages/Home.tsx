@@ -60,7 +60,7 @@ export default function Home() {
         "url": "https://mechanicalenterprise.com",
         "address": { "@type": "PostalAddress", "addressLocality": "Newark", "addressRegion": "NJ", "addressCountry": "US" },
         "areaServed": "New Jersey",
-        "priceRange": "$100-$550",
+        "priceRange": "$$",
         "openingHours": "Mo-Su 00:00-23:59",
         "description": "Expert HVAC installation in NJ with optional 10-year parts & labor coverage. Heat pumps, VRV/VRF systems, free assessments. Rebates may reduce your cost."
       }) }} />
