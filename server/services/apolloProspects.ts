@@ -113,6 +113,15 @@ export function createApolloClient(apiKey: string, fetchImpl: typeof fetch = fet
 }
 export type ApolloClient = ReturnType<typeof createApolloClient>;
 
+/**
+ * Apollo returns LinkedIn profile URLs as "http://www.linkedin.com/in/<slug>". Accept http or
+ * https (with or without www / a country subdomain) and return https://www.linkedin.com/in/<slug>.
+ */
+export function normalizeLinkedIn(url: string | null | undefined): string | null {
+  const m = /^https?:\/\/(?:[a-z]{2,3}\.|www\.)?linkedin\.com\/in\/([^/?#\s]+)\/?(?:[?#].*)?$/i.exec((url ?? "").trim());
+  return m ? `https://www.linkedin.com/in/${m[1]}` : null;
+}
+
 /** Turn an enrichment result into a prospect, or null with the reason it was rejected. */
 export function apolloToProspect(p: MatchPerson): { prospect: ResearchedProspect & { phone?: string }; reason?: never } | { prospect?: never; reason: string } {
   const email = (p.email ?? "").trim().toLowerCase();
@@ -124,8 +133,7 @@ export function apolloToProspect(p: MatchPerson): { prospect: ResearchedProspect
   if (name.split(/\s+/).length < 2 || !company || !title) return { reason: "incomplete identity" };
   if (isPublicBidEntity({ email, company })) return { reason: "public body or school" };
   if (isExcludedProspect({ name, company, email })) return { reason: "excluded" };
-  const source = p.linkedin_url && /^https:\/\/(www\.)?linkedin\.com\//.test(p.linkedin_url)
-    ? p.linkedin_url : `https://app.apollo.io/#/people/${encodeURIComponent(p.id ?? "")}`;
+  const source = normalizeLinkedIn(p.linkedin_url) ?? `https://app.apollo.io/#/people/${encodeURIComponent(p.id ?? "")}`;
   const digits = (p.organization?.phone ?? "").replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
   return {
     prospect: {
