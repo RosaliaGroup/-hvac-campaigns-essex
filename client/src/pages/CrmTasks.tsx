@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import TaskCallActions from "@/components/TaskCallActions";
+import FollowLinks from "@/components/FollowLinks";
 import ContactEnrichmentQueue from "@/components/ContactEnrichmentQueue";
 import FollowupDeliveryDiagnostics from "@/components/FollowupDeliveryDiagnostics";
 import { trpc } from "@/lib/trpc";
@@ -13,7 +14,7 @@ type Status="open"|"done"|"cancelled"|"all";
 type Action="all"|"call"|"email"|"text";
 type Due="all"|"overdue"|"today"|"upcoming";
 const labels:Record<number,string>={
-  2:"Personal introduction call",3:"Brief email check-in",4:"Second personal call",
+  1:"Follow on social",2:"Personal introduction call",3:"Brief email check-in",4:"Second personal call",
   5:"Maintenance insight",6:"Upcoming project conversation",7:"Replacement planning",
   8:"Relationship check-in",9:"Final value-based email",10:"Final personal check-in",
 };
@@ -129,7 +130,7 @@ export default function CrmTasks(){
         className="border-b last:border-b-0 p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <div className="flex items-center flex-wrap gap-2">
-            {task.kind==="human"?<Phone className="h-4 w-4 text-blue-700"/>:<Mail className="h-4 w-4 text-blue-700"/>}
+            {task.touchNumber===1?<ListTodo className="h-4 w-4 text-blue-700"/>:task.kind==="human"?<Phone className="h-4 w-4 text-blue-700"/>:<Mail className="h-4 w-4 text-blue-700"/>}
             <strong>{labels[task.touchNumber]??"Follow-up"}</strong>
             <span className="text-xs bg-slate-100 rounded px-2 py-1">Touch {task.touchNumber}/10</span>
             {task.status!=="open"&&<span className="text-xs text-slate-600">{task.status} · {task.outcome?.replaceAll("_"," ")}</span>}
@@ -150,11 +151,13 @@ export default function CrmTasks(){
               href={`https://mail.google.com/mail/u/?authuser=sales%40mechanicalenterprise.com#all/${encodeURIComponent(task.introThreadId)}`}>
               Original Gmail thread</a>
           </div>
+          {task.touchNumber===1&&task.status==="open"&&<FollowLinks contactId={task.externalContactId} taskId={task.id}
+            profiles={task.followProfiles??[]} onChanged={refresh}/>}
         </div>
         {task.status==="open"&&<div className="flex flex-wrap gap-2 w-full xl:w-auto xl:shrink-0">
           {!task.assignedToUserId&&<Button size="sm" variant="outline" disabled={busy}
             onClick={()=>assign.mutate({id:task.id})}>Assign to me</Button>}
-          {task.kind==="human"?<TaskCallActions
+          {task.touchNumber===1?null:task.kind==="human"?<TaskCallActions
             contactId={task.externalContactId}
             contactName={task.name || task.recipientEmail}
             phone={task.phone}

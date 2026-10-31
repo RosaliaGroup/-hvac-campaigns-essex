@@ -72,7 +72,12 @@ export async function outreachTaskPage(input: TaskPageInput) {
       .leftJoin(customers, eq(crmExternalContacts.customerId, customers.id))
       .where(filters),
   ]);
-  return { items: rows, total: Number(totals[0]?.total ?? 0) };
+  // "Follow on social" tasks carry the contact's verified profiles for one-click following.
+  const { followProfilesFor } = await import("./crmContactEnrichment");
+  const profiles = await followProfilesFor(rows.filter(r => r.touchNumber === 1).map(r => r.externalContactId))
+    .catch(() => new Map());
+  const items = rows.map(r => ({ ...r, followProfiles: r.touchNumber === 1 ? profiles.get(r.externalContactId) ?? [] : undefined }));
+  return { items, total: Number(totals[0]?.total ?? 0) };
 }
 
 export async function opportunityTaskPage(input: TaskPageInput) {
