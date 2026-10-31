@@ -238,3 +238,25 @@ export async function runPastLeadsApollo(db: Db, deps: {
   } finally { running = false; }
 }
 let running = false;
+
+/**
+ * One-time (owner, Oct 30): the catch-ups made ~180 "Follow on social" tasks for older leads
+ * all due at once. Spread them 20 per business day from Monday 9 AM ET, newest leads first.
+ * New leads' follow tasks (introduced Oct 30 or later) keep their own next-business-day dates.
+ */
+export const SPREAD_FOLLOW_NAME = "spread-follow-backlog-2026-10-31";
+export async function spreadFollowBacklog(db: Db, now = new Date()) {
+  if (!(await claim(db, SPREAD_FOLLOW_NAME))) return null;
+  const monday9 = new Date("2026-11-02T14:00:00Z"); // 9:00 AM EST
+  const base = now > monday9 ? now : monday9;
+  const res = await db.execute(sql`SELECT id FROM crmOutreach30DayTasks
+    WHERE touchNumber = 1 AND status = 'open' AND introAt < ${new Date("2026-10-30T04:00:00Z")}
+    ORDER BY introAt DESC, id ASC`);
+  const ids = (((res as any)?.[0] ?? []) as { id: number }[]).map(r => Number(r.id));
+  for (let i = 0; i < ids.length; i++)
+    await db.execute(sql`UPDATE crmOutreach30DayTasks SET dueAt = ${addBusinessDays(base, Math.floor(i / FOLLOW_TASKS_PER_DAY))}
+      WHERE id = ${ids[i]} AND status = 'open'`);
+  const out = { spread: ids.length, businessDays: Math.ceil(ids.length / FOLLOW_TASKS_PER_DAY) };
+  await db.execute(sql`UPDATE crmBackfillRuns SET summary = ${JSON.stringify(out)} WHERE name = ${SPREAD_FOLLOW_NAME}`);
+  return out;
+}
