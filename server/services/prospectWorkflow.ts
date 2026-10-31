@@ -476,9 +476,35 @@ export function startProspectWorkflow() {
             reserveReveal: () => apolloStore.reserveReveal(new Date()), normalize: normalizeLinkedIn });
           console.info("[apollo-linkedin-recovery]", rec ? JSON.stringify(rec) : "already ran");
         }
+        const { runPastLeadsCatchUp } = await import("./pastLeadsEnrichment");
+        const { isOutreachSuppressed } = await import("./outreachSuppression");
+        const past = await runPastLeadsCatchUp(db, { isSuppressed: e => isOutreachSuppressed(db, e),
+          queueResearch: id => queueContactEnrichment(id) });
+        console.info("[past-leads]", past ? JSON.stringify(past) : "already ran");
       } catch (e) {
         console.warn("[outreach-backfill] failed", (e as Error).message.slice(0, 200));
       }
     })(), 180_000).unref?.();
+    // Past leads: one Apollo lookup by work email each, after the 5 PM report or on weekends.
+    const pastLeadsApollo = async () => {
+      if (!process.env.APOLLO_API_KEY?.trim()) return;
+      try {
+        const db = await getDb();
+        if (!db) return;
+        const { runPastLeadsApollo } = await import("./pastLeadsEnrichment");
+        const { createApolloClient, createApolloStore, normalizeLinkedIn } = await import("./apolloProspects");
+        const { isOutreachSuppressed } = await import("./outreachSuppression");
+        const client = createApolloClient(process.env.APOLLO_API_KEY.trim());
+        const apolloStore = createApolloStore(db);
+        const out = await runPastLeadsApollo(db, { match: e => client.matchByEmail(e),
+          reserveReveal: () => apolloStore.reserveReveal(new Date()), normalize: normalizeLinkedIn,
+          isSuppressed: e => isOutreachSuppressed(db, e) });
+        if (out) console.info("[past-leads-apollo]", JSON.stringify(out));
+      } catch (e) {
+        console.warn("[past-leads-apollo] failed", (e as Error).message.slice(0, 200));
+      }
+    };
+    setTimeout(() => void pastLeadsApollo(), 240_000).unref?.();
+    setInterval(() => void pastLeadsApollo(), 15 * 60_000).unref?.();
   }
 }
