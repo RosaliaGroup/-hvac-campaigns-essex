@@ -18,8 +18,9 @@ describe("VERIFIED_FACTS", () => {
     expect(VERIFIED_FACTS.business.founded).toBeNull();
   });
 
-  it("certifications and projects stay empty — not requested, nothing invented", () => {
-    expect(VERIFIED_FACTS.certifications).toEqual([]);
+  it("certifications are only the owner-attested ones (2026-10-30); projects stay empty", () => {
+    expect(VERIFIED_FACTS.certifications.map((c) => c.name)).toEqual(["WMBE/SBE certified", "Licensed and insured; EPA-certified technicians"]);
+    expect(VERIFIED_FACTS.certifications.every((c) => c.verifiedOn === "2026-10-30")).toBe(true);
     expect(VERIFIED_FACTS.projects).toEqual([]);
   });
 

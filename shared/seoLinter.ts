@@ -109,7 +109,8 @@ export const COMPETITOR_BRANDS = ["A.J. Perri", "Gold Medal", "Horizon", "Hutchi
  * wording BLOCKS"). Add an exact string here only once verified; matching is
  * case-insensitive but otherwise exact (no partial-credit for "close enough").
  */
-export const APPROVED_CERTIFICATION_PHRASES: string[] = [];
+/** Owner-attested Oct 30, 2026 (VERIFIED_FACTS.certifications / business.license). */
+export const APPROVED_CERTIFICATION_PHRASES: string[] = ["WMBE/SBE certified", "EPA-certified", "EPA certified", "licensed and insured", "Master HVACR"];
 
 /**
  * Small county→utility map so a "$16K"/"$16,000" claim can be checked against

@@ -188,7 +188,13 @@ export const VERIFIED_FACTS: VerifiedFacts = {
     yearsInBusiness: 20,
     founded: null,
     // Owner-supplied only — see the field comments. Both stay null until the owner provides them.
-    license: null,
+    // Owner-supplied Oct 30, 2026 (photo of the DCA license certificate). The licensee's personal name and
+    // home address on the certificate are deliberately NOT stored here.
+    license: {
+      text: "NJ Master HVACR Contractor, License #19HC00400700",
+      verifiedOn: "2026-10-30",
+      source: "owner-supplied NJ Division of Consumer Affairs certificate, valid 2026-06-03 to 2028-06-30",
+    },
     hours: null,
   },
   // Owner-attested as factual on 2026-09-26, standardized site-wide by commit
@@ -225,7 +231,11 @@ export const VERIFIED_FACTS: VerifiedFacts = {
   // and "HVAC Financing" use the same page template but describe incentives,
   // not a service performed, so they're excluded here.
   services: ["Heat Pump", "Central AC", "Ductless Mini-Split", "Full HVAC System Replacement", "Commercial HVAC", "VRV/VRF System"],
-  certifications: [],
+  // Owner-attested Oct 30, 2026 (answered in chat).
+  certifications: [
+    { name: "WMBE/SBE certified", verifiedOn: "2026-10-30", source: "owner-attested" },
+    { name: "Licensed and insured; EPA-certified technicians", verifiedOn: "2026-10-30", source: "owner-attested" },
+  ],
   projects: [],
   // docs/positioning-warranty-spec.md §1 — owner-attested 2026-09-26.
   warranty: {
@@ -272,10 +282,10 @@ export const VERIFIED_FACTS: VerifiedFacts = {
     optIn: true,
     is24x7: false,
   },
-  // Owner has NOT confirmed 24/7 emergency or same-day service — every such claim BLOCKs until they do.
+  // Owner confirmed Oct 30, 2026: same-day repair visits and 24/7 emergency service are offered.
   serviceHours: {
-    emergency24x7: false,
-    sameDay: false,
+    emergency24x7: true,
+    sameDay: true,
   },
 };
 

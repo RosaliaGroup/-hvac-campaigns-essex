@@ -98,7 +98,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { icon: "🌀", title: "Central, Ductless & Heat Pump", desc: "Full service for split systems, mini-splits, and heat pumps from every major brand." },
     ],
     faqs: [
-      { q: "How much does AC repair cost in NJ?", a: "Most common repairs — capacitors, contactors, thermostats, and refrigerant service — fall between $150 and $650. We give you an exact flat-rate price before any work begins." },
+      { q: "How much does AC repair cost in NJ?", a: "Most common repairs — capacitors, contactors, thermostats, and refrigerant service — vary with the part and the system. The technician diagnoses the problem and gives you an exact flat-rate price before any work begins." },
       { q: "Can you come out the same day?", a: "Yes. We hold same-day slots and offer 24/7 emergency dispatch across New Jersey. Call (862) 423-9396 and we'll confirm a window quickly." },
       { q: "Should I repair or replace my air conditioner?", a: "As a rule of thumb, replace if the system is 12–15+ years old, uses discontinued R-22, or the repair exceeds about half of replacement cost. If replacement makes sense, we'll show you the NJ rebates and financing that make it affordable." },
       { q: "Do you repair ductless mini-splits and heat pumps?", a: "Yes — we're factory-trained on Mitsubishi, Daikin, Fujitsu, and all major ductless and heat-pump brands, plus conventional central air." },
@@ -139,7 +139,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     ],
     faqs: [
       { q: "How fast can you fix my heat in NJ?", a: "We keep same-day slots and run 24/7 emergency dispatch. For no-heat calls in winter, call (862) 423-9396 and we'll prioritize you." },
-      { q: "How much does heating repair cost?", a: "Typical repairs run $150–$700 depending on the part and system. You approve an exact flat-rate price before we begin." },
+      { q: "How much does heating repair cost?", a: "It depends on the part and the system. The technician diagnoses the problem first, and you approve an exact flat-rate price before we begin." },
       { q: "My heat works but some rooms are cold — can you help?", a: "Yes. Uneven heating is usually airflow, zoning, or distribution. We diagnose the cause and fix it rather than just band-aiding symptoms." },
       { q: "Do you handle both gas and electric heating?", a: "We service gas and electric furnaces, gas and oil boilers, and electric/gas heat pumps." },
       { q: "When should I replace instead of repair?", a: "If the system is old, unsafe, or facing a major repair, replacement may be smarter — and NJ rebates up to $16,000 can offset the cost. We'll give you an honest recommendation." },
@@ -178,7 +178,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { icon: "🧰", title: "All Brands", desc: "Carrier, Trane, Lennox, Goodman, Rheem, and every major furnace brand." },
     ],
     faqs: [
-      { q: "How much does furnace repair cost in NJ?", a: "Most furnace repairs run $150–$700. Igniters and flame sensors are on the lower end; blower motors and control boards are higher. You get an exact price upfront." },
+      { q: "How much does furnace repair cost in NJ?", a: "It depends on the part. Igniters and flame sensors are usually simpler fixes than blower motors or control boards. You approve an exact price upfront, before any work starts." },
       { q: "Is a cracked heat exchanger dangerous?", a: "Yes — it can leak carbon monoxide. If we find one we'll show you the evidence and your safe options. We never scare you into a sale." },
       { q: "Can you repair my furnace the same day?", a: "Usually yes. We stock common parts on the truck and offer 24/7 emergency service. Call (862) 423-9396." },
       { q: "Why does my furnace keep shutting off?", a: "Short cycling is often a dirty filter, a failing limit switch, or an oversized system. We pinpoint the exact cause." },
@@ -218,7 +218,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { icon: "🧯", title: "Safety & Efficiency", desc: "Combustion and safety checks plus tune-ups that cut fuel use." },
     ],
     faqs: [
-      { q: "How much does boiler repair cost in NJ?", a: "Common repairs run $200–$900 depending on the component. Circulators, valves, and controls vary in price — you approve an exact figure before we start." },
+      { q: "How much does boiler repair cost in NJ?", a: "It depends on the component — circulators, valves and controls all differ. You approve an exact price before we start." },
       { q: "Do you work on both steam and hot-water boilers?", a: "Yes. We service steam and hot-water (hydronic) boilers, gas and oil, including the older systems common in NJ." },
       { q: "Why are some of my radiators cold?", a: "Usually trapped air, a failing circulator, or a balancing issue. We diagnose the exact cause instead of guessing." },
       { q: "Can you come out the same day?", a: "Yes — same-day and 24/7 emergency service. No heat or no hot water in winter is a priority call. Ring (862) 423-9396." },
@@ -300,7 +300,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     faqs: [
       { q: "Why is my heat pump not heating in cold weather?", a: "Common causes are a stuck reversing valve, a failed defrost board, low refrigerant, or a fault in the backup heat. We diagnose the exact issue rather than guessing." },
       { q: "Why is my outdoor unit covered in ice?", a: "A little frost is normal; a solid block of ice usually means the defrost cycle has failed. We repair the defrost control and sensors." },
-      { q: "How much does heat pump repair cost in NJ?", a: "Most repairs run $200–$900 depending on the part. Inverter boards and compressors are higher. You get an exact price upfront." },
+      { q: "How much does heat pump repair cost in NJ?", a: "It depends on the part — inverter boards and compressors are bigger repairs than sensors or controls. You approve an exact price upfront, before any work starts." },
       { q: "Should I repair or replace my heat pump?", a: "If it's newer, repair is usually best. If it's aging or facing a major repair, a new cold-climate heat pump may qualify for NJ rebates up to $16,000 — we'll show you the numbers." },
       { q: "Do you service ductless mini-split heat pumps?", a: "Yes — see our dedicated mini-split repair service, and we handle multi-zone systems from every major brand." },
       { q: "Are you licensed and insured?", a: "Fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied repairs." },
@@ -341,7 +341,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Why is my mini-split leaking water inside?", a: "Almost always a clogged condensate drain or line. We clear it and check the slope and pump so it doesn't recur." },
       { q: "What do the blinking lights on my mini-split mean?", a: "They're a fault code specific to your brand. We read the code, confirm the cause, and repair it — no guesswork." },
       { q: "One zone works but another doesn't — can you fix that?", a: "Yes. Multi-zone issues are often a communication fault, a failed indoor board, or a refrigerant problem to that head. We isolate and repair the affected zone." },
-      { q: "How much does mini-split repair cost in NJ?", a: "Most repairs run $150–$800 depending on the fault. Drain clearing is on the low end; inverter boards are higher. You get an exact price upfront." },
+      { q: "How much does mini-split repair cost in NJ?", a: "It depends on the fault — clearing a drain line is a much smaller job than replacing an inverter board. You approve an exact price upfront, before any work starts." },
       { q: "Do you install new mini-splits too?", a: "We do — and new ductless heat-pump systems may qualify for NJ rebates up to $16,000. Ask us during your visit." },
       { q: "Are you factory-trained on my brand?", a: "We're trained across Mitsubishi, Daikin, Fujitsu, and all major ductless brands." },
     ],
