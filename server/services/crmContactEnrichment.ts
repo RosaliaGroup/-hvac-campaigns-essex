@@ -132,7 +132,58 @@ export async function setFollowConfirmed(input: { contactId: number; url: string
   const result = await getContactEnrichment(input.contactId);
   if (result.followed.some(x => x.url === url) !== input.followed)
     throw new Error("CRM social follow status could not be verified.");
+  // Once every verified profile is followed, the contact's "Follow on social" task closes itself.
+  if (input.followed) {
+    const entry = (await followProfilesFor([input.contactId])).get(input.contactId) ?? [];
+    if (entry.length && entry.every(p => p.followed))
+      await db.execute(sql`UPDATE crmOutreach30DayTasks SET status = 'done', completedAt = CURRENT_TIMESTAMP,
+        note = CONCAT(COALESCE(note, ''), ' Followed all verified profiles.')
+        WHERE externalContactId = ${input.contactId} AND touchNumber = 1 AND status = 'open'`);
+  }
   return result;
+}
+
+export type FollowProfile = { platform: string; url: string; kind: "person" | "company"; followed: boolean };
+/** Saved, verified social profiles per contact, with whether each has been followed. Read-only. */
+export async function followProfilesFor(contactIds: number[]): Promise<Map<number, FollowProfile[]>> {
+  const out = new Map<number, FollowProfile[]>();
+  const ids = Array.from(new Set(contactIds.filter(id => Number.isSafeInteger(id) && id > 0)));
+  if (!ids.length) return out;
+  const db = await getDb();
+  if (!db) return out;
+  const rows = ((await db.execute(sql`SELECT contactId, profile FROM crmContactProfiles
+    WHERE contactId IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})`).catch(() => [[]])) as any)?.[0] ?? [];
+  const follows = await db.select({ contactId: socialFollow.contactId, url: socialFollow.url })
+    .from(socialFollow).where(sql`${socialFollow.contactId} IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})`)
+    .catch(() => [] as { contactId: number; url: string }[]);
+  const done = new Set(follows.map(f => `${f.contactId} ${f.url}`));
+  for (const r of rows as any[]) {
+    let profile: any = r.profile;
+    if (typeof profile === "string") { try { profile = JSON.parse(profile); } catch { continue; } }
+    const list: FollowProfile[] = [];
+    const seen = new Set<string>();
+    for (const [kind, items] of [["person", profile?.social], ["company", profile?.companySocial]] as const) {
+      for (const it of Array.isArray(items) ? items : []) {
+        let url: string;
+        try { url = canonicalSocialUrl(String(it?.url ?? "")); } catch { continue; }
+        if (seen.has(url)) continue;
+        seen.add(url);
+        list.push({ platform: String(it?.platform ?? "Profile").slice(0, 40), url, kind, followed: done.has(`${r.contactId} ${url}`) });
+      }
+    }
+    out.set(Number(r.contactId), list);
+  }
+  return out;
+}
+
+/** Close a "Follow on social" task when there is nothing to follow (or it was handled elsewhere). */
+export async function closeFollowTask(taskId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("CRM database unavailable");
+  const r = await db.execute(sql`UPDATE crmOutreach30DayTasks SET status = 'done', completedAt = CURRENT_TIMESTAMP,
+    note = CONCAT(COALESCE(note, ''), ' Closed: nothing to follow.')
+    WHERE id = ${taskId} AND touchNumber = 1 AND status = 'open'`);
+  return { closed: Number((r as any)?.[0]?.affectedRows ?? 0) === 1 };
 }
 export const effectiveContactPhoneSQL = sql<string | null>`COALESCE(
   NULLIF(TRIM(${crmExternalContacts.phone}), ''),
