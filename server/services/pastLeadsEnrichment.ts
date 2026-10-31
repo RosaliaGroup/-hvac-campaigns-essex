@@ -167,6 +167,10 @@ export async function runPastLeadsApollo(db: Db, deps: {
   try {
   await db.execute(sql`CREATE TABLE IF NOT EXISTS crmApolloEmailLookups (
     email varchar(320) NOT NULL PRIMARY KEY, lookedUpAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP, result varchar(32) NOT NULL)`);
+  // One-time: the first run (Oct 30) required Apollo's "verified" tag and recorded misses
+  // without a reason; let those be looked up again.
+  if (await claim(db, "past-leads-apollo-retry-2026-10-30"))
+    await db.execute(sql`DELETE FROM crmApolloEmailLookups WHERE result = 'not_found'`);
   // The allowance is counted from recorded lookups (rolling 24 hours), so a restart mid-run
   // simply resumes where it stopped instead of losing the day.
   const usedRes = await db.execute(sql`SELECT COUNT(*) AS n FROM crmApolloEmailLookups
@@ -179,7 +183,7 @@ export async function runPastLeadsApollo(db: Db, deps: {
     WHERE JSON_SEARCH(profile, 'one', 'https://%linkedin.com/in/%') IS NOT NULL`)) as any)?.[0] ?? [])
     .map((r: any) => Number(r.contactId)));
   const { keep } = pastLeadsInGoodStanding(await allTaskRows(db));
-  const out = { checked: 0, linkedinSaved: 0, phonesSaved: 0, notFound: 0, capped: false, errors: 0 };
+  const out = { checked: 0, linkedinSaved: 0, phonesSaved: 0, notFound: 0, capped: false, errors: 0, reasons: {} as Record<string, number> };
   for (const lead of keep) {
     if (out.checked >= left) break;
     if (!lead.contactId || done.has(lead.email) || withLinkedIn.has(lead.contactId)) continue;
@@ -189,8 +193,9 @@ export async function runPastLeadsApollo(db: Db, deps: {
     let result = "not_found";
     try {
       const person = await deps.match(lead.email);
-      // Only a person whose verified work email IS this lead's address counts as a match.
-      const same = person?.email?.trim().toLowerCase() === lead.email && person?.email_status === "verified";
+      // Only a person whose email on file IS this lead's address counts as a match (we already
+      // email this address, so Apollo's own verification tag is not required).
+      const same = person?.email?.trim().toLowerCase() === lead.email;
       const url = same ? deps.normalize(person?.linkedin_url) : null;
       if (same) {
         result = "matched";
@@ -215,7 +220,11 @@ export async function runPastLeadsApollo(db: Db, deps: {
             out.phonesSaved++;
           }
         }
-      } else out.notFound++;
+      } else {
+        out.notFound++;
+        result = !person ? "no_person" : !person.email ? "email_hidden" : "other_email";
+        out.reasons[result] = (out.reasons[result] ?? 0) + 1;
+      }
     } catch (e) {
       out.errors++;
       console.warn("[past-leads-apollo]", (e as Error).message.slice(0, 160));
