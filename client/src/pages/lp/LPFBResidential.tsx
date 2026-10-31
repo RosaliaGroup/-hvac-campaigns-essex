@@ -16,8 +16,8 @@ import { useSEO } from "@/hooks/useSEO";
 export default function LPFBResidential() {
   const { toast } = useToast();
   useSEO({
-    title: "NJ Homeowners: Get Up to $16,000 Back on Heat Pumps | Mechanical Enterprise",
-    description: "Stack PSE&G and NJ Clean Energy incentives — up to $16,000 in NJ rebates. Most NJ homeowners pay ~$1,000 after all rebates. Free estimate — we handle all paperwork.",
+    title: "NJ Heat Pump Rebates Up to $16,000 | Free Assessment | Mechanical Enterprise",
+    description: "NJ homeowners may qualify for up to $16,000 in heat pump rebates. Free in-home assessment from a licensed NJ HVAC contractor — we handle the rebate paperwork.",
     ogUrl: "https://mechanicalenterprise.com/lp/fb-residential",
   });
   const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
@@ -83,19 +83,19 @@ export default function LPFBResidential() {
       {/* Hero — Facebook style: story-driven, visual, emotional */}
       <section className="py-12 px-4 bg-gradient-to-b from-blue-50 to-white">
         <div className="max-w-4xl mx-auto text-center">
-          <Badge className="mb-4 bg-green-100 text-green-800 border border-green-200">✅ NJ Homeowners Only — Limited Spots Available</Badge>
+          <Badge className="mb-4 bg-green-100 text-green-800 border border-green-200">✅ For NJ Homeowners — Free Assessment</Badge>
           <h1 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] leading-tight mb-4">
-            NJ Homeowners Are Getting <span className="text-[#ff6b35]">$16,000 Back</span> on New Heat Pumps
+            NJ Homeowners May Qualify for <span className="text-[#ff6b35]">Up to $16,000</span> in Heat Pump Rebates
           </h1>
           <p className="text-xl text-gray-600 mb-6 max-w-2xl mx-auto">
-            Most homeowners don't know they can stack PSE&G and NJ Clean Energy incentives. We handle all the paperwork — you just enjoy the savings.
+            Replacing an old furnace, boiler or central AC? A licensed NJ contractor checks your eligibility at a free in-home assessment, and we handle the rebate paperwork.
           </p>
 
           {/* Social Proof Bar */}
           <div className="flex flex-wrap justify-center gap-6 mb-8 text-sm text-gray-500">
-            <span className="flex items-center gap-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400" /> 4.9★ on Google (500+ reviews)</span>
-            <span className="flex items-center gap-1"><Home className="h-4 w-4 text-[#ff6b35]" /> 4,000+ NJ Installations</span>
-            <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" /> WMBE/SBE Certified</span>
+            <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" /> Licensed NJ HVAC contractor</span>
+            <span className="flex items-center gap-1"><Home className="h-4 w-4 text-[#ff6b35]" /> Free in-home assessment</span>
+            <span className="flex items-center gap-1"><Clock className="h-4 w-4 text-[#1e3a5f]" /> We handle the rebate paperwork</span>
           </div>
 
           {/* Lead Form — centered, prominent */}
@@ -104,7 +104,7 @@ export default function LPFBResidential() {
               <div className="text-center py-6">
                 <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-3" />
                 <h3 className="text-xl font-bold text-[#1e3a5f] mb-2">You're In!</h3>
-                <p className="text-gray-600 text-sm mb-4">We'll call you within 2 business hours to check your eligibility and schedule a free estimate.</p>
+                <p className="text-gray-600 text-sm mb-4">We'll call you to check your eligibility and schedule your free assessment.</p>
                 <a href="tel:+18624239396">
                   <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold">
                     <Phone className="h-4 w-4 mr-2" /> Call (862) 423-9396
@@ -136,60 +136,34 @@ export default function LPFBResidential() {
         </div>
       </section>
 
-      {/* The Math — make it tangible */}
+      {/* How it works — verified facts only (VERIFIED_FACTS: up to $16,000 residential rebate). No price
+          estimates or testimonials until real, attributable ones exist. */}
       <section className="py-12 px-4 bg-[#1e3a5f] text-white">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold mb-2">The Real Numbers</h2>
-          <p className="text-white/70 mb-8">Here's what a typical NJ homeowner saves with a heat pump installation</p>
-          <div className="grid md:grid-cols-4 gap-4">
+          <h2 className="text-3xl font-bold mb-2">How It Works</h2>
+          <p className="text-white/70 mb-8">Three steps from old system to new heat pump</p>
+          <div className="grid md:grid-cols-3 gap-4">
             {[
-              { label: "Avg. Install Cost", value: "$12,000", sub: "before incentives", icon: DollarSign },
-              { label: "PSE&G Rebate", value: "-$6,000", sub: "for eligible customers", icon: CheckCircle },
-              { label: "NJ Clean Energy", value: "-$5,000+", sub: "stacked incentives", icon: Leaf },
-              { label: "Your Net Cost", value: "~$1,000", sub: "after all incentives", icon: Star },
+              { label: "1. Free assessment", sub: "We look at your home, your current system and which rebates you may qualify for.", icon: Home },
+              { label: "2. Clear quote", sub: "You get a written quote and the eligible rebate amount before you decide anything.", icon: DollarSign },
+              { label: "3. Install + paperwork", sub: "Licensed installation, and we file the rebate paperwork for you.", icon: Leaf },
             ].map((item) => (
-              <div key={item.label} className="bg-white/10 rounded-xl p-4">
-                <item.icon className="h-6 w-6 text-[#ff6b35] mx-auto mb-2" />
-                <div className="text-2xl font-bold text-[#ff6b35]">{item.value}</div>
-                <div className="font-semibold text-sm">{item.label}</div>
-                <div className="text-xs text-white/60">{item.sub}</div>
+              <div key={item.label} className="bg-white/10 rounded-xl p-5 text-left">
+                <item.icon className="h-6 w-6 text-[#ff6b35] mb-2" />
+                <div className="font-semibold mb-1">{item.label}</div>
+                <div className="text-sm text-white/70">{item.sub}</div>
               </div>
             ))}
           </div>
-          <p className="text-white/50 text-xs mt-4">*Estimates based on average NJ installations. Actual savings vary by home size, utility provider, and system selected.</p>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-12 px-4 bg-gray-50">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-[#1e3a5f] text-center mb-8">NJ Homeowners Love Their New Systems</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { name: "Jennifer M.", location: "South Orange, NJ", text: "I was skeptical about the incentive amounts but Mechanical Enterprise got us $13,800 back. Our heating bill dropped 45%!", stars: 5 },
-              { name: "Robert L.", location: "Nutley, NJ", text: "From first call to installation in 10 days. The team handled every form and we just got a check in the mail.", stars: 5 },
-              { name: "Maria G.", location: "Bloomfield, NJ", text: "Best decision we made for our home. Quiet, efficient, and the incentives made it almost free. Highly recommend!", stars: 5 },
-            ].map((review) => (
-              <div key={review.name} className="bg-white rounded-xl p-5 shadow-sm">
-                <div className="flex gap-1 mb-3">
-                  {Array.from({ length: review.stars }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  ))}
-                </div>
-                <p className="text-sm text-gray-600 mb-3 italic">"{review.text}"</p>
-                <div className="font-semibold text-[#1e3a5f] text-sm">{review.name}</div>
-                <div className="text-xs text-gray-400">{review.location}</div>
-              </div>
-            ))}
-          </div>
+          <p className="text-white/50 text-xs mt-4">Rebates of up to $16,000 are available to eligible NJ homeowners. Eligibility and amounts depend on your utility, home and equipment, and are confirmed at the assessment.</p>
         </div>
       </section>
 
       {/* Bottom CTA */}
       <section className="py-12 px-4 bg-[#ff6b35] text-white text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold mb-3">Incentive Funds Are Limited — Act Now</h2>
-          <p className="text-white/90 mb-6">PSE&G and NJ Clean Energy programs have annual funding caps. Once funds are exhausted, the programs close until next year.</p>
+          <h2 className="text-3xl font-bold mb-3">Find Out What You Qualify For</h2>
+          <p className="text-white/90 mb-6">The assessment is free and there is no obligation.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <a href="tel:+18624239396">
               <Button size="lg" className="bg-white text-[#ff6b35] hover:bg-gray-100 font-bold px-8">
