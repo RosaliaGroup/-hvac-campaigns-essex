@@ -1512,72 +1512,108 @@ export const blogPosts: BlogPostData[] = [
 
   // Post 1: Complete Guide to NJ HVAC Rebates in 2026
   {
-    title: "The Complete Guide to NJ HVAC Rebates in 2026 (No Fluff, Just Numbers)",
-    slug: "nj-hvac-rebates-2026-complete-guide",
-    date: "March 31, 2026",
-    readTime: "10 min read",
-    category: "Rebates & Incentives",
-    metaDescription: "Every rebate available to NJ homeowners in 2026 — PSE&G and NJ Clean Heat, explained in plain numbers. Real numbers, no catch.",
-    excerpt: "If $16,000 sounds too good to be true, here's exactly where every dollar comes from. The complete breakdown of the NJ HVAC rebate in 2026.",
-    sections: [
+    "title": "NJ HVAC Rebates 2026: The Complete Guide",
+    "slug": "nj-hvac-rebates-2026-complete-guide",
+    "date": "March 31, 2026",
+    "readTime": "8 min read",
+    "category": "Rebates & Incentives",
+    "metaDescription": "See what the up to $16,000 PSE&G / NJ Clean Energy HVAC rebate actually covers in 2026, who may qualify, and how to confirm your real number.",
+    "excerpt": "The up to $16,000 HVAC rebate headline is real — but it's not what every household gets. Here's where that number comes from and how to find yours.",
+    "sections": [
       {
-        type: "intro",
-        content: "If $16,000 sounds too good to be true, here's exactly where every dollar comes from. New Jersey has one of the most generous HVAC incentive programs in the country right now, and 2026 is a peak year to use it. This guide breaks down the rebate available to NJ homeowners — no vague promises, just the actual numbers and where they come from.",
-      },
-      { type: "h2", content: "Where the $16,000 Actually Comes From" },
-      {
-        type: "paragraph",
-        content: "Let's start with the number everyone sees in the headlines and break it down dollar by dollar. The $16,000 figure is the PSE&G / NJ Clean Heat program's standard-tier cap for a residential heat pump installation — income-qualified (LMI) households can reach up to $18,000. No separate credit or federal tax program is stacked on top of it. Here's how it works.",
+        "type": "intro",
+        "content": "If you've seen an up to $16,000 HVAC rebate figure and wondered whether it applies to your home, here's what that number actually is. New Jersey's PSE&G / NJ Clean Energy program is the largest incentive available to homeowners replacing a heating or cooling system in 2026. This guide explains where that ceiling comes from, who may qualify, and how to get a real number for your own house instead of a headline figure."
       },
       {
-        type: "stat_box",
-        content: "PSE&G / NJ Clean Heat, Standard Tier: Up to $16,000 | Income-Qualified (LMI) Tier: Up to $18,000",
-      },
-      { type: "h2", content: "The NJ Clean Heat / PSE&G Rebate (Up to $16,000, $18,000 for Income-Qualified)" },
-      {
-        type: "paragraph",
-        content: "The NJ Clean Heat program is the backbone of HVAC rebates in New Jersey. Administered through your utility provider — PSE&G for most of Essex, Bergen, Hudson, Union, Morris, and Passaic counties — this program offers the single largest rebate available to residential homeowners. Rebate amounts vary based on several factors: the type of heat pump you install, your home's existing heating system, whether you're income-qualified, and the efficiency rating of the new equipment. For a standard residential installation replacing a gas furnace with a cold-climate heat pump, rebates typically range from $8,000 to $16,000. Income-qualified households — generally those earning below 80% of area median income — receive the highest tier of rebates, up to $18,000. Even moderate-income households can qualify for substantial amounts. The program covers central ducted heat pumps, ductless mini-splits, and hybrid systems. The key requirement is that equipment must meet minimum efficiency ratings: typically SEER2 15.2+ and HSPF2 7.8+ for the highest rebate tiers.",
-      },
-      { type: "h2", content: "Who Qualifies for Maximum Rebates?" },
-      {
-        type: "checklist",
-        items: [
-          "You own a residential property in New Jersey",
-          "Your home is in a PSE&G service area (covers most of northern and central NJ)",
-          "You're replacing an existing heating system (not new construction)",
-          "You install a qualifying cold-climate heat pump with minimum SEER2 15.2+ and HSPF2 7.8+",
-          "You work with a participating contractor (Mechanical Enterprise is a registered installer)",
-          "Income-qualified households (below 80% AMI) receive the highest rebate tier",
-        ],
-      },
-      { type: "h2", content: "Real Example: 3-Bedroom Newark Home" },
-      {
-        type: "paragraph",
-        content: "Here's a real scenario from a recent assessment. A 3-bedroom, 1,400 sq ft home in Newark's Ironbound neighborhood. The homeowner was replacing a 22-year-old gas furnace and a 15-year-old central AC unit. The home qualified as income-eligible under the NJ Clean Heat program. We recommended a Mitsubishi cold-climate ducted heat pump system rated at SEER2 17.1 and HSPF2 9.2. The total installation cost was $24,800. The PSE&G/NJ Clean Heat rebate came to $17,400 — the home's income-qualified (LMI) tier. The homeowner's net cost after the rebate was $7,400 — for a complete HVAC system replacement that eliminated both the old furnace and the aging AC unit. Monthly energy bills dropped by approximately $85 compared to the previous system. At that rate, the $7,400 out-of-pocket cost pays for itself in about 7 years.",
-      },
-      { type: "h2", content: "On-Bill Repayment: The $0 Upfront Option" },
-      {
-        type: "paragraph",
-        content: "Even after rebates, some homeowners prefer not to pay the remaining balance upfront. NJ's on-bill repayment (OBR) program allows you to finance the remaining cost directly through your utility bill. There's no separate loan application, no credit check in most cases, and the monthly payment is often less than the energy savings from the new system — meaning your total monthly housing costs could actually decrease from day one. Mechanical Enterprise helps you apply for OBR as part of our standard process.",
-      },
-      { type: "h2", content: "How to Get Started" },
-      {
-        type: "numbered_list",
-        items: [
-          "Book a free 20-minute home assessment with Mechanical Enterprise",
-          "We evaluate your current system and calculate every rebate you qualify for",
-          "You receive a written breakdown showing total cost, all rebates, and your net price",
-          "If you proceed, we handle all installation, permits, and rebate paperwork",
-          "Rebates are applied directly — you never pay the full price out of pocket",
-        ],
+        "type": "h2",
+        "content": "Where the Up to $16,000 Figure Comes From"
       },
       {
-        type: "cta_box",
-        content: "Ready to see your exact rebate amount? Our free assessment takes 20 minutes and gives you real numbers — no obligation, no pressure.",
-        buttonText: "Calculate My Rebates →",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "paragraph",
+        "content": "The $16,000 ceiling is the top tier of the PSE&G / NJ Clean Energy residential HVAC rebate program. It applies to qualifying heat pump installations, and it isn't a flat amount every household receives — what you may qualify for depends on your current heating system, the equipment you install, and your household's income tier. There's no separate program stacked on top of it; this is the main rebate pathway for residential heat pump projects in New Jersey right now, and the exact figure for your home is confirmed during an in-home assessment, not quoted over the phone."
       },
+      {
+        "type": "stat_box",
+        "content": "PSE&G / NJ Clean Energy Residential HVAC Rebate: Up to $16,000 — your exact tier is confirmed during an in-home assessment."
+      },
+      {
+        "type": "h2",
+        "content": "What the Rebate Program Covers"
+      },
+      {
+        "type": "paragraph",
+        "content": "The program, administered through your utility, is built around encouraging a switch to qualifying heat pump systems — central ducted systems, ductless mini-split systems, and hybrid setups that pair a heat pump with existing ductwork. Which rebate tier a project lands in, what efficiency level equipment needs to meet, and how income thresholds are structured all change periodically. Rather than repeat numbers that may be out of date by the time you read this, we pull the current program rules and calculate your specific rebate as part of the assessment. What we can tell you up front: the type of system you install, what you're replacing, and your household income can all move you between tiers."
+      },
+      {
+        "type": "h2",
+        "content": "Who May Qualify"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "You own residential property in Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, or Somerset County",
+          "You're replacing an existing heating or cooling system rather than installing in new construction",
+          "You're installing a qualifying heat pump system in place of your current equipment",
+          "Your household income may place you in a higher rebate tier — this is confirmed during the assessment, not estimated in advance",
+          "You work with an installer who handles the rebate application and paperwork on your behalf"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "A New Jersey Example: Older Homes in Essex County"
+      },
+      {
+        "type": "paragraph",
+        "content": "A lot of Essex County's housing stock — two- and three-bedroom homes in Newark, Bloomfield, and the surrounding towns — still runs on an original gas furnace paired with a separate, aging central AC unit well past its expected service life. These are exactly the kind of homes the heat pump rebate was built around: replacing two aging systems with one qualifying heat pump can unlock a different rebate tier than a single-system swap would. Every home is different, though. Attic insulation, ductwork condition, electrical panel capacity, and which utility actually serves the address can all affect which equipment gets recommended and which rebate tier applies — which is why we walk the home in person rather than quoting a number sight unseen."
+      },
+      {
+        "type": "h2",
+        "content": "Commercial Properties: PSE&G Direct Install"
+      },
+      {
+        "type": "paragraph",
+        "content": "If you own or manage a commercial building in our service area, a separate program — PSE&G Direct Install — can cover up to 80% of project cost for qualifying HVAC upgrades. It runs on its own application process, with its own equipment and building requirements, separate from the residential rebate described above. We can review whether a property qualifies as part of a commercial assessment."
+      },
+      {
+        "type": "h2",
+        "content": "How to Get Started"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
+          "Book a free in-home assessment with Mechanical Enterprise",
+          "We evaluate your current system and pull the current rebate tiers that apply to your household and equipment choice",
+          "You receive a written breakdown: total project cost, the rebate amount you may qualify for, and your net price",
+          "If you move forward, we handle installation and submit the rebate paperwork on your behalf",
+          "Approved rebate amounts are applied to reduce what you pay — you're not left to chase reimbursement afterward"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Want your exact rebate number instead of a headline figure? Our free in-home assessment gives you a real answer for your home — no obligation, no pressure.",
+        "buttonText": "Calculate My Rebate →",
+        "buttonUrl": "https://mechanicalenterprise.com/rebate-calculator"
+      }
     ],
+    "updatedDate": "October 30, 2026",
+    "faqSchema": [
+      {
+        "question": "Is the $16,000 rebate guaranteed for every homeowner?",
+        "answer": "No. It's the top tier of the PSE&G / NJ Clean Energy program. What you may qualify for depends on your equipment choice, your existing system, and your household income, and it's confirmed during an in-home assessment."
+      },
+      {
+        "question": "Which counties does this rebate apply to?",
+        "answer": "We serve homeowners in Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, and we confirm utility and program eligibility for your specific address during the assessment."
+      },
+      {
+        "question": "Do I need to apply for the rebate myself?",
+        "answer": "No. We calculate your likely rebate tier at the assessment and handle the rebate paperwork as part of the installation once you decide to move forward."
+      },
+      {
+        "question": "Is there a separate rebate for commercial buildings?",
+        "answer": "Yes. PSE&G Direct Install can cover up to 80% of project cost for qualifying commercial HVAC upgrades, through a separate application process from the residential program."
+      }
+    ]
   },
 
   // Post 2: PSE&G Heat Pump Rebates Explained
