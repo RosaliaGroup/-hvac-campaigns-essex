@@ -67,7 +67,8 @@ async function metaPost(path: string, token: string, body: Record<string, unknow
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────
 
-const ADS_SCOPES = "ads_management,ads_read,business_management,leads_retrieval,pages_manage_metadata,pages_read_engagement,pages_manage_ads";
+// pages_show_list is what makes the Facebook dialog list the Pages to choose from (owner, Oct 31: "cant find my business page").
+const ADS_SCOPES = "ads_management,ads_read,business_management,leads_retrieval,pages_show_list,pages_manage_metadata,pages_read_engagement,pages_manage_ads";
 
 // Social Lane "Connect" (docs/social-lane-spec.md, owner build instruction #5)
 // reuses this SAME OAuth app/dialog with the scopes it actually needs to
