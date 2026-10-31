@@ -8,10 +8,23 @@ import Turnstile from "@/components/Turnstile";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
 import { TcpaDisclosure } from "@/components/TcpaDisclosure";
 import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
-import { CheckCircle, Phone, Star, Clock, Home, ArrowRight, DollarSign, Leaf } from "lucide-react";
+import { CheckCircle, Phone, Star, Clock, Home, ArrowRight, DollarSign, Leaf, ShieldCheck } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useToast } from "@/hooks/use-toast";
 import { useSEO } from "@/hooks/useSEO";
+
+/** Optional 10-year coverage copy (VERIFIED_FACTS.warranty). Exported so the claims linter test can check it. */
+export const COVERAGE_HEADING = "Optional 10-Year Parts & Labor Coverage";
+export const COVERAGE_INTRO =
+  "Protect your new system for a decade. Coverage is an optional add-on you can choose when you install with Mechanical Enterprise.";
+export const COVERAGE_POINTS = [
+  "Parts and labor for 10 years",
+  "$0 deductible on covered repairs",
+  "All major brands",
+  "Eligible existing systems may qualify after an inspection",
+] as const;
+export const COVERAGE_FOOTNOTE =
+  "Coverage is purchased separately and priced per system. It is a third-party extended service agreement backed by A-rated insurers. Existing equipment is subject to inspection and program criteria.";
 
 export default function LPFBResidential() {
   const { toast } = useToast();
@@ -156,6 +169,33 @@ export default function LPFBResidential() {
             ))}
           </div>
           <p className="text-white/50 text-xs mt-4">Rebates of up to $16,000 are available to eligible NJ homeowners. Eligibility and amounts depend on your utility, home and equipment, and are confirmed at the assessment.</p>
+        </div>
+      </section>
+
+      {/* Optional coverage — matches the "Optional 10-Year Coverage" Google Ads headlines that land here.
+          Wording comes from VERIFIED_FACTS.warranty only: optional paid add-on, parts & labor, 10 years,
+          $0 deductible, all major brands, existing systems only after an eligibility inspection. */}
+      <section id="coverage" className="py-12 px-4 bg-gray-50">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <ShieldCheck className="h-10 w-10 text-[#1e3a5f] mx-auto mb-3" />
+            <h2 className="text-3xl font-bold text-[#1e3a5f] mb-2">{COVERAGE_HEADING}</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">{COVERAGE_INTRO}</p>
+          </div>
+          <div className="grid sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
+            {COVERAGE_POINTS.map((point) => (
+              <div key={point} className="flex items-start gap-3 bg-white rounded-xl border border-gray-100 p-4">
+                <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                <span className="text-gray-700">{point}</span>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 text-center mt-6 max-w-2xl mx-auto">{COVERAGE_FOOTNOTE}</p>
+          <div className="text-center mt-4">
+            <a href="/warranty" className="inline-flex items-center font-semibold text-[#1e3a5f] hover:underline">
+              See coverage details <ArrowRight className="h-4 w-4 ml-1" />
+            </a>
+          </div>
         </div>
       </section>
 
