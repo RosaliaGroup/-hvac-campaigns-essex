@@ -210,10 +210,10 @@ export default function Home() {
             <Card className="text-center border-t-4 border-t-[#ff6b35]">
               <CardHeader>
                 <Clock className="h-12 w-12 text-[#ff6b35] mx-auto mb-2" />
-                <CardTitle className="text-lg">24/7 Emergency Service</CardTitle>
+                <CardTitle className="text-lg">Free In-Home Assessment</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Round-the-clock support for all your HVAC emergencies</p>
+                <p className="text-sm text-muted-foreground">A written replacement quote and your rebate eligibility before you decide</p>
               </CardContent>
             </Card>
 

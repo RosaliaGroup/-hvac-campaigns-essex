@@ -72,8 +72,8 @@ export default function Contact() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">
-                  24/7 Emergency Service<br />
-                  Available
+                  Mon–Fri 9 AM–6 PM<br />
+                  Sat 9 AM–2 PM
                 </p>
               </CardContent>
             </Card>
@@ -136,9 +136,9 @@ export default function Contact() {
         <div className="container">
           <div className="max-w-3xl mx-auto text-center">
             <Clock className="h-16 w-16 text-[#ff6b35] mx-auto mb-4" />
-            <h3 className="text-3xl font-bold mb-4">Need Emergency Service?</h3>
+            <h3 className="text-3xl font-bold mb-4">Ready to Replace Your System?</h3>
             <p className="text-xl text-white/90 mb-6">
-              We're available 24/7 for all your HVAC emergencies
+              Book a free in-home assessment and written quote
             </p>
             <a href="tel:+18624239396">
               <button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors">

@@ -282,10 +282,11 @@ export const VERIFIED_FACTS: VerifiedFacts = {
     optIn: true,
     is24x7: false,
   },
-  // Owner confirmed Oct 30, 2026: same-day repair visits and 24/7 emergency service are offered.
+  // Owner Nov 1, 2026: "we dont offer 24/7 yet ... we dont do services only looking for replacements and
+  // installations". Reverses the Oct 30 confirmation. No 24/7, round-the-clock or same-day claims anywhere.
   serviceHours: {
-    emergency24x7: true,
-    sameDay: true,
+    emergency24x7: false,
+    sameDay: false,
   },
 };
 

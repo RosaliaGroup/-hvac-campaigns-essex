@@ -86,7 +86,7 @@ const FOLLOW_UP_REPLIES: Record<string, string> = {
   "💰 Rebate Calculator": "Check your estimate instantly — up to $16,000 residential, 80% commercial.",
   "🔄 Maintenance Plan": "Plans start at $19/mo — includes priority scheduling plus 15% off repairs. Book below!",
   "🏭 VRV/VRF Systems": "We're one of NJ's top VRV/VRF specialists — ideal for multi-zone buildings.",
-  "🔧 Service & Repair": "We service all commercial HVAC brands with same-day availability. $375 flat rate — fill out the form below.",
+  "🔧 Service & Repair": "We focus on new installations and full system replacements. Fill out the form below and we'll set up a free assessment.",
   "💸 80% Rebates": "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.",
   "🔩 HVAC Technician": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
   "🏢 Commercial Tech": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",

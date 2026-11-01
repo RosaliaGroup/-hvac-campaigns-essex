@@ -127,7 +127,7 @@ export default function LPFBResidential() {
                     <Phone className="h-4 w-4 mr-2" /> Call Now: (862) 423-9396
                   </Button>
                 </a>
-                <p className="text-xs text-gray-500 text-center mb-4">No heat? Same-day repair visits and 24/7 emergency service.</p>
+                <p className="text-xs text-gray-500 text-center mb-4">Old furnace, boiler or AC? Call for a free in-home replacement assessment.</p>
                 <h2 className="text-lg font-bold text-[#1e3a5f] mb-1 text-center">Or Request Your Free Assessment</h2>
                 <p className="text-xs text-gray-400 text-center mb-4">Two fields. We call you back.</p>
                 <form onSubmit={handleSubmit} className="space-y-3">
