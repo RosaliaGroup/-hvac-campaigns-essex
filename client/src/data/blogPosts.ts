@@ -89,7 +89,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Installation is only the starting point. Our Comfort Membership includes two maintenance visits per year, priority scheduling, and a replacement credit that applies toward your next system — billed monthly, with the equipment remaining yours. For portfolios managing PTAC, mini-split, RTU, or split systems across multiple buildings, we quote maintenance on a per-unit, per-year basis and provide quarterly reporting so you can track equipment condition and budget for replacements before they become emergencies. We also offer 24/7 emergency service with same-day response for active HVAC failures, so a down unit in a tenant space doesn't turn into a multi-day outage. Pairing a maintenance agreement with proactive replacement planning is typically the most cost-effective way to manage HVAC across a commercial or multifamily portfolio in New Jersey."
+        "content": "Installation is only the starting point. Our Comfort Membership includes two maintenance visits per year, priority scheduling, and a replacement credit that applies toward your next system — billed monthly, with the equipment remaining yours. For portfolios managing PTAC, mini-split, RTU, or split systems across multiple buildings, we quote maintenance on a per-unit, per-year basis and provide quarterly reporting so you can track equipment condition and budget for replacements before they become emergencies. When a unit is near the end of its life, we plan the replacement before it fails. Pairing a maintenance agreement with proactive replacement planning is typically the most cost-effective way to manage HVAC across a commercial or multifamily portfolio in New Jersey."
       },
       {
         "type": "cta_box",
@@ -214,7 +214,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "question": "Do you provide service outside normal business hours for commercial properties?",
-        "answer": "Yes. We offer 24/7 emergency service and same-day service for commercial and multifamily properties across our New Jersey service counties."
+        "answer": "We focus on planned replacements and new installations for commercial and multifamily properties within about 25 miles of Newark."
       }
     ]
   },
@@ -278,7 +278,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Total cost of ownership also depends on what happens between installations. The Comfort Membership gives property owners a structured way to budget for upkeep: parts and labor coverage for a chosen term, three, five, or ten years, plus two maintenance visits per year, priority scheduling, and a replacement credit that applies toward your next system with Mechanical Enterprise. Membership is billed monthly, and the system itself remains owned by you. For portfolios managing PTAC, mini-split, RTU, or split systems across multiple buildings, pricing is quoted per unit per year by portfolio, with quarterly reporting so facilities teams can track performance and plan capital replacement ahead of failure instead of reacting to it. Mechanical Enterprise also provides 24/7 emergency service and same-day response for urgent repair calls."
+        "content": "Total cost of ownership also depends on what happens between installations. The Comfort Membership gives property owners a structured way to budget for upkeep: parts and labor coverage for a chosen term, three, five, or ten years, plus two maintenance visits per year, priority scheduling, and a replacement credit that applies toward your next system with Mechanical Enterprise. Membership is billed monthly, and the system itself remains owned by you. For portfolios managing PTAC, mini-split, RTU, or split systems across multiple buildings, pricing is quoted per unit per year by portfolio, with quarterly reporting so facilities teams can track performance and plan capital replacement ahead of failure instead of reacting to it."
       },
       {
         "type": "checklist",
@@ -2716,12 +2716,12 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Emergency Replacement Is Faster Than You Think" },
       {
         type: "paragraph",
-        content: "If your AC failed and you are worried about timing, know that Mechanical Enterprise offers same-day assessments for emergency situations. We can typically complete a full system replacement within 1 to 3 days of your assessment. You do not have to suffer through weeks without cooling. We also handle all PSE&G rebate paperwork so you do not have to worry about the application process while dealing with an AC emergency. Call (862) 423-9396 for a same-day assessment.",
+        content: "If your AC failed and you are worried about timing, call us to book the earliest free in-home assessment. We can typically complete a full system replacement within 1 to 3 days of your assessment. You do not have to suffer through weeks without cooling. We also handle all PSE&G rebate paperwork so you do not have to worry about the application process while dealing with an AC emergency. Call (862) 423-9396 for a free assessment.",
       },
       {
         type: "cta_box",
-        content: "R22 system down? Get a same-day assessment and find out how much you qualify for in NJ rebates. Most homeowners pay nothing for a brand new system.",
-        buttonText: "Get Same-Day Assessment",
+        content: "R22 system down? Get a free assessment and find out how much you qualify for in NJ rebates. Most homeowners pay nothing for a brand new system.",
+        buttonText: "Get a Free Assessment",
         buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
       },
     ],
@@ -3434,7 +3434,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "What About Emergency Timelines?" },
       {
         type: "paragraph",
-        content: "If your R22 system has already failed and you need immediate replacement, Mechanical Enterprise offers expedited service. We can often perform same-day assessments for emergencies and schedule installation within 2-3 days if equipment is available locally. Emergency replacements still qualify for the full PSE&G rebate up to $16,000 — you do not lose any rebate eligibility by acting fast. Call (862) 423-9396 to discuss your timeline.",
+        content: "If your R22 system has already failed and you need immediate replacement, Mechanical Enterprise offers expedited service. We book the earliest free assessment and schedule installation within 2-3 days if equipment is available locally. Emergency replacements still qualify for the full PSE&G rebate up to $16,000 — you do not lose any rebate eligibility by acting fast. Call (862) 423-9396 to discuss your timeline.",
       },
       {
         type: "cta_box",
@@ -3849,7 +3849,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Thousands of Newark homes still use oil heat, many with systems installed 20-30+ years ago. Average heating costs for oil-heated Newark homes run $2,500-$3,500 per winter. A new heat pump can cut that in half while also providing air conditioning in summer — something most oil-heated homes don't have. With PSE&G rebates up to $16,000, the upgrade often costs nothing out of pocket." },
       { type: "stat_box", content: "Newark Oil Heating Cost: $2,500-$3,500/yr | Heat Pump Cost: $1,200-$1,800/yr | Rebates: Up to $16,000" },
       { type: "h2", content: "Newark's Local HVAC Contractor" },
-      { type: "paragraph", content: "Mechanical Enterprise is based right here in Newark. We're WMBE-certified, licensed in New Jersey, and approved by PSE&G. We understand Newark's housing stock — from Ironbound row houses to North Ward multi-families to Vailsburg singles. We provide free assessments, handle all permits and rebate paperwork, and offer same-day emergency service. Call (862) 423-9396 to get started." },
+      { type: "paragraph", content: "Mechanical Enterprise is based right here in Newark. We're WMBE-certified, licensed in New Jersey, and approved by PSE&G. We understand Newark's housing stock — from Ironbound row houses to North Ward multi-families to Vailsburg singles. We provide free assessments, handle all permits and rebate paperwork. Call (862) 423-9396 to get started." },
       { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
@@ -4185,15 +4185,15 @@ export const blogPosts: BlogPostData[] = [
     date: "April 12, 2026",
     readTime: "6 min read",
     category: "HVAC Tips & Maintenance",
-    metaDescription: "AC not working in NJ summer? Quick troubleshooting guide plus when to call a pro. Same-day service from Mechanical Enterprise.",
+    metaDescription: "AC not working in NJ summer? Quick troubleshooting guide plus when it's time to replace. Free assessments from Mechanical Enterprise.",
     excerpt: "Your AC stopped working in the NJ summer heat? Here's what to check before calling a pro — and when to call for emergency service.",
     sections: [
-      { type: "intro", content: "NJ summers are brutal, and a broken HVAC system can quickly become a health hazard — especially for elderly residents and young children. Before you panic, there are a few things you can check yourself. And if those don't work, Mechanical Enterprise offers same-day emergency service throughout New Jersey." },
+      { type: "intro", content: "NJ summers are brutal, and a broken HVAC system can quickly become a health hazard — especially for elderly residents and young children. Before you panic, there are a few things you can check yourself. And if your system keeps failing, it may be time for a replacement." },
       { type: "h2", content: "Quick Troubleshooting Checklist" },
       { type: "numbered_list", items: ["Check your thermostat — is it set to COOL and below current room temperature?","Check the circuit breaker — has the HVAC breaker tripped?","Check the air filter — a clogged filter can cause the system to shut down","Check the outdoor unit — is it running? Is it blocked by debris?","Check the drain line — a clogged condensate drain triggers many shutdowns","If none of these fix it, call a professional"] },
       { type: "h2", content: "When It's an Emergency" },
-      { type: "paragraph", content: "If the temperature inside your home exceeds 85°F and you have elderly residents, infants, or pets, treat it as an emergency. Call Mechanical Enterprise at (862) 423-9396 — we offer same-day emergency AC service throughout NJ. If your system is older than 10 years and breaking down frequently, it may be time to consider replacement with PSE&G rebates covering up to $16,000 of a new system." },
-      { type: "cta_box", content: "Need HVAC service now? Mechanical Enterprise offers same-day assessments throughout NJ. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
+      { type: "paragraph", content: "If the temperature inside your home exceeds 85°F and you have elderly residents, infants, or pets, treat it as an emergency. Call Mechanical Enterprise at (862) 423-9396 for a free replacement assessment. If your system is older than 10 years and breaking down frequently, it may be time to consider replacement with PSE&G rebates covering up to $16,000 of a new system." },
+      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
     ],
   },
   {
@@ -4212,8 +4212,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Signs You Should Replace Rather Than Repair" },
       { type: "checklist", items: ["System is 10+ years old","Uses R22 refrigerant (banned — cannot be recharged affordably)","Needs frequent repairs (more than once per year)","Energy bills have been increasing steadily","System doesn't cool or heat evenly","Makes unusual noises during operation"] },
       { type: "h2", content: "Get a Professional Opinion" },
-      { type: "paragraph", content: "Mechanical Enterprise provides honest repair vs replace assessments. We'll never pressure you to replace a system that can be economically repaired. But when replacement makes financial sense — especially with rebates up to $16,000 — we'll show you the numbers. Call (862) 423-9396 for a same-day assessment." },
-      { type: "cta_box", content: "Need HVAC service now? Mechanical Enterprise offers same-day assessments throughout NJ. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
+      { type: "paragraph", content: "Mechanical Enterprise provides honest repair vs replace assessments. We'll never pressure you to replace a system that can be economically repaired. But when replacement makes financial sense — especially with rebates up to $16,000 — we'll show you the numbers. Call (862) 423-9396 for a free assessment." },
+      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
     ],
   },
   {
@@ -4232,7 +4232,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "checklist", items: ["Replace air filter again","Test heating operation","Check gas connections and burner (gas furnace)","Inspect heat exchanger for cracks","Test carbon monoxide detectors","Check ductwork for leaks or damage","Schedule professional tune-up"] },
       { type: "h2", content: "Professional Maintenance" },
       { type: "paragraph", content: "While homeowners can handle basic tasks like filter changes, professional maintenance catches issues before they become expensive repairs. Mechanical Enterprise offers seasonal maintenance plans for NJ homeowners. Call (862) 423-9396 to schedule your professional tune-up." },
-      { type: "cta_box", content: "Need HVAC service now? Mechanical Enterprise offers same-day assessments throughout NJ. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
+      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
     ],
   },
   {

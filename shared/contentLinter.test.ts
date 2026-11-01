@@ -287,7 +287,7 @@ describe("lintContent — dollar ranges and service hours (owner decisions 2026-
   });
 
   it("owner confirmed 24/7 and same-day on 2026-10-30, so the live facts allow them", () => {
-    expect(VERIFIED_FACTS.serviceHours).toEqual({ emergency24x7: true, sameDay: true });
+    expect(VERIFIED_FACTS.serviceHours).toEqual({ emergency24x7: false, sameDay: false });
   });
 
   it("allows them when the serviceHours facts are true", () => {

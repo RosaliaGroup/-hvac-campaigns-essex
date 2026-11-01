@@ -48,11 +48,9 @@ import SmsCampaigns from "./pages/SmsCampaigns";
 import CampaignGenerator from "./pages/CampaignGenerator";
 import LPHeatPumpRebates from "./pages/lp/LPHeatPumpRebates";
 import LPCommercialVRV from "./pages/lp/LPCommercialVRV";
-import LPEmergencyHVAC from "./pages/lp/LPEmergencyHVAC";
 import LPFBResidential from "./pages/lp/LPFBResidential";
 import LPFBCommercial from "./pages/lp/LPFBCommercial";
 import LPRebateGuide from "./pages/lp/LPRebateGuide";
-import LPMaintenanceOffer from "./pages/lp/LPMaintenanceOffer";
 import LPReferralPartner from "./pages/lp/LPReferralPartner";
 import LPPsegRebate from "./pages/lp/LPPsegRebate";
 import LPPsegChecklist from "./pages/lp/LPPsegChecklist";
@@ -181,11 +179,12 @@ function Router() {
       {/* Campaign Landing Pages — no nav, optimized for paid traffic */}
       <Route path={"/lp/heat-pump-rebates"} component={LPHeatPumpRebates} />
       <Route path={"/lp/commercial-vrv"} component={LPCommercialVRV} />
-      <Route path={"/lp/emergency-hvac"} component={LPEmergencyHVAC} />
+      {/* Owner Nov 1, 2026: no 24/7 / emergency or maintenance service — these URLs show the residential replacement page. */}
+      <Route path={"/lp/emergency-hvac"} component={LPFBResidential} />
       <Route path={"/lp/fb-residential"} component={LPFBResidential} />
       <Route path={"/lp/fb-commercial"} component={LPFBCommercial} />
       <Route path={"/lp/rebate-guide"} component={LPRebateGuide} />
-      <Route path={"/lp/maintenance-offer"} component={LPMaintenanceOffer} />
+      <Route path={"/lp/maintenance-offer"} component={LPFBResidential} />
       <Route path={"/lp/referral-partner"} component={LPReferralPartner} />
       <Route path={"/pseg-rebate-contractor-nj"} component={LPPsegRebate} />
       <Route path={"/pseg-rebate-checklist"} component={LPPsegChecklist} />

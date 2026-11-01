@@ -82,10 +82,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     formCaptureType: "qualify_form",
     h1: "AC Not Cooling? We'll Have You Comfortable Today.",
     heroSub:
-      "Same-day air conditioning repair across New Jersey for central AC, ductless, and heat-pump systems. Licensed techs, all makes and models, and an upfront price before we start.",
-    metaTitle: "AC Repair NJ | Same-Day Air Conditioning Repair | Mechanical Enterprise",
+      "Failing air conditioner in New Jersey? We assess central AC, ductless and heat-pump systems and give you a written replacement quote, with every rebate you qualify for.",
+    metaTitle: "AC Replacement NJ | Failing Air Conditioner? Free Assessment | Mechanical Enterprise",
     metaDescription:
-      "Same-day AC repair across New Jersey. Licensed techs, all makes, upfront pricing, rebates on upgrades. Call (862) 423-9396.",
+      "Failing AC in NJ? Free in-home assessment and written replacement quote, plus rebates on new systems. Call (862) 423-9396.",
     introHeading: "Fast, Reliable Air Conditioning Repair in NJ",
     intro:
       "When your AC quits during a New Jersey heat wave, every hour matters. Our EPA-certified technicians find the real problem, quote a flat price before touching a tool, and carry common parts to finish most repairs in a single visit.",
@@ -99,7 +99,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     ],
     faqs: [
       { q: "How much does AC repair cost in NJ?", a: "Most common repairs — capacitors, contactors, thermostats, and refrigerant service — vary with the part and the system. The technician diagnoses the problem and gives you an exact flat-rate price before any work begins." },
-      { q: "Can you come out the same day?", a: "Yes. We hold same-day slots and offer 24/7 emergency dispatch across New Jersey. Call (862) 423-9396 and we'll confirm a window quickly." },
+      { q: "How fast can you come out?", a: "Call (862) 423-9396 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
       { q: "Should I repair or replace my air conditioner?", a: "As a rule of thumb, replace if the system is 12–15+ years old, uses discontinued R-22, or the repair exceeds about half of replacement cost. If replacement makes sense, we'll show you the NJ rebates and financing that make it affordable." },
       { q: "Do you repair ductless mini-splits and heat pumps?", a: "Yes — we're factory-trained on Mitsubishi, Daikin, Fujitsu, and all major ductless and heat-pump brands, plus conventional central air." },
       { q: "Are your technicians licensed and insured?", a: "Every technician is EPA-certified, fully licensed, and insured. Mechanical Enterprise is a WMBE/SBE-certified NJ contractor and all repairs are warrantied." },
@@ -108,11 +108,11 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     related: [
       { href: "/central-ac-installation-nj", label: "Central AC Installation", sub: "Time for a new system?" },
       { href: "/heat-pump-repair-nj", label: "Heat Pump Repair", sub: "Ducted & ductless" },
-      { href: "/emergency-hvac-repair-nj", label: "Emergency HVAC", sub: "24/7 response" },
+      { href: "/emergency-hvac-repair-nj", label: "Failing System", sub: "Replacement assessment" },
       REBATE_LINK,
     ],
     ctaHeading: "Stop Sweating — Get Your AC Fixed Today",
-    ctaSub: "Same-day appointments across New Jersey. Upfront pricing and every rebate you qualify for on upgrades.",
+    ctaSub: "Free in-home assessments across New Jersey, with every rebate you qualify for on a new system.",
   },
   {
     slug: "heating-repair-nj",
@@ -122,10 +122,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     formCaptureType: "qualify_form",
     h1: "No Heat? We'll Get Your Home Warm Again — Fast.",
     heroSub:
-      "Same-day and 24/7 heating repair across New Jersey for furnaces, boilers, and heat pumps. Honest diagnosis, upfront pricing, and warm air before nightfall.",
-    metaTitle: "Heating Repair NJ | Same-Day No-Heat Service | Mechanical Enterprise",
+      "Failing furnace, boiler or heat pump in New Jersey? Free in-home assessment, honest advice and a written replacement quote.",
+    metaTitle: "Heating System Replacement NJ | Free Assessment | Mechanical Enterprise",
     metaDescription:
-      "Fast heating repair across NJ — furnaces, boilers & heat pumps. Same-day & 24/7 no-heat service, upfront pricing. Call (862) 423-9396.",
+      "Failing furnace, boiler or heat pump in NJ? Free in-home assessment and written replacement quote. Call (862) 423-9396.",
     introHeading: "Expert Heating Repair for New Jersey Winters",
     intro:
       "A cold NJ night is no time to wait. We service every type of heating system, diagnose the true cause instead of guessing, and quote a flat price before we start — so you're never surprised.",
@@ -138,7 +138,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { icon: "♨️", title: "Furnaces, Boilers & Heat Pumps", desc: "One team for every heating system in your home, from every major brand." },
     ],
     faqs: [
-      { q: "How fast can you fix my heat in NJ?", a: "We keep same-day slots and run 24/7 emergency dispatch. For no-heat calls in winter, call (862) 423-9396 and we'll prioritize you." },
+      { q: "How fast can you come out?", a: "Call (862) 423-9396 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
       { q: "How much does heating repair cost?", a: "It depends on the part and the system. The technician diagnoses the problem first, and you approve an exact flat-rate price before we begin." },
       { q: "My heat works but some rooms are cold — can you help?", a: "Yes. Uneven heating is usually airflow, zoning, or distribution. We diagnose the cause and fix it rather than just band-aiding symptoms." },
       { q: "Do you handle both gas and electric heating?", a: "We service gas and electric furnaces, gas and oil boilers, and electric/gas heat pumps." },
@@ -149,10 +149,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/furnace-repair-nj", label: "Furnace Repair", sub: "Gas & electric" },
       { href: "/boiler-repair-nj", label: "Boiler Repair", sub: "Steam & hot-water" },
       { href: "/heat-pump-repair-nj", label: "Heat Pump Repair", sub: "Year-round comfort" },
-      { href: "/emergency-hvac-repair-nj", label: "Emergency HVAC", sub: "24/7 no-heat" },
+      { href: "/emergency-hvac-repair-nj", label: "Failing System", sub: "Replacement assessment" },
     ],
     ctaHeading: "Get Your Heat Back On Today",
-    ctaSub: "Same-day and 24/7 heating repair across New Jersey. Upfront pricing, no surprises.",
+    ctaSub: "Free heating replacement assessments across New Jersey. Written quote, no surprises.",
   },
   {
     slug: "furnace-repair-nj",
@@ -162,15 +162,15 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     formCaptureType: "qualify_form",
     h1: "No Heat? We'll Get Your Furnace Running Tonight.",
     heroSub:
-      "Gas and electric furnace repair across New Jersey. Same-day and 24/7 no-heat service, thorough safety checks, and an upfront flat price.",
-    metaTitle: "Furnace Repair NJ | 24/7 No-Heat Service | Mechanical Enterprise",
+      "Old or failing gas or electric furnace in New Jersey? Free in-home assessment and a written replacement quote.",
+    metaTitle: "Furnace Replacement NJ | Free Assessment | Mechanical Enterprise",
     metaDescription:
-      "Gas & electric furnace repair across NJ. Same-day & 24/7 no-heat service, safety checks, upfront pricing. Call (862) 423-9396.",
+      "Old or failing furnace in NJ? Free in-home assessment and written replacement quote. Call (862) 423-9396.",
     introHeading: "Trusted Furnace Repair Across New Jersey",
     intro:
       "From a furnace that won't ignite to one blowing cold air, we diagnose the real cause and repair it safely. Every visit includes a combustion and carbon-monoxide safety check at no extra charge.",
     cards: [
-      { icon: "🔥", title: "Won't Ignite / No Heat", desc: "Igniters, flame sensors, gas valves, and control boards repaired the same day." },
+      { icon: "🔥", title: "Won't Ignite / No Heat", desc: "Repeated ignition and no-heat problems are often a sign the furnace is near the end of its life." },
       { icon: "🌬️", title: "Blowing Cold Air", desc: "Blower, limit-switch, and thermostat faults that leave you shivering." },
       { icon: "🔁", title: "Short Cycling", desc: "Overheating, dirty filters, and airflow problems that shorten furnace life." },
       { icon: "🧯", title: "Cracked Heat Exchanger & CO", desc: "Safety-critical inspections to protect your family from carbon monoxide." },
@@ -180,7 +180,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     faqs: [
       { q: "How much does furnace repair cost in NJ?", a: "It depends on the part. Igniters and flame sensors are usually simpler fixes than blower motors or control boards. You approve an exact price upfront, before any work starts." },
       { q: "Is a cracked heat exchanger dangerous?", a: "Yes — it can leak carbon monoxide. If we find one we'll show you the evidence and your safe options. We never scare you into a sale." },
-      { q: "Can you repair my furnace the same day?", a: "Usually yes. We stock common parts on the truck and offer 24/7 emergency service. Call (862) 423-9396." },
+      { q: "Should I repair or replace my furnace?", a: "We focus on replacements. At a free in-home assessment we look at age, condition and efficiency and give you a written quote. Call (862) 423-9396." },
       { q: "Why does my furnace keep shutting off?", a: "Short cycling is often a dirty filter, a failing limit switch, or an oversized system. We pinpoint the exact cause." },
       { q: "Should I repair or replace my furnace?", a: "If it's 15+ years old or facing a major repair, replacement may pay off — and NJ rebates up to $16,000 can offset a new high-efficiency system. We'll advise honestly." },
       { q: "Do you offer maintenance to prevent breakdowns?", a: "Yes — a seasonal tune-up prevents most no-heat emergencies and keeps your warranty valid." },
@@ -189,10 +189,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/heating-repair-nj", label: "Heating Repair", sub: "All heating systems" },
       { href: "/boiler-repair-nj", label: "Boiler Repair", sub: "Steam & hot-water" },
       { href: "/hvac-system-replacement-nj", label: "System Replacement", sub: "Time for an upgrade?" },
-      { href: "/emergency-hvac-repair-nj", label: "Emergency HVAC", sub: "24/7 response" },
+      { href: "/emergency-hvac-repair-nj", label: "Failing System", sub: "Replacement assessment" },
     ],
     ctaHeading: "Warm Up Your Home Tonight",
-    ctaSub: "Same-day and 24/7 furnace repair across New Jersey, with a free safety check on every visit.",
+    ctaSub: "Free furnace replacement assessments across New Jersey.",
   },
   {
     slug: "boiler-repair-nj",
@@ -202,10 +202,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     formCaptureType: "qualify_form",
     h1: "No Heat or Hot Water? We'll Get Your Boiler Running Again.",
     heroSub:
-      "Steam and hot-water boiler repair across New Jersey — common in older homes and brownstones. Same-day and 24/7 service with upfront pricing.",
+      "Old or failing steam or hot-water boiler in New Jersey — common in older homes and brownstones. Free in-home assessment and written replacement quote.",
     metaTitle: "Boiler Repair NJ | Steam & Hot-Water Boilers | Mechanical Enterprise",
     metaDescription:
-      "Boiler repair across NJ — steam & hot-water systems, no heat, leaks, low pressure. Same-day & 24/7 service. Call (862) 423-9396.",
+      "Old or failing boiler in NJ — steam & hot-water systems. Free in-home assessment and replacement quote. Call (862) 423-9396.",
     introHeading: "Boiler Repair Specialists for New Jersey Homes",
     intro:
       "Boilers run many of New Jersey's older homes and multi-families, and they need a technician who truly knows hydronic and steam systems. We diagnose leaks, pressure problems, and no-heat faults and fix them right.",
@@ -221,18 +221,18 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "How much does boiler repair cost in NJ?", a: "It depends on the component — circulators, valves and controls all differ. You approve an exact price before we start." },
       { q: "Do you work on both steam and hot-water boilers?", a: "Yes. We service steam and hot-water (hydronic) boilers, gas and oil, including the older systems common in NJ." },
       { q: "Why are some of my radiators cold?", a: "Usually trapped air, a failing circulator, or a balancing issue. We diagnose the exact cause instead of guessing." },
-      { q: "Can you come out the same day?", a: "Yes — same-day and 24/7 emergency service. No heat or no hot water in winter is a priority call. Ring (862) 423-9396." },
+      { q: "How fast can you come out?", a: "Call (862) 423-9396 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
       { q: "Is it worth repairing an old boiler?", a: "Often yes, but if it's inefficient or failing we'll show you replacement options — high-efficiency systems may qualify for NJ rebates up to $16,000." },
       { q: "Are you licensed and insured?", a: "Fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied repairs." },
     ],
     related: [
       { href: "/heating-repair-nj", label: "Heating Repair", sub: "All heating systems" },
       { href: "/furnace-repair-nj", label: "Furnace Repair", sub: "Gas & electric" },
-      { href: "/emergency-hvac-repair-nj", label: "Emergency HVAC", sub: "24/7 no-heat" },
+      { href: "/emergency-hvac-repair-nj", label: "Failing System", sub: "Replacement assessment" },
       HUB_RES,
     ],
     ctaHeading: "Get Your Boiler Fixed Today",
-    ctaSub: "Same-day and 24/7 boiler repair across New Jersey from true hydronic and steam specialists.",
+    ctaSub: "Free boiler replacement assessments across New Jersey from hydronic and steam specialists.",
   },
   {
     slug: "indoor-air-quality-nj",
@@ -309,10 +309,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/heat-pump-installation-nj", label: "Heat Pump Installation", sub: "New system & rebates" },
       { href: "/ductless-mini-split-repair-nj", label: "Mini-Split Repair", sub: "Ductless systems" },
       { href: "/heat-pump-rebates-nj", label: "Heat Pump Rebates", sub: "Up to $16K in NJ" },
-      { href: "/emergency-hvac-repair-nj", label: "Emergency HVAC", sub: "24/7 response" },
+      { href: "/emergency-hvac-repair-nj", label: "Failing System", sub: "Replacement assessment" },
     ],
     ctaHeading: "Get Your Heat Pump Back in Action",
-    ctaSub: "Same-day heat-pump repair across New Jersey for ducted and ductless systems, all brands.",
+    ctaSub: "Free heat-pump replacement assessments across New Jersey for ducted and ductless systems.",
   },
   {
     slug: "ductless-mini-split-repair-nj",
@@ -352,7 +352,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/indoor-air-quality-nj", label: "Indoor Air Quality", sub: "Cleaner air" },
     ],
     ctaHeading: "Restore Comfort to Every Room",
-    ctaSub: "Same-day ductless mini-split repair across New Jersey for single- and multi-zone systems.",
+    ctaSub: "Free ductless mini-split installation and replacement assessments across New Jersey.",
   },
   {
     slug: "emergency-hvac-repair-nj",
@@ -715,7 +715,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Why is my kitchen so hot even with the exhaust running?", a: "Usually an imbalance between exhaust and makeup air. If makeup air can't keep up, the kitchen overheats and doors are hard to open. We balance the system." },
       { q: "Can you service us without closing the restaurant?", a: "Yes — we schedule overnight and between-shift work to keep you open and serving." },
       { q: "Do you handle both kitchen ventilation and dining comfort?", a: "We handle the whole picture — exhaust, makeup air, RTUs, and dining-room comfort — so it all works together." },
-      { q: "How fast can you respond if our AC or hood fails?", a: "We offer 24/7 emergency dispatch to prevent a closure. Call (862) 423-9396." },
+      { q: "Can you plan a replacement around our hours?", a: "Yes. We schedule installations to keep closures short. Call (862) 423-9396." },
       { q: "Do restaurant HVAC upgrades qualify for incentives?", a: "Often — PSE&G Direct Install and efficiency programs can cover a significant share of qualifying upgrades. We handle the paperwork." },
       { q: "Are you licensed and insured for commercial work?", a: "Yes — licensed, insured, WMBE/SBE-certified NJ commercial contractor with COIs on request." },
     ],
@@ -816,10 +816,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     formCaptureType: "lp_commercial_vrv",
     h1: "Keep Production Running. Process Cooling and Plant HVAC That Doesn't Quit.",
     heroSub:
-      "Industrial HVAC across New Jersey — process cooling, chillers, industrial ventilation, and makeup air for plants and manufacturing facilities. 24/7 uptime and compliance.",
+      "Industrial HVAC across New Jersey — process cooling, chillers, industrial ventilation, and makeup air for plants and manufacturing facilities. Planned replacements and new installations.",
     metaTitle: "Industrial HVAC NJ | Process Cooling & Chillers | Mechanical Enterprise",
     metaDescription:
-      "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. 24/7 uptime & compliance. Call (862) 423-9396.",
+      "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. Replacements & new installs. Call (862) 423-9396.",
     introHeading: "Industrial HVAC & Process Cooling in New Jersey",
     intro:
       "In a plant, HVAC isn't just comfort — it's uptime, product quality, and worker safety. We service industrial chillers, process cooling, and large-scale ventilation with the responsiveness critical operations demand.",
@@ -829,13 +829,13 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { icon: "🌬️", title: "Industrial Ventilation & Exhaust", desc: "Makeup air and exhaust systems that meet safety and compliance rules." },
       { icon: "♨️", title: "Large Boilers & Steam", desc: "Service for high-capacity boilers and steam systems." },
       { icon: "🎛️", title: "Controls & Redundancy", desc: "Controls, monitoring, and redundancy strategies that protect uptime." },
-      { icon: "🕐", title: "24/7 Critical Response", desc: "Priority emergency service to keep production moving." },
+      { icon: "🕐", title: "Planned Installations", desc: "Replacements scheduled to keep production moving." },
     ],
     faqs: [
       { q: "What's the difference between process cooling and comfort cooling?", a: "Comfort cooling keeps people comfortable; process cooling holds precise temperatures for equipment or product. Process cooling is less forgiving, so it needs tighter control and faster response — which we're built for." },
       { q: "Do you service and replace industrial chillers?", a: "Yes — we service, repair, and replace chilled-water and process-cooling systems, and coordinate rigging for large equipment." },
       { q: "Can you help with ventilation and air-quality compliance?", a: "Yes — we design and service makeup air and exhaust systems to maintain safe temperatures and meet compliance requirements." },
-      { q: "How fast can you respond to a critical failure?", a: "We offer 24/7 emergency dispatch and prioritize critical-process customers. Call (862) 423-9396." },
+      { q: "Can you schedule work around production?", a: "Yes. We plan replacements and installations around your schedule. Call (862) 423-9396." },
       { q: "Do you offer preventive maintenance for critical equipment?", a: "Yes — tailored PM programs with monitoring and redundancy planning to prevent unplanned downtime." },
       { q: "Are you licensed, insured, and able to provide a COI?", a: "Yes — licensed, insured, WMBE/SBE-certified NJ commercial contractor with COIs on request." },
     ],
@@ -846,7 +846,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       HUB_COM,
     ],
     ctaHeading: "Protect Your Production and Your People",
-    ctaSub: "Industrial HVAC and process cooling across New Jersey with 24/7 critical response.",
+    ctaSub: "Industrial HVAC and process cooling installations across New Jersey.",
   },
 ];
 

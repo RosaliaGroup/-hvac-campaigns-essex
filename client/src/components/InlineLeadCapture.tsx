@@ -111,7 +111,7 @@ const VARIANTS: Record<InlineLeadVariant, VariantConfig> = {
     buttonClass: "w-full bg-red-600 hover:bg-red-700 text-white text-base py-6",
     buttonLabel: "Call Tech Now",
     defaultTitle: "Emergency HVAC Service",
-    defaultSubtitle: "Same-day service across Northern NJ. Real technician, real fast.",
+    defaultSubtitle: "Free in-home replacement assessment across Northern NJ.",
     successMessage: "Tech will call you in under 60 seconds",
     showBadge: true,
     badgeText: "Available Now",

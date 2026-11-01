@@ -78,7 +78,7 @@ export default function Services() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">24/7 emergency repair services</span>
+                    <span className="text-sm">Full system replacements</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -134,17 +134,17 @@ export default function Services() {
               <CardHeader>
                 <Clock className="h-12 w-12 text-[#ff6b35] mb-4" />
                 <CardTitle className="text-2xl">Emergency Services</CardTitle>
-                <CardDescription>24/7 rapid response for urgent HVAC issues</CardDescription>
+                <CardDescription>Failing system? We assess it and quote a replacement</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <ul className="space-y-3">
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">Round-the-clock availability</span>
+                    <span className="text-sm">Assessment of your current system</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">Fast response times</span>
+                    <span className="text-sm">Written replacement quote</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
@@ -152,11 +152,11 @@ export default function Services() {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">Fully stocked service vehicles</span>
+                    <span className="text-sm">Rebate paperwork handled</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">Priority service for emergencies</span>
+                    <span className="text-sm">Scheduled installation</span>
                   </li>
                 </ul>
               </CardContent>

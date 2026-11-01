@@ -39,14 +39,14 @@ const PHONE_COMMERCIAL = PHONE_DISPLAY;
 const PHONE_COMMERCIAL_TEL = PHONE_TEL;
 
 const WHY_US_RESIDENTIAL = [
-  { icon: "⚡", title: "Fast, Local Response", desc: "Same-day and 24/7 emergency service across New Jersey. Based in Newark, serving all of NJ." },
+  { icon: "⚡", title: "Fast, Local Response", desc: "Free in-home assessments and written quotes. Based in Newark, serving towns within 25 miles." },
   { icon: "🧰", title: "All Makes & Models", desc: "Factory-trained on every major brand. Honest diagnosis and an upfront price before we start." },
   { icon: "💰", title: "Repair or Upgrade — We Maximize Rebates", desc: "If replacement makes sense, we unlock every NJ rebate you qualify for." },
   { icon: "🛡️", title: "Licensed & Insured", desc: "Fully licensed, bonded, and insured NJ contractor. WMBE/SBE certified. Warrantied workmanship." },
 ];
 
 const WHY_US_COMMERCIAL = [
-  { icon: "⏱️", title: "Minimized Downtime", desc: "Priority response and service agreements that keep your facility running. 24/7 emergency coverage." },
+  { icon: "⏱️", title: "Minimized Downtime", desc: "Planned replacements and new installations scheduled around your operations." },
   { icon: "🏢", title: "Every Property Type", desc: "Offices, retail, restaurants, warehouses, and industrial facilities across New Jersey." },
   { icon: "💰", title: "Direct Install & Incentives", desc: "PSE&G Direct Install can cover up to 80% of qualifying commercial upgrades. We handle the paperwork." },
   { icon: "🛡️", title: "Licensed, Insured & Certified", desc: "Fully licensed NJ commercial contractor. WMBE/SBE certified. PSE&G Trade Ally." },
@@ -82,7 +82,9 @@ function leadCaptureVariant(data: SeoLandingPageData): InlineLeadVariant {
   // "call in 60 seconds" wording is not an owner-verified claim.
   if (data.serviceOnly) return "commercial";
   const s = `${data.slug} ${data.service} ${data.serviceType}`.toLowerCase();
-  if (/emergency|24[- ]?7|no[- ]?heat/.test(s)) return "emergency";
+  // Owner Nov 1, 2026: no 24/7 or emergency service, installs/replacements only — the red
+  // "Call Tech Now / under 60 seconds" emergency card is never shown.
+  if (/emergency|24[- ]?7|no[- ]?heat/.test(s)) return "residential";
   if (/rebate|heat[- ]?pump|pseg|incentive/.test(s)) return "rebate";
   return data.category === "commercial" ? "commercial" : "residential";
 }
@@ -133,13 +135,13 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
     ? SERVICE_ONLY_STATS
     : isCommercial
     ? [
-        { big: "24/7", small: "Emergency Service" },
+        { big: "Free", small: "In-Home Assessment" },
         { big: "Up to 80%", small: "Covered by Direct Install" },
         { big: "All Property Types", small: "Office to Industrial" },
         { big: "Licensed & Insured", small: "NJ Contractor" },
       ]
     : [
-        { big: "Same-Day", small: "Service Available" },
+        { big: "10-Year", small: "Optional Coverage" },
         { big: "All Makes", small: "& Models" },
         { big: "Up to $16,000", small: "NJ Rebates on Upgrades" },
         { big: "Licensed & Insured", small: "NJ Contractor" },
