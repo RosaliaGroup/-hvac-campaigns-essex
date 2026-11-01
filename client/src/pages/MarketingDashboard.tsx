@@ -50,13 +50,20 @@ const PLATFORMS = [
   { value: "google_business", label: "Google Business Profile" },
   { value: "facebook", label: "Facebook" },
   { value: "instagram", label: "Instagram" },
-  { value: "nextdoor", label: "Nextdoor" },
-];
+  { value: "nextdoor", label: "Nextdoor (manual)" },
+  { value: "linkedin", label: "LinkedIn (manual)" },
+  { value: "youtube", label: "YouTube Shorts (manual)" },
+  { value: "apple_business", label: "Apple Business Connect (manual)" },
+  { value: "houzz", label: "Houzz (manual)" },
+  { value: "pinterest", label: "Pinterest (manual)" },
+] as const;
+
+type SocialPlatformValue = (typeof PLATFORMS)[number]["value"];
 
 function SocialPostManager() {
   const { toast } = useToast();
   const utils = trpc.useUtils();
-  const [platform, setPlatform] = useState<"google_business" | "facebook" | "instagram" | "nextdoor">("google_business");
+  const [platform, setPlatform] = useState<SocialPlatformValue>("google_business");
   const [contentType, setContentType] = useState<string>("hvac_tip");
   const [content, setContent] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
@@ -116,6 +123,11 @@ function SocialPostManager() {
     if (p === "facebook") return "bg-indigo-100 text-indigo-800";
     if (p === "instagram") return "bg-pink-100 text-pink-800";
     if (p === "nextdoor") return "bg-green-100 text-green-800";
+    if (p === "linkedin") return "bg-sky-100 text-sky-800";
+    if (p === "youtube") return "bg-red-100 text-red-800";
+    if (p === "apple_business") return "bg-gray-100 text-gray-800";
+    if (p === "houzz") return "bg-lime-100 text-lime-800";
+    if (p === "pinterest") return "bg-rose-100 text-rose-800";
     return "";
   };
 
@@ -127,7 +139,7 @@ function SocialPostManager() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>AI-Powered Social Posts</CardTitle>
-              <CardDescription>Generate, schedule, and manage posts for Google Business, Facebook & Instagram</CardDescription>
+              <CardDescription>Generate, schedule, and manage posts. Facebook &amp; Instagram publish automatically; other channels go to the manual queue to paste.</CardDescription>
             </div>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>

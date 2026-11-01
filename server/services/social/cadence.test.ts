@@ -37,6 +37,14 @@ describe("cadence caps", () => {
     expect(getPlatformWeeklyCap("nextdoor")).toBe(1);
   });
 
+  it("manual-queue channels have conservative defaults", () => {
+    expect(getPlatformWeeklyCap("linkedin")).toBe(1);
+    expect(getPlatformWeeklyCap("youtube")).toBe(1);
+    expect(getPlatformWeeklyCap("apple_business")).toBe(1);
+    expect(getPlatformWeeklyCap("houzz")).toBe(1);
+    expect(getPlatformWeeklyCap("pinterest")).toBe(2);
+  });
+
   it("isUnderWeeklyCap enforces the cap", () => {
     expect(isUnderWeeklyCap("facebook", 2)).toBe(true);
     expect(isUnderWeeklyCap("facebook", 3)).toBe(false);

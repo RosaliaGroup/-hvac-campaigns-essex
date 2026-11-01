@@ -12,8 +12,9 @@
  *  - Approval gate: a post cannot be published unless it is approved (an
  *    explicit publish action, or an already-scheduled row). Failed retries
  *    inherit the original approval.
- *  - Non-API channels (Nextdoor): queued for manual posting — never marked
- *    "posted" and never sent to a non-existent API.
+ *  - Non-API channels (Nextdoor, LinkedIn, YouTube, Apple Business Connect,
+ *    Houzz, Pinterest): queued for manual posting — never marked "posted" and
+ *    never sent to an API we have no approved access/credentials for.
  *
  * No schema change is required: the idempotency unit is the existing
  * socialPosts primary key, and the external id is stored in the existing
@@ -24,9 +25,29 @@ import * as dbModule from "../db";
 import { postToFacebook, postToInstagram } from "../integrations/facebook";
 import { postToGoogleBusiness } from "../integrations/google-business";
 
-export type Platform = "facebook" | "instagram" | "google_business" | "nextdoor";
+/** Every channel the social lane writes for. Order = display order. */
+export const SOCIAL_PLATFORMS = [
+  "facebook",
+  "instagram",
+  "google_business",
+  "nextdoor",
+  "linkedin",
+  "youtube",
+  "apple_business",
+  "houzz",
+  "pinterest",
+] as const;
 
-/** Channels we can actually publish to via an API. Nextdoor has no public posting API. */
+export type Platform = (typeof SOCIAL_PLATFORMS)[number];
+
+/**
+ * Channels we can actually publish to via an API. Everything else is a
+ * manual-queue channel: copy is generated and held, then pasted by hand.
+ *  - Nextdoor: Publish API needs Nextdoor partner approval (not granted).
+ *  - LinkedIn: company-page posting needs Community Management API review.
+ *  - YouTube / Pinterest: APIs exist but no OAuth connection is configured yet.
+ *  - Apple Business Connect / Houzz: no posting API for a single business.
+ */
 export const API_PUBLISHABLE_PLATFORMS: readonly Platform[] = [
   "facebook",
   "instagram",
@@ -275,7 +296,7 @@ export async function publishSocialPost(
         status: "draft",
       });
 
-  // 4. Non-API channels (Nextdoor): queue for manual posting. Never "posted".
+  // 4. Non-API channels (Nextdoor, LinkedIn, etc.): queue for manual posting. Never "posted".
   if (!isApiPublishable(platform)) {
     await deps.update(id, { status: "scheduled", errorMessage: null });
     return { id, platform, status: "queued", postId: null, alreadyPosted: false, queued: true };

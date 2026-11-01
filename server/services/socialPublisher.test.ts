@@ -249,7 +249,22 @@ describe("socialPublisher — non-API channels (Nextdoor)", () => {
     expect(isApiPublishable("instagram")).toBe(true);
     expect(isApiPublishable("google_business")).toBe(true);
     expect(isApiPublishable("nextdoor")).toBe(false);
+    for (const p of ["linkedin", "youtube", "apple_business", "houzz", "pinterest"] as const) {
+      expect(isApiPublishable(p)).toBe(false);
+    }
   });
+
+  it.each(["linkedin", "youtube", "apple_business", "houzz", "pinterest"] as const)(
+    "queues a %s post for manual posting without calling any API",
+    async (platform) => {
+      const h = makeHarness();
+      const r = await publishSocialPost({ platform, content: `Manual ${platform} post`, approved: true }, h.deps);
+      expect(r.status).toBe("queued");
+      expect(r.postId).toBeNull();
+      expect(h.publishCalls).toBe(0);
+      expect(h.rows[0].status).toBe("scheduled");
+    },
+  );
 });
 
 describe("safeErrorMessage", () => {

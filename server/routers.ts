@@ -30,7 +30,7 @@ import { heygenRouter } from "./routers/heygen";
 import { runCampaignAnalysis } from "./services/campaignEngine";
 import { enqueueLeadCustomerSync } from "./services/leadCustomerAutoSync";
 import { generateSocialPost } from "./integrations/ai-content-generator";
-import { publishSocialPost, retrySocialPost, PublishError } from "./services/socialPublisher";
+import { publishSocialPost, retrySocialPost, PublishError, SOCIAL_PLATFORMS } from "./services/socialPublisher";
 import * as marketingCanary from "./services/marketingCanary";
 import { redactCredentials } from "./services/credentialSafety";
 import { getMetaAuthUrl, SOCIAL_SCOPES } from "./metaAds";
@@ -1032,7 +1032,11 @@ export const appRouter = router({
               note: "Uses shared Google OAuth and the configured Local SEO location. Connection requires a successful access check; automatic posting remains disabled until a controlled test succeeds.",
             },
             nextdoor: { mode: "manual" as const, connected: false, note: "No public posting API — always manual queue." },
-            linkedin: { mode: "manual" as const, connected: false, note: "No company-page posting API for this use — always manual queue (copy generated, pasted by hand)." },
+            linkedin: { mode: "manual" as const, connected: false, note: "Company-page posting needs LinkedIn Community Management API approval — manual queue until granted." },
+            youtube: { mode: "manual" as const, connected: false, note: "YouTube Shorts — manual upload until a YouTube OAuth connection is added." },
+            apple_business: { mode: "manual" as const, connected: false, note: "Apple Business Connect Showcases — no posting API, always manual." },
+            houzz: { mode: "manual" as const, connected: false, note: "Houzz project photos — no posting API, always manual. Consented job photos only." },
+            pinterest: { mode: "manual" as const, connected: false, note: "Pinterest pins — manual until a Pinterest OAuth connection is added." },
           },
         };
       }),
@@ -1184,7 +1188,7 @@ export const appRouter = router({
     generatePostContent: protectedProcedure
       .input(
         z.object({
-          platform: z.enum(["facebook", "instagram", "google_business", "nextdoor"] as const),
+          platform: z.enum(SOCIAL_PLATFORMS),
           contentType: z.enum(["hvac_tip", "rebate_alert", "seasonal_advice", "energy_savings", "faq", "customer_testimonial", "maintenance_reminder", "before_after"] as const),
         })
       )
@@ -1197,7 +1201,7 @@ export const appRouter = router({
     schedulePost: protectedProcedure
       .input(
         z.object({
-          platform: z.enum(["facebook", "instagram", "google_business", "nextdoor"] as const),
+          platform: z.enum(SOCIAL_PLATFORMS),
           content: z.string().min(1),
           contentType: z.string().optional(),
           scheduledAt: z.string(), // ISO string
@@ -1223,7 +1227,7 @@ export const appRouter = router({
         z.object({
           // Optional existing socialPosts row to publish/reuse (e.g. a scheduled post).
           id: z.number().int().optional(),
-          platform: z.enum(["facebook", "instagram", "google_business", "nextdoor"] as const),
+          platform: z.enum(SOCIAL_PLATFORMS),
           content: z.string().min(1),
           contentType: z.string().optional(),
           mediaUrls: z.array(z.string()).optional(),

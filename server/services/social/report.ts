@@ -8,6 +8,7 @@
  */
 import type { SocialPost } from "../../../drizzle/schema";
 import { buildVetoLink, buildRevertLink } from "./holdAndPublish";
+import { isApiPublishable, type Platform } from "../socialPublisher";
 import { listPostsPostedBetween, listRecentPosts } from "./repo";
 
 export interface DigestPostLine {
@@ -100,7 +101,7 @@ export async function buildTodaysDigestSection(baseUrl: string, now: Date = new 
 
   const held = recent.filter((r) => r.status === "held");
   const vetoedToday = recent.filter((r) => r.status === "vetoed");
-  const queuedManual = recent.filter((r) => r.status === "scheduled" && (r.platform === "nextdoor" || r.contentSource === "b2b"));
+  const queuedManual = recent.filter((r) => r.status === "scheduled" && (!isApiPublishable(r.platform as Platform) || r.contentSource === "b2b"));
 
   return buildDigestSection({
     postedToday,
