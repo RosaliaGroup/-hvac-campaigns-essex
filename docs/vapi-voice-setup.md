@@ -116,7 +116,7 @@ Speed 1.0. Avoid the default/robotic voices.
 - Inbound phone number → inbound assistant. Outbound phone number → outbound assistant.
 - In Railway (service `-hvac-campaigns-essex`): `VAPI_OUTBOUND_ASSISTANT_ID` = outbound assistant ID,
   `VAPI_PHONE_NUMBER_ID` = outbound phone number ID. Without both, the CRM never places call-backs.
-- Tools stay as they are: getCallerInfo, bookAppointment, rescheduleAppointment, sendForm, End Call,
+- Tools stay as they are: getCallerInfo, bookHVAC, rescheduleHVAC, sendForm, sendCallRecap, End Call,
   and the end-of-call report to `/api/vapi/call-recap`.
 
 ## 5. After changing settings — test call checklist
