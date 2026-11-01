@@ -33,7 +33,9 @@ export default function LPFBResidential() {
     description: "NJ homeowners may qualify for up to $16,000 in heat pump rebates. Free in-home assessment from a licensed NJ HVAC contractor — we handle the rebate paperwork.",
     ogUrl: "https://mechanicalenterprise.com/lp/fb-residential",
   });
-  const [form, setForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
+  // Short form on purpose (Nov 1): name + phone + optional email. The old 4-field
+  // form got ~137 paid clicks and 0 submissions in October.
+  const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [submitted, setSubmitted] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   // Spam protection: honeypot decoy fields + form-load timestamp (too-fast submit).
@@ -66,13 +68,14 @@ export default function LPFBResidential() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.email && !form.phone) {
-      toast({ title: "Please enter your email or phone number", variant: "destructive" });
+    if (!form.phone && !form.email) {
+      toast({ title: "Please enter your phone number", variant: "destructive" });
       return;
     }
+    const [firstName, ...rest] = form.name.trim().split(/\s+/);
     captureLead.mutate({
-      firstName: form.firstName,
-      lastName: form.lastName,
+      firstName: firstName ?? "",
+      lastName: rest.join(" "),
       email: form.email,
       phone: form.phone,
       captureType: "lp_fb_residential",
@@ -94,25 +97,18 @@ export default function LPFBResidential() {
       </div>
 
       {/* Hero — Facebook style: story-driven, visual, emotional */}
-      <section className="py-12 px-4 bg-gradient-to-b from-blue-50 to-white">
+      <section className="py-5 md:py-12 px-4 bg-gradient-to-b from-blue-50 to-white">
         <div className="max-w-4xl mx-auto text-center">
-          <Badge className="mb-4 bg-green-100 text-green-800 border border-green-200">✅ For NJ Homeowners — Free Assessment</Badge>
-          <h1 className="text-4xl md:text-5xl font-bold text-[#1e3a5f] leading-tight mb-4">
+          <Badge className="hidden md:inline-flex mb-4 bg-green-100 text-green-800 border border-green-200">✅ For NJ Homeowners — Free Assessment</Badge>
+          <h1 className="text-2xl md:text-5xl font-bold text-[#1e3a5f] leading-tight mb-2 md:mb-4">
             NJ Homeowners May Qualify for <span className="text-[#ff6b35]">Up to $16,000</span> in Heat Pump Rebates
           </h1>
-          <p className="text-xl text-gray-600 mb-6 max-w-2xl mx-auto">
+          <p className="text-base md:text-xl text-gray-600 mb-4 md:mb-6 max-w-2xl mx-auto">
             Replacing an old furnace, boiler or central AC? A licensed NJ contractor checks your eligibility at a free in-home assessment, and we handle the rebate paperwork.
           </p>
 
-          {/* Social Proof Bar */}
-          <div className="flex flex-wrap justify-center gap-6 mb-8 text-sm text-gray-500">
-            <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" /> Licensed NJ HVAC contractor</span>
-            <span className="flex items-center gap-1"><Home className="h-4 w-4 text-[#ff6b35]" /> Free in-home assessment</span>
-            <span className="flex items-center gap-1"><Clock className="h-4 w-4 text-[#1e3a5f]" /> We handle the rebate paperwork</span>
-          </div>
-
           {/* Lead Form — centered, prominent */}
-          <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
+          <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl border border-gray-100 p-4 md:p-6">
             {submitted ? (
               <div className="text-center py-6">
                 <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-3" />
@@ -126,19 +122,22 @@ export default function LPFBResidential() {
               </div>
             ) : (
               <>
-                <h2 className="text-lg font-bold text-[#1e3a5f] mb-1 text-center">Check Your Eligibility — Free</h2>
-                <p className="text-xs text-gray-400 text-center mb-4">Takes 30 seconds. No obligation.</p>
+                <a href="tel:+18624239396" className="block mb-4">
+                  <Button type="button" className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white font-bold py-4">
+                    <Phone className="h-4 w-4 mr-2" /> Call Now: (862) 423-9396
+                  </Button>
+                </a>
+                <p className="text-xs text-gray-500 text-center mb-4">No heat? Same-day repair visits and 24/7 emergency service.</p>
+                <h2 className="text-lg font-bold text-[#1e3a5f] mb-1 text-center">Or Request Your Free Assessment</h2>
+                <p className="text-xs text-gray-400 text-center mb-4">Two fields. We call you back.</p>
                 <form onSubmit={handleSubmit} className="space-y-3">
                   <HoneypotFields values={honeypot} onChange={setHoneypot} />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input placeholder="First Name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} />
-                    <Input placeholder="Last Name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} />
-                  </div>
-                  <Input type="email" placeholder="Email Address" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                  <Input type="tel" placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  <Input autoComplete="name" placeholder="Your Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                  <Input type="tel" inputMode="tel" autoComplete="tel" required placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                  <Input type="email" autoComplete="email" placeholder="Email (optional)" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
                   <Turnstile className="flex justify-center" onVerify={setTurnstileToken} onExpire={() => setTurnstileToken("")} />
                   <Button type="submit" disabled={captureLead.isPending} className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold py-4">
-                    {captureLead.isPending ? "Checking..." : "Check My Eligibility →"}
+                    {captureLead.isPending ? "Sending..." : "Get My Free Assessment →"}
                   </Button>
                 <TcpaDisclosure />
                   </form>
@@ -146,6 +145,13 @@ export default function LPFBResidential() {
               </>
             )}
           </div>
+          {/* Social Proof Bar */}
+          <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm text-gray-500">
+            <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" /> NJ Master HVACR License #19HC00400700</span>
+            <span className="flex items-center gap-1"><Home className="h-4 w-4 text-[#ff6b35]" /> Free in-home assessment</span>
+            <span className="flex items-center gap-1"><Clock className="h-4 w-4 text-[#1e3a5f]" /> We handle the rebate paperwork</span>
+          </div>
+
         </div>
       </section>
 
