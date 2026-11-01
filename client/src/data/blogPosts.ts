@@ -1994,30 +1994,30 @@ export const blogPosts: BlogPostData[] = [
     "title": "Heat Pump vs Gas Furnace in NJ: 2026 Comparison",
     "slug": "heat-pump-vs-gas-furnace-nj-2026",
     "date": "March 31, 2026",
-    "readTime": "9 min read",
+    "readTime": "8 min read",
     "category": "HVAC Education",
-    "metaDescription": "Gas furnaces cost less upfront, but NJ homes may qualify for up to $16,000 in heat pump rebates. An honest 2026 cost comparison for homeowners.",
-    "excerpt": "Gas furnaces are usually cheaper to install. But with up to $16,000 in available NJ rebates, heat pumps close the gap fast. Here's the honest 2026 breakdown.",
+    "metaDescription": "Compare heat pump and gas furnace costs for NJ homes. See how up to $16,000 in rebates can affect your decision before you install.",
+    "excerpt": "Gas furnaces are usually cheaper to install, but NJ households may qualify for up to $16,000 in heat pump rebates. An honest, updated comparison.",
     "sections": [
       {
         "type": "intro",
-        "content": "Gas furnaces have been the default heating choice in New Jersey for decades, and for good reason — they're proven and relatively affordable to install. But the picture keeps shifting as utility rebate programs evolve. In 2026, households across Bergen, Essex, Union, Morris, and the rest of our northern New Jersey service area may qualify for up to $16,000 in combined PSE&G / NJ Clean Energy incentives when they choose a heat pump instead of a gas furnace. That changes how the upfront and long-term numbers compare. Here's an honest, side-by-side look."
+        "content": "Gas furnaces have been the default heating choice in New Jersey for decades, and for good reason — they're proven and relatively affordable to install. The picture looks different in 2026 largely because of how utility rebate programs have shifted. Households across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties may now qualify for up to $16,000 in combined PSE&G / NJ Clean Energy incentives when they choose a heat pump instead of a gas furnace. That changes how the upfront and long-term numbers stack up for a lot of homes. Here's an honest, side-by-side look at where each system stands, based on what we see during in-home assessments across our service area."
       },
       {
         "type": "h2",
-        "content": "Upfront Cost Before Rebates"
+        "content": "Upfront Installed Cost"
       },
       {
         "type": "paragraph",
-        "content": "Before any incentives are applied, a heat pump system generally costs more to install than a comparable gas furnace and air conditioner combination. The size of the gap depends on your home's square footage, the brand and tier of equipment you choose, whether existing ductwork can be reused or needs modification, and how complex the equipment swap is. Cold-climate heat pumps handle both heating and cooling in one system, which adds equipment cost compared to a separate furnace and AC condenser. On raw installed cost alone, before any rebate is applied, a gas furnace and AC pairing is usually the less expensive option. That part of the comparison hasn't changed."
+        "content": "Before any incentive is applied, a heat pump system generally costs more to install than a comparable gas furnace and central air conditioner pairing. The size of the gap depends on your home's square footage, the type and tier of equipment selected, whether existing ductwork can be reused or needs modification, and how complex the swap is. A cold-climate heat pump handles both heating and cooling in one system, which adds equipment cost compared with a separate furnace and AC condenser. On raw installed cost alone, a furnace-and-AC pairing is still usually the lower-cost option. That part of the comparison hasn't changed."
       },
       {
         "type": "h2",
-        "content": "Rebates Change the Equation in 2026"
+        "content": "How NJ Rebates Narrow the Gap"
       },
       {
         "type": "paragraph",
-        "content": "This is where 2026 looks different than it did even a couple of years ago. Gas furnace replacements currently don't qualify for any New Jersey utility rebate program — replacing one furnace with another gets no incentive support. A heat pump installation, on the other hand, may qualify for up to $16,000 in combined PSE&G / NJ Clean Energy incentives. Many households can also finance the remaining balance after rebates at 0% interest through PSE&G's On-Bill Repayment program, with payments added directly to the monthly utility bill instead of a separate loan. Actual rebate amounts, program tiers, and financing eligibility vary by household, equipment selected, and the rules in place at the time of installation. We don't quote these numbers from a brochure — we confirm what you specifically qualify for during your in-home assessment. For many homeowners, applying these incentives narrows the upfront gap with a gas furnace considerably, and in some cases closes it."
+        "content": "This is where the comparison looks different than it did a few years ago. Replacing one gas furnace with another currently carries no NJ utility rebate support that we've seen. A heat pump installation, by contrast, may qualify for up to $16,000 in combined PSE&G / NJ Clean Energy incentives. Actual rebate tiers, equipment requirements, and household eligibility vary and change over time, so we don't quote numbers from a flyer — we confirm exactly what your home qualifies for during an in-home assessment, before you commit to a system. For many households, applying those incentives narrows the upfront gap with a gas furnace considerably, and for some it closes it."
       },
       {
         "type": "h2",
@@ -2025,15 +2025,15 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Heat pumps move heat using electricity rather than burning fuel on-site, and in most New Jersey homes they cost less to run through the heating season than a comparable gas furnace — especially once you account for the fact that a heat pump also replaces an aging central air conditioner with a single, newer piece of equipment. How much you actually save depends on your home's insulation, thermostat habits, the age and condition of your current equipment, and current electric and gas rates, all of which shift over time. Rather than publish a single savings figure that won't hold true for every house, we calculate the specific operating-cost comparison for your home as part of the assessment, using your actual usage and current utility rates."
+        "content": "Heat pumps move heat using electricity instead of burning fuel on site, and in many New Jersey homes they cost less to run through the heating season than a comparable furnace — particularly once you factor in that a heat pump also replaces an aging central air conditioner with one newer piece of equipment. How much you actually save depends on your home's insulation, thermostat habits, the condition of your current equipment, and current electric and gas rates, all of which shift over time. Rather than publish one savings figure that won't hold true for every house, we calculate the specific operating-cost comparison for your home using your actual usage and current utility rates."
       },
       {
         "type": "h2",
-        "content": "When Gas Still Makes Sense"
+        "content": "When a Gas Furnace Still Makes Sense"
       },
       {
         "type": "paragraph",
-        "content": "We install heat pumps, which might suggest we'd push them on every customer — but that's not honest advice. If your current furnace is relatively new and running well, early replacement often doesn't pencil out even with available rebates. Homes without existing ductwork may be better suited to a ductless mini-split layout rather than a central heat pump system, which changes the installation plan and the math. If you're planning to sell your home within the next year or two, you may not have time to realize the full value of the investment. And homes with very high heating loads — older, poorly insulated houses in particular — may need weatherization work alongside a heat pump to perform well through the coldest stretches of winter. We walk through all of this during your assessment instead of assuming one system is automatically the right fit."
+        "content": "We install heat pumps, which might suggest we'd push them on every homeowner — that's not honest advice. If your current furnace is relatively new and running well, early replacement often doesn't pencil out even with available incentives. Homes without existing ductwork, like some older Morris County colonials we work in, may be better suited to a ductless mini-split layout than a central heat pump, which changes the installation plan and the math. If you plan to sell within the next year or two, you may not have time to realize the investment's full value. And homes with very high heating loads — older, poorly insulated houses in particular — may need weatherization work alongside a heat pump to perform well through the coldest stretches of winter. We walk through all of this during your assessment instead of assuming one system is the automatic fit."
       },
       {
         "type": "h2",
@@ -2041,15 +2041,15 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "The most common objection raised about heat pumps is that they won't keep up in cold weather. Heat pump technology designed for northern climates has improved substantially over the past decade, and current cold-climate models are built to operate through New Jersey winters, including extended cold stretches. Most systems include a backup electric resistance heat element that engages automatically on the coldest days to supplement the heat pump, so comfort doesn't depend on outdoor temperature alone. We size and configure every system — including how and when backup heat kicks in — based on your home's actual heat loss, not a generic square-footage estimate. That's a core part of what we review during an in-home assessment rather than a phone quote."
+        "content": "The most common objection to heat pumps is that they won't keep up in cold weather. Heat pump equipment designed for northern climates has improved substantially over the past decade, and current cold-climate models are built to operate through New Jersey winters, including extended cold stretches. Most systems include backup electric heat that engages automatically on the coldest days to supplement the heat pump, so comfort doesn't depend on outdoor temperature alone. We size and configure every system — including how and when backup heat kicks in — based on your home's actual heat loss, not a generic square-footage estimate. That's part of what we review during an in-home assessment rather than a phone quote."
       },
       {
         "type": "h2",
-        "content": "Coverage, Financing, and Next Steps"
+        "content": "Coverage and Next Steps"
       },
       {
         "type": "paragraph",
-        "content": "Whichever system you choose, ongoing protection matters over the life of the equipment. We offer an optional 10-year parts-and-labor coverage plan on new installations, administered through a third-party service agreement and backed by A-rated insurers, available on all major brands. If you're keeping your existing furnace, AC, or heat pump rather than replacing it, that equipment may still qualify for coverage after a separate eligibility inspection. Our Comfort Membership bundles coverage with two maintenance visits a year, priority scheduling, and a credit toward your next system, billed monthly instead of as a single large expense. For a new heat pump, that same assessment is also where we confirm which PSE&G / NJ Clean Energy rebates and On-Bill Repayment financing your household actually qualifies for."
+        "content": "Whichever system you choose, ongoing protection matters over the life of the equipment. We offer an optional 10-year parts-and-labor coverage plan on new installations, administered through a third-party service agreement and backed by A-rated insurers, available across major equipment brands. If you're keeping your existing furnace, AC, or heat pump rather than replacing it, that equipment may still qualify for coverage after a separate eligibility inspection. Our Comfort Membership bundles coverage with two maintenance visits a year, priority scheduling, and a credit toward your next system, billed monthly instead of as one large expense. For a new heat pump, the same in-home assessment is where we confirm which PSE&G / NJ Clean Energy incentives your household actually qualifies for — with the numbers specific to your home, not a brochure average."
       },
       {
         "type": "cta_box",
@@ -2058,15 +2058,15 @@ export const blogPosts: BlogPostData[] = [
         "buttonUrl": "https://mechanicalenterprise.com/rebate-calculator"
       }
     ],
-    "updatedDate": "October 30, 2026",
+    "updatedDate": "November 1, 2026",
     "faqSchema": [
       {
         "question": "Do gas furnace replacements qualify for rebates in New Jersey?",
-        "answer": "No. Current NJ utility and Clean Energy Program incentives are structured around heat pump installations, not gas-to-gas replacements. We confirm current program rules for your situation during your assessment."
+        "answer": "No, not based on what we see with current NJ utility and Clean Energy programs, which are structured around heat pump installations rather than gas-to-gas replacements. We confirm current program rules for your situation during your assessment."
       },
       {
         "question": "How much can I get in heat pump rebates in New Jersey?",
-        "answer": "Eligible households may qualify for up to $16,000 in combined PSE&G / NJ Clean Energy rebates, plus 0% interest financing through PSE&G's On-Bill Repayment program for any remaining balance. Exact amounts depend on your home and equipment and are confirmed during your in-home assessment."
+        "answer": "Eligible households may qualify for up to $16,000 in combined PSE&G / NJ Clean Energy rebates. Exact amounts depend on your home and equipment and are confirmed during your in-home assessment."
       },
       {
         "question": "Will a heat pump keep my house warm during a New Jersey winter?",
@@ -2074,7 +2074,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "question": "Is a gas furnace ever the better choice?",
-        "answer": "Yes — homes with a relatively new furnace already in place, no existing ductwork, a planned near-term sale, or very high heating loads may be better served by sticking with gas, at least for now. We give honest recommendations based on your home rather than defaulting to one system."
+        "answer": "Yes. Homes with a relatively new furnace already in place, no existing ductwork, a planned near-term sale, or very high heating loads may be better served by sticking with gas, at least for now. We give honest recommendations based on your home rather than defaulting to one system."
       }
     ]
   },
