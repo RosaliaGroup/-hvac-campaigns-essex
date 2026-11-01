@@ -84,8 +84,13 @@ describe("spamGuard — honeypot + timing", () => {
   it("honeypot company_url blocks", () => {
     expect(evaluateSpam({ name: "Bob", company_url: "x" }, { now: NOW }).blocked).toBe(true);
   });
-  it("submit within 4s blocks", () => {
-    expect(evaluateSpam({ name: "Bob", ts: NOW - 1500 }, { now: NOW }).blocked).toBe(true);
+  it("a fast submit alone does not block a clean lead (phone autofill)", () => {
+    const r = evaluateSpam({ name: "Maria Gonzalez", email: "maria@example.com", phone: "8624239396", ts: NOW - 1651 }, { now: NOW });
+    expect(r.blocked).toBe(false);
+    expect(r.reasons.some((x) => x.startsWith("too_fast"))).toBe(true);
+  });
+  it("a fast submit plus a gibberish name blocks", () => {
+    expect(evaluateSpam({ name: "kJvbXmq", ts: NOW - 1500 }, { now: NOW }).blocked).toBe(true);
   });
   it("submit after 4s does not block on timing", () => {
     const r = evaluateSpam({ name: "Bob", ts: NOW - 9000 }, { now: NOW });
@@ -99,8 +104,8 @@ describe("spamGuard — honeypot + timing", () => {
     expect(r.blocked).toBe(false);
     expect(r.reasons.some((x) => x.startsWith("too_fast"))).toBe(false);
   });
-  it("still blocks a truly too-fast submission with a positive elapsed time", () => {
-    const r = evaluateSpam({ name: "Bob", ts: NOW - 1000 }, { now: NOW });
+  it("a too-fast submission with an impossible phone blocks", () => {
+    const r = evaluateSpam({ name: "Bob", phone: "1234567890", ts: NOW - 1000 }, { now: NOW });
     expect(r.blocked).toBe(true);
   });
   it("still blocks implausible future timestamps beyond one minute", () => {

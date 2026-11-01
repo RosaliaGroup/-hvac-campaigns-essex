@@ -6,8 +6,11 @@
  * function). Do not add imports or reach for Node/Deno globals here.
  *
  * The guard SCORES a set of signals and blocks at/above `blockThreshold`
- * (default 60). Hard signals (honeypot, too-fast, blocked disposable domain)
- * each score 100 so they block on their own; the gibberish heuristics are
+ * (default 60). Hard signals (honeypot, far-future timestamp, blocked
+ * disposable domain) each score 100 so they block on their own. A fast submit
+ * scores 50: phone autofill lets a real homeowner finish a short form in 2-3
+ * seconds, so speed alone never blocks — it only tips a submission that also
+ * looks like gibberish or has an impossible phone number; the gibberish heuristics are
  * graded so a single weak signal never blocks a real person by itself — e.g.
  * the surname "Schmidt" (a 4-consonant run) scores 40 and passes, while a
  * random string like "kJvbXmq" trips several traits and blocks.
@@ -55,7 +58,10 @@ export interface SpamGuardResult {
 /** Point values per signal. Threshold is 60, so 100 = blocks alone. */
 const WEIGHTS = {
   honeypot: 100,
-  tooFast: 100,
+  // Below the threshold on purpose: autofill makes real humans fast (Oct 27 a
+  // 1.6s quick_quote with a clean name/phone was silently dropped).
+  tooFast: 50,
+  futureTimestamp: 100,
   blockedDomain: 100,
   invalidUsPhone: 60,
   // Gibberish is graded — each trait adds independently.
@@ -178,8 +184,11 @@ export function evaluateSpam(
   const MAX_CLOCK_SKEW_MS = 60_000;
   if (typeof input.ts === "number" && Number.isFinite(input.ts)) {
     const elapsed = now - input.ts;
-    if ((elapsed >= 0 && elapsed < minMs) || elapsed < -MAX_CLOCK_SKEW_MS) {
+    if (elapsed >= 0 && elapsed < minMs) {
       score += WEIGHTS.tooFast;
+      reasons.push(`too_fast:${Math.round(elapsed)}ms`);
+    } else if (elapsed < -MAX_CLOCK_SKEW_MS) {
+      score += WEIGHTS.futureTimestamp;
       reasons.push(`too_fast:${Math.round(elapsed)}ms`);
     }
   }
