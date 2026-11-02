@@ -48,6 +48,9 @@ export interface CallRecapInput {
   requested_service?: string | null;
   appointment_type?: string | null;
   appointment_details?: string | null;
+  /** Sent by the live Vapi sendCallRecap tool (folded into appointmentDetails). */
+  appointment_date?: string | null;
+  appointment_time?: string | null;
   property_address?: string | null;
   urgency?: string | null;
   call_summary?: string | null;
@@ -134,7 +137,9 @@ export function buildRecapRecord(input: CallRecapInput): RecapRecord {
 
   const reasonForCall = str(input.reason_for_call) ?? str(input.outcome);
   const requestedService = str(input.requested_service) ?? str(input.appointment_type);
-  const appointmentDetails = str(input.appointment_details);
+  const apptWhen = [str(input.appointment_date), str(input.appointment_time)].filter(Boolean).join(" at ");
+  const appointmentDetails =
+    [str(input.appointment_details), apptWhen || null].filter(Boolean).join(" — ") || null;
   const propertyAddress = str(input.property_address);
   const urgency = str(input.urgency);
   const aiSummary = str(input.ai_summary) ?? str(input.call_summary);
@@ -236,6 +241,12 @@ export interface RecapDeps {
   store: RecapStore;
   notifier: RecapNotifier;
   now?: () => Date;
+  /**
+   * When true the office email is NOT sent here: the Vapi end-of-call report
+   * (vapiEndOfCall.ts) sends ONE email with this recap + AI summary + the full
+   * transcript once the call has ended. Persistence and SMS are unaffected.
+   */
+  deferEmail?: boolean;
 }
 
 export interface CallRecapResult {
@@ -324,13 +335,17 @@ export async function persistCallRecap(
 
   // 4) Notifications — persistence is already committed. Failures are isolated.
   let emailed = false;
-  try {
-    emailed = await notifier.sendEmail(record, recapText);
-    if (!emailed) {
-      console.error(`[VapiTools][sendCallRecap] email delivery failed — recap #${recapId} remains saved`);
+  if (deps.deferEmail) {
+    console.info(`[VapiTools][sendCallRecap] email deferred to end-of-call report (recap #${recapId})`);
+  } else {
+    try {
+      emailed = await notifier.sendEmail(record, recapText);
+      if (!emailed) {
+        console.error(`[VapiTools][sendCallRecap] email delivery failed — recap #${recapId} remains saved`);
+      }
+    } catch (err) {
+      console.error(`[VapiTools][sendCallRecap] email threw (recap still saved):`, errMsg(err));
     }
-  } catch (err) {
-    console.error(`[VapiTools][sendCallRecap] email threw (recap still saved):`, errMsg(err));
   }
 
   // 5) SMS — only if the workflow requires it AND consent exists. Idempotent
