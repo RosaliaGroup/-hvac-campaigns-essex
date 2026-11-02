@@ -23,6 +23,12 @@ import {
   type RecapRecord,
   type RecapStore,
 } from "./callRecap";
+import {
+  handleEndOfCallReport,
+  isEndOfCallReport,
+  isOtherServerMessage,
+  parseEndOfCallReport,
+} from "./vapiEndOfCall";
 
 const RECAP_INBOX = "sales@mechanicalenterprise.com";
 
@@ -255,7 +261,9 @@ const notifier: RecapNotifier = {
 };
 
 export function productionRecapDeps(): RecapDeps {
-  return { store, notifier };
+  // VAPI_RECAP_EMAIL_AT_END_OF_CALL=true → the end-of-call report sends the one
+  // complete email (recap + summary + full transcript); the mid-call tool only stores.
+  return { store, notifier, deferEmail: process.env.VAPI_RECAP_EMAIL_AT_END_OF_CALL === "true" };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -282,6 +290,24 @@ export function registerVapiRecapRoute(app: Express): void {
     const provided = header.replace(/^Bearer\s+/i, "").trim();
     if (provided !== secret) {
       return res.status(401).json({ success: false, error: "Unauthorized" });
+    }
+
+    // Vapi server messages (assistant Server URL) share this endpoint + secret.
+    if (isEndOfCallReport(req.body)) {
+      const report = parseEndOfCallReport(req.body);
+      if (!report) return res.status(200).json({ success: true, ignored: "no call id" });
+      try {
+        return res.status(200).json(await handleEndOfCallReport(report));
+      } catch (err) {
+        console.error(
+          "[VapiRecapRoute] end-of-call report failed:",
+          err instanceof Error ? err.message : "unknown error",
+        );
+        return res.status(500).json({ success: false, error: "Failed to store end-of-call report" });
+      }
+    }
+    if (isOtherServerMessage(req.body)) {
+      return res.status(200).json({ success: true, ignored: true });
     }
 
     const body = (req.body ?? {}) as CallRecapInput;
