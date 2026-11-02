@@ -81,19 +81,14 @@ Edison
 
 ## 2. Voice — what callers hear
 
-Best natural sound for phone calls in 2026 comes from low-latency "flash" voice models. Use one of:
+**Live since Nov 2, 2026 on both assistants: ElevenLabs — Eleven v4 Turbo, voice "Sarah"
+(mature, reassuring, confident).** About 300 ms to first audio, $0.029/min.
 
-1. **ElevenLabs — model Flash v2.5** (recommended): most human-sounding real-time option.
-   Pick a warm, conversational American female voice and keep it the same on both assistants.
-   - Stability: 0.45 (lower = more natural variation; below 0.35 can wobble)
-   - Similarity: 0.75
-   - Style exaggeration: 0
-   - Speaker boost: On
-   - Streaming latency optimization: 3
-   - Do NOT use Eleven v3 for live calls — it isn't built for real-time.
-2. **Cartesia — Sonic 3.x**: lowest latency (under ~90 ms to first audio); slightly less expressive.
+- Eleven v3 Conversational is NOT available to this Vapi org — publishing with it fails.
+- Fallback if v4 Turbo is ever rejected: Vapi Voices v2 (about 430 ms, $0.02/min).
+- The old voice (Vapi Voices v1 "Emma", about 810 ms) sounded slow and robotic — don't go back to it.
 
-Speed 1.0. Avoid the default/robotic voices.
+Keep the same voice on inbound and outbound so callers hear one "Jessica".
 
 ## 3. Conversation timing — sounding human
 
@@ -116,7 +111,10 @@ Speed 1.0. Avoid the default/robotic voices.
 - Inbound phone number → inbound assistant. Outbound phone number → outbound assistant.
 - In Railway (service `-hvac-campaigns-essex`): `VAPI_OUTBOUND_ASSISTANT_ID` = outbound assistant ID,
   `VAPI_PHONE_NUMBER_ID` = outbound phone number ID. Without both, the CRM never places call-backs.
-- Tools stay as they are: getCallerInfo, bookHVAC, rescheduleHVAC, sendForm, sendCallRecap, End Call,
+- Railway variables set Nov 2, 2026: VAPI_OUTBOUND_ASSISTANT_ID = 0f768c27-dd34-4543-bc86-5d83f12d5b09,
+  VAPI_PHONE_NUMBER_ID = 184bbe34-dc62-4539-b11b-a0ce970d6e58.
+- Tools stay as they are: getCallerInfo, bookHVAC, rescheduleHVAC, MechanicalSendFormTelnyx, sendCallRecap, End Call,
+  mechanical_transfer_interested_install (inbound only),
   and the end-of-call report to `/api/vapi/call-recap`.
 
 ## 5. After changing settings — test call checklist
