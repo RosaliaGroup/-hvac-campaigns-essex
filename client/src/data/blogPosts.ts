@@ -1692,17 +1692,17 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    "title": "NJ Heat Pump Rebates 2026: Up to $16,000 Guide",
+    "title": "NJ Heat Pump Rebates 2026: Up to $16,000",
     "slug": "nj-heat-pump-rebates-2026",
     "date": "March 31, 2026",
-    "readTime": "7 min read",
+    "readTime": "6 min read",
     "category": "Rebates & Incentives",
-    "metaDescription": "NJ homeowners may qualify for up to $16,000 in PSE&G / NJ Clean Energy heat pump rebates in 2026. See how it works and book a free assessment.",
-    "excerpt": "New Jersey's PSE&G / NJ Clean Energy Program can put up to $16,000 toward a qualifying heat pump install in 2026. Here's how the program works, what affects your amount, and how to find out exactly what you qualify for.",
+    "metaDescription": "NJ homeowners may qualify for up to $16,000 in heat pump rebates in 2026. See how the program works and book a free in-home assessment.",
+    "excerpt": "New Jersey's PSE&G / NJ Clean Energy Program may put up to $16,000 toward a qualifying heat pump install in 2026. Here's how the program works, what affects your amount, and how to find out exactly what you qualify for.",
     "sections": [
       {
         "type": "intro",
-        "content": "New Jersey homeowners can still save significantly on a heat pump installation in 2026 through the PSE&G / NJ Clean Energy Program residential rebate, which can provide up to $16,000 toward a qualifying project. Commercial property owners have a separate option worth knowing about too: PSE&G's Direct Install program, which can cover up to 80% of project costs on qualifying commercial HVAC upgrades. This guide walks through how both programs work, what tends to influence your rebate amount, and how Mechanical Enterprise LLC handles the paperwork for you. We serve Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. Because every home and building is different, your exact rebate amount is confirmed during a free in-home assessment — not estimated online."
+        "content": "New Jersey homeowners can still put significant savings toward a heat pump installation in 2026 through the PSE&G / NJ Clean Energy Program, which may provide up to $16,000 toward a qualifying project. Commercial property owners have a separate path worth knowing about too: PSE&G's Direct Install program, which may cover up to 80% of costs on qualifying commercial HVAC upgrades. This guide covers how both programs work, what tends to influence your eligible amount, and how Mechanical Enterprise LLC handles the paperwork for you. We serve Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. Because every home and building is different, your exact amount is confirmed during a free in-home assessment — not estimated online."
       },
       {
         "type": "h2",
@@ -1710,7 +1710,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "The rebate landscape in NJ has simplified compared to prior years. For most homeowners, the main path to savings is the combined PSE&G / NJ Clean Energy Program rebate, which can provide up to $16,000 toward a qualifying heat pump installation. For commercial buildings — multifamily properties, offices, retail space, and similar — PSE&G's Direct Install program is the one to ask about, and it can cover up to 80% of a qualifying project's cost. Both programs are administered through PSE&G, and both require working with a contractor who can prepare and submit the application correctly."
+        "content": "The rebate landscape in NJ has simplified compared to prior years. For most homeowners, the main path to savings is the PSE&G / NJ Clean Energy Program, which may provide up to $16,000 toward a qualifying heat pump installation. For commercial buildings — multifamily properties, offices, retail space, and similar — PSE&G's Direct Install program is the one to ask about, and it may cover up to 80% of a qualifying project's cost. Both programs are administered through PSE&G, and both involve working with a contractor who can prepare and submit the application correctly."
       },
       {
         "type": "stat_box",
@@ -1722,7 +1722,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "This is the primary incentive for homeowners replacing a furnace, boiler, or aging AC system with a heat pump. The amount you may qualify for isn't a flat number — it depends on factors like the type of heat pump you install, the scope of the project, your home's current heating fuel, and what equipment and funding tiers are active at the time you apply. Rather than guess at a figure, we calculate your actual eligible amount during a free in-home assessment, and we put it in writing before you commit to any installation. If you're also weighing longer-term protection, Mechanical Enterprise offers an optional 10-year parts-and-labor coverage plan as a paid add-on on new installations (and, in some cases, on existing systems that pass an eligibility inspection) — that's a separate decision from the rebate itself, but it's worth discussing at the same visit."
+        "content": "This program is the main incentive for homeowners replacing a furnace, boiler, or aging air conditioner with a heat pump. The amount you may qualify for isn't a flat number — it depends on factors like the type of heat pump you install, the scope of the project, your home's current heating fuel, and which funding tiers happen to be active when you apply. Rather than guess at a figure, we calculate your actual eligible amount during a free in-home assessment and put it in writing before you commit to any installation. If you're also weighing longer-term protection for your new system, Mechanical Enterprise offers an optional 10-year parts-and-labor coverage plan as a paid add-on on new installations, and in some cases on existing systems that pass an eligibility inspection. That coverage decision is separate from the rebate itself, but it's worth discussing at the same visit."
       },
       {
         "type": "checklist",
@@ -1740,7 +1740,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "If you own or manage a commercial property — an office building, a multifamily property in Hudson County, a retail space, or similar — the residential rebate path isn't what applies to you. PSE&G's Direct Install program is built for commercial HVAC upgrades and can cover up to 80% of the project cost for qualifying work. Mechanical Enterprise installs and services commercial HVAC systems, including VRV/VRF systems, and can walk a property owner or facilities manager through what Direct Install requires, what documentation is needed, and what the program can realistically cover for a specific building. As with the residential program, the final number depends on the scope of the project and is confirmed before work starts."
+        "content": "If you own or manage a commercial property — an office building, a multifamily property in Union County, a retail space, or similar — the residential rebate path isn't what applies to you. PSE&G's Direct Install program is built for commercial HVAC upgrades and may cover up to 80% of the project cost for qualifying work. Mechanical Enterprise installs and services commercial HVAC systems, including VRV/VRF systems, and can walk a property owner or facilities manager through what Direct Install involves, what documentation is typically requested, and what the program can realistically cover for a specific building. As with the residential program, the final number depends on the scope of the project and is confirmed before any work starts."
       },
       {
         "type": "h2",
@@ -1748,11 +1748,11 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "A few things tend to move the needle on how much you can receive. The type of heat pump matters — ducted central systems and ductless mini-splits are evaluated differently. What you're replacing matters too: switching away from an older or less efficient heating system is often viewed differently than replacing newer equipment. Whether the project is residential or commercial changes which program applies entirely. And because these are utility-administered programs, funding levels and available tiers can shift over the course of the year, which is part of why getting a current, written number from your assessment matters more than relying on last year's figures or a number you saw online. We stay current on program status so you don't have to track it yourself."
+        "content": "A few things tend to move the needle on how much you may receive. The type of heat pump matters — ducted central systems and ductless mini-splits are evaluated differently. What you're replacing matters too: switching away from an older heating system is often viewed differently than replacing newer equipment. Whether the project is residential or commercial changes which program applies entirely. And because these are utility-administered programs, funding levels and available tiers can shift over the course of the year, which is part of why getting a current, written number from your assessment matters more than relying on last year's figures or a number you saw online somewhere. We stay current on program status so you don't have to track it yourself."
       },
       {
         "type": "h2",
-        "content": "How Mechanical Enterprise Handles the Rebate Process"
+        "content": "How We Handle the Rebate Process"
       },
       {
         "type": "paragraph",
@@ -1763,14 +1763,14 @@ export const blogPosts: BlogPostData[] = [
         "items": [
           "Free in-home assessment — we evaluate your current system, your home or building, and your eligibility for available programs",
           "Equipment recommendation — sized and selected for your space, with program eligibility factored in from the start",
-          "Paperwork preparation — we complete the required program documentation and pre-approvals before installation begins where applicable",
+          "Paperwork preparation — we complete the required program documentation before installation begins where applicable",
           "Installation — our technicians install the system and pull all required permits",
           "Rebate submission — we file the final paperwork after installation so you aren't left chasing a check"
         ]
       },
       {
         "type": "cta_box",
-        "content": "Want to know your actual rebate number? Our free in-home assessment confirms exactly what you qualify for — no guesswork, no obligation.",
+        "content": "Want to know your actual rebate number? Our free in-home assessment confirms exactly what you may qualify for — no guesswork, no obligation.",
         "buttonText": "Book My Free Assessment →",
         "buttonUrl": "https://mechanicalenterprise.com/rebate-calculator"
       },
@@ -1780,14 +1780,14 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Mechanical Enterprise LLC has worked in New Jersey HVAC for 20 years, serving Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. Our services cover heat pumps, central AC, ductless mini-splits, full HVAC system replacements, commercial HVAC, and VRV/VRF systems. Whether you're a homeowner weighing a switch to a heat pump or a property owner evaluating a commercial upgrade, the first step is the same: a free assessment that tells you exactly what your building qualifies for, in writing, before you make any decisions."
+        "content": "Mechanical Enterprise LLC has worked in New Jersey HVAC for 20 years, serving Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. Our services cover heat pumps, central air conditioning, ductless mini-splits, full HVAC system replacements, commercial HVAC, and VRV/VRF systems. Whether you're a homeowner weighing a switch to a heat pump or a property owner evaluating a commercial upgrade in Bergen or Middlesex County, the first step is the same: a free assessment that tells you exactly what your building may qualify for, in writing, before you make any decisions."
       }
     ],
-    "updatedDate": "October 30, 2026",
+    "updatedDate": "November 2, 2026",
     "faqSchema": [
       {
         "question": "How much can I get back for a heat pump in NJ in 2026?",
-        "answer": "Many homeowners may qualify for up to $16,000 through the combined PSE&G / NJ Clean Energy Program rebate. Your exact amount depends on your home and equipment and is confirmed during a free assessment."
+        "answer": "Many homeowners may qualify for up to $16,000 through the PSE&G / NJ Clean Energy Program rebate. Your exact amount depends on your home and equipment and is confirmed during a free assessment."
       },
       {
         "question": "Does my business qualify for a heat pump rebate?",
