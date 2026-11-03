@@ -19,6 +19,7 @@ import { getDb } from "../../../db";
 import { seoIntelCompetitorSnapshots, type SeoIntelCompetitorSnapshotRow } from "../../../../drizzle/schema";
 import { COMPETITOR_WATCHLIST, fetchableCompetitors, type WatchedCompetitor } from "../../../../shared/competitorWatchlist";
 import type { CompetitorDiffFinding, CompetitorDiffKind } from "../../../../shared/marketIntelTypes";
+import { confirmedCompetitorsForWatch } from "./competitorDashboard";
 
 const USER_AGENT = "Mechanical Enterprise Market Intel Bot (+https://mechanicalenterprise.com)";
 const DAILY_PAGE_CAP = 60; // §4 cost cap
@@ -236,7 +237,14 @@ export async function watchCompetitor(competitor: WatchedCompetitor, remainingBu
 
 /** Real I/O: watch every domain-verified competitor, respecting the daily page cap. */
 export async function collectCompetitorDiffs(now: Date = new Date()): Promise<{ diffs: CompetitorDiffFinding[]; skippedDomains: string[] }> {
-  const watchable = fetchableCompetitors();
+  // Competitors the owner confirmed in the CRM (Competitors dashboard) take part alongside the code seed list.
+  const fromCrm = await confirmedCompetitorsForWatch().catch(() => []);
+  const seed = fetchableCompetitors();
+  const seen = new Set(seed.map((c) => c.domain));
+  const watchable: WatchedCompetitor[] = [
+    ...seed,
+    ...fromCrm.filter((c) => !seen.has(c.domain)).map((c) => ({ name: c.name, domain: c.domain, domainVerified: true, pages: ["/"], queries: [] })),
+  ];
   const budget = { count: DAILY_PAGE_CAP };
   const diffs: CompetitorDiffFinding[] = [];
   const skippedDomains: string[] = [];
@@ -245,6 +253,7 @@ export async function collectCompetitorDiffs(now: Date = new Date()): Promise<{ 
     for (const r of results) diffs.push(...r.diffs);
   }
   // Every non-verified seed entry is effectively "skipped" — surfaced so the report can say why the list looks thin.
-  for (const c of COMPETITOR_WATCHLIST) if (!c.domainVerified) skippedDomains.push(c.name);
+  const crmNames = new Set(fromCrm.map((c) => c.name.toLowerCase()));
+  for (const c of COMPETITOR_WATCHLIST) if (!c.domainVerified && !crmNames.has(c.name.toLowerCase())) skippedDomains.push(c.name);
   return { diffs, skippedDomains };
 }

@@ -9,9 +9,12 @@
  */
 import { msUntilNextRun, parseCronToSchedule, type ScheduleSpec } from "../../../../shared/cronTiming";
 import { runMarketIntelReport } from "./report";
+import { refreshCompetitorDashboard } from "./competitorDashboard";
 
 const DEFAULT_SCHEDULE: ScheduleSpec = { hour: 6, minute: 0, timeZone: "America/New_York" };
 const MONDAY_WEEKLY_SCHEDULE: ScheduleSpec = { hour: 6, minute: 30, timeZone: "America/New_York", weekdays: [1] };
+/** Competitors dashboard refresh — before the weekly roll-up so its changes make Monday's report. */
+const MONDAY_COMPETITORS_SCHEDULE: ScheduleSpec = { hour: 5, minute: 30, timeZone: "America/New_York", weekdays: [1] };
 
 function dailySchedule(): ScheduleSpec {
   const raw = process.env.SEO_INTEL_SCHEDULE?.trim();
@@ -54,7 +57,16 @@ export function startMarketIntelScheduler(): void {
         .finally(armWeekly);
     }, delay);
   };
+  const armCompetitors = () => {
+    const delay = msUntilNextRun(MONDAY_COMPETITORS_SCHEDULE);
+    setTimeout(() => {
+      refreshCompetitorDashboard()
+        .catch((err) => console.error("[Competitors] weekly refresh error:", (err as Error).message))
+        .finally(armCompetitors);
+    }, delay);
+  };
   console.log(`[MarketIntel] scheduled — ${process.env.SEO_INTEL_SCHEDULE?.trim() || "06:00 America/New_York daily (default)"}; weekly roll-up Mondays 06:30 ET`);
   armDaily();
   armWeekly();
+  armCompetitors();
 }

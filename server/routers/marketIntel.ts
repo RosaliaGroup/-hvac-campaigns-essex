@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
-import { protectedProcedure, router } from "../_core/trpc";
+import { adminProcedure, protectedProcedure, router } from "../_core/trpc";
 import { resolveTeamMemberId } from "../../shared/fieldApp";
 import { getDb } from "../db";
 import { seoIntelReports, seoIntelItems } from "../../drizzle/schema";
@@ -11,8 +11,19 @@ import { submitOwnerDecisionValue, OwnerDecisionValueRequiredError } from "../se
 import { openPagePR } from "../services/seo/intel/pagePr";
 import { GithubNotConfiguredError } from "../services/seo/github";
 import { startLaneJob, getLaneJobStatus } from "../services/asyncLaneJob";
+import {
+  CompetitorTablesMissingError,
+  getDashboardSnapshot,
+  listCompetitors,
+  refreshCompetitorDashboard,
+  seedSuggestedCompetitors,
+  upsertCompetitor,
+} from "../services/seo/intel/competitorDashboard";
+import { normalizeDomain } from "../../shared/competitorDashboard";
+import { COMPETITOR_WATCHLIST } from "../../shared/competitorWatchlist";
 
 function toTRPCError(err: unknown): never {
+  if (err instanceof CompetitorTablesMissingError) throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
   if (err instanceof ItemNotFoundError) throw new TRPCError({ code: "NOT_FOUND", message: err.message });
   if (err instanceof OwnerDecisionValueRequiredError) throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
   if (err instanceof GithubNotConfiguredError) throw new TRPCError({ code: "PRECONDITION_FAILED", message: err.message });
@@ -138,4 +149,48 @@ export const marketIntelRouter = router({
         toTRPCError(err);
       }
     }),
+
+  /* ── Competitors dashboard (free sources; shared/competitorDashboard.ts) ── */
+
+  /** Everything the Competitors page needs. `setupNeeded` is true until 0084 is applied. */
+  competitorDashboard: protectedProcedure.query(async () => {
+    try {
+      await seedSuggestedCompetitors();
+      const [competitors, snapshot] = await Promise.all([listCompetitors(), getDashboardSnapshot()]);
+      const known = new Set(competitors.map((c) => c.name.toLowerCase()));
+      const namesWithoutDomain = COMPETITOR_WATCHLIST.map((c) => c.name).filter((n) => !known.has(n.toLowerCase()));
+      return { setupNeeded: false as const, competitors, namesWithoutDomain, ...snapshot, job: getLaneJobStatus("competitors") };
+    } catch (err) {
+      if (err instanceof CompetitorTablesMissingError) {
+        return { setupNeeded: true as const, competitors: [], namesWithoutDomain: COMPETITOR_WATCHLIST.map((c) => c.name), weekOf: null, current: [], previous: [], ourQueries: [], job: getLaneJobStatus("competitors") };
+      }
+      toTRPCError(err);
+    }
+  }),
+
+  saveCompetitor: adminProcedure
+    .input(z.object({
+      id: z.number().optional(),
+      name: z.string().trim().min(1).max(255),
+      domain: z.string().trim().min(3).max(255),
+      status: z.enum(["suggested", "confirmed", "removed"]),
+      brandTerms: z.array(z.string().trim().min(1).max(100)).max(10).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const domain = normalizeDomain(input.domain);
+      if (!domain) throw new TRPCError({ code: "BAD_REQUEST", message: "That doesn't look like a website address (example: ajperri.com)." });
+      try {
+        await upsertCompetitor({ ...input, domain });
+        console.log("[Competitors] saved", JSON.stringify({ actor: (ctx.user as { email?: string } | null)?.email ?? null, name: input.name, domain, status: input.status }));
+        return { ok: true, domain };
+      } catch (err) {
+        toTRPCError(err);
+      }
+    }),
+
+  /** Fire-and-forget refresh (PageSpeed alone can take ~30s per site); poll competitorDashboard.job. */
+  refreshCompetitors: protectedProcedure.mutation(async () => {
+    const { started } = startLaneJob("competitors", () => refreshCompetitorDashboard());
+    return { started, status: getLaneJobStatus("competitors") };
+  }),
 });

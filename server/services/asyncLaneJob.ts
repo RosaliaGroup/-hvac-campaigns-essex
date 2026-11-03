@@ -182,7 +182,7 @@ export function listRunningJobs(kind?: string): JobSnapshot[] {
 
 /* ── Lane front door (unchanged public API) ──────────────────────────────── */
 
-export const LANES = ["content", "meta", "marketIntel"] as const;
+export const LANES = ["content", "meta", "marketIntel", "competitors"] as const;
 export type LaneName = (typeof LANES)[number];
 
 export type LaneJobStatus = {

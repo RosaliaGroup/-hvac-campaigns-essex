@@ -15,6 +15,8 @@ import { seoIntelReports, seoIntelItems, type SeoIntelReportRow } from "../../..
 import { getSeoSiteUrl } from "../../../integrations/searchConsole";
 import { snapshotTodaysQueries, collectSearchDemand } from "./searchDemand";
 import { collectCompetitorDiffs } from "./competitorWatch";
+import { getDashboardSnapshot } from "./competitorDashboard";
+import { weeklyChanges } from "../../../../shared/competitorDashboard";
 import { collectSerpChecks } from "./serpChecks";
 import { collectTrends } from "./trends";
 import { runAiVisibilityCheck, collectAiVisibility } from "./aiVisibility";
@@ -68,6 +70,15 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
   }
 
   const competitors = await collectCompetitorDiffs(now).catch((err) => ({ diffs: [], skippedDomains: [`collection failed: ${(err as Error).message}`] }));
+  let competitorWeeklyChanges: string[] | undefined;
+  if (windowKind === "weekly") {
+    try {
+      const snap = await getDashboardSnapshot();
+      competitorWeeklyChanges = snap.current.flatMap((cur) => weeklyChanges(cur, snap.previous.find((p) => p.domain === cur.domain) ?? null));
+    } catch (err) {
+      console.error("[MarketIntel] competitor dashboard changes skipped:", (err as Error).message);
+    }
+  }
   const serp = await collectSerpChecks();
   const trends = await collectTrends();
   const differentiatorMatches = detectDifferentiatorMatches(competitors.diffs);
@@ -107,7 +118,7 @@ export async function runMarketIntelReport(opts: RunReportOptions = {}): Promise
     ...(notes.length ? { notes } : {}),
     ...(crawlCheck ? { crawlCheck } : {}),
     ...(experiment ? { experiment } : {}),
-    searchDemand, competitors: { diffs: competitors.diffs, skippedDomains: competitors.skippedDomains },
+    searchDemand, competitors: { diffs: competitors.diffs, skippedDomains: competitors.skippedDomains, ...(competitorWeeklyChanges?.length ? { weeklyChanges: competitorWeeklyChanges } : {}) },
     positioning: { theirClaims: differentiatorMatches, ourStaleClaims: staleClaims },
     serp, trends,
     ...(aiVisibility ? { aiVisibility } : {}),
