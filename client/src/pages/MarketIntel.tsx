@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Loader2, RotateCcw, Ban, ExternalLink } from "lucide-react";
+import { RefreshCw, Loader2, RotateCcw, Ban, ExternalLink, Users } from "lucide-react";
+import { Link } from "wouter";
 import DashboardFooter from "@/components/DashboardFooter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -97,10 +98,15 @@ export default function MarketIntel() {
           <h1 className="text-2xl font-semibold">Market Intel</h1>
           <p className="text-sm text-muted-foreground">Daily search demand, competitor, and positioning report (docs/market-intel-spec.md).</p>
         </div>
+        <div className="flex gap-2">
+        <Link href="/market-intel/competitors">
+          <Button variant="outline"><Users className="h-4 w-4 mr-2" />Competitors</Button>
+        </Link>
         <Button onClick={() => runNow.mutate()} disabled={runNow.isPending || jobRunning}>
           {runNow.isPending || jobRunning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
           {jobRunning ? "Running… this can take a few minutes" : "Run now"}
         </Button>
+        </div>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -144,6 +150,17 @@ export default function MarketIntel() {
             return (
               <>
                 {aiv && <AiVisibilityCard section={aiv} />}
+                {(sec?.competitors?.weeklyChanges?.length ?? 0) > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base">Competitor changes this week</CardTitle>
+                      <CardDescription>From the Competitors dashboard (free sources). <Link href="/market-intel/competitors" className="text-primary hover:underline">Open dashboard</Link></CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-1 text-sm">
+                      {sec!.competitors.weeklyChanges!.map((c, i) => <div key={i}>• {c}</div>)}
+                    </CardContent>
+                  </Card>
+                )}
                 {cc && (
                   <Card>
                     <CardHeader>

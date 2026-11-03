@@ -153,6 +153,8 @@ export type MarketIntelSections = {
   competitors: {
     diffs: CompetitorDiffFinding[];
     skippedDomains: string[];
+    /** Weekly roll-up only: week-over-week changes from the Competitors dashboard (ad tags, new pages, brand searches). */
+    weeklyChanges?: string[];
   };
   positioning: {
     theirClaims: Array<{ differentiator: string; competitor: string; evidence: string }>;

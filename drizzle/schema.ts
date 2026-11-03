@@ -3720,6 +3720,50 @@ export const seoIntelAiVisibility = mysqlTable(
 );
 export type SeoIntelAiVisibilityRow = typeof seoIntelAiVisibility.$inferSelect;
 export type InsertSeoIntelAiVisibility = typeof seoIntelAiVisibility.$inferInsert;
+
+/**
+ * Owner-editable competitor watchlist (Competitors dashboard, client/src/pages/CompetitorDashboard.tsx).
+ * Supersedes the static shared/competitorWatchlist.ts seed once 0084 is applied: only `confirmed` rows are
+ * fetched (page watch, sitemap, homepage tags, PageSpeed); `suggested` rows wait for the owner to confirm the domain.
+ */
+export const seoIntelCompetitors = mysqlTable(
+  "seoIntelCompetitors",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 255 }).notNull(),
+    /** Bare host, e.g. "ajperri.com" (no scheme, no www). Unique. */
+    domain: varchar("domain", { length: 255 }).notNull(),
+    status: mysqlEnum("status", ["suggested", "confirmed", "removed"]).default("suggested").notNull(),
+    /** string[] of extra brand search terms; the name is always included. */
+    brandTerms: json("brandTerms"),
+    note: text("note"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    domainUq: uniqueIndex("seoIntelCompetitors_domain_uq").on(table.domain),
+  }),
+);
+export type SeoIntelCompetitorRow = typeof seoIntelCompetitors.$inferSelect;
+
+/** Weekly free-source metrics per domain (us + each confirmed competitor). metricKey = sha256(weekOf|domain). */
+export const seoIntelCompetitorMetrics = mysqlTable(
+  "seoIntelCompetitorMetrics",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    weekOf: varchar("weekOf", { length: 10 }).notNull(),
+    domain: varchar("domain", { length: 255 }).notNull(),
+    metricKey: varchar("metricKey", { length: 64 }).notNull(),
+    /** shared/competitorDashboard.ts DomainMetrics. */
+    data: json("data").notNull(),
+    capturedAt: timestamp("capturedAt").defaultNow().notNull(),
+  },
+  table => ({
+    keyUq: uniqueIndex("seoIntelCompetitorMetrics_key_uq").on(table.metricKey),
+    weekIdx: index("seoIntelCompetitorMetrics_week_idx").on(table.weekOf),
+  }),
+);
+export type SeoIntelCompetitorMetricRow = typeof seoIntelCompetitorMetrics.$inferSelect;
 export type InsertEstimateLineItem = typeof estimateLineItems.$inferInsert;
 
 // ═══════════════════════════════════════════════════════════════════════════
