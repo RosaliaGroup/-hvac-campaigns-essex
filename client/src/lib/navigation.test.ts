@@ -226,11 +226,13 @@ describe("resolveNavRole", () => {
       { role: "user", teamRole: "admin" },
       { role: "user", teamRole: "viewer" },
       { role: "user", teamRole: "member" },
+      { role: "user", teamRole: "sales" },
     ];
     for (const s of samples) {
       expect(PRODUCTION_ROLES).toContain(resolveNavRole(s));
     }
-    expect(PRODUCTION_ROLES).toEqual(["admin", "member", "viewer"]);
+    expect(PRODUCTION_ROLES).toEqual(["admin", "member", "viewer", "sales"]);
+    expect(resolveNavRole({ role: "user", teamRole: "sales" })).toBe("sales");
   });
 });
 
@@ -285,19 +287,13 @@ describe("getVisibleDepartments", () => {
   // resolves to these roles yet (resolveNavRole only returns admin/member/viewer);
   // they are kept and tested so the mechanism is ready when a role field is added.
 
-  it("sales sees Sales tools, Calendar and Command Center — not Marketing or Dispatch jobs", () => {
-    expect(deptIds("sales")).toEqual(["home", "sales", "dispatch"]);
-    expect(itemLabels("sales", "sales")).toEqual([
-      "Lead Inbox",
-      "Communications",
-      "Contacts",
-      "Opportunity Center",
-      "Prospecting & Follow-up",
-      "Lead Scoring",
-    ]);
-    // Only the Calendar leaks into Dispatch for a salesperson.
+  it("sales sees only the Lead Inbox, Contacts and Calendar — no dashboard, money or marketing", () => {
+    expect(deptIds("sales")).toEqual(["sales", "dispatch"]);
+    expect(itemLabels("sales", "sales")).toEqual(["Lead Inbox", "Contacts"]);
     expect(itemLabels("sales", "dispatch")).toEqual(["Calendar"]);
-    expect(deptIds("sales")).not.toContain("marketing");
+    for (const d of ["home", "marketing", "accounting", "ai", "analytics", "admin"]) {
+      expect(deptIds("sales")).not.toContain(d);
+    }
   });
 
   it("dispatcher sees Dispatch & Field plus Contacts", () => {

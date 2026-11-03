@@ -936,7 +936,7 @@ export type TeamMemberContactFields = {
 export async function createTeamMember(data: {
   email: string;
   name: string;
-  role: "admin" | "member" | "viewer";
+  role: "admin" | "member" | "viewer" | "sales";
   inviteToken: string;
   inviteExpiresAt: Date;
   invitedBy: string;
@@ -967,7 +967,7 @@ export async function updateTeamMember(
   data: Partial<{
     name: string;
     email: string;
-    role: "admin" | "member" | "viewer";
+    role: "admin" | "member" | "viewer" | "sales";
   } & TeamMemberContactFields>,
 ) {
   const db = await getDb();

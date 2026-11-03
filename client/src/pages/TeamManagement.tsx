@@ -34,6 +34,7 @@ const roleBadge: Record<string, string> = {
   admin: "bg-purple-100 text-purple-700",
   member: "bg-blue-100 text-blue-700",
   viewer: "bg-gray-100 text-gray-700",
+  sales: "bg-orange-100 text-orange-700",
 };
 
 const statusBadge: Record<string, string> = {
@@ -42,7 +43,7 @@ const statusBadge: Record<string, string> = {
   suspended: "bg-red-100 text-red-700",
 };
 
-type Role = "admin" | "member" | "viewer";
+type Role = "admin" | "member" | "viewer" | "sales";
 type FormState = ContactFieldsValue & {
   firstName: string;
   lastName: string;
@@ -306,6 +307,7 @@ export default function TeamManagement() {
                         <SelectItem value="admin">Admin — full access</SelectItem>
                         <SelectItem value="member">Member — standard access</SelectItem>
                         <SelectItem value="viewer">Viewer — read-only</SelectItem>
+                        <SelectItem value="sales">Sales — leads, contacts, appointments &amp; calls only</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (
@@ -467,7 +469,7 @@ export default function TeamManagement() {
           <CardContent className="pt-4">
             <h3 className="font-semibold text-sm mb-3">How team access works</h3>
             <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
-              <li>Click <strong>Add Team Member</strong>, fill in their details, and assign a role: <strong>Admin</strong> (full access), <strong>Member</strong> (standard), or <strong>Viewer</strong> (read-only).</li>
+              <li>Click <strong>Add Team Member</strong>, fill in their details, and assign a role: <strong>Admin</strong> (full access), <strong>Member</strong> (standard), <strong>Viewer</strong> (read-only), or <strong>Sales</strong> (leads, contacts, appointments and recorded calls only — no financials, marketing or settings).</li>
               <li>Copy the generated invite link and send it to them directly (email, text, etc.).</li>
               <li>They click the link, set their password, and are immediately logged in.</li>
               <li>Team members (including field technicians) can keep their own phone, address, emergency contact, and photo up to date under <strong>My Profile</strong>.</li>

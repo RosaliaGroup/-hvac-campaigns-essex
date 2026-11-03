@@ -189,7 +189,7 @@ export const teamAuthRouter = router({
       lastName: z.string().trim().min(1, "Last name is required").max(120),
       email: z.string().trim().email("Enter a valid work email address."),
       mobilePhone: z.string().trim().min(1, "Mobile phone is required"),
-      role: z.enum(["admin", "member", "viewer"]).default("member"),
+      role: z.enum(["admin", "member", "viewer", "sales"]).default("member"),
       origin: z.string().url(),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -464,7 +464,7 @@ export const teamAuthRouter = router({
       firstName: z.string().trim().max(120).optional(),
       lastName: z.string().trim().max(120).optional(),
       email: z.string().trim().email("Enter a valid work email address.").optional(),
-      role: z.enum(["admin", "member", "viewer"]).optional(),
+      role: z.enum(["admin", "member", "viewer", "sales"]).optional(),
     }))
     .mutation(async ({ input }) => {
       const member = await db.getTeamMemberById(input.id);

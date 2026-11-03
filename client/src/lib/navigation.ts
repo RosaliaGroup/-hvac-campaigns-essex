@@ -20,6 +20,8 @@
  * and the only ones `resolveNavRole` ever returns:
  *   - `admin`   users.role === "admin" OR team session teamRole "admin"
  *   - `viewer`  team session teamRole "viewer" (read-only where supported)
+ *   - `sales`   team session teamRole "sales" — Lead Inbox, Contacts, Calendar,
+ *               recorded calls; no financials/marketing/admin
  *   - `member`  everyone else (default operational employee)
  *
  * FUTURE roles — `sales` / `dispatcher` / `technician` / `marketing` are kept as
@@ -47,7 +49,7 @@ export const ALL_ROLES: NavRole[] = [
 ];
 
 /** Roles a real user can currently be resolved to in production. */
-export const PRODUCTION_ROLES: NavRole[] = ["admin", "member", "viewer"];
+export const PRODUCTION_ROLES: NavRole[] = ["admin", "member", "viewer", "sales"];
 
 /* ── Nav model ─────────────────────────────────────────────────────────── */
 
@@ -90,7 +92,7 @@ export const DEPARTMENTS: NavDepartment[] = [
     primaryPath: "/command-center",
     items: [
       // The single business-overview dashboard. (User-facing name: "Dashboard".)
-      { label: "Dashboard", path: "/command-center", icon: "LayoutDashboard", roles: ["sales", "dispatcher", "technician", "marketing", CRM] },
+      { label: "Dashboard", path: "/command-center", icon: "LayoutDashboard", roles: ["dispatcher", "technician", "marketing", CRM] },
     ],
   },
   {
@@ -100,12 +102,12 @@ export const DEPARTMENTS: NavDepartment[] = [
     primaryPath: "/lead-dashboard",
     items: [
       { label: "Lead Inbox", path: "/lead-dashboard", icon: "Inbox", roles: ["sales", "marketing", CRM] },
-      { label: "Communications", path: "/contacts/communications", icon: "MessageSquare", roles: ["sales", "dispatcher", CRM] },
-      { label: "Tasks", path: "/tasks", icon: "ListTodo", roles: ["sales", "dispatcher", CRM] },
+      { label: "Communications", path: "/contacts/communications", icon: "MessageSquare", roles: ["dispatcher", CRM] },
+      { label: "Tasks", path: "/tasks", icon: "ListTodo", roles: ["dispatcher", CRM] },
       { label: "Contacts", path: "/customers", icon: "UserRound", roles: ["sales", "dispatcher", CRM] },
-      { label: "Opportunity Center", path: "/opportunities", icon: "Target", roles: ["sales", CRM] },
-      { label: "Prospecting & Follow-up", path: "/growth", icon: "Target", roles: ["sales", "marketing", CRM] },
-      { label: "Lead Scoring", path: "/lead-scoring", icon: "Star", roles: ["sales", CRM] },
+      { label: "Opportunity Center", path: "/opportunities", icon: "Target", roles: [CRM] },
+      { label: "Prospecting & Follow-up", path: "/growth", icon: "Target", roles: ["marketing", CRM] },
+      { label: "Lead Scoring", path: "/lead-scoring", icon: "Star", roles: [CRM] },
     ],
   },
   {
@@ -283,6 +285,9 @@ export function resolveNavRole(user: UserLike): NavRole {
   if (!user) return "member";
   if (user.role === "admin" || user.teamRole === "admin") return "admin";
   if (user.teamRole === "viewer") return "viewer";
+  // Sales: Lead Inbox, Contacts and Calendar only (server enforces the same
+  // limits — see shared/salesAccess.ts).
+  if (user.teamRole === "sales") return "sales";
   return "member";
 }
 

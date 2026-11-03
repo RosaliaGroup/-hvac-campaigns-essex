@@ -19,6 +19,7 @@ import { registerSeoRoutes } from "../seo";
 import { startScheduledSmsProcessor } from "../services/scheduledSms";
 import { startSalesDocPoller } from "../services/salesDocPoller";
 import { startDueReminderSweep } from "../services/dueReminderSweep";
+import { registerClickToCallRoutes } from "../services/clickToCall";
 import { registerSmsWebhookRoutes, assertWebhookSecurityOrExit } from "../services/smsWebhook";
 import { registerHvacHomeownerImportRoute } from "../services/hvacHomeownerImportRoute";
 import { registerHomeownerUnsubscribeRoute, startHomeownerEmailLane } from "../services/homeownerEmailLane";
@@ -80,6 +81,7 @@ async function startServer() {
   registerOAuthRoutes(app);
   // SMS reply webhook — Telnyx inbound (active) + legacy TextBelt format fallback
   registerSmsWebhookRoutes(app);
+  registerClickToCallRoutes(app);
   // Temporary token-gated, outbound-disabled purchased-homeowner import.
   registerHvacHomeownerImportRoute(app);
   // Public, token-verified unsubscribe for the homeowner email campaign (link + one-click POST).

@@ -329,7 +329,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             {activeLabel}
           </span>
           <div className="ml-auto flex items-center gap-2">
-            <MarketingAiStatus />
+            {role !== "sales" && <MarketingAiStatus />}
             <NotificationBell />
           </div>
         </header>
