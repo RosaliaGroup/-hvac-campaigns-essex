@@ -191,6 +191,10 @@ export const callLogs = mysqlTable("callLogs", {
   leadId: int("leadId"),
   // Customer linkage (Phase 1)
   customerId: int("customerId"),
+  /** leadCaptures.id when the call was placed from a lead (click-to-call). */
+  leadCaptureId: int("leadCaptureId"),
+  /** teamMembers.id of the rep who placed a click-to-call. */
+  agentTeamMemberId: int("agentTeamMemberId"),
   leadQuality: mysqlEnum("leadQuality", ["hot", "warm", "cold"]),
   serviceType: varchar("serviceType", { length: 255 }),
   budget: varchar("budget", { length: 100 }),
@@ -518,7 +522,7 @@ export const teamMembers = mysqlTable("teamMembers", {
   email: varchar("email", { length: 320 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   passwordHash: text("passwordHash"),
-  role: mysqlEnum("role", ["admin", "member", "viewer"]).default("member").notNull(),
+  role: mysqlEnum("role", ["admin", "member", "viewer", "sales"]).default("member").notNull(),
   status: mysqlEnum("status", ["invited", "active", "suspended"]).default("invited").notNull(),
   inviteToken: varchar("inviteToken", { length: 128 }),
   inviteExpiresAt: timestamp("inviteExpiresAt"),

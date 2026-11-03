@@ -13,6 +13,9 @@ import InternalNav from "@/components/InternalNav";
 import AppointmentDialog from "@/components/AppointmentDialog";
 import PropertyLinkSection from "@/components/PropertyLinkSection";
 import ConversationPreview from "@/components/sms/ConversationPreview";
+import { CallButton, CallHistoryCard } from "@/components/calls/ClickToCall";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { isSalesUser } from "@shared/salesAccess";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,7 +44,9 @@ export default function LeadDetail() {
   const leadId = parseInt(params.id || "0");
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const qboStatus = trpc.quickbooks.getStatus.useQuery();
+  // Sales reps get contact/appointment/call tools only — no QuickBooks or estimates.
+  const isSales = isSalesUser(useAuth().user as { teamRole?: string } | null);
+  const qboStatus = trpc.quickbooks.getStatus.useQuery(undefined, { enabled: !isSales });
   const qboPush = trpc.quickbooks.pushCustomer.useMutation({
     onSuccess: result => {
       if (result.outcome === "conflict") {
@@ -141,7 +146,7 @@ export default function LeadDetail() {
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="property">Property</TabsTrigger>
             <TabsTrigger value="appointments">Appointments ({appointments.length})</TabsTrigger>
-            <TabsTrigger value="estimates">Estimates</TabsTrigger>
+            {!isSales && <TabsTrigger value="estimates">Estimates</TabsTrigger>}
             <TabsTrigger value="timeline">Timeline</TabsTrigger>
           </TabsList>
 
@@ -183,19 +188,17 @@ export default function LeadDetail() {
             <Card>
               <CardHeader className="pb-3"><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
               <CardContent className="flex flex-wrap gap-2">
-                <Button asChild size="sm" variant="outline" disabled={!cap.phone}>
-                  <a href={cap.phone ? `tel:${cap.phone}` : undefined}><Phone className="h-3.5 w-3.5 mr-1" /> Call</a>
-                </Button>
-                <Button size="sm" variant="outline" disabled={!cap.phone} onClick={() => cap.phone && navigate(internalSmsConversationPath(cap.phone))}>
+                <CallButton phone={cap.phone} leadCaptureId={leadId} customerId={cap.customerId} />
+                {!isSales && <Button size="sm" variant="outline" disabled={!cap.phone} onClick={() => cap.phone && navigate(internalSmsConversationPath(cap.phone))}>
                   <MessageSquare className="h-3.5 w-3.5 mr-1" /> Text
-                </Button>
+                </Button>}
                 <Button size="sm" variant="outline" onClick={() => setScheduleOpen(true)}>
                   <CalendarPlus className="h-3.5 w-3.5 mr-1" /> Schedule Assessment
                 </Button>
-                <Button size="sm" variant="outline" disabled={!cap.email} onClick={() => navigate(`/contacts/communications?leadCaptureId=${leadId}`)}>
+                {!isSales && <Button size="sm" variant="outline" disabled={!cap.email} onClick={() => navigate(`/contacts/communications?leadCaptureId=${leadId}`)}>
                   <Mail className="h-3.5 w-3.5 mr-1" /> Email
-                </Button>
-                {cap.customerId ? (
+                </Button>}
+                {isSales ? null : cap.customerId ? (
                   <Button size="sm" variant="outline"
                     disabled={!qboStatus.data?.connected || qboPush.isPending}
                     onClick={() => qboPush.mutate({ customerId: cap.customerId! })}>
@@ -209,11 +212,13 @@ export default function LeadDetail() {
                 )}
                 {/* Task 8B — Create Estimate is available at ANY stage. Converts the lead
                     to a customer (dedupe) if needed, then opens the Good/Better/Best builder. */}
-                {cap.customerId
+                {isSales ? null : cap.customerId
                   ? <StartEstimateButton variant="outline" customerId={cap.customerId} defaultTitle={`Estimate for ${name}`} label="Create Estimate" />
                   : <StartEstimateButton variant="outline" captureId={leadId} defaultTitle={`Estimate for ${name}`} label="Create Estimate" />}
               </CardContent>
             </Card>
+
+            <CallHistoryCard phone={cap.phone} leadCaptureId={leadId} customerId={cap.customerId} />
 
             <ConversationPreview phone={cap.phone} />
 
@@ -277,7 +282,7 @@ export default function LeadDetail() {
           </TabsContent>
 
           {/* ── Estimates ── */}
-          <TabsContent value="estimates">
+          {!isSales && <TabsContent value="estimates">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                 <CardTitle className="text-base flex items-center gap-2"><ClipboardList className="h-4 w-4 text-[#1e3a5f]" /> Tiered Estimates</CardTitle>
@@ -291,7 +296,7 @@ export default function LeadDetail() {
                   : <p className="text-sm text-muted-foreground">No estimates yet. Creating one converts this lead to a customer (matching an existing customer by phone/email when possible), then opens the Good/Better/Best builder.</p>}
               </CardContent>
             </Card>
-          </TabsContent>
+          </TabsContent>}
 
           {/* ── Timeline ── */}
           <TabsContent value="timeline">

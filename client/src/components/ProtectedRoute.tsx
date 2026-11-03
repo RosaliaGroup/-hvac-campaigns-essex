@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
+import { isSalesRoute, isSalesUser, SALES_HOME } from "@shared/salesAccess";
 
 interface ProtectedRouteProps {
   component: React.ComponentType;
@@ -19,8 +21,12 @@ interface ProtectedRouteProps {
  *   <Route path="/marketing-autopilot" component={() => <ProtectedRoute component={MarketingAutopilot} />} />
  */
 export default function ProtectedRoute({ component: Component }: ProtectedRouteProps) {
-  const { isAuthenticated, loading } = useAuth();
-  const [location] = useLocation();
+  const { isAuthenticated, loading, user } = useAuth();
+  const [location, navigate] = useLocation();
+  const salesBlocked = isSalesUser(user as { teamRole?: string } | null) && !isSalesRoute(location);
+  useEffect(() => {
+    if (salesBlocked) navigate(SALES_HOME, { replace: true });
+  }, [salesBlocked, navigate]);
 
   if (loading) {
     return (
@@ -39,6 +45,9 @@ export default function ProtectedRoute({ component: Component }: ProtectedRouteP
     window.location.href = `/team-login?return=${returnPath}`;
     return null;
   }
+
+  // Sales reps only get the Lead Inbox, leads, Contacts and Calendar.
+  if (salesBlocked) return null;
 
   return (
     <DashboardLayout>

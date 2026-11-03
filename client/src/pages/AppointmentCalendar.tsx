@@ -4,6 +4,8 @@
  * Day cells show status-colored count dots; clicking a day opens a detail Sheet.
  * Unscheduled legacy appointments live in a collapsible backlog with "Set date".
  */
+import { useAuth } from "@/_core/hooks/useAuth";
+import { isSalesUser } from "@shared/salesAccess";
 import { useMemo, useState } from "react";
 import type { ComponentProps } from "react";
 import type { DayButton } from "react-day-picker";
@@ -82,6 +84,8 @@ export default function AppointmentCalendar() {
   const [createDefaults, setCreateDefaults] = useState<{ scheduledAt?: Date } | undefined>();
 
   const { data: assignees = [] } = trpc.appointments.assignees.useQuery();
+  // Sales books and reschedules; jobs belong to dispatch.
+  const isSales = isSalesUser(useAuth().user as { teamRole?: string } | null);
 
   const createJobFromAppt = trpc.jobs.createFromAppointment.useMutation({
     onSuccess: res => navigateTo(`/jobs/${res.id}`),
@@ -328,7 +332,7 @@ export default function AppointmentCalendar() {
                   </div>
                   <div className="flex items-center justify-between pt-1">
                     {a.bookedBy === "jessica" ? <Badge variant="outline" className="text-[10px]">Booked by Jessica</Badge> : <span />}
-                    {a.jobId ? (
+                    {isSales ? null : a.jobId ? (
                       <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => navigateTo(`/jobs/${a.jobId}`)}>
                         View Job
                       </Button>

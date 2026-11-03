@@ -1,4 +1,5 @@
 import { contactDisplayName } from "../../shared/contactName";
+import { isSalesUser, redactCustomerDetailForSales } from "@shared/salesAccess";
 import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -870,7 +871,7 @@ export const customersRouter = router({
   /** 360° view: customer + properties + related records. */
   getById: protectedProcedure
     .input(z.object({ id: z.number().int() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db)
         throw new TRPCError({
@@ -1023,7 +1024,7 @@ export const customersRouter = router({
         propertyCount: props.length,
       });
 
-      return {
+      const detail = {
         customer,
         relationship,
         classification: contactClassification(
@@ -1044,6 +1045,8 @@ export const customersRouter = router({
         counts: relations.counts,
         summary: relations.summary,
       };
+      // Sales reps see the contact, appointments and calls — never money.
+      return isSalesUser(ctx.user) ? redactCustomerDetailForSales(detail) : detail;
     }),
 
   create: protectedProcedure

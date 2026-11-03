@@ -6,10 +6,10 @@ import { getSessionCookieOptions } from "./cookies";
 
 /**
  * Authenticated user with the (optional) real team role.
- * Team sessions carry teamRole "admin" | "member" | "viewer";
+ * Team sessions carry teamRole "admin" | "member" | "viewer" | "sales";
  * Manus OAuth users have no teamRole (treated as member-level).
  */
-export type AuthenticatedUser = User & { teamRole?: "admin" | "member" | "viewer" };
+export type AuthenticatedUser = User & { teamRole?: "admin" | "member" | "viewer" | "sales" };
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];

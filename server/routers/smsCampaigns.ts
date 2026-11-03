@@ -3,6 +3,7 @@
  * Handles contacts, campaigns, sending, and delivery tracking
  * SMS provider: Telnyx (active). TextBelt is legacy — removed July 2026.
  */
+import { isSalesUser } from "@shared/salesAccess";
 import { sendTelnyxSms, telnyxConfigured } from "../services/telnyxSms";
 import {
   sendAndRecordSms,
@@ -478,7 +479,9 @@ export const smsCampaignsRouter = router({
       contactId: z.number().optional(),
       limit: z.number().default(100),
     }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      // Sales sees one client's thread at a time, never the whole inbox.
+      if (isSalesUser(ctx.user) && !input.phone?.trim() && input.contactId == null) return [];
       const db = await requireDb();
       // Prefer phone: every inbox row (inbound + outbound) stores the number in
       // E.164, so a last-10 match returns the complete chronological thread even

@@ -9,7 +9,7 @@
  */
 export interface DispatchAccessUser {
   role?: string | null;
-  teamRole?: "admin" | "member" | "viewer" | null;
+  teamRole?: "admin" | "member" | "viewer" | "sales" | null;
 }
 
 export function canAccessDispatch(user: DispatchAccessUser | null | undefined): boolean {

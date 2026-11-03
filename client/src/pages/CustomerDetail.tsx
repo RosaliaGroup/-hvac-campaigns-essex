@@ -41,6 +41,8 @@ import {
 } from "@shared/nameFormat";
 import { jobRoute, opportunityRoute } from "@/lib/customerNavigation";
 import ConversationPreview from "@/components/sms/ConversationPreview";
+import { CallButton, CallHistoryCard } from "@/components/calls/ClickToCall";
+import { isSalesUser } from "@shared/salesAccess";
 import {
   StartEstimateButton,
   TieredEstimateList,
@@ -166,6 +168,8 @@ export default function CustomerDetail() {
   const customerId = parseInt(params.id || "0");
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  // Sales reps: contact, properties, appointments and calls only — no money/QuickBooks.
+  const isSales = isSalesUser(useAuth().user as { teamRole?: string } | null);
 
   const { data, isLoading, refetch } = trpc.customers.getById.useQuery(
     { id: customerId },
@@ -446,11 +450,13 @@ export default function CustomerDetail() {
                 {customer.status}
               </Badge>
               {/* QuickBooks status — display only until Phase 2 */}
-              <Badge variant="outline" className="text-muted-foreground">
-                QuickBooks:{" "}
-                {qbLabel[customer.quickbooksSyncStatus] ??
-                  customer.quickbooksSyncStatus}
-              </Badge>
+              {!isSales && (
+                <Badge variant="outline" className="text-muted-foreground">
+                  QuickBooks:{" "}
+                  {qbLabel[customer.quickbooksSyncStatus] ??
+                    customer.quickbooksSyncStatus}
+                </Badge>
+              )}
               {customer.source && (
                 <span className="text-muted-foreground">
                   Source: {customer.source}
@@ -482,6 +488,8 @@ export default function CustomerDetail() {
                 About this contact
               </h2>
               <div className="flex flex-wrap gap-2">
+                <CallButton phone={customer.phone} customerId={customerId} />
+                {!isSales && (
                 <Button
                   size="sm"
                   variant="outline"
@@ -494,6 +502,7 @@ export default function CustomerDetail() {
                   <Mail className="h-4 w-4 mr-1" />
                   Email / SMS
                 </Button>
+                )}
                 <Button size="sm" variant="outline" onClick={openEdit}>
                   Edit
                 </Button>
@@ -519,30 +528,34 @@ export default function CustomerDetail() {
                 relationship.
               </p>
             </aside>
-            <div>
+            {!isSales && <div>
               <ContactProfilePanel
                 key={customerId}
                 customerId={customerId}
                 companyName={customer.companyName}
               />
-            </div>
+            </div>}
           </div>
           <main className="min-w-0 space-y-4">
-            <SummaryCards
-              summary={summary}
-              customer={customer}
-              qbLabel={qbLabel}
-              onSelectTab={setTab}
-            />
+            {!isSales && (
+              <SummaryCards
+                summary={summary}
+                customer={customer}
+                qbLabel={qbLabel}
+                onSelectTab={setTab}
+              />
+            )}
             {/* Keep customer-level QuickBooks sync visible on every tab, especially Activities.
                 This uses the existing duplicate-aware push/link/resolve workflow. */}
-            <section aria-label="QuickBooks customer sync">
-              <QuickBooksCard
-                customer={customer}
-                customerId={customerId}
-                onChange={refetch}
-              />
-            </section>
+            {!isSales && (
+              <section aria-label="QuickBooks customer sync">
+                <QuickBooksCard
+                  customer={customer}
+                  customerId={customerId}
+                  onChange={refetch}
+                />
+              </section>
+            )}
             <Tabs value={tab} onValueChange={setTab}>
               <TabsList className="flex-wrap h-auto">
                 <TabsTrigger value="timeline">Activities</TabsTrigger>
@@ -550,16 +563,20 @@ export default function CustomerDetail() {
                 <TabsTrigger value="properties">
                   Properties ({counts.properties})
                 </TabsTrigger>
-                <TabsTrigger value="jobs">Jobs ({counts.jobs})</TabsTrigger>
-                <TabsTrigger value="opportunities">
-                  Opportunities ({counts.opportunities})
-                </TabsTrigger>
-                <TabsTrigger value="estimates">
-                  Estimates / Proposals ({counts.estimates})
-                </TabsTrigger>
-                <TabsTrigger value="invoices">
-                  Invoices ({counts.invoices})
-                </TabsTrigger>
+                {!isSales && (
+                  <>
+                    <TabsTrigger value="jobs">Jobs ({counts.jobs})</TabsTrigger>
+                    <TabsTrigger value="opportunities">
+                      Opportunities ({counts.opportunities})
+                    </TabsTrigger>
+                    <TabsTrigger value="estimates">
+                      Estimates / Proposals ({counts.estimates})
+                    </TabsTrigger>
+                    <TabsTrigger value="invoices">
+                      Invoices ({counts.invoices})
+                    </TabsTrigger>
+                  </>
+                )}
               </TabsList>
 
               <TabsContent value="summary" className="space-y-4">
@@ -582,7 +599,7 @@ export default function CustomerDetail() {
                           · alt {customer.altPhone}
                         </span>
                       )}
-                      {customer.phone && (
+                      {customer.phone && !isSales && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -622,6 +639,8 @@ export default function CustomerDetail() {
                     )}
                   </CardContent>
                 </Card>
+
+                <CallHistoryCard phone={customer.phone} customerId={customerId} />
 
                 {/* SMS Conversation — recent internal thread (only shown if history exists) */}
                 <ConversationPreview phone={customer.phone} />

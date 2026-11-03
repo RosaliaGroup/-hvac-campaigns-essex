@@ -2,6 +2,7 @@ import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import { isSalesAllowedProcedure, isSalesUser } from "@shared/salesAccess";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -71,7 +72,28 @@ const blockViewerMutations = t.middleware(async opts => {
   return next();
 });
 
-export const protectedProcedure = t.procedure.use(gatewayTimeoutGuard).use(requireUser).use(blockViewerMutations);
+/**
+ * Sales role: DENY BY DEFAULT. A sales session may only call the procedures in
+ * shared/salesAccess.ts (leads, contacts, appointments, notes, click-to-call).
+ * Financial, marketing, analytics, AI and admin routes are all rejected here,
+ * including any route added later that isn't deliberately allowlisted.
+ */
+export const restrictSalesToAllowlist = t.middleware(async opts => {
+  const { ctx, path, next } = opts;
+  if (isSalesUser(ctx.user) && !isSalesAllowedProcedure(path)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Sales access covers leads, contacts, appointments and calls only.",
+    });
+  }
+  return next();
+});
+
+export const protectedProcedure = t.procedure
+  .use(gatewayTimeoutGuard)
+  .use(requireUser)
+  .use(blockViewerMutations)
+  .use(restrictSalesToAllowlist);
 
 /**
  * Requires a non-viewer authenticated user (member or admin) for BOTH
@@ -86,7 +108,7 @@ export const memberProcedure = t.procedure.use(gatewayTimeoutGuard).use(requireU
     }
     return next();
   }),
-);
+).use(restrictSalesToAllowlist);
 
 export const adminProcedure = t.procedure.use(gatewayTimeoutGuard).use(
   t.middleware(async opts => {

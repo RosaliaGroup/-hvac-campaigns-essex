@@ -1,4 +1,6 @@
 import { COOKIE_NAME } from "@shared/const";
+import { callsRouter } from "./routers/calls";
+import { isSalesUser, redactLeadCaptureForSales } from "@shared/salesAccess";
 import { LEAD_STAGE_ENUM, buildLeadCapturePatch, deriveContactRelationship } from "@shared/leadPipeline";
 import { extractAttribution } from "@shared/attribution";
 import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
@@ -128,6 +130,7 @@ export const appRouter = router({
   quickbooks: quickbooksRouter,
   // Commercial Opportunities (P2) extend the same system, nested under `commercial`.
   notifications: notificationsRouter,
+  calls: callsRouter,
   opportunities: mergeRouters(opportunitiesRouter, router({ commercial: commercialOpportunitiesRouter })),
   bidAssistant: bidAssistantRouter,
   estimates: estimatesRouter,
@@ -590,8 +593,10 @@ export const appRouter = router({
           offset: z.number().optional().default(0),
         })
       )
-      .query(async ({ input }) => {
-        const leads = await db.getAllLeadCaptures(input);
+      .query(async ({ input, ctx }) => {
+        const leads = (await db.getAllLeadCaptures(input)).map((l: any) =>
+          isSalesUser(ctx.user) ? redactLeadCaptureForSales(l) : l,
+        );
         // Attach the SAME server-derived relationship the Contacts list uses,
         // so a lead reads identically in both screens (stage alone is not enough
         // — an appointment or won job also counts).
@@ -849,11 +854,12 @@ export const appRouter = router({
     /** Single lead capture for the full-page Lead detail (Task 8B). */
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const dbi = await db.getDb();
         if (!dbi) return null;
-        const cap = (await dbi.select().from(leadCapturesTable).where(dEq(leadCapturesTable.id, input.id)).limit(1))[0];
-        if (!cap) return null;
+        const raw = (await dbi.select().from(leadCapturesTable).where(dEq(leadCapturesTable.id, input.id)).limit(1))[0];
+        if (!raw) return null;
+        const cap = isSalesUser(ctx.user) ? redactLeadCaptureForSales(raw) : raw;
         const rel = await computeRelationships(dbi, [
           { id: cap.id, customerId: cap.customerId, phone: cap.phone, email: cap.email, leadStages: [cap.status] },
         ]);
