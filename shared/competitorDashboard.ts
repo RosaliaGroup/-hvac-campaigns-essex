@@ -20,11 +20,18 @@ export const OUR_DOMAIN = "mechanicalenterprise.com";
 export const OUR_NAME = "Mechanical Enterprise";
 export const OUR_BRAND_TERMS = ["mechanical enterprise", "mechanical enterprise llc", "mechanical enterprise nj"];
 
-/** Domains confirmed from each company's own pages (search results, Nov 3 2026). Seeded as `suggested`; the owner confirms in the CRM. */
+/** Suggested competitor sites (search results / AI-visibility sources, Nov 3 2026). Seeded as `suggested`; the owner confirms each in the CRM. */
 export const SUGGESTED_COMPETITOR_DOMAINS: Array<{ name: string; domain: string }> = [
   { name: "A.J. Perri", domain: "ajperri.com" },
   { name: "Gold Medal", domain: "goldmedalservice.com" },
   { name: "Horizon", domain: "horizonservices.com" },
+  // Cited by AI answers for our target queries (AI-visibility check, week of Nov 2 2026).
+  { name: "Lehigh HVAC", domain: "lehighhvac.com" },
+  { name: "Sam's Air Control", domain: "samsaircontrol.com" },
+  { name: "Air Professionals", domain: "airprofessionalsnj.com" },
+  { name: "NuWatt Energy", domain: "nuwattenergy.com" },
+  { name: "C&C Air Conditioning", domain: "candcair.com" },
+  { name: "Dimatic Control", domain: "dimaticcontrol.com" },
 ];
 
 export type BrandDemand = {
