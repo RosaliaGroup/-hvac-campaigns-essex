@@ -154,3 +154,42 @@ describe("errorDetail", () => {
     expect(errorDetail(new Error("boom"))).toBe("boom");
   });
 });
+
+describe("Google Trends fallback", () => {
+  it("parses the XSSI-prefixed JSON and timeline", async () => {
+    const { parseTrendsJson, trendsTimeline } = await import("../../../../shared/competitorDashboard");
+    const j = parseTrendsJson(`)]}',\n{"default":{"timelineData":[{"time":"1730592000","value":[50,10]},{"time":"1731196800","value":[100,0]}]}}`);
+    const t = trendsTimeline(["a", "b"], j);
+    expect(t[0].points).toEqual([{ date: "2024-11-03", value: 50 }, { date: "2024-11-10", value: 100 }]);
+    expect(t[1].points.map((p) => p.value)).toEqual([10, 0]);
+  });
+  it("batches by 5 with the anchor in each and rescales to the first batch", async () => {
+    const { trendsBatches, combineTrendsBatches } = await import("../../../../shared/competitorDashboard");
+    expect(trendsBatches(["us", "a", "b", "c", "d", "e"], "a")).toEqual([["a", "us", "b", "c", "d"], ["a", "e"]]);
+    const pts = (vs: number[]) => vs.map((value, i) => ({ date: `2026-0${i + 1}-01`, value }));
+    const out = combineTrendsBatches(
+      [
+        [{ keyword: "a", points: pts([40, 40]) }, { keyword: "us", points: pts([20, 20]) }],
+        [{ keyword: "a", points: pts([80, 80]) }, { keyword: "e", points: pts([100, 100]) }],
+      ],
+      "a",
+    );
+    expect(out.find((o) => o.keyword === "us")?.mean).toBe(20);
+    expect(out.find((o) => o.keyword === "e")?.mean).toBe(50);
+    expect(out.find((o) => o.keyword === "e")?.monthly).toEqual([{ month: "2026-01", searches: 50 }, { month: "2026-02", searches: 50 }]);
+  });
+  it("uses Trends for share only when no Keyword Planner counts exist", async () => {
+    const { shareOfSearch, brandMetricSource } = await import("../../../../shared/competitorDashboard");
+    const rows = [
+      metrics({ domain: "us.com", name: "Us", isUs: true, brandDemand: { terms: [], avgMonthly: null, monthly: [], source: "google_trends", relativeInterest: 10 } }),
+      metrics({ domain: "a.com", name: "A", brandDemand: { terms: [], avgMonthly: null, monthly: [], source: "google_trends", relativeInterest: 30 } }),
+    ];
+    expect(brandMetricSource(rows)).toBe("google_trends");
+    expect(shareOfSearch(rows).map((r) => [r.name, r.share])).toEqual([["A", 0.75], ["Us", 0.25]]);
+  });
+  it("recognises the Explorer-access error", async () => {
+    const { keywordPlannerBlockedReason } = await import("./competitorDashboard");
+    expect(keywordPlannerBlockedReason("This method is not allowed for use with explorer access. Please apply for basic access")).toMatch(/Basic access/);
+    expect(keywordPlannerBlockedReason("quota exceeded")).toBeNull();
+  });
+});

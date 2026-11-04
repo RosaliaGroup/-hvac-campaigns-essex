@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { ArrowLeft, Check, ExternalLink, Loader2, Plus, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import DashboardFooter from "@/components/DashboardFooter";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { resolveNavRole } from "@/lib/navigation";
-import { adLibraryLinks, brandTermsFor, keywordGap, shareOfSearch, type DomainMetrics } from "@shared/competitorDashboard";
+import { adLibraryLinks, brandMetricSource, brandTermsFor, brandValue, keywordGap, shareOfSearch, type DomainMetrics } from "@shared/competitorDashboard";
 
 /**
  * Competitors dashboard — a Similarweb-style view built only from free sources
@@ -93,6 +93,10 @@ export default function CompetitorDashboard() {
   const ordered = useMemo(() => [...current].sort((a, b) => (a.isUs ? -1 : b.isUs ? 1 : a.name.localeCompare(b.name))), [current]);
   const colorIndex = useMemo(() => new Map(ordered.map((m, i) => [m.domain, i])), [ordered]);
   const share = useMemo(() => shareOfSearch(current), [current]);
+  const source = useMemo(() => brandMetricSource(current), [current]);
+  const isTrends = source === "google_trends";
+  const brandNum = (m: DomainMetrics | undefined) => (m ? brandValue(m, source) : null);
+  const fmtBrand = (n: number | null | undefined) => (n == null ? "—" : isTrends ? (Math.round(n * 10) / 10).toString() : n.toLocaleString());
   const us = current.find((m) => m.isUs);
   const ourShare = share.find((s) => s.isUs);
   const rivals = current.filter((m) => !m.isUs);
@@ -111,9 +115,9 @@ export default function CompetitorDashboard() {
   }, [ordered]);
   // Top 5 by brand demand + us, so the line chart stays legible.
   const trendSeries = useMemo(() => {
-    const top = [...rivals].sort((a, b) => (b.brandDemand?.avgMonthly ?? 0) - (a.brandDemand?.avgMonthly ?? 0)).slice(0, 5);
+    const top = [...rivals].sort((a, b) => (brandNum(b) ?? 0) - (brandNum(a) ?? 0)).slice(0, 5);
     return [...(us ? [us] : []), ...top].filter((m) => (m.brandDemand?.monthly.length ?? 0) > 0);
-  }, [rivals, us]);
+  }, [rivals, us, source]);
 
   const gap = useMemo(
     () => keywordGap(rivals.map((r) => ({ name: r.name, brandTerms: brandTermsFor(r.name), keywords: r.siteKeywords })), data?.ourQueries ?? []),
@@ -159,7 +163,11 @@ export default function CompetitorDashboard() {
       {current.length > 0 && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Stat label="Our brand searches / month (NJ)" value={fmt(us?.brandDemand?.avgMonthly)} hint="People searching for us by name" />
+            {isTrends ? (
+              <Stat label="Our brand interest (Google Trends, NJ)" value={fmtBrand(brandNum(us))} hint="Relative to the other brands, not a count" />
+            ) : (
+              <Stat label="Our brand searches / month (NJ)" value={fmt(us?.brandDemand?.avgMonthly)} hint="People searching for us by name" />
+            )}
             <Stat label="Our share of brand searches" value={ourShare ? pct(ourShare.share) : "—"} hint={`Among ${share.length} tracked brands`} />
             <Stat label="Competitors with a Google Ads tag" value={`${rivals.filter((r) => r.adTech?.googleAds).length} of ${rivals.length}`} hint="On their homepage — usually means they buy ads" />
             <Stat label="Competitors with a Meta pixel" value={`${rivals.filter((r) => r.adTech?.metaPixel).length} of ${rivals.length}`} hint="Usually means Facebook/Instagram ads" />
@@ -168,7 +176,11 @@ export default function CompetitorDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Share of brand searches</CardTitle>
-              <CardDescription>Average monthly Google searches in New Jersey for each company's name. The closest free stand-in for "who gets the most traffic" — it is not a visit count.</CardDescription>
+              <CardDescription>
+                {isTrends
+                  ? "How often people in New Jersey search Google for each company's name over the last 12 months, relative to each other (Google Trends). Shares are meaningful; the numbers are not search counts. Exact monthly counts appear once Google Ads API Basic access is approved."
+                  : "Average monthly Google searches in New Jersey for each company's name. The closest free stand-in for \"who gets the most traffic\" — it is not a visit count."}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div style={{ height: Math.max(160, share.length * 40) }}>
@@ -179,22 +191,23 @@ export default function CompetitorDashboard() {
                     <YAxis type="category" dataKey="name" width={150} tick={{ fill: "var(--viz-ink)", fontSize: 12 }} axisLine={false} tickLine={false} />
                     <Tooltip
                       cursor={{ fill: "var(--viz-grid)", opacity: 0.5 }}
-                      formatter={(v: number, _n, item) => [`${v.toLocaleString()} / month (${pct((item.payload as { share: number }).share)})`, "Brand searches"]}
+                      formatter={(v: number, _n, item) => [isTrends ? `${fmtBrand(v)} (${pct((item.payload as { share: number }).share)} share)` : `${v.toLocaleString()} / month (${pct((item.payload as { share: number }).share)})`, isTrends ? "Relative interest" : "Brand searches"]}
                     />
-                    <Bar dataKey="searches" radius={[0, 4, 4, 0]} label={{ position: "right", fill: "var(--viz-ink)", fontSize: 12, formatter: (v: number) => v.toLocaleString() }}>
+                    <Bar dataKey="searches" radius={[0, 4, 4, 0]}>
+                      <LabelList dataKey={isTrends ? "share" : "searches"} position="right" fill="var(--viz-ink)" fontSize={12} formatter={(v: number) => (isTrends ? pct(v) : v.toLocaleString())} />
                       {share.map((s) => <Cell key={s.domain} fill={s.isUs ? seriesVar(0) : "var(--viz-neutral)"} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <p className="text-xs text-muted-foreground mt-2">Blue is Mechanical Enterprise. Small brands can show 0 — Keyword Planner rounds low volumes down.</p>
+              <p className="text-xs text-muted-foreground mt-2">Blue is Mechanical Enterprise. Small brands can show 0 — {isTrends ? "Google Trends reports very low interest as 0." : "Keyword Planner rounds low volumes down."}</p>
             </CardContent>
           </Card>
 
           {trendData.length > 1 && trendSeries.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Brand searches over the last 12 months</CardTitle>
+                <CardTitle className="text-base">{isTrends ? "Brand interest over the last 12 months" : "Brand searches over the last 12 months"}</CardTitle>
                 <CardDescription>Us and the five largest tracked competitors. Seasonal swings (summer AC, winter heat) affect everyone.</CardDescription>
               </CardHeader>
               <CardContent>
@@ -226,7 +239,7 @@ export default function CompetitorDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Company</TableHead>
-                    <TableHead className="text-right">Brand searches/mo</TableHead>
+                    <TableHead className="text-right">{isTrends ? "Brand interest (Trends)" : "Brand searches/mo"}</TableHead>
                     <TableHead className="text-right">Pages</TableHead>
                     <TableHead className="text-right">Updated in 30 days</TableHead>
                     <TableHead>Google Ads tag</TableHead>
@@ -248,7 +261,7 @@ export default function CompetitorDashboard() {
                           <div className="font-medium">{m.name}{m.isUs && <Badge variant="outline" className="ml-2">Us</Badge>}</div>
                           <a href={`https://${m.domain}`} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:underline">{m.domain}</a>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">{fmt(m.brandDemand?.avgMonthly)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{fmtBrand(brandNum(m))}</TableCell>
                         <TableCell className="text-right tabular-nums">{m.sitemap?.found ? fmt(m.sitemap.urlCount) : "—"}</TableCell>
                         <TableCell className="text-right tabular-nums">{m.sitemap?.found ? fmt(m.sitemap.updatedLast30) : "—"}</TableCell>
                         <TableCell><YesNo on={m.adTech?.googleAds} /></TableCell>
