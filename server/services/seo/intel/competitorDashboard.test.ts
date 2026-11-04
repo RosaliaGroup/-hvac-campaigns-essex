@@ -12,7 +12,7 @@ import {
   weeklyChanges,
   type DomainMetrics,
 } from "../../../../shared/competitorDashboard";
-import { mapHistoricalMetrics, mapKeywordIdeas, mapPageSpeed } from "./competitorDashboard";
+import { errorDetail, mapHistoricalMetrics, mapKeywordIdeas, mapPageSpeed } from "./competitorDashboard";
 
 function metrics(over: Partial<DomainMetrics>): DomainMetrics {
   return { domain: "x.com", name: "X", isUs: false, capturedAt: "2026-11-02T10:00:00Z", brandDemand: null, siteKeywords: [], sitemap: null, adTech: null, speed: null, errors: [], ...over };
@@ -145,5 +145,12 @@ describe("API response mappers", () => {
     expect(mapPageSpeed({ lighthouseResult: { categories: { performance: { score: 0.534 } }, audits: { "largest-contentful-paint": { numericValue: 4210.6 } } }, originLoadingExperience: { metrics: { LARGEST_CONTENTFUL_PAINT_MS: {} } } }))
       .toEqual({ mobileScore: 53, lcpMs: 4211, hasFieldData: true });
     expect(mapPageSpeed({})).toEqual({ mobileScore: null, lcpMs: null, hasFieldData: false });
+  });
+});
+
+describe("errorDetail", () => {
+  it("reads GoogleAdsFailure-style errors and plain errors", () => {
+    expect(errorDetail({ errors: [{ message: "The caller does not have permission", error_code: { authorization_error: 2 } }] })).toBe('The caller does not have permission {"authorization_error":2}');
+    expect(errorDetail(new Error("boom"))).toBe("boom");
   });
 });
