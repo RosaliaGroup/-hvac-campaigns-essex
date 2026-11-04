@@ -62,14 +62,19 @@ curl -sS --fail-with-body "${sig[@]}" -H "Content-Type: application/gzip" \
   -T "$file" "${endpoint}/${S3_BUCKET}/${key}" >/dev/null || fail "upload failed"
 log "uploaded ${key}"
 
-# Confirm the uploaded object's size matches.
-remote="$(curl -sS --fail -I "${sig[@]}" "${endpoint}/${S3_BUCKET}/${key}" | tr -d '\r' | awk -F': ' 'tolower($1)=="content-length"{print $2}')"
-[ "$remote" = "$bytes" ] || fail "uploaded size ${remote} != local ${bytes}"
+# Confirm the uploaded object's size via a bucket listing (the bucket refuses signed HEAD requests).
+listing="$(curl -sS --fail "${sig[@]}" "${endpoint}/${S3_BUCKET}?list-type=2&prefix=mysql/")" || fail "could not list bucket"
+remote="$(echo "$listing" | tr '\n' ' ' | grep -o "<Contents>[^<]*<Key>${key}</Key>.*" | grep -o '<Size>[0-9]*</Size>' | head -1 | grep -o '[0-9]*' || true)"
+if [ -z "$remote" ]; then
+  # Some S3 servers order fields differently; fall back to searching the Contents block that holds our key.
+  remote="$(echo "$listing" | tr '\n' ' ' | sed 's#</Contents>#</Contents>\n#g' | grep "<Key>${key}</Key>" | grep -o '<Size>[0-9]*</Size>' | grep -o '[0-9]*' || true)"
+fi
+[ "$remote" = "$bytes" ] || fail "uploaded size ${remote:-missing} != local ${bytes}"
+log "upload verified (${remote} bytes)"
 rm -f "$file"
 
 # Prune backups older than KEEP_DAYS (keys carry the date, so compare names).
 cutoff="$(date -u -d "-${KEEP_DAYS} days" +%Y-%m-%d)"
-listing="$(curl -sS --fail "${sig[@]}" "${endpoint}/${S3_BUCKET}?list-type=2&prefix=mysql/")"
 deleted=0
 for k in $(echo "$listing" | grep -o '<Key>[^<]*</Key>' | sed 's/<[^>]*>//g'); do
   d="$(echo "$k" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)"
