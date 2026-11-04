@@ -23,7 +23,11 @@ import {
   OUR_NAME,
   SUGGESTED_COMPETITOR_DOMAINS,
   brandTermsFor,
+  combineTrendsBatches,
   detectAdTech,
+  parseTrendsJson,
+  trendsBatches,
+  trendsTimeline,
   parseSitemap,
   sitemapsFromRobots,
   summarizeSitemapUrls,
@@ -272,23 +276,52 @@ async function pageSpeed(domain: string): Promise<SpeedResult> {
 
 /* ── One domain ──────────────────────────────────────────────────────────── */
 
+/** Keyword Planner needs Google Ads API Basic access; with Explorer access every call fails the same way. Exported for tests. */
+export function keywordPlannerBlockedReason(detail: string): string | null {
+  if (/explorer access|basic access|DEVELOPER_TOKEN_NOT_APPROVED|developer token is only approved for use with test accounts/i.test(detail)) {
+    return "Keyword Planner is blocked until the Google Ads API has Basic access (apply in Google Ads → Tools → API Center). Brand interest comes from Google Trends meanwhile; the keyword gap stays empty.";
+  }
+  return null;
+}
+
+/** Shared across one refresh: once Keyword Planner is known to be blocked, stop calling it and report it once. */
+export type KpState = { blockedReason: string | null; reported: boolean; speedBlocked?: boolean };
+
 export async function collectDomainMetrics(
   target: { name: string; domain: string; brandTerms: string[]; isUs: boolean },
   customer: KpCustomer | null,
   now: Date = new Date(),
+  kp: KpState = { blockedReason: null, reported: false },
 ): Promise<DomainMetrics> {
   const m: DomainMetrics = {
     domain: target.domain, name: target.name, isUs: target.isUs, capturedAt: now.toISOString(),
     brandDemand: null, siteKeywords: [], sitemap: null, adTech: null, speed: null, errors: [],
   };
 
-  if (customer) {
-    try { m.brandDemand = await brandDemand(customer, target.brandTerms); } catch (err) { m.errors.push(`Brand searches: ${errorDetail(err)}`); }
-    if (!target.isUs) {
-      try { m.siteKeywords = await siteKeywords(customer, target.domain); } catch (err) { m.errors.push(`Site keywords: ${errorDetail(err)}`); }
+  const kpCall = async <T,>(label: string, fn: () => Promise<T>): Promise<T | null> => {
+    if (kp.blockedReason) return null;
+    try {
+      return await fn();
+    } catch (err) {
+      const detail = errorDetail(err);
+      const blocked = keywordPlannerBlockedReason(detail);
+      if (blocked) {
+        kp.blockedReason = blocked;
+        if (!kp.reported) { m.errors.push(blocked); kp.reported = true; }
+      } else {
+        m.errors.push(`${label}: ${detail}`);
+      }
+      return null;
     }
-  } else {
-    m.errors.push("Brand searches and keywords: Google Ads isn't connected in the CRM.");
+  };
+
+  if (customer) {
+    m.brandDemand = await kpCall("Brand searches", () => brandDemand(customer, target.brandTerms));
+    if (m.brandDemand) m.brandDemand.source = "keyword_planner";
+    if (!target.isUs) m.siteKeywords = (await kpCall("Site keywords", () => siteKeywords(customer, target.domain))) ?? [];
+  } else if (!kp.reported) {
+    m.errors.push("Brand searches and keywords: Google Ads isn't connected in the CRM. Brand interest comes from Google Trends.");
+    kp.reported = true;
   }
 
   const robots = await robotsText(target.domain);
@@ -303,8 +336,85 @@ export async function collectDomainMetrics(
     } catch (err) { m.errors.push(`Homepage: ${errorDetail(err)}`); }
   }
 
-  try { m.speed = await pageSpeed(target.domain); } catch (err) { m.errors.push(`Speed: ${errorDetail(err)}`); }
+  if (!kp.speedBlocked) {
+    try {
+      m.speed = await pageSpeed(target.domain);
+    } catch (err) {
+      const detail = errorDetail(err);
+      if (/HTTP 429/.test(detail)) {
+        kp.speedBlocked = true;
+        m.errors.push("Speed: Google's free speed check needs its own key (create a free API key with the PageSpeed Insights API turned on, and add it in Railway as GOOGLE_PSI_API_KEY). Skipped for all sites this week.");
+      } else {
+        m.errors.push(`Speed: ${detail}`);
+      }
+    }
+  }
   return m;
+}
+
+/* ── Google Trends fallback (free, no key; unofficial endpoints, may be rate-limited) ── */
+
+const TRENDS_GEO = "US-NJ";
+
+async function trendsCookie(): Promise<string> {
+  try {
+    const res = await fetch(`https://trends.google.com/trends/explore?geo=${TRENDS_GEO}`, { headers: { "User-Agent": USER_AGENT }, redirect: "manual" });
+    const set = (res.headers as unknown as { getSetCookie?: () => string[] }).getSetCookie?.() ?? [];
+    return set.map((c) => c.split(";")[0]).join("; ");
+  } catch {
+    return "";
+  }
+}
+
+async function trendsGet(url: string, cookie: string): Promise<string> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": USER_AGENT, ...(cookie ? { Cookie: cookie } : {}) }, signal: ctrl.signal });
+    if (!res.ok) throw new Error(`Google Trends HTTP ${res.status}${res.status === 429 ? " (Google is limiting requests from our server; it retries next week)" : ""}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function trendsBatch(keywords: string[], cookie: string) {
+  const req = { comparisonItem: keywords.map((keyword) => ({ keyword, geo: TRENDS_GEO, time: "today 12-m" })), category: 0, property: "" };
+  const explore = parseTrendsJson<{ widgets?: Array<{ id?: string; token?: string; request?: unknown }> }>(
+    await trendsGet(`https://trends.google.com/trends/api/explore?hl=en-US&tz=300&req=${encodeURIComponent(JSON.stringify(req))}`, cookie),
+  );
+  const ts = explore.widgets?.find((w) => w.id === "TIMESERIES");
+  if (!ts?.token || !ts.request) throw new Error("Google Trends returned no timeline");
+  const data = parseTrendsJson(
+    await trendsGet(`https://trends.google.com/trends/api/widgetdata/multiline?hl=en-US&tz=300&req=${encodeURIComponent(JSON.stringify(ts.request))}&token=${encodeURIComponent(ts.token)}`, cookie),
+  );
+  return trendsTimeline(keywords, data);
+}
+
+/** Fills brandDemand from Google Trends for every row Keyword Planner didn't fill. Mutates rows; returns an error line or null. */
+export async function fillFromTrends(rows: DomainMetrics[]): Promise<string | null> {
+  const missing = rows.filter((r) => !r.brandDemand);
+  if (missing.length === 0) return null;
+  const termOf = (r: DomainMetrics) => r.name.toLowerCase();
+  const terms = rows.map(termOf);
+  // Anchor on the first competitor (stable across weeks), falling back to us.
+  const anchor = termOf(rows.find((r) => !r.isUs) ?? rows[0]);
+  try {
+    const cookie = await trendsCookie();
+    const batches = [];
+    for (const batch of trendsBatches(terms, anchor)) {
+      batches.push(await trendsBatch(batch, cookie));
+      await new Promise((r) => setTimeout(r, 2500));
+    }
+    const combined = new Map(combineTrendsBatches(batches, anchor).map((c) => [c.keyword, c]));
+    for (const r of missing) {
+      const c = combined.get(termOf(r));
+      if (c) r.brandDemand = { terms: [termOf(r)], avgMonthly: null, monthly: c.monthly, source: "google_trends", relativeInterest: c.mean };
+    }
+    return null;
+  } catch (err) {
+    return `Brand interest (Google Trends): ${errorDetail(err)}`;
+  }
 }
 
 /* ── Weekly snapshot ─────────────────────────────────────────────────────── */
@@ -332,15 +442,23 @@ export async function refreshCompetitorDashboard(onProgress?: (done: number, tot
   }
 
   const weekOf = weekStartET(now);
-  let errors = 0;
+  const kp: KpState = { blockedReason: null, reported: false };
+  const rows: DomainMetrics[] = [];
   for (let i = 0; i < targets.length; i++) {
-    const metrics = await collectDomainMetrics(targets[i], customer, now);
+    rows.push(await collectDomainMetrics(targets[i], customer, now, kp));
+    onProgress?.(i + 1, targets.length);
+  }
+  // Brand interest from Google Trends wherever Keyword Planner couldn't supply counts.
+  const trendsError = await fillFromTrends(rows);
+  if (trendsError) rows[0].errors.push(trendsError);
+
+  let errors = 0;
+  for (const metrics of rows) {
     errors += metrics.errors.length;
     await db
       .insert(seoIntelCompetitorMetrics)
       .values({ weekOf, domain: metrics.domain, metricKey: metricKey(weekOf, metrics.domain), data: metrics })
       .onDuplicateKeyUpdate({ set: { data: metrics, capturedAt: now } });
-    onProgress?.(i + 1, targets.length);
   }
   console.log(`[Competitors] week ${weekOf}: ${targets.length} domains, ${errors} source error(s)`);
   return { weekOf, domains: targets.length, errors };

@@ -38,8 +38,12 @@ export type BrandDemand = {
   terms: string[];
   /** Sum of the terms' average monthly searches (NJ, Google Search). */
   avgMonthly: number | null;
-  /** Last 12 months, oldest first. */
+  /** Last 12 months, oldest first. With source google_trends these are relative interest values, not counts. */
   monthly: Array<{ month: string; searches: number }>;
+  /** Where the numbers came from. Absent on rows saved before the Trends fallback existed (= keyword_planner). */
+  source?: "keyword_planner" | "google_trends";
+  /** Google Trends only: 12-month average relative interest, scaled so all tracked brands are comparable. */
+  relativeInterest?: number | null;
 };
 
 export type SiteKeyword = { keyword: string; avgMonthly: number; competition: string | null };
@@ -220,19 +224,91 @@ export function sitemapsFromRobots(robotsTxt: string): string[] {
 
 export type ShareRow = { domain: string; name: string; isUs: boolean; searches: number; share: number };
 
-/** Pure — each brand's slice of the total brand searches. Domains with no demand data are left out. */
+/** Which source the brand numbers this week come from: Keyword Planner counts when any row has them, else Google Trends. */
+export function brandMetricSource(rows: DomainMetrics[]): "keyword_planner" | "google_trends" | null {
+  if (rows.some((r) => r.brandDemand?.avgMonthly != null)) return "keyword_planner";
+  if (rows.some((r) => r.brandDemand?.relativeInterest != null)) return "google_trends";
+  return null;
+}
+
+/** The brand number to show for one row under the week's source. */
+export function brandValue(r: DomainMetrics, source: ReturnType<typeof brandMetricSource>): number | null {
+  if (source === "keyword_planner") return r.brandDemand?.avgMonthly ?? null;
+  if (source === "google_trends") return r.brandDemand?.relativeInterest ?? null;
+  return null;
+}
+
+/** Pure — each brand's slice of the total brand searches (or Trends interest). Domains with no data are left out. */
 export function shareOfSearch(rows: DomainMetrics[]): ShareRow[] {
-  const withData = rows.filter((r) => r.brandDemand?.avgMonthly != null);
-  const total = withData.reduce((s, r) => s + (r.brandDemand!.avgMonthly ?? 0), 0);
+  const source = brandMetricSource(rows);
+  const withData = rows.filter((r) => brandValue(r, source) != null);
+  const total = withData.reduce((s, r) => s + (brandValue(r, source) ?? 0), 0);
   return withData
-    .map((r) => ({
-      domain: r.domain,
-      name: r.name,
-      isUs: r.isUs,
-      searches: r.brandDemand!.avgMonthly ?? 0,
-      share: total > 0 ? (r.brandDemand!.avgMonthly ?? 0) / total : 0,
-    }))
+    .map((r) => {
+      const v = brandValue(r, source) ?? 0;
+      return { domain: r.domain, name: r.name, isUs: r.isUs, searches: v, share: total > 0 ? v / total : 0 };
+    })
     .sort((a, b) => b.searches - a.searches);
+}
+
+/* ── Google Trends (free, no key) ─────────────────────────────────────────── */
+
+export type TrendsSeries = { keyword: string; points: Array<{ date: string; value: number }> };
+
+/** Pure — strips Google's anti-JSON-hijacking prefix and parses. */
+export function parseTrendsJson<T = unknown>(text: string): T {
+  return JSON.parse(text.replace(/^\)\]\}',?\s*/, "")) as T;
+}
+
+/** Pure — one multiline widget response → a series per keyword (weekly points). */
+export function trendsTimeline(keywords: string[], json: unknown): TrendsSeries[] {
+  const data = (json as { default?: { timelineData?: Array<{ time?: string; value?: number[] }> } })?.default?.timelineData ?? [];
+  return keywords.map((keyword, i) => ({
+    keyword,
+    points: data
+      .filter((d) => d.time && Array.isArray(d.value))
+      .map((d) => ({ date: new Date(Number(d.time) * 1000).toISOString().slice(0, 10), value: Number(d.value![i] ?? 0) })),
+  }));
+}
+
+const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+
+/**
+ * Pure — Trends compares at most 5 terms at a time, each batch scaled 0–100 to its own peak. Every batch
+ * includes the same anchor term; batches are rescaled so the anchor's average matches batch 0, which makes
+ * all brands comparable. Returns each keyword's 12-month average and monthly averages in that common scale.
+ */
+export function combineTrendsBatches(batches: TrendsSeries[][], anchor: string): Array<{ keyword: string; mean: number; monthly: Array<{ month: string; searches: number }> }> {
+  const anchorMean = (b: TrendsSeries[]) => mean(b.find((s) => s.keyword === anchor)?.points.map((p) => p.value) ?? []);
+  const base = batches.length ? anchorMean(batches[0]) : 0;
+  const out = new Map<string, { keyword: string; mean: number; monthly: Array<{ month: string; searches: number }> }>();
+  for (const batch of batches) {
+    const a = anchorMean(batch);
+    const factor = a > 0 && base > 0 ? base / a : 1;
+    for (const s of batch) {
+      if (out.has(s.keyword)) continue;
+      const byMonth = new Map<string, number[]>();
+      for (const p of s.points) {
+        const m = p.date.slice(0, 7);
+        byMonth.set(m, [...(byMonth.get(m) ?? []), p.value * factor]);
+      }
+      const round = (n: number) => Math.round(n * 10) / 10;
+      out.set(s.keyword, {
+        keyword: s.keyword,
+        mean: round(mean(s.points.map((p) => p.value * factor))),
+        monthly: Array.from(byMonth.entries()).sort(([x], [y]) => x.localeCompare(y)).slice(-12).map(([month, vs]) => ({ month, searches: round(mean(vs)) })),
+      });
+    }
+  }
+  return Array.from(out.values());
+}
+
+/** Pure — splits terms into Trends-sized batches (max 5), each led by the anchor. */
+export function trendsBatches(terms: string[], anchor: string): string[][] {
+  const others = Array.from(new Set(terms.filter((t) => t !== anchor)));
+  const batches: string[][] = [];
+  for (let i = 0; i < others.length; i += 4) batches.push([anchor, ...others.slice(i, i + 4)]);
+  return batches.length ? batches : [[anchor]];
 }
 
 /** Brand words to ignore when comparing a competitor's keywords with ours (their own name isn't a gap for us). */
@@ -284,7 +360,8 @@ export function weeklyChanges(cur: DomainMetrics, prev: DomainMetrics | null): s
   if (cur.sitemap && prev.sitemap && cur.sitemap.urlCount - prev.sitemap.urlCount >= 10) {
     out.push(`${cur.name} published ${cur.sitemap.urlCount - prev.sitemap.urlCount} new pages this week.`);
   }
-  const ca = cur.brandDemand?.avgMonthly, pa = prev.brandDemand?.avgMonthly;
+  const sameSource = (cur.brandDemand?.source ?? "keyword_planner") === (prev.brandDemand?.source ?? "keyword_planner");
+  const ca = sameSource ? cur.brandDemand?.avgMonthly : null, pa = sameSource ? prev.brandDemand?.avgMonthly : null;
   if (ca != null && pa != null && pa > 0 && Math.abs(ca - pa) / pa >= 0.25) {
     out.push(`${cur.name} brand searches ${ca > pa ? "up" : "down"} ${Math.round((Math.abs(ca - pa) / pa) * 100)}% (${pa} → ${ca}/mo).`);
   }
