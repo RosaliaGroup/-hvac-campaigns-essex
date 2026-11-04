@@ -41,6 +41,13 @@ const MAX_SITEMAP_FILES = 8;
 const FETCH_TIMEOUT_MS = 20_000;
 const PSI_TIMEOUT_MS = 90_000;
 
+/** google-ads-api throws GoogleAdsFailure objects (no .message); pull the real reason out. Exported for tests. */
+export function errorDetail(err: unknown): string {
+  const e = err as { message?: string; errors?: Array<{ message?: string; error_code?: unknown }>; details?: string };
+  const fromErrors = (e?.errors ?? []).map((x) => `${x.message ?? ""} ${x.error_code ? JSON.stringify(x.error_code) : ""}`.trim()).filter(Boolean).join(" | ");
+  return fromErrors || e?.message || e?.details || (typeof err === "string" ? err : JSON.stringify(err)?.slice(0, 300)) || "unknown error";
+}
+
 const MONTHS = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
 
 async function fetchText(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<{ ok: boolean; status: number; text: string }> {
@@ -276,9 +283,9 @@ export async function collectDomainMetrics(
   };
 
   if (customer) {
-    try { m.brandDemand = await brandDemand(customer, target.brandTerms); } catch (err) { m.errors.push(`Brand searches: ${(err as Error).message}`); }
+    try { m.brandDemand = await brandDemand(customer, target.brandTerms); } catch (err) { m.errors.push(`Brand searches: ${errorDetail(err)}`); }
     if (!target.isUs) {
-      try { m.siteKeywords = await siteKeywords(customer, target.domain); } catch (err) { m.errors.push(`Site keywords: ${(err as Error).message}`); }
+      try { m.siteKeywords = await siteKeywords(customer, target.domain); } catch (err) { m.errors.push(`Site keywords: ${errorDetail(err)}`); }
     }
   } else {
     m.errors.push("Brand searches and keywords: Google Ads isn't connected in the CRM.");
@@ -288,15 +295,15 @@ export async function collectDomainMetrics(
   if (!target.isUs && robotsDisallowsAll(robots)) {
     m.errors.push("Their robots.txt blocks crawlers, so the sitemap and homepage weren't fetched.");
   } else {
-    try { m.sitemap = await sitemapSummary(target.domain, robots, now); } catch (err) { m.errors.push(`Sitemap: ${(err as Error).message}`); }
+    try { m.sitemap = await sitemapSummary(target.domain, robots, now); } catch (err) { m.errors.push(`Sitemap: ${errorDetail(err)}`); }
     try {
       const home = await fetchText(`https://${target.domain}/`);
       if (home.ok) m.adTech = detectAdTech(home.text);
       else m.errors.push(`Homepage: HTTP ${home.status}`);
-    } catch (err) { m.errors.push(`Homepage: ${(err as Error).message}`); }
+    } catch (err) { m.errors.push(`Homepage: ${errorDetail(err)}`); }
   }
 
-  try { m.speed = await pageSpeed(target.domain); } catch (err) { m.errors.push(`Speed: ${(err as Error).message}`); }
+  try { m.speed = await pageSpeed(target.domain); } catch (err) { m.errors.push(`Speed: ${errorDetail(err)}`); }
   return m;
 }
 
@@ -321,7 +328,7 @@ export async function refreshCompetitorDashboard(onProgress?: (done: number, tot
   let customer: KpCustomer | null = null;
   const token = await getAdsRefreshToken();
   if (token) {
-    try { customer = await getAdsCustomer(token); } catch (err) { console.error("[Competitors] Google Ads client:", (err as Error).message); }
+    try { customer = await getAdsCustomer(token); } catch (err) { console.error("[Competitors] Google Ads client:", errorDetail(err)); }
   }
 
   const weekOf = weekStartET(now);
