@@ -58,29 +58,30 @@ log "dump ok: ${tables} tables, ${bytes} bytes compressed"
 endpoint="${S3_ENDPOINT%/}"
 sig=(--aws-sigv4 "aws:amz:${S3_REGION}:s3" --user "${S3_ACCESS_KEY_ID}:${S3_SECRET_ACCESS_KEY}")
 
-curl -sS --fail-with-body "${sig[@]}" -H "Content-Type: application/gzip" \
-  -T "$file" "${endpoint}/${S3_BUCKET}/${key}" >/dev/null || fail "upload failed"
+put_headers="$(curl -sS --fail-with-body "${sig[@]}" -H "Content-Type: application/gzip" \
+  -T "$file" -D - -o /dev/null "${endpoint}/${S3_BUCKET}/${key}" | tr -d '\r')" || fail "upload failed"
 log "uploaded ${key}"
 
-# Confirm the uploaded object's size via a bucket listing (the bucket refuses signed HEAD requests).
-listing="$(curl -sS --fail "${sig[@]}" "${endpoint}/${S3_BUCKET}?list-type=2&prefix=mysql/")" || fail "could not list bucket"
-remote="$(echo "$listing" | tr '\n' ' ' | grep -o "<Contents>[^<]*<Key>${key}</Key>.*" | grep -o '<Size>[0-9]*</Size>' | head -1 | grep -o '[0-9]*' || true)"
-if [ -z "$remote" ]; then
-  # Some S3 servers order fields differently; fall back to searching the Contents block that holds our key.
-  remote="$(echo "$listing" | tr '\n' ' ' | sed 's#</Contents>#</Contents>\n#g' | grep "<Key>${key}</Key>" | grep -o '<Size>[0-9]*</Size>' | grep -o '[0-9]*' || true)"
-fi
-[ "$remote" = "$bytes" ] || fail "uploaded size ${remote:-missing} != local ${bytes}"
-log "upload verified (${remote} bytes)"
+# Confirm the upload: for a single-part upload the storage returns the file's MD5 as the ETag.
+etag="$(echo "$put_headers" | awk 'tolower($1)=="etag:"{print $2}' | tr -d '"')"
+local_md5="$(md5sum "$file" | cut -d' ' -f1)"
+[ -n "$etag" ] || fail "upload returned no ETag to verify against"
+[ "$etag" = "$local_md5" ] || fail "uploaded checksum ${etag} != local ${local_md5}"
+log "upload verified (md5 ${local_md5}, ${bytes} bytes)"
 rm -f "$file"
 
-# Prune backups older than KEEP_DAYS (keys carry the date, so compare names).
+# Prune backups older than KEEP_DAYS. Best effort: a pruning problem never fails a good backup.
 cutoff="$(date -u -d "-${KEEP_DAYS} days" +%Y-%m-%d)"
-deleted=0
-for k in $(echo "$listing" | grep -o '<Key>[^<]*</Key>' | sed 's/<[^>]*>//g'); do
-  d="$(echo "$k" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)"
-  if [ -n "$d" ] && [[ "$d" < "$cutoff" ]]; then
-    curl -sS --fail -X DELETE "${sig[@]}" "${endpoint}/${S3_BUCKET}/${k}" >/dev/null && deleted=$((deleted+1))
-  fi
-done
-total="$(echo "$listing" | grep -o '<Key>' | wc -l)"
-log "done: ${total} backup(s) in bucket before pruning, ${deleted} older than ${KEEP_DAYS} days removed"
+if listing="$(curl -sS --fail "${sig[@]}" "${endpoint}/${S3_BUCKET}?list-type=2&prefix=mysql%2F" 2>/dev/null)"; then
+  deleted=0
+  for k in $(echo "$listing" | grep -o '<Key>[^<]*</Key>' | sed 's/<[^>]*>//g'); do
+    d="$(echo "$k" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -1 || true)"
+    if [ -n "$d" ] && [[ "$d" < "$cutoff" ]]; then
+      curl -sS --fail -X DELETE "${sig[@]}" "${endpoint}/${S3_BUCKET}/${k}" >/dev/null && deleted=$((deleted+1)) || true
+    fi
+  done
+  total="$(echo "$listing" | grep -o '<Key>' | wc -l)"
+  log "done: ${total} backup(s) in bucket, ${deleted} older than ${KEEP_DAYS} days removed"
+else
+  log "done (WARNING: could not list the bucket to remove copies older than ${KEEP_DAYS} days)"
+fi
