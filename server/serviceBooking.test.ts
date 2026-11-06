@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cardFee, formatUsd, totalFor } from "../shared/servicePricing";
-import { bookingSchema, buildInstructions, paymentConfig, paymentReference } from "./integrations/serviceBookingRoute";
+import { bookingSchema, buildInstructions, buildQuickbooksVenmoSms, paymentConfig, paymentReference } from "./integrations/serviceBookingRoute";
+import { buildServiceInvoiceBody } from "./integrations/accounting/quickbooks";
 
 describe("service pricing", () => {
   it("adds a 3% card fee, never above Stripe's 2.9% + 30¢", () => {
@@ -22,7 +23,7 @@ describe("service pricing", () => {
 
 describe("service booking route helpers", () => {
   it("defaults Zelle to info@ and hides Venmo until a handle is set", () => {
-    expect(paymentConfig({} as NodeJS.ProcessEnv)).toEqual({ card: false, zelle: "info@mechanicalenterprise.com", venmo: null });
+    expect(paymentConfig({} as NodeJS.ProcessEnv)).toEqual({ card: false, zelle: "info@mechanicalenterprise.com", venmo: null, venmoViaQuickbooks: true });
     expect(paymentConfig({ VENMO_HANDLE: "Mech-Ent", STRIPE_SECRET_KEY: "sk" } as NodeJS.ProcessEnv).venmo).toBe("@Mech-Ent");
   });
   it("validates input and rejects the honeypot", () => {
@@ -38,5 +39,24 @@ describe("service booking route helpers", () => {
     expect(m.amount).toBe("$650");
     expect(m.sms).toContain("send $650 by Zelle to info@mechanicalenterprise.com with memo ME-ABC123");
     expect(m.html).not.toContain("<b>Test");
+  });
+});
+
+describe("Venmo via QuickBooks invoice", () => {
+  it("builds a one-line emailed invoice with no card option and the base price", () => {
+    const body = buildServiceInvoiceBody(
+      { customerRef: "42", amount: 149, name: "Service Call", description: "Visit and diagnosis", email: "a@b.co", docNumber: "1050" },
+      { value: "7", name: "HVAC Services" },
+    ) as any;
+    expect(body.CustomerRef).toEqual({ value: "42" });
+    expect(body.Line).toHaveLength(1);
+    expect(body.Line[0].Amount).toBe(149);
+    expect(body.BillEmail).toEqual({ Address: "a@b.co" });
+    expect(body.AllowOnlineCreditCardPayment).toBe(false);
+    expect(body.DocNumber).toBe("1050");
+  });
+  it("texts the pay link, or points to the email when QuickBooks gives no link", () => {
+    expect(buildQuickbooksVenmoSms("Ana Test", "Service Call", "$149", "https://pay.example/x")).toContain("choose Venmo or PayPal: https://pay.example/x");
+    expect(buildQuickbooksVenmoSms("Ana Test", "Service Call", "$149", null)).toContain("We emailed your Service Call invoice ($149)");
   });
 });

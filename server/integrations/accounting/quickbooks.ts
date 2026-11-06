@@ -393,6 +393,34 @@ export function nextDocNumberFrom(docNumbers: Array<string | null | undefined>, 
 }
 
 // ── Sync-log writer (unit-tested) ───────────────────────────────────────────
+/**
+ * Pure: body for a website service-call invoice (one line, emailed to the
+ * customer, payable online). PayPal/Venmo appear on the QuickBooks pay page when
+ * that option is on in QuickBooks Payments; card is off so the card-fee price
+ * (Stripe) stays the only card route.
+ */
+export function buildServiceInvoiceBody(
+  input: { customerRef: string; amount: number; name: string; description: string; email: string; privateNote?: string; docNumber?: string | null },
+  itemRef: { value: string; name: string },
+): Record<string, unknown> {
+  const amount = Math.round(input.amount * 100) / 100;
+  const body: Record<string, unknown> = {
+    CustomerRef: { value: input.customerRef },
+    Line: [{
+      DetailType: "SalesItemLineDetail",
+      Amount: amount,
+      Description: `${input.name} — ${input.description}`.slice(0, 4000),
+      SalesItemLineDetail: { ItemRef: { value: itemRef.value, name: itemRef.name }, Qty: 1, UnitPrice: amount },
+    }],
+    BillEmail: { Address: input.email },
+    AllowOnlineCreditCardPayment: false,
+    AllowOnlineACHPayment: true,
+  };
+  if (input.docNumber) body.DocNumber = input.docNumber.slice(0, 21);
+  if (input.privateNote) body.PrivateNote = input.privateNote.slice(0, 4000);
+  return body;
+}
+
 export async function writeSyncLog(entry: InsertQuickbooksSyncLog): Promise<void> {
   const db = await getDb();
   if (!db) return;
@@ -901,6 +929,71 @@ export class QuickBooksProvider implements AccountingProvider {
       totalAmount: Number(json.Estimate.TotalAmt ?? 0),
       raw: json.Estimate,
     };
+  }
+
+  /**
+   * Website bookings: reuse a QBO customer only when email or phone matches
+   * (a same-name match could be a different person); otherwise create one,
+   * adding the phone's last 4 digits to the name if it's already taken.
+   */
+  async findOrCreateWebCustomer(c: AccountingCustomerInput): Promise<string> {
+    const match = pickMergeMatch(c, await this.findMatches(c));
+    if (match && match.matchedBy !== "name") return match.candidate.Id;
+    const body = mapCustomerToQbo(c);
+    if (match) body.DisplayName = `${body.DisplayName} (${(c.phone ?? "").replace(/\D/g, "").slice(-4) || "web"})`;
+    const res = await this.qboFetch(`/customer`, { method: "POST", body: JSON.stringify(body) });
+    const json = (await res.json().catch(() => ({}))) as { Customer?: QboCustomer; Fault?: { Error?: Array<{ Message?: string; Detail?: string }> } };
+    if (!res.ok || !json.Customer?.Id) {
+      const err = json.Fault?.Error?.[0];
+      throw new Error(`QuickBooks customer create failed: ${err?.Message ?? err?.Detail ?? `HTTP ${res.status}`}`);
+    }
+    return json.Customer.Id;
+  }
+
+  private async nextInvoiceDocNumber(): Promise<string> {
+    const res = await this.qboFetch(`/query?query=${encodeURIComponent("SELECT * FROM Invoice MAXRESULTS 1000")}`);
+    let docNumbers: Array<string | undefined> = [];
+    if (res.ok) {
+      const json = (await res.json().catch(() => ({}))) as { QueryResponse?: { Invoice?: Array<{ DocNumber?: string }> } };
+      docNumbers = (json.QueryResponse?.Invoice ?? []).map(i => i.DocNumber);
+    }
+    return nextDocNumberFrom(docNumbers);
+  }
+
+  /**
+   * Create a one-line service-call invoice, have QuickBooks email it, and return
+   * the customer pay link (InvoiceLink) for the text message.
+   */
+  async createAndSendServiceInvoice(input: {
+    customerRef: string; amount: number; name: string; description: string; email: string; privateNote?: string;
+    itemRef?: { value: string; name: string };
+  }): Promise<{ qbId: string; docNumber: string | null; invoiceLink: string | null; emailed: boolean }> {
+    const itemRef = input.itemRef ?? (await this.resolveDefaultItemRef());
+    const docNumber = (await this.usesCustomTxnNumbers()) ? await this.nextInvoiceDocNumber() : null;
+    const res = await this.qboFetch(`/invoice`, { method: "POST", body: JSON.stringify(buildServiceInvoiceBody({ ...input, docNumber }, itemRef)) });
+    const json = (await res.json().catch(() => ({}))) as {
+      Invoice?: { Id?: string; DocNumber?: string };
+      Fault?: { Error?: Array<{ Message?: string; Detail?: string }> };
+    };
+    if (!res.ok || !json.Invoice?.Id) {
+      const err = json.Fault?.Error?.[0];
+      throw new Error(`QuickBooks invoice create failed: ${err?.Message ?? err?.Detail ?? `HTTP ${res.status}`}`);
+    }
+    const qbId = json.Invoice.Id;
+
+    const sent = await this.qboFetch(`/invoice/${qbId}/send?sendTo=${encodeURIComponent(input.email)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+    }).catch(() => null);
+    const emailed = Boolean(sent?.ok);
+
+    let invoiceLink: string | null = null;
+    const read = await this.qboFetch(`/invoice/${qbId}?include=invoiceLink`).catch(() => null);
+    if (read?.ok) {
+      const r = (await read.json().catch(() => ({}))) as { Invoice?: { InvoiceLink?: string } };
+      invoiceLink = r.Invoice?.InvoiceLink || null;
+    }
+    return { qbId, docNumber: json.Invoice.DocNumber ?? docNumber, invoiceLink, emailed };
   }
 
   async pushInvoice(): Promise<never> {

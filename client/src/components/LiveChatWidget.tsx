@@ -35,7 +35,7 @@ const P = {
   residential: { standard: { price: formatUsd(SERVICE_PRICES.residential.standard) }, emergency: { price: formatUsd(SERVICE_PRICES.residential.emergency) } },
   commercial: { standard: { price: formatUsd(SERVICE_PRICES.commercial.standard) }, emergency: { price: formatUsd(SERVICE_PRICES.commercial.emergency) } },
 };
-const PAY_LABELS: Record<ServicePaymentMethod, string> = { card: "💳 Card", zelle: "Zelle", venmo: "Venmo" };
+const PAY_LABELS: Record<ServicePaymentMethod, string> = { card: "💳 Card", zelle: "Zelle", venmo: "Venmo / PayPal" };
 const RES_SERVICE = `🔧 Service Call (${P.residential.standard.price})`;
 const RES_EMERGENCY = `🚨 Emergency (${P.residential.emergency.price})`;
 const COM_SERVICE = `🔧 Commercial Service (${P.commercial.standard.price})`;
@@ -459,7 +459,7 @@ export default function LiveChatWidget() {
     setSvcSubmitting(true); setSvcPayError("");
     const method = svcPayMethod;
 
-    let result: { ok?: boolean; error?: string; checkoutUrl?: string; reference?: string; payTo?: string; amount?: string; sms?: boolean; email?: boolean } = {};
+    let result: { ok?: boolean; error?: string; checkoutUrl?: string; reference?: string; payTo?: string; amount?: string; sms?: boolean; email?: boolean; via?: string; payLink?: string | null; invoiceNumber?: string } = {};
     try {
       const res = await fetch("/api/service-booking", {
         method: "POST",
@@ -476,7 +476,9 @@ export default function LiveChatWidget() {
       ? `Payment: ${PAY_LABELS[method]} chosen, but the payment step failed — send payment details when confirming`
       : method === "card"
         ? `Payment: card ${formatUsd(totalDue)} (${currentPrice} + ${formatUsd(currentFee)} card fee) — Stripe checkout opened; check Stripe before confirming`
-        : `Payment: ${PAY_LABELS[method]} ${result.amount} to ${result.payTo}, memo ${result.reference} — instructions ${[result.sms && "texted", result.email && "emailed"].filter(Boolean).join(" + ") || "NOT delivered (send manually)"}`;
+        : result.via === "quickbooks"
+          ? `Payment: Venmo/PayPal ${result.amount} — QuickBooks invoice #${result.invoiceNumber} ${[result.email && "emailed by QuickBooks", result.sms && "pay link texted"].filter(Boolean).join(" + ") || "created but NOT delivered (send it from QuickBooks)"}`
+          : `Payment: ${PAY_LABELS[method]} ${result.amount} to ${result.payTo}, memo ${result.reference} — instructions ${[result.sms && "texted", result.email && "emailed"].filter(Boolean).join(" + ") || "NOT delivered (send manually)"}`;
     const payload = {
       caller_name: svcName.trim(),
       caller_phone: svcPhone.trim(),
@@ -500,6 +502,16 @@ export default function LiveChatWidget() {
     setSvcSubmitting(false); setSvcSubmitted(true);
     setMenuLevel("none");
     const sentBy = [result.sms && "text", result.email && "email"].filter(Boolean).join(" and ");
+    if (result.via === "quickbooks") {
+      setMessages((p) => [...p, {
+        role: "assistant",
+        text: `Thanks! Your ${result.amount} invoice is ready — open it, tap Pay and choose Venmo or PayPal.` +
+          (result.payLink ? ` Pay here: ${result.payLink}` : "") +
+          (sentBy ? ` We also sent it by ${sentBy}.` : "") +
+          ` We'll call to confirm your time once it's paid. Questions? Call ${PHONE}`,
+      }]);
+      return;
+    }
     setMessages((p) => [...p, {
       role: "assistant",
       text: `Thanks! To confirm, send ${result.amount} by ${PAY_LABELS[method]} to ${result.payTo} with memo ${result.reference}.` +
@@ -738,8 +750,8 @@ export default function LiveChatWidget() {
                     style={{ padding: "14px", background: ORANGE, color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 16, cursor: svcSubmitting ? "wait" : "pointer", opacity: svcSubmitting ? 0.7 : 1, transition: "background 0.2s", width: "100%" }}
                     onMouseEnter={(e) => { if (!svcSubmitting) e.currentTarget.style.background = ORANGE_HOVER; }}
                     onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
-                  >{svcSubmitting ? "Processing…" : svcPayMethod === "card" ? `💳 Pay ${formatUsd(totalDue)} by Card` : `Get ${PAY_LABELS[svcPayMethod]} Instructions`}</button>
-                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>{svcPayMethod === "card" ? "Secure checkout by Stripe. Repairs are quoted before any work." : "We'll text and email where to send payment. Repairs are quoted before any work."}</div>
+                  >{svcSubmitting ? "Processing…" : svcPayMethod === "card" ? `💳 Pay ${formatUsd(totalDue)} by Card` : svcPayMethod === "venmo" ? "Get Venmo / PayPal Invoice" : "Get Zelle Instructions"}</button>
+                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>{svcPayMethod === "card" ? "Secure checkout by Stripe. Repairs are quoted before any work." : svcPayMethod === "venmo" ? "We'll email and text your invoice — pay it with Venmo or PayPal. Repairs are quoted before any work." : "We'll text and email where to send payment. Repairs are quoted before any work."}</div>
                 </div>
               </div>
             )}

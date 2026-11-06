@@ -3,8 +3,11 @@
  *
  *   GET  /api/service-booking/options  → which payment methods are on
  *   POST /api/service-booking          → card: Stripe Checkout URL for the
- *                                        price + card fee; zelle/venmo: texts and
- *                                        emails the customer payment instructions.
+ *                                        price + card fee; zelle: texts and emails
+ *                                        the customer payment instructions; venmo:
+ *                                        a QuickBooks invoice (emailed by QuickBooks,
+ *                                        pay link texted) payable with PayPal/Venmo —
+ *                                        or, if VENMO_HANDLE is set, instructions.
  *
  * Amounts always come from shared/servicePricing — never from the request.
  * The office still gets the booking details from the chat's call recap.
@@ -24,6 +27,7 @@ import {
 import { checkRateLimit, phoneKey } from "../_core/rateLimit";
 import { sendEmail } from "../services/emailService";
 import { sendTelnyxSms, toE164 } from "../services/telnyxSms";
+import { quickbooksProvider } from "./accounting/quickbooks";
 
 const SITE_URL = (process.env.PUBLIC_SITE_URL || "https://mechanicalenterprise.com").replace(/\/$/, "");
 const OFFICE_PHONE = "(862) 423-9396";
@@ -34,7 +38,35 @@ export function paymentConfig(env: NodeJS.ProcessEnv = process.env) {
     card: Boolean(env.STRIPE_SECRET_KEY),
     zelle: (env.ZELLE_RECIPIENT ?? "").trim() || ZELLE_DEFAULT_RECIPIENT,
     venmo: venmo ? (venmo.startsWith("@") ? venmo : `@${venmo}`) : null,
+    venmoViaQuickbooks: env.VENMO_VIA_QUICKBOOKS !== "false",
   };
+}
+
+/** QuickBooks items for service calls (Products & Services). Override by env if they change. */
+export function serviceCallItem(category: ServiceCategory, env: NodeJS.ProcessEnv = process.env) {
+  return category === "commercial"
+    ? { value: env.QUICKBOOKS_COMMERCIAL_SERVICE_CALL_ITEM_ID || "17", name: "HVAC Commercial Service Call/ Repair" }
+    : { value: env.QUICKBOOKS_RESIDENTIAL_SERVICE_CALL_ITEM_ID || "14", name: "HVAC Residential Service Call / Repair" };
+}
+
+/** QuickBooks connection check, cached for 5 minutes (it's a DB read). */
+let qbCache: { at: number; ok: boolean } | null = null;
+async function quickbooksReady(): Promise<boolean> {
+  if (qbCache && Date.now() - qbCache.at < 5 * 60_000) return qbCache.ok;
+  const ok = await quickbooksProvider.getStatus().then((s) => s.connected).catch(() => false);
+  qbCache = { at: Date.now(), ok };
+  return ok;
+}
+
+async function venmoAvailable(cfg: ReturnType<typeof paymentConfig>): Promise<boolean> {
+  return Boolean(cfg.venmo) || (cfg.venmoViaQuickbooks && (await quickbooksReady()));
+}
+
+export function buildQuickbooksVenmoSms(name: string, label: string, amount: string, link: string | null): string {
+  const first = name.split(/\s+/)[0];
+  return link
+    ? `Mechanical Enterprise: Thanks, ${first}! Pay your ${label} (${amount}) here — tap Pay and choose Venmo or PayPal: ${link} We'll call to confirm your time once it's paid. Questions? ${OFFICE_PHONE}. Reply STOP to opt out.`
+    : `Mechanical Enterprise: Thanks, ${first}! We emailed your ${label} invoice (${amount}) — open it and choose Venmo or PayPal to pay. We'll call to confirm your time once it's paid. Questions? ${OFFICE_PHONE}. Reply STOP to opt out.`;
 }
 
 export const bookingSchema = z.object({
@@ -93,10 +125,10 @@ export function buildInstructions(
 }
 
 export function registerServiceBookingRoute(app: Express) {
-  app.get("/api/service-booking/options", (_req: Request, res: Response) => {
+  app.get("/api/service-booking/options", async (_req: Request, res: Response) => {
     const cfg = paymentConfig();
     res.json({
-      methods: [cfg.card && "card", "zelle", cfg.venmo && "venmo"].filter(Boolean),
+      methods: [cfg.card && "card", "zelle", (await venmoAvailable(cfg)) && "venmo"].filter(Boolean),
     });
   });
 
@@ -161,6 +193,29 @@ export function registerServiceBookingRoute(app: Express) {
         });
         console.log(`[ServiceBooking] card checkout ${session.id} ${label} ${formatUsd(base + fee)}`);
         return res.json({ ok: true, method: "card", checkoutUrl: session.url });
+      }
+
+      if (input.paymentMethod === "venmo" && !cfg.venmo) {
+        if (!(await venmoAvailable(cfg))) return res.status(503).json({ ok: false, error: "Venmo isn't available right now." });
+        const amount = formatUsd(base);
+        const [firstName, ...rest] = input.name.split(/\s+/);
+        const customerRef = await quickbooksProvider.findOrCreateWebCustomer({
+          localId: 0, type: input.category, displayName: input.name,
+          firstName, lastName: rest.join(" ") || null, email: input.email, phone: input.phone,
+        });
+        const inv = await quickbooksProvider.createAndSendServiceInvoice({
+          customerRef, amount: base, name: label, email: input.email,
+          description: "Visit and diagnosis — any repair is quoted on site.",
+          privateNote: "Website chat booking — customer chose Venmo/PayPal.",
+          itemRef: serviceCallItem(input.category),
+        });
+        const sms = await sendTelnyxSms(input.phone, buildQuickbooksVenmoSms(input.name, label, amount, inv.invoiceLink))
+          .then((r) => r.success).catch(() => false);
+        console.log(`[ServiceBooking] venmo via QuickBooks invoice ${inv.docNumber ?? inv.qbId} emailed=${inv.emailed} link=${Boolean(inv.invoiceLink)} sms=${sms}`);
+        return res.json({
+          ok: true, method: "venmo", via: "quickbooks", amount, payLink: inv.invoiceLink,
+          invoiceNumber: inv.docNumber ?? inv.qbId, sms, email: inv.emailed,
+        });
       }
 
       const payTo = input.paymentMethod === "zelle" ? cfg.zelle : cfg.venmo;
