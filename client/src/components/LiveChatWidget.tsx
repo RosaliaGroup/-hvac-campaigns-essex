@@ -392,9 +392,16 @@ export default function LiveChatWidget() {
   }, [input, userMsgCount, freetextCount, flowCategory, triggerLeadForm]);
 
   const handleBack = useCallback(() => {
+    // From the service form, go back one step to that category's options.
+    if (menuLevel === "service-form" && (flowCategory === "residential" || flowCategory === "commercial")) {
+      setMessages((p) => [...p, { role: "assistant", text: "Sure — what else can I help with?" }]);
+      setSvcEmergency(false); setSvcPayError("");
+      setMenuLevel(flowCategory);
+      return;
+    }
     setMessages((p) => [...p, { role: "assistant", text: "No problem! What else can I help you with?" }]);
     setMenuLevel("main"); setPendingBooking(false); setFlowCategory(null);
-  }, []);
+  }, [menuLevel, flowCategory]);
 
   const getFollowUpButtons = (): string[] | null => {
     const m: Record<string, string> = { residential: "🏠 Residential", commercial: "🏢 Commercial", careers: "💼 Careers", partnership: "🤝 Partnership", courses: "📚 Courses" };
@@ -532,7 +539,7 @@ export default function LiveChatWidget() {
   /* ── render ────────────────────────────────────────────────────── */
   const followUpButtons = getFollowUpButtons();
   const isFollowUpMenu = followUpButtons !== null;
-  const showBackButton = menuLevel !== "main" && menuLevel !== "none" && menuLevel !== "question" && menuLevel !== "service-form" && !isTyping;
+  const showBackButton = menuLevel !== "main" && menuLevel !== "none" && menuLevel !== "question" && !(menuLevel === "service-form" && svcSubmitting) && !isTyping;
 
   return (
     <>
@@ -657,8 +664,14 @@ export default function LiveChatWidget() {
             {/* ── INLINE SERVICE BOOKING FORM ────────────────────── */}
             {menuLevel === "service-form" && !isTyping && !svcSubmitted && (
               <div style={{ ...formCardStyle, animation: svcValidationError ? "me-shake 0.4s" : undefined }}>
-                <div style={{ fontWeight: 600, fontSize: 15, color: NAVY, marginBottom: 2 }}>
-                  {isCommercial ? "Book Commercial Service" : "Book Service Call"}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: NAVY }}>
+                    {isCommercial ? "Book Commercial Service" : "Book Service Call"}
+                  </div>
+                  <button type="button" onClick={handleBack} disabled={svcSubmitting}
+                    style={{ background: "none", border: "none", color: NAVY, fontSize: 12, cursor: "pointer", padding: 0, textDecoration: "underline", whiteSpace: "nowrap" }}>
+                    ← Back
+                  </button>
                 </div>
                 {svcEmergency ? (
                   <div style={{ fontSize: 13, color: "#d63c3c", fontWeight: 600, marginBottom: 10 }}>
