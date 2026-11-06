@@ -1,22 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { cardFee, formatUsd, priceBreakdown, totalFor } from "../shared/servicePricing";
+import { cardFee, formatUsd, priceBreakdown, stripeFeeOn, totalFor } from "../shared/servicePricing";
 import { bookingSchema, buildInstructions, buildQuickbooksVenmoSms, paymentConfig, paymentReference } from "./integrations/serviceBookingRoute";
 import { buildServiceInvoiceBody } from "./integrations/accounting/quickbooks";
 
 describe("service pricing", () => {
-  it("adds a 3% card fee, never above Stripe's 2.9% + 30¢", () => {
-    expect(cardFee(149)).toBe(4.47);
-    expect(cardFee(299)).toBe(8.97);
-    expect(cardFee(425)).toBe(12.75);
-    expect(cardFee(650)).toBe(19.5);
-    // Large amounts: Stripe's real cost is below 3%, so the fee is capped at that cost.
-    expect(cardFee(5000)).toBeLessThan(150);
+  it("card fee always covers Stripe's 2.9% + 30¢ on the whole charge", () => {
+    for (const amt of [1, 49.99, 158.87, 318.81, 453.16, 693.06, 5000, 12345.67]) {
+      const fee = cardFee(amt);
+      expect(stripeFeeOn(amt + fee)).toBeLessThanOrEqual(fee);
+      expect(fee - stripeFeeOn(amt + fee)).toBeLessThanOrEqual(0.02); // no meaningful overcharge
+    }
+    expect(cardFee(158.87)).toBe(5.06);
   });
   it("adds NJ sales tax to every method and the card fee only for cards", () => {
-    expect(priceBreakdown("residential", false, "card")).toEqual({ base: 149, tax: 9.87, subtotal: 158.87, fee: 4.77, total: 163.64 });
+    expect(priceBreakdown("residential", false, "card")).toEqual({ base: 149, tax: 9.87, subtotal: 158.87, fee: 5.06, total: 163.93 });
     expect(totalFor("residential", false, "zelle")).toBe(158.87);
     expect(totalFor("commercial", true, "venmo")).toBe(693.06);
-    expect(totalFor("commercial", true, "card")).toBe(713.85);
+    expect(totalFor("commercial", true, "card")).toBe(714.07);
     expect(formatUsd(153.47)).toBe("$153.47");
     expect(formatUsd(149)).toBe("$149");
   });

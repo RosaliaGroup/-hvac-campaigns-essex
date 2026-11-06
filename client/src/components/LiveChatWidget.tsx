@@ -29,7 +29,7 @@ const COURSES_URL = `${BASE}/courses`;
 const PARTNERSHIPS_URL = `${BASE}/partnerships#apply`;
 /* ── Service-call pricing (shared/servicePricing) ──────────────────
    The fee covers the visit + diagnosis; any repair is quoted on site.
-   Card adds a 3% processing fee (Stripe Checkout, created by the server);
+   Card adds a processing fee that covers Stripe in full (Stripe Checkout, created by the server);
    Zelle/Venmo get payment instructions by text and email. */
 const P = {
   residential: { standard: { price: formatUsd(SERVICE_PRICES.residential.standard) }, emergency: { price: formatUsd(SERVICE_PRICES.residential.emergency) } },
@@ -740,7 +740,7 @@ export default function LiveChatWidget() {
                   </div>
                   <div style={{ fontSize: 12, color: "#666", marginTop: -4 }}>
                     {currentPrice} + {formatUsd(bd.tax)} NJ sales tax
-                    {svcPayMethod === "card" && <> + {formatUsd(bd.fee)} card processing fee (3%). Pay by Zelle{payMethods.includes("venmo") ? " or Venmo" : ""} to skip the card fee.</>}
+                    {svcPayMethod === "card" && <> + {formatUsd(bd.fee)} card processing fee. Pay by Zelle{payMethods.includes("venmo") ? " or Venmo" : ""} to skip the card fee.</>}
                   </div>
                   {svcPayError && <div style={{ fontSize: 13, color: "#d63c3c" }}>{svcPayError}</div>}
 

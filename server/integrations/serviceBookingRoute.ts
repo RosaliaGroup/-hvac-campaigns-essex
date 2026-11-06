@@ -10,7 +10,7 @@
  *                                        or, if VENMO_HANDLE is set, instructions.
  *
  * Amounts always come from shared/servicePricing — never from the request.
- * Every method charges NJ sales tax (6.625%); card adds 3% on top of that.
+ * Every method charges NJ sales tax (6.625%); card adds a fee that covers Stripe's 2.9% + 30¢ in full.
  * The office still gets the booking details from the chat's call recap.
  */
 
@@ -192,7 +192,7 @@ export function registerServiceBookingRoute(app: Express) {
               price_data: {
                 currency: "usd",
                 product_data: {
-                  name: "Card processing fee (3%)",
+                  name: "Card processing fee",
                   description: "Pay by Zelle or Venmo to avoid this fee.",
                 },
                 unit_amount: Math.round(price.fee * 100),

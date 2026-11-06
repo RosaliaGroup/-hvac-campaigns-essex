@@ -15,19 +15,26 @@ export const SERVICE_PRICES: Record<ServiceCategory, Record<ServiceTierName, num
   commercial: { standard: 425, emergency: 650 },
 };
 
-/** Card surcharge: 3% (Visa/Mastercard cap), never more than Stripe's own fee. */
-export const CARD_FEE_RATE = 0.03;
-const STRIPE_PERCENT = 0.029;
-const STRIPE_FIXED = 0.3;
+/**
+ * Card processing fee: sized so it fully covers Stripe's 2.9% + 30¢ on the
+ * whole charge, including the fee itself (owner, Nov 6 — accepted that this is
+ * above the 3% card-network surcharge cap on small payments).
+ */
+export const STRIPE_PERCENT = 0.029;
+export const STRIPE_FIXED = 0.3;
 
 const cents = (n: number) => Math.round(n * 100) / 100;
 
-/** Card processing fee added to `base` dollars. */
-export function cardFee(base: number): number {
-  const capped = cents(base * CARD_FEE_RATE);
-  // Fee that would exactly cover Stripe's 2.9% + 30¢ on the grossed-up total.
-  const stripeCost = Math.ceil(((base * STRIPE_PERCENT + STRIPE_FIXED) / (1 - STRIPE_PERCENT)) * 100) / 100;
-  return Math.min(capped, stripeCost);
+/** What Stripe charges on a payment of `total` dollars. */
+export function stripeFeeOn(total: number): number {
+  return cents(total * STRIPE_PERCENT + STRIPE_FIXED);
+}
+
+/** Card fee added to `amount` dollars so that Stripe's fee on the total is fully covered. */
+export function cardFee(amount: number): number {
+  let fee = Math.ceil(((amount * STRIPE_PERCENT + STRIPE_FIXED) / (1 - STRIPE_PERCENT)) * 100) / 100;
+  while (stripeFeeOn(amount + fee) > fee) fee = cents(fee + 0.01); // guard against rounding
+  return fee;
 }
 
 export function servicePrice(category: ServiceCategory, emergency: boolean): number {
@@ -41,7 +48,7 @@ export function salesTax(base: number): number {
   return cents(base * SALES_TAX_RATE);
 }
 
-/** Full breakdown: price + NJ sales tax, plus the 3% card fee on that subtotal when paying by card. */
+/** Full breakdown: price + NJ sales tax, plus the card fee (covers Stripe in full) when paying by card. */
 export function priceBreakdown(category: ServiceCategory, emergency: boolean, method: ServicePaymentMethod) {
   const base = servicePrice(category, emergency);
   const tax = salesTax(base);
