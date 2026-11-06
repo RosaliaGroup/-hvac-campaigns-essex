@@ -26,11 +26,29 @@ const COMMERCIAL_REBATE_URL = `${BASE}/commercial#rebate-calculator`;
 const CAREERS_URL = `${BASE}/careers`;
 const COURSES_URL = `${BASE}/courses`;
 const PARTNERSHIPS_URL = `${BASE}/partnerships#apply`;
-/* ── Stripe payment links (placeholders — replace with real links) ── */
-const STRIPE_RESIDENTIAL_STANDARD = "https://buy.stripe.com/7sY8wIcuM0hz7M17I40oM03";
-const STRIPE_RESIDENTIAL_EMERGENCY = "https://buy.stripe.com/aFaeV6dyQ1lDgix1jG0oM02";
-const STRIPE_COMMERCIAL_STANDARD = "https://buy.stripe.com/28EdR266o7K14zP8M80oM06";
-const STRIPE_COMMERCIAL_EMERGENCY = "https://buy.stripe.com/eVqaEQdyQfcteapfaw0oM04";
+/* ── Service-call pricing ──────────────────────────────────────────
+   The fee covers the visit + diagnosis; any repair is quoted on site
+   before work starts. Each tier pays through its own Stripe Payment Link,
+   set in Netlify env. A tier with no link takes the request without
+   payment and the office sends a payment link when it confirms. */
+type ServiceTier = { price: string; link?: string };
+const env = import.meta.env as Record<string, string | undefined>;
+const SERVICE_PRICING: Record<"residential" | "commercial", { standard: ServiceTier; emergency: ServiceTier }> = {
+  residential: {
+    standard: { price: "$149", link: env.VITE_STRIPE_LINK_RES_STANDARD || undefined },
+    emergency: { price: "$299", link: env.VITE_STRIPE_LINK_RES_EMERGENCY || undefined },
+  },
+  commercial: {
+    standard: { price: "$425", link: env.VITE_STRIPE_LINK_COM_STANDARD || undefined },
+    emergency: { price: "$650", link: env.VITE_STRIPE_LINK_COM_EMERGENCY || undefined },
+  },
+};
+const P = SERVICE_PRICING;
+const RES_SERVICE = `🔧 Service Call (${P.residential.standard.price})`;
+const RES_EMERGENCY = `🚨 Emergency (${P.residential.emergency.price})`;
+const COM_SERVICE = `🔧 Commercial Service (${P.commercial.standard.price})`;
+const COM_EMERGENCY = `🚨 Commercial Emergency (${P.commercial.emergency.price})`;
+const FEE_NOTE = "covers the visit and diagnosis — we quote any repair before work starts";
 
 const LEAD_FORM_THRESHOLD = 3;
 const AUTO_OPEN_MS = 8_000;
@@ -38,10 +56,7 @@ const AUTO_OPEN_KEY = "me_chat_auto_opened";
 const GREETING = "Hi! I'm Jessica from Mechanical Enterprise. 👋 How can I help you today?";
 
 /* ── Service options that go straight to inline form ────────────────── */
-const SERVICE_OPTIONS = new Set([
-  "🔧 Service Call ($100)", "🚨 Emergency ($175)", "🔄 Maintenance Plan",
-  "🔧 Service & Repair", "🚨 Emergency ($175)",
-]);
+const SERVICE_OPTIONS = new Set([RES_SERVICE, RES_EMERGENCY, COM_SERVICE, COM_EMERGENCY]);
 
 /* ── Quick-reply menus ─────────────────────────────────────────────── */
 const MAIN_MENU = ["🏠 Residential", "🏢 Commercial", "💼 Careers", "🤝 Partnership"];
@@ -49,11 +64,11 @@ const MAIN_MENU = ["🏠 Residential", "🏢 Commercial", "💼 Careers", "🤝 
 const FOLLOW_UP_CONFIG: Record<string, { reply: string; buttons: string[] }> = {
   "🏠 Residential": {
     reply: "Great! What do you need help with for your home?",
-    buttons: ["🆓 Free Assessment", "🔧 Service Call ($100)", "🚨 Emergency ($175)", "💰 Rebate Calculator", "🔄 Maintenance Plan"],
+    buttons: ["🆓 Free Assessment", RES_SERVICE, RES_EMERGENCY, "💰 Rebate Calculator", "🔄 Maintenance Plan"],
   },
   "🏢 Commercial": {
     reply: "Got it! What can we help with for your commercial property?",
-    buttons: ["🆓 Free Assessment", "🏭 VRV/VRF Systems", "🔧 Service & Repair", "🚨 Emergency ($175)", "💸 80% Rebates", "💰 Rebate Calculator"],
+    buttons: ["🆓 Free Assessment", "🏭 VRV/VRF Systems", COM_SERVICE, COM_EMERGENCY, "💸 80% Rebates", "💰 Rebate Calculator"],
   },
   "💼 Careers": {
     reply: "We're hiring across NJ! What would you like to know?",
@@ -81,19 +96,20 @@ const CATEGORY_MAP: Record<string, FlowCategory> = {
 /* ── Follow-up one-liners ──────────────────────────────────────────── */
 const FOLLOW_UP_REPLIES: Record<string, string> = {
   "🆓 Free Assessment": "Perfect! A free assessment takes about 60 min and we handle all rebate paperwork.",
-  "🔧 Service Call ($100)": "Got it — $100 flat rate, no hourly fees. Fill out the form below and we'll get you scheduled.",
-  "🚨 Emergency ($175)": "We respond in 2-4 hours. $175 flat rate. Fill out the form and we'll call you right back.",
+  [RES_SERVICE]: `Got it — the ${P.residential.standard.price} service call ${FEE_NOTE}. Fill out the form below and we'll get you scheduled.`,
+  [RES_EMERGENCY]: `The ${P.residential.emergency.price} emergency call gets priority scheduling and ${FEE_NOTE}. Fill out the form and we'll call you back for the earliest slot.`,
+  [COM_SERVICE]: `Got it — the ${P.commercial.standard.price} commercial service call ${FEE_NOTE}. Fill out the form below and we'll get you scheduled.`,
+  [COM_EMERGENCY]: `The ${P.commercial.emergency.price} commercial emergency call gets priority scheduling and ${FEE_NOTE}. Fill out the form and we'll call you back for the earliest slot.`,
   "💰 Rebate Calculator": "Check your estimate instantly — up to $16,000 residential, 80% commercial.",
-  "🔄 Maintenance Plan": "Plans start at $19/mo — includes priority scheduling plus 15% off repairs. Book below!",
-  "🏭 VRV/VRF Systems": "We're one of NJ's top VRV/VRF specialists — ideal for multi-zone buildings.",
-  "🔧 Service & Repair": "We focus on new installations and full system replacements. Fill out the form below and we'll set up a free assessment.",
+  "🔄 Maintenance Plan": "We'd be glad to put together maintenance plan options for your system. Leave your details and we'll follow up.",
+  "🏭 VRV/VRF Systems": "We design and install VRV/VRF systems — ideal for multi-zone buildings.",
   "💸 80% Rebates": "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.",
-  "🔩 HVAC Technician": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
-  "🏢 Commercial Tech": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
-  "📋 Apply Now": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
-  "💰 Pay & Benefits": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
+  "🔩 HVAC Technician": "We're always looking for great HVAC talent across NJ — full benefits and competitive pay.",
+  "🏢 Commercial Tech": "We're always looking for great HVAC talent across NJ — full benefits and competitive pay.",
+  "📋 Apply Now": "We're always looking for great HVAC talent across NJ — full benefits and competitive pay.",
+  "💰 Pay & Benefits": "We're always looking for great HVAC talent across NJ — full benefits and competitive pay.",
   "🤝 Referral Partner ($200-$500)": "Earn $200-$500 per qualified referral — we handle everything after the intro.",
-  "🏘️ Property Manager Program": "Property managers get priority service, volume pricing, and a dedicated account rep.",
+  "🏘️ Property Manager Program": "Property managers get portfolio maintenance contracts with fixed per-unit pricing and quarterly condition reports.",
   "🏗️ Contractor Program": "We sub-contract HVAC for GCs across NJ — licensed, insured, and always on schedule.",
   "📞 Talk to Someone": "Fill out the form and we'll be in touch within 24-48 hours!",
   "📜 Certifications": "We offer EPA 608, OSHA 30, and manufacturer-specific certifications.",
@@ -418,36 +434,36 @@ export default function LiveChatWidget() {
     }
     setSvcSubmitting(true);
 
+    const tier = svcEmergency ? pricing.emergency : pricing.standard;
+    // Open Stripe before any await so the browser treats it as a click, not a popup.
+    if (tier.link) window.open(tier.link, "_blank", "noopener");
+
     const appointmentType = isCommercial ? "Commercial Service Call" : "Residential Service Call";
     const payload = {
       caller_name: svcName.trim(),
       caller_phone: svcPhone.trim(),
       caller_email: svcEmail.trim(),
       appointment_type: appointmentType,
-      call_summary: buildServiceSummary(),
-      outcome: "booked",
+      call_summary: `${buildServiceSummary()}\nPayment: ${tier.link ? "Stripe link opened — check Stripe before confirming" : "not collected — send a payment link when confirming"}`,
+      outcome: "needs_follow_up",
       transcript: messages.map((m) => `${m.role === "user" ? "Visitor" : "Jessica"}: ${m.text}`).join("\n"),
     };
 
     try { await fetch("/.netlify/functions/sendCallRecap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch {}
 
-    // Open Stripe payment link
-    let stripeUrl: string;
-    if (isCommercial) {
-      stripeUrl = svcEmergency ? STRIPE_COMMERCIAL_EMERGENCY : STRIPE_COMMERCIAL_STANDARD;
-    } else {
-      stripeUrl = svcEmergency ? STRIPE_RESIDENTIAL_EMERGENCY : STRIPE_RESIDENTIAL_STANDARD;
-    }
-    window.open(stripeUrl, "_blank", "noopener");
-
     setSvcSubmitting(false); setSvcSubmitted(true);
     setMenuLevel("none");
-    setMessages((p) => [...p, { role: "assistant", text: `✅ Booked! We'll confirm within 1 hour. Questions? Call ${PHONE}` }]);
+    const thanks = tier.link
+      ? `Thanks! Finish payment in the Stripe tab to hold your spot — we'll call to confirm the time. Questions? Call ${PHONE}`
+      : `Thanks! Request received — we'll call to confirm the time and text you a secure payment link. Questions? Call ${PHONE}`;
+    setMessages((p) => [...p, { role: "assistant", text: thanks }]);
   };
 
   /* ── pricing helpers ───────────────────────────────────────────── */
-  const emergencyPrice = isCommercial ? "$550" : "$175";
-  const regularPrice = isCommercial ? "$375" : "$100";
+  const pricing = isCommercial ? SERVICE_PRICING.commercial : SERVICE_PRICING.residential;
+  const emergencyPrice = pricing.emergency.price;
+  const regularPrice = pricing.standard.price;
+  const currentTier = svcEmergency ? pricing.emergency : pricing.standard;
 
   /* ── render ────────────────────────────────────────────────────── */
   const followUpButtons = getFollowUpButtons();
@@ -582,11 +598,11 @@ export default function LiveChatWidget() {
                 </div>
                 {svcEmergency ? (
                   <div style={{ fontSize: 13, color: "#d63c3c", fontWeight: 600, marginBottom: 10 }}>
-                    🚨 Emergency Rate: {emergencyPrice} flat — 2-4 hr response
+                    🚨 Emergency service call: {emergencyPrice} — priority scheduling, visit + diagnosis
                   </div>
                 ) : (
                   <div style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>
-                    ✅ Standard Rate: {regularPrice} flat — scheduled appointment
+                    ✅ Service call: {regularPrice} — visit + diagnosis, repairs quoted on site
                   </div>
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -652,8 +668,8 @@ export default function LiveChatWidget() {
                     style={{ padding: "14px", background: ORANGE, color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 16, cursor: svcSubmitting ? "wait" : "pointer", opacity: svcSubmitting ? 0.7 : 1, transition: "background 0.2s", width: "100%" }}
                     onMouseEnter={(e) => { if (!svcSubmitting) e.currentTarget.style.background = ORANGE_HOVER; }}
                     onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
-                  >{svcSubmitting ? "Processing…" : "💳 Pay & Confirm Booking"}</button>
-                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>Payment secures your appointment slot</div>
+                  >{svcSubmitting ? "Processing…" : currentTier.link ? "💳 Pay & Request Booking" : "Request Service Call"}</button>
+                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>{currentTier.link ? "Payment holds your slot. Repairs are quoted before any work." : "No payment now — we'll confirm by phone and text a payment link."}</div>
                 </div>
               </div>
             )}
