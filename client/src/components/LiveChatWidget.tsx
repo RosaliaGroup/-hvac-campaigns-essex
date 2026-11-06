@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { SERVICE_PRICES, cardFee, formatUsd, type ServicePaymentMethod } from "@shared/servicePricing";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 type ChatMessage = { role: "user" | "assistant"; text: string };
@@ -26,24 +27,15 @@ const COMMERCIAL_REBATE_URL = `${BASE}/commercial#rebate-calculator`;
 const CAREERS_URL = `${BASE}/careers`;
 const COURSES_URL = `${BASE}/courses`;
 const PARTNERSHIPS_URL = `${BASE}/partnerships#apply`;
-/* ── Service-call pricing ──────────────────────────────────────────
-   The fee covers the visit + diagnosis; any repair is quoted on site
-   before work starts. Each tier pays through its own Stripe Payment Link,
-   set in Netlify env. A tier with no link takes the request without
-   payment and the office sends a payment link when it confirms. */
-type ServiceTier = { price: string; link?: string };
-const env = import.meta.env as Record<string, string | undefined>;
-const SERVICE_PRICING: Record<"residential" | "commercial", { standard: ServiceTier; emergency: ServiceTier }> = {
-  residential: {
-    standard: { price: "$149", link: env.VITE_STRIPE_LINK_RES_STANDARD || undefined },
-    emergency: { price: "$299", link: env.VITE_STRIPE_LINK_RES_EMERGENCY || undefined },
-  },
-  commercial: {
-    standard: { price: "$425", link: env.VITE_STRIPE_LINK_COM_STANDARD || undefined },
-    emergency: { price: "$650", link: env.VITE_STRIPE_LINK_COM_EMERGENCY || undefined },
-  },
+/* ── Service-call pricing (shared/servicePricing) ──────────────────
+   The fee covers the visit + diagnosis; any repair is quoted on site.
+   Card adds a 3% processing fee (Stripe Checkout, created by the server);
+   Zelle/Venmo get payment instructions by text and email. */
+const P = {
+  residential: { standard: { price: formatUsd(SERVICE_PRICES.residential.standard) }, emergency: { price: formatUsd(SERVICE_PRICES.residential.emergency) } },
+  commercial: { standard: { price: formatUsd(SERVICE_PRICES.commercial.standard) }, emergency: { price: formatUsd(SERVICE_PRICES.commercial.emergency) } },
 };
-const P = SERVICE_PRICING;
+const PAY_LABELS: Record<ServicePaymentMethod, string> = { card: "💳 Card", zelle: "Zelle", venmo: "Venmo" };
 const RES_SERVICE = `🔧 Service Call (${P.residential.standard.price})`;
 const RES_EMERGENCY = `🚨 Emergency (${P.residential.emergency.price})`;
 const COM_SERVICE = `🔧 Commercial Service (${P.commercial.standard.price})`;
@@ -200,6 +192,9 @@ export default function LiveChatWidget() {
   const [svcDate, setSvcDate] = useState("");
   const [svcMessage, setSvcMessage] = useState("");
   const [svcSubmitting, setSvcSubmitting] = useState(false);
+  const [payMethods, setPayMethods] = useState<ServicePaymentMethod[]>(["card", "zelle"]);
+  const [svcPayMethod, setSvcPayMethod] = useState<ServicePaymentMethod>("card");
+  const [svcPayError, setSvcPayError] = useState("");
   const [svcSubmitted, setSvcSubmitted] = useState(false);
   const [svcValidationError, setSvcValidationError] = useState(false);
   // Commercial-only fields
@@ -215,6 +210,35 @@ export default function LiveChatWidget() {
   const autoOpenFired = useRef(false);
 
   const isCommercial = flowCategory === "commercial";
+
+  /* ── payment methods on (card needs Stripe; Venmo needs a handle) ── */
+  useEffect(() => {
+    if (menuLevel !== "service-form") return;
+    let live = true;
+    fetch("/api/service-booking/options")
+      .then((r) => r.json())
+      .then((d: { methods?: ServicePaymentMethod[] }) => {
+        if (!live || !d.methods?.length) return;
+        setPayMethods(d.methods);
+        setSvcPayMethod((m) => (d.methods!.includes(m) ? m : d.methods![0]));
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [menuLevel]);
+
+  /* ── back from Stripe checkout ─────────────────────────────────── */
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get("service_booking");
+    if (!status) return;
+    autoOpenFired.current = true;
+    setOpen(true);
+    setMessages([{ role: "assistant", text: status === "paid"
+      ? `✅ Payment received — thank you! We'll call you shortly to confirm your appointment time. Questions? Call ${PHONE}`
+      : `No problem — your payment wasn't completed. You can book again here or call us at ${PHONE}.` }]);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("service_booking");
+    window.history.replaceState(null, "", url.toString());
+  }, []);
 
   /* ── auto-open ─────────────────────────────────────────────────── */
   useEffect(() => {
@@ -245,7 +269,7 @@ export default function LiveChatWidget() {
     setSvcAddress(""); setSvcType("AC Repair"); setSvcEmergency(false); setSvcDate("");
     setSvcMessage(""); setSvcCompany(""); setSvcPropertyType("Office Building");
     setSvcSqft("Under 2,000 sq ft"); setSvcFloors(""); setSvcCurrentSystem("Unknown");
-    setSvcServiceNeeded("Repair"); setSvcValidationError(false);
+    setSvcServiceNeeded("Repair"); setSvcValidationError(false); setSvcPayError("");
   }, []);
 
   /* ── main menu click ───────────────────────────────────────────── */
@@ -425,45 +449,73 @@ export default function LiveChatWidget() {
     return lines.join("\n");
   };
 
-  /* ── submit service form + open Stripe ────────────────────────── */
+  /* ── submit service form → card checkout or Zelle/Venmo instructions ── */
   const handlePayAndBook = async () => {
     if (!validateServiceForm()) {
       setSvcValidationError(true);
       setTimeout(() => setSvcValidationError(false), 600);
       return;
     }
-    setSvcSubmitting(true);
+    setSvcSubmitting(true); setSvcPayError("");
+    const method = svcPayMethod;
 
-    const tier = svcEmergency ? pricing.emergency : pricing.standard;
-    // Open Stripe before any await so the browser treats it as a click, not a popup.
-    if (tier.link) window.open(tier.link, "_blank", "noopener");
+    let result: { ok?: boolean; error?: string; checkoutUrl?: string; reference?: string; payTo?: string; amount?: string; sms?: boolean; email?: boolean } = {};
+    try {
+      const res = await fetch("/api/service-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: svcName.trim(), phone: svcPhone.trim(), email: svcEmail.trim(),
+          category: isCommercial ? "commercial" : "residential", emergency: svcEmergency, paymentMethod: method,
+        }),
+      });
+      result = await res.json().catch(() => ({ ok: false }));
+    } catch { result = { ok: false }; }
 
-    const appointmentType = isCommercial ? "Commercial Service Call" : "Residential Service Call";
+    const paymentLine = !result.ok
+      ? `Payment: ${PAY_LABELS[method]} chosen, but the payment step failed — send payment details when confirming`
+      : method === "card"
+        ? `Payment: card ${formatUsd(totalDue)} (${currentPrice} + ${formatUsd(currentFee)} card fee) — Stripe checkout opened; check Stripe before confirming`
+        : `Payment: ${PAY_LABELS[method]} ${result.amount} to ${result.payTo}, memo ${result.reference} — instructions ${[result.sms && "texted", result.email && "emailed"].filter(Boolean).join(" + ") || "NOT delivered (send manually)"}`;
     const payload = {
       caller_name: svcName.trim(),
       caller_phone: svcPhone.trim(),
       caller_email: svcEmail.trim(),
-      appointment_type: appointmentType,
-      call_summary: `${buildServiceSummary()}\nPayment: ${tier.link ? "Stripe link opened — check Stripe before confirming" : "not collected — send a payment link when confirming"}`,
+      appointment_type: isCommercial ? "Commercial Service Call" : "Residential Service Call",
+      call_summary: `${buildServiceSummary()}\n${paymentLine}`,
       outcome: "needs_follow_up",
       transcript: messages.map((m) => `${m.role === "user" ? "Visitor" : "Jessica"}: ${m.text}`).join("\n"),
     };
-
     try { await fetch("/.netlify/functions/sendCallRecap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch {}
 
+    if (!result.ok) {
+      setSvcSubmitting(false);
+      setSvcPayError(result.error || `We got your request but couldn't set up payment. We'll call you — or call ${PHONE}.`);
+      return;
+    }
+    if (method === "card" && result.checkoutUrl) {
+      window.location.assign(result.checkoutUrl); // same tab: no popup blocker
+      return;
+    }
     setSvcSubmitting(false); setSvcSubmitted(true);
     setMenuLevel("none");
-    const thanks = tier.link
-      ? `Thanks! Finish payment in the Stripe tab to hold your spot — we'll call to confirm the time. Questions? Call ${PHONE}`
-      : `Thanks! Request received — we'll call to confirm the time and text you a secure payment link. Questions? Call ${PHONE}`;
-    setMessages((p) => [...p, { role: "assistant", text: thanks }]);
+    const sentBy = [result.sms && "text", result.email && "email"].filter(Boolean).join(" and ");
+    setMessages((p) => [...p, {
+      role: "assistant",
+      text: `Thanks! To confirm, send ${result.amount} by ${PAY_LABELS[method]} to ${result.payTo} with memo ${result.reference}.` +
+        (sentBy ? ` We also sent these details by ${sentBy}.` : "") +
+        ` We'll call to confirm your time once it arrives. Questions? Call ${PHONE}`,
+    }]);
   };
 
   /* ── pricing helpers ───────────────────────────────────────────── */
-  const pricing = isCommercial ? SERVICE_PRICING.commercial : SERVICE_PRICING.residential;
+  const pricing = isCommercial ? P.commercial : P.residential;
   const emergencyPrice = pricing.emergency.price;
   const regularPrice = pricing.standard.price;
-  const currentTier = svcEmergency ? pricing.emergency : pricing.standard;
+  const currentBase = SERVICE_PRICES[isCommercial ? "commercial" : "residential"][svcEmergency ? "emergency" : "standard"];
+  const currentPrice = formatUsd(currentBase);
+  const currentFee = cardFee(currentBase);
+  const totalDue = svcPayMethod === "card" ? Math.round((currentBase + currentFee) * 100) / 100 : currentBase;
 
   /* ── render ────────────────────────────────────────────────────── */
   const followUpButtons = getFollowUpButtons();
@@ -653,23 +705,41 @@ export default function LiveChatWidget() {
                   <input type="date" placeholder="Preferred Date" value={svcDate} onChange={(e) => setSvcDate(e.target.value)} style={inputFieldStyle} {...focusBorder} />
                   <textarea placeholder="Additional Details (optional)" value={svcMessage} onChange={(e) => setSvcMessage(e.target.value)} rows={2} style={{ ...inputFieldStyle, resize: "vertical" as const }} {...focusBorder} />
 
+                  {/* ── Payment method ──────────────────────────────── */}
+                  <div style={{ fontSize: 13, color: NAVY, fontWeight: 600, marginTop: 2 }}>How would you like to pay?</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {payMethods.map((m) => (
+                      <button key={m} type="button" onClick={() => setSvcPayMethod(m)}
+                        style={{ flex: 1, padding: "8px 6px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                          border: `2px solid ${svcPayMethod === m ? ORANGE : "#ddd"}`, background: svcPayMethod === m ? "#fff4ec" : "#fff", color: NAVY }}>
+                        {PAY_LABELS[m]}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* ── Price summary box ───────────────────────────── */}
                   <div style={{ border: `2px solid ${ORANGE}`, borderRadius: 8, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 14, color: NAVY, fontWeight: 500 }}>
                       {isCommercial ? "Commercial" : ""} {svcEmergency ? "Emergency" : "Service Call"}
                     </span>
                     <span style={{ fontSize: 18, fontWeight: 700, color: NAVY }}>
-                      {svcEmergency ? emergencyPrice : regularPrice}
+                      {formatUsd(totalDue)}
                     </span>
                   </div>
+                  {svcPayMethod === "card" && (
+                    <div style={{ fontSize: 12, color: "#666", marginTop: -4 }}>
+                      {currentPrice} + {formatUsd(currentFee)} card processing fee (3%). Pay by Zelle{payMethods.includes("venmo") ? " or Venmo" : ""} to skip the fee.
+                    </div>
+                  )}
+                  {svcPayError && <div style={{ fontSize: 13, color: "#d63c3c" }}>{svcPayError}</div>}
 
                   {/* ── Pay & Book button ───────────────────────────── */}
                   <button type="button" onClick={handlePayAndBook} disabled={svcSubmitting}
                     style={{ padding: "14px", background: ORANGE, color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 16, cursor: svcSubmitting ? "wait" : "pointer", opacity: svcSubmitting ? 0.7 : 1, transition: "background 0.2s", width: "100%" }}
                     onMouseEnter={(e) => { if (!svcSubmitting) e.currentTarget.style.background = ORANGE_HOVER; }}
                     onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
-                  >{svcSubmitting ? "Processing…" : currentTier.link ? "💳 Pay & Request Booking" : "Request Service Call"}</button>
-                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>{currentTier.link ? "Payment holds your slot. Repairs are quoted before any work." : "No payment now — we'll confirm by phone and text a payment link."}</div>
+                  >{svcSubmitting ? "Processing…" : svcPayMethod === "card" ? `💳 Pay ${formatUsd(totalDue)} by Card` : `Get ${PAY_LABELS[svcPayMethod]} Instructions`}</button>
+                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>{svcPayMethod === "card" ? "Secure checkout by Stripe. Repairs are quoted before any work." : "We'll text and email where to send payment. Repairs are quoted before any work."}</div>
                 </div>
               </div>
             )}
