@@ -400,7 +400,7 @@ export function nextDocNumberFrom(docNumbers: Array<string | null | undefined>, 
  * (Stripe) stays the only card route.
  */
 export function buildServiceInvoiceBody(
-  input: { customerRef: string; amount: number; name: string; description: string; email: string; privateNote?: string; docNumber?: string | null },
+  input: { customerRef: string; amount: number; name: string; description: string; email: string; privateNote?: string; docNumber?: string | null; taxable?: boolean; shipToLine1?: string },
   itemRef: { value: string; name: string },
 ): Record<string, unknown> {
   const amount = Math.round(input.amount * 100) / 100;
@@ -410,13 +410,21 @@ export function buildServiceInvoiceBody(
       DetailType: "SalesItemLineDetail",
       Amount: amount,
       Description: `${input.name} — ${input.description}`.slice(0, 4000),
-      SalesItemLineDetail: { ItemRef: { value: itemRef.value, name: itemRef.name }, Qty: 1, UnitPrice: amount },
+      SalesItemLineDetail: {
+        ItemRef: { value: itemRef.value, name: itemRef.name }, Qty: 1, UnitPrice: amount,
+        ...(input.taxable ? { TaxCodeRef: { value: "TAX" } } : {}),
+      },
     }],
     BillEmail: { Address: input.email },
     AllowOnlineCreditCardPayment: false,
     AllowOnlineACHPayment: true,
   };
   if (input.docNumber) body.DocNumber = input.docNumber.slice(0, 21);
+  // Automated Sales Tax uses the ship-to address to pick the rate.
+  if (input.shipToLine1) {
+    const zip = input.shipToLine1.match(/\b(0[78]\d{3})(?:-\d{4})?\s*$/)?.[1];
+    body.ShipAddr = { Line1: input.shipToLine1.slice(0, 500), CountrySubDivisionCode: "NJ", Country: "US", ...(zip ? { PostalCode: zip } : {}) };
+  }
   if (input.privateNote) body.PrivateNote = input.privateNote.slice(0, 4000);
   return body;
 }
@@ -966,13 +974,13 @@ export class QuickBooksProvider implements AccountingProvider {
    */
   async createAndSendServiceInvoice(input: {
     customerRef: string; amount: number; name: string; description: string; email: string; privateNote?: string;
-    itemRef?: { value: string; name: string };
-  }): Promise<{ qbId: string; docNumber: string | null; invoiceLink: string | null; emailed: boolean }> {
+    itemRef?: { value: string; name: string }; taxable?: boolean; shipToLine1?: string;
+  }): Promise<{ qbId: string; docNumber: string | null; invoiceLink: string | null; emailed: boolean; totalAmount: number | null }> {
     const itemRef = input.itemRef ?? (await this.resolveDefaultItemRef());
     const docNumber = (await this.usesCustomTxnNumbers()) ? await this.nextInvoiceDocNumber() : null;
     const res = await this.qboFetch(`/invoice`, { method: "POST", body: JSON.stringify(buildServiceInvoiceBody({ ...input, docNumber }, itemRef)) });
     const json = (await res.json().catch(() => ({}))) as {
-      Invoice?: { Id?: string; DocNumber?: string };
+      Invoice?: { Id?: string; DocNumber?: string; TotalAmt?: number };
       Fault?: { Error?: Array<{ Message?: string; Detail?: string }> };
     };
     if (!res.ok || !json.Invoice?.Id) {
@@ -993,7 +1001,8 @@ export class QuickBooksProvider implements AccountingProvider {
       const r = (await read.json().catch(() => ({}))) as { Invoice?: { InvoiceLink?: string } };
       invoiceLink = r.Invoice?.InvoiceLink || null;
     }
-    return { qbId, docNumber: json.Invoice.DocNumber ?? docNumber, invoiceLink, emailed };
+    const totalAmount = typeof json.Invoice.TotalAmt === "number" ? json.Invoice.TotalAmt : null;
+    return { qbId, docNumber: json.Invoice.DocNumber ?? docNumber, invoiceLink, emailed, totalAmount };
   }
 
   async pushInvoice(): Promise<never> {

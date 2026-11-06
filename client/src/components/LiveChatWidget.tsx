@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { SERVICE_PRICES, cardFee, formatUsd, type ServicePaymentMethod } from "@shared/servicePricing";
+import { SERVICE_PRICES, formatUsd, priceBreakdown, type ServicePaymentMethod } from "@shared/servicePricing";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 type ChatMessage = { role: "user" | "assistant"; text: string };
@@ -40,7 +40,7 @@ const RES_SERVICE = `🔧 Service Call (${P.residential.standard.price})`;
 const RES_EMERGENCY = `🚨 Emergency (${P.residential.emergency.price})`;
 const COM_SERVICE = `🔧 Commercial Service (${P.commercial.standard.price})`;
 const COM_EMERGENCY = `🚨 Commercial Emergency (${P.commercial.emergency.price})`;
-const FEE_NOTE = "covers the visit and diagnosis — we quote any repair before work starts";
+const FEE_NOTE = "covers the visit and diagnosis (plus NJ sales tax) — we quote any repair before work starts";
 
 const LEAD_FORM_THRESHOLD = 3;
 const AUTO_OPEN_MS = 8_000;
@@ -445,7 +445,7 @@ export default function LiveChatWidget() {
     lines.push(`Emergency: ${svcEmergency ? "Yes" : "No"}`);
     if (svcDate) lines.push(`Preferred Date: ${svcDate}`);
     if (svcMessage.trim()) lines.push(`Details: ${svcMessage.trim()}`);
-    lines.push(`Price: ${svcEmergency ? emergencyPrice : regularPrice} flat rate`);
+    lines.push(`Price: ${svcEmergency ? emergencyPrice : regularPrice} + NJ sales tax`);
     return lines.join("\n");
   };
 
@@ -467,6 +467,7 @@ export default function LiveChatWidget() {
         body: JSON.stringify({
           name: svcName.trim(), phone: svcPhone.trim(), email: svcEmail.trim(),
           category: isCommercial ? "commercial" : "residential", emergency: svcEmergency, paymentMethod: method,
+          address: svcAddress.trim(),
         }),
       });
       result = await res.json().catch(() => ({ ok: false }));
@@ -475,7 +476,7 @@ export default function LiveChatWidget() {
     const paymentLine = !result.ok
       ? `Payment: ${PAY_LABELS[method]} chosen, but the payment step failed — send payment details when confirming`
       : method === "card"
-        ? `Payment: card ${formatUsd(totalDue)} (${currentPrice} + ${formatUsd(currentFee)} card fee) — Stripe checkout opened; check Stripe before confirming`
+        ? `Payment: card ${formatUsd(bd.total)} (${currentPrice} + ${formatUsd(bd.tax)} NJ tax + ${formatUsd(bd.fee)} card fee) — Stripe checkout opened; check Stripe before confirming`
         : result.via === "quickbooks"
           ? `Payment: Venmo/PayPal ${result.amount} — QuickBooks invoice #${result.invoiceNumber} ${[result.email && "emailed by QuickBooks", result.sms && "pay link texted"].filter(Boolean).join(" + ") || "created but NOT delivered (send it from QuickBooks)"}`
           : `Payment: ${PAY_LABELS[method]} ${result.amount} to ${result.payTo}, memo ${result.reference} — instructions ${[result.sms && "texted", result.email && "emailed"].filter(Boolean).join(" + ") || "NOT delivered (send manually)"}`;
@@ -524,10 +525,9 @@ export default function LiveChatWidget() {
   const pricing = isCommercial ? P.commercial : P.residential;
   const emergencyPrice = pricing.emergency.price;
   const regularPrice = pricing.standard.price;
-  const currentBase = SERVICE_PRICES[isCommercial ? "commercial" : "residential"][svcEmergency ? "emergency" : "standard"];
-  const currentPrice = formatUsd(currentBase);
-  const currentFee = cardFee(currentBase);
-  const totalDue = svcPayMethod === "card" ? Math.round((currentBase + currentFee) * 100) / 100 : currentBase;
+  const bd = priceBreakdown(isCommercial ? "commercial" : "residential", svcEmergency, svcPayMethod);
+  const currentPrice = formatUsd(bd.base);
+  const totalDue = bd.total;
 
   /* ── render ────────────────────────────────────────────────────── */
   const followUpButtons = getFollowUpButtons();
@@ -738,11 +738,10 @@ export default function LiveChatWidget() {
                       {formatUsd(totalDue)}
                     </span>
                   </div>
-                  {svcPayMethod === "card" && (
-                    <div style={{ fontSize: 12, color: "#666", marginTop: -4 }}>
-                      {currentPrice} + {formatUsd(currentFee)} card processing fee (3%). Pay by Zelle{payMethods.includes("venmo") ? " or Venmo" : ""} to skip the fee.
-                    </div>
-                  )}
+                  <div style={{ fontSize: 12, color: "#666", marginTop: -4 }}>
+                    {currentPrice} + {formatUsd(bd.tax)} NJ sales tax
+                    {svcPayMethod === "card" && <> + {formatUsd(bd.fee)} card processing fee (3%). Pay by Zelle{payMethods.includes("venmo") ? " or Venmo" : ""} to skip the card fee.</>}
+                  </div>
                   {svcPayError && <div style={{ fontSize: 13, color: "#d63c3c" }}>{svcPayError}</div>}
 
                   {/* ── Pay & Book button ───────────────────────────── */}

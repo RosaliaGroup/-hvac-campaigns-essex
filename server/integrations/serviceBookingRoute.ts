@@ -10,6 +10,7 @@
  *                                        or, if VENMO_HANDLE is set, instructions.
  *
  * Amounts always come from shared/servicePricing — never from the request.
+ * Every method charges NJ sales tax (6.625%); card adds 3% on top of that.
  * The office still gets the booking details from the chat's call recap.
  */
 
@@ -17,10 +18,10 @@ import type { Express, Request, Response } from "express";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import {
+  SALES_TAX_RATE,
   ZELLE_DEFAULT_RECIPIENT,
-  cardFee,
   formatUsd,
-  servicePrice,
+  priceBreakdown,
   type ServiceCategory,
   type ServicePaymentMethod,
 } from "../../shared/servicePricing";
@@ -75,6 +76,7 @@ export const bookingSchema = z.object({
   email: z.string().trim().email().max(200),
   category: z.enum(["residential", "commercial"]),
   emergency: z.boolean(),
+  address: z.string().trim().max(300).optional(),
   paymentMethod: z.enum(["card", "zelle", "venmo"]),
   /** Honeypot — real visitors never fill it. */
   website: z.string().max(0).optional(),
@@ -100,22 +102,24 @@ export function buildInstructions(
   ref: string,
 ) {
   const first = input.name.split(/\s+/)[0];
-  const amount = formatUsd(servicePrice(input.category, input.emergency));
+  const p = priceBreakdown(input.category, input.emergency, method);
+  const amount = formatUsd(p.total);
+  const taxLine = `${formatUsd(p.base)} + ${formatUsd(p.tax)} NJ sales tax`;
   const label = serviceLabel(input.category, input.emergency);
   const via = method === "zelle" ? `Zelle to ${payTo}` : `Venmo to ${payTo}`;
   const memo = method === "zelle" ? "memo" : "note";
   const sms =
-    `Mechanical Enterprise: Thanks, ${first}! To confirm your ${label} (${amount}), send ${amount} by ${via} ` +
+    `Mechanical Enterprise: Thanks, ${first}! To confirm your ${label} (${taxLine}), send ${amount} by ${via} ` +
     `with ${memo} ${ref}. We'll call to confirm your time once it arrives. Questions? ${OFFICE_PHONE}. Reply STOP to opt out.`;
   const subject = `Payment instructions — ${label} (${amount})`;
   const html = `
     <p>Hi ${esc(first)},</p>
     <p>Thanks for booking a <strong>${esc(label)}</strong> with Mechanical Enterprise.
-       The ${esc(amount)} fee covers the visit and diagnosis; we quote any repair before work starts.</p>
+       The ${esc(formatUsd(p.base))} fee covers the visit and diagnosis; we quote any repair before work starts.</p>
     <p><strong>To confirm, send ${esc(amount)} by ${method === "zelle" ? "Zelle" : "Venmo"}:</strong></p>
     <ul>
       <li>${method === "zelle" ? "Zelle to" : "Venmo to"}: <strong>${esc(payTo)}</strong></li>
-      <li>Amount: <strong>${esc(amount)}</strong></li>
+      <li>Amount: <strong>${esc(amount)}</strong> (${esc(taxLine)})</li>
       <li>${memo === "memo" ? "Memo" : "Note"}: <strong>${esc(ref)}</strong></li>
     </ul>
     <p>Once it arrives we'll call you to confirm your appointment time.</p>
@@ -147,14 +151,14 @@ export function registerServiceBookingRoute(app: Express) {
     }
 
     const cfg = paymentConfig();
-    const base = servicePrice(input.category, input.emergency);
+    const price = priceBreakdown(input.category, input.emergency, input.paymentMethod);
+    const base = price.base;
     const label = serviceLabel(input.category, input.emergency);
 
     try {
       if (input.paymentMethod === "card") {
         if (!cfg.card) return res.status(503).json({ ok: false, error: "Card payments are unavailable right now." });
         const { stripe } = await import("../stripe-service");
-        const fee = cardFee(base);
         const session = await stripe.checkout.sessions.create({
           mode: "payment",
           payment_method_types: ["card"],
@@ -179,11 +183,19 @@ export function registerServiceBookingRoute(app: Express) {
             {
               price_data: {
                 currency: "usd",
+                product_data: { name: `NJ sales tax (${(SALES_TAX_RATE * 100).toFixed(3)}%)` },
+                unit_amount: Math.round(price.tax * 100),
+              },
+              quantity: 1,
+            },
+            {
+              price_data: {
+                currency: "usd",
                 product_data: {
                   name: "Card processing fee (3%)",
                   description: "Pay by Zelle or Venmo to avoid this fee.",
                 },
-                unit_amount: Math.round(fee * 100),
+                unit_amount: Math.round(price.fee * 100),
               },
               quantity: 1,
             },
@@ -191,24 +203,28 @@ export function registerServiceBookingRoute(app: Express) {
           success_url: `${SITE_URL}/?service_booking=paid`,
           cancel_url: `${SITE_URL}/?service_booking=cancelled`,
         });
-        console.log(`[ServiceBooking] card checkout ${session.id} ${label} ${formatUsd(base + fee)}`);
+        console.log(`[ServiceBooking] card checkout ${session.id} ${label} ${formatUsd(price.total)}`);
         return res.json({ ok: true, method: "card", checkoutUrl: session.url });
       }
 
       if (input.paymentMethod === "venmo" && !cfg.venmo) {
         if (!(await venmoAvailable(cfg))) return res.status(503).json({ ok: false, error: "Venmo isn't available right now." });
-        const amount = formatUsd(base);
         const [firstName, ...rest] = input.name.split(/\s+/);
         const customerRef = await quickbooksProvider.findOrCreateWebCustomer({
           localId: 0, type: input.category, displayName: input.name,
           firstName, lastName: rest.join(" ") || null, email: input.email, phone: input.phone,
+          address: input.address ? { line1: input.address, state: "NJ" } : undefined,
         });
         const inv = await quickbooksProvider.createAndSendServiceInvoice({
           customerRef, amount: base, name: label, email: input.email,
           description: "Visit and diagnosis — any repair is quoted on site.",
           privateNote: "Website chat booking — customer chose Venmo/PayPal.",
           itemRef: serviceCallItem(input.category),
+          taxable: true,
+          shipToLine1: input.address,
         });
+        // QuickBooks works out the tax from the address; show its total (fall back to ours).
+        const amount = formatUsd(inv.totalAmount ?? price.total);
         const sms = await sendTelnyxSms(input.phone, buildQuickbooksVenmoSms(input.name, label, amount, inv.invoiceLink))
           .then((r) => r.success).catch(() => false);
         console.log(`[ServiceBooking] venmo via QuickBooks invoice ${inv.docNumber ?? inv.qbId} emailed=${inv.emailed} link=${Boolean(inv.invoiceLink)} sms=${sms}`);

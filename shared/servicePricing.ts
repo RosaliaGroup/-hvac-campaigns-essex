@@ -34,9 +34,24 @@ export function servicePrice(category: ServiceCategory, emergency: boolean): num
   return SERVICE_PRICES[category][emergency ? "emergency" : "standard"];
 }
 
-export function totalFor(category: ServiceCategory, emergency: boolean, method: ServicePaymentMethod): number {
+/** NJ sales tax — charged on every service call (owner, Nov 6). QuickBooks (AST) uses the same 6.625% NJ code. */
+export const SALES_TAX_RATE = 0.06625;
+
+export function salesTax(base: number): number {
+  return cents(base * SALES_TAX_RATE);
+}
+
+/** Full breakdown: price + NJ sales tax, plus the 3% card fee on that subtotal when paying by card. */
+export function priceBreakdown(category: ServiceCategory, emergency: boolean, method: ServicePaymentMethod) {
   const base = servicePrice(category, emergency);
-  return method === "card" ? cents(base + cardFee(base)) : base;
+  const tax = salesTax(base);
+  const subtotal = cents(base + tax);
+  const fee = method === "card" ? cardFee(subtotal) : 0;
+  return { base, tax, subtotal, fee, total: cents(subtotal + fee) };
+}
+
+export function totalFor(category: ServiceCategory, emergency: boolean, method: ServicePaymentMethod): number {
+  return priceBreakdown(category, emergency, method).total;
 }
 
 /** "$149" for whole dollars, "$153.47" otherwise. */
