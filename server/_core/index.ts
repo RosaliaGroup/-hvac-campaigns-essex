@@ -41,6 +41,7 @@ import { startMarketIntelScheduler } from "../services/seo/intel/job";
 import { registerGa4SyncRoutes, startGa4SyncScheduler } from "../services/ga4/routes";
 import { registerGbpSyncRoutes, startGbpSyncScheduler } from "../services/gbp/routes";
 import { registerVapiRecapRoute } from "../integrations/vapiRecapRoute";
+import { registerServiceBookingRoute } from "../integrations/serviceBookingRoute";
 import { registerVapiToolsRoute } from "../integrations/vapiToolsRoute";
 import { startProspectWorkflow } from "../services/prospectWorkflow";
 import { startGrowthCadencePoller } from "../services/growth/cadenceEngine";
@@ -109,6 +110,8 @@ async function startServer() {
   registerGbpSyncRoutes(app);
   // Vapi (Jessica) end-of-call recap — persist to Mechanical CRM + notify (POST /api/vapi/call-recap)
   registerVapiRecapRoute(app);
+  // Website chat service-call payments — Stripe card checkout or Zelle/Venmo instructions (POST /api/service-booking)
+  registerServiceBookingRoute(app);
   // Vapi function tools (getCallerInfo/bookHVAC/rescheduleHVAC/sendReferralLink) — Vapi-shaped REST adapter over the vapiTools dispatcher (POST /api/vapi/tools)
   registerVapiToolsRoute(app);
   // API responses (incl. auth.me and every session-scoped read) must never be

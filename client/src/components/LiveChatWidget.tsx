@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { SERVICE_PRICES, formatUsd, priceBreakdown, type ServicePaymentMethod } from "@shared/servicePricing";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 type ChatMessage = { role: "user" | "assistant"; text: string };
@@ -26,11 +27,20 @@ const COMMERCIAL_REBATE_URL = `${BASE}/commercial#rebate-calculator`;
 const CAREERS_URL = `${BASE}/careers`;
 const COURSES_URL = `${BASE}/courses`;
 const PARTNERSHIPS_URL = `${BASE}/partnerships#apply`;
-/* ── Stripe payment links (placeholders — replace with real links) ── */
-const STRIPE_RESIDENTIAL_STANDARD = "https://buy.stripe.com/7sY8wIcuM0hz7M17I40oM03";
-const STRIPE_RESIDENTIAL_EMERGENCY = "https://buy.stripe.com/aFaeV6dyQ1lDgix1jG0oM02";
-const STRIPE_COMMERCIAL_STANDARD = "https://buy.stripe.com/28EdR266o7K14zP8M80oM06";
-const STRIPE_COMMERCIAL_EMERGENCY = "https://buy.stripe.com/eVqaEQdyQfcteapfaw0oM04";
+/* ── Service-call pricing (shared/servicePricing) ──────────────────
+   The fee covers the visit + diagnosis; any repair is quoted on site.
+   Card adds a processing fee that covers Stripe in full (Stripe Checkout, created by the server);
+   Zelle/Venmo get payment instructions by text and email. */
+const P = {
+  residential: { standard: { price: formatUsd(SERVICE_PRICES.residential.standard) }, emergency: { price: formatUsd(SERVICE_PRICES.residential.emergency) } },
+  commercial: { standard: { price: formatUsd(SERVICE_PRICES.commercial.standard) }, emergency: { price: formatUsd(SERVICE_PRICES.commercial.emergency) } },
+};
+const PAY_LABELS: Record<ServicePaymentMethod, string> = { card: "💳 Card", zelle: "Zelle", venmo: "Venmo / PayPal" };
+const RES_SERVICE = `🔧 Service Call (${P.residential.standard.price})`;
+const RES_EMERGENCY = `🚨 Emergency (${P.residential.emergency.price})`;
+const COM_SERVICE = `🔧 Commercial Service (${P.commercial.standard.price})`;
+const COM_EMERGENCY = `🚨 Commercial Emergency (${P.commercial.emergency.price})`;
+const FEE_NOTE = "covers the visit and diagnosis (plus NJ sales tax) — we quote any repair before work starts";
 
 const LEAD_FORM_THRESHOLD = 3;
 const AUTO_OPEN_MS = 8_000;
@@ -38,10 +48,7 @@ const AUTO_OPEN_KEY = "me_chat_auto_opened";
 const GREETING = "Hi! I'm Jessica from Mechanical Enterprise. 👋 How can I help you today?";
 
 /* ── Service options that go straight to inline form ────────────────── */
-const SERVICE_OPTIONS = new Set([
-  "🔧 Service Call ($100)", "🚨 Emergency ($175)", "🔄 Maintenance Plan",
-  "🔧 Service & Repair", "🚨 Emergency ($175)",
-]);
+const SERVICE_OPTIONS = new Set([RES_SERVICE, RES_EMERGENCY, COM_SERVICE, COM_EMERGENCY]);
 
 /* ── Quick-reply menus ─────────────────────────────────────────────── */
 const MAIN_MENU = ["🏠 Residential", "🏢 Commercial", "💼 Careers", "🤝 Partnership"];
@@ -49,11 +56,11 @@ const MAIN_MENU = ["🏠 Residential", "🏢 Commercial", "💼 Careers", "🤝 
 const FOLLOW_UP_CONFIG: Record<string, { reply: string; buttons: string[] }> = {
   "🏠 Residential": {
     reply: "Great! What do you need help with for your home?",
-    buttons: ["🆓 Free Assessment", "🔧 Service Call ($100)", "🚨 Emergency ($175)", "💰 Rebate Calculator", "🔄 Maintenance Plan"],
+    buttons: ["🆓 Free Assessment", RES_SERVICE, RES_EMERGENCY, "💰 Rebate Calculator", "🔄 Maintenance Plan"],
   },
   "🏢 Commercial": {
     reply: "Got it! What can we help with for your commercial property?",
-    buttons: ["🆓 Free Assessment", "🏭 VRV/VRF Systems", "🔧 Service & Repair", "🚨 Emergency ($175)", "💸 80% Rebates", "💰 Rebate Calculator"],
+    buttons: ["🆓 Free Assessment", "🏭 VRV/VRF Systems", COM_SERVICE, COM_EMERGENCY, "💸 80% Rebates", "💰 Rebate Calculator"],
   },
   "💼 Careers": {
     reply: "We're hiring across NJ! What would you like to know?",
@@ -81,19 +88,20 @@ const CATEGORY_MAP: Record<string, FlowCategory> = {
 /* ── Follow-up one-liners ──────────────────────────────────────────── */
 const FOLLOW_UP_REPLIES: Record<string, string> = {
   "🆓 Free Assessment": "Perfect! A free assessment takes about 60 min and we handle all rebate paperwork.",
-  "🔧 Service Call ($100)": "Got it — $100 flat rate, no hourly fees. Fill out the form below and we'll get you scheduled.",
-  "🚨 Emergency ($175)": "We respond in 2-4 hours. $175 flat rate. Fill out the form and we'll call you right back.",
+  [RES_SERVICE]: `Got it — the ${P.residential.standard.price} service call ${FEE_NOTE}. Fill out the form below and we'll get you scheduled.`,
+  [RES_EMERGENCY]: `The ${P.residential.emergency.price} emergency call gets priority scheduling and ${FEE_NOTE}. Fill out the form and we'll call you back for the earliest slot.`,
+  [COM_SERVICE]: `Got it — the ${P.commercial.standard.price} commercial service call ${FEE_NOTE}. Fill out the form below and we'll get you scheduled.`,
+  [COM_EMERGENCY]: `The ${P.commercial.emergency.price} commercial emergency call gets priority scheduling and ${FEE_NOTE}. Fill out the form and we'll call you back for the earliest slot.`,
   "💰 Rebate Calculator": "Check your estimate instantly — up to $16,000 residential, 80% commercial.",
-  "🔄 Maintenance Plan": "Plans start at $19/mo — includes priority scheduling plus 15% off repairs. Book below!",
-  "🏭 VRV/VRF Systems": "We're one of NJ's top VRV/VRF specialists — ideal for multi-zone buildings.",
-  "🔧 Service & Repair": "We focus on new installations and full system replacements. Fill out the form below and we'll set up a free assessment.",
+  "🔄 Maintenance Plan": "We'd be glad to put together maintenance plan options for your system. Leave your details and we'll follow up.",
+  "🏭 VRV/VRF Systems": "We design and install VRV/VRF systems — ideal for multi-zone buildings.",
   "💸 80% Rebates": "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.",
-  "🔩 HVAC Technician": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
-  "🏢 Commercial Tech": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
-  "📋 Apply Now": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
-  "💰 Pay & Benefits": "We're always looking for great HVAC talent across NJ — full benefits, take-home van, and competitive pay.",
+  "🔩 HVAC Technician": "We're always looking for great HVAC talent across NJ — full benefits and competitive pay.",
+  "🏢 Commercial Tech": "We're always looking for great HVAC talent across NJ — full benefits and competitive pay.",
+  "📋 Apply Now": "We're always looking for great HVAC talent across NJ — full benefits and competitive pay.",
+  "💰 Pay & Benefits": "We're always looking for great HVAC talent across NJ — full benefits and competitive pay.",
   "🤝 Referral Partner ($200-$500)": "Earn $200-$500 per qualified referral — we handle everything after the intro.",
-  "🏘️ Property Manager Program": "Property managers get priority service, volume pricing, and a dedicated account rep.",
+  "🏘️ Property Manager Program": "Property managers get portfolio maintenance contracts with fixed per-unit pricing and quarterly condition reports.",
   "🏗️ Contractor Program": "We sub-contract HVAC for GCs across NJ — licensed, insured, and always on schedule.",
   "📞 Talk to Someone": "Fill out the form and we'll be in touch within 24-48 hours!",
   "📜 Certifications": "We offer EPA 608, OSHA 30, and manufacturer-specific certifications.",
@@ -184,6 +192,9 @@ export default function LiveChatWidget() {
   const [svcDate, setSvcDate] = useState("");
   const [svcMessage, setSvcMessage] = useState("");
   const [svcSubmitting, setSvcSubmitting] = useState(false);
+  const [payMethods, setPayMethods] = useState<ServicePaymentMethod[]>(["card", "zelle"]);
+  const [svcPayMethod, setSvcPayMethod] = useState<ServicePaymentMethod>("card");
+  const [svcPayError, setSvcPayError] = useState("");
   const [svcSubmitted, setSvcSubmitted] = useState(false);
   const [svcValidationError, setSvcValidationError] = useState(false);
   // Commercial-only fields
@@ -199,6 +210,35 @@ export default function LiveChatWidget() {
   const autoOpenFired = useRef(false);
 
   const isCommercial = flowCategory === "commercial";
+
+  /* ── payment methods on (card needs Stripe; Venmo needs a handle) ── */
+  useEffect(() => {
+    if (menuLevel !== "service-form") return;
+    let live = true;
+    fetch("/api/service-booking/options")
+      .then((r) => r.json())
+      .then((d: { methods?: ServicePaymentMethod[] }) => {
+        if (!live || !d.methods?.length) return;
+        setPayMethods(d.methods);
+        setSvcPayMethod((m) => (d.methods!.includes(m) ? m : d.methods![0]));
+      })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [menuLevel]);
+
+  /* ── back from Stripe checkout ─────────────────────────────────── */
+  useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get("service_booking");
+    if (!status) return;
+    autoOpenFired.current = true;
+    setOpen(true);
+    setMessages([{ role: "assistant", text: status === "paid"
+      ? `✅ Payment received — thank you! We'll call you shortly to confirm your appointment time. Questions? Call ${PHONE}`
+      : `No problem — your payment wasn't completed. You can book again here or call us at ${PHONE}.` }]);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("service_booking");
+    window.history.replaceState(null, "", url.toString());
+  }, []);
 
   /* ── auto-open ─────────────────────────────────────────────────── */
   useEffect(() => {
@@ -229,7 +269,7 @@ export default function LiveChatWidget() {
     setSvcAddress(""); setSvcType("AC Repair"); setSvcEmergency(false); setSvcDate("");
     setSvcMessage(""); setSvcCompany(""); setSvcPropertyType("Office Building");
     setSvcSqft("Under 2,000 sq ft"); setSvcFloors(""); setSvcCurrentSystem("Unknown");
-    setSvcServiceNeeded("Repair"); setSvcValidationError(false);
+    setSvcServiceNeeded("Repair"); setSvcValidationError(false); setSvcPayError("");
   }, []);
 
   /* ── main menu click ───────────────────────────────────────────── */
@@ -405,49 +445,89 @@ export default function LiveChatWidget() {
     lines.push(`Emergency: ${svcEmergency ? "Yes" : "No"}`);
     if (svcDate) lines.push(`Preferred Date: ${svcDate}`);
     if (svcMessage.trim()) lines.push(`Details: ${svcMessage.trim()}`);
-    lines.push(`Price: ${svcEmergency ? emergencyPrice : regularPrice} flat rate`);
+    lines.push(`Price: ${svcEmergency ? emergencyPrice : regularPrice} + NJ sales tax`);
     return lines.join("\n");
   };
 
-  /* ── submit service form + open Stripe ────────────────────────── */
+  /* ── submit service form → card checkout or Zelle/Venmo instructions ── */
   const handlePayAndBook = async () => {
     if (!validateServiceForm()) {
       setSvcValidationError(true);
       setTimeout(() => setSvcValidationError(false), 600);
       return;
     }
-    setSvcSubmitting(true);
+    setSvcSubmitting(true); setSvcPayError("");
+    const method = svcPayMethod;
 
-    const appointmentType = isCommercial ? "Commercial Service Call" : "Residential Service Call";
+    let result: { ok?: boolean; error?: string; checkoutUrl?: string; reference?: string; payTo?: string; amount?: string; sms?: boolean; email?: boolean; via?: string; payLink?: string | null; invoiceNumber?: string } = {};
+    try {
+      const res = await fetch("/api/service-booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: svcName.trim(), phone: svcPhone.trim(), email: svcEmail.trim(),
+          category: isCommercial ? "commercial" : "residential", emergency: svcEmergency, paymentMethod: method,
+          address: svcAddress.trim(),
+        }),
+      });
+      result = await res.json().catch(() => ({ ok: false }));
+    } catch { result = { ok: false }; }
+
+    const paymentLine = !result.ok
+      ? `Payment: ${PAY_LABELS[method]} chosen, but the payment step failed — send payment details when confirming`
+      : method === "card"
+        ? `Payment: card ${formatUsd(bd.total)} (${currentPrice} + ${formatUsd(bd.tax)} NJ tax + ${formatUsd(bd.fee)} card fee) — Stripe checkout opened; check Stripe before confirming`
+        : result.via === "quickbooks"
+          ? `Payment: Venmo/PayPal ${result.amount} — QuickBooks invoice #${result.invoiceNumber} ${[result.email && "emailed by QuickBooks", result.sms && "pay link texted"].filter(Boolean).join(" + ") || "created but NOT delivered (send it from QuickBooks)"}`
+          : `Payment: ${PAY_LABELS[method]} ${result.amount} to ${result.payTo}, memo ${result.reference} — instructions ${[result.sms && "texted", result.email && "emailed"].filter(Boolean).join(" + ") || "NOT delivered (send manually)"}`;
     const payload = {
       caller_name: svcName.trim(),
       caller_phone: svcPhone.trim(),
       caller_email: svcEmail.trim(),
-      appointment_type: appointmentType,
-      call_summary: buildServiceSummary(),
-      outcome: "booked",
+      appointment_type: isCommercial ? "Commercial Service Call" : "Residential Service Call",
+      call_summary: `${buildServiceSummary()}\n${paymentLine}`,
+      outcome: "needs_follow_up",
       transcript: messages.map((m) => `${m.role === "user" ? "Visitor" : "Jessica"}: ${m.text}`).join("\n"),
     };
-
     try { await fetch("/.netlify/functions/sendCallRecap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); } catch {}
 
-    // Open Stripe payment link
-    let stripeUrl: string;
-    if (isCommercial) {
-      stripeUrl = svcEmergency ? STRIPE_COMMERCIAL_EMERGENCY : STRIPE_COMMERCIAL_STANDARD;
-    } else {
-      stripeUrl = svcEmergency ? STRIPE_RESIDENTIAL_EMERGENCY : STRIPE_RESIDENTIAL_STANDARD;
+    if (!result.ok) {
+      setSvcSubmitting(false);
+      setSvcPayError(result.error || `We got your request but couldn't set up payment. We'll call you — or call ${PHONE}.`);
+      return;
     }
-    window.open(stripeUrl, "_blank", "noopener");
-
+    if (method === "card" && result.checkoutUrl) {
+      window.location.assign(result.checkoutUrl); // same tab: no popup blocker
+      return;
+    }
     setSvcSubmitting(false); setSvcSubmitted(true);
     setMenuLevel("none");
-    setMessages((p) => [...p, { role: "assistant", text: `✅ Booked! We'll confirm within 1 hour. Questions? Call ${PHONE}` }]);
+    const sentBy = [result.sms && "text", result.email && "email"].filter(Boolean).join(" and ");
+    if (result.via === "quickbooks") {
+      setMessages((p) => [...p, {
+        role: "assistant",
+        text: `Thanks! Your ${result.amount} invoice is ready — open it, tap Pay and choose Venmo or PayPal.` +
+          (result.payLink ? ` Pay here: ${result.payLink}` : "") +
+          (sentBy ? ` We also sent it by ${sentBy}.` : "") +
+          ` We'll call to confirm your time once it's paid. Questions? Call ${PHONE}`,
+      }]);
+      return;
+    }
+    setMessages((p) => [...p, {
+      role: "assistant",
+      text: `Thanks! To confirm, send ${result.amount} by ${PAY_LABELS[method]} to ${result.payTo} with memo ${result.reference}.` +
+        (sentBy ? ` We also sent these details by ${sentBy}.` : "") +
+        ` We'll call to confirm your time once it arrives. Questions? Call ${PHONE}`,
+    }]);
   };
 
   /* ── pricing helpers ───────────────────────────────────────────── */
-  const emergencyPrice = isCommercial ? "$550" : "$175";
-  const regularPrice = isCommercial ? "$375" : "$100";
+  const pricing = isCommercial ? P.commercial : P.residential;
+  const emergencyPrice = pricing.emergency.price;
+  const regularPrice = pricing.standard.price;
+  const bd = priceBreakdown(isCommercial ? "commercial" : "residential", svcEmergency, svcPayMethod);
+  const currentPrice = formatUsd(bd.base);
+  const totalDue = bd.total;
 
   /* ── render ────────────────────────────────────────────────────── */
   const followUpButtons = getFollowUpButtons();
@@ -582,11 +662,11 @@ export default function LiveChatWidget() {
                 </div>
                 {svcEmergency ? (
                   <div style={{ fontSize: 13, color: "#d63c3c", fontWeight: 600, marginBottom: 10 }}>
-                    🚨 Emergency Rate: {emergencyPrice} flat — 2-4 hr response
+                    🚨 Emergency service call: {emergencyPrice} — priority scheduling, visit + diagnosis
                   </div>
                 ) : (
                   <div style={{ fontSize: 13, color: "#666", marginBottom: 10 }}>
-                    ✅ Standard Rate: {regularPrice} flat — scheduled appointment
+                    ✅ Service call: {regularPrice} — visit + diagnosis, repairs quoted on site
                   </div>
                 )}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -637,23 +717,40 @@ export default function LiveChatWidget() {
                   <input type="date" placeholder="Preferred Date" value={svcDate} onChange={(e) => setSvcDate(e.target.value)} style={inputFieldStyle} {...focusBorder} />
                   <textarea placeholder="Additional Details (optional)" value={svcMessage} onChange={(e) => setSvcMessage(e.target.value)} rows={2} style={{ ...inputFieldStyle, resize: "vertical" as const }} {...focusBorder} />
 
+                  {/* ── Payment method ──────────────────────────────── */}
+                  <div style={{ fontSize: 13, color: NAVY, fontWeight: 600, marginTop: 2 }}>How would you like to pay?</div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {payMethods.map((m) => (
+                      <button key={m} type="button" onClick={() => setSvcPayMethod(m)}
+                        style={{ flex: 1, padding: "8px 6px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                          border: `2px solid ${svcPayMethod === m ? ORANGE : "#ddd"}`, background: svcPayMethod === m ? "#fff4ec" : "#fff", color: NAVY }}>
+                        {PAY_LABELS[m]}
+                      </button>
+                    ))}
+                  </div>
+
                   {/* ── Price summary box ───────────────────────────── */}
                   <div style={{ border: `2px solid ${ORANGE}`, borderRadius: 8, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span style={{ fontSize: 14, color: NAVY, fontWeight: 500 }}>
                       {isCommercial ? "Commercial" : ""} {svcEmergency ? "Emergency" : "Service Call"}
                     </span>
                     <span style={{ fontSize: 18, fontWeight: 700, color: NAVY }}>
-                      {svcEmergency ? emergencyPrice : regularPrice}
+                      {formatUsd(totalDue)}
                     </span>
                   </div>
+                  <div style={{ fontSize: 12, color: "#666", marginTop: -4 }}>
+                    {currentPrice} + {formatUsd(bd.tax)} NJ sales tax
+                    {svcPayMethod === "card" && <> + {formatUsd(bd.fee)} card processing fee. Pay by Zelle{payMethods.includes("venmo") ? " or Venmo" : ""} to skip the card fee.</>}
+                  </div>
+                  {svcPayError && <div style={{ fontSize: 13, color: "#d63c3c" }}>{svcPayError}</div>}
 
                   {/* ── Pay & Book button ───────────────────────────── */}
                   <button type="button" onClick={handlePayAndBook} disabled={svcSubmitting}
                     style={{ padding: "14px", background: ORANGE, color: "#fff", border: "none", borderRadius: 12, fontWeight: 700, fontSize: 16, cursor: svcSubmitting ? "wait" : "pointer", opacity: svcSubmitting ? 0.7 : 1, transition: "background 0.2s", width: "100%" }}
                     onMouseEnter={(e) => { if (!svcSubmitting) e.currentTarget.style.background = ORANGE_HOVER; }}
                     onMouseLeave={(e) => (e.currentTarget.style.background = ORANGE)}
-                  >{svcSubmitting ? "Processing…" : "💳 Pay & Confirm Booking"}</button>
-                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>Payment secures your appointment slot</div>
+                  >{svcSubmitting ? "Processing…" : svcPayMethod === "card" ? `💳 Pay ${formatUsd(totalDue)} by Card` : svcPayMethod === "venmo" ? "Get Venmo / PayPal Invoice" : "Get Zelle Instructions"}</button>
+                  <div style={{ fontSize: 11, color: "#999", textAlign: "center" }}>{svcPayMethod === "card" ? "Secure checkout by Stripe. Repairs are quoted before any work." : svcPayMethod === "venmo" ? "We'll email and text your invoice — pay it with Venmo or PayPal. Repairs are quoted before any work." : "We'll text and email where to send payment. Repairs are quoted before any work."}</div>
                 </div>
               </div>
             )}
