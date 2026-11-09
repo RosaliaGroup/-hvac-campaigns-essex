@@ -6,7 +6,7 @@ Separate commit, scoped exactly as you specified: no form-field, endpoint, redir
 
 `client/src/pages/Qualify.tsx` — the lead-capture mutation's `onError` used to call `setSubmitted(true)`, showing the visitor the same "You're All Set!" success screen (with their estimated rebate) as a real success, even when the submission never reached the CRM.
 
-Now: a new `submitError` state shows an inline failure banner on the booking step — "We couldn't submit your request — please try again," with a `tel:` link to `(862) 423-9396` — and the submit button relabels to "Try Again." The Turnstile token is cleared on error (tokens are single-use; resending a possibly-already-consumed token on retry would just cause a second, confusing failure — clearing it makes the server fall back to the existing Layer-1 content guard on retry, per `Turnstile.tsx`'s documented behavior).
+Now: a new `submitError` state shows an inline failure banner on the booking step — "We couldn't submit your request — please try again," with a `tel:` link to `(862) 419-1763` — and the submit button relabels to "Try Again." The Turnstile token is cleared on error (tokens are single-use; resending a possibly-already-consumed token on retry would just cause a second, confusing failure — clearing it makes the server fall back to the existing Layer-1 content guard on retry, per `Turnstile.tsx`'s documented behavior).
 
 ## (b) Conversion tracking
 

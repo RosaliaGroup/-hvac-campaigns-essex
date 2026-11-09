@@ -294,7 +294,7 @@ Thank you for choosing Mechanical Enterprise!"
 
 ```
 "Perfect! You'll hear from us within 24 hours. In the meantime, if you have any questions, 
-you can always call us back at (862) 423-9396. We're here 24/7.
+you can always call us back at (862) 419-1763. We're here 24/7.
 
 Is there anything else I can help you with today?"
 ```
@@ -303,7 +303,7 @@ Is there anything else I can help you with today?"
 
 ```
 "I'm glad I could help! If you decide to move forward or have any other questions, 
-don't hesitate to call us at (862) 423-9396. We're always here to help.
+don't hesitate to call us at (862) 419-1763. We're always here to help.
 
 Have a great day!"
 ```

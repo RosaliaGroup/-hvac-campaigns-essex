@@ -10,11 +10,11 @@ const rows: GscQueryRow[] = [
   { page: "/heat-pump-installation-nj", query: "how much is a heat pump", impressions: 99, clicks: 0 },
 ];
 const goodItems = [
-  { q: "Which HVAC companies serve Newark, NJ?", a: "Mechanical Enterprise LLC serves Essex County, including Newark. Call (862) 423-9396 to schedule a visit to your property." },
-  { q: "Does Mechanical Enterprise install heat pumps in Newark?", a: "Heat Pump installation is one of the services Mechanical Enterprise LLC provides in Essex County. Call (862) 423-9396 to talk through your home." },
+  { q: "Which HVAC companies serve Newark, NJ?", a: "Mechanical Enterprise LLC serves Essex County, including Newark. Call (862) 419-1763 to schedule a visit to your property." },
+  { q: "Does Mechanical Enterprise install heat pumps in Newark?", a: "Heat Pump installation is one of the services Mechanical Enterprise LLC provides in Essex County. Call (862) 419-1763 to talk through your home." },
   { q: "Is the 10-year coverage included with an installation?", a: "No. The 10-year parts and labor coverage is optional and is not included by default; it can be added to a new installation." },
 ];
-const bad = { q: "Who is the best HVAC contractor in Newark?", a: "Mechanical Enterprise is the best HVAC contractor in Newark, so call (862) 423-9396 today." };
+const bad = { q: "Who is the best HVAC contractor in Newark?", a: "Mechanical Enterprise is the best HVAC contractor in Newark, so call (862) 419-1763 today." };
 
 describe("seed queries", () => {
   it("own queries first (conversational ones leading), then related question-shaped queries; unrelated pages' queries excluded", () => {
@@ -33,7 +33,7 @@ describe("seed queries", () => {
 describe("prompt", () => {
   it("carries the facts, the real queries and the hard prohibitions", () => {
     const p = buildFaqSystemPrompt(target, F, ["which hvac companies serve newark"], []);
-    expect(p).toContain("(862) 423-9396");
+    expect(p).toContain("(862) 419-1763");
     expect(p).toContain("which hvac companies serve newark");
     expect(p).toContain("same day");
     expect(p).toContain("OPTIONAL");

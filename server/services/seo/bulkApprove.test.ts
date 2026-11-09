@@ -239,7 +239,7 @@ function page(overrides: Record<string, any> = {}): Record<string, any> {
     page: "/hvac-elizabeth-nj",
     url: "https://mechanicalenterprise.com/hvac-elizabeth-nj",
     title: "Elizabeth NJ HVAC Contractor | AC & Heat Pump Installation",
-    metaDescription: "Licensed HVAC installation in Elizabeth, NJ. Free assessment, no obligation. Call (862) 423-9396.",
+    metaDescription: "Licensed HVAC installation in Elizabeth, NJ. Free assessment, no obligation. Call (862) 419-1763.",
     h1: "Elizabeth H1",
     category: "residential",
     clicks: 10,
@@ -345,7 +345,7 @@ describe("approveBatchToPR — commit/PR guarantees (spec §11)", () => {
   it("creates exactly one commit and one PR for a two-page batch, and never writes to main", async () => {
     const pages = [
       page({ id: 1, page: "/hvac-elizabeth-nj" }),
-      page({ id: 2, page: "/hvac-clifton-nj", title: "Clifton NJ HVAC Contractor | AC Repair & Install", metaDescription: "Licensed HVAC in Clifton, NJ. Free assessment. Call (862) 423-9396." }),
+      page({ id: 2, page: "/hvac-clifton-nj", title: "Clifton NJ HVAC Contractor | AC Repair & Install", metaDescription: "Licensed HVAC in Clifton, NJ. Free assessment. Call (862) 419-1763." }),
     ];
     const { db, drafts } = makeDb(pages);
     vi.mocked(getDb).mockResolvedValue(db as never);
@@ -378,7 +378,7 @@ describe("approveBatchToPR — commit/PR guarantees (spec §11)", () => {
         id: i + 1,
         page: `/hvac-city-${i + 1}-nj`,
         title: `City ${i + 1} NJ HVAC Contractor | AC & Heat Pump Installation`,
-        metaDescription: `Licensed HVAC installation in City ${i + 1}, NJ. Free assessment, no obligation. Call (862) 423-9396.`,
+        metaDescription: `Licensed HVAC installation in City ${i + 1}, NJ. Free assessment, no obligation. Call (862) 419-1763.`,
       }),
     );
     const { db } = makeDb(pages);
@@ -439,7 +439,7 @@ describe("revertBatch", () => {
   it("restores the pre-batch title/meta for a merged batch, without touching other pages' later changes", async () => {
     const pages = [
       page({ id: 1, page: "/hvac-elizabeth-nj" }),
-      page({ id: 2, page: "/hvac-clifton-nj", title: "Clifton NJ HVAC Contractor | AC Repair & Install", metaDescription: "Licensed HVAC in Clifton, NJ. Free assessment. Call (862) 423-9396." }),
+      page({ id: 2, page: "/hvac-clifton-nj", title: "Clifton NJ HVAC Contractor | AC Repair & Install", metaDescription: "Licensed HVAC in Clifton, NJ. Free assessment. Call (862) 419-1763." }),
     ];
     const { db, drafts, batches } = makeDb(pages);
     vi.mocked(getDb).mockResolvedValue(db as never);
@@ -619,7 +619,7 @@ describe("approveBatchToPR — one PR per batch (a second batch the same day doe
   it("gives the second same-day batch its own branch and its own PR", async () => {
     const pages = [
       page({ id: 1, page: "/hvac-elizabeth-nj" }),
-      page({ id: 2, page: "/hvac-clifton-nj", title: "Clifton NJ HVAC Contractor | AC Repair & Install", metaDescription: "Licensed HVAC in Clifton, NJ. Free assessment. Call (862) 423-9396." }),
+      page({ id: 2, page: "/hvac-clifton-nj", title: "Clifton NJ HVAC Contractor | AC Repair & Install", metaDescription: "Licensed HVAC in Clifton, NJ. Free assessment. Call (862) 419-1763." }),
     ];
     const { db, batches } = makeDb(pages);
     vi.mocked(getDb).mockResolvedValue(db as never);

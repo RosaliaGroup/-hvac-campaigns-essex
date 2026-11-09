@@ -33,7 +33,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
       "Essex County homeowners qualify for up to $16,000 in rebates and incentives on a new heat pump. See your estimate in 2 minutes — no commitment required.",
       "Mechanical Enterprise is a WMBE-certified local HVAC contractor serving Essex County. 0% financing, no money down options, and up to $16,000 in program rebates.",
       "Replace your oil, gas, or electric system with a high-efficiency heat pump. NJ Clean Heat program covers up to $16,000. Free assessment — book online today.",
-      "Check what rebates and incentives you qualify for in 2 minutes. Serving all of Essex County NJ. WMBE/SBE certified. Call (862) 423-9396 or get your estimate online.",
+      "Check what rebates and incentives you qualify for in 2 minutes. Serving all of Essex County NJ. WMBE/SBE certified. Call (862) 419-1763 or get your estimate online.",
     ],
   },
   {
@@ -59,7 +59,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Switching from oil to a heat pump in New Jersey qualifies for up to $16,000 in rebates and incentives. Oil tank decommissioning included. Free estimate in 2 minutes.",
-      "Mechanical Enterprise handles the full oil-to-heat pump conversion — decommissioning, installation, and rebate paperwork. Serving Essex County NJ. Call (862) 423-9396.",
+      "Mechanical Enterprise handles the full oil-to-heat pump conversion — decommissioning, installation, and rebate paperwork. Serving Essex County NJ. Call (862) 419-1763.",
       "Stop paying high oil prices. A new heat pump costs less to run and qualifies for up to $16,000 in NJ Clean Heat rebates. 0% financing, no money down options available.",
       "Essex County homeowners: replace your oil system and get up to $16,000 back through the NJ Clean Heat program. WMBE-certified local contractor. Book your free assessment today.",
     ],
@@ -83,12 +83,12 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
       "Full System Replacement — No Money Down",
       "Serving All of Essex County NJ",
       "VRV/VRF Specialists",
-      "Call (862) 423-9396 — Free Estimate",
+      "Call (862) 419-1763 — Free Estimate",
     ],
     descriptions: [
       "Mechanical Enterprise installs high-efficiency heat pumps and central AC systems throughout Essex County NJ. Up to $16,000 in rebates available. Free assessment — book online.",
       "Local WMBE-certified HVAC contractor serving Essex County. New heat pump systems starting with 0% financing and no money down. Check your rebate eligibility in 2 minutes.",
-      "Replace your old HVAC system with a high-efficiency heat pump. Heating and cooling in one unit. Up to $16,000 in NJ Clean Heat rebates. Call (862) 423-9396 today.",
+      "Replace your old HVAC system with a high-efficiency heat pump. Heating and cooling in one unit. Up to $16,000 in NJ Clean Heat rebates. Call (862) 419-1763 today.",
       "Mechanical Enterprise handles full HVAC replacements for Essex County homeowners. VRV/VRF specialists. Free assessment, no obligation. See your rebate estimate online now.",
     ],
   },
@@ -105,7 +105,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Your R22 AC system cannot be recharged — R22 is banned. Replace now and get up to $20K in rebates.",
-      "Licensed NJ contractor. Free assessment. We handle all PSE&G rebate paperwork. Call (862) 423-9396.",
+      "Licensed NJ contractor. Free assessment. We handle all PSE&G rebate paperwork. Call (862) 419-1763.",
     ],
   },
   {
@@ -119,7 +119,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "R22 freon is banned. Stop paying for repairs on a dead system. Replace and get up to $20K back.",
-      "Free assessment. We handle PSE&G rebate paperwork. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. We handle PSE&G rebate paperwork. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -133,7 +133,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Repairing an R22 system costs more every year. Replace now and get up to $20K in NJ rebates.",
-      "Free assessment. Licensed NJ contractor. We handle all paperwork. Call (862) 423-9396.",
+      "Free assessment. Licensed NJ contractor. We handle all paperwork. Call (862) 419-1763.",
     ],
   },
   {
@@ -147,7 +147,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "R22 refrigerant was banned in 2020. Your old AC system qualifies for up to $20K in NJ rebates now.",
-      "Free assessment. We handle PSE&G paperwork. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle PSE&G paperwork. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -161,7 +161,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "R22 system replacement costs $8K-$15K. PSE&G rebates cover up to $18K. You may pay nothing.",
-      "Free assessment and quote. We handle all rebate paperwork. Call (862) 423-9396.",
+      "Free assessment and quote. We handle all rebate paperwork. Call (862) 419-1763.",
     ],
   },
   {
@@ -175,7 +175,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "R22 AC broke down? Cannot be repaired cheaply. Replace now and get up to $20K in NJ rebates.",
-      "Same-day assessment available. Licensed NJ contractor. Call (862) 423-9396 now.",
+      "Same-day assessment available. Licensed NJ contractor. Call (862) 419-1763 now.",
     ],
   },
 
@@ -191,7 +191,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "AC systems over 10 years old qualify for up to $20K in NJ rebates. Replace before summer.",
-      "Free assessment. We handle PSE&G rebate paperwork. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle PSE&G rebate paperwork. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -205,7 +205,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "If your AC is 10+ years old you qualify for major NJ rebates. Most homeowners get $12K-$20K back.",
-      "Free assessment. We handle all paperwork. WMBE certified NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle all paperwork. WMBE certified NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -219,7 +219,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Old inefficient AC costs $200+ more per month. Replace and get up to $20K in NJ rebates now.",
-      "Free assessment. We handle PSE&G paperwork. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. We handle PSE&G paperwork. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -233,7 +233,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Replace your central AC and get up to $20K in combined NJ rebates. Free assessment and quote.",
-      "Licensed NJ contractor. We handle all PSE&G paperwork. WMBE certified. Call (862) 423-9396.",
+      "Licensed NJ contractor. We handle all PSE&G paperwork. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -247,7 +247,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Most HVAC systems over 10 years qualify for major NJ rebates. Free 20-min assessment tells you exactly.",
-      "We handle all PSE&G rebate paperwork at no cost. Licensed NJ contractor. Call (862) 423-9396.",
+      "We handle all PSE&G rebate paperwork at no cost. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -261,7 +261,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Switch from oil to a heat pump and get up to $20K in combined NJ rebates. Cut heating bills by 60%.",
-      "Free assessment. We handle PSE&G paperwork. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle PSE&G paperwork. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
 
@@ -277,7 +277,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "We are a PSE&G certified NJ contractor. We handle your entire rebate application at no extra cost.",
-      "Free assessment. Up to $20K in combined rebates. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. Up to $20K in combined rebates. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -291,7 +291,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "PSE&G Clean Heat Program pays up to $18K for heat pump installation. We file everything for you.",
-      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -305,7 +305,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "NJ Clean Energy Program offers major HVAC rebates. We identify every rebate you qualify for free.",
-      "Free assessment. We handle all applications. WMBE certified NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle all applications. WMBE certified NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -319,7 +319,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "NJ homeowners get PSE&G rebates plus federal tax credits for heat pumps in 2026. Up to $20K total.",
-      "Free assessment. We handle all paperwork. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle all paperwork. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -333,7 +333,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "We handle your entire NJ HVAC rebate application at no cost. You fill out zero forms. Free assessment.",
-      "Licensed NJ contractor. WMBE certified. Up to $20K combined. Call (862) 423-9396.",
+      "Licensed NJ contractor. WMBE certified. Up to $20K combined. Call (862) 419-1763.",
     ],
   },
   {
@@ -347,7 +347,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Combine federal 25C tax credit with PSE&G rebates for up to $20K total on HVAC replacement in NJ.",
-      "Free assessment. We handle all paperwork. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle all paperwork. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
 
@@ -363,7 +363,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Essex County HVAC replacement with up to $20K in PSE&G rebates. Serving Newark Montclair West Orange.",
-      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -377,7 +377,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Hudson County HVAC replacement with up to $20K in rebates. Serving Jersey City Hoboken Bayonne.",
-      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -391,7 +391,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Bergen County HVAC replacement with up to $20K in PSE&G rebates. Serving Hackensack Paramus Teaneck.",
-      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -405,7 +405,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Passaic County HVAC replacement with up to $20K in rebates. Serving Paterson Clifton Wayne Passaic.",
-      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -419,7 +419,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Union County HVAC replacement with up to $20K in PSE&G rebates. Serving Elizabeth Union Linden.",
-      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 419-1763.",
     ],
   },
   {
@@ -433,7 +433,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Middlesex County HVAC replacement with up to $20K in rebates. Serving New Brunswick Edison Woodbridge.",
-      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 423-9396.",
+      "Free assessment. Licensed NJ contractor. WMBE certified. Call (862) 419-1763.",
     ],
   },
 
@@ -449,7 +449,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Commercial R22 systems must be replaced. PSE&G Direct Install covers up to 80% of replacement cost.",
-      "Free commercial assessment. We handle all paperwork. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free commercial assessment. We handle all paperwork. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -463,7 +463,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "NJ commercial HVAC rebates cover up to 80% of replacement costs through PSE&G Direct Install Program.",
-      "Free assessment. We handle all paperwork. WMBE certified NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle all paperwork. WMBE certified NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -477,7 +477,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Office building HVAC replacement with up to 80% covered by PSE&G. Lighting 100% free included.",
-      "Free assessment. We handle all paperwork. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle all paperwork. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -491,7 +491,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Restaurant HVAC replacement with up to 80% covered by PSE&G Direct Install. Lighting 100% free.",
-      "Free assessment. Fast installation. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free assessment. Fast installation. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -505,7 +505,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Churches and nonprofits qualify for PSE&G HVAC rebates covering up to 80% of replacement costs.",
-      "Free assessment. We handle all paperwork. WMBE certified NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We handle all paperwork. WMBE certified NJ contractor. Call (862) 419-1763.",
     ],
   },
   {
@@ -519,7 +519,7 @@ export const AD_COPY_LIBRARY: AdCopyEntry[] = [
     ],
     descriptions: [
       "Warehouse and industrial HVAC replacement with up to 80% covered by PSE&G Direct Install Program.",
-      "Free assessment. We serve large commercial properties. Licensed NJ contractor. Call (862) 423-9396.",
+      "Free assessment. We serve large commercial properties. Licensed NJ contractor. Call (862) 419-1763.",
     ],
   },
 ];

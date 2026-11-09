@@ -37,7 +37,7 @@ WARN:
 
 ## 3. New page `/warranty` (public, indexable, `Service` + `FAQPage` schema, breadcrumb → Residential)
 Title: `10-Year Parts & Labor HVAC Coverage in NJ | Mechanical Enterprise` (≤60: use "10-Year Parts & Labor HVAC Coverage | Mechanical Enterprise")
-Meta: `Optional 10-year parts and labor coverage for new HVAC installations and qualifying existing systems in New Jersey. No deductible on covered repairs. Call (862) 423-9396.`
+Meta: `Optional 10-year parts and labor coverage for new HVAC installations and qualifying existing systems in New Jersey. No deductible on covered repairs. Call (862) 419-1763.`
 
 Body (use verbatim, edit only for accuracy against the provider's terms PDF):
 
@@ -62,7 +62,7 @@ Body (use verbatim, edit only for accuracy against the provider's terms PDF):
 > **Is coverage required?** No. It's an optional add-on, quoted with your installation or after an eligibility inspection.
 > **Does coverage transfer if I sell the property?** [CONFIRM WITH PROVIDER TERMS — typical programs allow one transfer.]
 > **Is maintenance required?** [CONFIRM — if the program requires annual maintenance, state it here.]
-> **How do I file a claim?** Call Mechanical Enterprise at (862) 423-9396. We diagnose the issue, confirm coverage with the administrator, and complete the repair.
+> **How do I file a claim?** Call Mechanical Enterprise at (862) 419-1763. We diagnose the issue, confirm coverage with the administrator, and complete the repair.
 >
 > ## Pricing
 > Coverage is priced per system and quoted with your installation or after the eligibility inspection.

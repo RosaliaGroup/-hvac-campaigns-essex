@@ -31,7 +31,7 @@ import { sendTelnyxSms, toE164 } from "../services/telnyxSms";
 import { quickbooksProvider } from "./accounting/quickbooks";
 
 const SITE_URL = (process.env.PUBLIC_SITE_URL || "https://mechanicalenterprise.com").replace(/\/$/, "");
-const OFFICE_PHONE = "(862) 423-9396";
+const OFFICE_PHONE = "(862) 419-1763";
 
 export function paymentConfig(env: NodeJS.ProcessEnv = process.env) {
   const venmo = (env.VENMO_HANDLE ?? "").trim();

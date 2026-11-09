@@ -17,7 +17,7 @@ Thank you for your interest in partnering with Mechanical Enterprise. This kit p
 - Energy-Efficient System Replacements
 
 **Contact Information:**
-- Phone: (862) 423-9396
+- Phone: (862) 419-1763
 - Email: sales@mechanicalenterprise.com
 - Location: Newark, NJ
 - Service Area: 15 counties in New Jersey
@@ -270,7 +270,7 @@ Begin connecting clients and earning commissions
 
 **Partnership Inquiries:**  
 Email: sales@mechanicalenterprise.com  
-Phone: (862) 423-9396
+Phone: (862) 419-1763
 
 **Office Location:**  
 Newark, NJ

@@ -85,7 +85,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Failing air conditioner in New Jersey? We assess central AC, ductless and heat-pump systems and give you a written replacement quote, with every rebate you qualify for.",
     metaTitle: "AC Replacement NJ | Failing Air Conditioner? Free Assessment | Mechanical Enterprise",
     metaDescription:
-      "Failing AC in NJ? Free in-home assessment and written replacement quote, plus rebates on new systems. Call (862) 423-9396.",
+      "Failing AC in NJ? Free in-home assessment and written replacement quote, plus rebates on new systems. Call (862) 419-1763.",
     introHeading: "Fast, Reliable Air Conditioning Repair in NJ",
     intro:
       "When your AC quits during a New Jersey heat wave, every hour matters. Our EPA-certified technicians find the real problem, quote a flat price before touching a tool, and carry common parts to finish most repairs in a single visit.",
@@ -99,7 +99,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     ],
     faqs: [
       { q: "How much does AC repair cost in NJ?", a: "Most common repairs — capacitors, contactors, thermostats, and refrigerant service — vary with the part and the system. The technician diagnoses the problem and gives you an exact flat-rate price before any work begins." },
-      { q: "How fast can you come out?", a: "Call (862) 423-9396 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
+      { q: "How fast can you come out?", a: "Call (862) 419-1763 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
       { q: "Should I repair or replace my air conditioner?", a: "As a rule of thumb, replace if the system is 12–15+ years old, uses discontinued R-22, or the repair exceeds about half of replacement cost. If replacement makes sense, we'll show you the NJ rebates and financing that make it affordable." },
       { q: "Do you repair ductless mini-splits and heat pumps?", a: "Yes — we're factory-trained on Mitsubishi, Daikin, Fujitsu, and all major ductless and heat-pump brands, plus conventional central air." },
       { q: "Are your technicians licensed and insured?", a: "Every technician is EPA-certified, fully licensed, and insured. Mechanical Enterprise is a WMBE/SBE-certified NJ contractor and all repairs are warrantied." },
@@ -125,7 +125,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Failing furnace, boiler or heat pump in New Jersey? Free in-home assessment, honest advice and a written replacement quote.",
     metaTitle: "Heating System Replacement NJ | Free Assessment | Mechanical Enterprise",
     metaDescription:
-      "Failing furnace, boiler or heat pump in NJ? Free in-home assessment and written replacement quote. Call (862) 423-9396.",
+      "Failing furnace, boiler or heat pump in NJ? Free in-home assessment and written replacement quote. Call (862) 419-1763.",
     introHeading: "Expert Heating Repair for New Jersey Winters",
     intro:
       "A cold NJ night is no time to wait. We service every type of heating system, diagnose the true cause instead of guessing, and quote a flat price before we start — so you're never surprised.",
@@ -138,7 +138,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { icon: "♨️", title: "Furnaces, Boilers & Heat Pumps", desc: "One team for every heating system in your home, from every major brand." },
     ],
     faqs: [
-      { q: "How fast can you come out?", a: "Call (862) 423-9396 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
+      { q: "How fast can you come out?", a: "Call (862) 419-1763 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
       { q: "How much does heating repair cost?", a: "It depends on the part and the system. The technician diagnoses the problem first, and you approve an exact flat-rate price before we begin." },
       { q: "My heat works but some rooms are cold — can you help?", a: "Yes. Uneven heating is usually airflow, zoning, or distribution. We diagnose the cause and fix it rather than just band-aiding symptoms." },
       { q: "Do you handle both gas and electric heating?", a: "We service gas and electric furnaces, gas and oil boilers, and electric/gas heat pumps." },
@@ -165,7 +165,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Old or failing gas or electric furnace in New Jersey? Free in-home assessment and a written replacement quote.",
     metaTitle: "Furnace Replacement NJ | Free Assessment | Mechanical Enterprise",
     metaDescription:
-      "Old or failing furnace in NJ? Free in-home assessment and written replacement quote. Call (862) 423-9396.",
+      "Old or failing furnace in NJ? Free in-home assessment and written replacement quote. Call (862) 419-1763.",
     introHeading: "Trusted Furnace Repair Across New Jersey",
     intro:
       "From a furnace that won't ignite to one blowing cold air, we diagnose the real cause and repair it safely. Every visit includes a combustion and carbon-monoxide safety check at no extra charge.",
@@ -180,7 +180,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     faqs: [
       { q: "How much does furnace repair cost in NJ?", a: "It depends on the part. Igniters and flame sensors are usually simpler fixes than blower motors or control boards. You approve an exact price upfront, before any work starts." },
       { q: "Is a cracked heat exchanger dangerous?", a: "Yes — it can leak carbon monoxide. If we find one we'll show you the evidence and your safe options. We never scare you into a sale." },
-      { q: "Should I repair or replace my furnace?", a: "We focus on replacements. At a free in-home assessment we look at age, condition and efficiency and give you a written quote. Call (862) 423-9396." },
+      { q: "Should I repair or replace my furnace?", a: "We focus on replacements. At a free in-home assessment we look at age, condition and efficiency and give you a written quote. Call (862) 419-1763." },
       { q: "Why does my furnace keep shutting off?", a: "Short cycling is often a dirty filter, a failing limit switch, or an oversized system. We pinpoint the exact cause." },
       { q: "Should I repair or replace my furnace?", a: "If it's 15+ years old or facing a major repair, replacement may pay off — and NJ rebates up to $16,000 can offset a new high-efficiency system. We'll advise honestly." },
       { q: "Do you offer maintenance to prevent breakdowns?", a: "Yes — a seasonal tune-up prevents most no-heat emergencies and keeps your warranty valid." },
@@ -205,7 +205,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Old or failing steam or hot-water boiler in New Jersey — common in older homes and brownstones. Free in-home assessment and written replacement quote.",
     metaTitle: "Boiler Repair NJ | Steam & Hot-Water Boilers | Mechanical Enterprise",
     metaDescription:
-      "Old or failing boiler in NJ — steam & hot-water systems. Free in-home assessment and replacement quote. Call (862) 423-9396.",
+      "Old or failing boiler in NJ — steam & hot-water systems. Free in-home assessment and replacement quote. Call (862) 419-1763.",
     introHeading: "Boiler Repair Specialists for New Jersey Homes",
     intro:
       "Boilers run many of New Jersey's older homes and multi-families, and they need a technician who truly knows hydronic and steam systems. We diagnose leaks, pressure problems, and no-heat faults and fix them right.",
@@ -221,7 +221,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "How much does boiler repair cost in NJ?", a: "It depends on the component — circulators, valves and controls all differ. You approve an exact price before we start." },
       { q: "Do you work on both steam and hot-water boilers?", a: "Yes. We service steam and hot-water (hydronic) boilers, gas and oil, including the older systems common in NJ." },
       { q: "Why are some of my radiators cold?", a: "Usually trapped air, a failing circulator, or a balancing issue. We diagnose the exact cause instead of guessing." },
-      { q: "How fast can you come out?", a: "Call (862) 423-9396 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
+      { q: "How fast can you come out?", a: "Call (862) 419-1763 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
       { q: "Is it worth repairing an old boiler?", a: "Often yes, but if it's inefficient or failing we'll show you replacement options — high-efficiency systems may qualify for NJ rebates up to $16,000." },
       { q: "Are you licensed and insured?", a: "Fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied repairs." },
     ],
@@ -245,7 +245,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Whole-home indoor air quality solutions across New Jersey — purifiers, advanced filtration, UV lights, humidity control, and duct sealing.",
     metaTitle: "Indoor Air Quality NJ | Air Purifiers & Filtration | Mechanical Enterprise",
     metaDescription:
-      "Improve your NJ home's air — purifiers, filtration, UV lights, humidity control & duct sealing. Free assessment. Call (862) 423-9396.",
+      "Improve your NJ home's air — purifiers, filtration, UV lights, humidity control & duct sealing. Free assessment. Call (862) 419-1763.",
     introHeading: "Healthier Air for Your New Jersey Home",
     intro:
       "Dust, pollen, humidity, and pollutants build up in NJ homes year-round. We assess your air and recommend the right mix of filtration, purification, and humidity control — integrated with your existing HVAC system.",
@@ -285,7 +285,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Expert heat-pump repair across New Jersey for ducted and ductless systems — no heat, no cooling, defrost problems, and refrigerant faults. All brands.",
     metaTitle: "Heat Pump Repair NJ | Ducted & Ductless | Mechanical Enterprise",
     metaDescription:
-      "Expert heat pump repair across NJ — no heat/cooling, defrost & refrigerant faults, all brands. Upgrade rebates. Call (862) 423-9396.",
+      "Expert heat pump repair across NJ — no heat/cooling, defrost & refrigerant faults, all brands. Upgrade rebates. Call (862) 419-1763.",
     introHeading: "Heat Pump Repair Done Right in New Jersey",
     intro:
       "Heat pumps heat and cool in one system, so a fault affects your comfort year-round. Our technicians know cold-climate heat pumps inside and out — from reversing valves to defrost boards — and fix the true cause fast.",
@@ -325,7 +325,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Ductless mini-split repair across New Jersey — not cooling or heating, water leaks, error codes, and communication faults. Single- and multi-zone, all brands.",
     metaTitle: "Ductless Mini-Split Repair NJ | All Brands | Mechanical Enterprise",
     metaDescription:
-      "Mini-split repair across NJ — not cooling, leaks, error codes, comm faults. Mitsubishi, Daikin, Fujitsu & more. Call (862) 423-9396.",
+      "Mini-split repair across NJ — not cooling, leaks, error codes, comm faults. Mitsubishi, Daikin, Fujitsu & more. Call (862) 419-1763.",
     introHeading: "Ductless Mini-Split Repair Across New Jersey",
     intro:
       "Mini-splits deliver quiet, zoned comfort — but inverter systems need a technician who understands them. We repair indoor and outdoor units, decode error codes, and get every zone working again.",
@@ -363,10 +363,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     serviceOnly: true,
     h1: "Emergency HVAC Repair for Occupied NJ Buildings",
     heroSub:
-      "No heat in an apartment building, cooling down in an office or store, a rooftop unit that won't restart — call (862) 423-9396 and tell us what failed. We'll triage the problem, tell you when a technician can be on site, and work the repair around the people inside.",
+      "No heat in an apartment building, cooling down in an office or store, a rooftop unit that won't restart — call (862) 419-1763 and tell us what failed. We'll triage the problem, tell you when a technician can be on site, and work the repair around the people inside.",
     metaTitle: "Emergency HVAC Repair NJ | Buildings & Multifamily",
     metaDescription:
-      "Emergency HVAC repair for NJ apartment, office and retail buildings: no heat, no cooling, failed RTUs and boilers. Call (862) 423-9396 to report a failure.",
+      "Emergency HVAC repair for NJ apartment, office and retail buildings: no heat, no cooling, failed RTUs and boilers. Call (862) 419-1763 to report a failure.",
     introHeading: "When Heat or Cooling Fails in a Building People Depend On",
     intro:
       "A failure in an occupied building is different from a failure in a single home. Residents call the management office, commercial occupants lose a workday, and every hour adds pressure on the person responsible for the property. Mechanical Enterprise works with property managers, superintendents and building owners across northern and central New Jersey to get failed heating and cooling equipment diagnosed and repaired, and to keep the people in the building informed while it happens.",
@@ -382,7 +382,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       {
         heading: "How an Emergency Call Works",
         paragraphs: [
-          "Call (862) 423-9396 and describe what stopped working, which part of the building is affected and who is on site. We ask a few triage questions up front — is the whole building affected or one zone, are any breakers or safeties tripped, is water leaking — because the answers decide which technician and which parts should be sent.",
+          "Call (862) 419-1763 and describe what stopped working, which part of the building is affected and who is on site. We ask a few triage questions up front — is the whole building affected or one zone, are any breakers or safeties tripped, is water leaking — because the answers decide which technician and which parts should be sent.",
           "Before anyone is dispatched we tell you when a technician can realistically be there. When the technician arrives, they confirm the cause, explain the options and get approval before repair work starts. If a part has to be ordered, you get a plan for temporary heat or cooling where it is practical, and a clear next step rather than an open-ended wait.",
         ],
       },
@@ -419,7 +419,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     },
     faqs: [
       { q: "What kinds of buildings do you handle emergency HVAC repairs for?", a: "Multifamily and condo buildings, offices, retail, restaurants, medical space, warehouses and mixed-use properties in northern and central New Jersey." },
-      { q: "How do I report a heating or cooling failure?", a: "Call (862) 423-9396. Tell us the address, what failed, which areas are affected and who is on site. We triage on the phone and tell you when a technician can be there." },
+      { q: "How do I report a heating or cooling failure?", a: "Call (862) 419-1763. Tell us the address, what failed, which areas are affected and who is on site. We triage on the phone and tell you when a technician can be there." },
       { q: "Will you tell me the repair cost before you start?", a: "Yes. The technician diagnoses the problem first, explains the options and gets approval from the person you designate before repair work begins." },
       { q: "What if a part has to be ordered?", a: "We tell you what part is needed and the next step, and where practical we help plan temporary heat or cooling for the affected area while it is on order." },
       { q: "Can you help us avoid repeat emergency calls?", a: "Yes. Every call ends with notes on related equipment, and a preventive maintenance agreement, priced per unit per year with quarterly reporting, can catch failures before they happen." },
@@ -432,7 +432,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/blog/commercial-hvac-response-sla-checklist", label: "Response Agreements", sub: "What an SLA should include" },
     ],
     ctaHeading: "Report a Heating or Cooling Failure",
-    ctaSub: "Call (862) 423-9396 with the address and what failed, and we'll tell you when a technician can be on site.",
+    ctaSub: "Call (862) 419-1763 with the address and what failed, and we'll tell you when a technician can be on site.",
   },
   {
     slug: "commercial-hvac-service-nj",
@@ -446,7 +446,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Service calls, diagnostics and repairs for rooftop units, split systems, VRF, PTACs and building controls in offices, retail, multifamily and mixed-use properties across northern and central New Jersey.",
     metaTitle: "Commercial HVAC Service & Repair NJ | RTU, VRF, PTAC",
     metaDescription:
-      "Commercial HVAC repair and service calls for NJ offices, retail and multifamily buildings: RTUs, splits, VRF, PTACs and controls. Call (862) 423-9396.",
+      "Commercial HVAC repair and service calls for NJ offices, retail and multifamily buildings: RTUs, splits, VRF, PTACs and controls. Call (862) 419-1763.",
     introHeading: "One Service Contractor for the Whole Building",
     intro:
       "Property managers rarely deal with one type of equipment. A single mixed-use building can have packaged rooftop units over the retail floor, split systems in offices, PTACs or ductless units in apartments, and a set of controls nobody has documented. Mechanical Enterprise services all of it, so you have one number to call, one service history and one contractor accountable for finding the real cause of a problem instead of resetting it until the next failure.",
@@ -520,7 +520,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/blog/commercial-hvac-response-sla-checklist", label: "Response Agreements", sub: "What an SLA should include" },
     ],
     ctaHeading: "Request Commercial HVAC Service",
-    ctaSub: "Call (862) 423-9396 or send a request with the address and equipment, and we'll schedule a technician.",
+    ctaSub: "Call (862) 419-1763 or send a request with the address and equipment, and we'll schedule a technician.",
   },
   {
     slug: "commercial-rtu-service-nj",
@@ -534,7 +534,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Diagnostics, repair and planned service for packaged rooftop units on NJ retail, office, restaurant and multifamily buildings — cooling, gas heat, economizers, fans and controls.",
     metaTitle: "Rooftop Unit (RTU) Repair & Service NJ | Commercial",
     metaDescription:
-      "Commercial rooftop unit repair and service in NJ: compressors, gas heat, economizers, belts and controls on packaged RTUs. Call (862) 423-9396.",
+      "Commercial rooftop unit repair and service in NJ: compressors, gas heat, economizers, belts and controls on packaged RTUs. Call (862) 419-1763.",
     introHeading: "Packaged Rooftop Units, Serviced by People Who Go on the Roof",
     intro:
       "Rooftop units are out of sight until they fail, and then they affect everyone below them. A single packaged unit can carry the heating, cooling and ventilation for a store, a restaurant dining room or an office floor. Mechanical Enterprise diagnoses and repairs RTUs across northern and central New Jersey and keeps records by unit, so you can see which equipment is healthy, which needs work, and which is heading toward replacement.",
@@ -603,7 +603,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/blog/rooftop-hvac-replacement-quote-checklist-nj", label: "RTU Replacement Quotes", sub: "Owner checklist" },
     ],
     ctaHeading: "Get a Rooftop Unit Looked At",
-    ctaSub: "Call (862) 423-9396 or send the address, unit details and roof access information to request RTU service.",
+    ctaSub: "Call (862) 419-1763 or send the address, unit details and roof access information to request RTU service.",
   },
   {
     slug: "commercial-hvac-maintenance-nj",
@@ -617,7 +617,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Planned maintenance for rooftop units, split systems, mini-splits, PTACs and VRF across your NJ buildings — priced per unit per year, quoted by portfolio, with quarterly reporting on every unit we maintain.",
     metaTitle: "Commercial HVAC Maintenance Agreements NJ | Portfolios",
     metaDescription:
-      "Preventive HVAC maintenance agreements for NJ commercial and multifamily buildings, priced per unit per year with quarterly reports. (862) 423-9396.",
+      "Preventive HVAC maintenance agreements for NJ commercial and multifamily buildings, priced per unit per year with quarterly reports. (862) 419-1763.",
     introHeading: "Planned Maintenance Instead of Surprise Breakdowns",
     intro:
       "Most HVAC emergencies start as small problems nobody was looking for: a belt fraying, a drain line slowly clogging, a coil packed with debris, a capacitor drifting out of range. A maintenance agreement puts a technician in front of every unit on a schedule, so those problems are caught on a planned visit instead of during a heat wave or the first cold night. For property managers, it also produces something just as valuable — a written record of what every unit in the portfolio looks like.",
@@ -686,7 +686,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/blog/closed-loop-pump-rotation-checklist-nj", label: "Pump Rotation Checklist", sub: "For building engineers" },
     ],
     ctaHeading: "Get a Maintenance Quote for Your Buildings",
-    ctaSub: "Send your building list and equipment counts, or call (862) 423-9396, and we'll prepare a per-unit annual quote.",
+    ctaSub: "Send your building list and equipment counts, or call (862) 419-1763, and we'll prepare a per-unit annual quote.",
   },
   {
     slug: "restaurant-hvac-nj",
@@ -699,7 +699,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Restaurant HVAC and kitchen ventilation across New Jersey — exhaust hoods, makeup air, dining-room comfort, and RTUs. Off-hours service to avoid costly closures.",
     metaTitle: "Restaurant HVAC & Kitchen Ventilation NJ | Mechanical Enterprise",
     metaDescription:
-      "Restaurant HVAC across NJ — kitchen exhaust & makeup air, dining comfort, RTUs. Off-hours service to avoid closures. Call (862) 423-9396.",
+      "Restaurant HVAC across NJ — kitchen exhaust & makeup air, dining comfort, RTUs. Off-hours service to avoid closures. Call (862) 419-1763.",
     introHeading: "Restaurant HVAC & Ventilation Specialists in NJ",
     intro:
       "Restaurants live and die by comfort and code. We balance kitchen exhaust and makeup air, keep the dining room comfortable, and service your rooftop units — scheduling around your hours so you never lose a shift.",
@@ -715,7 +715,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Why is my kitchen so hot even with the exhaust running?", a: "Usually an imbalance between exhaust and makeup air. If makeup air can't keep up, the kitchen overheats and doors are hard to open. We balance the system." },
       { q: "Can you service us without closing the restaurant?", a: "Yes — we schedule overnight and between-shift work to keep you open and serving." },
       { q: "Do you handle both kitchen ventilation and dining comfort?", a: "We handle the whole picture — exhaust, makeup air, RTUs, and dining-room comfort — so it all works together." },
-      { q: "Can you plan a replacement around our hours?", a: "Yes. We schedule installations to keep closures short. Call (862) 423-9396." },
+      { q: "Can you plan a replacement around our hours?", a: "Yes. We schedule installations to keep closures short. Call (862) 419-1763." },
       { q: "Do restaurant HVAC upgrades qualify for incentives?", a: "Often — PSE&G Direct Install and efficiency programs can cover a significant share of qualifying upgrades. We handle the paperwork." },
       { q: "Are you licensed and insured for commercial work?", a: "Yes — licensed, insured, WMBE/SBE-certified NJ commercial contractor with COIs on request." },
     ],
@@ -739,7 +739,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Warehouse and distribution HVAC across New Jersey — unit and infrared heaters, ventilation, HVLS fans, and rooftop units for large spaces. Worker comfort and compliance.",
     metaTitle: "Warehouse HVAC NJ | Heating, Ventilation & Cooling | Mechanical Enterprise",
     metaDescription:
-      "Warehouse & distribution HVAC across NJ — unit heaters, ventilation, HVLS, rooftop units. Worker comfort & compliance. Call (862) 423-9396.",
+      "Warehouse & distribution HVAC across NJ — unit heaters, ventilation, HVLS, rooftop units. Worker comfort & compliance. Call (862) 419-1763.",
     introHeading: "Large-Space HVAC for NJ Warehouses & Distribution",
     intro:
       "New Jersey's logistics corridor runs on warehouses that are hard to heat, ventilate, and cool. We design and service large-space systems that keep workers comfortable and compliant without wasting energy.",
@@ -779,7 +779,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Office building HVAC across New Jersey — RTUs, VAV and VRF systems, chillers, controls, and indoor air quality. Fewer hot-and-cold complaints, better efficiency.",
     metaTitle: "Office Building HVAC NJ | Multi-Zone Comfort | Mechanical Enterprise",
     metaDescription:
-      "Office HVAC across NJ — RTUs, VAV/VRF, chillers, controls & IAQ. Tenant comfort, fewer complaints. Call (862) 423-9396.",
+      "Office HVAC across NJ — RTUs, VAV/VRF, chillers, controls & IAQ. Tenant comfort, fewer complaints. Call (862) 419-1763.",
     introHeading: "Office HVAC That Keeps Tenants Comfortable",
     intro:
       "Hot-and-cold complaints are the fastest way to frustrate tenants. We service and optimize multi-zone office systems, fix comfort imbalances, and improve air quality and efficiency across your building.",
@@ -819,7 +819,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Industrial HVAC across New Jersey — process cooling, chillers, industrial ventilation, and makeup air for plants and manufacturing facilities. Planned replacements and new installations.",
     metaTitle: "Industrial HVAC NJ | Process Cooling & Chillers | Mechanical Enterprise",
     metaDescription:
-      "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. Replacements & new installs. Call (862) 423-9396.",
+      "Industrial HVAC across NJ — process cooling, chillers, ventilation & makeup air. Replacements & new installs. Call (862) 419-1763.",
     introHeading: "Industrial HVAC & Process Cooling in New Jersey",
     intro:
       "In a plant, HVAC isn't just comfort — it's uptime, product quality, and worker safety. We service industrial chillers, process cooling, and large-scale ventilation with the responsiveness critical operations demand.",
@@ -835,7 +835,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "What's the difference between process cooling and comfort cooling?", a: "Comfort cooling keeps people comfortable; process cooling holds precise temperatures for equipment or product. Process cooling is less forgiving, so it needs tighter control and faster response — which we're built for." },
       { q: "Do you service and replace industrial chillers?", a: "Yes — we service, repair, and replace chilled-water and process-cooling systems, and coordinate rigging for large equipment." },
       { q: "Can you help with ventilation and air-quality compliance?", a: "Yes — we design and service makeup air and exhaust systems to maintain safe temperatures and meet compliance requirements." },
-      { q: "Can you schedule work around production?", a: "Yes. We plan replacements and installations around your schedule. Call (862) 423-9396." },
+      { q: "Can you schedule work around production?", a: "Yes. We plan replacements and installations around your schedule. Call (862) 419-1763." },
       { q: "Do you offer preventive maintenance for critical equipment?", a: "Yes — tailored PM programs with monitoring and redundancy planning to prevent unplanned downtime." },
       { q: "Are you licensed, insured, and able to provide a COI?", a: "Yes — licensed, insured, WMBE/SBE-certified NJ commercial contractor with COIs on request." },
     ],

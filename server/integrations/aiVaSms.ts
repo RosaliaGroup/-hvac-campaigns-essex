@@ -102,5 +102,5 @@ export async function handleIncomingSms(webhook: TelnyxInboundWebhook) {
  * migration. Do not enable it here.
  */
 async function generateSmsResponse(message: string, phoneNumber: string): Promise<string> {
-  return "Thanks for contacting Mechanical Enterprise! We'll respond shortly. For immediate assistance, call (862) 423-9396.";
+  return "Thanks for contacting Mechanical Enterprise! We'll respond shortly. For immediate assistance, call (862) 419-1763.";
 }

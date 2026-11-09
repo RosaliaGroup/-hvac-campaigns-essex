@@ -9,7 +9,7 @@ describe("Mechanical customer text templates", () => {
   });
   it("uses the corrected business number and leaves STOP branding to the server", () => {
     for (const template of CUSTOMER_SMS_TEMPLATES) {
-      expect(template.message).toContain("(862) 423-9396");
+      expect(template.message).toContain("(862) 419-1763");
       expect(template.message).not.toContain("201-449-6850");
       expect(template.message).not.toMatch(/reply STOP/i);
       expect(template.message.length).toBeLessThanOrEqual(1200);

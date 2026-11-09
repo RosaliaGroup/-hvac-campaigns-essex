@@ -124,7 +124,7 @@ export async function sendPasswordResetEmail(
           <tr>
             <td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
               <p style="color:#9ca3af;margin:0;font-size:12px;">
-                © 2025 Mechanical Enterprise · Essex County, NJ · (862) 423-9396
+                © 2025 Mechanical Enterprise · Essex County, NJ · (862) 419-1763
               </p>
             </td>
           </tr>
@@ -205,7 +205,7 @@ export async function sendTeamInviteEmail(
           <tr>
             <td style="background:#f9fafb;padding:20px 40px;text-align:center;border-top:1px solid #e5e7eb;">
               <p style="color:#9ca3af;margin:0;font-size:12px;">
-                © 2025 Mechanical Enterprise · Essex County, NJ · (862) 423-9396
+                © 2025 Mechanical Enterprise · Essex County, NJ · (862) 419-1763
               </p>
             </td>
           </tr>

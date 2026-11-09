@@ -226,7 +226,7 @@ describe("AnthropicOptimizationProvider — install-page titles carry the 10-yea
   });
 
   it("a title with the phrase passes the linter for an installation page", () => {
-    const r = lintPageMeta({ pagePath: "/heat-pump-installation-nj", title: "Heat Pump Installation NJ | 10-Year Parts & Labor", metaDescription: "Quality heat pump installation in NJ with proper sizing. Call (862) 423-9396." });
+    const r = lintPageMeta({ pagePath: "/heat-pump-installation-nj", title: "Heat Pump Installation NJ | 10-Year Parts & Labor", metaDescription: "Quality heat pump installation in NJ with proper sizing. Call (862) 419-1763." });
     expect(r.passes).toBe(true);
     expect("Heat Pump Installation NJ | 10-Year Parts & Labor".length).toBeLessThanOrEqual(60);
   });

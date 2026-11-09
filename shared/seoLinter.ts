@@ -196,7 +196,7 @@ export function cityUtilityTerritory(pagePath: string): UtilityTerritory {
 }
 
 // Last-10-digits comparison (matches server/_core/rateLimit.ts's phoneKey()
-// convention) — a bare "(862) 423-9396" and a "+1"-prefixed "18624239396"
+// convention) — a bare "(862) 419-1763" and a "+1"-prefixed "18624191763"
 // must compare equal, or the canonical number itself gets falsely flagged.
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(-10);

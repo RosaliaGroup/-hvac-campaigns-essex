@@ -15,8 +15,8 @@ import InlineLeadCapture from "@/components/InlineLeadCapture";
 import { pickBlogVariant, isCommercialVariant } from "./blogVariant";
 
 const BASE = "https://mechanicalenterprise.com";
-const PHONE = "(862) 423-9396";
-const PHONE_TEL = "tel:+18624239396";
+const PHONE = "(862) 419-1763";
+const PHONE_TEL = "tel:+18624191763";
 
 /** Render [text](url) links in plain text content */
 function renderLinkedText(text: string) {

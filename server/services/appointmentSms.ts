@@ -28,7 +28,7 @@ async function isOptedOut(phone: string): Promise<boolean> {
   }
 }
 
-const BUSINESS_PHONE = "(862) 423-9396";
+const BUSINESS_PHONE = "(862) 419-1763";
 
 const TYPE_LABELS: Record<string, string> = {
   free_consultation: "Free Consultation",

@@ -62,7 +62,7 @@ export default function LPFBResidential() {
       );
     },
     onError: () => {
-      toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Please call (862) 419-1763", variant: "destructive" });
     },
   });
 
@@ -114,17 +114,17 @@ export default function LPFBResidential() {
                 <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-3" />
                 <h3 className="text-xl font-bold text-[#1e3a5f] mb-2">You're In!</h3>
                 <p className="text-gray-600 text-sm mb-4">We'll call you to check your eligibility and schedule your free assessment.</p>
-                <a href="tel:+18624239396">
+                <a href="tel:+18624191763">
                   <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold">
-                    <Phone className="h-4 w-4 mr-2" /> Call (862) 423-9396
+                    <Phone className="h-4 w-4 mr-2" /> Call (862) 419-1763
                   </Button>
                 </a>
               </div>
             ) : (
               <>
-                <a href="tel:+18624239396" className="block mb-4">
+                <a href="tel:+18624191763" className="block mb-4">
                   <Button type="button" className="w-full bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 text-white font-bold py-4">
-                    <Phone className="h-4 w-4 mr-2" /> Call Now: (862) 423-9396
+                    <Phone className="h-4 w-4 mr-2" /> Call Now: (862) 419-1763
                   </Button>
                 </a>
                 <p className="text-xs text-gray-500 text-center mb-4">Old furnace, boiler or AC? Call for a free in-home replacement assessment.</p>
@@ -211,9 +211,9 @@ export default function LPFBResidential() {
           <h2 className="text-3xl font-bold mb-3">Find Out What You Qualify For</h2>
           <p className="text-white/90 mb-6">The assessment is free and there is no obligation.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="tel:+18624239396">
+            <a href="tel:+18624191763">
               <Button size="lg" className="bg-white text-[#ff6b35] hover:bg-gray-100 font-bold px-8">
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
               </Button>
             </a>
             <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>

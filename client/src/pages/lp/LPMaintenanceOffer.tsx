@@ -120,7 +120,7 @@ export default function LPMaintenanceOffer() {
       );
     },
     onError: () => {
-      toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Please call (862) 419-1763", variant: "destructive" });
     },
   });
 
@@ -264,7 +264,7 @@ export default function LPMaintenanceOffer() {
                 <p className="text-white/80 mb-4">
                   Thank you for joining our maintenance program. We will call within 2 hours to confirm your plan and schedule your first service.
                 </p>
-                <a href="tel:+18624239396">
+                <a href="tel:+18624191763">
                   <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white">
                     <Phone className="h-4 w-4 mr-2" /> Call Us Now
                   </Button>
@@ -403,9 +403,9 @@ export default function LPMaintenanceOffer() {
             >
               Choose My Plan <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
-            <a href="tel:+18624239396">
+            <a href="tel:+18624191763">
               <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
               </Button>
             </a>
           </div>

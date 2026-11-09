@@ -19,7 +19,7 @@ describe("homeowner email copy (CAN-SPAM)", () => {
     }
     expect(body).toContain(url);
     expect(html).toContain(`href="${url.replace(/&/g, "&amp;")}"`);
-    expect(body).toContain("(862) 423-9396");
+    expect(body).toContain("(862) 419-1763");
     expect(body).not.toContain("449-6850");
     expect(body).not.toMatch(/you (requested|inquired|contacted us)/i);
   });
@@ -86,10 +86,10 @@ describe("signature", () => {
   });
   it("uses the real Gmail HTML signature in both parts when available", async () => {
     const { introEmail, followUpEmail } = await import("../../shared/homeownerEmail");
-    const sig = '<div><b>Ana Haynes</b><br>President | Mechanical Enterprise LLC<br><a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a> | <a href="tel:8624239396">(862) 423-9396</a></div>';
+    const sig = '<div><b>Ana Haynes</b><br>President | Mechanical Enterprise LLC<br><a href="https://mechanicalenterprise.com">mechanicalenterprise.com</a> | <a href="tel:8624191763">(862) 419-1763</a></div>';
     const intro = introEmail({ firstName: "Jane", unsubscribeUrl: "https://x/u", postalAddress: ADDRESS, signatureHtml: sig });
     expect(intro.html).toContain(sig);
-    expect(intro.body).toContain("Ana Haynes\nPresident | Mechanical Enterprise LLC\nmechanicalenterprise.com | (862) 423-9396");
+    expect(intro.body).toContain("Ana Haynes\nPresident | Mechanical Enterprise LLC\nmechanicalenterprise.com | (862) 419-1763");
     expect(intro.body).not.toMatch(/<[a-z]/i);
     const fu = followUpEmail({ firstName: "Jane", unsubscribeUrl: "https://x/u", postalAddress: ADDRESS, signatureHtml: sig, originalSubject: "Hi" });
     expect(fu.html).toContain(sig);
