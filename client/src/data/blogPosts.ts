@@ -1994,14 +1994,14 @@ export const blogPosts: BlogPostData[] = [
     "title": "Heat Pump vs Gas Furnace in NJ: 2026 Comparison",
     "slug": "heat-pump-vs-gas-furnace-nj-2026",
     "date": "March 31, 2026",
-    "readTime": "7 min read",
+    "readTime": "6 min read",
     "category": "HVAC Education",
-    "metaDescription": "See how 2026 heat pump and gas furnace costs compare for NJ homes, plus how PSE&G/NJ Clean Energy incentives up to $16,000 may apply to yours.",
-    "excerpt": "Gas furnaces often cost less upfront, but NJ households may qualify for up to $16,000 in heat pump incentives. An honest, updated comparison for homeowners across northern and central New Jersey.",
+    "metaDescription": "Compare 2026 heat pump and gas furnace costs for NJ homes, plus how PSE&G/NJ Clean Energy incentives up to $16,000 may apply.",
+    "excerpt": "Gas furnaces often cost less upfront, but some NJ households may qualify for incentives up to $16,000 toward a heat pump. An updated, honest comparison for homeowners across northern and central New Jersey.",
     "sections": [
       {
         "type": "intro",
-        "content": "Gas furnaces have been the default heating choice in New Jersey for decades, and they're still a reliable, relatively affordable option. Mechanical Enterprise LLC has worked on HVAC systems across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for more than 20 years, and the question we get most often now is whether a heat pump makes more sense than a furnace for a given house. Part of that is because PSE&G / NJ Clean Energy incentives can now bring households up to $16,000 toward a qualifying heat pump installation instead of a gas furnace. Whether that changes the math for your home depends on your square footage, ductwork, and current equipment — details we confirm during an in-home assessment, not over the phone. Here's an honest, side-by-side look at where each system stands based on what we see in homes across our service area."
+        "content": "Gas furnaces have been the default heating choice in New Jersey for decades, and they're still a dependable, comparatively affordable option. Mechanical Enterprise LLC has worked on HVAC systems across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for over 20 years, and the question we get most often now is whether a heat pump makes more sense than a furnace for a given house. Part of that is because PSE&G / NJ Clean Energy incentives may bring eligible households up to $16,000 toward a qualifying heat pump installation instead of a gas furnace. Whether that changes the math for your home depends on your square footage, ductwork, and current equipment — details we confirm during an in-home assessment, not over the phone. Here's an honest, side-by-side look at where each system stands based on what we see in homes across our service area."
       },
       {
         "type": "h2",
@@ -2017,7 +2017,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "This is where the comparison looks different than it did a few years ago. Replacing one gas furnace with another doesn't currently carry NJ utility incentive support that we're aware of. A heat pump installation, by contrast, may qualify for up to $16,000 in combined PSE&G / NJ Clean Energy incentives. Program rules, equipment requirements, and household eligibility vary and change over time, so we don't quote numbers off a flyer — we confirm exactly what your home qualifies for during an in-home assessment, before you commit to a system. For many households, applying those incentives narrows the upfront gap with a gas furnace considerably. The only way to know where your home lands is to have the numbers run against your actual equipment and layout."
+        "content": "This is where the comparison looks different than it did a few years ago. Replacing one gas furnace with another doesn't currently carry NJ utility incentive support that we're aware of. A heat pump installation, by contrast, may qualify a household for incentives up to $16,000 through PSE&G / NJ Clean Energy programs. Program rules, equipment requirements, and household eligibility vary and change over time, so we don't quote numbers off a flyer — we confirm exactly what your home qualifies for during an in-home assessment, before you commit to a system. For many households, applying an incentive narrows the upfront gap with a gas furnace considerably. The only way to know where your home lands is to have the numbers run against your actual equipment and layout."
       },
       {
         "type": "h2",
@@ -2025,7 +2025,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Heat pumps move heat using electricity instead of burning fuel on site, and in many New Jersey homes they can cost less to run through the heating season than a comparable furnace — particularly once you factor in that a heat pump also replaces an aging central air conditioner with one piece of equipment. How much you actually save depends on your home's insulation, thermostat habits, the condition of your current equipment, and current electric and gas rates, all of which shift over time. Rather than publish one savings figure that won't hold true for every house, we calculate the specific operating-cost comparison for your home using your actual usage and current utility rates during the assessment."
+        "content": "Heat pumps move heat using electricity instead of burning fuel on site, and in many New Jersey homes they can cost less to run through the heating season than a comparable furnace — particularly once you factor in that a heat pump also replaces an aging central air conditioner with one piece of equipment. How much you actually save depends on your home's insulation, thermostat habits, the condition of your current equipment, and current electric and gas rates, all of which shift over time. Rather than publish one savings figure that won't hold true for every house, we walk through the specific operating-cost comparison for your home using your actual usage and current utility rates during the assessment."
       },
       {
         "type": "h2",
@@ -2033,7 +2033,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "We install heat pumps, which might suggest we'd push them on every homeowner — that's not honest advice. If your current furnace is relatively new and running well, early replacement often doesn't make sense even with available incentives. Homes without existing ductwork, like some older Morris County colonials we work in, may be better suited to a ductless mini-split layout than a central heat pump, which changes the installation plan and the comparison. If you plan to sell within the next year or two, you may not have time to realize the investment's full value. And homes with very high heating loads — older, poorly insulated houses in particular — may need weatherization work alongside a heat pump to perform well through the coldest stretches of winter. We walk through all of this during your assessment instead of assuming one system is the right fit."
+        "content": "We install heat pumps, which might suggest we'd push them on every homeowner — that's not honest advice. If your current furnace is relatively new and running well, early replacement often doesn't make sense even with an available incentive. Homes without existing ductwork, like some older Morris County colonials we work in, may be better suited to a ductless mini-split layout than a central heat pump, which changes the installation plan and the comparison. If you plan to sell within the next year or two, you may not have time to realize the investment's full value. And homes with very high heating loads — older, poorly insulated houses in particular — may need weatherization work alongside a heat pump to perform well through the coldest stretches of winter. We walk through all of this during your assessment instead of assuming one system is the right fit."
       },
       {
         "type": "h2",
@@ -2049,16 +2049,16 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Whichever system you choose, ongoing protection matters over the life of the equipment. We offer an optional, paid 10-year parts-and-labor coverage plan on new installations, administered through a third-party service agreement and backed by A-rated insurers, available across major equipment brands. If you're keeping your existing furnace, AC, or heat pump rather than replacing it, that equipment may qualify for the same coverage after a separate eligibility inspection. Our Comfort Membership bundles a coverage term with two maintenance visits a year, priority scheduling, and a credit toward your next system, billed monthly instead of as one large expense. For a new heat pump, the in-home assessment is also where we confirm which PSE&G / NJ Clean Energy incentives your household actually qualifies for — specific to your home, not a brochure average."
+        "content": "Whichever system you choose, ongoing protection matters over the life of the equipment. We offer an optional, paid 10-year parts-and-labor coverage plan on new installations, administered through a third-party service agreement and backed by A-rated insurers, available across major equipment brands. If you're keeping your existing furnace, AC, or heat pump rather than replacing it, that equipment may qualify for the same coverage after a separate eligibility inspection. Our Comfort Membership bundles a coverage term with two maintenance visits a year, priority scheduling, and a credit toward your next system, billed monthly instead of as one large expense. For a new heat pump, the in-home assessment is also where we confirm which PSE&G / NJ Clean Energy incentives your household may qualify for — specific to your home, not a brochure average."
       },
       {
         "type": "cta_box",
-        "content": "Want the real numbers for your home — installed cost, incentive eligibility, and monthly operating costs side by side? Schedule a free in-home assessment and we'll walk you through the honest math before you decide.",
+        "content": "Want the real numbers for your home — installed cost, incentive eligibility, and monthly operating costs side by side? Schedule an in-home assessment and we'll walk you through the honest math before you decide.",
         "buttonText": "Compare My Options →",
         "buttonUrl": "https://mechanicalenterprise.com/rebate-calculator"
       }
     ],
-    "updatedDate": "November 6, 2026",
+    "updatedDate": "November 9, 2026",
     "faqSchema": [
       {
         "question": "Do gas furnace replacements qualify for incentives in New Jersey?",
@@ -2066,7 +2066,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "question": "How much can I get in heat pump incentives in New Jersey?",
-        "answer": "Eligible households may qualify for up to $16,000 in combined PSE&G / NJ Clean Energy incentives. Exact amounts depend on your home and equipment and are confirmed during your in-home assessment."
+        "answer": "Eligible households may qualify for incentives up to $16,000 through combined PSE&G / NJ Clean Energy programs. Exact amounts depend on your home and equipment and are confirmed during your in-home assessment."
       },
       {
         "question": "Will a heat pump keep my house warm during a New Jersey winter?",
