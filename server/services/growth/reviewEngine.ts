@@ -7,14 +7,17 @@
  * calling ensureReviewRequestForJob/ForAppointment twice is a safe no-op, mirroring
  * ensureFollowupsForOpportunity's pattern.
  *
- * T+2h SMS: "How did we do? Reply 1-5." A numeric 1-5 reply on a pending review
- * request (matched by phone in handleReviewReply, called from the SMS webhook) is
- * NOT a general opt-in for automated contact — reviewRequests carries its own phone
- * and this flow never enrolls the contact in any other campaign. Reply 4-5 -> GBP
- * link + thank-you. Reply 1-3 -> owner alert (never public) + a follow-up-call
- * task. No reply -> one reminder at T+3 days, WITH the link for everyone
- * (spec §5: "recommended: yes, to stay clearly within Google's policy" — implemented
- * as the default here).
+ * T+2h ask: when GBP_REVIEW_LINK is set, the FIRST text carries the Google
+ * review link for every customer (Google's review policy forbids "review gating"
+ * — only sending the link to customers who say they were happy), and the same
+ * ask goes by email when the customer has an email on file (texts can be
+ * carrier-filtered). Without a link it falls back to "How did we do? Reply 1-5."
+ * A numeric 1-5 reply on a pending review request (matched by phone in
+ * handleReviewReply, called from the SMS webhook) is NOT a general opt-in for
+ * automated contact — reviewRequests carries its own phone and this flow never
+ * enrolls the contact in any other campaign. Reply 4-5 -> thank-you (with link).
+ * Reply 1-3 -> owner alert + a follow-up-call task. No reply -> one reminder at
+ * T+3 days, with the link.
  *
  * REVIEWS_ENABLED (default TRUE) gates sending the initial ask; REVIEWS_AUTOREPLY
  * (default FALSE, unrelated to sending) gates auto-posting review responses, which
@@ -27,6 +30,7 @@ import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import { getDb } from "../../db";
 import { reviewRequests, customers, jobs, appointments } from "../../../drizzle/schema";
 import { sendGrowthSms } from "./sms";
+import { sendGrowthEmail } from "./email";
 import { notify } from "../../routers/notifications";
 
 type Db = NonNullable<Awaited<ReturnType<typeof getDb>>>;
@@ -43,6 +47,43 @@ export function reviewsAutoReplyEnabled(): boolean {
 }
 function gbpReviewLink(): string | null {
   return process.env.GBP_REVIEW_LINK?.trim() || null;
+}
+
+/** First review ask by text. With a link, every customer gets it (no gating). */
+export function reviewAskSms(link: string | null): string {
+  return link
+    ? `Thank you for choosing Mechanical Enterprise! Would you share your experience on Google? ${link} If anything wasn't right, reply here and we'll make it right. Reply STOP to opt out.`
+    : "How did we do? Reply with a number 1-5 (5 = excellent). Reply STOP to opt out.";
+}
+
+export function reviewAskEmailHtml(link: string): string {
+  return [
+    "<p>Hi,</p>",
+    "<p>Thank you for choosing Mechanical Enterprise. Would you take a minute to share your experience on Google? It helps other New Jersey homeowners and businesses find us.</p>",
+    `<p><a href="${link}">Leave a Google review</a></p>`,
+    "<p>If anything about the job wasn't right, just reply to this email or call us and we'll make it right.</p>",
+    "<p>— The Mechanical Enterprise team</p>",
+  ].join("");
+}
+
+/** Email for a review request: the CRM customer's, else the appointment's. */
+async function reviewRecipientEmail(
+  db: Db,
+  r: { customerId: number | null; appointmentId: number | null },
+): Promise<string | null> {
+  try {
+    if (r.customerId) {
+      const [c] = await db.select({ email: customers.email }).from(customers).where(eq(customers.id, r.customerId)).limit(1);
+      if (c?.email?.trim()) return c.email.trim();
+    }
+    if (r.appointmentId) {
+      const [a] = await db.select({ email: appointments.email }).from(appointments).where(eq(appointments.id, r.appointmentId)).limit(1);
+      if (a?.email?.trim()) return a.email.trim();
+    }
+  } catch (err) {
+    console.error("[growth] review email lookup failed:", err);
+  }
+  return null;
 }
 
 /** Job completion trigger. Idempotent (UNIQUE jobId). */
@@ -85,14 +126,26 @@ export async function processDueReviewRequests(db: Db, now: Date = new Date()): 
     .where(and(eq(reviewRequests.status, "pending"), lt(reviewRequests.createdAt, new Date(now.getTime() - TWO_HOURS_MS))))
     .limit(200);
   for (const r of dueAsk) {
+    const link = gbpReviewLink();
     const result = await sendGrowthSms({
       db, phone: r.phone, consentStatus: "customer", // a just-completed job/appointment IS an existing customer relationship
-      message: "How did we do? Reply with a number 1-5 (5 = excellent). Reply STOP to opt out.",
+      message: reviewAskSms(link),
       campaignType: CAMPAIGN_TYPE, leadTable: "customer", leadId: r.customerId, step: 0,
     });
     if (result.outcome === "sent" || result.outcome === "failed") {
       await db.update(reviewRequests).set({ status: "sent", sentAt: now }).where(eq(reviewRequests.id, r.id));
       asked++;
+      // Same ask by email (once, alongside the first text) — only with a link.
+      if (link) {
+        const email = await reviewRecipientEmail(db, r);
+        if (email) {
+          await sendGrowthEmail({
+            db, to: email, subject: "How did we do? — Mechanical Enterprise",
+            html: reviewAskEmailHtml(link),
+            campaignType: CAMPAIGN_TYPE, leadTable: "customer", leadId: r.customerId, step: 0,
+          });
+        }
+      }
     }
     // "held" (outside calling hours) and "blocked" leave status=pending for a later poll / or forever if terminal.
   }
