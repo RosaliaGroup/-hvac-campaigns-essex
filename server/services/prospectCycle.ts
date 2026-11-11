@@ -103,7 +103,7 @@ export function followUpBody(row: Pick<QueueRow, "name" | "company">, step: numb
     `Wanted to share that we often help property teams with seasonal maintenance and equipment replacement planning — happy to be a resource for ${row.company}.`,
     `I'll close the loop here so I don't crowd your inbox. If ${row.company} ever needs HVAC service or a second opinion on equipment, I'm glad to help.`,
   ];
-  return `Hi ${first},\n\n${openers[Math.min(step, openers.length) - 1]}\n\nWould a quick call be useful, or is there someone else who oversees HVAC?\n\nAna Haynes\nPresident | Mechanical Enterprise LLC\nsales@mechanicalenterprise.com | (862) 423-9396\nIf you prefer no further outreach, reply and I'll remove you from our list.`;
+  return `Hi ${first},\n\n${openers[Math.min(step, openers.length) - 1]}\n\nWould a quick call be useful, or is there someone else who oversees HVAC?\n\nAna Haynes\nPresident | Mechanical Enterprise LLC\nsales@mechanicalenterprise.com | (862) 419-1763\nIf you prefer no further outreach, reply and I'll remove you from our list.`;
 }
 
 /** Legacy + current rows: the intro timestamp is followUpAt − 1 day (set at intro send). */

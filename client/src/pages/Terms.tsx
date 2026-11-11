@@ -151,8 +151,8 @@ export default function Terms() {
                 sales@mechanicalenterprise.com
               </a><br />
               Phone:{" "}
-              <a href="tel:+18624239396" className="text-[#e8813a] hover:underline">
-                (862) 423-9396
+              <a href="tel:+18624191763" className="text-[#e8813a] hover:underline">
+                (862) 419-1763
               </a>
             </p>
           </div>

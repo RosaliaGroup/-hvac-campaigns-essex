@@ -39,13 +39,13 @@ describe("lintPageMeta — BLOCK rules (spec §3, acceptance test §11)", () => 
   });
 
   it("blocks a non-canonical phone number", () => {
-    const result = lintPageMeta({ pagePath: "/x", title: "title", metaDescription: "Call (862) 419-1763 today." });
+    const result = lintPageMeta({ pagePath: "/x", title: "title", metaDescription: "Call (862) 423-9396 today." });
     expect(result.passes).toBe(false);
     expect(result.findings.some((f) => f.code === "non_canonical_phone")).toBe(true);
   });
 
   it("does NOT block the canonical phone number", () => {
-    const result = lintPageMeta({ pagePath: "/x", title: "title", metaDescription: "Call (862) 423-9396 today." });
+    const result = lintPageMeta({ pagePath: "/x", title: "title", metaDescription: "Call (862) 419-1763 today." });
     expect(result.findings.some((f) => f.code === "non_canonical_phone")).toBe(false);
   });
 
@@ -144,7 +144,7 @@ describe("lintPageMeta — a clean page passes with zero findings", () => {
     const result = lintPageMeta({
       pagePath: "/hvac-newark-nj",
       title: "Newark NJ HVAC Contractor | AC & Heat Pump Installation",
-      metaDescription: "Licensed HVAC installation in Newark, NJ. Free assessment, no obligation. Call (862) 423-9396.",
+      metaDescription: "Licensed HVAC installation in Newark, NJ. Free assessment, no obligation. Call (862) 419-1763.",
     });
     // Note: this fixture intentionally avoids every BLOCK trigger above.
     expect(result.findings.filter((f) => f.severity === "block")).toEqual([]);
@@ -156,7 +156,7 @@ describe("lintPageMeta — word-boundary matching (phrase lists must not match i
     const result = lintPageMeta({
       pagePath: "/hvac-newark-nj",
       title: "Proudly serving the heart of Essex County, NJ",
-      metaDescription: "Licensed HVAC installation in Newark, NJ. Call (862) 423-9396.",
+      metaDescription: "Licensed HVAC installation in Newark, NJ. Call (862) 419-1763.",
     });
     expect(result.findings.some((f) => f.code === "expired_incentive")).toBe(false);
   });
@@ -165,14 +165,14 @@ describe("lintPageMeta — word-boundary matching (phrase lists must not match i
     const result = lintPageMeta({
       pagePath: "/x",
       title: "Older HVAC systems may contain asbestos insulation",
-      metaDescription: "Licensed HVAC installation. Call (862) 423-9396.",
+      metaDescription: "Licensed HVAC installation. Call (862) 419-1763.",
     });
     expect(result.findings.some((f) => f.code === "superlative")).toBe(false);
   });
 
   it('does not block "on the horizon" — competitor brand matching is case-sensitive, so lowercase "horizon" the word is not "Horizon" the company', () => {
     const result = lintPageMeta(
-      { pagePath: "/x", title: "New HVAC rebates on the horizon for 2026", metaDescription: "Licensed HVAC installation. Call (862) 423-9396." },
+      { pagePath: "/x", title: "New HVAC rebates on the horizon for 2026", metaDescription: "Licensed HVAC installation. Call (862) 419-1763." },
       { now: new Date("2026-09-25") },
     );
     expect(result.findings.some((f) => f.code === "competitor_name")).toBe(false);
@@ -506,7 +506,7 @@ describe("lintNumericClaims — unverified numeric business claims (owner decisi
     "Compressor failures cluster in years 5-8.",
     "A 10-year parts and labor agreement covers repairs.",
     "PSE&G rebates up to $16K may apply.",
-    "Call (862) 423-9396 for a free assessment.",
+    "Call (862) 419-1763 for a free assessment.",
     "We install heat pumps, ductless systems and VRF for NJ homes and buildings.",
     "Three steps to a proper installation.",
     "Serving Essex, Hudson and Bergen counties.",
@@ -522,16 +522,16 @@ describe("lintNumericClaims — unverified numeric business claims (owner decisi
 
 describe("lintPageMeta / lintContent wire in numeric claims", () => {
   it("lintPageMeta BLOCKS '15 counties' in the meta (defaults to VERIFIED_FACTS) but allows the verified 9", () => {
-    const bad = lintPageMeta({ pagePath: "/residential", title: "Residential HVAC", metaDescription: "Installation across 15 NJ counties. Call (862) 423-9396." });
+    const bad = lintPageMeta({ pagePath: "/residential", title: "Residential HVAC", metaDescription: "Installation across 15 NJ counties. Call (862) 419-1763." });
     expect(bad.passes).toBe(false);
     expect(bad.findings.map((f) => f.code)).toContain("unverified_numeric_claim");
-    const ok = lintPageMeta({ pagePath: "/residential", title: "Residential HVAC", metaDescription: "Installation across 9 NJ counties. Call (862) 423-9396." });
+    const ok = lintPageMeta({ pagePath: "/residential", title: "Residential HVAC", metaDescription: "Installation across 9 NJ counties. Call (862) 419-1763." });
     expect(ok.findings.map((f) => f.code)).not.toContain("unverified_numeric_claim");
   });
 
   it("lintPageMeta BLOCKS a star-rating or customer-count claim in the title", () => {
-    expect(lintPageMeta({ pagePath: "/contact", title: "5-Star HVAC Contractor NJ", metaDescription: "Call (862) 423-9396." }).passes).toBe(false);
-    expect(lintPageMeta({ pagePath: "/contact", title: "500+ Customers Served", metaDescription: "Call (862) 423-9396." }).passes).toBe(false);
+    expect(lintPageMeta({ pagePath: "/contact", title: "5-Star HVAC Contractor NJ", metaDescription: "Call (862) 419-1763." }).passes).toBe(false);
+    expect(lintPageMeta({ pagePath: "/contact", title: "500+ Customers Served", metaDescription: "Call (862) 419-1763." }).passes).toBe(false);
   });
 }
 );
@@ -556,14 +556,14 @@ describe("numeric-claim false positives and truncated titles (found in the pre-r
   });
 
   it("BLOCKS a truncated title like \"P\" (which used to sail through: it is short, not long)", () => {
-    const r = lintPageMeta({ pagePath: "/blog/pseg-rebate-application-process", title: "P", metaDescription: "Learn the PSE&G HVAC rebate application steps. Call (862) 423-9396 to start." });
+    const r = lintPageMeta({ pagePath: "/blog/pseg-rebate-application-process", title: "P", metaDescription: "Learn the PSE&G HVAC rebate application steps. Call (862) 419-1763 to start." });
     expect(r.passes).toBe(false);
     expect(r.findings.map((f) => f.code)).toContain("title_too_short");
   });
 
   it("a 10+ character title is not flagged as too short; an empty title keeps its own empty_title finding only", () => {
-    expect(lintPageMeta({ pagePath: "/contact", title: "Contact Us Now", metaDescription: "Call (862) 423-9396." }).findings.map((f) => f.code)).not.toContain("title_too_short");
-    const empty = lintPageMeta({ pagePath: "/contact", title: "", metaDescription: "Call (862) 423-9396." }).findings.map((f) => f.code);
+    expect(lintPageMeta({ pagePath: "/contact", title: "Contact Us Now", metaDescription: "Call (862) 419-1763." }).findings.map((f) => f.code)).not.toContain("title_too_short");
+    const empty = lintPageMeta({ pagePath: "/contact", title: "", metaDescription: "Call (862) 419-1763." }).findings.map((f) => f.code);
     expect(empty).toContain("empty_title");
     expect(empty).not.toContain("title_too_short");
   });

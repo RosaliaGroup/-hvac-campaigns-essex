@@ -19,14 +19,14 @@ import { VERIFIED_FACTS } from "@shared/verifiedFacts";
  * rule) without changing its meaning.
  */
 const BASE = "https://mechanicalenterprise.com";
-const PHONE = "(862) 423-9396";
-const PHONE_TEL = "tel:+18624239396";
+const PHONE = "(862) 419-1763";
+const PHONE_TEL = "tel:+18624191763";
 const { warranty } = VERIFIED_FACTS;
 
 export default function Warranty() {
   useSEO({
     title: "10-Year Parts & Labor HVAC Coverage | Mechanical Enterprise",
-    description: "Optional 10-year parts & labor coverage for new HVAC installs and qualifying existing systems in NJ. No deductible on covered repairs. Call (862) 423-9396.",
+    description: "Optional 10-year parts & labor coverage for new HVAC installs and qualifying existing systems in NJ. No deductible on covered repairs. Call (862) 419-1763.",
     ogUrl: `${BASE}/warranty`,
   });
 

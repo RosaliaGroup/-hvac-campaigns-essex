@@ -45,7 +45,7 @@ export function buildReferralMessage(firstName?: string | null): string {
     `${greeting}Earn $500 per referral with Mechanical Enterprise. ` +
     `Know someone who needs HVAC work? Send them our way — we pay you when they book: ` +
     `${CUSTOMER_REFERRAL_LINK}\n\n` +
-    `Questions? Call (862) 423-9396\n` +
+    `Questions? Call (862) 419-1763\n` +
     `Reply STOP to opt out.`
   );
 }

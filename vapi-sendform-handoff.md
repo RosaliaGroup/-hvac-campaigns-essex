@@ -42,7 +42,7 @@ Wrong/missing secret → **401**. No `sendForm` call in the body → **400**.
         "id": "<tool-call-id>",
         "function": {
           "name": "sendForm",
-          "arguments": "{\"phone\":\"+18624239396\",\"type\":\"booking\"}"
+          "arguments": "{\"phone\":\"+18624191763\",\"type\":\"booking\"}"
         }
       }
     ]
@@ -118,7 +118,7 @@ repointing the tool, or the endpoint will 503.
   should not exist.
 - **Business phone discrepancy** (reported, not changed here):
   `netlify/functions/sendReferralEmails.js` uses one number while the Jessica
-  prompts / `appointmentSms.ts` use `(862) 423-9396`. Needs an owner decision on
+  prompts / `appointmentSms.ts` use `(862) 419-1763`. Needs an owner decision on
   the canonical customer-facing number before any copy change.
 - **Assistant docs**: `AIAssistantPrompts.tsx` TOOL 2 previously documented
   `/lp/heat-pump-rebates`; it now reflects the chosen `/qualify` + the new

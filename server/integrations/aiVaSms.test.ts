@@ -16,7 +16,7 @@ vi.mock("../db", () => ({
 import { handleIncomingSms } from "./aiVaSms";
 
 const ACK =
-  "Thanks for contacting Mechanical Enterprise! We'll respond shortly. For immediate assistance, call (862) 423-9396.";
+  "Thanks for contacting Mechanical Enterprise! We'll respond shortly. For immediate assistance, call (862) 419-1763.";
 
 function telnyxInbound(from: string, text: string, id = "msg_abc") {
   return {

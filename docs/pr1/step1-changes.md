@@ -97,7 +97,7 @@ Full diff and exact line numbers: `git diff origin/main -- <path>` on this branc
 ## K — `/courses`
 
 `client/src/pages/CourseDetail.tsx` + `client/src/pages/Courses.tsx`:
-- New `COURSE_PURCHASES_ENABLED = false` gate (defined independently in each file) wraps the "Enroll Now" button (`CourseDetail.tsx`) and a second, previously-undocumented "Choose Your Plan" subscription selector (`Courses.tsx`) — **both already had no `onClick` handler at all** (already non-functional, just visually live — a claim-safety problem on its own). Inert state: "Coming Soon — Contact Us" / "Coming Soon — Call (862) 423-9396," linking `tel:+18624239396`. Original code preserved in the disabled branch, not deleted.
+- New `COURSE_PURCHASES_ENABLED = false` gate (defined independently in each file) wraps the "Enroll Now" button (`CourseDetail.tsx`) and a second, previously-undocumented "Choose Your Plan" subscription selector (`Courses.tsx`) — **both already had no `onClick` handler at all** (already non-functional, just visually live — a claim-safety problem on its own). Inert state: "Coming Soon — Contact Us" / "Coming Soon — Call (862) 419-1763," linking `tel:+18624191763`. Original code preserved in the disabled branch, not deleted.
 - "Secure payment with Stripe..." reassurance line: only renders when the gate is `true`.
 - `netlify.toml` + `inject-meta.ts`: `noindex, nofollow`.
 - Removed from sitemap (item C).

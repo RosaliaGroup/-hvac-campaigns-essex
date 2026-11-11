@@ -35,9 +35,14 @@ export default function Contact() {
                 <CardTitle className="text-lg">Phone</CardTitle>
               </CardHeader>
               <CardContent>
-                <a href="tel:+18624239396" className="text-[#1e3a5f] hover:text-[#ff6b35] font-medium">
-                  (862) 423-9396
+                <a href="tel:+18624191763" className="text-[#1e3a5f] hover:text-[#ff6b35] font-medium">
+                  Call (862) 419-1763
                 </a>
+                <div className="mt-1">
+                  <a href="sms:+15516007027" className="text-[#1e3a5f] hover:text-[#ff6b35] font-medium">
+                    Text (551) 600-7027
+                  </a>
+                </div>
               </CardContent>
             </Card>
 
@@ -140,11 +145,14 @@ export default function Contact() {
             <p className="text-xl text-white/90 mb-6">
               Book a free in-home assessment and written quote
             </p>
-            <a href="tel:+18624239396">
+            <a href="tel:+18624191763">
               <button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold py-4 px-8 rounded-lg text-lg transition-colors">
-                Call Now: (862) 423-9396
+                Call Now: (862) 419-1763
               </button>
             </a>
+            <p className="mt-4 text-white/90">
+              Prefer to text? <a href="sms:+15516007027" className="underline font-semibold hover:text-[#ff6b35]">Text (551) 600-7027</a>
+            </p>
           </div>
         </div>
       </section>

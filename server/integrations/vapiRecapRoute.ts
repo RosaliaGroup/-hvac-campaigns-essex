@@ -218,7 +218,7 @@ function recapEmailHtml(record: RecapRecord, recapText: string): string {
         ${record.aiSummary ? `<div style="margin-top:16px;padding:14px;background:#fff;border-left:4px solid #ff6b35;border-radius:6px;"><p style="margin:0;font-size:14px;white-space:pre-line;line-height:1.6;">${escapeHtml(record.aiSummary)}</p></div>` : ""}
       </div>
       <div style="background:#eee;padding:10px 20px;border-radius:0 0 8px 8px;text-align:center;">
-        <p style="margin:0;font-size:12px;color:#999;">Mechanical Enterprise LLC · (862) 423-9396</p>
+        <p style="margin:0;font-size:12px;color:#999;">Mechanical Enterprise LLC · (862) 419-1763</p>
       </div>
     </div>`;
 }
@@ -254,7 +254,7 @@ const notifier: RecapNotifier = {
       (record.followUpRequired
         ? `We're following up on your request and will be in touch shortly. `
         : `We've logged your request and will be in touch if anything's needed. `) +
-      `Questions? Call (862) 423-9396. Reply STOP to opt out.`;
+      `Questions? Call (862) 419-1763. Reply STOP to opt out.`;
     const res = await sendTelnyxSms(normalizedPhone, msg);
     return res.success;
   },

@@ -170,7 +170,7 @@ function inviteEmailHtml(summary: string, whenLabel: string, location: string | 
       <tr><td style="padding:2px 8px;color:#6b7280;">When</td><td>${whenLabel}</td></tr>
       ${location ? `<tr><td style="padding:2px 8px;color:#6b7280;">Where</td><td>${location}</td></tr>` : ""}
     </table>
-    <p style="color:#9ca3af;font-size:12px;">Mechanical Enterprise · Essex County, NJ · (862) 423-9396</p>
+    <p style="color:#9ca3af;font-size:12px;">Mechanical Enterprise · Essex County, NJ · (862) 419-1763</p>
   </body></html>`;
 }
 

@@ -45,7 +45,7 @@ export default function Home() {
     // docs/positioning-warranty-spec.md §4 — title trimmed to fit the ≤60 char limit
     // (shared/seoLinter.ts's title_too_long rule) while still leading with installation + coverage.
     title: "NJ HVAC Install & 10-Year Coverage | Mechanical Enterprise",
-    description: "NJ HVAC installation with optional 10-year parts & labor coverage. PSE&G rebates may reduce your cost. Free assessment. Call (862) 423-9396.",
+    description: "NJ HVAC installation with optional 10-year parts & labor coverage. PSE&G rebates may reduce your cost. Free assessment. Call (862) 419-1763.",
     ogUrl: "https://mechanicalenterprise.com",
   });
 
@@ -55,7 +55,7 @@ export default function Home() {
         "@context": "https://schema.org",
         "@type": "HVACBusiness",
         "name": "Mechanical Enterprise LLC",
-        "telephone": "(862) 423-9396",
+        "telephone": "(862) 419-1763",
         "email": "sales@mechanicalenterprise.com",
         "url": "https://mechanicalenterprise.com",
         "address": { "@type": "PostalAddress", "addressLocality": "Newark", "addressRegion": "NJ", "addressCountry": "US" },
@@ -445,7 +445,7 @@ export default function Home() {
                 </Button>
               </Link>
               <Button size="lg" variant="outline" className="bg-white/10 backdrop-blur-sm text-white border-white hover:bg-white/20">
-                <a href="tel:+18624239396">(862) 423-9396</a>
+                <a href="tel:+18624191763">(862) 419-1763</a>
               </Button>
             </div>
           </div>

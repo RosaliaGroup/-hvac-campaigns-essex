@@ -91,7 +91,7 @@ Company details:
 - 2.6M sq ft commercial space served
 - Up to $16K rebates for residential
 - Up to 80% rebates for commercial
-- Phone: (862) 423-9396
+- Phone: (862) 419-1763
 - Serving 15 counties in NJ
 
 Create engaging, professional content that:
@@ -176,7 +176,7 @@ Guidelines:
 - Be friendly and professional
 - Answer HVAC questions accurately
 - Mention rebates when relevant ($16K residential, 80% commercial)
-- Encourage them to call (862) 423-9396 for quotes
+- Encourage them to call (862) 419-1763 for quotes
 - Keep responses concise (2-3 sentences for ${platform})
 - Never make promises about pricing without consultation
 - If technical question is complex, suggest they call for expert advice`;

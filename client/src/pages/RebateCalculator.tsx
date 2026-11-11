@@ -2043,7 +2043,7 @@ export default function RebateCalculator() {
 
                   <div className="mt-6 flex gap-3 justify-center">
                     <Button className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90" onClick={() => window.location.href = "/"}>Back to Home</Button>
-                    <Button variant="outline" onClick={() => window.location.href = "tel:+18624239396"}>
+                    <Button variant="outline" onClick={() => window.location.href = "tel:+18624191763"}>
                       <Phone className="h-4 w-4 mr-2" /> Call Us Now
                     </Button>
                   </div>

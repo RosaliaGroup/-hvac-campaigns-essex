@@ -3,7 +3,7 @@ import { VERIFIED_FACTS as F } from "./verifiedFacts";
 import { validateFaqItem, validateFaqSet, buildFaqPageJsonLd, buildSpeakableJsonLd, allowedNumbers, MAX_ANSWER_CHARS } from "./aiFaq";
 
 const good = (q: string, a: string) => ({ q, a });
-const ok1 = good("Which HVAC companies serve Newark, NJ?", "Mechanical Enterprise LLC serves Essex County, including Newark. Call (862) 423-9396 to talk through your system and schedule a visit.");
+const ok1 = good("Which HVAC companies serve Newark, NJ?", "Mechanical Enterprise LLC serves Essex County, including Newark. Call (862) 419-1763 to talk through your system and schedule a visit.");
 
 describe("validateFaqItem (facts-only gate)", () => {
   it("accepts a plain, factual answer", () => { expect(validateFaqItem(ok1, F)).toEqual([]); });
@@ -17,16 +17,16 @@ describe("validateFaqItem (facts-only gate)", () => {
     expect(r.map((i) => i.code)).toContain("unverified_number");
   });
   it("allows the verified numbers: phone, 10-year coverage, the $16,000 incentive", () => {
-    const a = good("Is there a rebate for heat pumps in NJ?", "NJ homeowners may qualify for rebates of up to $16,000. Call (862) 423-9396 to see what applies to your home.");
+    const a = good("Is there a rebate for heat pumps in NJ?", "NJ homeowners may qualify for rebates of up to $16,000. Call (862) 419-1763 to see what applies to your home.");
     expect(validateFaqItem(a, F)).toEqual([]);
     expect(allowedNumbers(F).has("16000")).toBe(true);
     expect(allowedNumbers(F).has("10")).toBe(true);
   });
   it("blocks superlatives, certifications and competitor names via the claims linter", () => {
     for (const a of [
-      "Mechanical Enterprise is the best HVAC contractor in Essex County, so call (862) 423-9396 today.",
-      "We are a certified WMBE contractor serving Essex County, so call (862) 423-9396 for details.",
-      "Mechanical Enterprise is a better choice than Gold Medal for Essex County; call (862) 423-9396 to compare.",
+      "Mechanical Enterprise is the best HVAC contractor in Essex County, so call (862) 419-1763 today.",
+      "We are a certified WMBE contractor serving Essex County, so call (862) 419-1763 for details.",
+      "Mechanical Enterprise is a better choice than Gold Medal for Essex County; call (862) 419-1763 to compare.",
     ]) {
       expect(validateFaqItem(good("Who can fix my AC today in Essex County?", a), F).length).toBeGreaterThan(0);
     }
@@ -40,7 +40,7 @@ describe("validateFaqItem (facts-only gate)", () => {
 describe("validateFaqSet", () => {
   const three = [
     ok1,
-    good("Do you install heat pumps in Essex County?", "Yes. Heat Pump is one of the services Mechanical Enterprise LLC provides in Essex County, New Jersey; call (862) 423-9396."),
+    good("Do you install heat pumps in Essex County?", "Yes. Heat Pump is one of the services Mechanical Enterprise LLC provides in Essex County, New Jersey; call (862) 419-1763."),
     good("Is 10-year coverage included with an install?", "No. The 10-year parts and labor coverage is optional and not included by default; it can be added to a new installation."),
   ];
   it("needs 3-5 unique items", () => {

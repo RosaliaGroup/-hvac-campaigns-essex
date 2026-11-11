@@ -39,7 +39,7 @@ describe("lintSocialContent", () => {
   });
 
   it("passes the canonical phone number", () => {
-    const result = lintSocialContent("Call us at (862) 423-9396 to schedule your tune-up.");
+    const result = lintSocialContent("Call us at (862) 419-1763 to schedule your tune-up.");
     expect(result.blocked).toBe(false);
   });
 });

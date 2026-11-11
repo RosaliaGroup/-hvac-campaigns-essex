@@ -160,7 +160,7 @@ describe("referral link + message copy", () => {
       "Hi Dana! Earn $500 per referral with Mechanical Enterprise. " +
         "Know someone who needs HVAC work? Send them our way — we pay you when they book: " +
         "https://mechanicalenterprise.com/referral\n\n" +
-        "Questions? Call (862) 423-9396\n" +
+        "Questions? Call (862) 419-1763\n" +
         "Reply STOP to opt out.",
     );
   });

@@ -30,9 +30,9 @@ export const campaignTemplates: CampaignTemplate[] = [
     content: {
       headline: '24/7 Emergency AC Repair Newark',
       headline2: 'Same-Day Service | Licensed Techs',
-      headline3: 'Call Now (862) 423-9396',
+      headline3: 'Call Now (862) 419-1763',
       description: "AC broken? We're available 24/7 for emergency repairs across Essex County. Licensed technicians, transparent pricing, same-day service.",
-      description2: 'WMBE certified. Serving 15 New Jersey counties. Call (862) 423-9396 for immediate assistance.',
+      description2: 'WMBE certified. Serving 15 New Jersey counties. Call (862) 419-1763 for immediate assistance.',
     },
     targetAudience: 'Homeowners with immediate HVAC failure, 33-mile radius',
     estimatedBudget: '$50-100 per day',
@@ -48,7 +48,7 @@ export const campaignTemplates: CampaignTemplate[] = [
       headline2: "No Heat? We're Here 24/7",
       headline3: 'Licensed HVAC Experts',
       description: 'Furnace not working? Get fast, reliable emergency heating repair. Licensed technicians respond quickly across Essex County and surrounding areas.',
-      description2: 'Transparent pricing. WMBE certified business. Call (862) 423-9396 now.',
+      description2: 'Transparent pricing. WMBE certified business. Call (862) 419-1763 now.',
     },
     targetAudience: 'Homeowners with heating emergencies, winter season',
     estimatedBudget: '$50-100 per day',
@@ -61,7 +61,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Story Ad',
     content: {
       headline: 'AC Broken? 🥵',
-      body: '24/7 Emergency Service\nCall (862) 423-9396',
+      body: '24/7 Emergency Service\nCall (862) 419-1763',
       cta: 'Swipe Up',
     },
     targetAudience: 'Local homeowners 25-55',
@@ -122,7 +122,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Google Business Post',
     content: {
       headline: '2026 HVAC Rebates - Apply Early!',
-      body: '⚠️ 2026 Rebate Funds Limited - Apply Early\n\nNew Jersey homeowners can still access:\n💰 Up to $20,000 in combined rebates\n💰 30% federal tax credit\n💰 Zero-interest financing\n\nWe handle all paperwork and maximize your savings. Our VRF/VRV specialists have helped hundreds of families upgrade to energy-efficient heat pumps.\n\nDon\'t miss out - rebate funds are allocated first-come, first-served!\n\nCall (862) 423-9396 for your free consultation.',
+      body: '⚠️ 2026 Rebate Funds Limited - Apply Early\n\nNew Jersey homeowners can still access:\n💰 Up to $20,000 in combined rebates\n💰 30% federal tax credit\n💰 Zero-interest financing\n\nWe handle all paperwork and maximize your savings. Our VRF/VRV specialists have helped hundreds of families upgrade to energy-efficient heat pumps.\n\nDon\'t miss out - rebate funds are allocated first-come, first-served!\n\nCall (862) 419-1763 for your free consultation.',
       cta: 'Get Quote',
     },
     targetAudience: 'Local homeowners in service area',
@@ -141,7 +141,7 @@ export const campaignTemplates: CampaignTemplate[] = [
       headline2: 'Up to 80% Covered by PSE&G Rebates',
       headline3: 'VRF/VRV Specialists | Free Assessment',
       description: 'Upgrade your commercial HVAC with up to 80% of project costs covered by PSE&G rebates. Reduce operating costs and improve efficiency. Free energy assessment.',
-      description2: 'WMBE certified. 2.6M sq ft served. Hotels, offices, restaurants. Call (862) 423-9396.',
+      description2: 'WMBE certified. 2.6M sq ft served. Hotels, offices, restaurants. Call (862) 419-1763.',
     },
     targetAudience: 'Commercial property owners & facility managers in New Jersey',
     estimatedBudget: '$100-200 per day',
@@ -169,7 +169,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Google Business Post',
     content: {
       headline: 'Commercial HVAC – Up to 80% PSE&G Rebates',
-      body: '🏢 Commercial Property Owners: Major Savings Available\n\nPSE&G\'s Commercial & Industrial Direct Install program can cover up to 80% of your HVAC upgrade project costs.\n\nWe specialize in:\n• VRF/VRV commercial systems\n• Energy-efficient retrofits\n• BIM-integrated installations\n• Multi-zone climate control\n\nWe handle all PSE&G rebate paperwork and maximize your incentives.\n\nCall (862) 423-9396 for a free commercial energy assessment.',
+      body: '🏢 Commercial Property Owners: Major Savings Available\n\nPSE&G\'s Commercial & Industrial Direct Install program can cover up to 80% of your HVAC upgrade project costs.\n\nWe specialize in:\n• VRF/VRV commercial systems\n• Energy-efficient retrofits\n• BIM-integrated installations\n• Multi-zone climate control\n\nWe handle all PSE&G rebate paperwork and maximize your incentives.\n\nCall (862) 419-1763 for a free commercial energy assessment.',
       cta: 'Get Assessment',
     },
     targetAudience: 'Commercial property owners in New Jersey',
@@ -186,7 +186,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     content: {
       headline: 'HVAC Maintenance Plans Newark NJ',
       headline2: 'First Month FREE | Priority Service',
-      headline3: 'Licensed Technicians | (862) 423-9396',
+      headline3: 'Licensed Technicians | (862) 419-1763',
       description: 'Stop paying for surprise repairs. Our maintenance subscription gives you fixed monthly pricing, priority emergency service, and 84% fewer breakdowns.',
       description2: 'Residential & commercial plans. WMBE certified. Serving 15 New Jersey counties. Call today.',
     },
@@ -216,7 +216,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Feed Ad',
     content: {
       headline: 'Never Worry About HVAC Again 🛠️',
-      body: 'Our maintenance subscription keeps your system running perfectly year-round.\n\n✅ Fixed monthly pricing\n✅ Priority emergency service\n✅ Seasonal tune-ups included\n✅ First month FREE\n\nCall (862) 423-9396 to enroll today!',
+      body: 'Our maintenance subscription keeps your system running perfectly year-round.\n\n✅ Fixed monthly pricing\n✅ Priority emergency service\n✅ Seasonal tune-ups included\n✅ First month FREE\n\nCall (862) 419-1763 to enroll today!',
       cta: 'Sign Up',
     },
     targetAudience: 'Homeowners 30-55 in Essex County and surrounding areas',
@@ -230,7 +230,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Google Business Post',
     content: {
       headline: 'Prepare Your AC for Summer',
-      body: "Don't wait for your AC to break during the first heat wave! ☀️\n\nOur pre-season maintenance includes:\n✓ Full system inspection\n✓ Filter replacement\n✓ Refrigerant check\n✓ Performance optimization\n\n**First-time customers: First month of maintenance subscription FREE!**\n\nCall (862) 423-9396 to schedule your tune-up today!",
+      body: "Don't wait for your AC to break during the first heat wave! ☀️\n\nOur pre-season maintenance includes:\n✓ Full system inspection\n✓ Filter replacement\n✓ Refrigerant check\n✓ Performance optimization\n\n**First-time customers: First month of maintenance subscription FREE!**\n\nCall (862) 419-1763 to schedule your tune-up today!",
       cta: 'Call Now',
     },
     targetAudience: 'Local homeowners in service area',
@@ -244,7 +244,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Google Business Post',
     content: {
       headline: 'HVAC Maintenance Subscription – First Month FREE',
-      body: '🔧 Protect Your HVAC Investment with Our Subscription Plan\n\nFor a fixed monthly fee, you get:\n✅ Bi-annual tune-ups (spring & fall)\n✅ Priority emergency service\n✅ Filter replacements included\n✅ 15% discount on all repairs\n✅ Extended equipment warranty\n\nResidential plans starting at $29/month.\nCommercial plans available for multi-unit properties.\n\n**First month FREE for new subscribers!**\n\nCall (862) 423-9396 to enroll.',
+      body: '🔧 Protect Your HVAC Investment with Our Subscription Plan\n\nFor a fixed monthly fee, you get:\n✅ Bi-annual tune-ups (spring & fall)\n✅ Priority emergency service\n✅ Filter replacements included\n✅ 15% discount on all repairs\n✅ Extended equipment warranty\n\nResidential plans starting at $29/month.\nCommercial plans available for multi-unit properties.\n\n**First month FREE for new subscribers!**\n\nCall (862) 419-1763 to enroll.',
       cta: 'Learn More',
     },
     targetAudience: 'Homeowners and property managers in service area',
@@ -263,7 +263,7 @@ export const campaignTemplates: CampaignTemplate[] = [
       headline2: 'Real Estate & Property Managers Welcome',
       headline3: 'No Investment | Flexible | Apply Now',
       description: 'Partner with Mechanical Enterprise and earn referral commissions on every HVAC project. Perfect for real estate agents, property managers, and contractors.',
-      description2: 'Serving 15 New Jersey counties. WMBE certified. Flexible schedule. Call (862) 423-9396.',
+      description2: 'Serving 15 New Jersey counties. WMBE certified. Flexible schedule. Call (862) 419-1763.',
     },
     targetAudience: 'Real estate agents, property managers, contractors in New Jersey',
     estimatedBudget: '$30-60 per day',
@@ -291,7 +291,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Feed Ad',
     content: {
       headline: 'Earn With Every HVAC Referral 💼',
-      body: 'Are you a real estate agent, property manager, or contractor?\n\nPartner with Mechanical Enterprise and earn referral commissions on every project you send our way.\n\n✅ No upfront investment\n✅ Flexible schedule\n✅ Marketing support provided\n✅ Commissions paid promptly\n\nDM us or call (862) 423-9396 to apply!',
+      body: 'Are you a real estate agent, property manager, or contractor?\n\nPartner with Mechanical Enterprise and earn referral commissions on every project you send our way.\n\n✅ No upfront investment\n✅ Flexible schedule\n✅ Marketing support provided\n✅ Commissions paid promptly\n\nDM us or call (862) 419-1763 to apply!',
       cta: 'Apply Now',
     },
     targetAudience: 'Real estate agents, property managers, contractors 30-55',
@@ -305,7 +305,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Google Business Post',
     content: {
       headline: 'Become a Referral Partner – Earn on Every Project',
-      body: '💼 Referral Partner Opportunity\n\nDo you work in real estate, property management, construction, or hospitality?\n\nJoin our referral partner network and earn commissions on every HVAC project you refer.\n\nWhat we offer:\n• Competitive referral commissions\n• Optional direct sales for higher earnings\n• Marketing materials and support\n• No upfront investment required\n• Flexible schedule\n\nWe serve 15 counties across New Jersey and have completed projects for 4,000+ residential and 2.6M sq ft of commercial space.\n\nCall (862) 423-9396 or email sales@mechanicalenterprise.com to apply.',
+      body: '💼 Referral Partner Opportunity\n\nDo you work in real estate, property management, construction, or hospitality?\n\nJoin our referral partner network and earn commissions on every HVAC project you refer.\n\nWhat we offer:\n• Competitive referral commissions\n• Optional direct sales for higher earnings\n• Marketing materials and support\n• No upfront investment required\n• Flexible schedule\n\nWe serve 15 counties across New Jersey and have completed projects for 4,000+ residential and 2.6M sq ft of commercial space.\n\nCall (862) 419-1763 or email sales@mechanicalenterprise.com to apply.',
       cta: 'Apply Now',
     },
     targetAudience: 'Real estate agents, property managers, contractors in New Jersey',
@@ -321,7 +321,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Nextdoor Neighborhood Post',
     content: {
       headline: 'Neighbors – Up to $20,000 in Heat Pump Rebates Available Now',
-      body: '👋 Hi neighbors!\n\nI wanted to share something that could save you a lot of money this year. New Jersey homeowners can stack PSE&G, NJ Clean Energy, and federal incentives for up to $20,000 back on a new heat pump system.\n\nWe are Mechanical Enterprise, a local HVAC company serving Essex County and 14 other NJ counties. We are WMBE/SBE certified with 4,000+ residential installations completed.\n\nWe handle ALL the rebate paperwork for you — you just enjoy the savings.\n\n📞 Call (862) 423-9396 for a free in-home estimate\n🌐 mechanicalenterprise.com/residential',
+      body: '👋 Hi neighbors!\n\nI wanted to share something that could save you a lot of money this year. New Jersey homeowners can stack PSE&G, NJ Clean Energy, and federal incentives for up to $20,000 back on a new heat pump system.\n\nWe are Mechanical Enterprise, a local HVAC company serving Essex County and 14 other NJ counties. We are WMBE/SBE certified with 4,000+ residential installations completed.\n\nWe handle ALL the rebate paperwork for you — you just enjoy the savings.\n\n📞 Call (862) 419-1763 for a free in-home estimate\n🌐 mechanicalenterprise.com/residential',
       cta: 'Get Free Estimate',
       hashtags: ['#HVAC', '#NewJersey', '#EssexCounty', '#HeatPump', '#EnergyRebates'],
     },
@@ -336,7 +336,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Nextdoor Neighborhood Post',
     content: {
       headline: 'Local HVAC Emergency Service – Same Day Response',
-      body: '🚨 HVAC Emergency? We are your neighbors!\n\nMechanical Enterprise provides 24/7 emergency HVAC service across Essex County. Furnace not working? AC down in the heat? We respond fast.\n\n✅ Same-day service available\n✅ Licensed & insured technicians\n✅ Serving your neighborhood for 20+ years\n✅ Transparent pricing, no surprises\n\nSave our number: (862) 423-9396\n\nWe are local — we care about our community.',
+      body: '🚨 HVAC Emergency? We are your neighbors!\n\nMechanical Enterprise provides 24/7 emergency HVAC service across Essex County. Furnace not working? AC down in the heat? We respond fast.\n\n✅ Same-day service available\n✅ Licensed & insured technicians\n✅ Serving your neighborhood for 20+ years\n✅ Transparent pricing, no surprises\n\nSave our number: (862) 419-1763\n\nWe are local — we care about our community.',
       cta: 'Call Now',
       hashtags: ['#HVAC', '#EssexCounty', '#Emergency', '#LocalBusiness'],
     },
@@ -351,7 +351,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Nextdoor Neighborhood Post',
     content: {
       headline: 'Protect Your HVAC This Season – Maintenance Plans from $29/mo',
-      body: '🏠 Hey neighbors!\n\nDid you know that skipping annual HVAC maintenance can cut your system\'s life in half and cost you thousands in repairs?\n\nMechanical Enterprise offers affordable maintenance subscription plans starting at $29/month:\n\n🔧 Essential Plan – $29/mo: Bi-annual tune-ups, priority scheduling\n⭐ Pro Plan – $49/mo: Quarterly visits, filter replacements included\n💎 Premium Plan – $79/mo: Monthly check-ins, emergency priority, parts discount\n\n🎁 First month FREE for new subscribers!\n\nCall (862) 423-9396 or visit mechanicalenterprise.com/lp/maintenance-offer',
+      body: '🏠 Hey neighbors!\n\nDid you know that skipping annual HVAC maintenance can cut your system\'s life in half and cost you thousands in repairs?\n\nMechanical Enterprise offers affordable maintenance subscription plans starting at $29/month:\n\n🔧 Essential Plan – $29/mo: Bi-annual tune-ups, priority scheduling\n⭐ Pro Plan – $49/mo: Quarterly visits, filter replacements included\n💎 Premium Plan – $79/mo: Monthly check-ins, emergency priority, parts discount\n\n🎁 First month FREE for new subscribers!\n\nCall (862) 419-1763 or visit mechanicalenterprise.com/lp/maintenance-offer',
       cta: 'Start Free Month',
       hashtags: ['#HVAC', '#EssexCounty', '#HomeMaintenance', '#LocalBusiness'],
     },
@@ -366,7 +366,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Nextdoor Business Post',
     content: {
       headline: 'Business Owners: Up to 80% of Your HVAC Upgrade Covered by PSE&G',
-      body: '📢 Attention local business owners and property managers!\n\nPSE&G and NJ utility programs can cover up to 80% of the cost of commercial HVAC upgrades. This is real money — we have helped local businesses save hundreds of thousands of dollars.\n\nMechanical Enterprise specializes in:\n• VRV/VRF multi-zone systems\n• Commercial heat pumps\n• BMS/BIM integration\n• Hotels, restaurants, offices, retail\n\nWe have served 2.6 million sq ft of commercial space in NJ.\n\n📞 (862) 423-9396 for a free commercial assessment\n🌐 mechanicalenterprise.com/commercial',
+      body: '📢 Attention local business owners and property managers!\n\nPSE&G and NJ utility programs can cover up to 80% of the cost of commercial HVAC upgrades. This is real money — we have helped local businesses save hundreds of thousands of dollars.\n\nMechanical Enterprise specializes in:\n• VRV/VRF multi-zone systems\n• Commercial heat pumps\n• BMS/BIM integration\n• Hotels, restaurants, offices, retail\n\nWe have served 2.6 million sq ft of commercial space in NJ.\n\n📞 (862) 419-1763 for a free commercial assessment\n🌐 mechanicalenterprise.com/commercial',
       cta: 'Free Assessment',
       hashtags: ['#CommercialHVAC', '#EssexCounty', '#BusinessOwners', '#PSEGRebates'],
     },
@@ -381,7 +381,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Nextdoor Neighborhood Post',
     content: {
       headline: 'Earn Extra Income Referring HVAC Projects – No Experience Needed',
-      body: '💰 Looking to earn extra income?\n\nMechanical Enterprise is looking for referral partners in our neighborhood. If you know homeowners or businesses that need HVAC work, you can earn a commission on every project you refer.\n\nPerfect for:\n• Real estate agents\n• Property managers\n• Contractors & handymen\n• Anyone with a local network\n\nNo upfront investment. No experience needed. Just refer and earn.\n\n📞 Call (862) 423-9396 or visit mechanicalenterprise.com/lp/referral-partner to apply.',
+      body: '💰 Looking to earn extra income?\n\nMechanical Enterprise is looking for referral partners in our neighborhood. If you know homeowners or businesses that need HVAC work, you can earn a commission on every project you refer.\n\nPerfect for:\n• Real estate agents\n• Property managers\n• Contractors & handymen\n• Anyone with a local network\n\nNo upfront investment. No experience needed. Just refer and earn.\n\n📞 Call (862) 419-1763 or visit mechanicalenterprise.com/lp/referral-partner to apply.',
       cta: 'Apply to Partner',
       hashtags: ['#EarnExtraIncome', '#EssexCounty', '#ReferralProgram', '#LocalBusiness'],
     },
@@ -654,7 +654,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Cold Email',
     content: {
       headline: "Your nonprofit's lighting is 100% covered — and HVAC is 80% off",
-      primaryText: "Hi [Name], I'm reaching out because I think your organization is leaving significant money on the table. Through the NJ Direct Install Program: Commercial and nonprofit lighting is covered at 100% — no cost, no financing, no OBR. Just free new LED lighting. HVAC replacement is covered up to 80%. The remaining balance goes on your utility bill via On-Bill Repayment — typically less than your current energy savings. If your organization operates multiple buildings in NJ, every building qualifies separately. We've helped churches, community centers, charter schools, and nonprofits across Essex County access these programs. The assessment is free, takes 30 minutes per building, and we handle every piece of paperwork. Can I schedule a walkthrough this week? — Mechanical Enterprise (862) 423-9396 | PSE&G Trade Ally | WMBE Certified",
+      primaryText: "Hi [Name], I'm reaching out because I think your organization is leaving significant money on the table. Through the NJ Direct Install Program: Commercial and nonprofit lighting is covered at 100% — no cost, no financing, no OBR. Just free new LED lighting. HVAC replacement is covered up to 80%. The remaining balance goes on your utility bill via On-Bill Repayment — typically less than your current energy savings. If your organization operates multiple buildings in NJ, every building qualifies separately. We've helped churches, community centers, charter schools, and nonprofits across Essex County access these programs. The assessment is free, takes 30 minutes per building, and we handle every piece of paperwork. Can I schedule a walkthrough this week? — Mechanical Enterprise (862) 419-1763 | PSE&G Trade Ally | WMBE Certified",
       cta: 'Reply to Schedule',
     },
     targetAudience: 'NJ nonprofit executive directors, facilities managers — cold outreach',
@@ -668,7 +668,7 @@ export const campaignTemplates: CampaignTemplate[] = [
     adType: 'Follow-up Email',
     content: {
       headline: 'Board meeting agenda item: Free lighting + 80% HVAC for all our buildings',
-      primaryText: "Hi [Name], this is worth bringing to your next board meeting. The NJ Direct Install Program offers: 100% lighting coverage — every qualifying building, zero cost. Up to 80% HVAC coverage — remaining balance on utility bill via OBR. Each building in your portfolio qualifies separately. For an organization with 5 buildings, we're talking about potentially $200,000\u2013$500,000 in covered improvements at effectively zero net cost. We'll prepare a full building-by-building breakdown for your board presentation — free, no obligation. Mechanical Enterprise has completed this process for nonprofits across NJ. PSE&G Trade Ally | WMBE/SBE Certified | (862) 423-9396",
+      primaryText: "Hi [Name], this is worth bringing to your next board meeting. The NJ Direct Install Program offers: 100% lighting coverage — every qualifying building, zero cost. Up to 80% HVAC coverage — remaining balance on utility bill via OBR. Each building in your portfolio qualifies separately. For an organization with 5 buildings, we're talking about potentially $200,000\u2013$500,000 in covered improvements at effectively zero net cost. We'll prepare a full building-by-building breakdown for your board presentation — free, no obligation. Mechanical Enterprise has completed this process for nonprofits across NJ. PSE&G Trade Ally | WMBE/SBE Certified | (862) 419-1763",
       cta: 'Request Board Presentation Package',
     },
     targetAudience: 'NJ nonprofit board members, trustees — follow-up sequence',
@@ -736,7 +736,7 @@ export const platformInstructions: Record<string, { title: string; steps: string
       'Choose "Website traffic" or "Leads" goal',
       'Set location targeting to 33-mile radius from Newark, New Jersey',
       'Copy the headline and description from template',
-      'Add call extensions with (862) 423-9396',
+      'Add call extensions with (862) 419-1763',
       'Set daily budget and launch campaign',
     ],
   },

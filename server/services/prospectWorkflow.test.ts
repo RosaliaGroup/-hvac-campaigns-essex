@@ -333,10 +333,10 @@ describe("CRM sync and reports", () => {
 });
 
 describe("signature", () => {
-  it("uses the current customer-facing phone (862) 423-9396 everywhere", () => {
-    for (let step = 1; step <= 4; step++) expect(followUpBody({ name: "Jane Smith", company: "Acme" }, step)).toContain("423-9396");
-    expect(introduction({ name: "Jane Smith", company: "Acme", title: "PM" })).toContain("423-9396");
-    for (const old of ["419-1763"]) {
+  it("uses the main line (862) 419-1763 everywhere, never a cell", () => {
+    for (let step = 1; step <= 4; step++) expect(followUpBody({ name: "Jane Smith", company: "Acme" }, step)).toContain("419-1763");
+    expect(introduction({ name: "Jane Smith", company: "Acme", title: "PM" })).toContain("419-1763");
+    for (const old of ["423-9396", "449-6850"]) {
       expect(followUpBody({ name: "J", company: "A" }, 1)).not.toContain(old);
       expect(introduction({ name: "J", company: "A", title: "PM" })).not.toContain(old);
     }

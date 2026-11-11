@@ -67,12 +67,12 @@ describe("company entity", () => {
     expect(ld).not.toHaveProperty("address");
     expect(ld).not.toHaveProperty("openingHours");
     expect(ld["@type"]).toBe("HVACBusiness");
-    expect(ld.telephone).toBe("+18624239396");
+    expect(ld.telephone).toBe("+18624191763");
   });
   it("never contains a number the facts don't hold (no invented counts or years)", () => {
     const all = JSON.stringify(rows) + JSON.stringify(buildEntityJsonLd(VERIFIED_FACTS));
     const nums = all.match(/\d+/g) ?? [];
-    const allowed = new Set(["1", "862", "423", "9396", "10", "20", "18624239396", "19", "00400700", "19HC00400700"]);
+    const allowed = new Set(["1", "862", "419", "1763", "10", "20", "18624191763", "19", "00400700", "19HC00400700"]);
     for (const n of nums) expect(allowed.has(n) || n.length >= 10).toBe(true);
   });
 });

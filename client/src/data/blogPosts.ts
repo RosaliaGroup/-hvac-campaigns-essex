@@ -887,7 +887,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Mechanical Enterprise has worked in New Jersey's mechanical trade for 20 years, serving commercial and multifamily properties throughout Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. That includes garden-style apartment complexes, mixed-use mid-rises, and high-rise multifamily buildings with shared mechanical infrastructure — each requiring a different phasing and system approach. To start planning a replacement for your building, call (862) 423-9396."
+        "content": "Mechanical Enterprise has worked in New Jersey's mechanical trade for 20 years, serving commercial and multifamily properties throughout Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties. That includes garden-style apartment complexes, mixed-use mid-rises, and high-rise multifamily buildings with shared mechanical infrastructure — each requiring a different phasing and system approach. To start planning a replacement for your building, call (862) 419-1763."
       }
     ],
     "faqSchema": [
@@ -2587,7 +2587,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "How Mechanical Enterprise Handles It" },
       {
         type: "paragraph",
-        content: "We assess your home for free and identify every rebate you qualify for. We handle every PSE&G application and all paperwork at no cost to you. Most of our R22 replacement customers in NJ receive between $12,000 and $16,000 in combined rebates. Call (862) 423-9396 or book online.",
+        content: "We assess your home for free and identify every rebate you qualify for. We handle every PSE&G application and all paperwork at no cost to you. Most of our R22 replacement customers in NJ receive between $12,000 and $16,000 in combined rebates. Call (862) 419-1763 or book online.",
       },
       {
         type: "cta_box",
@@ -2630,7 +2630,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Which Refrigerant Should You Choose?" },
       {
         type: "paragraph",
-        content: "For most NJ homeowners replacing an R22 system in 2026, either R410A or R454B equipment will serve you well for 15-20 years. The most important factor is choosing a high-efficiency heat pump system that qualifies for maximum rebates. Mechanical Enterprise evaluates your home and recommends the best equipment for your specific situation. Call (862) 423-9396 for a free assessment.",
+        content: "For most NJ homeowners replacing an R22 system in 2026, either R410A or R454B equipment will serve you well for 15-20 years. The most important factor is choosing a high-efficiency heat pump system that qualifies for maximum rebates. Mechanical Enterprise evaluates your home and recommends the best equipment for your specific situation. Call (862) 419-1763 for a free assessment.",
       },
       {
         type: "cta_box",
@@ -2678,7 +2678,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Real Examples from NJ Homeowners" },
       {
         type: "paragraph",
-        content: "A homeowner in Montclair with a 2,200 sq ft home replaced their R22 system with a central heat pump for $12,500. They received $14,200 in combined rebates and paid nothing out of pocket. A Newark homeowner replaced a failing R22 unit with a ductless system for $7,800 and received $9,100 in rebates. These are not unusual cases — they are typical for NJ homeowners who work with a contractor that knows how to maximize every available incentive. Call (862) 423-9396 to find out what your specific home qualifies for.",
+        content: "A homeowner in Montclair with a 2,200 sq ft home replaced their R22 system with a central heat pump for $12,500. They received $14,200 in combined rebates and paid nothing out of pocket. A Newark homeowner replaced a failing R22 unit with a ductless system for $7,800 and received $9,100 in rebates. These are not unusual cases — they are typical for NJ homeowners who work with a contractor that knows how to maximize every available incentive. Call (862) 419-1763 to find out what your specific home qualifies for.",
       },
       {
         type: "cta_box",
@@ -2716,7 +2716,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Emergency Replacement Is Faster Than You Think" },
       {
         type: "paragraph",
-        content: "If your AC failed and you are worried about timing, call us to book the earliest free in-home assessment. We can typically complete a full system replacement within 1 to 3 days of your assessment. You do not have to suffer through weeks without cooling. We also handle all PSE&G rebate paperwork so you do not have to worry about the application process while dealing with an AC emergency. Call (862) 423-9396 for a free assessment.",
+        content: "If your AC failed and you are worried about timing, call us to book the earliest free in-home assessment. We can typically complete a full system replacement within 1 to 3 days of your assessment. You do not have to suffer through weeks without cooling. We also handle all PSE&G rebate paperwork so you do not have to worry about the application process while dealing with an AC emergency. Call (862) 419-1763 for a free assessment.",
       },
       {
         type: "cta_box",
@@ -2765,7 +2765,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Rebate Funding Is Not Guaranteed Forever" },
       {
         type: "paragraph",
-        content: "The PSE&G rebate programs offering up to $16,000 for heat pump installation are based on current NJ clean energy policy. These programs can be modified, reduced, or ended. Homeowners who replace now lock in the current incentive levels, up to $16,000 today. There is no guarantee these numbers will be the same next year. Call (862) 423-9396 to get your free assessment scheduled.",
+        content: "The PSE&G rebate programs offering up to $16,000 for heat pump installation are based on current NJ clean energy policy. These programs can be modified, reduced, or ended. Homeowners who replace now lock in the current incentive levels, up to $16,000 today. There is no guarantee these numbers will be the same next year. Call (862) 419-1763 to get your free assessment scheduled.",
       },
       {
         type: "cta_box",
@@ -2821,7 +2821,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         type: "paragraph",
-        content: "The entire process from assessment to installation typically takes 2-4 weeks. Rebate checks arrive 6-12 weeks after installation. Call (862) 423-9396 to start with a free assessment.",
+        content: "The entire process from assessment to installation typically takes 2-4 weeks. Rebate checks arrive 6-12 weeks after installation. Call (862) 419-1763 to start with a free assessment.",
       },
       {
         type: "cta_box",
@@ -2872,7 +2872,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "How to Get Started with Commercial R22 Replacement" },
       {
         type: "paragraph",
-        content: "Mechanical Enterprise is a certified PSE&G Direct Install contractor. We handle the entire process — assessment, PSE&G application, equipment selection, installation, and all paperwork. Our commercial assessment is free and typically takes 30-60 minutes depending on building size. We evaluate your existing R22 equipment, calculate your coverage amount, and provide a detailed proposal showing your cost after PSE&G covers their portion. Call (862) 423-9396 to schedule your free commercial assessment.",
+        content: "Mechanical Enterprise is a certified PSE&G Direct Install contractor. We handle the entire process — assessment, PSE&G application, equipment selection, installation, and all paperwork. Our commercial assessment is free and typically takes 30-60 minutes depending on building size. We evaluate your existing R22 equipment, calculate your coverage amount, and provide a detailed proposal showing your cost after PSE&G covers their portion. Call (862) 419-1763 to schedule your free commercial assessment.",
       },
       {
         type: "cta_box",
@@ -2924,7 +2924,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Why Work with a Certified Contractor" },
       {
         type: "paragraph",
-        content: "PSE&G requires that installations be performed by a licensed NJ HVAC contractor. But beyond the basic requirement, working with a contractor who has deep experience with PSE&G rebates makes a significant difference in your rebate amount. Mechanical Enterprise has processed hundreds of PSE&G rebate applications and knows how to document installations to maximize approval amounts. We handle all paperwork at no additional cost. Call (862) 423-9396 to get started.",
+        content: "PSE&G requires that installations be performed by a licensed NJ HVAC contractor. But beyond the basic requirement, working with a contractor who has deep experience with PSE&G rebates makes a significant difference in your rebate amount. Mechanical Enterprise has processed hundreds of PSE&G rebate applications and knows how to document installations to maximize approval amounts. We handle all paperwork at no additional cost. Call (862) 419-1763 to get started.",
       },
       {
         type: "cta_box",
@@ -2962,7 +2962,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Maximum Rebates for Oil-to-Heat-Pump Conversions" },
       {
         type: "paragraph",
-        content: "PSE&G and NJ Clean Energy programs offer their highest rebate tiers for homes converting from oil heat to heat pumps. This is because oil-to-electric conversions have the biggest impact on carbon reduction, which is the primary goal of these incentive programs. Combined with the R22 system replacement, you are hitting two priority targets at once — removing a banned refrigerant and eliminating fossil fuel heating. This positions you for maximum rebates of up to $16,000 from PSE&G plus up to $2,000 from Mechanical Enterprise. Call (862) 423-9396 to find out your exact rebate amount.",
+        content: "PSE&G and NJ Clean Energy programs offer their highest rebate tiers for homes converting from oil heat to heat pumps. This is because oil-to-electric conversions have the biggest impact on carbon reduction, which is the primary goal of these incentive programs. Combined with the R22 system replacement, you are hitting two priority targets at once — removing a banned refrigerant and eliminating fossil fuel heating. This positions you for maximum rebates of up to $16,000 from PSE&G plus up to $2,000 from Mechanical Enterprise. Call (862) 419-1763 to find out your exact rebate amount.",
       },
       {
         type: "cta_box",
@@ -3004,7 +3004,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Why System Age Matters for Rebates" },
       {
         type: "paragraph",
-        content: "Older R22 systems are dramatically less efficient than modern heat pumps. A 15-year-old R22 system operates at roughly 10 SEER, while a modern heat pump operates at 18-22 SEER — nearly double the efficiency. This means your current system uses almost twice as much electricity as a new one to produce the same amount of cooling. NJ rebate programs specifically target older, less efficient systems because replacing them has the biggest impact on energy savings and carbon reduction. If your R22 system is 15 or more years old, you are likely to qualify for the highest rebate tier. Call (862) 423-9396 to confirm your system age and rebate eligibility.",
+        content: "Older R22 systems are dramatically less efficient than modern heat pumps. A 15-year-old R22 system operates at roughly 10 SEER, while a modern heat pump operates at 18-22 SEER — nearly double the efficiency. This means your current system uses almost twice as much electricity as a new one to produce the same amount of cooling. NJ rebate programs specifically target older, less efficient systems because replacing them has the biggest impact on energy savings and carbon reduction. If your R22 system is 15 or more years old, you are likely to qualify for the highest rebate tier. Call (862) 419-1763 to confirm your system age and rebate eligibility.",
       },
       {
         type: "cta_box",
@@ -3058,7 +3058,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "PSE&G Rebates for Essex County Homeowners" },
       {
         type: "paragraph",
-        content: "All of Essex County is within PSE&G service territory, which means every homeowner qualifies for PSE&G Clean Heat rebates of up to $16,000 for heat pump installation. Essex County homeowners can receive up to $16,000 toward their R22 system replacement. We handle all PSE&G paperwork and rebate applications at no cost. Call (862) 423-9396 to schedule your free assessment.",
+        content: "All of Essex County is within PSE&G service territory, which means every homeowner qualifies for PSE&G Clean Heat rebates of up to $16,000 for heat pump installation. Essex County homeowners can receive up to $16,000 toward their R22 system replacement. We handle all PSE&G paperwork and rebate applications at no cost. Call (862) 419-1763 to schedule your free assessment.",
       },
       {
         type: "cta_box",
@@ -3107,7 +3107,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Ductless Solutions for Hudson County Homes" },
       {
         type: "paragraph",
-        content: "Many Hudson County homes lack ductwork, which makes ductless mini-split heat pumps the ideal R22 replacement. Ductless systems require only a small hole in the wall for refrigerant lines — no major construction or ductwork installation needed. They are whisper-quiet compared to old R22 window units and provide both heating and cooling. PSE&G rebates apply to ductless systems just as they do to central heat pumps, with combined rebates available up to $16,000. Mechanical Enterprise has extensive experience installing ductless systems in Hudson County's tight spaces and historic homes. Call (862) 423-9396 for a free assessment.",
+        content: "Many Hudson County homes lack ductwork, which makes ductless mini-split heat pumps the ideal R22 replacement. Ductless systems require only a small hole in the wall for refrigerant lines — no major construction or ductwork installation needed. They are whisper-quiet compared to old R22 window units and provide both heating and cooling. PSE&G rebates apply to ductless systems just as they do to central heat pumps, with combined rebates available up to $16,000. Mechanical Enterprise has extensive experience installing ductless systems in Hudson County's tight spaces and historic homes. Call (862) 419-1763 for a free assessment.",
       },
       {
         type: "cta_box",
@@ -3159,7 +3159,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Bergen County R22 Replacement Process" },
       {
         type: "paragraph",
-        content: "The process is straightforward. We schedule a free assessment at your Bergen County home, evaluate your R22 system and home characteristics, and provide a detailed proposal showing your total cost, rebate amount, and net out-of-pocket expense. Most Bergen County homeowners are surprised by how little they pay after rebates — many pay nothing. We handle all PSE&G paperwork and rebate applications. Installation typically takes 1-2 days for standard systems and 2-3 days for larger multi-zone installations. Call (862) 423-9396 to schedule your free Bergen County assessment.",
+        content: "The process is straightforward. We schedule a free assessment at your Bergen County home, evaluate your R22 system and home characteristics, and provide a detailed proposal showing your total cost, rebate amount, and net out-of-pocket expense. Most Bergen County homeowners are surprised by how little they pay after rebates — many pay nothing. We handle all PSE&G paperwork and rebate applications. Installation typically takes 1-2 days for standard systems and 2-3 days for larger multi-zone installations. Call (862) 419-1763 to schedule your free Bergen County assessment.",
       },
       {
         type: "cta_box",
@@ -3208,7 +3208,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Getting Started in Passaic County" },
       {
         type: "paragraph",
-        content: "Mechanical Enterprise serves all of Passaic County with free R22 assessments. We evaluate your current system, determine your exact rebate eligibility, and provide a clear proposal with no surprises. Whether you have a single-family home in Wayne or a multi-unit building in Paterson, we have experience with your housing type. PSE&G rebates of up to $16,000 mean most Passaic County homeowners pay a fraction of the total cost — or nothing at all. Call (862) 423-9396 to book your free assessment.",
+        content: "Mechanical Enterprise serves all of Passaic County with free R22 assessments. We evaluate your current system, determine your exact rebate eligibility, and provide a clear proposal with no surprises. Whether you have a single-family home in Wayne or a multi-unit building in Paterson, we have experience with your housing type. PSE&G rebates of up to $16,000 mean most Passaic County homeowners pay a fraction of the total cost — or nothing at all. Call (862) 419-1763 to book your free assessment.",
       },
       {
         type: "cta_box",
@@ -3254,7 +3254,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "What to Do If You See These Signs" },
       {
         type: "paragraph",
-        content: "If you recognize two or more of these signs in your R22 system, schedule a free assessment now — before the system fails completely. Mechanical Enterprise will evaluate your system, confirm whether it uses R22, and calculate your exact rebate eligibility. There is no cost and no obligation. Most NJ homeowners qualify for PSE&G rebates up to $16,000. Call (862) 423-9396 today.",
+        content: "If you recognize two or more of these signs in your R22 system, schedule a free assessment now — before the system fails completely. Mechanical Enterprise will evaluate your system, confirm whether it uses R22, and calculate your exact rebate eligibility. There is no cost and no obligation. Most NJ homeowners qualify for PSE&G rebates up to $16,000. Call (862) 419-1763 today.",
       },
       {
         type: "cta_box",
@@ -3292,7 +3292,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "The Smarter Financial Move" },
       {
         type: "paragraph",
-        content: "Instead of paying $100 to $200 per pound for banned refrigerant, NJ homeowners are replacing their R22 systems with heat pumps and receiving PSE&G rebates of up to $16,000. Many pay nothing out of pocket for a brand new system that is twice as efficient as their old R22 unit. The monthly energy savings of $150 to $300 start immediately. Every dollar you spend on R22 recharges is a dollar you will never see again — but a new heat pump pays for itself and then some. Call (862) 423-9396 for a free assessment to see your numbers.",
+        content: "Instead of paying $100 to $200 per pound for banned refrigerant, NJ homeowners are replacing their R22 systems with heat pumps and receiving PSE&G rebates of up to $16,000. Many pay nothing out of pocket for a brand new system that is twice as efficient as their old R22 unit. The monthly energy savings of $150 to $300 start immediately. Every dollar you spend on R22 recharges is a dollar you will never see again — but a new heat pump pays for itself and then some. Call (862) 419-1763 for a free assessment to see your numbers.",
       },
       {
         type: "cta_box",
@@ -3337,7 +3337,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Total Savings Over 15 Years" },
       {
         type: "paragraph",
-        content: "A typical NJ homeowner who replaces their R22 system with a heat pump saves $150 to $300 per month on energy costs. Over the 15 to 20 year lifespan of a heat pump, that adds up to $27,000 to $72,000 in cumulative savings. Add the upfront rebates of up to $16,000 from PSE&G and Mechanical Enterprise, and the total financial benefit of replacing your R22 system reaches $47,000 to $92,000. There is no scenario where keeping an R22 system makes financial sense. Call (862) 423-9396 to get your personalized savings estimate.",
+        content: "A typical NJ homeowner who replaces their R22 system with a heat pump saves $150 to $300 per month on energy costs. Over the 15 to 20 year lifespan of a heat pump, that adds up to $27,000 to $72,000 in cumulative savings. Add the upfront rebates of up to $16,000 from PSE&G and Mechanical Enterprise, and the total financial benefit of replacing your R22 system reaches $47,000 to $92,000. There is no scenario where keeping an R22 system makes financial sense. Call (862) 419-1763 to get your personalized savings estimate.",
       },
       {
         type: "cta_box",
@@ -3389,7 +3389,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "What to Do If You Confirm R22" },
       {
         type: "paragraph",
-        content: "If your system uses R22, do not panic but do not wait either. Your system still works — but when it needs refrigerant or a major repair, the costs will be extreme because R22 is banned. The best move is to get a free assessment now while rebates are at their highest. NJ homeowners qualify for up to $16,000 in combined PSE&G and Mechanical Enterprise rebates. Call (862) 423-9396 or book online. See our complete guide to R22 replacement for full details.",
+        content: "If your system uses R22, do not panic but do not wait either. Your system still works — but when it needs refrigerant or a major repair, the costs will be extreme because R22 is banned. The best move is to get a free assessment now while rebates are at their highest. NJ homeowners qualify for up to $16,000 in combined PSE&G and Mechanical Enterprise rebates. Call (862) 419-1763 or book online. See our complete guide to R22 replacement for full details.",
       },
       {
         type: "cta_box",
@@ -3434,7 +3434,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "What About Emergency Timelines?" },
       {
         type: "paragraph",
-        content: "If your R22 system has already failed and you need immediate replacement, Mechanical Enterprise offers expedited service. We book the earliest free assessment and schedule installation within 2-3 days if equipment is available locally. Emergency replacements still qualify for the full PSE&G rebate up to $16,000 — you do not lose any rebate eligibility by acting fast. Call (862) 423-9396 to discuss your timeline.",
+        content: "If your R22 system has already failed and you need immediate replacement, Mechanical Enterprise offers expedited service. We book the earliest free assessment and schedule installation within 2-3 days if equipment is available locally. Emergency replacements still qualify for the full PSE&G rebate up to $16,000 — you do not lose any rebate eligibility by acting fast. Call (862) 419-1763 to discuss your timeline.",
       },
       {
         type: "cta_box",
@@ -3504,7 +3504,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Frequently Asked Questions" },
       {
         type: "paragraph",
-        content: "Can I just recharge my R22 system? Technically yes, if a technician has reclaimed R22 available. But it costs $500 to $2,000 per recharge and does not fix the underlying problem. Can I switch to R410A without replacing the whole system? No. R22 and R410A operate at different pressures and require different components. The entire system must be replaced. Will my new system work in cold NJ winters? Yes. Modern cold-climate heat pumps operate efficiently down to -15 degrees Fahrenheit, well below NJ minimum temperatures. How long will the rebate programs last? PSE&G programs are funded annually and can be modified or reduced. Current rebate levels are not guaranteed for future years. Call (862) 423-9396 to get started while maximum rebates are available.",
+        content: "Can I just recharge my R22 system? Technically yes, if a technician has reclaimed R22 available. But it costs $500 to $2,000 per recharge and does not fix the underlying problem. Can I switch to R410A without replacing the whole system? No. R22 and R410A operate at different pressures and require different components. The entire system must be replaced. Will my new system work in cold NJ winters? Yes. Modern cold-climate heat pumps operate efficiently down to -15 degrees Fahrenheit, well below NJ minimum temperatures. How long will the rebate programs last? PSE&G programs are funded annually and can be modified or reduced. Current rebate levels are not guaranteed for future years. Call (862) 419-1763 to get started while maximum rebates are available.",
       },
       {
         type: "cta_box",
@@ -3532,7 +3532,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "checklist", items: ["Own a home in Bergen County served by PSE&G","Replace an existing heating/cooling system","Install a qualifying high-efficiency heat pump","Work with a licensed, PSE&G-approved contractor","Submit rebate application within required timeframe"] },
       { type: "h2", content: "Popular Upgrades in Bergen County" },
       { type: "paragraph", content: "Bergen County has a mix of housing stock that benefits from different heat pump configurations. Older homes in Hackensack and Teaneck often switch from oil or gas furnaces to central heat pump systems. Townhomes in Fort Lee and Edgewater do well with ductless mini-splits. Larger homes in Ridgewood and Paramus may benefit from multi-zone VRF systems. Regardless of your home type, Mechanical Enterprise provides a free assessment to determine the best system and maximum rebate amount for your specific situation." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3552,7 +3552,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Hudson County's housing stock is unique — lots of row houses, condos, and multi-family properties. Ductless mini-split heat pumps are extremely popular here because they don't require ductwork, making them perfect for older buildings. For larger homes in areas like North Bergen and Secaucus, central heat pump systems provide whole-home comfort. Mechanical Enterprise has extensive experience with Hudson County properties and knows exactly which systems qualify for the highest rebate amounts in each building type." },
       { type: "h2", content: "How to Get Started" },
       { type: "paragraph", content: "The process is simple. Contact Mechanical Enterprise for a free assessment — we'll evaluate your current system, recommend the best replacement, calculate your exact rebate amount, and handle all PSE&G paperwork. We serve every municipality in Hudson County including Jersey City, Hoboken, Bayonne, Union City, West New York, North Bergen, Secaucus, Weehawken, and Guttenberg." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3570,7 +3570,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "stat_box", content: "NJ Rebates: Up to $16,000" },
       { type: "h2", content: "Why Passaic County Homeowners Should Upgrade Now" },
       { type: "paragraph", content: "Energy costs in Passaic County continue to rise, and older HVAC systems can cost $200+ more per month than modern heat pumps. By upgrading now, you lock in 2026 rebate amounts, reduce monthly energy bills by 30-50%, and increase your home's value. Mechanical Enterprise serves all of Passaic County — from downtown Paterson to suburban Wayne. We provide free assessments and handle all rebate paperwork at no additional cost." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3587,8 +3587,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "PSE&G's NJ Clean Heat program provides up to $16,000 for qualifying heat pump installations. Union County's diverse housing stock — from Elizabeth's urban multi-family homes to Westfield's single-family residences — means virtually every homeowner has a path to significant rebate savings. Whether you're replacing an old oil furnace in Linden or upgrading central AC in Cranford, rebate programs cover a wide range of scenarios." },
       { type: "stat_box", content: "NJ Rebates: Up to $16,000" },
       { type: "h2", content: "Getting Your Union County Rebate" },
-      { type: "paragraph", content: "Mechanical Enterprise serves every municipality in Union County. Our free assessment takes about 20 minutes and tells you exactly which rebates you qualify for and how much you'll receive. We handle all PSE&G paperwork, schedule installation around your timeline, and ensure your system meets all efficiency requirements for maximum rebate amounts. Call (862) 423-9396 to schedule your free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise serves every municipality in Union County. Our free assessment takes about 20 minutes and tells you exactly which rebates you qualify for and how much you'll receive. We handle all PSE&G paperwork, schedule installation around your timeline, and ensure your system meets all efficiency requirements for maximum rebate amounts. Call (862) 419-1763 to schedule your free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3606,7 +3606,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "stat_box", content: "NJ Rebates: Up to $16,000" },
       { type: "h2", content: "Why Upgrade Now in Middlesex County" },
       { type: "paragraph", content: "Rebate amounts can change annually, and 2026 offers some of the highest incentives ever available. Mechanical Enterprise provides free assessments throughout Middlesex County — we'll evaluate your current system, recommend the optimal replacement, and handle every step of the rebate process. From Woodbridge to New Brunswick to Perth Amboy, we're your local PSE&G-approved contractor." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3624,7 +3624,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "stat_box", content: "NJ Rebates: Up to $16,000" },
       { type: "h2", content: "Serving All of Morris County" },
       { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments throughout Morris County. We're a PSE&G-approved, WMBE-certified contractor that handles all rebate paperwork at no cost to you. Whether you're in downtown Morristown, suburban Parsippany, or rural Mendham, we'll determine your exact rebate eligibility and recommend the best system for your home." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3642,7 +3642,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "stat_box", content: "NJ Rebates: Up to $16,000" },
       { type: "h2", content: "Get Started with a Free Assessment" },
       { type: "paragraph", content: "Mechanical Enterprise serves all of Somerset County with free HVAC assessments. We evaluate your existing system, recommend the best replacement options, calculate your exact rebate amounts, and handle all paperwork. As a PSE&G-approved contractor, we ensure you receive every dollar you're entitled to." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3659,8 +3659,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "PSE&G's NJ Clean Heat program provides up to $16,000 for qualifying heat pump installations. Many homes in Trenton and Hamilton were built decades ago with oil or gas heating that costs significantly more to operate than modern heat pumps. Upgrading now means lower monthly bills plus up to $16,000 back in rebates." },
       { type: "stat_box", content: "NJ Rebates: Up to $16,000" },
       { type: "h2", content: "Free Assessment for Mercer County Homeowners" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments throughout Mercer County. We're PSE&G-approved and handle all rebate paperwork at no cost. Whether you're in downtown Trenton, suburban Hamilton, or the Princeton area, call (862) 423-9396 to schedule your free assessment and find out exactly how much you can save." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments throughout Mercer County. We're PSE&G-approved and handle all rebate paperwork at no cost. Whether you're in downtown Trenton, suburban Hamilton, or the Princeton area, call (862) 419-1763 to schedule your free assessment and find out exactly how much you can save." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3677,8 +3677,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Monmouth County homeowners served by JCP&L or PSE&G have access to the NJ Clean Heat program with rebates up to $16,000. Shore-area homes in Asbury Park and Long Branch deal with salt air and humidity that accelerate HVAC system wear — making replacement both necessary and financially smart when rebates cover most of the cost." },
       { type: "stat_box", content: "State Rebate: Up to $16,000" },
       { type: "h2", content: "Start Your Rebate Application" },
-      { type: "paragraph", content: "Mechanical Enterprise serves Monmouth County homeowners with free HVAC assessments. We determine your exact rebate eligibility, recommend the best system for your home, and handle all application paperwork. Call (862) 423-9396 or visit mechanicalenterprise.com to schedule your free assessment today." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise serves Monmouth County homeowners with free HVAC assessments. We determine your exact rebate eligibility, recommend the best system for your home, and handle all application paperwork. Call (862) 419-1763 or visit mechanicalenterprise.com to schedule your free assessment today." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3695,8 +3695,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Through the NJ Clean Heat program, Ocean County homeowners can receive up to $16,000 in rebates for heat pump installations. Ocean County's coastal climate means HVAC systems work harder and wear out faster — making 2026 the ideal time to upgrade while rebate amounts are at their highest." },
       { type: "stat_box", content: "State Rebate: Up to $16,000" },
       { type: "h2", content: "Free Assessment for Ocean County" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments throughout Ocean County. We're a licensed, PSE&G-approved contractor that handles all rebate paperwork. From Toms River to Lakewood to the barrier island communities, we'll help you get every rebate dollar you're entitled to. Call (862) 423-9396 to get started." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments throughout Ocean County. We're a licensed, PSE&G-approved contractor that handles all rebate paperwork. From Toms River to Lakewood to the barrier island communities, we'll help you get every rebate dollar you're entitled to. Call (862) 419-1763 to get started." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3716,7 +3716,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "The process typically takes 1-2 days for installation. First, Mechanical Enterprise performs a free assessment to determine the right heat pump size and configuration for your home. We then handle permits, installation, oil tank decommissioning, and all rebate paperwork. Most homeowners are surprised at how quickly and smoothly the transition goes — you wake up with oil heat and go to bed with a brand new heat pump, often paying little to nothing out of pocket after rebates." },
       { type: "h2", content: "Oil Tank Decommissioning Included" },
       { type: "paragraph", content: "One of the biggest concerns oil-heated homeowners have is what happens to their oil tank. Mechanical Enterprise includes oil tank decommissioning as part of our conversion package. We properly drain, clean, and decommission your tank according to NJ DEP regulations. This eliminates a major environmental liability and removes a potential obstacle to future home sales." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3735,8 +3735,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "How Rebates Offset the Cost" },
       { type: "paragraph", content: "PSE&G's NJ Clean Heat program offers rebates up to $16,000 for oil-to-heat-pump conversions. For a typical $12,000 installation, a $14,000+ rebate means you're actually money ahead from day one. Mechanical Enterprise handles all rebate applications and ensures your system qualifies for the maximum available amount." },
       { type: "h2", content: "Financing Options" },
-      { type: "paragraph", content: "If you prefer not to pay upfront, PSE&G's On-Bill Repayment program lets you finance the remaining cost (after rebates) through your monthly utility bill at 0% interest. Your monthly payment is typically less than what you were spending on oil, so you start saving immediately. Contact Mechanical Enterprise at (862) 423-9396 for a free quote." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "If you prefer not to pay upfront, PSE&G's On-Bill Repayment program lets you finance the remaining cost (after rebates) through your monthly utility bill at 0% interest. Your monthly payment is typically less than what you were spending on oil, so you start saving immediately. Contact Mechanical Enterprise at (862) 419-1763 for a free quote." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3755,7 +3755,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Heat pump sizing depends on your home's square footage, insulation, window count, and local climate. Mechanical Enterprise performs a Manual J load calculation during your free assessment to determine the exact right size. An undersized system won't heat effectively; an oversized system wastes energy. Getting it right is critical — and it's something our experienced technicians do every day across New Jersey." },
       { type: "h2", content: "Timeline and What to Expect" },
       { type: "paragraph", content: "From assessment to installation typically takes 2-4 weeks, depending on equipment availability and scheduling. The actual installation is usually completed in 1-2 days. Your home will have heat throughout the process — we don't remove the old system until the new one is ready to take over. Mechanical Enterprise coordinates everything so the transition is seamless." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3774,8 +3774,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Electric Heat Options for NJ Homes" },
       { type: "paragraph", content: "Modern electric heat pumps are not the inefficient electric baseboard heaters of the past. Today's heat pumps operate at 300-400% efficiency — meaning for every dollar of electricity used, they produce $3-$4 worth of heat. Cold-climate heat pumps work effectively even when NJ temperatures drop below zero. Mechanical Enterprise installs all major brands and recommends the best system for your specific home and budget." },
       { type: "h2", content: "Monthly Cost Comparison" },
-      { type: "paragraph", content: "The average NJ oil-heated home spends $250-$350 per month on heating during winter. A heat pump reduces that to $100-$150 per month — a savings of $1,500-$2,400 per year. When you combine those savings with rebates up to $16,000, the financial case for switching is overwhelming. Contact Mechanical Enterprise at (862) 423-9396 for your free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "The average NJ oil-heated home spends $250-$350 per month on heating during winter. A heat pump reduces that to $100-$150 per month — a savings of $1,500-$2,400 per year. When you combine those savings with rebates up to $16,000, the financial case for switching is overwhelming. Contact Mechanical Enterprise at (862) 419-1763 for your free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3795,7 +3795,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Modern oil furnaces operate at 80-87% efficiency — meaning 13-20% of the fuel you buy is wasted. Heat pumps operate at 300-400% efficiency (called COP) because they move heat rather than create it. Even in NJ's coldest winter weather, cold-climate heat pumps maintain 200%+ efficiency. Plus, heat pumps provide cooling in summer — oil furnaces don't." },
       { type: "h2", content: "The Rebate Factor" },
       { type: "paragraph", content: "With up to $16,000 in NJ rebates available for oil-to-heat-pump conversions, the upfront cost difference is effectively eliminated. Most homeowners pay $0 out of pocket after rebates. This makes the decision straightforward: switch to a heat pump, eliminate oil costs, get cooling included, and pocket $16,000 in rebates. Mechanical Enterprise provides free assessments to show you exactly what your savings would be." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3814,7 +3814,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "If your oil-heated home already has ductwork, a ducted central heat pump is often the simplest replacement — same ductwork, new efficient system. If your home doesn't have ducts (common with oil boiler/radiator systems), ductless mini-splits are the ideal solution. They mount on the wall, require only a small hole for refrigerant lines, and provide room-by-room temperature control. Mechanical Enterprise evaluates your home's specific situation during our free assessment." },
       { type: "h2", content: "Rebate-Qualifying Specifications" },
       { type: "paragraph", content: "To qualify for maximum PSE&G rebates, your heat pump must meet minimum HSPF2 and SEER2 ratings. The exact numbers vary by system type, but generally you need SEER2 of 15+ and HSPF2 of 8+. All systems Mechanical Enterprise installs meet or exceed these requirements — we wouldn't recommend a system that doesn't qualify for the best available rebates." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3831,8 +3831,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Essex County's housing stock dates primarily from the early-to-mid 20th century, when oil was the standard heating fuel. Many of these homes still have original oil furnaces or boilers — some 30-40 years old. These systems are not only expensive to operate but increasingly difficult to maintain as parts become scarce. Natural gas conversion was once the go-to upgrade, but heat pumps now offer better efficiency, lower operating costs, and significantly higher rebates." },
       { type: "stat_box", content: "Essex County Oil Homes: Thousands | NJ Rebates: Up to $16,000" },
       { type: "h2", content: "Your Local Essex County Contractor" },
-      { type: "paragraph", content: "Mechanical Enterprise is headquartered in Newark and serves all of Essex County. We're a WMBE-certified, PSE&G-approved contractor with deep expertise in oil-to-heat-pump conversions. We handle everything: assessment, system design, installation, oil tank decommissioning, and rebate paperwork. Call (862) 423-9396 for your free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise is headquartered in Newark and serves all of Essex County. We're a WMBE-certified, PSE&G-approved contractor with deep expertise in oil-to-heat-pump conversions. We handle everything: assessment, system design, installation, oil tank decommissioning, and rebate paperwork. Call (862) 419-1763 for your free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3849,8 +3849,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Thousands of Newark homes still use oil heat, many with systems installed 20-30+ years ago. Average heating costs for oil-heated Newark homes run $2,500-$3,500 per winter. A new heat pump can cut that in half while also providing air conditioning in summer — something most oil-heated homes don't have. With PSE&G rebates up to $16,000, the upgrade often costs nothing out of pocket." },
       { type: "stat_box", content: "Newark Oil Heating Cost: $2,500-$3,500/yr | Heat Pump Cost: $1,200-$1,800/yr | Rebates: Up to $16,000" },
       { type: "h2", content: "Newark's Local HVAC Contractor" },
-      { type: "paragraph", content: "Mechanical Enterprise is based right here in Newark. We're WMBE-certified, licensed in New Jersey, and approved by PSE&G. We understand Newark's housing stock — from Ironbound row houses to North Ward multi-families to Vailsburg singles. We provide free assessments, handle all permits and rebate paperwork. Call (862) 423-9396 to get started." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise is based right here in Newark. We're WMBE-certified, licensed in New Jersey, and approved by PSE&G. We understand Newark's housing stock — from Ironbound row houses to North Ward multi-families to Vailsburg singles. We provide free assessments, handle all permits and rebate paperwork. Call (862) 419-1763 to get started." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3869,8 +3869,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Best Applications for VRF in NJ" },
       { type: "paragraph", content: "VRF systems excel in multi-story office buildings, medical facilities, hotels, retail spaces, and mixed-use developments. Mechanical Enterprise specializes in VRF/VRV design and installation throughout New Jersey. We're certified by Daikin and Mitsubishi — the two leading VRF manufacturers — and have installed systems in hundreds of NJ commercial properties." },
       { type: "h2", content: "PSE&G Coverage for VRF Systems" },
-      { type: "paragraph", content: "VRF systems qualify for PSE&G's Direct Install program, with coverage up to 80% of total project cost. Given that VRF installations can range from $50,000 to $200,000+ depending on building size, the PSE&G subsidy represents enormous savings. Contact Mechanical Enterprise at (862) 423-9396 for a free VRF assessment." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 423-9396 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "VRF systems qualify for PSE&G's Direct Install program, with coverage up to 80% of total project cost. Given that VRF installations can range from $50,000 to $200,000+ depending on building size, the PSE&G subsidy represents enormous savings. Contact Mechanical Enterprise at (862) 419-1763 for a free VRF assessment." },
+      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3889,8 +3889,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Which Commercial Properties Qualify?" },
       { type: "checklist", items: ["Office buildings","Retail stores and shopping centers","Restaurants and food service","Medical and dental offices","Houses of worship","Warehouses and industrial facilities","Hotels and hospitality","Schools and educational facilities","Nonprofit organizations"] },
       { type: "h2", content: "Apply Today" },
-      { type: "paragraph", content: "Mechanical Enterprise is a PSE&G-approved commercial HVAC contractor. We handle the entire Direct Install application process, design the optimal system for your property, and complete installation with minimal disruption to your business. Call (862) 423-9396 for a free commercial assessment." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 423-9396 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise is a PSE&G-approved commercial HVAC contractor. We handle the entire Direct Install application process, design the optimal system for your property, and complete installation with minimal disruption to your business. Call (862) 419-1763 for a free commercial assessment." },
+      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3907,8 +3907,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Mechanical Enterprise designs warehouse HVAC systems tailored to your specific operation. Options include rooftop units for zone heating/cooling, high-volume low-speed (HVLS) fans for air circulation, radiant heating for loading dock areas, and VRF systems for office spaces within the warehouse. We also handle warehouse lighting upgrades — 100% free through the Direct Install program." },
       { type: "stat_box", content: "HVAC: Up to 80% Covered | Lighting: 100% Free | OBR: 0% Interest" },
       { type: "h2", content: "Get a Free Warehouse Assessment" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free warehouse HVAC assessments throughout New Jersey. We evaluate your current system, calculate Direct Install savings, and design a solution that meets your operational needs. Call (862) 423-9396 to schedule." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 423-9396 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise provides free warehouse HVAC assessments throughout New Jersey. We evaluate your current system, calculate Direct Install savings, and design a solution that meets your operational needs. Call (862) 419-1763 to schedule." },
+      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3925,8 +3925,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Restaurants generate enormous amounts of heat from cooking equipment, requiring HVAC systems that can handle the load while keeping dining areas comfortable. Proper kitchen ventilation and makeup air systems are also essential for health code compliance. Mechanical Enterprise designs restaurant HVAC systems that balance kitchen demands with dining room comfort — and we ensure everything meets NJ health department requirements." },
       { type: "stat_box", content: "HVAC Coverage: Up to 80% | Kitchen Lighting: 100% Free | Walk-in Cooler Efficiency: Included" },
       { type: "h2", content: "Free Restaurant Assessment" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments for NJ restaurants. We evaluate your kitchen ventilation, dining area comfort, and energy usage to design the optimal system. PSE&G covers up to 80% of costs and lighting upgrades are completely free. Call (862) 423-9396 to schedule your assessment." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 423-9396 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments for NJ restaurants. We evaluate your kitchen ventilation, dining area comfort, and energy usage to design the optimal system. PSE&G covers up to 80% of costs and lighting upgrades are completely free. Call (862) 419-1763 to schedule your assessment." },
+      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3943,8 +3943,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "VRF systems are the gold standard for office buildings because they provide individual zone control, simultaneous heating and cooling, and 30-50% energy savings compared to traditional systems. Each office or conference room can be set to a different temperature, eliminating the constant thermostat battles that plague traditional HVAC setups. The systems are also extremely quiet — no more noisy rooftop units disrupting meetings." },
       { type: "checklist", items: ["Individual temperature control per office/zone","30-50% lower energy costs","Quiet operation — no disruptive noise","Compact equipment footprint","PSE&G covers up to 80% of installation","100% free lighting upgrades included"] },
       { type: "h2", content: "Get Started" },
-      { type: "paragraph", content: "Mechanical Enterprise specializes in office building VRF/VRV installations throughout New Jersey. We provide free building assessments, handle all PSE&G Direct Install paperwork, and coordinate installation to minimize disruption to your tenants. Call (862) 423-9396 to schedule your free assessment." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 423-9396 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise specializes in office building VRF/VRV installations throughout New Jersey. We provide free building assessments, handle all PSE&G Direct Install paperwork, and coordinate installation to minimize disruption to your tenants. Call (862) 419-1763 to schedule your free assessment." },
+      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3961,8 +3961,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "PSE&G-approved contractors have been vetted by PSE&G for proper licensing, insurance, installation quality, and knowledge of rebate program requirements. Approved contractors can submit rebate applications directly to PSE&G on your behalf, ensuring paperwork is completed correctly the first time. Non-approved contractors cannot file rebate applications, which means you'd have to navigate the complex process yourself — and errors can delay or reduce your rebate." },
       { type: "checklist", items: ["Licensed and insured in New Jersey","Trained on PSE&G rebate program requirements","Can submit rebate applications directly","Install equipment meeting efficiency standards","Follow PSE&G quality installation guidelines","Provide required documentation and inspections"] },
       { type: "h2", content: "Why Choose Mechanical Enterprise" },
-      { type: "paragraph", content: "Mechanical Enterprise is PSE&G-approved for all residential and commercial rebate programs including NJ Clean Heat, Direct Install, and On-Bill Repayment. We're also WMBE/SBE certified. We handle 100% of the rebate paperwork at no cost to you — from initial application through final payment. Call (862) 423-9396 for a free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise is PSE&G-approved for all residential and commercial rebate programs including NJ Clean Heat, Direct Install, and On-Bill Repayment. We're also WMBE/SBE certified. We handle 100% of the rebate paperwork at no cost to you — from initial application through final payment. Call (862) 419-1763 for a free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -3979,8 +3979,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "When you work with a PSE&G-approved contractor like Mechanical Enterprise, we submit your rebate application before installation begins. Once approved, the rebate amount (up to $16,000) is deducted from your total cost at the time of service. You never pay the full price — only the difference between the installation cost and your rebate amount. For many homeowners, this difference is $0." },
       { type: "stat_box", content: "Max Instant Rebate: Up to $16,000 | Processing Time: Pre-approved before install | Your Out-of-Pocket: Often $0" },
       { type: "h2", content: "Qualifying for Instant Rebates" },
-      { type: "paragraph", content: "To qualify for PSE&G instant rebates, you need a PSE&G account in good standing, a qualifying heat pump system, and installation by a PSE&G-approved contractor. Mechanical Enterprise determines your eligibility during your free assessment and handles the entire pre-approval process. Call (862) 423-9396 to get started." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "To qualify for PSE&G instant rebates, you need a PSE&G account in good standing, a qualifying heat pump system, and installation by a PSE&G-approved contractor. Mechanical Enterprise determines your eligibility during your free assessment and handles the entire pre-approval process. Call (862) 419-1763 to get started." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4097,8 +4097,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "How to Apply" },
       { type: "numbered_list", items: ["Contact a PSE&G-approved contractor (like Mechanical Enterprise)","Schedule a free home assessment","Receive a quote with your exact rebate amount","Contractor submits pre-approval to PSE&G","Installation is scheduled after approval","Rebate is applied to your project cost","Enjoy lower energy bills and a new heat pump"] },
       { type: "h2", content: "Maximize Your Rebate" },
-      { type: "paragraph", content: "Mechanical Enterprise ensures every installation qualifies for the maximum available rebate. We select equipment that meets the highest efficiency tiers, prepare thorough documentation, and submit applications that get approved the first time. Call (862) 423-9396 for your free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise ensures every installation qualifies for the maximum available rebate. We select equipment that meets the highest efficiency tiers, prepare thorough documentation, and submit applications that get approved the first time. Call (862) 419-1763 for your free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4116,8 +4116,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Common Application Mistakes" },
       { type: "paragraph", content: "The most common mistake homeowners make is choosing a non-approved contractor who can't submit applications directly. Other pitfalls include selecting equipment that doesn't meet minimum efficiency requirements, missing application deadlines, or incomplete documentation. Mechanical Enterprise has processed hundreds of PSE&G rebate applications with a near-100% approval rate — we know exactly what's needed." },
       { type: "h2", content: "Get Started Today" },
-      { type: "paragraph", content: "Don't navigate the PSE&G rebate process alone. Mechanical Enterprise handles everything from start to finish, ensuring you receive the maximum rebate amount. Call (862) 423-9396 for your free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Don't navigate the PSE&G rebate process alone. Mechanical Enterprise handles everything from start to finish, ensuring you receive the maximum rebate amount. Call (862) 419-1763 for your free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4136,8 +4136,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "The federal Energy Efficient Home Improvement Credit (25C), which had provided a tax credit of up to $2,000 for qualifying heat pump installations, was not extended past December 31, 2025. If your equipment was installed and paid for on or before that date, ask your tax preparer whether you can still claim it on that year's return." },
       { type: "stat_box", content: "NJ Rebates: Up to $16,000 (instant)" },
       { type: "h2", content: "How Mechanical Enterprise Helps" },
-      { type: "paragraph", content: "Mechanical Enterprise handles your PSE&G rebate application from start to finish. Call (862) 423-9396 for your free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise handles your PSE&G rebate application from start to finish. Call (862) 419-1763 for your free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4156,8 +4156,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Who Qualifies" },
       { type: "checklist", items: ["Any commercial property served by PSE&G","Offices, retail, restaurants, warehouses","Medical facilities and houses of worship","Schools and nonprofits","Industrial and manufacturing facilities","Multi-family common areas"] },
       { type: "h2", content: "Apply Through Mechanical Enterprise" },
-      { type: "paragraph", content: "As a PSE&G-approved commercial contractor, Mechanical Enterprise handles the entire Direct Install application for your business. We provide a free assessment, design the optimal system, and manage all paperwork. Call (862) 423-9396 today." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 423-9396 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "As a PSE&G-approved commercial contractor, Mechanical Enterprise handles the entire Direct Install application for your business. We provide a free assessment, design the optimal system, and manage all paperwork. Call (862) 419-1763 today." },
+      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4175,8 +4175,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Who Qualifies?" },
       { type: "paragraph", content: "Income qualification is based on your household size and total annual income. Generally, households earning up to 400% of the federal poverty level may qualify for enhanced programs. For a family of four, that's approximately $124,800 in 2026. Even if you're not sure whether you qualify, Mechanical Enterprise can help determine your eligibility during a free assessment — there's no obligation and no cost." },
       { type: "h2", content: "How to Apply" },
-      { type: "paragraph", content: "Contact Mechanical Enterprise at (862) 423-9396 for a free assessment. We'll evaluate your home, determine your income-qualified program eligibility, and help you access the maximum available incentives. Many income-qualified households receive their new heat pump at zero cost." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Contact Mechanical Enterprise at (862) 419-1763 for a free assessment. We'll evaluate your home, determine your income-qualified program eligibility, and help you access the maximum available incentives. Many income-qualified households receive their new heat pump at zero cost." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4192,8 +4192,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Quick Troubleshooting Checklist" },
       { type: "numbered_list", items: ["Check your thermostat — is it set to COOL and below current room temperature?","Check the circuit breaker — has the HVAC breaker tripped?","Check the air filter — a clogged filter can cause the system to shut down","Check the outdoor unit — is it running? Is it blocked by debris?","Check the drain line — a clogged condensate drain triggers many shutdowns","If none of these fix it, call a professional"] },
       { type: "h2", content: "When It's an Emergency" },
-      { type: "paragraph", content: "If the temperature inside your home exceeds 85°F and you have elderly residents, infants, or pets, treat it as an emergency. Call Mechanical Enterprise at (862) 423-9396 for a free replacement assessment. If your system is older than 10 years and breaking down frequently, it may be time to consider replacement with PSE&G rebates covering up to $16,000 of a new system." },
-      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
+      { type: "paragraph", content: "If the temperature inside your home exceeds 85°F and you have elderly residents, infants, or pets, treat it as an emergency. Call Mechanical Enterprise at (862) 419-1763 for a free replacement assessment. If your system is older than 10 years and breaking down frequently, it may be time to consider replacement with PSE&G rebates covering up to $16,000 of a new system." },
+      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 419-1763 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
     ],
   },
   {
@@ -4212,8 +4212,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Signs You Should Replace Rather Than Repair" },
       { type: "checklist", items: ["System is 10+ years old","Uses R22 refrigerant (banned — cannot be recharged affordably)","Needs frequent repairs (more than once per year)","Energy bills have been increasing steadily","System doesn't cool or heat evenly","Makes unusual noises during operation"] },
       { type: "h2", content: "Get a Professional Opinion" },
-      { type: "paragraph", content: "Mechanical Enterprise provides honest repair vs replace assessments. We'll never pressure you to replace a system that can be economically repaired. But when replacement makes financial sense — especially with rebates up to $16,000 — we'll show you the numbers. Call (862) 423-9396 for a free assessment." },
-      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
+      { type: "paragraph", content: "Mechanical Enterprise provides honest repair vs replace assessments. We'll never pressure you to replace a system that can be economically repaired. But when replacement makes financial sense — especially with rebates up to $16,000 — we'll show you the numbers. Call (862) 419-1763 for a free assessment." },
+      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 419-1763 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
     ],
   },
   {
@@ -4231,8 +4231,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Fall Maintenance (Before Heating Season)" },
       { type: "checklist", items: ["Replace air filter again","Test heating operation","Check gas connections and burner (gas furnace)","Inspect heat exchanger for cracks","Test carbon monoxide detectors","Check ductwork for leaks or damage","Schedule professional tune-up"] },
       { type: "h2", content: "Professional Maintenance" },
-      { type: "paragraph", content: "While homeowners can handle basic tasks like filter changes, professional maintenance catches issues before they become expensive repairs. Mechanical Enterprise offers seasonal maintenance plans for NJ homeowners. Call (862) 423-9396 to schedule your professional tune-up." },
-      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 423-9396 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
+      { type: "paragraph", content: "While homeowners can handle basic tasks like filter changes, professional maintenance catches issues before they become expensive repairs. Mechanical Enterprise offers seasonal maintenance plans for NJ homeowners. Call (862) 419-1763 to schedule your professional tune-up." },
+      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 419-1763 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
     ],
   },
   {
@@ -4251,8 +4251,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "NJ HVAC rebates in 2026 are at their highest levels ever. PSE&G offers up to $16,000. These incentive levels are not guaranteed to continue — they can be reduced or eliminated in future years. Additionally, heat pump technology has advanced significantly, making modern systems far more efficient and capable in NJ's cold winters than even five years ago." },
       { type: "stat_box", content: "2026 Rebates: Up to $16,000 | Future Rebates: Not Guaranteed | Average System Lifespan: 15-20 years" },
       { type: "h2", content: "Free Replacement Assessment" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC replacement assessments for NJ homeowners. We'll inspect your current system, give you an honest opinion on repair vs replace, and calculate your exact rebate amount if replacement is recommended. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC replacement assessments for NJ homeowners. We'll inspect your current system, give you an honest opinion on repair vs replace, and calculate your exact rebate amount if replacement is recommended. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4270,8 +4270,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Factors That Shorten Lifespan in NJ" },
       { type: "paragraph", content: "NJ's coastal humidity accelerates corrosion on outdoor equipment. Salt air in shore communities is particularly damaging. Lack of annual maintenance is the number one lifespan reducer — systems without professional tune-ups typically fail 5-7 years sooner. Oversized or undersized systems also wear out faster because they cycle too frequently or run continuously." },
       { type: "h2", content: "Planning Your Replacement" },
-      { type: "paragraph", content: "If your system is approaching its expected lifespan, start planning now rather than waiting for it to fail. In 2026, PSE&G rebates up to $16,000 make proactive replacement financially smart. Mechanical Enterprise provides free assessments to evaluate your system's condition and remaining life. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "If your system is approaching its expected lifespan, start planning now rather than waiting for it to fail. In 2026, PSE&G rebates up to $16,000 make proactive replacement financially smart. Mechanical Enterprise provides free assessments to evaluate your system's condition and remaining life. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4289,8 +4289,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Brand Comparison" },
       { type: "stat_box", content: "Mitsubishi: Best Cold Climate | Daikin: Best Value | Carrier: Widest Range | Lennox: Quietest Operation" },
       { type: "h2", content: "All Qualify for NJ Rebates" },
-      { type: "paragraph", content: "Every brand Mechanical Enterprise installs qualifies for PSE&G rebates up to $16,000 and. The specific model matters more than the brand for rebate qualification — we select models that meet the highest efficiency tiers to maximize your rebate. Call (862) 423-9396 for a free assessment with brand and model recommendations specific to your home." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Every brand Mechanical Enterprise installs qualifies for PSE&G rebates up to $16,000 and. The specific model matters more than the brand for rebate qualification — we select models that meet the highest efficiency tiers to maximize your rebate. Call (862) 419-1763 for a free assessment with brand and model recommendations specific to your home." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4306,8 +4306,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "HVAC Services in Paterson" },
       { type: "paragraph", content: "We install heat pumps, central AC systems, ductless mini-splits, and provide oil-to-heat-pump conversions throughout Paterson. Many Paterson homes still use oil heat, making them ideal candidates for conversion with maximum PSE&G rebates up to $16,000." },
       { type: "h2", content: "Get Your Free Assessment" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments for Paterson homeowners. We'll evaluate your system, calculate your exact rebate amount, and provide a no-obligation quote. Call (862) 423-9396 to schedule." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments for Paterson homeowners. We'll evaluate your system, calculate your exact rebate amount, and provide a no-obligation quote. Call (862) 419-1763 to schedule." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4323,8 +4323,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Trenton HVAC Services" },
       { type: "paragraph", content: "We provide heat pump installation, central AC replacement, ductless mini-splits, oil-to-heat-pump conversions, and emergency repair throughout Trenton. Many of Trenton's older homes have oil or outdated gas heating systems that qualify for maximum PSE&G rebate amounts when replaced with modern heat pumps." },
       { type: "h2", content: "Get Started" },
-      { type: "paragraph", content: "Call (862) 423-9396 for a free assessment. We handle all rebate paperwork and ensure you receive the maximum available amount." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Call (862) 419-1763 for a free assessment. We handle all rebate paperwork and ensure you receive the maximum available amount." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4340,8 +4340,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Edison HVAC Services" },
       { type: "paragraph", content: "Mechanical Enterprise provides complete HVAC services throughout Edison and Middlesex County. Heat pump installation, central AC replacement, ductless mini-splits, and commercial HVAC. We're PSE&G-approved and handle all rebate paperwork at no cost. Edison's typical ranch and split-level homes are ideal candidates for central heat pump systems that provide both heating and cooling." },
       { type: "h2", content: "Free Assessment" },
-      { type: "paragraph", content: "Call (862) 423-9396 for a free HVAC assessment in Edison. We'll calculate your exact rebate amount and provide a no-obligation quote." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Call (862) 419-1763 for a free HVAC assessment in Edison. We'll calculate your exact rebate amount and provide a no-obligation quote." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4357,8 +4357,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Why Heat Pumps for Toms River" },
       { type: "paragraph", content: "Heat pumps are ideal for Toms River's climate — they provide efficient cooling during hot, humid summers and reliable heating during mild-to-cold winters. The latest cold-climate models handle even the coldest shore nights. Plus, they eliminate the need for separate heating and cooling systems, simplifying maintenance. With rebates covering most of the cost, the upgrade makes financial sense." },
       { type: "h2", content: "Get Your Free Assessment" },
-      { type: "paragraph", content: "Call (862) 423-9396 for a free HVAC assessment in Toms River. PSE&G rebates up to $16,000 available." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Call (862) 419-1763 for a free HVAC assessment in Toms River. PSE&G rebates up to $16,000 available." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4374,8 +4374,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Camden Rebate Programs" },
       { type: "paragraph", content: "Standard PSE&G rebates provide up to $16,000 for heat pump installations. Camden residents may also qualify for enhanced income-qualified programs through PSE&G's Comfort Partners and similar initiatives, which can provide free or dramatically reduced-cost HVAC equipment. Mechanical Enterprise helps determine which programs you qualify for." },
       { type: "h2", content: "Get Started" },
-      { type: "paragraph", content: "Call (862) 423-9396 for a free assessment. We'll determine your eligibility for all available programs including income-qualified incentives." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Call (862) 419-1763 for a free assessment. We'll determine your eligibility for all available programs including income-qualified incentives." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4394,8 +4394,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "The Installation Process" },
       { type: "numbered_list", items: ["Free assessment and Manual J load calculation","System design and equipment selection","Rebate pre-approval submitted to PSE&G","Permits pulled (Mechanical Enterprise handles this)","Installation day (typically 1-2 days)","System testing and commissioning","Homeowner walkthrough and thermostat training","Rebate paperwork submitted"] },
       { type: "h2", content: "Get Started" },
-      { type: "paragraph", content: "Mechanical Enterprise is a PSE&G-approved heat pump installer serving all of NJ. Call (862) 423-9396 for your free assessment and exact rebate calculation." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise is a PSE&G-approved heat pump installer serving all of NJ. Call (862) 419-1763 for your free assessment and exact rebate calculation." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4412,8 +4412,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Many NJ homes — especially pre-1960s construction — lack central ductwork. Mini-splits solve this by requiring only a small hole in the wall for refrigerant lines. Each indoor unit provides heating and cooling for one zone, with individual temperature control. Multi-zone systems can cover an entire house with 2-8 indoor units connected to one outdoor unit." },
       { type: "stat_box", content: "Single Zone: $4K-$6K | Multi-Zone (3-4): $10K-$14K | After Rebates: Often $0" },
       { type: "h2", content: "Installation Process" },
-      { type: "paragraph", content: "Mini-split installation is minimally invasive. Each indoor unit requires a 3-inch hole for refrigerant and electrical lines. No ductwork, no major construction. A single-zone system can be installed in half a day; a full multi-zone house system takes 1-2 days. Mechanical Enterprise handles all permits and PSE&G rebate paperwork. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mini-split installation is minimally invasive. Each indoor unit requires a 3-inch hole for refrigerant and electrical lines. No ductwork, no major construction. A single-zone system can be installed in half a day; a full multi-zone house system takes 1-2 days. Mechanical Enterprise handles all permits and PSE&G rebate paperwork. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4429,8 +4429,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Benefits of Ductless AC in NJ" },
       { type: "checklist", items: ["No ductwork required — perfect for older NJ homes","Individual temperature control per room","30-40% more efficient than window units","Provides heating AND cooling (heat pump)","Quiet operation — no noisy window units","Qualifies for up to $16,000 in NJ rebates","Easy installation — typically one day per zone"] },
       { type: "h2", content: "Cost and Rebates" },
-      { type: "paragraph", content: "A single-zone ductless system costs $4,000-$6,000 installed. Multi-zone systems for a whole house run $10,000-$14,000. With PSE&G rebates up to $16,000, most NJ homeowners pay little to nothing out of pocket. Mechanical Enterprise provides free assessments and handles all rebate paperwork. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "A single-zone ductless system costs $4,000-$6,000 installed. Multi-zone systems for a whole house run $10,000-$14,000. With PSE&G rebates up to $16,000, most NJ homeowners pay little to nothing out of pocket. Mechanical Enterprise provides free assessments and handles all rebate paperwork. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4546,8 +4546,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "PSE&G On-Bill Repayment (OBR) is the most popular option — 0% interest, payments added to your monthly PSE&G bill, no credit check required. Most homeowners see net lower monthly bills because energy savings exceed the OBR payment. Traditional financing through HVAC manufacturers (Carrier Credit, Wells Fargo) offers 0% promotional rates for 12-60 months. FHA Title I home improvement loans are available for larger projects." },
       { type: "stat_box", content: "PSE&G OBR: 0% Interest | Manufacturer Financing: 0% for 12-60 months | After Rebates: Often $0 Down" },
       { type: "h2", content: "Calculate Your Monthly Cost" },
-      { type: "paragraph", content: "Mechanical Enterprise provides detailed financing calculations during your free assessment. We show you the total cost, rebate amounts, financing options, and projected monthly payments vs. energy savings. Call (862) 423-9396 to get started." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise provides detailed financing calculations during your free assessment. We show you the total cost, rebate amounts, financing options, and projected monthly payments vs. energy savings. Call (862) 419-1763 to get started." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4564,8 +4564,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "SEER2 measures cooling efficiency (higher is better — look for 16+). HSPF2 measures heating efficiency (look for 9+). COP measures heat pump efficiency at specific temperatures. The highest-efficiency systems cost more upfront but qualify for the largest PSE&G rebates, often making them the cheapest option after incentives. Mechanical Enterprise recommends systems that balance efficiency, comfort, and rebate qualification." },
       { type: "stat_box", content: "Minimum for Rebate: SEER2 15+ | Best Efficiency: SEER2 20+ | Energy Savings: 30-50%" },
       { type: "h2", content: "Most Efficient Options for NJ" },
-      { type: "paragraph", content: "Variable-speed heat pumps are the most efficient option, adjusting output continuously rather than cycling on and off. Ductless mini-splits with inverter technology are extremely efficient for zone control. Cold-climate heat pumps maintain high efficiency even in NJ's coldest weather. Mechanical Enterprise helps you choose the right balance of efficiency and value. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Variable-speed heat pumps are the most efficient option, adjusting output continuously rather than cycling on and off. Ductless mini-splits with inverter technology are extremely efficient for zone control. Cold-climate heat pumps maintain high efficiency even in NJ's coldest weather. Mechanical Enterprise helps you choose the right balance of efficiency and value. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4581,9 +4581,9 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "What Expired" },
       { type: "paragraph", content: "The 25C credit covered 30% of qualified heat pump costs, up to $2,000 per year, claimed on your federal tax return. It was not extended past December 31, 2025. If your qualifying equipment was installed and paid for on or before that date, ask your tax preparer whether it can still be claimed on that year's return — the expiration affects new installs, not ones already completed." },
       { type: "h2", content: "What's Still Available" },
-      { type: "paragraph", content: "The PSE&G / NJ Clean Heat rebate is a state and utility program, separate from the IRS, and it's unaffected by the federal credit's expiration. Mechanical Enterprise handles the rebate application for every client. Call (862) 423-9396 for a free assessment." },
+      { type: "paragraph", content: "The PSE&G / NJ Clean Heat rebate is a state and utility program, separate from the IRS, and it's unaffected by the federal credit's expiration. Mechanical Enterprise handles the rebate application for every client. Call (862) 419-1763 for a free assessment." },
       { type: "stat_box", content: "Residential NJ Rebate: Up to $16,000 | Income-Qualified (LMI): Up to $18,000" },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4600,8 +4600,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "The NJ Clean Heat program, which the IRA helped fund at the state level, is unaffected by the 25C credit's expiration — it's administered by New Jersey and PSE&G, not the IRS. Residential homeowners can still receive up to $16,000 in rebates for a qualifying heat pump installation." },
       { type: "stat_box", content: "NJ Rebates: Up to $16,000 | Available: Through PSE&G's NJ Clean Heat program" },
       { type: "h2", content: "Maximizing IRA Benefits in NJ" },
-      { type: "paragraph", content: "NJ homeowners are uniquely positioned to benefit because IRA federal credits stack on top of PSE&G state rebates. A homeowner installing a heat pump can receive up to $16,000 from PSE&G. Mechanical Enterprise ensures every installation qualifies for both programs. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "NJ homeowners are uniquely positioned to benefit because IRA federal credits stack on top of PSE&G state rebates. A homeowner installing a heat pump can receive up to $16,000 from PSE&G. Mechanical Enterprise ensures every installation qualifies for both programs. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4619,8 +4619,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Commercial Programs" },
       { type: "paragraph", content: "Direct Install covers up to 80% of commercial HVAC costs. SmartStart Buildings provides incentives for new commercial construction. Pay-for-Performance rewards building owners for achieving energy reduction targets. All programs are available through PSE&G-approved contractors like Mechanical Enterprise." },
       { type: "h2", content: "Apply Through Mechanical Enterprise" },
-      { type: "paragraph", content: "We navigate all NJCEP programs on your behalf, ensuring you access every incentive available. Call (862) 423-9396 for a free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "We navigate all NJCEP programs on your behalf, ensuring you access every incentive available. Call (862) 419-1763 for a free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4638,8 +4638,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "After Rebates" },
       { type: "paragraph", content: "PSE&G rebates cover up to $16,000 of residential installations. For a typical $12,000 central heat pump installation, rebates of $14,000+ mean you receive money back beyond the cost of the system. Commercial properties get up to 80% covered through Direct Install. Mechanical Enterprise provides exact pricing with rebates calculated before you commit to anything." },
       { type: "h2", content: "Get a Free Quote" },
-      { type: "paragraph", content: "Call (862) 423-9396 for a free assessment and detailed quote showing your cost before and after all applicable rebates." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Call (862) 419-1763 for a free assessment and detailed quote showing your cost before and after all applicable rebates." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4657,8 +4657,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Red Flags to Avoid" },
       { type: "paragraph", content: "Be wary of contractors who can't provide a license number, want full payment upfront, pressure you to decide immediately, don't offer written quotes, or aren't PSE&G-approved (meaning you won't get full rebates). A reputable contractor like Mechanical Enterprise provides free assessments, written quotes, and handles all paperwork at no extra cost." },
       { type: "h2", content: "Why Mechanical Enterprise" },
-      { type: "paragraph", content: "We're NJ-licensed, PSE&G-approved, WMBE-certified, fully insured, and handle all rebate paperwork. Free assessments, transparent pricing, and no-pressure quotes. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "We're NJ-licensed, PSE&G-approved, WMBE-certified, fully insured, and handle all rebate paperwork. Free assessments, transparent pricing, and no-pressure quotes. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4676,8 +4676,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "When Permits Are NOT Required" },
       { type: "paragraph", content: "Routine maintenance, filter changes, thermostat replacement, and minor repairs typically don't require permits in NJ. However, if your repair involves refrigerant work, electrical modifications, or gas connections, a permit may be needed." },
       { type: "h2", content: "Mechanical Enterprise Handles Everything" },
-      { type: "paragraph", content: "When you work with Mechanical Enterprise, we pull all required permits, schedule inspections, and ensure your installation meets all NJ building codes. Permit costs are included in our quotes — no surprises. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "When you work with Mechanical Enterprise, we pull all required permits, schedule inspections, and ensure your installation meets all NJ building codes. Permit costs are included in our quotes — no surprises. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4694,8 +4694,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Heat pump water heaters extract heat from the surrounding air and transfer it to your water tank. They're essentially air conditioners in reverse — cooling the room they're in while heating your water. This makes basements and garages ideal locations. Modern units maintain consistent hot water delivery even in NJ's colder weather." },
       { type: "stat_box", content: "Energy Savings: 50-70% | Annual Savings: $300-$500 | Lifespan: 13-15 years" },
       { type: "h2", content: "Rebates and Tax Credits" },
-      { type: "paragraph", content: "NJ utility programs may offer additional rebates. Mechanical Enterprise installs heat pump water heaters throughout NJ. Call (862) 423-9396 for a free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "NJ utility programs may offer additional rebates. Mechanical Enterprise installs heat pump water heaters throughout NJ. Call (862) 419-1763 for a free assessment." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4712,8 +4712,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Geothermal systems circulate fluid through underground loops to exchange heat with the earth, which maintains a constant 50-55°F year-round in NJ. In winter, the system extracts heat from the ground. In summer, it deposits heat into the ground. Because ground temperatures are stable, geothermal systems operate at extreme efficiency regardless of outdoor weather conditions." },
       { type: "stat_box", content: "Efficiency: 300-500% | Federal Credit: 30% (no cap) | Lifespan: 25+ years | Loop Lifespan: 50+ years" },
       { type: "h2", content: "Is Geothermal Right for Your NJ Home?" },
-      { type: "paragraph", content: "Geothermal works best on properties with sufficient yard space for horizontal loops or the ability to drill vertical boreholes. Installation costs range from $20,000-$40,000, but the 30% federal tax credit (worth $6,000-$12,000) significantly reduces the investment. Mechanical Enterprise evaluates geothermal feasibility as part of our free assessment. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Geothermal works best on properties with sufficient yard space for horizontal loops or the ability to drill vertical boreholes. Installation costs range from $20,000-$40,000, but the 30% federal tax credit (worth $6,000-$12,000) significantly reduces the investment. Mechanical Enterprise evaluates geothermal feasibility as part of our free assessment. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4731,8 +4731,8 @@ export const blogPosts: BlogPostData[] = [
       { type: "h2", content: "Best Smart Thermostats for NJ" },
       { type: "paragraph", content: "For heat pump systems, Ecobee Premium is our top recommendation — it has built-in occupancy sensing, air quality monitoring, and excellent heat pump optimization. Google Nest Learning Thermostat works well for most systems. Honeywell T-series offers the most straightforward setup. All work with heat pumps, central AC, and furnaces." },
       { type: "h2", content: "Installation" },
-      { type: "paragraph", content: "Mechanical Enterprise installs smart thermostats as part of any HVAC installation or as a standalone service. We ensure your thermostat is optimized for your specific system type, particularly important for heat pumps which require different settings than traditional furnaces. Call (862) 423-9396." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 423-9396 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
+      { type: "paragraph", content: "Mechanical Enterprise installs smart thermostats as part of any HVAC installation or as a standalone service. We ensure your thermostat is optimized for your specific system type, particularly important for heat pumps which require different settings than traditional furnaces. Call (862) 419-1763." },
+      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
     ],
   },
   {
@@ -4754,7 +4754,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Even if you don't qualify for Comfort Partners, you can stack multiple programs to reduce your cost: PSE&G Clean Heat rebate ($4,000-$8,000) + NJ Clean Energy rebate ($2,000-$4,000) + PSE&G On-Bill Repayment for any remaining balance at 0% interest. For a typical $12,000-$16,000 heat pump installation, this combination often covers 100% of the cost." },
       { type: "checklist", items: ["PSE&G Clean Heat rebate: $4,000-$8,000", "NJ Clean Energy program: $2,000-$4,000", "PSE&G On-Bill Repayment: 0% interest on remaining balance", "Total potential coverage: $6,000-$12,000+"] },
       { type: "h2", content: "How Mechanical Enterprise Makes It Easy" },
-      { type: "paragraph", content: "We handle every step: free home assessment, system design, all rebate applications, installation, and inspection. You don't fill out a single form. We determine which programs you qualify for during your free assessment and show you exactly what your out-of-pocket cost will be (often $0). Call (862) 423-9396 or book your free assessment online." },
+      { type: "paragraph", content: "We handle every step: free home assessment, system design, all rebate applications, installation, and inspection. You don't fill out a single form. We determine which programs you qualify for during your free assessment and show you exactly what your out-of-pocket cost will be (often $0). Call (862) 419-1763 or book your free assessment online." },
       { type: "cta_box", content: "Find out if you qualify for a free HVAC system. Mechanical Enterprise handles all paperwork and applications. Most homeowners pay $0 out of pocket.", buttonText: "Check My Eligibility — Free Assessment", buttonUrl: "https://mechanicalenterprise.com/qualify" },
     ],
     faqSchema: [
@@ -4811,7 +4811,7 @@ export const blogPosts: BlogPostData[] = [
       { type: "paragraph", content: "Even if PSE&G denies your specific rebate application, you likely still qualify for: NJ Clean Energy program rebates (separate from PSE&G), manufacturer rebates, and local utility programs. Mechanical Enterprise can review your situation and identify which programs still apply to your installation." },
       { type: "h2", content: "How to Avoid Denial: Work with a PSE&G-Approved Contractor" },
       { type: "paragraph", content: "The #1 way to avoid rebate denial is to work with a PSE&G-approved contractor from the start. Mechanical Enterprise is PSE&G-approved and handles all rebate paperwork as part of every installation. We verify equipment eligibility before ordering, submit applications with all required documentation, and follow up until the rebate check arrives. Our rebate approval rate is over 98% because we know exactly what PSE&G requires." },
-      { type: "cta_box", content: "Rebate denied? Or want to make sure your next application is approved? Call Mechanical Enterprise. We're PSE&G-approved and handle all paperwork.", buttonText: "Call (862) 423-9396", buttonUrl: "tel:8624239396" },
+      { type: "cta_box", content: "Rebate denied? Or want to make sure your next application is approved? Call Mechanical Enterprise. We're PSE&G-approved and handle all paperwork.", buttonText: "Call (862) 419-1763", buttonUrl: "tel:8624191763" },
     ],
     faqSchema: [
       { question: "Can I appeal a PSE&G rebate denial?", answer: "Yes. Call PSE&G at 1-800-854-4444 within 30 days of denial to request a review. Most denials due to missing paperwork can be resolved by resubmitting with correct documents." },
