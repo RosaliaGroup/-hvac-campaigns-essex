@@ -40,6 +40,7 @@ import { isWarmedUp } from "./warmupGate";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
 import { armHold } from "./autoMerge";
 import { VERIFIED_FACTS, isPriceRangeStale } from "../../../shared/verifiedFacts";
+import { isKeptRebateTopicPost } from "../../../shared/excludedPrograms";
 
 /** docs/positioning-warranty-spec.md §9b — "asOf older than 180 days -> WARN in the nightly meta lane". A no-op today: VERIFIED_FACTS.priceRanges is empty until the owner supplies entries. */
 function warnOnStalePriceRanges(now: Date): void {
@@ -148,6 +149,8 @@ export function selectNightlyDraftCandidates(
     if (p.impressions < MIN_IMPRESSIONS_90D && pinIndex(p.pagePath) < 0) return false;
     if (ctx.lockedPaths.has(p.pagePath)) return false;
     if (ctx.pendingBatchPaths.has(p.pagePath)) return false;
+    // Owner (2026-11-10): the kept rebate-topic posts stay exactly as they are — never rewrite their title/meta.
+    if (p.pagePath.startsWith("/blog/") && isKeptRebateTopicPost(p.pagePath)) return false;
     if (p.draftUpdatedAt && p.draftUpdatedAt.getTime() > cooldownCutoff) return false;
     return true;
   });
@@ -193,6 +196,7 @@ export function selectCleanDraftPickups(
       if (isMockProvider(c.model)) return false;
       // No impressions floor for EXISTING drafts (owner decision 2026-09-30): the floor guards the cost/relevance of GENERATING a draft, and these already exist and lint clean. They are simply ranked by impressions.
       if (ctx.lockedPaths.has(c.pagePath) || ctx.pendingBatchPaths.has(c.pagePath)) return false;
+      if (c.pagePath.startsWith("/blog/") && isKeptRebateTopicPost(c.pagePath)) return false;
       // "Unbatched" means never batched: a merged batch already shipped this page (its draft just wasn't re-flagged), and a reverted one was rolled back on purpose.
       if (ctx.batchedPaths?.has(c.pagePath)) {
         // ...unless the page was RE-DRAFTED since: new copy that differs from everything any batch shipped is a genuine new proposal.

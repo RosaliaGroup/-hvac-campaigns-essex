@@ -14,7 +14,7 @@
  *     (no dictionary), which is the conventional approximation everywhere
  *     this formula is implemented without a syllable dictionary.
  */
-import { EXCLUDED_PROGRAM_RE } from "./excludedPrograms";
+import { EXCLUDED_PROGRAM_RE, REBATE_PROMO_RE } from "./excludedPrograms";
 import {
   SUPERLATIVES,
   EXPIRED_INCENTIVES,
@@ -234,6 +234,12 @@ export function lintContent(input: ContentLintInput, facts: VerifiedFacts): Cont
   // Owner exclusion (2026-10-30): no PSE&G On-Bill Repayment / OBR in new content, title or meta.
   if (EXCLUDED_PROGRAM_RE.test(`${input.title} ${input.metaDescription} ${body}`)) {
     findings.push(blockFinding("excluded_program", `Mentions PSE&G On-Bill Repayment (OBR), which the owner excluded from marketing copy — remove every mention.`));
+  }
+  // Owner decision (2026-11-10): no residential rebate promotion. New posts and refreshes may not mention
+  // rebates, incentives, tax credits or utility programs at all (the kept rebate-topic posts are never refreshed).
+  const rebateHit = `${input.title} ${input.metaDescription} ${body}`.match(REBATE_PROMO_RE);
+  if (rebateHit) {
+    findings.push(blockFinding("rebate_promo", `Mentions "${rebateHit[0]}" — the owner stopped all rebate/incentive/tax-credit promotion (Nov 10, 2026). Remove every rebate, incentive, tax-credit and utility-program mention and keep the post about installation quality and system fit.`));
   }
 
   const wordCount = countWords(bodyLower);

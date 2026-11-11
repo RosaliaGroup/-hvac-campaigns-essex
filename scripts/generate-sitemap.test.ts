@@ -53,8 +53,14 @@ describe("generate-sitemap — coverage", () => {
   });
 
   it("includes core landing pages that must never fall out of the index", () => {
-    for (const p of ["/", "/residential", "/commercial", "/blog", "/direct-install", "/rebate-calculator"]) {
+    for (const p of ["/", "/residential", "/commercial", "/blog", "/direct-install", "/contact"]) {
       expect(locs.has(`${BASE}${p}`)).toBe(true);
+    }
+  });
+
+  it("leaves the retired rebate pages out (owner decision Nov 10 2026 — they 301 elsewhere)", () => {
+    for (const p of ["/rebate-calculator", "/rebate-guide", "/lp/heat-pump-rebates", "/pseg-rebate-contractor-nj", "/pseg-rebate-checklist", "/heat-pump-rebates-nj"]) {
+      expect(locs.has(`${BASE}${p}`), p).toBe(false);
     }
   });
 

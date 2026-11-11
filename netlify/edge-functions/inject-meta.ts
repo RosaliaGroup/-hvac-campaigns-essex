@@ -26,10 +26,10 @@ const BASE = "https://mechanicalenterprise.com";
 // claim (no certification/ranking documentation in the repo). Kept in sync
 // with the client-side title in client/src/pages/Home.tsx (useSEO call).
 // docs/positioning-warranty-spec.md §4 — leads with installation + optional
-// 10-year coverage; rebates demoted to a secondary mention, same as the hero.
+// 10-year coverage; no rebate promotion (owner, Nov 10 2026).
 const DEFAULT_TITLE = "NJ HVAC Install & 10-Year Coverage | Mechanical Enterprise";
 const DEFAULT_DESC =
-  `Licensed NJ HVAC installation with optional 10-year parts & labor coverage. Rebates may reduce your cost. Free assessment. Call ${PHONE}.`;
+  `Licensed NJ HVAC installation with optional 10-year parts & labor coverage. Free in-home assessment. Call ${PHONE}.`;
 const DEFAULT_OG_IMAGE = `${BASE}/og-default.png`;
 
 // ── Known page metadata ────────────────────────────────────────────────────
@@ -43,8 +43,8 @@ interface PageMeta {
 const PAGE_META: Record<string, PageMeta> = {
   "/": { title: DEFAULT_TITLE, description: DEFAULT_DESC },
   "/residential": {
-    title: "Residential HVAC Installation NJ | Heat Pump & AC | Up to $16K Rebates",
-    description: "Expert residential HVAC installation in NJ. Heat pumps, central AC, ductless mini-splits & furnaces. Optional 10-year parts & labor coverage. Up to $16K in NJ rebates. Free in-home assessment.",
+    title: "Residential HVAC Installation NJ | Heat Pump & AC",
+    description: "Expert residential HVAC installation in NJ. Heat pumps, central AC, ductless mini-splits & furnaces. Optional 10-year parts & labor coverage. Free in-home assessment.",
   },
   "/commercial": {
     title: "Commercial HVAC Contractor NJ | Direct Install | Up to 80% Covered",
@@ -71,8 +71,8 @@ const PAGE_META: Record<string, PageMeta> = {
     description: "Contact Mechanical Enterprise for HVAC service in New Jersey. Call (862) 419-1763 or request a free assessment online.",
   },
   "/blog": {
-    title: "NJ HVAC Blog | Rebate Guides, Heat Pump Tips & Energy Savings",
-    description: "Expert HVAC guides for NJ homeowners. Learn about heat pump rebates, PSE&G programs, R22 replacement, oil-to-electric conversion, and how to save thousands on your HVAC upgrade.",
+    title: "NJ HVAC Blog | Installation Guides & Heat Pump Tips",
+    description: "HVAC installation guides for NJ homes and buildings: heat pumps, R22 replacement, oil-to-electric conversion and choosing the right system.",
   },
   "/direct-install": {
     title: "NJ Direct Install Program | Free Lighting & 80% HVAC | Mechanical Enterprise",
@@ -96,7 +96,7 @@ const PAGE_META: Record<string, PageMeta> = {
   },
   "/testimonials": {
     title: "Customer Reviews | Mechanical Enterprise NJ",
-    description: "Read what NJ homeowners and businesses say about Mechanical Enterprise HVAC installations and rebate assistance.",
+    description: "Read what NJ homeowners and businesses say about Mechanical Enterprise HVAC installations.",
   },
   "/careers": {
     title: "HVAC Careers NJ | Mechanical Enterprise",
@@ -112,43 +112,43 @@ const PAGE_META: Record<string, PageMeta> = {
   // post-hydration client value would disagree. Previously these all fell
   // through to DEFAULT_TITLE (the homepage's own title/description).
   "/heat-pump-installation-nj": {
-    title: "Heat Pump Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
-    description: "Heat Pump installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call (862) 419-1763.",
+    title: "Heat Pump Installation NJ | Free Assessment | Mechanical Enterprise",
+    description: "Heat Pump installation in NJ with optional 10-year parts & labor coverage. Free in-home assessment, optional 10-year parts & labor coverage. Call (862) 419-1763.",
   },
   "/central-ac-installation-nj": {
-    title: "Central AC Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
-    description: "Central AC installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call (862) 419-1763.",
+    title: "Central AC Installation NJ | Free Assessment | Mechanical Enterprise",
+    description: "Central AC installation in NJ with optional 10-year parts & labor coverage. Free in-home assessment, optional 10-year parts & labor coverage. Call (862) 419-1763.",
   },
   "/ductless-mini-split-installation-nj": {
-    title: "Ductless Mini-Split Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
-    description: "Ductless Mini-Split installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call (862) 419-1763.",
+    title: "Ductless Mini-Split Installation NJ | Free Assessment | Mechanical Enterprise",
+    description: "Ductless Mini-Split installation in NJ with optional 10-year parts & labor coverage. Free in-home assessment, optional 10-year parts & labor coverage. Call (862) 419-1763.",
   },
   "/vrv-vrf-installation-nj": {
-    title: "VRV/VRF System Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
-    description: "VRV/VRF System installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call (862) 419-1763.",
+    title: "VRV/VRF System Installation NJ | Free Assessment | Mechanical Enterprise",
+    description: "VRV/VRF System installation in NJ with optional 10-year parts & labor coverage. Free in-home assessment, optional 10-year parts & labor coverage. Call (862) 419-1763.",
   },
   "/hvac-system-replacement-nj": {
-    title: "Full HVAC System Replacement Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
-    description: "Full HVAC System Replacement installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call (862) 419-1763.",
+    title: "Full HVAC System Replacement Installation NJ | Free Assessment | Mechanical Enterprise",
+    description: "Full HVAC System Replacement installation in NJ. Free in-home assessment, optional 10-year parts & labor coverage. Licensed NJ contractor. Call (862) 419-1763.",
   },
   "/commercial-hvac-installation-nj": {
-    title: "Commercial HVAC Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
-    description: "Commercial HVAC installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call (862) 419-1763.",
+    title: "Commercial HVAC Installation NJ | Free Assessment | Mechanical Enterprise",
+    description: "Commercial HVAC installation in NJ. Free in-home assessment, optional 10-year parts & labor coverage. Licensed NJ contractor. Call (862) 419-1763.",
   },
   "/heat-pump-rebates-nj": {
-    title: "Heat Pump Rebates NJ Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
-    description: "Heat Pump Rebates NJ installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call (862) 419-1763.",
+    title: "Heat Pump Rebates NJ Installation NJ | Free Assessment | Mechanical Enterprise",
+    description: "Heat Pump Rebates NJ installation in NJ. Free in-home assessment, optional 10-year parts & labor coverage. Licensed NJ contractor. Call (862) 419-1763.",
   },
   "/hvac-financing-nj": {
-    title: "HVAC Financing Installation NJ | Free Assessment & Rebates | Mechanical Enterprise",
-    description: "HVAC Financing installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call (862) 419-1763.",
+    title: "HVAC Financing Installation NJ | Free Assessment | Mechanical Enterprise",
+    description: "HVAC Financing installation in NJ. Free in-home assessment, optional 10-year parts & labor coverage. Licensed NJ contractor. Call (862) 419-1763.",
   },
   // Mirrors client/src/pages/PromosLanding.tsx, which has no useSEO() call
   // of its own — this is the only title/description this page gets, so it
   // is authoritative rather than mirroring anything.
   "/promos": {
     title: "NJ HVAC Upgrade Promotions | Mechanical Enterprise",
-    description: "Residential HVAC upgrade promotions and real project examples for NJ homeowners — rebates, financing, and case studies.",
+    description: "Residential HVAC upgrade promotions and real project examples for NJ homeowners — financing options and project examples.",
   },
   // Mirrors client/src/pages/Privacy.tsx / Terms.tsx / Referral.tsx / CompetitorPage.tsx's own useSEO() calls exactly.
   "/privacy": {
@@ -164,31 +164,31 @@ const PAGE_META: Record<string, PageMeta> = {
     description: "Know someone who needs HVAC work? Send them our way. Earn $500 when they book. No cap. Open to everyone. Newark NJ.",
   },
   "/vs-aj-perri": {
-    title: "A.J. Perri Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise",
-    description: "Looking for an alternative to A.J. Perri in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call (862) 419-1763.",
+    title: "A.J. Perri Alternative NJ | Free Assessment | Mechanical Enterprise",
+    description: "Looking for an alternative to A.J. Perri in NJ? Mechanical Enterprise offers free HVAC assessments, optional 10-year parts & labor coverage, and local Newark-based service. Call (862) 419-1763.",
   },
   "/vs-gold-medal-service": {
-    title: "Gold Medal Service Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise",
-    description: "Looking for an alternative to Gold Medal Service in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call (862) 419-1763.",
+    title: "Gold Medal Service Alternative NJ | Free Assessment | Mechanical Enterprise",
+    description: "Looking for an alternative to Gold Medal Service in NJ? Mechanical Enterprise offers free HVAC assessments, optional 10-year parts & labor coverage, and local Newark-based service. Call (862) 419-1763.",
   },
   "/vs-horizon-services": {
-    title: "Horizon Services Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise",
-    description: "Looking for an alternative to Horizon Services in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call (862) 419-1763.",
+    title: "Horizon Services Alternative NJ | Free Assessment | Mechanical Enterprise",
+    description: "Looking for an alternative to Horizon Services in NJ? Mechanical Enterprise offers free HVAC assessments, optional 10-year parts & labor coverage, and local Newark-based service. Call (862) 419-1763.",
   },
   "/vs-hutchinson": {
-    title: "Hutchinson Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise",
-    description: "Looking for an alternative to Hutchinson in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call (862) 419-1763.",
+    title: "Hutchinson Alternative NJ | Free Assessment | Mechanical Enterprise",
+    description: "Looking for an alternative to Hutchinson in NJ? Mechanical Enterprise offers free HVAC assessments, optional 10-year parts & labor coverage, and local Newark-based service. Call (862) 419-1763.",
   },
   // /qualify and /assessment both route to client/src/pages/Qualify.tsx (no
   // useSEO() call of its own) — distinct titles since a shared exact title
   // would violate netlify/tests/inject-meta.test.ts's uniqueness check.
   "/qualify": {
-    title: "See If You Qualify for NJ HVAC Rebates | Mechanical Enterprise",
-    description: "Enter your home details to see your NJ HVAC rebate amount and out-of-pocket cost before booking your free assessment.",
+    title: "Book a Free HVAC Assessment in NJ | Mechanical Enterprise",
+    description: "Tell us about your home and system, then book a free in-home HVAC assessment with Mechanical Enterprise.",
   },
   "/assessment": {
     title: "Free HVAC Assessment NJ | Mechanical Enterprise",
-    description: "Book a free HVAC assessment in NJ. See your rebate amount and out-of-pocket cost before you commit to anything.",
+    description: "Book a free HVAC assessment in NJ. Get a written replacement quote before you commit to anything.",
   },
   // /rebate-calc renders the identical RebateCalculator component as
   // /rebate-calculator — same precedent as /lp/rebate-guide vs /rebate-guide
@@ -621,9 +621,18 @@ export default async function handler(request: Request, context: any) {
     // the live URL Vapi's sendReferralLink SMS tool sends to real customers,
     // server/services/referralSms.ts CUSTOMER_REFERRAL_LINK. Flagged for the
     // owner rather than changed.)
-    "/rebate-calc": "/rebate-calculator",
+    "/rebate-calc": "/contact",
+    // Owner decision Nov 10 2026: no residential rebate promotion — the rebate pages are retired.
+    // (The 49 rebate-topic blog posts stay live as-is; see shared/excludedPrograms.ts.)
+    "/rebate-calculator": "/contact",
+    "/rebate-guide": "/residential",
+    "/lp/rebate-guide": "/lp/fb-residential",
+    "/lp/heat-pump-rebates": "/lp/fb-residential",
+    "/pseg-rebate-contractor-nj": "/residential",
+    "/pseg-rebate-checklist": "/contact",
+    "/heat-pump-rebates-nj": "/heat-pump-installation-nj",
   };
-  const redirectTarget = REDIRECTS[url.pathname];
+  const redirectTarget = REDIRECTS[url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : url.pathname];
   if (redirectTarget) {
     return new Response(null, {
       status: 301,

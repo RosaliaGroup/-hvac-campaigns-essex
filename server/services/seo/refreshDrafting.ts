@@ -6,9 +6,9 @@
  * What differs from a new B2B post (contentDrafting.ts):
  *  - The audience is whoever the post was written for (homeowners for the rebate guides). The B2B-only
  *    topic gate (isResidentialOrRebateTopic) does not apply to a refresh — the page already exists.
- *  - Rebates may be discussed, but ONLY with the figures in VERIFIED_FACTS.incentives. The linter still
- *    blocks every other dollar figure and the critic still blocks unsupported claims, so unverified
- *    program amounts in the old copy are dropped, not carried over.
+ *  - Owner decision 2026-11-10: no rebate promotion. A refresh removes every rebate, incentive, tax-credit
+ *    and utility-program mention (the linter blocks them). The 49 rebate-topic posts in
+ *    KEPT_REBATE_TOPIC_POSTS are left as-is and never refreshed (contentPipeline skips them).
  *  - Slug and original publication date are kept; `updatedDate` is stamped by the server.
  */
 import { factsForWriters } from "../../../shared/excludedPrograms";
@@ -82,8 +82,8 @@ export function buildRefreshSystemPrompt(ctx: RefreshContext, facts: VerifiedFac
     `- Total body length 950-${ctx.maxWords} words across all sections. Keep the depth of the current post; cut padding and repetition, not substance.`,
     "- The `title` field IS the page's one H1 — do not repeat it as a section. At most 6 `h2` sections; no other headings.",
     "- Keep any accurate, still-useful content and structure from the current post. Update anything dated. Remove anything you cannot support with VERIFIED FACTS.",
-    "- Dollar figures: use ONLY amounts that appear in VERIFIED_FACTS.incentives (e.g. \"Up to $16,000\" for the PSE&G / NJ Clean Energy residential rebate, \"Up to 80%\" for commercial Direct Install). Drop every other program-specific dollar amount, tier or stacking total from the old copy — describe those programs without numbers and tell the reader eligibility and amounts are confirmed during the assessment.",
-    "- The ONLY \"$\" figures allowed anywhere in the post are the exact amount strings in VERIFIED_FACTS.incentives. No installed prices, cost ranges, savings estimates, utility-bill figures or example budgets — explain what drives cost in words instead.",
+    "- NO REBATES (owner decision, Nov 10 2026): remove every mention of rebates, incentives, tax credits, utility programs (PSE&G, Clean Heat, NJ Clean Energy, Direct Install), \"$16,000\"/\"$16K\" and on-bill repayment, including any section, checklist item, FAQ or CTA about them. Never use the words \"rebate\" or \"incentive\" — the checker blocks them. Keep the post about installation quality, system fit, cost drivers in words and the optional 10-year parts & labor coverage.",
+    "- No \"$\" figures anywhere in the post. No installed prices, cost ranges, savings estimates, utility-bill figures or example budgets — explain what drives cost in words instead.",
     "- Never mention the federal 25C credit, the IRA tax credit, HEAR/HOMES or HEEHRA rebates (expired or unverified).",
     "- Never mention PSE&G On-Bill Repayment, \"OBR\", on-bill financing or 0% utility-bill financing — the owner excluded it. Remove every mention that is in the current post.",
     `- These words and phrases are blocked by the checker in ANY sense, so never use them (rephrase instead): ${[...EXPIRED_INCENTIVES, ...SUPERLATIVES, ...CERTIFICATION_WORDS].map((w) => `"${w}"`).join(", ")}. For example write "you may be told" instead of "you'll hear".`,
@@ -91,11 +91,10 @@ export function buildRefreshSystemPrompt(ctx: RefreshContext, facts: VerifiedFac
     // A separate fact-checker rejects ANY checkable claim that is not in VERIFIED FACTS (Oct 30: the rebate guides
     // were blocked for "licensed contractor", SEER2/HSPF2 thresholds, brand names, PSE&G territory, "registered installer").
     "- A separate fact-checker rejects any checkable statement that is not in VERIFIED FACTS. So do NOT state: a license, certification, registration, \"participating contractor\" or \"trade ally\" status (unless VERIFIED FACTS lists it); equipment brand names; efficiency ratings or thresholds (SEER2, HSPF2, ENERGY STAR tiers); which towns or counties a utility serves; program rules, deadlines or eligibility criteria; industry statistics or typical savings. Areas WE serve may only be the VERIFIED_FACTS serviceCounties. Explain what to ask, what affects eligibility in plain words, and that eligibility is confirmed at the assessment — without specific criteria.",
-    "- Rebates are never promised: say a household \"may qualify\" and that eligibility is confirmed at the assessment.",
     residential
-      ? "- Include exactly one `cta_box` for a free in-home assessment; buttonUrl must be https://mechanicalenterprise.com/contact or https://mechanicalenterprise.com/rebate-calculator."
+      ? "- Include exactly one `cta_box` for a free in-home assessment; buttonUrl must be https://mechanicalenterprise.com/contact."
       : "- Include exactly one `cta_box` requesting a service visit or consultation; buttonUrl must start with https://mechanicalenterprise.com/commercial.",
-    "- Include a specific NJ angle (a named county, utility or building type).",
+    "- Include a specific NJ angle (a named county, town or building type).",
     "- Warranty/coverage: the 10-year parts & labor coverage is an OPTIONAL PAID add-on — never included, free, standard, lifetime or unlimited. Existing systems only \"may qualify\" if eligible.",
     "- NEVER include: case studies, counts of completed projects, named clients, certification claims, superlatives (\"#1\", \"best\", \"award-winning\"), competitor names, guarantees or refunds.",
     "- Only include `faqSchema` with 3 or more genuinely distinct questions (keep good ones from the current post); otherwise omit it.",

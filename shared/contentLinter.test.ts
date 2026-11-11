@@ -347,3 +347,16 @@ describe("lintContent — owner-excluded program (PSE&G On-Bill Repayment)", () 
     expect(codes("Your monthly bill and the billing cycle; robust obrigado.")).not.toContain("excluded_program");
   });
 });
+
+describe("lintContent — no rebate promotion (owner decision 2026-11-10)", () => {
+  const codes = (body: string, title = cleanInput.title) => lintContent({ ...cleanInput, title, body: words(1000) + " " + body }, factsWithIncentive).findings.map((f) => f.code);
+  it("blocks rebate / incentive / tax-credit / utility-program wording in title or body", () => {
+    expect(codes("You may qualify for PSE&G rebates.")).toContain("rebate_promo");
+    expect(codes("Ask about utility incentives at the assessment.")).toContain("rebate_promo");
+    expect(codes("The Clean Heat program changed this year.")).toContain("rebate_promo");
+    expect(codes("plain body", "Heat Pump Rebates Explained")).toContain("rebate_promo");
+  });
+  it("does not trip on ordinary installation copy", () => {
+    expect(codes("We size the system to the home and explain the optional 10-year parts & labor coverage.")).not.toContain("rebate_promo");
+  });
+});

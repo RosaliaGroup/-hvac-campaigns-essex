@@ -41,6 +41,12 @@ describe("selectNightlyDraftCandidates (spec Part 1 acceptance tests)", () => {
     expect(result).toEqual([]);
   });
 
+  it("never includes a kept rebate-topic blog post (owner 2026-11-10: leave them as-is)", () => {
+    const pages = [page({ pageId: 1, pagePath: "/blog/hvac-rebates-essex-county-nj" }), page({ pageId: 2, pagePath: "/blog/heat-pump-installation-nj-guide" })];
+    const result = selectNightlyDraftCandidates(pages, { lockedPaths: new Set(), pendingBatchPaths: new Set(), now: NOW });
+    expect(result.map((r) => r.pagePath)).toEqual(["/blog/heat-pump-installation-nj-guide"]);
+  });
+
   it("never includes a page in a pending (pr_open) batch", () => {
     const pages = [page({ pageId: 1, pagePath: "/pending-page" })];
     const result = selectNightlyDraftCandidates(pages, { lockedPaths: new Set(), pendingBatchPaths: new Set(["/pending-page"]), now: NOW });

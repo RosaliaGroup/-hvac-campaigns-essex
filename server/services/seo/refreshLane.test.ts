@@ -49,10 +49,12 @@ describe("refresh drafting", () => {
     if (commercial) expect(isResidentialPost(commercial)).toBe(false);
   });
 
-  it("prompt pins the slug, allows only verified figures and bans the expired programs", () => {
+  it("prompt pins the slug, removes all rebate wording and $ figures, and bans the expired programs", () => {
     const prompt = buildRefreshSystemPrompt({ current: rebatePost, reason: "clicks down 96%", maxWords: 2000 }, VERIFIED_FACTS);
     expect(prompt).toContain(`Keep "slug" exactly "${rebatePost.slug}"`);
-    expect(prompt).toContain("ONLY amounts that appear in VERIFIED_FACTS.incentives");
+    expect(prompt).toContain("NO REBATES");
+    expect(prompt).toContain("No \"$\" figures anywhere in the post");
+    expect(prompt).toMatch(/buttonUrl must be https:\/\/mechanicalenterprise\.com\/contact\.\n/);
     expect(prompt).toContain("HEEHRA");
     expect(prompt).toContain("mechanicalenterprise.com/contact");
     expect(prompt).toContain("950-2000 words");

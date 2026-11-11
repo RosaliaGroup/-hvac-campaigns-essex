@@ -45,7 +45,7 @@ export default function Home() {
     // docs/positioning-warranty-spec.md §4 — title trimmed to fit the ≤60 char limit
     // (shared/seoLinter.ts's title_too_long rule) while still leading with installation + coverage.
     title: "NJ HVAC Install & 10-Year Coverage | Mechanical Enterprise",
-    description: "NJ HVAC installation with optional 10-year parts & labor coverage. PSE&G rebates may reduce your cost. Free assessment. Call (862) 419-1763.",
+    description: "NJ HVAC installation sized to your home, with optional 10-year parts & labor coverage. Free in-home assessment. Call (862) 419-1763.",
     ogUrl: "https://mechanicalenterprise.com",
   });
 
@@ -62,7 +62,7 @@ export default function Home() {
         "areaServed": "New Jersey",
         "priceRange": "$$",
         "openingHours": "Mo-Su 00:00-23:59",
-        "description": "Expert HVAC installation in NJ with optional 10-year parts & labor coverage. Heat pumps, VRV/VRF systems, free assessments. Rebates may reduce your cost."
+        "description": "Expert HVAC installation in NJ with optional 10-year parts & labor coverage. Heat pumps, VRV/VRF systems and free in-home assessments."
       }) }} />
       <ExitIntentPopup />
       <Navigation />
@@ -101,24 +101,6 @@ export default function Home() {
               </Link>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Rebates band (docs/positioning-warranty-spec.md §4 — demoted below the hero, calculator link kept) */}
-      <section className="py-4 bg-[#f7f8fa] border-b text-center">
-        <div className="container">
-          <p className="text-sm text-muted-foreground">
-            Rebates and financing may reduce your cost —{" "}
-            <a
-              href="https://mechanicalenterprise.com/rebate-calculator"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#e8813a] font-medium underline hover:no-underline"
-            >
-              check your rebate eligibility
-            </a>
-            .
-          </p>
         </div>
       </section>
 
@@ -213,7 +195,7 @@ export default function Home() {
                 <CardTitle className="text-lg">Free In-Home Assessment</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">A written replacement quote and your rebate eligibility before you decide</p>
+                <p className="text-sm text-muted-foreground">A written replacement quote before you decide</p>
               </CardContent>
             </Card>
 
@@ -349,18 +331,13 @@ export default function Home() {
                   <li>• Single-family homes</li>
                   <li>• Multi-family properties</li>
                   <li>• Heat pump installations</li>
-                  <li>• Up to $16,000 in NJ rebates</li>
+                  <li>• Optional 10-year parts & labor coverage</li>
                 </ul>
                 <Link href="/residential">
                   <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90">
                     Residential Campaigns <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
-                <a href="https://mechanicalenterprise.com/rebate-calculator" target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" className="w-full border-[#ff6b35] text-[#ff6b35] hover:bg-[#ff6b35]/10">
-                    🏠 Rebate Calculator — Up to $16,000
-                  </Button>
-                </a>
               </CardContent>
             </Card>
 
