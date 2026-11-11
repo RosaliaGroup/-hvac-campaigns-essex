@@ -244,6 +244,11 @@ export function ensureProspectTables(db: Db): Promise<void> {
   return tablesReady;
 }
 
+/** "Follow on social" tasks are off unless FOLLOW_SOCIAL_TASKS_ENABLED=true (owner, Nov 11, 2026). */
+export function followSocialTasksEnabled(env: Record<string, string | undefined> = process.env) {
+  return env.FOLLOW_SOCIAL_TASKS_ENABLED === "true";
+}
+
 export function createCycleStore(db: Db): CycleStore {
   return {
     async claimHour(hour, now) {
@@ -373,7 +378,9 @@ export function createCycleStore(db: Db): CycleStore {
       // Day 1: follow the person and company from our own social accounts (done by a person:
       // LinkedIn/Facebook/Instagram do not allow automated following).
       const linkedin = /^https:\/\/(www\.)?linkedin\.com\/in\//i.test(row.verificationUrl) ? row.verificationUrl : null;
-      if (await insert30DayTask({
+      // Owner, Nov 11, 2026 ("nothing manual"): no more "Follow on social" tasks; contacts are
+      // reached on Facebook/Instagram through the nightly Meta Custom Audience sync instead.
+      if (followSocialTasksEnabled() && await insert30DayTask({
         contactId: row.externalContactId, email: row.email.toLowerCase(),
         introMessageId: sent.id, introThreadId: sent.threadId, introAt,
         touchNumber: 1, kind: "human", dueAt: addBusinessDays(introAt, 1),
@@ -495,6 +502,13 @@ export function startProspectWorkflow() {
         const { runRestoreWronglyStopped } = await import("./restoreWronglyStopped");
         const restored = await runRestoreWronglyStopped(db, createCycleStore(db));
         console.info("[restore-stops]", restored ? JSON.stringify(restored) : "already ran");
+        if (!followSocialTasksEnabled()) {
+          const off = await db.execute(sql`UPDATE crmOutreach30DayTasks SET status = 'cancelled',
+            note = 'Follow-on-social tasks turned off (owner, Nov 11, 2026): contacts are reached through the nightly Meta Custom Audience instead.'
+            WHERE touchNumber = 1 AND status = 'open'`);
+          const n = Number((off as any)?.[0]?.affectedRows ?? 0);
+          if (n) console.info("[follow-tasks-off]", JSON.stringify({ cancelled: n }));
+        }
         const { backfillHomeownerCallTasks } = await import("./homeownerCallTask");
         const calls = await backfillHomeownerCallTasks(db);
         console.info("[homeowner-calls]", calls ? JSON.stringify(calls) : "already ran");
@@ -502,6 +516,36 @@ export function startProspectWorkflow() {
         console.warn("[outreach-backfill] failed", (e as Error).message.slice(0, 200));
       }
     })(), 180_000).unref?.();
+    // Nightly: CRM business contacts -> Meta Custom Audience (once per Eastern day, from 2 AM).
+    const metaAudience = async () => {
+      try {
+        const now = new Date();
+        const et = easternParts(now);
+        if (et.hour < 2) return;
+        const db = await getDb();
+        if (!db) return;
+        const { getAiVaCredentials } = await import("../db");
+        const creds = await getAiVaCredentials("meta_ads");
+        const token = creds["user_access_token"] || (creds["token_type"] !== "page_access_token" ? creds["access_token"] : "") || process.env.META_ACCESS_TOKEN || "";
+        if (!token) return;
+        const m = await import("./metaContactsAudience");
+        if (!(await m.claimDailyAudienceRun(db, `${et.year}-${et.month}-${et.day}`))) return;
+        const adAccount = process.env.META_AUDIENCE_AD_ACCOUNT_ID?.trim() || m.DEFAULT_AUDIENCE_AD_ACCOUNT;
+        try {
+          const out = await m.syncContactsAudience(db, m.graphCaller(token), adAccount);
+          console.info("[meta-audience]", JSON.stringify(out));
+        } catch (e) {
+          // Release today's claim so the next half-hour tick retries (e.g. after the Custom
+          // Audience terms are accepted in Ads Manager).
+          await db.execute(sql`DELETE FROM crmBackfillRuns WHERE name = ${`meta-audience-${et.year}-${et.month}-${et.day}`}`).catch(() => undefined);
+          console.warn("[meta-audience] failed", (e as Error).message.slice(0, 300));
+        }
+      } catch (e) {
+        console.warn("[meta-audience] skipped", (e as Error).message.slice(0, 200));
+      }
+    };
+    setTimeout(() => void metaAudience(), 240_000).unref?.();
+    setInterval(() => void metaAudience(), 30 * 60_000).unref?.();
     // Past leads: one Apollo lookup by work email each, after the 5 PM report or on weekends.
     const pastLeadsApollo = async () => {
       if (!process.env.APOLLO_API_KEY?.trim()) return;
