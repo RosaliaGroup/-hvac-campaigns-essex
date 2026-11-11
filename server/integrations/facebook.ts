@@ -60,13 +60,71 @@ export async function postToFacebook(
   return String(data.id) as string;
 }
 
+/** True for a video file URL (published to Instagram as a Reel). */
+export function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov)(\?|$)/i.test(url);
+}
+
 /**
- * Post to Instagram Business account
+ * Instagram's API accepts JPEG images only. PNG/WebP images hosted on our own
+ * site are converted on the fly by Netlify's image CDN (fm=jpg). Other hosts
+ * are passed through unchanged (Instagram may reject them).
+ */
+export function toInstagramImageUrl(url: string): string {
+  if (/\.jpe?g(\?|$)/i.test(url)) return url;
+  const m = url.match(/^https:\/\/(?:www\.)?mechanicalenterprise\.com(\/[^?#]*)/i);
+  if (!m) return url;
+  return `https://mechanicalenterprise.com/.netlify/images?url=${encodeURIComponent(m[1])}&fm=jpg&q=90`;
+}
+
+const GRAPH = "https://graph.facebook.com/v18.0";
+
+async function graphPost(path: string, body: Record<string, unknown>) {
+  const res = await fetch(`${GRAPH}/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(`Instagram API error (${path.split("/").pop()}): ${JSON.stringify(data)}`);
+  return data as { id?: string };
+}
+
+/**
+ * Wait until an Instagram media container is ready to publish. Videos (Reels)
+ * are processed asynchronously; images are usually FINISHED immediately.
+ */
+export async function waitForInstagramContainer(
+  creationId: string,
+  accessToken: string,
+  opts: { timeoutMs?: number; intervalMs?: number; fetchFn?: typeof fetch } = {},
+): Promise<void> {
+  const timeoutMs = opts.timeoutMs ?? 5 * 60 * 1000;
+  const intervalMs = opts.intervalMs ?? 5000;
+  const f = opts.fetchFn ?? fetch;
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const res = await f(`${GRAPH}/${creationId}?fields=status_code,status&access_token=${encodeURIComponent(accessToken)}`);
+    const data = (await res.json().catch(() => ({}))) as { status_code?: string; status?: string };
+    if (data.status_code === "FINISHED" || data.status_code === "PUBLISHED") return;
+    if (data.status_code === "ERROR" || data.status_code === "EXPIRED") {
+      throw new Error(`Instagram media processing ${data.status_code}: ${data.status ?? "no detail"}`);
+    }
+    if (Date.now() + intervalMs > deadline) {
+      throw new Error(`Instagram media still ${data.status_code ?? "processing"} after ${Math.round(timeoutMs / 1000)}s`);
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
+
+/**
+ * Post to Instagram Business account. A video URL (.mp4/.mov) is published as
+ * a Reel (also shown in the main feed); anything else as a single photo.
  */
 export async function postToInstagram(
   credentials: FacebookCredentials,
   content: string,
-  imageUrl: string
+  mediaUrl: string
 ) {
   const { accessToken, instagramAccountId } = credentials;
 
@@ -74,51 +132,21 @@ export async function postToInstagram(
     throw new Error("Missing Instagram credentials");
   }
 
-  // Instagram requires a two-step process: create media container, then publish
+  // Step 1: create the media container.
+  const reel = isVideoUrl(mediaUrl);
+  const container = await graphPost(`${instagramAccountId}/media`, reel
+    ? { media_type: "REELS", video_url: mediaUrl, caption: content, share_to_feed: true, access_token: accessToken }
+    : { image_url: toInstagramImageUrl(mediaUrl), caption: content, access_token: accessToken });
+  if (!container.id) throw new Error("Instagram container error: no id returned");
 
-  // Step 1: Create media container
-  const containerUrl = `https://graph.facebook.com/v18.0/${instagramAccountId}/media`;
-  const containerResponse = await fetch(containerUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      image_url: imageUrl,
-      caption: content,
-      access_token: accessToken,
-    }),
+  // Step 2: wait for processing (Reels take a while), then publish.
+  await waitForInstagramContainer(container.id, accessToken);
+  const data = await graphPost(`${instagramAccountId}/media_publish`, {
+    creation_id: container.id,
+    access_token: accessToken,
   });
 
-  if (!containerResponse.ok) {
-    const error = await containerResponse.json();
-    throw new Error(`Instagram container error: ${JSON.stringify(error)}`);
-  }
-
-  const containerData = await containerResponse.json();
-  const creationId = containerData.id;
-
-  // Step 2: Publish the container
-  const publishUrl = `https://graph.facebook.com/v18.0/${instagramAccountId}/media_publish`;
-  const publishResponse = await fetch(publishUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      creation_id: creationId,
-      access_token: accessToken,
-    }),
-  });
-
-  if (!publishResponse.ok) {
-    const error = await publishResponse.json();
-    throw new Error(`Instagram publish error: ${JSON.stringify(error)}`);
-  }
-
-  const data = await publishResponse.json();
-
-  console.log("[Instagram] Post published:", data.id);
+  console.log(`[Instagram] ${reel ? "Reel" : "Post"} published:`, data.id);
   return String(data.id) as string;
 }
 
