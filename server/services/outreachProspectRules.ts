@@ -70,3 +70,13 @@ export function isVerifiedProspect(input: {
     return ["http:", "https:"].includes(url.protocol) && Boolean(url.hostname);
   } catch { return false; }
 }
+
+/** Contacts-list sources written by outreach itself (ensureSentEmailContact). A Contacts row
+ * with one of these sources is a prospect we emailed, not a customer. */
+export const OUTREACH_CONTACT_SOURCES = ["HVAC Prospecting Task", "Gmail Selected", "Gmail Sent", "CRM Manual"] as const;
+
+/** True only for a real customer: a Contacts row outreach did not create, or one with a job. */
+export function isRealCustomer(source: string | null | undefined, hasJob: boolean): boolean {
+  if (hasJob) return true;
+  return !(OUTREACH_CONTACT_SOURCES as readonly string[]).includes((source ?? "").trim());
+}

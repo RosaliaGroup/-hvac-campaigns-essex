@@ -8,6 +8,7 @@ import {
   notifications,
   appointments,
   customers,
+  jobs,
   crmCommunications,
 } from "../../drizzle/schema";
 import { anthropicSearch, parseJsonObject } from "./contactProfile/anthropicSearch";
@@ -18,7 +19,7 @@ import { prospectMailbox } from "./prospectGmail";
 import { recordGrowthTouch } from "./growth/touchLedger";
 import { prospectWorkflowErrorKind } from "./prospectWorkflowError";
 import { isOutreachSuppressed, recordOutreachSuppression } from "./outreachSuppression";
-import { isPublicBidEntity } from "./outreachProspectRules";
+import { isPublicBidEntity, isRealCustomer } from "./outreachProspectRules";
 import { saveVerifiedProspect } from "./saveVerifiedProspect";
 import { CRM_MAILBOX } from "./gmailCrm";
 import { runCycle, type CycleStore, type QueueRow } from "./prospectCycle";
@@ -291,8 +292,15 @@ export function createCycleStore(db: Db): CycleStore {
       const [appt] = await db.select({ id: appointments.id }).from(appointments)
         .where(and(sql`LOWER(${appointments.email}) = ${email}`, sql`${appointments.status} <> 'cancelled'`)).limit(1);
       if (appt) return "appointment_scheduled";
-      const [cust] = await db.select({ id: customers.id }).from(customers).where(sql`LOWER(${customers.email}) = ${email}`).limit(1);
-      if (cust) return "existing_customer";
+      // Contact research and Gmail sync add every emailed prospect to Contacts (customers table),
+      // so a Contacts row alone is not a customer (Nov 5–11, 2026: follow-ups to prospects were
+      // stopped as "existing_customer"). Outreach-created rows count only once they have a job.
+      const custRows = await db.select({ id: customers.id, source: customers.source }).from(customers)
+        .where(sql`LOWER(${customers.email}) = ${email}`).limit(5);
+      for (const cust of custRows) {
+        const [job] = await db.select({ id: jobs.id }).from(jobs).where(eq(jobs.customerId, cust.id)).limit(1);
+        if (isRealCustomer(cust.source, Boolean(job))) return "existing_customer";
+      }
       if (row.leadId) {
         const [lead] = await db.select({ status: leads.status }).from(leads).where(eq(leads.id, row.leadId)).limit(1);
         if (lead && ["quoted", "won", "lost"].includes(lead.status)) return "active_opportunity";
