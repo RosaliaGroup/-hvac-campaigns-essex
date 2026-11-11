@@ -502,6 +502,9 @@ export function startProspectWorkflow() {
         const { runRestoreWronglyStopped } = await import("./restoreWronglyStopped");
         const restored = await runRestoreWronglyStopped(db, createCycleStore(db));
         console.info("[restore-stops]", restored ? JSON.stringify(restored) : "already ran");
+        const { spreadOverdueTasks } = await import("./pastLeadsEnrichment");
+        const overdue = await spreadOverdueTasks(db);
+        console.info("[spread-overdue]", overdue ? JSON.stringify(overdue) : "already ran");
         if (!followSocialTasksEnabled()) {
           const off = await db.execute(sql`UPDATE crmOutreach30DayTasks SET status = 'cancelled',
             note = 'Follow-on-social tasks turned off (owner, Nov 11, 2026): contacts are reached through the nightly Meta Custom Audience instead.'

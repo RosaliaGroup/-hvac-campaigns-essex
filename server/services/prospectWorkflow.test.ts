@@ -167,12 +167,12 @@ describe("follow-ups", () => {
     expect(outreach(sends).map(s => s.to)).toEqual([b.email]);
     expect(r.held[0].reason).toBe("bounded");
   });
-  it("inspects at most five candidates per run", async () => {
-    const rows = Array.from({ length: 8 }, () => followUp());
+  it("inspects at most fifteen candidates per run", async () => {
+    const rows = Array.from({ length: 18 }, () => followUp());
     const { store } = makeStore(rows);
     const { mb, sends } = makeMailbox();
     const r = await runCycle(store, async () => mb, WED_11AM);
-    expect(outreach(sends)).toHaveLength(5);
+    expect(outreach(sends)).toHaveLength(15);
     expect(r.pending).toBe(3);
   });
 });
@@ -345,7 +345,7 @@ describe("signature", () => {
 
 describe("prospect search runs every sending hour", () => {
   it("searches even when the follow-up backlog is large, and still sends follow-ups first", async () => {
-    const rows = Array.from({ length: 8 }, () => followUp());
+    const rows = Array.from({ length: 18 }, () => followUp());
     const { store, log } = makeStore(rows, { research: () => [intro()] });
     const { mb, sends } = makeMailbox();
     const r = await runCycle(store, async () => mb, WED_11AM);
@@ -539,12 +539,12 @@ describe("public bodies and schools are never contacted (public bidding)", () =>
     expect(outreach(sends).map(s => s.to)).toEqual(ok.map(o => o.email));
   });
   it("introductions still go out when no follow-up could be sent this hour", async () => {
-    const replied = Array.from({ length: 8 }, () => followUp());
+    const replied = Array.from({ length: 18 }, () => followUp());
     const queued = [intro(), intro()];
     const { store } = makeStore([...replied, ...queued]);
     const { mb, sends } = makeMailbox({ thread: { replied: true } });
     const r = await runCycle(store, async () => mb, WED_11AM);
-    expect(r.stopped).toHaveLength(5);
+    expect(r.stopped).toHaveLength(15);
     expect(r.sent.map(s => s.kind)).toEqual(["intro", "intro"]);
     expect(outreach(sends).every((s: any) => !s.threadId)).toBe(true);
   });
