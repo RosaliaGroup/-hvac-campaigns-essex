@@ -492,6 +492,9 @@ export function startProspectWorkflow() {
         const { spreadFollowBacklog } = await import("./pastLeadsEnrichment");
         const spread = await spreadFollowBacklog(db);
         console.info("[follow-backlog]", spread ? JSON.stringify(spread) : "already ran");
+        const { runRestoreWronglyStopped } = await import("./restoreWronglyStopped");
+        const restored = await runRestoreWronglyStopped(db, createCycleStore(db));
+        console.info("[restore-stops]", restored ? JSON.stringify(restored) : "already ran");
         const { backfillHomeownerCallTasks } = await import("./homeownerCallTask");
         const calls = await backfillHomeownerCallTasks(db);
         console.info("[homeowner-calls]", calls ? JSON.stringify(calls) : "already ran");
