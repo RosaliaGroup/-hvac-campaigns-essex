@@ -54,7 +54,11 @@ export function graphCaller(token: string, fetchImpl: typeof fetch = fetch): Gra
     const url = method === "GET" ? `${GRAPH}${path}?${params}` : `${GRAPH}${path}`;
     const res = await fetchImpl(url, method === "GET" ? undefined : { method, body: params });
     const json = await res.json();
-    if (json?.error) throw new Error(`Meta API error: ${json.error.message} (code ${json.error.code}${json.error.error_subcode ? `/${json.error.error_subcode}` : ""})`);
+    if (json?.error) {
+      const e = json.error;
+      const detail = [e.error_user_title, e.error_user_msg].filter(Boolean).join(" — ");
+      throw new Error(`Meta API error on ${method} ${path.split("?")[0]}: ${e.message} (code ${e.code}${e.error_subcode ? `/${e.error_subcode}` : ""})${detail ? ` | ${detail}` : ""}${e.fbtrace_id ? ` [trace ${e.fbtrace_id}]` : ""}`);
+    }
     return json;
   };
 }

@@ -538,7 +538,7 @@ export function startProspectWorkflow() {
           // Release today's claim so the next half-hour tick retries (e.g. after the Custom
           // Audience terms are accepted in Ads Manager).
           await db.execute(sql`DELETE FROM crmBackfillRuns WHERE name = ${`meta-audience-${et.year}-${et.month}-${et.day}`}`).catch(() => undefined);
-          console.warn("[meta-audience] failed", (e as Error).message.slice(0, 300));
+          console.warn("[meta-audience] failed", (e as Error).message.slice(0, 800));
         }
       } catch (e) {
         console.warn("[meta-audience] skipped", (e as Error).message.slice(0, 200));
