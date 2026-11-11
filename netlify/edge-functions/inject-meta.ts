@@ -631,6 +631,9 @@ export default async function handler(request: Request, context: any) {
     "/pseg-rebate-contractor-nj": "/residential",
     "/pseg-rebate-checklist": "/contact",
     "/heat-pump-rebates-nj": "/heat-pump-installation-nj",
+    // Owner rule: no PSE&G On-Bill Repayment in marketing — both OBR posts taken down Nov 10 2026.
+    "/blog/pseg-on-bill-repayment-hvac": "/blog/hvac-financing-nj-options",
+    "/blog/nj-on-bill-repayment-zero-upfront-hvac": "/blog/hvac-financing-nj-options",
   };
   const redirectTarget = REDIRECTS[url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : url.pathname];
   if (redirectTarget) {

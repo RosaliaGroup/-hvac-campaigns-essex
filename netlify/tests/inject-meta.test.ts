@@ -171,7 +171,7 @@ describe("complete published blog inventory", () => {
   });
 
   it("serves the revised high-impression guide titles rather than stale SEO overrides", () => {
-    for (const slug of ["central-ac-replacement-nj-cost", "pseg-on-bill-repayment-hvac"]) {
+    for (const slug of ["central-ac-replacement-nj-cost"]) {
       const post = allBlogPosts.find(p => p.slug === slug)!;
       expect(titleFor(`/blog/${slug}`)).toBe(post.title.replace(/&/g, "&amp;"));
     }
