@@ -120,9 +120,11 @@ export function buildMessage(type: SendFormType, url: string, name?: string | nu
   const who = firstName(name);
   // Mechanical branding + STOP disclosure (10DLC). Telnyx/carriers handle the
   // STOP/HELP auto-replies at the network level; we only advertise STOP here.
+  // Brand prefix first, plain wording (no "free", no "!"), matching the
+  // registered 10DLC sample messages so carrier spam filters don't block it.
   return type === "reschedule"
-    ? `Hi ${who} — here's your link to pick a new time for your Mechanical Enterprise visit: ${url} Reply STOP to opt out.`
-    : `Hi ${who}! Mechanical Enterprise here — here's your link to book your free HVAC assessment: ${url} Reply STOP to opt out.`;
+    ? `Mechanical Enterprise: Hi ${who}, here is the link to pick a new time for your home visit: ${url} Reply STOP to opt out.`
+    : `Mechanical Enterprise: Hi ${who}, here is the link to pick a time for your home visit: ${url} Reply STOP to opt out.`;
 }
 
 function maskPhone(phone: string): string {
