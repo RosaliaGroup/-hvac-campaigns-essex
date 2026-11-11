@@ -587,14 +587,6 @@ export const blogPosts: BlogPostData[] = [
         "content": "Ready to get bids on closed-loop pump rotation, controls, or replacement? Send us your loop schematic and run-hour records and we'll walk the mechanical room with you.",
         "buttonText": "Request a Commercial Site Visit",
         "buttonUrl": "https://mechanicalenterprise.com/commercial"
-      },
-      {
-        "type": "h2",
-        "content": "Rebates as a Secondary Benefit"
-      },
-      {
-        "type": "paragraph",
-        "content": "Pump and controls upgrades on commercial properties may qualify for PSE&G Direct Install, which can cover up to 80% of project cost for qualifying commercial equipment upgrades, with any remaining balance eligible for 0% interest financing through PSE&G On-Bill Repayment, repaid on the monthly utility bill. These programs apply to qualifying commercial projects — not residential rebates — and eligibility depends on the specific scope and equipment proposed. Ask your contractor to confirm in writing whether your rotation controls or pump replacement project qualifies before you finalize scope, since program terms and qualifying equipment lists are set by the utility, not by the contractor."
       }
     ],
     "faqSchema": [
@@ -820,7 +812,7 @@ export const blogPosts: BlogPostData[] = [
     "sections": [
       {
         "type": "intro",
-        "content": "Replacing HVAC systems across an occupied multifamily building is nothing like a new-construction install. Tenants still need heat, cooling, and hot water while crews work floor by floor or unit by unit. For property managers, general contractors, and building owners, the goal is a plan that prioritizes correct equipment sizing and installation quality first, then sequences the work so residents aren't displaced. Optional 10-year parts & labor coverage and utility incentive programs can support the budget, but they should never be the reason a system gets chosen over one that actually fits the building."
+        "content": "Replacing HVAC systems across an occupied multifamily building is nothing like a new-construction install. Tenants still need heat, cooling, and hot water while crews work floor by floor or unit by unit. For property managers, general contractors, and building owners, the goal is a plan that prioritizes correct equipment sizing and installation quality first, then sequences the work so residents aren't displaced."
       },
       {
         "type": "h2",
@@ -855,8 +847,7 @@ export const blogPosts: BlogPostData[] = [
           "Building access constraints: elevator availability, parking, loading areas",
           "Tenant notification requirements and any lease or HOA notice periods",
           "Project timeline or phasing constraints driven by budget cycles or occupancy",
-          "Whether optional parts & labor coverage should be included in the proposal",
-          "Any interest in exploring commercial rebate or financing programs"
+          "Whether optional parts & labor coverage should be included in the proposal"
         ]
       },
       {
@@ -866,14 +857,6 @@ export const blogPosts: BlogPostData[] = [
       {
         "type": "paragraph",
         "content": "For new installations, Mechanical Enterprise offers an optional 10-year parts & labor coverage as a separately purchased add-on, with a zero deductible and coverage available across all major brands. This is not bundled into the installation price and is not a standard feature — it's a paid agreement you select at the time of purchase. Existing equipment in a building may also qualify for the same coverage, but only after it passes an eligibility inspection; not every existing system will qualify, and eligibility is assessed unit by unit against program criteria."
-      },
-      {
-        "type": "h2",
-        "content": "Rebates and Financing: A Secondary Consideration"
-      },
-      {
-        "type": "paragraph",
-        "content": "Once the system design and phasing plan are set, commercial incentive programs can help manage the budget. PSE&G Direct Install (commercial) can cover up to 80% of eligible project costs, and PSE&G On-Bill Repayment offers 0% interest financing for the remaining balance, repaid through the monthly utility bill. These programs can meaningfully reduce out-of-pocket cost for qualifying multifamily properties, but they shouldn't drive equipment selection. A system chosen primarily to maximize a rebate, rather than to fit the building, tends to generate more service calls and tenant complaints down the line."
       },
       {
         "type": "cta_box",
@@ -953,14 +936,6 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "h2",
-        "content": "Rebates and Incentives as a Secondary Benefit"
-      },
-      {
-        "type": "paragraph",
-        "content": "Commercial HVAC upgrades across New Jersey may also qualify for programs separate from per-unit service pricing. PSE&G Direct Install can cover up to 80% of an eligible commercial project's cost, and any remaining balance can be financed at 0% interest through PSE&G On-Bill Repayment, repaid through the monthly utility bill. These programs apply to qualifying commercial projects and are evaluated case by case — they're a secondary consideration behind proper installation and system fit, not a reason to choose equipment that doesn't match a building's actual load. Per-unit pricing itself is set independently of whether a given project pursues these programs."
-      },
-      {
-        "type": "h2",
         "content": "What to Send Us Before Bidding"
       },
       {
@@ -1013,7 +988,7 @@ export const blogPosts: BlogPostData[] = [
     "sections": [
       {
         "type": "intro",
-        "content": "If you manage commercial or multifamily property in Essex County, you've probably asked a few contractors what a heat pump installation costs and gotten a few different answers. That's normal. Pricing is driven by site-specific variables: existing ductwork condition, electrical service capacity, refrigerant line-set length, local permitting, and the equipment tier you select. A PTAC retrofit, a multifamily central plant upgrade, and a mixed-use building replacing aging rooftop units don't land on the same number. This guide walks through the factors that move pricing from project to project, what to send bidders before you ask for a quote, and where optional coverage and commercial incentive programs fit into the total cost picture."
+        "content": "If you manage commercial or multifamily property in Essex County, you've probably asked a few contractors what a heat pump installation costs and gotten a few different answers. That's normal. Pricing is driven by site-specific variables: existing ductwork condition, electrical service capacity, refrigerant line-set length, local permitting, and the equipment tier you select. A PTAC retrofit, a multifamily central plant upgrade, and a mixed-use building replacing aging rooftop units don't land on the same number."
       },
       {
         "type": "h2",
@@ -1048,26 +1023,6 @@ export const blogPosts: BlogPostData[] = [
         "content": "Permitting adds time and, in some cases, cost that property owners don't always anticipate when comparing bids. Electrical work tied to a heat pump installation typically requires inspection, and commercial projects may involve additional review depending on building type, occupancy, and the scope of mechanical work. A contractor familiar with Essex County jurisdictions should be able to tell you upfront whether your project needs permits, what inspections to expect, and how that timeline affects your installation schedule. If a bid doesn't mention permitting at all, ask about it directly — it's a common place where quotes diverge after the contract is signed."
       },
       {
-        "type": "h2",
-        "content": "Coverage Options and Commercial Incentive Programs"
-      },
-      {
-        "type": "paragraph",
-        "content": "Installation quality and proper system fit matter more to long-term performance than the sticker price alone. For new installations by Mechanical Enterprise, optional 10-year parts and labor coverage is available as a separately purchased add-on backed by a third-party service agreement — it is not bundled into the installation price and is not automatic. Eligible existing systems may also qualify for this coverage after an inspection, though not every system will pass. On the incentive side, PSE&G's commercial Direct Install program has covered up to 80% of eligible project costs, with PSE&G's On-Bill Repayment program offering 0% interest financing on the remaining balance, repaid through the monthly utility bill. These programs can meaningfully change the net cost of a commercial heat pump project, but eligibility and amounts depend on the program's current terms — confirm specifics before you budget around them."
-      },
-      {
-        "type": "checklist",
-        "items": [
-          "Building type and unit count (multifamily, mixed-use, single-tenant commercial, etc.)",
-          "Current heating/cooling system type: PTAC, split, RTU, central ducted, or none",
-          "Photos or a floor plan showing existing ductwork, if any",
-          "Electrical panel location, amperage, and approximate age",
-          "Distance between where outdoor and indoor equipment would be placed",
-          "Any known access restrictions (tenant scheduling, roof access, landmark/historic status)",
-          "Whether you're pursuing PSE&G Direct Install or On-Bill Repayment for the project"
-        ]
-      },
-      {
         "type": "cta_box",
         "content": "Get a site-specific heat pump quote for your Essex County property, with ductwork, electrical, and equipment tier assessed before you're given a number.",
         "buttonText": "Request a Commercial Assessment",
@@ -1084,10 +1039,6 @@ export const blogPosts: BlogPostData[] = [
       {
         "type": "paragraph",
         "content": "Does the optional 10-year coverage apply to systems we already have? Eligible existing systems may qualify for the optional parts and labor coverage after an inspection, but it's not available for every system and isn't bundled into any installation automatically."
-      },
-      {
-        "type": "paragraph",
-        "content": "Do incentive programs apply to every commercial building in Essex County? Program eligibility, amounts, and terms are set by PSE&G and NJ Clean Energy, not by Mechanical Enterprise, so it's worth confirming current eligibility for your specific property and project scope before finalizing a budget."
       }
     ],
     "faqSchema": [
@@ -1098,10 +1049,6 @@ export const blogPosts: BlogPostData[] = [
       {
         "question": "Does the optional 10-year parts and labor coverage apply to our existing system?",
         "answer": "Eligible existing systems may qualify for the optional coverage after an inspection, but not every system passes, and it is a separately purchased add-on rather than something bundled into installation."
-      },
-      {
-        "question": "Are PSE&G commercial incentive programs available for every Essex County building?",
-        "answer": "Program terms, amounts, and eligibility are set by PSE&G and NJ Clean Energy and can vary by project type, so confirm current eligibility for your specific building before budgeting around a rebate or financing figure."
       }
     ]
   },
@@ -1171,14 +1118,6 @@ export const blogPosts: BlogPostData[] = [
           "Whether existing equipment requires an inspection before enrollment, and what that inspection checks",
           "How claims are filed and what documentation is required at the time of failure"
         ]
-      },
-      {
-        "type": "h2",
-        "content": "Rebates and Incentives Are a Bonus, Not the Foundation"
-      },
-      {
-        "type": "paragraph",
-        "content": "Utility incentive programs can offset part of a replacement project, but they shouldn't drive the decision on their own. PSE&G's Direct Install program covers up to 80% of eligible commercial project costs, and the remaining balance can sometimes be financed at 0% interest through PSE&G's On-Bill Repayment program, repaid through the monthly utility bill. These programs apply to qualifying commercial projects and are worth discussing with your contractor during scoping — but they're a secondary consideration behind correct system design, quality installation, and a clear understanding of what any extended coverage will and won't pay for."
       },
       {
         "type": "cta_box",
@@ -1274,14 +1213,6 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "h2",
-        "content": "Rebates, Direct Install, and Financing for NJ Properties"
-      },
-      {
-        "type": "paragraph",
-        "content": "Replacement economics also depend on what's available to offset project cost. PSE&G's Direct Install program can cover up to 80% of an eligible commercial project, and the On-Bill Repayment option offers 0% interest financing on the remaining balance, repaid through the monthly utility bill. These programs are a secondary consideration behind getting the sizing, installation, and coverage right — but for a multifamily building in Union or Middlesex County weighing a multi-unit replacement, they can meaningfully change the budget conversation with ownership or the board."
-      },
-      {
-        "type": "h2",
         "content": "What to Send Us Before You Request Bids"
       },
       {
@@ -1334,7 +1265,7 @@ export const blogPosts: BlogPostData[] = [
     "sections": [
       {
         "type": "intro",
-        "content": "When you're reviewing competing HVAC installation quotes for a commercial building or multifamily property in New Jersey, the lowest number on the page isn't always the lowest-risk choice. Installation quality, correct system sizing, and the labor scope behind the quote matter as much as the equipment brand. Optional 10-year parts & labor coverage can also factor into the comparison, and any rebate figures should only be treated as a secondary, verify-before-you-count-on-it benefit."
+        "content": "When you're reviewing competing HVAC installation quotes for a commercial building or multifamily property in New Jersey, the lowest number on the page isn't always the lowest-risk choice. Installation quality, correct system sizing, and the labor scope behind the quote matter as much as the equipment brand."
       },
       {
         "type": "h2",
@@ -1383,14 +1314,6 @@ export const blogPosts: BlogPostData[] = [
           "Timeline constraints — occupied units, tenant notice requirements, or seasonal deadlines",
           "Whether you want pricing for optional 10-year parts & labor coverage included as a separate line item"
         ]
-      },
-      {
-        "type": "h2",
-        "content": "Rebates and Incentives: A Secondary Factor"
-      },
-      {
-        "type": "paragraph",
-        "content": "Incentives can offset part of a commercial project's cost, but they shouldn't be the deciding factor between bids. PSE&G's Direct Install program for commercial properties can cover up to 80% of eligible project costs, and PSE&G's On-Bill Repayment option offers 0% interest financing on the remaining balance, repaid through the monthly utility bill. Eligibility, caps, and program terms change and are determined by the utility, not the contractor, so confirm current details directly with PSE&G before factoring any specific amount into your budget. Treat incentive estimates as a bonus to a sound bid, not a reason to accept a quote with unclear scope or warranty terms."
       },
       {
         "type": "cta_box",
@@ -1479,7 +1402,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Projects in Essex, Hudson, Bergen, and the surrounding counties often involve older multifamily stock with limited mechanical room space, alongside newer commercial builds designed for VRF efficiency. Where it applies, commercial projects may also be eligible for PSE&G Direct Install support, which can cover up to 80% of project cost, with the remaining balance eligible for 0% interest financing through PSE&G's On-Bill Repayment program, repaid via the monthly utility bill. These are secondary benefits worth mentioning to ownership during pricing conversations — they don't change the installation approach, but they can affect how a client weighs system options during design."
+        "content": "Projects in Essex, Hudson, Bergen, and the surrounding counties often involve older multifamily stock with limited mechanical room space, alongside newer commercial builds designed for VRF efficiency."
       },
       {
         "type": "cta_box",
@@ -1542,11 +1465,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "h2",
-        "content": "Rebates and Financing Can Offset Capital Outlay"
-      },
-      {
-        "type": "paragraph",
-        "content": "Rebates should factor into a capital plan as a secondary consideration, after install quality and system fit are settled — not as the reason to choose a system or a vendor. For commercial and multifamily projects, PSE&G Direct Install can cover up to 80% of project cost, and the remaining balance may be eligible for PSE&G On-Bill Repayment, which offers 0% interest financing repaid through the monthly utility bill. These programs can materially change the timing of a capital project, but eligibility and amounts depend on the specific program terms in effect at the time of application, so owners should confirm current details before building them into a final per-unit number."
+        "content": "What to Send Bidders for a Per-Unit Estimate"
       },
       {
         "type": "checklist",
@@ -1572,23 +1491,19 @@ export const blogPosts: BlogPostData[] = [
     ],
     "faqSchema": [
       {
-        "answer": "Start by separating the portfolio into cohorts by unit type — PTAC, mini-split, RTU, split — since each has different replacement cycles and labor needs. Then weigh installation quality and correct system sizing as heavily as equipment cost, since these factors affect service life and callback frequency.",
-        "question": "How should apartment owners set a per-unit HVAC capital budget?"
+        "question": "How should apartment owners set a per-unit HVAC capital budget?",
+        "answer": "Start by separating the portfolio into cohorts by unit type — PTAC, mini-split, RTU, split — since each has different replacement cycles and labor needs. Then weigh installation quality and correct system sizing as heavily as equipment cost, since these factors affect service life and callback frequency."
       },
       {
-        "answer": "No. It is an optional, paid add-on administered as a third-party extended service agreement. It's available for new installations by Mechanical Enterprise and for existing systems that pass an eligibility inspection and qualify under program criteria.",
-        "question": "Is the 10-Year Parts & Labor Coverage included with a new HVAC installation?"
+        "question": "Is the 10-Year Parts & Labor Coverage included with a new HVAC installation?",
+        "answer": "No. It is an optional, paid add-on administered as a third-party extended service agreement. It's available for new installations by Mechanical Enterprise and for existing systems that pass an eligibility inspection and qualify under program criteria."
       },
       {
-        "answer": "PSE&G Direct Install can cover up to 80% of eligible commercial project cost, and the remaining balance may be eligible for 0% interest On-Bill Repayment. Program terms and eligibility should be confirmed at the time of application.",
-        "question": "Do PSE&G commercial rebates apply to apartment building HVAC projects?"
-      },
-      {
-        "answer": "Pricing is quoted per unit per year by portfolio rather than by county. Mechanical Enterprise services Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties under the same portfolio pricing approach.",
-        "question": "Does per-unit pricing differ across counties served by Mechanical Enterprise?"
+        "question": "Does per-unit pricing differ across counties served by Mechanical Enterprise?",
+        "answer": "Pricing is quoted per unit per year by portfolio rather than by county. Mechanical Enterprise services Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties under the same portfolio pricing approach."
       }
     ],
-    "metaDescription": "A per-unit framework for apartment owners budgeting HVAC replacement across NJ portfolios, from install quality to optional coverage and rebates."
+    "metaDescription": "Per-Unit HVAC Capital Budgeting Guide for NJ Apartments. Free in-home assessment from Mechanical Enterprise: (862) 419-1763."
   },
 
   {
@@ -1659,13 +1574,8 @@ export const blogPosts: BlogPostData[] = [
           "Current escalation contact list and after-hours procedures on file",
           "Whether the bidder will quote response commitments per portfolio, in writing, with a defined clock start",
           "Reporting format and cadence the bidder can commit to",
-          "Whether optional parts and labor coverage is priced separately from the base service contract",
-          "For commercial properties, whether the project may qualify for PSE&G Direct Install or On-Bill Repayment financing"
+          "Whether optional parts and labor coverage is priced separately from the base service contract"
         ]
-      },
-      {
-        "type": "paragraph",
-        "content": "On the incentive side, commercial properties in our NJ service area may be able to reduce project cost through PSE&G Direct Install, which has covered up to 80% of eligible project cost, with the remaining balance available through PSE&G On-Bill Repayment at 0% interest, repaid via the monthly utility bill. These programs are separate from any SLA or coverage discussion and should be confirmed directly with the utility program at the time of your project."
       },
       {
         "type": "cta_box",
@@ -1676,16 +1586,16 @@ export const blogPosts: BlogPostData[] = [
     ],
     "faqSchema": [
       {
-        "answer": "Response windows should be defined in writing and quoted based on your specific portfolio size and unit mix rather than assumed as a standard number. Ask any bidder to specify their commitment in the contract, including the clock start and exceptions.",
-        "question": "What response time should a commercial HVAC SLA guarantee?"
+        "question": "What response time should a commercial HVAC SLA guarantee?",
+        "answer": "Response windows should be defined in writing and quoted based on your specific portfolio size and unit mix rather than assumed as a standard number. Ask any bidder to specify their commitment in the contract, including the clock start and exceptions."
       },
       {
-        "answer": "No. An SLA governs response time, escalation, and reporting. Cost exposure on parts and labor is addressed separately through an optional coverage plan, which is priced and administered independently of the response agreement.",
-        "question": "Does a response SLA include equipment replacement costs?"
+        "question": "Does a response SLA include equipment replacement costs?",
+        "answer": "No. An SLA governs response time, escalation, and reporting. Cost exposure on parts and labor is addressed separately through an optional coverage plan, which is priced and administered independently of the response agreement."
       },
       {
-        "answer": "Quarterly reporting is a reasonable baseline for most commercial and multifamily portfolios, covering unit-by-unit service history and open tickets across PTAC, mini-split, RTU, and split systems.",
-        "question": "How often should SLA reporting be delivered?"
+        "question": "How often should SLA reporting be delivered?",
+        "answer": "Quarterly reporting is a reasonable baseline for most commercial and multifamily portfolios, covering unit-by-unit service history and open tickets across PTAC, mini-split, RTU, and split systems."
       }
     ],
     "metaDescription": "What a real commercial HVAC SLA should specify: response window, escalation path, reporting cadence, and portfolio coverage in NJ."
@@ -1996,12 +1906,12 @@ export const blogPosts: BlogPostData[] = [
     "date": "March 31, 2026",
     "readTime": "6 min read",
     "category": "HVAC Education",
-    "metaDescription": "Compare 2026 heat pump and gas furnace costs for NJ homes, plus how PSE&G/NJ Clean Energy incentives up to $16,000 may apply.",
-    "excerpt": "Gas furnaces often cost less upfront, but some NJ households may qualify for incentives up to $16,000 toward a heat pump. An updated, honest comparison for homeowners across northern and central New Jersey.",
+    "metaDescription": "Heat Pump vs Gas Furnace in NJ: 2026 Comparison. Free in-home assessment from Mechanical Enterprise: (862) 419-1763.",
+    "excerpt": "An updated, honest comparison for homeowners across northern and central New Jersey.",
     "sections": [
       {
         "type": "intro",
-        "content": "Gas furnaces have been the default heating choice in New Jersey for decades, and they're still a dependable, comparatively affordable option. Mechanical Enterprise LLC has worked on HVAC systems across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for over 20 years, and the question we get most often now is whether a heat pump makes more sense than a furnace for a given house. Part of that is because PSE&G / NJ Clean Energy incentives may bring eligible households up to $16,000 toward a qualifying heat pump installation instead of a gas furnace. Whether that changes the math for your home depends on your square footage, ductwork, and current equipment — details we confirm during an in-home assessment, not over the phone. Here's an honest, side-by-side look at where each system stands based on what we see in homes across our service area."
+        "content": "Gas furnaces have been the default heating choice in New Jersey for decades, and they're still a dependable, comparatively affordable option. Mechanical Enterprise LLC has worked on HVAC systems across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for over 20 years, and the question we get most often now is whether a heat pump makes more sense than a furnace for a given house. Whether that changes the math for your home depends on your square footage, ductwork, and current equipment — details we confirm during an in-home assessment, not over the phone. Here's an honest, side-by-side look at where each system stands based on what we see in homes across our service area."
       },
       {
         "type": "h2",
@@ -2009,15 +1919,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Before any incentive is applied, a heat pump system generally costs more to install than a comparable gas furnace and central air conditioner pairing. The size of that gap depends on your home's square footage, the equipment tier you choose, whether your existing ductwork can be reused or needs modification, and how complex the swap is. A heat pump built for northern climates heats and cools with one system, which adds equipment cost compared with a separate furnace and AC condenser. On raw installed cost alone, a furnace-and-AC pairing is usually still the lower-cost option. That part of the comparison hasn't changed — what's changed is what happens to the numbers once incentives are factored in."
-      },
-      {
-        "type": "h2",
-        "content": "How NJ Incentives May Narrow the Gap"
-      },
-      {
-        "type": "paragraph",
-        "content": "This is where the comparison looks different than it did a few years ago. Replacing one gas furnace with another doesn't currently carry NJ utility incentive support that we're aware of. A heat pump installation, by contrast, may qualify a household for incentives up to $16,000 through PSE&G / NJ Clean Energy programs. Program rules, equipment requirements, and household eligibility vary and change over time, so we don't quote numbers off a flyer — we confirm exactly what your home qualifies for during an in-home assessment, before you commit to a system. For many households, applying an incentive narrows the upfront gap with a gas furnace considerably. The only way to know where your home lands is to have the numbers run against your actual equipment and layout."
+        "content": "The size of that gap depends on your home's square footage, the equipment tier you choose, whether your existing ductwork can be reused or needs modification, and how complex the swap is. A heat pump built for northern climates heats and cools with one system, which adds equipment cost compared with a separate furnace and AC condenser. On raw installed cost alone, a furnace-and-AC pairing is usually still the lower-cost option."
       },
       {
         "type": "h2",
@@ -2033,7 +1935,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "We install heat pumps, which might suggest we'd push them on every homeowner — that's not honest advice. If your current furnace is relatively new and running well, early replacement often doesn't make sense even with an available incentive. Homes without existing ductwork, like some older Morris County colonials we work in, may be better suited to a ductless mini-split layout than a central heat pump, which changes the installation plan and the comparison. If you plan to sell within the next year or two, you may not have time to realize the investment's full value. And homes with very high heating loads — older, poorly insulated houses in particular — may need weatherization work alongside a heat pump to perform well through the coldest stretches of winter. We walk through all of this during your assessment instead of assuming one system is the right fit."
+        "content": "We install heat pumps, which might suggest we'd push them on every homeowner — that's not honest advice. Homes without existing ductwork, like some older Morris County colonials we work in, may be better suited to a ductless mini-split layout than a central heat pump, which changes the installation plan and the comparison. If you plan to sell within the next year or two, you may not have time to realize the investment's full value. And homes with very high heating loads — older, poorly insulated houses in particular — may need weatherization work alongside a heat pump to perform well through the coldest stretches of winter. We walk through all of this during your assessment instead of assuming one system is the right fit."
       },
       {
         "type": "h2",
@@ -2049,25 +1951,17 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Whichever system you choose, ongoing protection matters over the life of the equipment. We offer an optional, paid 10-year parts-and-labor coverage plan on new installations, administered through a third-party service agreement and backed by A-rated insurers, available across major equipment brands. If you're keeping your existing furnace, AC, or heat pump rather than replacing it, that equipment may qualify for the same coverage after a separate eligibility inspection. Our Comfort Membership bundles a coverage term with two maintenance visits a year, priority scheduling, and a credit toward your next system, billed monthly instead of as one large expense. For a new heat pump, the in-home assessment is also where we confirm which PSE&G / NJ Clean Energy incentives your household may qualify for — specific to your home, not a brochure average."
+        "content": "Whichever system you choose, ongoing protection matters over the life of the equipment. We offer an optional, paid 10-year parts-and-labor coverage plan on new installations, administered through a third-party service agreement and backed by A-rated insurers, available across major equipment brands. If you're keeping your existing furnace, AC, or heat pump rather than replacing it, that equipment may qualify for the same coverage after a separate eligibility inspection. Our Comfort Membership bundles a coverage term with two maintenance visits a year, priority scheduling, and a credit toward your next system, billed monthly instead of as one large expense."
       },
       {
         "type": "cta_box",
-        "content": "Want the real numbers for your home — installed cost, incentive eligibility, and monthly operating costs side by side? Schedule an in-home assessment and we'll walk you through the honest math before you decide.",
+        "content": "Schedule an in-home assessment and we'll walk you through the honest math before you decide.",
         "buttonText": "Compare My Options →",
-        "buttonUrl": "https://mechanicalenterprise.com/rebate-calculator"
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
       }
     ],
     "updatedDate": "November 9, 2026",
     "faqSchema": [
-      {
-        "question": "Do gas furnace replacements qualify for incentives in New Jersey?",
-        "answer": "Not based on what we see with current NJ utility and Clean Energy programs, which are structured around heat pump installations rather than gas-to-gas replacements. We confirm current program rules for your situation during your assessment."
-      },
-      {
-        "question": "How much can I get in heat pump incentives in New Jersey?",
-        "answer": "Eligible households may qualify for incentives up to $16,000 through combined PSE&G / NJ Clean Energy programs. Exact amounts depend on your home and equipment and are confirmed during your in-home assessment."
-      },
       {
         "question": "Will a heat pump keep my house warm during a New Jersey winter?",
         "answer": "Heat pumps built for northern climates include backup electric heat that engages automatically during the coldest stretches. We size every system to your home's actual heat loss during the assessment so it performs through winter."
@@ -2220,67 +2114,86 @@ export const blogPosts: BlogPostData[] = [
 
   // Post 6: What Happens at a Free HVAC Assessment
   {
-    title: "What Happens at a Free HVAC Assessment? (We Walk Through Every Step)",
-    slug: "what-happens-free-hvac-assessment",
-    date: "March 31, 2026",
-    readTime: "7 min read",
-    category: "Getting Started",
-    metaDescription: "Worried a free assessment means a sales ambush? Here's exactly what a Mechanical Enterprise tech does during your 20-minute home visit — nothing more.",
-    excerpt: "Worried a free assessment means a sales pitch? Here's exactly what happens during your 20-minute home visit — step by step, nothing more.",
-    sections: [
+    "title": "What Happens at a Free HVAC Assessment? (We Walk Through Every Step)",
+    "slug": "what-happens-free-hvac-assessment",
+    "date": "March 31, 2026",
+    "readTime": "7 min read",
+    "category": "Getting Started",
+    "metaDescription": "Worried a free assessment means a sales ambush? Here's exactly what a Mechanical Enterprise tech does during your 20-minute home visit — nothing more.",
+    "excerpt": "Worried a free assessment means a sales pitch? Here's exactly what happens during your 20-minute home visit — step by step, nothing more.",
+    "sections": [
       {
-        type: "intro",
-        content: "We get it — 'free assessment' often feels like code for 'high-pressure sales visit.' That's not how we operate, and we know the only way to prove that is to show you exactly what happens. Here's a step-by-step walkthrough of what a Mechanical Enterprise HVAC assessment looks like, start to finish. It takes about 20 minutes, and you walk away with a number — not a contract.",
+        "type": "intro",
+        "content": "We get it — 'free assessment' often feels like code for 'high-pressure sales visit.' That's not how we operate, and we know the only way to prove that is to show you exactly what happens. Here's a step-by-step walkthrough of what a Mechanical Enterprise HVAC assessment looks like, start to finish. It takes about 20 minutes, and you walk away with a number — not a contract."
       },
-      { type: "h2", content: "Step 1: Scheduling (2 Minutes)" },
       {
-        type: "paragraph",
-        content: "You book online or call us. We ask for your address, the approximate age of your current heating system, and what fuel it runs on (gas, oil, electric, or you're not sure — all fine). We schedule a window that works for you, typically within 3-5 business days. We'll text you the day before to confirm and give you a 2-hour arrival window. Our tech arrives in a marked Mechanical Enterprise vehicle and introduces themselves by name.",
+        "type": "h2",
+        "content": "Step 1: Scheduling (2 Minutes)"
       },
-      { type: "h2", content: "Step 2: Your Current System (5 Minutes)" },
       {
-        type: "paragraph",
-        content: "The tech locates your existing heating and cooling equipment — usually in the basement, utility closet, or attic. They note the make, model, age, fuel type, and current condition. They're not looking for problems to upsell — they're documenting what you have so we can calculate what rebate programs apply. They'll also look at your thermostat setup and note the type and condition of your ductwork if you have any. If you have a boiler system, they'll note whether it's hot water or steam, as this affects the heat pump configuration options.",
+        "type": "paragraph",
+        "content": "You book online or call us. We ask for your address, the approximate age of your current heating system, and what fuel it runs on (gas, oil, electric, or you're not sure — all fine). We schedule a window that works for you, typically within 3-5 business days. We'll text you the day before to confirm and give you a 2-hour arrival window. Our tech arrives in a marked Mechanical Enterprise vehicle and introduces themselves by name."
       },
-      { type: "h2", content: "Step 3: Your Home Layout (5 Minutes)" },
       {
-        type: "paragraph",
-        content: "The tech does a quick walkthrough to assess your home's heating and cooling zones. They're looking at square footage per floor, window count and condition, insulation visible in accessible areas, and the general layout that affects system sizing. They are not inspecting your home for defects or judging your housekeeping. They're gathering the data points needed to recommend the right size system and calculate accurate rebate amounts. If areas of the home are off-limits, just say so — they'll estimate based on what they can see.",
+        "type": "h2",
+        "content": "Step 2: Your Current System (5 Minutes)"
       },
-      { type: "h2", content: "Step 4: The Questions We Ask" },
       {
-        type: "checklist",
-        items: [
+        "type": "paragraph",
+        "content": "The tech locates your existing heating and cooling equipment — usually in the basement, utility closet, or attic. They note the make, model, age, fuel type, and current condition. They'll also look at your thermostat setup and note the type and condition of your ductwork if you have any. If you have a boiler system, they'll note whether it's hot water or steam, as this affects the heat pump configuration options."
+      },
+      {
+        "type": "h2",
+        "content": "Step 3: Your Home Layout (5 Minutes)"
+      },
+      {
+        "type": "paragraph",
+        "content": "The tech does a quick walkthrough to assess your home's heating and cooling zones. They're looking at square footage per floor, window count and condition, insulation visible in accessible areas, and the general layout that affects system sizing. They are not inspecting your home for defects or judging your housekeeping. If areas of the home are off-limits, just say so — they'll estimate based on what they can see."
+      },
+      {
+        "type": "h2",
+        "content": "Step 4: The Questions We Ask"
+      },
+      {
+        "type": "checklist",
+        "items": [
           "How old is your current heating system? (Approximate is fine)",
           "What are your current monthly energy bills? (Helps us estimate savings)",
           "Are there any rooms that are too hot or too cold? (Helps with system design)",
-          "Are you the homeowner? (Required for rebate eligibility)",
-          "Approximate household income range (only if you want to check for income-eligible enhanced rebates — completely optional)",
-          "Any upcoming plans for the home? (Renovation, addition, selling — affects our recommendation)",
-        ],
-      },
-      { type: "h2", content: "Step 5: The Numbers (5 Minutes)" },
-      {
-        type: "paragraph",
-        content: "Based on what the tech sees, they'll calculate your estimated rebate amount on the spot using our internal tool. You'll get a preliminary number that includes the PSE&G/NJ Clean Heat rebate estimate you'd be eligible for. They'll also give you a ballpark total system cost so you can see what the net price would look like after rebates. This is an estimate — the final numbers come in a written proposal within 48 hours. But the estimate is usually within 10% of the final figure.",
-      },
-      { type: "h2", content: "Step 6: What We Leave You With" },
-      {
-        type: "paragraph",
-        content: "When the tech leaves — after about 20 minutes total — you'll have three things. First, a clear understanding of what rebates you likely qualify for and the approximate amounts. Second, a timeline for receiving a detailed written proposal (usually within 48 hours). Third, our contact information if you have follow-up questions. You will not have signed anything. You will not have committed to anything. Nobody will call you repeatedly to follow up. If you want to proceed, you call us. If you don't, that's fine — the assessment cost us time, not you money.",
-      },
-      { type: "h2", content: "What We Don't Do" },
-      {
-        type: "paragraph",
-        content: "We don't use scare tactics about your existing system. We don't claim your furnace is 'dangerous' to pressure you into a decision. We don't offer a 'today only' price. We don't send a closer after the tech leaves. We don't add you to a call list. Our business model is simple: NJ has generous rebates right now, a lot of homeowners don't know about them, and when we explain the numbers honestly, a good percentage of people decide to move forward on their own timeline. Pressure tactics aren't necessary when the math speaks for itself.",
+          "Any upcoming plans for the home? (Renovation, addition, selling — affects our recommendation)"
+        ]
       },
       {
-        type: "cta_box",
-        content: "Book your free 20-minute assessment. We'll show you the numbers and leave you alone to decide. No pressure, no obligation, no follow-up calls.",
-        buttonText: "Book My Free Assessment →",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "Step 5: The Numbers (5 Minutes)"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "Based on what the tech sees, they'll give you a ballpark price for the system that fits your home. This is an estimate — the final numbers come in a written proposal within 48 hours. But the estimate is usually within 10% of the final figure."
+      },
+      {
+        "type": "h2",
+        "content": "Step 6: What We Leave You With"
+      },
+      {
+        "type": "paragraph",
+        "content": "When the tech leaves — after about 20 minutes total — you'll have three things. First, a ballpark price for the system that fits your home. Second, a timeline for receiving a detailed written proposal (usually within 48 hours). Third, our contact information if you have follow-up questions. You will not have signed anything. You will not have committed to anything. Nobody will call you repeatedly to follow up. If you want to proceed, you call us. If you don't, that's fine — the assessment cost us time, not you money."
+      },
+      {
+        "type": "h2",
+        "content": "What We Don't Do"
+      },
+      {
+        "type": "paragraph",
+        "content": "We don't use scare tactics about your existing system. We don't claim your furnace is 'dangerous' to pressure you into a decision. We don't offer a 'today only' price. We don't send a closer after the tech leaves. We don't add you to a call list. Pressure tactics aren't necessary when the math speaks for itself."
+      },
+      {
+        "type": "cta_box",
+        "content": "Book your free 20-minute assessment. We'll show you the numbers and leave you alone to decide. No pressure, no obligation, no follow-up calls.",
+        "buttonText": "Book My Free Assessment →",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   // Post 7: NJ On-Bill Repayment
@@ -2546,234 +2459,269 @@ export const blogPosts: BlogPostData[] = [
   // ═══════════════════════════════════════════════════════════
 
   {
-    title: "R22 Refrigerant Is Banned in NJ — Here's Exactly What to Do Next",
-    slug: "r22-refrigerant-banned-nj-what-to-do",
-    date: "April 8, 2026",
-    readTime: "5 min read",
-    category: "Residential",
-    metaDescription: "R22 refrigerant was banned in 2020. NJ homeowners with R22 AC systems cannot recharge them. Here's what to do and how to get up to $16K in rebates.",
-    excerpt: "If your AC uses R22 refrigerant, you cannot recharge it. Here's what NJ homeowners need to know and how to get up to $16K back.",
-    sections: [
+    "title": "R22 Refrigerant Is Banned in NJ — Here's Exactly What to Do Next",
+    "slug": "r22-refrigerant-banned-nj-what-to-do",
+    "date": "April 8, 2026",
+    "readTime": "5 min read",
+    "category": "Residential",
+    "metaDescription": "R22 refrigerant was banned in 2020. NJ homeowners with R22 AC systems cannot recharge them.",
+    "excerpt": "If your AC uses R22 refrigerant, you cannot recharge it.",
+    "sections": [
       {
-        type: "intro",
-        content: "R22 refrigerant — also called Freon — was permanently banned in the United States on January 1, 2020. If your air conditioning system was installed before 2010, there is a good chance it uses R22. Here is what that means for you and what NJ homeowners can do about it.",
+        "type": "intro",
+        "content": "R22 refrigerant — also called Freon — was permanently banned in the United States on January 1, 2020. If your air conditioning system was installed before 2010, there is a good chance it uses R22. Here is what that means for you and what NJ homeowners can do about it."
       },
-      { type: "h2", content: "What Is R22 and Why Was It Banned?" },
       {
-        type: "paragraph",
-        content: "R22 is a hydrochlorofluorocarbon refrigerant that was widely used in residential AC systems from the 1970s through the 2000s. It was phased out under the Montreal Protocol because of its damaging effect on the ozone layer. The EPA banned production and import of R22 on January 1, 2020. Any remaining R22 is reclaimed from old systems and is extremely expensive — often $100 to $200 per pound.",
+        "type": "h2",
+        "content": "What Is R22 and Why Was It Banned?"
       },
-      { type: "h2", content: "What This Means for Your AC System" },
       {
-        type: "paragraph",
-        content: "If your AC uses R22 and it develops a refrigerant leak, you have two options — pay extremely high prices for reclaimed R22 to recharge it, or replace the entire system. Most HVAC technicians will tell you that recharging an R22 system is throwing money away. A single recharge can cost $500 to $2,000, and it does not fix the underlying leak. You will need to recharge again.",
+        "type": "paragraph",
+        "content": "R22 is a hydrochlorofluorocarbon refrigerant that was widely used in residential AC systems from the 1970s through the 2000s. It was phased out under the Montreal Protocol because of its damaging effect on the ozone layer. The EPA banned production and import of R22 on January 1, 2020. Any remaining R22 is reclaimed from old systems and is extremely expensive — often $100 to $200 per pound."
       },
-      { type: "h2", content: "The Better Option — Replace and Get Up to $16K in NJ Rebates" },
       {
-        type: "paragraph",
-        content: "NJ homeowners who replace their R22 system with a qualifying heat pump qualify for PSE&G rebates of up to $16,000, plus up to $2,000 from Mechanical Enterprise, for a combined total of up to $16,000. The new system will be dramatically more efficient — heat pumps use 50-60% less energy than old AC systems and also provide heating, so you can eliminate your oil or gas furnace too.",
+        "type": "h2",
+        "content": "What This Means for Your AC System"
       },
-      { type: "stat_box", content: "R22 Recharge Cost: $500-$2,000 per visit | New Heat Pump with Rebates: Often $0 out of pocket | Monthly Savings: $150-$300 on energy bills" },
       {
-        type: "checklist",
-        items: [
+        "type": "paragraph",
+        "content": "If your AC uses R22 and it develops a refrigerant leak, you have two options — pay extremely high prices for reclaimed R22 to recharge it, or replace the entire system. Most HVAC technicians will tell you that recharging an R22 system is throwing money away. A single recharge can cost $500 to $2,000, and it does not fix the underlying leak. You will need to recharge again."
+      },
+      {
+        "type": "h2",
+        "content": "Signs It's Time to Replace"
+      },
+      {
+        "type": "checklist",
+        "items": [
           "Your system was installed before 2010",
           "You have had refrigerant added in the past 3 years",
           "Your energy bills have been increasing",
           "Your system takes a long time to cool your home",
-          "Your technician mentioned R22 or Freon",
-        ],
-      },
-      { type: "h2", content: "How Mechanical Enterprise Handles It" },
-      {
-        type: "paragraph",
-        content: "We assess your home for free and identify every rebate you qualify for. We handle every PSE&G application and all paperwork at no cost to you. Most of our R22 replacement customers in NJ receive between $12,000 and $16,000 in combined rebates. Call (862) 419-1763 or book online.",
+          "Your technician mentioned R22 or Freon"
+        ]
       },
       {
-        type: "cta_box",
-        content: "Find out if your system uses R22 and what you qualify for. Free 20-minute assessment.",
-        buttonText: "Book Free Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "How Mechanical Enterprise Handles It"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "Call (862) 419-1763 or book online."
+      },
+      {
+        "type": "cta_box",
+        "content": "Find out if your system uses R22 and what you qualify for. Free 20-minute assessment.",
+        "buttonText": "Book Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "R22 vs R410A: What NJ Homeowners Need to Know Before Replacing Their AC",
-    slug: "r22-vs-r410a-difference-nj",
-    date: "April 8, 2026",
-    readTime: "4 min read",
-    category: "Residential",
-    metaDescription: "R22 and R410A are different refrigerants. R22 is banned and cannot be used in new systems. Here's what NJ homeowners need to know before replacing.",
-    excerpt: "R22 is banned. R410A replaced it but is also being phased down. Here is what NJ homeowners should know before choosing a new system.",
-    sections: [
+    "title": "R22 vs R410A: What NJ Homeowners Need to Know Before Replacing Their AC",
+    "slug": "r22-vs-r410a-difference-nj",
+    "date": "April 8, 2026",
+    "readTime": "4 min read",
+    "category": "Residential",
+    "metaDescription": "R22 and R410A are different refrigerants. R22 is banned and cannot be used in new systems. Here's what NJ homeowners need to know before replacing.",
+    "excerpt": "R22 is banned. R410A replaced it but is also being phased down. Here is what NJ homeowners should know before choosing a new system.",
+    "sections": [
       {
-        type: "intro",
-        content: "If you are replacing an R22 system, you need to understand the differences between refrigerants. R22 is banned, R410A has been the standard replacement for two decades, and now R454B is arriving as the next generation. Here is what matters for NJ homeowners making this decision in 2026.",
-      },
-      { type: "h2", content: "R22 vs R410A — What Changed and Why" },
-      {
-        type: "paragraph",
-        content: "R22 was the dominant residential refrigerant from the 1970s until the mid-2000s. It works well as a coolant but destroys the ozone layer, which is why the EPA phased it out entirely by January 2020. R410A replaced R22 starting around 2006 and became the standard in all new residential systems. R410A does not deplete the ozone layer, operates at higher pressures which means better efficiency, and has been the default choice for nearly 20 years. The two refrigerants are not interchangeable — you cannot put R410A into an R22 system. If your system uses R22, you need a completely new system regardless of which modern refrigerant you choose.",
-      },
-      { type: "stat_box", content: "R22: Banned since 2020, $100-200/lb | R410A: Current standard, widely available | R454B: Next generation, arriving 2025-2026" },
-      { type: "h2", content: "The Shift to R454B — Should You Wait?" },
-      {
-        type: "paragraph",
-        content: "Starting in 2025, the EPA is phasing down R410A in favor of R454B, which has a much lower global warming potential. Some manufacturers are already producing R454B systems. However, this does not mean you should wait. R410A systems will be supported, serviced, and recharged for decades to come. Waiting means paying more for R22 recharges, risking a complete system failure in summer, and potentially missing current rebate levels. The best time to replace an R22 system is now, regardless of whether you choose R410A or R454B equipment.",
-      },
-      { type: "h2", content: "What This Means for Your NJ Rebates" },
-      {
-        type: "paragraph",
-        content: "Both R410A and R454B heat pump systems qualify for PSE&G rebates up to $16,000. The refrigerant type does not affect your rebate eligibility — what matters is the system efficiency rating. We help you choose the right system for your home and maximize every available rebate. See our complete guide to NJ heat pump rebates for full details on eligibility.",
-      },
-      { type: "h2", content: "Which Refrigerant Should You Choose?" },
-      {
-        type: "paragraph",
-        content: "For most NJ homeowners replacing an R22 system in 2026, either R410A or R454B equipment will serve you well for 15-20 years. The most important factor is choosing a high-efficiency heat pump system that qualifies for maximum rebates. Mechanical Enterprise evaluates your home and recommends the best equipment for your specific situation. Call (862) 419-1763 for a free assessment.",
+        "type": "intro",
+        "content": "If you are replacing an R22 system, you need to understand the differences between refrigerants. R22 is banned, R410A has been the standard replacement for two decades, and now R454B is arriving as the next generation. Here is what matters for NJ homeowners making this decision in 2026."
       },
       {
-        type: "cta_box",
-        content: "Not sure which system is right for your home? We evaluate your current R22 setup and recommend the best replacement option — free, no obligation.",
-        buttonText: "Book Free Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "R22 vs R410A — What Changed and Why"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "R22 was the dominant residential refrigerant from the 1970s until the mid-2000s. It works well as a coolant but destroys the ozone layer, which is why the EPA phased it out entirely by January 2020. R410A replaced R22 starting around 2006 and became the standard in all new residential systems. R410A does not deplete the ozone layer, operates at higher pressures which means better efficiency, and has been the default choice for nearly 20 years. The two refrigerants are not interchangeable — you cannot put R410A into an R22 system. If your system uses R22, you need a completely new system regardless of which modern refrigerant you choose."
+      },
+      {
+        "type": "stat_box",
+        "content": "R22: Banned since 2020, $100-200/lb | R410A: Current standard, widely available | R454B: Next generation, arriving 2025-2026"
+      },
+      {
+        "type": "h2",
+        "content": "The Shift to R454B — Should You Wait?"
+      },
+      {
+        "type": "paragraph",
+        "content": "Starting in 2025, the EPA is phasing down R410A in favor of R454B, which has a much lower global warming potential. Some manufacturers are already producing R454B systems. However, this does not mean you should wait. R410A systems will be supported, serviced, and recharged for decades to come. The best time to replace an R22 system is now, regardless of whether you choose R410A or R454B equipment."
+      },
+      {
+        "type": "h2",
+        "content": "Which Refrigerant Should You Choose?"
+      },
+      {
+        "type": "paragraph",
+        "content": "For most NJ homeowners replacing an R22 system in 2026, either R410A or R454B equipment will serve you well for 15-20 years. Mechanical Enterprise evaluates your home and recommends the best equipment for your specific situation. Call (862) 419-1763 for a free assessment."
+      },
+      {
+        "type": "cta_box",
+        "content": "Not sure which system is right for your home? We evaluate your current R22 setup and recommend the best replacement option — free, no obligation.",
+        "buttonText": "Book Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "How Much Does R22 System Replacement Cost in NJ? (And How to Get It Free)",
-    slug: "how-much-does-r22-replacement-cost-nj",
-    date: "April 8, 2026",
-    readTime: "5 min read",
-    category: "Residential",
-    metaDescription: "R22 AC system replacement costs $8,000-$15,000 in NJ. But PSE&G rebates cover up to $16,000. Many NJ homeowners pay nothing. Here's how.",
-    excerpt: "R22 system replacement in NJ costs $8K-$15K before rebates. But with PSE&G rebates up to $16K, many homeowners pay nothing out of pocket.",
-    sections: [
+    "title": "How Much Does R22 System Replacement Cost in NJ? (And How to Get It Free)",
+    "slug": "how-much-does-r22-replacement-cost-nj",
+    "date": "April 8, 2026",
+    "readTime": "5 min read",
+    "category": "Residential",
+    "metaDescription": "R22 AC system replacement costs $8,000-$15,000 in NJ. Many NJ homeowners pay nothing. Here's how.",
+    "excerpt": "The most common question we hear from NJ homeowners with R22 systems is how much replacement will cost.",
+    "sections": [
       {
-        type: "intro",
-        content: "The most common question we hear from NJ homeowners with R22 systems is how much replacement will cost. The answer surprises most people — after rebates, many pay nothing out of pocket. Here is a complete cost breakdown.",
-      },
-      { type: "h2", content: "What R22 Replacement Costs Before Rebates" },
-      {
-        type: "paragraph",
-        content: "A full R22 system replacement in NJ typically costs between $8,000 and $15,000 before rebates. The exact cost depends on your home size, the type of system you choose, ductwork condition, and installation complexity. A standard central heat pump for a 1,500-2,000 square foot home runs $8,000 to $11,000. Larger homes or those needing ductwork modifications can reach $12,000 to $15,000. Ductless mini-split systems for smaller spaces start around $5,000 to $8,000.",
+        "type": "intro",
+        "content": "The most common question we hear from NJ homeowners with R22 systems is how much replacement will cost. Here is a complete cost breakdown."
       },
       {
-        type: "numbered_list",
-        items: [
+        "type": "h2",
+        "content": "What Affects Your Cost"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
           "Home size — larger homes need larger capacity systems",
           "System type — central heat pump vs ductless mini-split",
           "Ductwork condition — existing ducts may need sealing or replacement",
           "Electrical panel — some homes need a panel upgrade for heat pumps",
-          "Number of zones — multi-zone systems cost more but provide better comfort",
-        ],
-      },
-      { type: "stat_box", content: "Average R22 Replacement: $8,000-$15,000 | NJ Rebates: Up to $16,000 | Net Cost for Many NJ Homeowners: $0" },
-      { type: "h2", content: "How PSE&G Rebates Eliminate the Cost" },
-      {
-        type: "paragraph",
-        content: "PSE&G offers rebates up to $16,000 for qualifying heat pump installations through their NJ Clean Heat program. When you add Mechanical Enterprise's credit of up to $2,000, the combined rebates can exceed the total installation cost. We have had dozens of NJ homeowners walk away owing nothing after their R22 system was replaced with a brand new high-efficiency heat pump. Even homeowners who do not qualify for the maximum rebate typically receive $12,000 to $16,000 back, reducing their out-of-pocket cost to a fraction of the total.",
-      },
-      { type: "h2", content: "Real Examples from NJ Homeowners" },
-      {
-        type: "paragraph",
-        content: "A homeowner in Montclair with a 2,200 sq ft home replaced their R22 system with a central heat pump for $12,500. They received $14,200 in combined rebates and paid nothing out of pocket. A Newark homeowner replaced a failing R22 unit with a ductless system for $7,800 and received $9,100 in rebates. These are not unusual cases — they are typical for NJ homeowners who work with a contractor that knows how to maximize every available incentive. Call (862) 419-1763 to find out what your specific home qualifies for.",
+          "Number of zones — multi-zone systems cost more but provide better comfort"
+        ]
       },
       {
-        type: "cta_box",
-        content: "Want to know your exact cost after rebates? Our free assessment calculates your specific rebate amount based on your home and current system.",
-        buttonText: "Get Your Free Quote",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "Real Examples from NJ Homeowners"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "A homeowner in Montclair with a 2,200 sq ft home replaced their R22 system with a central heat pump for $12,500. Call (862) 419-1763 to find out what your specific home qualifies for."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Book a free in-home assessment. We size the system to your home and give you a written quote before you decide.",
+        "buttonText": "Get Your Free Quote",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "Your R22 AC Stopped Working in NJ — Should You Repair or Replace?",
-    slug: "r22-ac-not-working-nj",
-    date: "April 8, 2026",
-    readTime: "4 min read",
-    category: "Residential",
-    metaDescription: "R22 AC not working? Repair costs are skyrocketing because R22 is banned. NJ homeowners can replace and get up to $16K back. Here's the math.",
-    excerpt: "If your R22 AC stopped working, here is why replacing it makes more financial sense than repairing — and how to get up to $16K in NJ rebates.",
-    sections: [
+    "title": "Your R22 AC Stopped Working in NJ — Should You Repair or Replace?",
+    "slug": "r22-ac-not-working-nj",
+    "date": "April 8, 2026",
+    "readTime": "4 min read",
+    "category": "Residential",
+    "metaDescription": "R22 AC not working? Repair costs are skyrocketing because R22 is banned. Here's the math.",
+    "excerpt": "Your R22 AC just stopped working and you need a solution fast.",
+    "sections": [
       {
-        type: "intro",
-        content: "Your R22 AC just stopped working and you need a solution fast. Before you call for a repair, read this. The math almost always favors full replacement — especially with NJ rebates covering most or all of the cost.",
-      },
-      { type: "h2", content: "Why R22 Repairs Are a Money Pit" },
-      {
-        type: "paragraph",
-        content: "R22 refrigerant has been banned since January 2020. The only R22 available is reclaimed from other old systems, and the supply shrinks every year. A single R22 recharge now costs $500 to $2,000 depending on how much refrigerant your system needs. If the problem is a compressor failure, you are looking at $1,500 to $3,000 for the repair plus the cost of the R22 recharge. And here is the critical problem — these repairs do not fix the underlying age of the system. An R22 system that needs a major repair today will need another one within 12 to 24 months. You are spending thousands to keep a dying system running for a little while longer.",
-      },
-      { type: "stat_box", content: "R22 Recharge: $500-$2,000 | Compressor Repair: $1,500-$3,000 | New Heat Pump After Rebates: Often $0 | Annual Savings: $1,800-$3,600" },
-      { type: "h2", content: "The Repair vs Replace Math" },
-      {
-        type: "paragraph",
-        content: "Consider two scenarios for a typical NJ homeowner. Scenario A — you repair your R22 system for $2,000 now, then spend another $1,500 next year on another repair, plus your monthly energy bills stay high at $300 to $400 during summer. Total cost over 3 years: $5,500 in repairs plus $10,800 in energy bills. Scenario B — you replace the system now. After PSE&G rebates of up to $16,000, your out-of-pocket cost could be $0. Your monthly energy bills drop to $100 to $150 during summer. Total cost over 3 years: $0 in repairs plus $4,500 in energy bills. Replacement saves you over $11,000 in just three years.",
-      },
-      { type: "h2", content: "Emergency Replacement Is Faster Than You Think" },
-      {
-        type: "paragraph",
-        content: "If your AC failed and you are worried about timing, call us to book the earliest free in-home assessment. We can typically complete a full system replacement within 1 to 3 days of your assessment. You do not have to suffer through weeks without cooling. We also handle all PSE&G rebate paperwork so you do not have to worry about the application process while dealing with an AC emergency. Call (862) 419-1763 for a free assessment.",
+        "type": "intro",
+        "content": "Your R22 AC just stopped working and you need a solution fast. Before you call for a repair, read this."
       },
       {
-        type: "cta_box",
-        content: "R22 system down? Get a free assessment and find out how much you qualify for in NJ rebates. Most homeowners pay nothing for a brand new system.",
-        buttonText: "Get a Free Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "Why R22 Repairs Are a Money Pit"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "R22 refrigerant has been banned since January 2020. The only R22 available is reclaimed from other old systems, and the supply shrinks every year. A single R22 recharge now costs $500 to $2,000 depending on how much refrigerant your system needs. If the problem is a compressor failure, you are looking at $1,500 to $3,000 for the repair plus the cost of the R22 recharge. And here is the critical problem — these repairs do not fix the underlying age of the system. An R22 system that needs a major repair today will need another one within 12 to 24 months. You are spending thousands to keep a dying system running for a little while longer."
+      },
+      {
+        "type": "h2",
+        "content": "The Repair vs Replace Math"
+      },
+      {
+        "type": "paragraph",
+        "content": "Consider two scenarios for a typical NJ homeowner. Scenario A — you repair your R22 system for $2,000 now, then spend another $1,500 next year on another repair, plus your monthly energy bills stay high at $300 to $400 during summer. Total cost over 3 years: $5,500 in repairs plus $10,800 in energy bills. Scenario B — you replace the system now. Your monthly energy bills drop to $100 to $150 during summer. Total cost over 3 years: $0 in repairs plus $4,500 in energy bills. Replacement saves you over $11,000 in just three years."
+      },
+      {
+        "type": "h2",
+        "content": "Emergency Replacement Is Faster Than You Think"
+      },
+      {
+        "type": "paragraph",
+        "content": "If your AC failed and you are worried about timing, call us to book the earliest free in-home assessment. We can typically complete a full system replacement within 1 to 3 days of your assessment. You do not have to suffer through weeks without cooling. Call (862) 419-1763 for a free assessment."
+      },
+      {
+        "type": "cta_box",
+        "content": "R22 system down? Most homeowners pay nothing for a brand new system.",
+        "buttonText": "Get a Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "When Is the Right Time to Replace Your R22 System in NJ?",
-    slug: "when-to-replace-r22-system-nj",
-    date: "April 8, 2026",
-    readTime: "4 min read",
-    category: "Residential",
-    metaDescription: "Don't wait for your R22 system to fail completely. NJ homeowners who replace proactively get up to $16K in rebates. Here's when to act.",
-    excerpt: "The best time to replace your R22 system is before it fails completely. NJ homeowners can get up to $16K in rebates by acting now.",
-    sections: [
+    "title": "When Is the Right Time to Replace Your R22 System in NJ?",
+    "slug": "when-to-replace-r22-system-nj",
+    "date": "April 8, 2026",
+    "readTime": "4 min read",
+    "category": "Residential",
+    "metaDescription": "Don't wait for your R22 system to fail completely. Here's when to act.",
+    "excerpt": "The best time to replace your R22 system is before it fails completely.",
+    "sections": [
       {
-        type: "intro",
-        content: "Many NJ homeowners with R22 systems wait until their AC fails completely before replacing it. This is a costly mistake. Here is why timing matters and when you should act.",
-      },
-      { type: "h2", content: "Why Waiting Costs You More" },
-      {
-        type: "paragraph",
-        content: "When your R22 system fails in the middle of July, you are in emergency mode. Emergency replacements cost 10-20% more because you cannot shop around or wait for scheduling availability. HVAC contractors are fully booked in summer, so you may wait days or even weeks without cooling. You also lose the ability to plan around rebate timelines — some rebate programs have funding cycles that can run low later in the year. Homeowners who replace proactively in spring get the best scheduling, the best pricing, and the full range of rebate options.",
+        "type": "intro",
+        "content": "Many NJ homeowners with R22 systems wait until their AC fails completely before replacing it. This is a costly mistake. Here is why timing matters and when you should act."
       },
       {
-        type: "checklist",
-        items: [
+        "type": "h2",
+        "content": "Why Waiting Costs You More"
+      },
+      {
+        "type": "paragraph",
+        "content": "When your R22 system fails in the middle of July, you are in emergency mode. Emergency replacements cost 10-20% more because you cannot shop around or wait for scheduling availability. HVAC contractors are fully booked in summer, so you may wait days or even weeks without cooling."
+      },
+      {
+        "type": "checklist",
+        "items": [
           "Your system is making unusual noises — grinding, squealing, or banging",
           "Your energy bills have increased more than 20% year over year",
           "Some rooms are noticeably warmer or cooler than others",
           "Your system runs constantly but never reaches the set temperature",
           "You have had a refrigerant recharge in the past 2 years",
           "Your system is 15 or more years old",
-          "Repair costs have exceeded $1,000 in the past 12 months",
-        ],
-      },
-      { type: "h2", content: "The Best Time to Replace Is Spring" },
-      {
-        type: "paragraph",
-        content: "Spring is the ideal time for R22 replacement in NJ. Contractors have more availability, rebate funding is at its highest for the year, and you get your new system installed and tested before the first heat wave. PSE&G rebate programs operate on annual funding cycles — homeowners who apply earlier in the year historically receive the highest rebate amounts. Waiting until summer or fall risks reduced incentives if funding runs low.",
-      },
-      { type: "h2", content: "Rebate Funding Is Not Guaranteed Forever" },
-      {
-        type: "paragraph",
-        content: "The PSE&G rebate programs offering up to $16,000 for heat pump installation are based on current NJ clean energy policy. These programs can be modified, reduced, or ended. Homeowners who replace now lock in the current incentive levels, up to $16,000 today. There is no guarantee these numbers will be the same next year. Call (862) 419-1763 to get your free assessment scheduled.",
+          "Repair costs have exceeded $1,000 in the past 12 months"
+        ]
       },
       {
-        type: "cta_box",
-        content: "Do not wait for your R22 system to fail in the middle of summer. Book your free spring assessment now and lock in maximum rebates.",
-        buttonText: "Book Spring Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "The Best Time to Replace Is Spring"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "Spring is the ideal time for R22 replacement in NJ."
+      },
+      {
+        "type": "cta_box",
+        "content": "Do not wait for your R22 system to fail in the middle of summer.",
+        "buttonText": "Book Spring Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
@@ -2833,28 +2781,37 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    title: "Commercial R22 System Replacement in NJ — 80% Covered by PSE&G",
-    slug: "r22-commercial-replacement-nj",
-    date: "April 8, 2026",
-    readTime: "5 min read",
-    category: "Commercial",
-    metaDescription: "NJ commercial buildings with R22 systems can get up to 80% of replacement costs covered by PSE&G Direct Install Program. Free assessment.",
-    excerpt: "NJ commercial property owners with R22 systems can get up to 80% of replacement costs covered through PSE&G Direct Install.",
-    sections: [
+    "title": "Commercial R22 System Replacement in NJ — 80% Covered by PSE&G",
+    "slug": "r22-commercial-replacement-nj",
+    "date": "April 8, 2026",
+    "readTime": "5 min read",
+    "category": "Commercial",
+    "metaDescription": "NJ commercial buildings with R22 systems can get up to 80% of replacement costs covered by PSE&G Direct Install Program. Free assessment.",
+    "excerpt": "NJ commercial property owners with R22 systems can get up to 80% of replacement costs covered through PSE&G Direct Install.",
+    "sections": [
       {
-        type: "intro",
-        content: "Commercial buildings in NJ face the same R22 ban as residential properties, but the solution is different — and in many ways better. The PSE&G Direct Install Program covers up to 80% of HVAC replacement costs for qualifying commercial properties, and lighting upgrades are 100% free.",
+        "type": "intro",
+        "content": "Commercial buildings in NJ face the same R22 ban as residential properties, but the solution is different — and in many ways better. The PSE&G Direct Install Program covers up to 80% of HVAC replacement costs for qualifying commercial properties, and lighting upgrades are 100% free."
       },
-      { type: "h2", content: "The PSE&G Direct Install Program for Commercial R22" },
       {
-        type: "paragraph",
-        content: "PSE&G Direct Install is designed specifically for small to medium commercial properties in NJ. If your commercial building uses R22 HVAC equipment, you qualify for up to 80% coverage on the replacement cost. This is not a rebate you apply for after the fact — PSE&G pays the contractor directly, so your out-of-pocket cost is only 20% of the total project. For a $30,000 commercial HVAC replacement, you would pay approximately $6,000. The program also includes 100% free lighting upgrades — LED retrofits for your entire building at no cost to you.",
+        "type": "h2",
+        "content": "The PSE&G Direct Install Program for Commercial R22"
       },
-      { type: "stat_box", content: "HVAC Coverage: Up to 80% by PSE&G | Lighting Upgrades: 100% Free | Your Cost: As low as 20% of total project" },
-      { type: "h2", content: "Which Commercial Properties Qualify?" },
       {
-        type: "checklist",
-        items: [
+        "type": "paragraph",
+        "content": "PSE&G Direct Install is designed specifically for small to medium commercial properties in NJ. If your commercial building uses R22 HVAC equipment, you qualify for up to 80% coverage on the replacement cost. For a $30,000 commercial HVAC replacement, you would pay approximately $6,000. The program also includes 100% free lighting upgrades — LED retrofits for your entire building at no cost to you."
+      },
+      {
+        "type": "stat_box",
+        "content": "HVAC Coverage: Up to 80% by PSE&G | Lighting Upgrades: 100% Free | Your Cost: As low as 20% of total project"
+      },
+      {
+        "type": "h2",
+        "content": "Which Commercial Properties Qualify?"
+      },
+      {
+        "type": "checklist",
+        "items": [
           "Office buildings and professional spaces",
           "Restaurants and food service establishments",
           "Retail stores and shopping centers",
@@ -2862,25 +2819,28 @@ export const blogPosts: BlogPostData[] = [
           "Nonprofit organizations",
           "Warehouses and light industrial facilities",
           "Medical and dental offices",
-          "Multi-unit residential buildings (5+ units)",
-        ],
+          "Multi-unit residential buildings (5+ units)"
+        ]
       },
       {
-        type: "paragraph",
-        content: "Most commercial properties served by PSE&G qualify for the Direct Install Program. The property must be in PSE&G service territory and have existing HVAC equipment that is being replaced with higher-efficiency systems. There is no minimum or maximum building size requirement, though the program is designed primarily for small to medium commercial properties.",
-      },
-      { type: "h2", content: "How to Get Started with Commercial R22 Replacement" },
-      {
-        type: "paragraph",
-        content: "Mechanical Enterprise is a certified PSE&G Direct Install contractor. We handle the entire process — assessment, PSE&G application, equipment selection, installation, and all paperwork. Our commercial assessment is free and typically takes 30-60 minutes depending on building size. We evaluate your existing R22 equipment, calculate your coverage amount, and provide a detailed proposal showing your cost after PSE&G covers their portion. Call (862) 419-1763 to schedule your free commercial assessment.",
+        "type": "paragraph",
+        "content": "Most commercial properties served by PSE&G qualify for the Direct Install Program. The property must be in PSE&G service territory and have existing HVAC equipment that is being replaced with higher-efficiency systems. There is no minimum or maximum building size requirement, though the program is designed primarily for small to medium commercial properties."
       },
       {
-        type: "cta_box",
-        content: "Own a commercial property with R22 HVAC? Get a free assessment and find out how much PSE&G will cover.",
-        buttonText: "Schedule Commercial Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/commercial",
+        "type": "h2",
+        "content": "How to Get Started with Commercial R22 Replacement"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise is a certified PSE&G Direct Install contractor. We handle the entire process — assessment, PSE&G application, equipment selection, installation, and all paperwork. Our commercial assessment is free and typically takes 30-60 minutes depending on building size. We evaluate your existing R22 equipment, calculate your coverage amount, and provide a detailed proposal showing your cost after PSE&G covers their portion. Call (862) 419-1763 to schedule your free commercial assessment."
+      },
+      {
+        "type": "cta_box",
+        "content": "Own a commercial property with R22 HVAC? Get a free assessment and find out how much PSE&G will cover.",
+        "buttonText": "Schedule Commercial Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ]
   },
 
   {
@@ -2974,45 +2934,49 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    title: "How Old Is Your HVAC System? NJ Systems Over 10 Years Old May Use R22",
-    slug: "r22-system-age-nj",
-    date: "April 8, 2026",
-    readTime: "4 min read",
-    category: "Residential",
-    metaDescription: "HVAC systems installed before 2010 in NJ likely use R22 refrigerant. Here's how to check and what to do about it.",
-    excerpt: "If your HVAC was installed before 2010, it probably uses R22. Here is how to check and what NJ homeowners should do about it.",
-    sections: [
+    "title": "How Old Is Your HVAC System? NJ Systems Over 10 Years Old May Use R22",
+    "slug": "r22-system-age-nj",
+    "date": "April 8, 2026",
+    "readTime": "4 min read",
+    "category": "Residential",
+    "metaDescription": "HVAC systems installed before 2010 in NJ likely use R22 refrigerant. Here's how to check and what to do about it.",
+    "excerpt": "If your HVAC was installed before 2010, it probably uses R22. Here is how to check and what NJ homeowners should do about it.",
+    "sections": [
       {
-        type: "intro",
-        content: "Not every homeowner knows what refrigerant their AC uses. But if your system was installed before 2010, there is a high probability it runs on R22 — a refrigerant that has been banned since 2020. Here is how to find out and why it matters for your wallet.",
+        "type": "intro",
+        "content": "Not every homeowner knows what refrigerant their AC uses. But if your system was installed before 2010, there is a high probability it runs on R22 — a refrigerant that has been banned since 2020. Here is how to find out and why it matters for your wallet."
       },
-      { type: "h2", content: "The R22 Timeline — When Systems Were Made" },
       {
-        type: "paragraph",
-        content: "R22 was the standard residential refrigerant from the 1970s through the mid-2000s. Manufacturers began transitioning to R410A around 2006, and by January 2010 all new AC systems were required to use R410A or another approved refrigerant. This means any AC system manufactured before 2010 almost certainly uses R22. Systems manufactured between 2006 and 2010 could use either refrigerant. If your system was installed in 2010 or later, it likely uses R410A and you do not have the R22 problem.",
+        "type": "h2",
+        "content": "The R22 Timeline — When Systems Were Made"
       },
-      { type: "h2", content: "3 Ways to Check If Your System Uses R22" },
       {
-        type: "numbered_list",
-        items: [
+        "type": "paragraph",
+        "content": "R22 was the standard residential refrigerant from the 1970s through the mid-2000s. Manufacturers began transitioning to R410A around 2006, and by January 2010 all new AC systems were required to use R410A or another approved refrigerant. This means any AC system manufactured before 2010 almost certainly uses R22. Systems manufactured between 2006 and 2010 could use either refrigerant. If your system was installed in 2010 or later, it likely uses R410A and you do not have the R22 problem."
+      },
+      {
+        "type": "h2",
+        "content": "3 Ways to Check If Your System Uses R22"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
           "Check the label on your outdoor unit — look for a sticker or nameplate that lists the refrigerant type. It will say R22, HCFC-22, or R410A. The label is usually on the side or back of the outdoor condenser unit.",
           "Check the installation date — look at your home purchase records, warranty documents, or the unit nameplate for a manufacture date. Any system made before 2010 is very likely R22.",
-          "Look up the model number — find the model number on your outdoor unit nameplate and search it online. The manufacturer specification sheet will list the refrigerant type.",
-        ],
-      },
-      { type: "stat_box", content: "Systems before 2006: 99% use R22 | Systems 2006-2010: Mixed R22/R410A | Systems after 2010: R410A or newer | Efficiency loss by age 15+: 30-50%" },
-      { type: "h2", content: "Why System Age Matters for Rebates" },
-      {
-        type: "paragraph",
-        content: "Older R22 systems are dramatically less efficient than modern heat pumps. A 15-year-old R22 system operates at roughly 10 SEER, while a modern heat pump operates at 18-22 SEER — nearly double the efficiency. This means your current system uses almost twice as much electricity as a new one to produce the same amount of cooling. NJ rebate programs specifically target older, less efficient systems because replacing them has the biggest impact on energy savings and carbon reduction. If your R22 system is 15 or more years old, you are likely to qualify for the highest rebate tier. Call (862) 419-1763 to confirm your system age and rebate eligibility.",
+          "Look up the model number — find the model number on your outdoor unit nameplate and search it online. The manufacturer specification sheet will list the refrigerant type."
+        ]
       },
       {
-        type: "cta_box",
-        content: "Not sure about your system? Our free assessment includes R22 identification, age verification, and a complete rebate calculation.",
-        buttonText: "Book Free System Check",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "stat_box",
+        "content": "Systems before 2006: 99% use R22 | Systems 2006-2010: Mixed R22/R410A | Systems after 2010: R410A or newer | Efficiency loss by age 15+: 30-50%"
       },
-    ],
+      {
+        "type": "cta_box",
+        "content": "Not sure about your system?",
+        "buttonText": "Book Free System Check",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
@@ -3220,299 +3184,341 @@ export const blogPosts: BlogPostData[] = [
   },
 
   {
-    title: "7 Signs Your R22 System Is Failing and It Is Time to Replace It in NJ",
-    slug: "signs-r22-system-failing-nj",
-    date: "April 8, 2026",
-    readTime: "5 min read",
-    category: "Residential",
-    metaDescription: "Watch for these 7 warning signs that your R22 AC system is failing in NJ. Replace before it breaks and get up to $16K in rebates.",
-    excerpt: "These 7 warning signs mean your R22 system is failing. NJ homeowners who replace proactively save thousands and get up to $16K in rebates.",
-    sections: [
+    "title": "7 Signs Your R22 System Is Failing and It Is Time to Replace It in NJ",
+    "slug": "signs-r22-system-failing-nj",
+    "date": "April 8, 2026",
+    "readTime": "5 min read",
+    "category": "Residential",
+    "metaDescription": "Watch for these 7 warning signs that your R22 AC system is failing in NJ.",
+    "excerpt": "These 7 warning signs mean your R22 system is failing.",
+    "sections": [
       {
-        type: "intro",
-        content: "R22 systems do not fail all at once — they deteriorate gradually. Knowing the warning signs lets you plan a replacement on your schedule instead of scrambling in an emergency. Here are 7 signs your R22 system is on its way out.",
+        "type": "intro",
+        "content": "R22 systems do not fail all at once — they deteriorate gradually. Knowing the warning signs lets you plan a replacement on your schedule instead of scrambling in an emergency. Here are 7 signs your R22 system is on its way out."
       },
-      { type: "h2", content: "The 7 Warning Signs" },
       {
-        type: "numbered_list",
-        items: [
+        "type": "h2",
+        "content": "The 7 Warning Signs"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
           "Rising energy bills — if your electric bill has increased 20% or more year over year without changes in usage, your R22 system is losing efficiency as it ages and components wear down",
           "Frequent repairs — if you have called for service more than twice in the past 12 months, your system is entering the failure cascade where one failing component stresses others",
           "Uneven cooling — hot spots or rooms that never reach the set temperature indicate your system can no longer distribute cooled air effectively, often due to a failing compressor or low refrigerant",
           "Strange noises — grinding, squealing, banging, or rattling sounds from the outdoor unit signal worn bearings, loose components, or a compressor that is about to seize",
           "Short cycling — the system turns on and off frequently in rapid cycles instead of running steadily, which indicates a refrigerant leak, electrical issue, or failing compressor",
           "Warm air from vents — if your system is running but blowing lukewarm air, it has likely lost a significant amount of R22 refrigerant through leaks and cannot cool effectively",
-          "Excessive moisture or ice — unusual condensation around the indoor unit or ice forming on the outdoor unit are signs of refrigerant problems that are expensive to fix on R22 systems",
-        ],
-      },
-      { type: "stat_box", content: "Emergency Replacement Cost Premium: 10-20% more | Planned Replacement: Full rebate access, best scheduling | Average Warning Period: 6-12 months before complete failure" },
-      { type: "h2", content: "Why Proactive Replacement Saves Money" },
-      {
-        type: "paragraph",
-        content: "Homeowners who replace their R22 system before complete failure save money in multiple ways. They avoid emergency pricing premiums of 10-20%. They choose from the full range of equipment options instead of whatever is in stock. They schedule installation during spring when contractors have availability and pricing is competitive. They also access the full range of rebate programs with proper documentation. An emergency replacement in July leaves no time for optimal rebate applications. Read our guide on when to replace your R22 system for more timing advice.",
-      },
-      { type: "h2", content: "What to Do If You See These Signs" },
-      {
-        type: "paragraph",
-        content: "If you recognize two or more of these signs in your R22 system, schedule a free assessment now — before the system fails completely. Mechanical Enterprise will evaluate your system, confirm whether it uses R22, and calculate your exact rebate eligibility. There is no cost and no obligation. Most NJ homeowners qualify for PSE&G rebates up to $16,000. Call (862) 419-1763 today.",
+          "Excessive moisture or ice — unusual condensation around the indoor unit or ice forming on the outdoor unit are signs of refrigerant problems that are expensive to fix on R22 systems"
+        ]
       },
       {
-        type: "cta_box",
-        content: "Seeing warning signs from your R22 system? Get ahead of the problem. Free assessment and rebate calculation.",
-        buttonText: "Book Free Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "Why Proactive Replacement Saves Money"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "Homeowners who replace their R22 system before complete failure save money in multiple ways. They avoid emergency pricing premiums of 10-20%. They choose from the full range of equipment options instead of whatever is in stock. They schedule installation during spring when contractors have availability and pricing is competitive. Read our guide on when to replace your R22 system for more timing advice."
+      },
+      {
+        "type": "h2",
+        "content": "What to Do If You See These Signs"
+      },
+      {
+        "type": "paragraph",
+        "content": "If you recognize two or more of these signs in your R22 system, schedule a free assessment now — before the system fails completely. There is no cost and no obligation. Call (862) 419-1763 today."
+      },
+      {
+        "type": "cta_box",
+        "content": "Seeing warning signs from your R22 system? Get ahead of the problem.",
+        "buttonText": "Book Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "How Much Does R22 Freon Cost in 2026? Why NJ Homeowners Are Replacing Instead",
-    slug: "r22-freon-cost-2026-nj",
-    date: "April 8, 2026",
-    readTime: "4 min read",
-    category: "Residential",
-    metaDescription: "R22 freon costs $100-200 per pound in 2026 because it is banned. NJ homeowners are replacing their systems and getting up to $16K in rebates instead.",
-    excerpt: "R22 freon costs $100-200 per pound in 2026 and rising. Here is why NJ homeowners are replacing their systems instead of recharging.",
-    sections: [
+    "title": "How Much Does R22 Freon Cost in 2026? Why NJ Homeowners Are Replacing Instead",
+    "slug": "r22-freon-cost-2026-nj",
+    "date": "April 8, 2026",
+    "readTime": "4 min read",
+    "category": "Residential",
+    "metaDescription": "R22 freon costs $100-200 per pound in 2026 because it is banned.",
+    "excerpt": "R22 freon costs $100-200 per pound in 2026 and rising. Here is why NJ homeowners are replacing their systems instead of recharging.",
+    "sections": [
       {
-        type: "intro",
-        content: "If your HVAC technician quoted you $800 to $2,000 for an R22 recharge and you thought that sounded high, you are right. R22 prices have skyrocketed since the 2020 ban and will only continue to rise. Here is what is happening and why replacement makes more sense.",
-      },
-      { type: "h2", content: "R22 Price History — A Disappearing Supply" },
-      {
-        type: "paragraph",
-        content: "Before the phase-out began, R22 cost contractors about $10 to $15 per pound wholesale. As the phase-out progressed through the 2010s, prices climbed steadily. After the complete ban on production and import in January 2020, the only R22 available is reclaimed from old systems being decommissioned. This finite and shrinking supply has driven wholesale prices to $50 to $100 per pound, which translates to $100 to $200 per pound retail when you factor in contractor markup, handling, and labor. A typical residential recharge uses 3 to 10 pounds of refrigerant.",
-      },
-      { type: "stat_box", content: "R22 Price 2015: $15/lb | R22 Price 2020: $50/lb | R22 Price 2026: $100-200/lb | Typical Recharge: 3-10 lbs = $500-$2,000" },
-      { type: "h2", content: "Why Recharging Is Throwing Money Away" },
-      {
-        type: "paragraph",
-        content: "An R22 recharge does not fix anything — it just adds refrigerant to compensate for a leak. The leak is still there and the system will lose refrigerant again within months. You are paying $500 to $2,000 every time, potentially multiple times per year, to keep a dying system running. Over 2 to 3 years, many homeowners spend $3,000 to $6,000 on recharges alone — and still end up needing a full replacement. That $3,000 to $6,000 wasted on recharges would have been better spent toward a new system that comes with up to $16,000 in NJ rebates.",
-      },
-      { type: "h2", content: "The Smarter Financial Move" },
-      {
-        type: "paragraph",
-        content: "Instead of paying $100 to $200 per pound for banned refrigerant, NJ homeowners are replacing their R22 systems with heat pumps and receiving PSE&G rebates of up to $16,000. Many pay nothing out of pocket for a brand new system that is twice as efficient as their old R22 unit. The monthly energy savings of $150 to $300 start immediately. Every dollar you spend on R22 recharges is a dollar you will never see again — but a new heat pump pays for itself and then some. Call (862) 419-1763 for a free assessment to see your numbers.",
+        "type": "intro",
+        "content": "If your HVAC technician quoted you $800 to $2,000 for an R22 recharge and you thought that sounded high, you are right. R22 prices have skyrocketed since the 2020 ban and will only continue to rise. Here is what is happening and why replacement makes more sense."
       },
       {
-        type: "cta_box",
-        content: "Stop paying $100-200 per pound for banned refrigerant. Replace your R22 system and get up to $16K in NJ rebates.",
-        buttonText: "Get Free Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "R22 Price History — A Disappearing Supply"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "Before the phase-out began, R22 cost contractors about $10 to $15 per pound wholesale. As the phase-out progressed through the 2010s, prices climbed steadily. After the complete ban on production and import in January 2020, the only R22 available is reclaimed from old systems being decommissioned. This finite and shrinking supply has driven wholesale prices to $50 to $100 per pound, which translates to $100 to $200 per pound retail when you factor in contractor markup, handling, and labor. A typical residential recharge uses 3 to 10 pounds of refrigerant."
+      },
+      {
+        "type": "stat_box",
+        "content": "R22 Price 2015: $15/lb | R22 Price 2020: $50/lb | R22 Price 2026: $100-200/lb | Typical Recharge: 3-10 lbs = $500-$2,000"
+      },
+      {
+        "type": "h2",
+        "content": "Why Recharging Is Throwing Money Away"
+      },
+      {
+        "type": "paragraph",
+        "content": "An R22 recharge does not fix anything — it just adds refrigerant to compensate for a leak. The leak is still there and the system will lose refrigerant again within months. You are paying $500 to $2,000 every time, potentially multiple times per year, to keep a dying system running. Over 2 to 3 years, many homeowners spend $3,000 to $6,000 on recharges alone — and still end up needing a full replacement."
+      },
+      {
+        "type": "h2",
+        "content": "The Smarter Financial Move"
+      },
+      {
+        "type": "paragraph",
+        "content": "The monthly energy savings of $150 to $300 start immediately. Every dollar you spend on R22 recharges is a dollar you will never see again — but a new heat pump pays for itself and then some. Call (862) 419-1763 for a free assessment to see your numbers."
+      },
+      {
+        "type": "cta_box",
+        "content": "Stop paying $100-200 per pound for banned refrigerant.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "How Much Will You Save by Replacing Your R22 System with a Heat Pump in NJ?",
-    slug: "r22-heat-pump-savings-nj",
-    date: "April 8, 2026",
-    readTime: "5 min read",
-    category: "Residential",
-    metaDescription: "NJ homeowners who replace R22 systems with heat pumps save $150-300 per month on energy bills plus get up to $16K in rebates.",
-    excerpt: "Replacing your R22 system with a heat pump saves $150-300 per month on energy bills in NJ, plus you get up to $16K in rebates.",
-    sections: [
+    "title": "How Much Will You Save by Replacing Your R22 System with a Heat Pump in NJ?",
+    "slug": "r22-heat-pump-savings-nj",
+    "date": "April 8, 2026",
+    "readTime": "5 min read",
+    "category": "Residential",
+    "metaDescription": "How Much Will You Save by Replacing Your R22 System with a Heat Pump in NJ? Free in-home assessment from Mechanical Enterprise: (862) 419-1763.",
+    "excerpt": "Here is a detailed breakdown of what you can expect to save every month and over the life of your new system.",
+    "sections": [
       {
-        type: "intro",
-        content: "The upfront rebates get the headlines, but the ongoing savings are what really make R22-to-heat-pump replacement a financial no-brainer for NJ homeowners. Here is a detailed breakdown of what you can expect to save every month and over the life of your new system.",
+        "type": "intro",
+        "content": "Here is a detailed breakdown of what you can expect to save every month and over the life of your new system."
       },
-      { type: "h2", content: "Monthly Energy Savings Breakdown" },
       {
-        type: "paragraph",
-        content: "An R22 system typically operates at 8 to 10 SEER efficiency. A modern heat pump operates at 18 to 22 SEER — roughly twice as efficient for cooling. For heating, the comparison is even more dramatic. If you currently heat with oil at $4.50 per gallon or natural gas, a heat pump provides the same heating at roughly 40-60% lower cost because it moves heat rather than generating it through combustion. NJ homeowners who replace R22 AC plus oil or gas heating with a heat pump typically see their combined energy bills drop from $400 to $600 per month to $150 to $250 per month during peak heating and cooling seasons.",
+        "type": "h2",
+        "content": "Monthly Energy Savings Breakdown"
       },
-      { type: "stat_box", content: "Cooling Savings: 50% lower electric bills | Heating Savings: 40-60% vs oil/gas | Monthly Reduction: $150-$300 | 15-Year Savings: $27,000-$54,000" },
-      { type: "h2", content: "Where the Savings Come From" },
       {
-        type: "numbered_list",
-        items: [
+        "type": "paragraph",
+        "content": "An R22 system typically operates at 8 to 10 SEER efficiency. A modern heat pump operates at 18 to 22 SEER — roughly twice as efficient for cooling. For heating, the comparison is even more dramatic. If you currently heat with oil at $4.50 per gallon or natural gas, a heat pump provides the same heating at roughly 40-60% lower cost because it moves heat rather than generating it through combustion. NJ homeowners who replace R22 AC plus oil or gas heating with a heat pump typically see their combined energy bills drop from $400 to $600 per month to $150 to $250 per month during peak heating and cooling seasons."
+      },
+      {
+        "type": "stat_box",
+        "content": "Cooling Savings: 50% lower electric bills | Heating Savings: 40-60% vs oil/gas | Monthly Reduction: $150-$300 | 15-Year Savings: $27,000-$54,000"
+      },
+      {
+        "type": "h2",
+        "content": "Where the Savings Come From"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
           "Cooling efficiency — your new system uses half the electricity for the same cooling output",
           "Heating efficiency — heat pumps are 300% efficient vs 80-95% for furnaces and boilers",
           "No oil delivery — eliminating oil heat saves $2,000 to $4,000 per year in NJ",
           "No R22 recharges — stop paying $500 to $2,000 per year for banned refrigerant",
           "Lower maintenance — new systems need less frequent and less expensive maintenance",
-          "Smart controls — modern heat pumps include smart thermostats that optimize scheduling",
-        ],
-      },
-      { type: "h2", content: "Total Savings Over 15 Years" },
-      {
-        type: "paragraph",
-        content: "A typical NJ homeowner who replaces their R22 system with a heat pump saves $150 to $300 per month on energy costs. Over the 15 to 20 year lifespan of a heat pump, that adds up to $27,000 to $72,000 in cumulative savings. Add the upfront rebates of up to $16,000 from PSE&G and Mechanical Enterprise, and the total financial benefit of replacing your R22 system reaches $47,000 to $92,000. There is no scenario where keeping an R22 system makes financial sense. Call (862) 419-1763 to get your personalized savings estimate.",
+          "Smart controls — modern heat pumps include smart thermostats that optimize scheduling"
+        ]
       },
       {
-        type: "cta_box",
-        content: "Want to know your exact monthly savings? Our free assessment includes a personalized energy savings calculation.",
-        buttonText: "Calculate My Savings",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "Total Savings Over 15 Years"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "A typical NJ homeowner who replaces their R22 system with a heat pump saves $150 to $300 per month on energy costs. Over the 15 to 20 year lifespan of a heat pump, that adds up to $27,000 to $72,000 in cumulative savings. There is no scenario where keeping an R22 system makes financial sense. Call (862) 419-1763 to get your personalized savings estimate."
+      },
+      {
+        "type": "cta_box",
+        "content": "Want to know your exact monthly savings? Our free assessment includes a personalized energy savings calculation.",
+        "buttonText": "Calculate My Savings",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "How to Tell If Your NJ Home Has an R22 System — 3 Easy Ways to Check",
-    slug: "r22-system-check-nj",
-    date: "April 8, 2026",
-    readTime: "3 min read",
-    category: "Residential",
-    metaDescription: "Not sure if your AC uses R22? Here are 3 easy ways NJ homeowners can check before calling a contractor.",
-    excerpt: "Not sure if your AC uses R22 refrigerant? Here are 3 easy ways to check without calling a technician.",
-    sections: [
+    "title": "How to Tell If Your NJ Home Has an R22 System — 3 Easy Ways to Check",
+    "slug": "r22-system-check-nj",
+    "date": "April 8, 2026",
+    "readTime": "3 min read",
+    "category": "Residential",
+    "metaDescription": "Not sure if your AC uses R22? Here are 3 easy ways NJ homeowners can check before calling a contractor.",
+    "excerpt": "Not sure if your AC uses R22 refrigerant? Here are 3 easy ways to check without calling a technician.",
+    "sections": [
       {
-        type: "intro",
-        content: "You have heard that R22 is banned and NJ homeowners can get up to $16,000 in rebates for replacing R22 systems. But you are not sure if your AC actually uses R22. Here are three simple ways to find out in the next 10 minutes.",
-      },
-      { type: "h2", content: "Method 1 — Check the Outdoor Unit Label" },
-      {
-        type: "paragraph",
-        content: "Walk outside to your air conditioning condenser — the box-shaped unit with a fan on top, usually located on the side or back of your house. Look for a metal nameplate or sticker on the unit. It will list the manufacturer, model number, serial number, and refrigerant type. If you see R-22, HCFC-22, or R22 listed under refrigerant, your system uses the banned refrigerant. If you see R-410A, your system uses the newer refrigerant and does not have the R22 issue.",
-      },
-      { type: "h2", content: "Method 2 — Check the Installation Date" },
-      {
-        type: "paragraph",
-        content: "If the label is faded or hard to read, check the installation date. Look at the serial number on the nameplate — many manufacturers encode the manufacture date in the first few characters. You can also check your home purchase inspection report, warranty documents, or prior HVAC service records. If the system was installed before 2010, it almost certainly uses R22. Systems installed between 2006 and 2010 could use either R22 or R410A. Systems installed after 2010 use R410A or newer refrigerants.",
-      },
-      { type: "h2", content: "Method 3 — Look Up the Model Number Online" },
-      {
-        type: "paragraph",
-        content: "Find the model number on the nameplate of your outdoor unit and search for it online. Enter the brand name and model number into any search engine. The manufacturer specification sheet will clearly list the refrigerant type. This is the most definitive method if the label on the unit is damaged or illegible. You can also call the manufacturer customer service line with your model number and they will tell you the refrigerant type.",
+        "type": "intro",
+        "content": "You have heard that R22 is banned, but you are not sure if your AC actually uses R22. Here are three simple ways to find out in the next 10 minutes."
       },
       {
-        type: "numbered_list",
-        items: [
+        "type": "h2",
+        "content": "Method 1 — Check the Outdoor Unit Label"
+      },
+      {
+        "type": "paragraph",
+        "content": "Walk outside to your air conditioning condenser — the box-shaped unit with a fan on top, usually located on the side or back of your house. Look for a metal nameplate or sticker on the unit. It will list the manufacturer, model number, serial number, and refrigerant type. If you see R-22, HCFC-22, or R22 listed under refrigerant, your system uses the banned refrigerant. If you see R-410A, your system uses the newer refrigerant and does not have the R22 issue."
+      },
+      {
+        "type": "h2",
+        "content": "Method 2 — Check the Installation Date"
+      },
+      {
+        "type": "paragraph",
+        "content": "If the label is faded or hard to read, check the installation date. Look at the serial number on the nameplate — many manufacturers encode the manufacture date in the first few characters. You can also check your home purchase inspection report, warranty documents, or prior HVAC service records. If the system was installed before 2010, it almost certainly uses R22. Systems installed between 2006 and 2010 could use either R22 or R410A. Systems installed after 2010 use R410A or newer refrigerants."
+      },
+      {
+        "type": "h2",
+        "content": "Method 3 — Look Up the Model Number Online"
+      },
+      {
+        "type": "paragraph",
+        "content": "Find the model number on the nameplate of your outdoor unit and search for it online. Enter the brand name and model number into any search engine. The manufacturer specification sheet will clearly list the refrigerant type. This is the most definitive method if the label on the unit is damaged or illegible. You can also call the manufacturer customer service line with your model number and they will tell you the refrigerant type."
+      },
+      {
+        "type": "numbered_list",
+        "items": [
           "Go outside and find your AC condenser unit",
           "Look for the nameplate or sticker on the side or back",
           "Find the refrigerant type — R-22 means you have the banned refrigerant",
           "If unreadable, check the install date — before 2010 means likely R22",
-          "If still unsure, search the model number online for specifications",
-        ],
-      },
-      { type: "h2", content: "What to Do If You Confirm R22" },
-      {
-        type: "paragraph",
-        content: "If your system uses R22, do not panic but do not wait either. Your system still works — but when it needs refrigerant or a major repair, the costs will be extreme because R22 is banned. The best move is to get a free assessment now while rebates are at their highest. NJ homeowners qualify for up to $16,000 in combined PSE&G and Mechanical Enterprise rebates. Call (862) 419-1763 or book online. See our complete guide to R22 replacement for full details.",
+          "If still unsure, search the model number online for specifications"
+        ]
       },
       {
-        type: "cta_box",
-        content: "Confirmed R22? Or still not sure? Either way, our free assessment identifies your refrigerant type and calculates your rebate amount.",
-        buttonText: "Book Free Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "What to Do If You Confirm R22"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "If your system uses R22, do not panic but do not wait either. Your system still works — but when it needs refrigerant or a major repair, the costs will be extreme because R22 is banned. Call (862) 419-1763 or book online. See our complete guide to R22 replacement for full details."
+      },
+      {
+        "type": "cta_box",
+        "content": "Confirmed R22? Or still not sure?",
+        "buttonText": "Book Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "How Long Does R22 System Replacement Take in NJ? What to Expect",
-    slug: "r22-replacement-timeline-nj",
-    date: "April 8, 2026",
-    readTime: "4 min read",
-    category: "Residential",
-    metaDescription: "R22 system replacement in NJ typically takes 1-2 days. Here is what to expect from assessment to installation to rebate check.",
-    excerpt: "R22 system replacement takes 1-2 days in NJ. Here is the full timeline from free assessment to rebate check in your mailbox.",
-    sections: [
+    "title": "How Long Does R22 System Replacement Take in NJ? What to Expect",
+    "slug": "r22-replacement-timeline-nj",
+    "date": "April 8, 2026",
+    "readTime": "4 min read",
+    "category": "Residential",
+    "metaDescription": "R22 system replacement in NJ typically takes 1-2 days.",
+    "excerpt": "R22 system replacement takes 1-2 days in NJ.",
+    "sections": [
       {
-        type: "intro",
-        content: "One of the most common concerns we hear from NJ homeowners is how long the process takes. The answer is shorter than most people expect. Here is a complete timeline so you know exactly what to plan for.",
-      },
-      { type: "h2", content: "The Full Timeline — Assessment to Rebate Check" },
-      {
-        type: "numbered_list",
-        items: [
-          "Day 1 — Free Assessment (20-30 minutes): We visit your home, evaluate your R22 system, measure your home, check ductwork and electrical, and calculate your exact rebate amount. You leave with a written proposal showing total cost, rebate amount, and net out-of-pocket cost.",
-          "Days 2-7 — Decision and Scheduling: You review the proposal and decide to proceed. We order your equipment and schedule your installation date. Most equipment ships within 3-5 business days.",
-          "Installation Day 1 (6-8 hours): Our crew removes your old R22 system, installs the new heat pump outdoor and indoor units, connects refrigerant lines, and runs electrical. For standard central systems this is a single-day job.",
-          "Installation Day 2 if needed (4-6 hours): Larger homes, multi-zone systems, or installations requiring ductwork modifications may need a second day. We complete all connections, test the system thoroughly, and walk you through the controls.",
-          "Week 1-2 After Installation: We submit your PSE&G rebate application with all required documentation including installation photos, equipment specifications, and efficiency ratings.",
-          "Weeks 6-12 After Submission: PSE&G processes your rebate application and mails your rebate check directly to you. Processing time varies but typically takes 6-12 weeks.",
-        ],
-      },
-      { type: "stat_box", content: "Assessment: 20-30 minutes | Installation: 1-2 days | Rebate Check: 6-12 weeks after submission | Total Process: 2-4 weeks assessment to installation" },
-      { type: "h2", content: "How to Prepare Your Home" },
-      {
-        type: "paragraph",
-        content: "Before installation day, clear a 3-foot area around your outdoor AC unit and your indoor furnace or air handler. Make sure our crew has clear access to the electrical panel. If you have pets, plan to keep them in a separate room during installation. The crew will need to turn off your HVAC system for the duration of installation. In warm weather, consider having fans available. In cold weather, have a space heater handy. Most installations are completed within a single day so any discomfort is minimal.",
-      },
-      { type: "h2", content: "What About Emergency Timelines?" },
-      {
-        type: "paragraph",
-        content: "If your R22 system has already failed and you need immediate replacement, Mechanical Enterprise offers expedited service. We book the earliest free assessment and schedule installation within 2-3 days if equipment is available locally. Emergency replacements still qualify for the full PSE&G rebate up to $16,000 — you do not lose any rebate eligibility by acting fast. Call (862) 419-1763 to discuss your timeline.",
+        "type": "intro",
+        "content": "One of the most common concerns we hear from NJ homeowners is how long the process takes. The answer is shorter than most people expect. Here is a complete timeline so you know exactly what to plan for."
       },
       {
-        type: "cta_box",
-        content: "Ready to start the process? Book your free 20-minute assessment and get your timeline started.",
-        buttonText: "Book Free Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "How to Prepare Your Home"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "Before installation day, clear a 3-foot area around your outdoor AC unit and your indoor furnace or air handler. Make sure our crew has clear access to the electrical panel. If you have pets, plan to keep them in a separate room during installation. The crew will need to turn off your HVAC system for the duration of installation. In warm weather, consider having fans available. In cold weather, have a space heater handy. Most installations are completed within a single day so any discomfort is minimal."
+      },
+      {
+        "type": "h2",
+        "content": "What About Emergency Timelines?"
+      },
+      {
+        "type": "paragraph",
+        "content": "If your R22 system has already failed and you need immediate replacement, Mechanical Enterprise offers expedited service. We book the earliest free assessment and schedule installation within 2-3 days if equipment is available locally. Call (862) 419-1763 to discuss your timeline."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to start the process? Book your free 20-minute assessment and get your timeline started.",
+        "buttonText": "Book Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
 
   {
-    title: "The Complete NJ Homeowner Guide to Replacing Your R22 System with a Heat Pump",
-    slug: "r22-heat-pump-nj-complete-guide",
-    date: "April 8, 2026",
-    readTime: "8 min read",
-    category: "Residential",
-    metaDescription: "Everything NJ homeowners need to know about replacing an R22 system with a heat pump — costs, rebates, timeline, and how to get up to $16K back.",
-    excerpt: "The complete guide to replacing your R22 system with a heat pump in NJ — costs, rebates, timeline, and how to get up to $16K back.",
-    sections: [
+    "title": "The Complete NJ Homeowner Guide to Replacing Your R22 System with a Heat Pump",
+    "slug": "r22-heat-pump-nj-complete-guide",
+    "date": "April 8, 2026",
+    "readTime": "8 min read",
+    "category": "Residential",
+    "metaDescription": "The Complete NJ Homeowner Guide to Replacing Your R22 System with a Heat Pump. Free in-home assessment from Mechanical Enterprise: (862) 419-1763.",
+    "excerpt": "This is the comprehensive guide for NJ homeowners considering R22 system replacement.",
+    "sections": [
       {
-        type: "intro",
-        content: "This is the comprehensive guide for NJ homeowners considering R22 system replacement. Whether you are just learning about the R22 ban or ready to schedule your replacement, this guide covers everything — what R22 is, how to check your system, your replacement options, costs, rebates, the process, and how to choose a contractor.",
-      },
-      { type: "h2", content: "What Is R22 and Why Does It Matter?" },
-      {
-        type: "paragraph",
-        content: "R22, also known as Freon, was the standard refrigerant in residential air conditioning from the 1970s through the mid-2000s. It was banned by the EPA on January 1, 2020 because it depletes the ozone layer. No new R22 can be manufactured or imported into the United States. The only R22 available is reclaimed from old systems, which is why prices have risen to $100 to $200 per pound. If your AC was installed before 2010, there is a high probability it uses R22. Check the nameplate on your outdoor unit or look up your model number online to confirm. See our guide to checking your R22 system for step-by-step instructions.",
-      },
-      { type: "h2", content: "Your Replacement Options" },
-      {
-        type: "paragraph",
-        content: "When replacing an R22 system, you have several options. A central heat pump replaces your existing central AC and can also replace your furnace, providing both heating and cooling from one system. A ductless mini-split heat pump is ideal for homes without ductwork or for adding zones to specific rooms. A hybrid system pairs a heat pump with your existing gas furnace for homes in extremely cold areas, though modern cold-climate heat pumps handle NJ winters without backup. Mechanical Enterprise evaluates your home and recommends the best option for your specific situation, always with an eye toward maximizing your rebate eligibility.",
+        "type": "intro",
+        "content": "This is the comprehensive guide for NJ homeowners considering R22 system replacement."
       },
       {
-        type: "checklist",
-        items: [
+        "type": "h2",
+        "content": "What Is R22 and Why Does It Matter?"
+      },
+      {
+        "type": "paragraph",
+        "content": "R22, also known as Freon, was the standard refrigerant in residential air conditioning from the 1970s through the mid-2000s. It was banned by the EPA on January 1, 2020 because it depletes the ozone layer. No new R22 can be manufactured or imported into the United States. The only R22 available is reclaimed from old systems, which is why prices have risen to $100 to $200 per pound. If your AC was installed before 2010, there is a high probability it uses R22. Check the nameplate on your outdoor unit or look up your model number online to confirm. See our guide to checking your R22 system for step-by-step instructions."
+      },
+      {
+        "type": "h2",
+        "content": "Your Replacement Options"
+      },
+      {
+        "type": "paragraph",
+        "content": "When replacing an R22 system, you have several options. A central heat pump replaces your existing central AC and can also replace your furnace, providing both heating and cooling from one system. A ductless mini-split heat pump is ideal for homes without ductwork or for adding zones to specific rooms. A hybrid system pairs a heat pump with your existing gas furnace for homes in extremely cold areas, though modern cold-climate heat pumps handle NJ winters without backup."
+      },
+      {
+        "type": "checklist",
+        "items": [
           "Central heat pump — best for homes with existing ductwork, replaces AC + furnace",
           "Ductless mini-split — best for homes without ducts or adding targeted zones",
           "Multi-zone system — best for larger homes needing room-by-room temperature control",
-          "Hybrid system — pairs heat pump with existing furnace for extreme cold backup",
-        ],
+          "Hybrid system — pairs heat pump with existing furnace for extreme cold backup"
+        ]
       },
-      { type: "h2", content: "Costs and Rebates — The Full Picture" },
       {
-        type: "paragraph",
-        content: "R22 system replacement in NJ costs $8,000 to $15,000 before rebates, depending on home size and system type. PSE&G Clean Heat rebates cover up to $16,000 for qualifying installations — which exceeds the installation cost for most homes. Many NJ homeowners pay nothing out of pocket. Even those who do not qualify for the maximum typically pay 20-40% of the total cost after rebates. Read our detailed cost breakdown for specific numbers by home size and system type.",
+        "type": "h2",
+        "content": "The Replacement Process Step by Step"
       },
-      { type: "stat_box", content: "Before Rebates: $8,000-$15,000 | NJ Rebates: Up to $16,000 | Net Cost: Often $0" },
-      { type: "h2", content: "The Replacement Process Step by Step" },
       {
-        type: "numbered_list",
-        items: [
-          "Free assessment — 20-30 minutes, we evaluate your system, home, and rebate eligibility",
-          "Proposal — detailed written quote showing costs, rebates, and net out-of-pocket expense",
+        "type": "numbered_list",
+        "items": [
           "Equipment ordering — 3-5 business days for delivery after you approve",
           "Installation — 1-2 days for standard systems, minimal disruption to your home",
-          "System testing — thorough performance verification before crew leaves",
-          "Rebate submission — we file all PSE&G paperwork within 1-2 weeks of installation",
-          "Rebate receipt — PSE&G mails your check within 6-12 weeks of approval",
-        ],
-      },
-      { type: "h2", content: "How to Choose the Right Contractor" },
-      {
-        type: "paragraph",
-        content: "Not all contractors are equal when it comes to R22 replacement and rebate maximization. Look for a contractor that is licensed in NJ, has specific experience with PSE&G rebate applications, and handles all paperwork for you. Ask how many PSE&G rebate applications they have filed and what percentage have been approved at the maximum tier. Mechanical Enterprise has processed hundreds of successful PSE&G applications and maintains a near-perfect approval rate at the highest rebate tiers. We are also WMBE certified and serve all 15 NJ counties. Read our guide to PSE&G rebate contractors for more on what to look for.",
-      },
-      { type: "h2", content: "Frequently Asked Questions" },
-      {
-        type: "paragraph",
-        content: "Can I just recharge my R22 system? Technically yes, if a technician has reclaimed R22 available. But it costs $500 to $2,000 per recharge and does not fix the underlying problem. Can I switch to R410A without replacing the whole system? No. R22 and R410A operate at different pressures and require different components. The entire system must be replaced. Will my new system work in cold NJ winters? Yes. Modern cold-climate heat pumps operate efficiently down to -15 degrees Fahrenheit, well below NJ minimum temperatures. How long will the rebate programs last? PSE&G programs are funded annually and can be modified or reduced. Current rebate levels are not guaranteed for future years. Call (862) 419-1763 to get started while maximum rebates are available.",
+          "System testing — thorough performance verification before crew leaves"
+        ]
       },
       {
-        type: "cta_box",
-        content: "Ready to replace your R22 system? Start with a free assessment — we handle everything from equipment selection to rebate paperwork.",
-        buttonText: "Book Free Assessment",
-        buttonUrl: "https://mechanicalenterprise.com/rebate-calculator",
+        "type": "h2",
+        "content": "How to Choose the Right Contractor"
       },
-    ],
+      {
+        "type": "paragraph",
+        "content": "We are also WMBE certified and serve all 15 NJ counties."
+      },
+      {
+        "type": "h2",
+        "content": "Frequently Asked Questions"
+      },
+      {
+        "type": "paragraph",
+        "content": "Can I just recharge my R22 system? Technically yes, if a technician has reclaimed R22 available. But it costs $500 to $2,000 per recharge and does not fix the underlying problem. Can I switch to R410A without replacing the whole system? No. R22 and R410A operate at different pressures and require different components. The entire system must be replaced. Will my new system work in cold NJ winters? Yes. Modern cold-climate heat pumps operate efficiently down to -15 degrees Fahrenheit, well below NJ minimum temperatures."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to replace your R22 system?",
+        "buttonText": "Book Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
     title: "HVAC Rebates in Bergen County NJ: Complete 2026 Guide",
@@ -3700,63 +3706,152 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "Oil Heat Replacement in NJ 2026: Complete Guide",
-    slug: "oil-heat-replacement-nj-2026",
-    date: "April 12, 2026",
-    readTime: "8 min read",
-    category: "Oil Heat Replacement",
-    metaDescription: "Complete guide to replacing oil heat in NJ. Up to $16,000 in rebates available. Free assessment from Mechanical Enterprise.",
-    excerpt: "NJ homeowners replacing oil heating systems can qualify for up to $16,000 in combined rebates. Here's everything you need to know about switching in 2026.",
-    sections: [
-      { type: "intro", content: "If you're still heating your New Jersey home with oil, 2026 is the year to make the switch. Oil prices remain volatile, maintenance costs keep climbing, and — most importantly — NJ offers up to $16,000 in combined rebates for homeowners who replace oil heating with a high-efficiency heat pump. Mechanical Enterprise has helped hundreds of NJ homeowners make this transition, handling everything from system design to oil tank decommissioning to rebate paperwork." },
-      { type: "h2", content: "Why Replace Oil Heat Now?" },
-      { type: "paragraph", content: "Oil heating is the most expensive way to heat a home in New Jersey. The average oil-heated home spends $2,500-$4,000 per year on fuel alone, compared to $1,200-$1,800 for a heat pump. Oil furnaces also require annual maintenance, tank inspections, and eventual tank replacement — costs that add up quickly. Modern heat pumps provide both heating and cooling in one system, eliminate the need for an oil tank entirely, and qualify for massive NJ rebates." },
-      { type: "stat_box", content: "Average Annual Savings: $1,500-$2,000 | NJ Rebates: Up to $16,000" },
-      { type: "h2", content: "The Oil-to-Heat-Pump Conversion Process" },
-      { type: "paragraph", content: "The process typically takes 1-2 days for installation. First, Mechanical Enterprise performs a free assessment to determine the right heat pump size and configuration for your home. We then handle permits, installation, oil tank decommissioning, and all rebate paperwork. Most homeowners are surprised at how quickly and smoothly the transition goes — you wake up with oil heat and go to bed with a brand new heat pump, often paying little to nothing out of pocket after rebates." },
-      { type: "h2", content: "Oil Tank Decommissioning Included" },
-      { type: "paragraph", content: "One of the biggest concerns oil-heated homeowners have is what happens to their oil tank. Mechanical Enterprise includes oil tank decommissioning as part of our conversion package. We properly drain, clean, and decommission your tank according to NJ DEP regulations. This eliminates a major environmental liability and removes a potential obstacle to future home sales." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Oil Heat Replacement in NJ 2026: Complete Guide",
+    "slug": "oil-heat-replacement-nj-2026",
+    "date": "April 12, 2026",
+    "readTime": "8 min read",
+    "category": "Oil Heat Replacement",
+    "metaDescription": "Complete guide to replacing oil heat in NJ. Free assessment from Mechanical Enterprise.",
+    "excerpt": "Here's everything you need to know about switching in 2026.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "If you're still heating your New Jersey home with oil, 2026 is the year to make the switch."
+      },
+      {
+        "type": "h2",
+        "content": "Why Replace Oil Heat Now?"
+      },
+      {
+        "type": "paragraph",
+        "content": "Oil heating is the most expensive way to heat a home in New Jersey. The average oil-heated home spends $2,500-$4,000 per year on fuel alone, compared to $1,200-$1,800 for a heat pump. Oil furnaces also require annual maintenance, tank inspections, and eventual tank replacement — costs that add up quickly."
+      },
+      {
+        "type": "h2",
+        "content": "The Oil-to-Heat-Pump Conversion Process"
+      },
+      {
+        "type": "paragraph",
+        "content": "The process typically takes 1-2 days for installation. First, Mechanical Enterprise performs a free assessment to determine the right heat pump size and configuration for your home."
+      },
+      {
+        "type": "h2",
+        "content": "Oil Tank Decommissioning Included"
+      },
+      {
+        "type": "paragraph",
+        "content": "One of the biggest concerns oil-heated homeowners have is what happens to their oil tank. Mechanical Enterprise includes oil tank decommissioning as part of our conversion package. We properly drain, clean, and decommission your tank according to NJ DEP regulations. This eliminates a major environmental liability and removes a potential obstacle to future home sales."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Oil Furnace Replacement Cost in NJ: What to Expect in 2026",
-    slug: "oil-furnace-replacement-cost-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "Oil Heat Replacement",
-    metaDescription: "Oil furnace replacement costs $8K-$15K in NJ before rebates. PSE&G rebates cover up to $16K. Many homeowners pay $0 out of pocket.",
-    excerpt: "Replacing an oil furnace in NJ costs $8,000-$15,000 before rebates. With PSE&G rebates up to $16,000, many homeowners pay nothing out of pocket.",
-    sections: [
-      { type: "intro", content: "The cost of replacing an oil furnace in New Jersey ranges from $8,000 to $15,000 depending on your home's size, the type of heat pump you choose, and the complexity of the installation. But here's the good news: PSE&G rebates can cover up to $16,000 of that cost, meaning many NJ homeowners actually pay $0 out of pocket for a brand new heat pump system." },
-      { type: "h2", content: "Cost Breakdown by System Type" },
-      { type: "paragraph", content: "A basic single-zone heat pump system for a smaller NJ home runs $8,000-$10,000 installed. A multi-zone ductless mini-split system for a medium home costs $10,000-$13,000. A full ducted central heat pump for a larger home ranges $12,000-$15,000. These prices include removal of the old oil furnace, installation of the new system, and all electrical work. Mechanical Enterprise provides free quotes with exact pricing before any work begins." },
-      { type: "stat_box", content: "Small Home: $8K-$10K | Medium Home: $10K-$13K | Large Home: $12K-$15K | After Rebates: Often $0" },
-      { type: "h2", content: "How Rebates Offset the Cost" },
-      { type: "paragraph", content: "PSE&G's NJ Clean Heat program offers rebates up to $16,000 for oil-to-heat-pump conversions. For a typical $12,000 installation, a $14,000+ rebate means you're actually money ahead from day one. Mechanical Enterprise handles all rebate applications and ensures your system qualifies for the maximum available amount." },
-      { type: "h2", content: "Financing Options" },
-      { type: "paragraph", content: "If you prefer not to pay upfront, PSE&G's On-Bill Repayment program lets you finance the remaining cost (after rebates) through your monthly utility bill at 0% interest. Your monthly payment is typically less than what you were spending on oil, so you start saving immediately. Contact Mechanical Enterprise at (862) 419-1763 for a free quote." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Oil Furnace Replacement Cost in NJ: What to Expect in 2026",
+    "slug": "oil-furnace-replacement-cost-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "Oil Heat Replacement",
+    "metaDescription": "Oil Furnace Replacement Cost in NJ: What to Expect in 2026. Free in-home assessment from Mechanical Enterprise: (862) 419-1763.",
+    "excerpt": "The cost of replacing an oil furnace in New Jersey ranges from $8,000 to $15,000 depending on your home's size, the type of heat pump you choose, and the complexity of the installation.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "The cost of replacing an oil furnace in New Jersey ranges from $8,000 to $15,000 depending on your home's size, the type of heat pump you choose, and the complexity of the installation."
+      },
+      {
+        "type": "h2",
+        "content": "Cost Breakdown by System Type"
+      },
+      {
+        "type": "paragraph",
+        "content": "A basic single-zone heat pump system for a smaller NJ home runs $8,000-$10,000 installed. A multi-zone ductless mini-split system for a medium home costs $10,000-$13,000. A full ducted central heat pump for a larger home ranges $12,000-$15,000. These prices include removal of the old oil furnace, installation of the new system, and all electrical work. Mechanical Enterprise provides free quotes with exact pricing before any work begins."
+      },
+      {
+        "type": "h2",
+        "content": "Financing Options"
+      },
+      {
+        "type": "paragraph",
+        "content": "Your monthly payment is typically less than what you were spending on oil, so you start saving immediately. Contact Mechanical Enterprise at (862) 419-1763 for a free quote."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "How to Switch from Oil to Heat Pump in NJ",
-    slug: "switch-oil-to-heat-pump-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "Oil Heat Replacement",
-    metaDescription: "Step-by-step guide to switching from oil to heat pump in NJ. Up to $16,000 in rebates. Free assessment from Mechanical Enterprise.",
-    excerpt: "Switching from oil to a heat pump in NJ is easier than you think. Here's your step-by-step guide to making the switch and getting up to $16,000 in rebates.",
-    sections: [
-      { type: "intro", content: "Switching from oil heat to a heat pump is one of the smartest home upgrades you can make in New Jersey right now. Heat pumps cost less to operate, provide both heating and cooling, and qualify for up to $16,000 in combined NJ rebates. Here's exactly how to make the switch." },
-      { type: "h2", content: "Step-by-Step Process" },
-      { type: "numbered_list", items: ["Schedule a free assessment with Mechanical Enterprise — we evaluate your home and current system","Receive your custom quote with exact rebate amounts calculated","We handle all permits and PSE&G rebate pre-approval","Installation day: typically 1-2 days for complete conversion","Oil tank decommissioning (included in our service)","Final inspection and system commissioning","We submit all rebate paperwork — you receive your rebate check"] },
-      { type: "h2", content: "What Size Heat Pump Do You Need?" },
-      { type: "paragraph", content: "Heat pump sizing depends on your home's square footage, insulation, window count, and local climate. Mechanical Enterprise performs a Manual J load calculation during your free assessment to determine the exact right size. An undersized system won't heat effectively; an oversized system wastes energy. Getting it right is critical — and it's something our experienced technicians do every day across New Jersey." },
-      { type: "h2", content: "Timeline and What to Expect" },
-      { type: "paragraph", content: "From assessment to installation typically takes 2-4 weeks, depending on equipment availability and scheduling. The actual installation is usually completed in 1-2 days. Your home will have heat throughout the process — we don't remove the old system until the new one is ready to take over. Mechanical Enterprise coordinates everything so the transition is seamless." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "How to Switch from Oil to Heat Pump in NJ",
+    "slug": "switch-oil-to-heat-pump-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "Oil Heat Replacement",
+    "metaDescription": "Step-by-step guide to switching from oil to heat pump in NJ. Free assessment from Mechanical Enterprise.",
+    "excerpt": "Switching from oil to a heat pump in NJ is easier than you think.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Switching from oil heat to a heat pump is one of the smartest home upgrades you can make in New Jersey right now. Here's exactly how to make the switch."
+      },
+      {
+        "type": "h2",
+        "content": "Step-by-Step Process"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
+          "Schedule a free assessment with Mechanical Enterprise — we evaluate your home and current system",
+          "Installation day: typically 1-2 days for complete conversion",
+          "Oil tank decommissioning (included in our service)",
+          "Final inspection and system commissioning"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "What Size Heat Pump Do You Need?"
+      },
+      {
+        "type": "paragraph",
+        "content": "Heat pump sizing depends on your home's square footage, insulation, window count, and local climate. Mechanical Enterprise performs a Manual J load calculation during your free assessment to determine the exact right size. An undersized system won't heat effectively; an oversized system wastes energy. Getting it right is critical — and it's something our experienced technicians do every day across New Jersey."
+      },
+      {
+        "type": "h2",
+        "content": "Timeline and What to Expect"
+      },
+      {
+        "type": "paragraph",
+        "content": "From assessment to installation typically takes 2-4 weeks, depending on equipment availability and scheduling. The actual installation is usually completed in 1-2 days. Your home will have heat throughout the process — we don't remove the old system until the new one is ready to take over. Mechanical Enterprise coordinates everything so the transition is seamless."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
     title: "Oil to Electric Heat Conversion Rebates in NJ",
@@ -3779,99 +3874,244 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "Oil Heat vs Heat Pump: NJ Homeowner Comparison Guide",
-    slug: "oil-heat-vs-heat-pump-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "Oil Heat Replacement",
-    metaDescription: "Oil heat vs heat pump comparison for NJ homeowners. Cost, efficiency, rebates, and maintenance compared. Free assessment available.",
-    excerpt: "Should NJ homeowners keep oil heat or switch to a heat pump? Here's an honest side-by-side comparison of costs, efficiency, and rebates.",
-    sections: [
-      { type: "intro", content: "Many New Jersey homeowners wonder whether it's worth switching from oil heat to a heat pump. The answer in 2026 is almost always yes — but let's look at the numbers objectively so you can make an informed decision." },
-      { type: "h2", content: "Cost Comparison" },
-      { type: "paragraph", content: "Oil heat costs NJ homeowners an average of $2,500-$4,000 per year in fuel costs alone. Heat pumps cost $1,200-$1,800 per year for the same amount of heating — a savings of $1,300-$2,200 annually. Oil also requires annual tune-ups ($200-$300), eventual tank replacement ($3,000-$5,000), and carries the risk of fuel price spikes. Heat pumps have lower maintenance costs and no fuel price volatility." },
-      { type: "stat_box", content: "Oil Heat: $2,500-$4,000/yr | Heat Pump: $1,200-$1,800/yr | Annual Savings: $1,300-$2,200" },
-      { type: "h2", content: "Efficiency Comparison" },
-      { type: "paragraph", content: "Modern oil furnaces operate at 80-87% efficiency — meaning 13-20% of the fuel you buy is wasted. Heat pumps operate at 300-400% efficiency (called COP) because they move heat rather than create it. Even in NJ's coldest winter weather, cold-climate heat pumps maintain 200%+ efficiency. Plus, heat pumps provide cooling in summer — oil furnaces don't." },
-      { type: "h2", content: "The Rebate Factor" },
-      { type: "paragraph", content: "With up to $16,000 in NJ rebates available for oil-to-heat-pump conversions, the upfront cost difference is effectively eliminated. Most homeowners pay $0 out of pocket after rebates. This makes the decision straightforward: switch to a heat pump, eliminate oil costs, get cooling included, and pocket $16,000 in rebates. Mechanical Enterprise provides free assessments to show you exactly what your savings would be." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Oil Heat vs Heat Pump: NJ Homeowner Comparison Guide",
+    "slug": "oil-heat-vs-heat-pump-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "Oil Heat Replacement",
+    "metaDescription": "Oil heat vs heat pump comparison for NJ homeowners. Free assessment available.",
+    "excerpt": "Should NJ homeowners keep oil heat or switch to a heat pump?",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Many New Jersey homeowners wonder whether it's worth switching from oil heat to a heat pump. The answer in 2026 is almost always yes — but let's look at the numbers objectively so you can make an informed decision."
+      },
+      {
+        "type": "h2",
+        "content": "Cost Comparison"
+      },
+      {
+        "type": "paragraph",
+        "content": "Oil heat costs NJ homeowners an average of $2,500-$4,000 per year in fuel costs alone. Heat pumps cost $1,200-$1,800 per year for the same amount of heating — a savings of $1,300-$2,200 annually. Oil also requires annual tune-ups ($200-$300), eventual tank replacement ($3,000-$5,000), and carries the risk of fuel price spikes. Heat pumps have lower maintenance costs and no fuel price volatility."
+      },
+      {
+        "type": "stat_box",
+        "content": "Oil Heat: $2,500-$4,000/yr | Heat Pump: $1,200-$1,800/yr | Annual Savings: $1,300-$2,200"
+      },
+      {
+        "type": "h2",
+        "content": "Efficiency Comparison"
+      },
+      {
+        "type": "paragraph",
+        "content": "Modern oil furnaces operate at 80-87% efficiency — meaning 13-20% of the fuel you buy is wasted. Heat pumps operate at 300-400% efficiency (called COP) because they move heat rather than create it. Even in NJ's coldest winter weather, cold-climate heat pumps maintain 200%+ efficiency. Plus, heat pumps provide cooling in summer — oil furnaces don't."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Best Heat Pumps for Replacing Oil Systems in NJ",
-    slug: "best-heat-pump-oil-replacement-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "Oil Heat Replacement",
-    metaDescription: "Best heat pump brands and models for replacing oil heat in NJ. Mitsubishi, Daikin, Carrier reviewed. Free assessment available.",
-    excerpt: "Which heat pump is best for replacing oil heat in NJ? We review the top brands and models that qualify for maximum PSE&G rebates.",
-    sections: [
-      { type: "intro", content: "When replacing an oil heating system in New Jersey, choosing the right heat pump is critical for both comfort and maximum rebate qualification. Not all heat pumps are created equal — you need a cold-climate rated system that can handle NJ winters while meeting PSE&G's efficiency requirements for the highest rebate tiers." },
-      { type: "h2", content: "Top Heat Pump Brands for NJ Oil Replacement" },
-      { type: "paragraph", content: "Mechanical Enterprise installs and recommends several top-tier heat pump brands for NJ oil replacements. Mitsubishi Hyper-Heat systems are our most popular recommendation — they maintain heating capacity down to -13°F, far below NJ's typical winter lows. Daikin Fit and VRV systems offer excellent efficiency for both residential and light commercial applications. Carrier and Lennox also offer strong cold-climate options. All of these brands have models that meet PSE&G's highest rebate tier requirements." },
-      { type: "h2", content: "Ducted vs Ductless for Oil Replacement" },
-      { type: "paragraph", content: "If your oil-heated home already has ductwork, a ducted central heat pump is often the simplest replacement — same ductwork, new efficient system. If your home doesn't have ducts (common with oil boiler/radiator systems), ductless mini-splits are the ideal solution. They mount on the wall, require only a small hole for refrigerant lines, and provide room-by-room temperature control. Mechanical Enterprise evaluates your home's specific situation during our free assessment." },
-      { type: "h2", content: "Rebate-Qualifying Specifications" },
-      { type: "paragraph", content: "To qualify for maximum PSE&G rebates, your heat pump must meet minimum HSPF2 and SEER2 ratings. The exact numbers vary by system type, but generally you need SEER2 of 15+ and HSPF2 of 8+. All systems Mechanical Enterprise installs meet or exceed these requirements — we wouldn't recommend a system that doesn't qualify for the best available rebates." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Best Heat Pumps for Replacing Oil Systems in NJ",
+    "slug": "best-heat-pump-oil-replacement-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "Oil Heat Replacement",
+    "metaDescription": "Best heat pump brands and models for replacing oil heat in NJ. Mitsubishi, Daikin, Carrier reviewed. Free assessment available.",
+    "excerpt": "Which heat pump is best for replacing oil heat in NJ?",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Replacing oil heat with a cold-climate heat pump is one of the biggest upgrades a New Jersey home can make. The right choice depends on your home, your ductwork and how the system is sized, so here is what to compare before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Top Heat Pump Brands for NJ Oil Replacement"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise installs and recommends several top-tier heat pump brands for NJ oil replacements. Mitsubishi Hyper-Heat systems are our most popular recommendation — they maintain heating capacity down to -13°F, far below NJ's typical winter lows. Daikin Fit and VRV systems offer excellent efficiency for both residential and light commercial applications. Carrier and Lennox also offer strong cold-climate options."
+      },
+      {
+        "type": "h2",
+        "content": "Ducted vs Ductless for Oil Replacement"
+      },
+      {
+        "type": "paragraph",
+        "content": "If your oil-heated home already has ductwork, a ducted central heat pump is often the simplest replacement — same ductwork, new efficient system. If your home doesn't have ducts (common with oil boiler/radiator systems), ductless mini-splits are the ideal solution. They mount on the wall, require only a small hole for refrigerant lines, and provide room-by-room temperature control. Mechanical Enterprise evaluates your home's specific situation during our free assessment."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Oil Heat Replacement in Essex County NJ",
-    slug: "oil-heat-essex-county-replacement",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "Oil Heat Replacement",
-    metaDescription: "Essex County NJ oil heat replacement guide. Up to $16,000 in rebates. Serving Newark, Montclair, West Orange. Free assessment.",
-    excerpt: "Essex County homeowners replacing oil heat can get up to $16,000 in rebates. Serving Newark, Montclair, West Orange, and all Essex County.",
-    sections: [
-      { type: "intro", content: "Essex County has one of the highest concentrations of oil-heated homes in New Jersey. From older Victorians in Montclair to multi-family properties in Newark to colonials in West Orange, thousands of Essex County homes still rely on expensive, inefficient oil heating. In 2026, these homeowners can qualify for up to $16,000 in rebates to switch to a modern heat pump." },
-      { type: "h2", content: "Why Essex County Has So Many Oil-Heated Homes" },
-      { type: "paragraph", content: "Essex County's housing stock dates primarily from the early-to-mid 20th century, when oil was the standard heating fuel. Many of these homes still have original oil furnaces or boilers — some 30-40 years old. These systems are not only expensive to operate but increasingly difficult to maintain as parts become scarce. Natural gas conversion was once the go-to upgrade, but heat pumps now offer better efficiency, lower operating costs, and significantly higher rebates." },
-      { type: "stat_box", content: "Essex County Oil Homes: Thousands | NJ Rebates: Up to $16,000" },
-      { type: "h2", content: "Your Local Essex County Contractor" },
-      { type: "paragraph", content: "Mechanical Enterprise is headquartered in Newark and serves all of Essex County. We're a WMBE-certified, PSE&G-approved contractor with deep expertise in oil-to-heat-pump conversions. We handle everything: assessment, system design, installation, oil tank decommissioning, and rebate paperwork. Call (862) 419-1763 for your free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Oil Heat Replacement in Essex County NJ",
+    "slug": "oil-heat-essex-county-replacement",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "Oil Heat Replacement",
+    "metaDescription": "Essex County NJ oil heat replacement guide. Serving Newark, Montclair, West Orange. Free assessment.",
+    "excerpt": "Serving Newark, Montclair, West Orange, and all Essex County.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Essex County has one of the highest concentrations of oil-heated homes in New Jersey. From older Victorians in Montclair to multi-family properties in Newark to colonials in West Orange, thousands of Essex County homes still rely on expensive, inefficient oil heating."
+      },
+      {
+        "type": "h2",
+        "content": "Why Essex County Has So Many Oil-Heated Homes"
+      },
+      {
+        "type": "paragraph",
+        "content": "Essex County's housing stock dates primarily from the early-to-mid 20th century, when oil was the standard heating fuel. Many of these homes still have original oil furnaces or boilers — some 30-40 years old. These systems are not only expensive to operate but increasingly difficult to maintain as parts become scarce."
+      },
+      {
+        "type": "h2",
+        "content": "Your Local Essex County Contractor"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise is headquartered in Newark and serves all of Essex County. Call (862) 419-1763 for your free assessment."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Oil Heat Replacement in Newark NJ: Local Guide",
-    slug: "oil-heat-newark-nj-replacement",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "Oil Heat Replacement",
-    metaDescription: "Newark NJ oil heat replacement guide. Up to $16,000 in rebates available. Local WMBE-certified contractor. Free assessment.",
-    excerpt: "Newark homeowners replacing oil heat can qualify for up to $16,000 in rebates. Mechanical Enterprise is your local Newark HVAC contractor.",
-    sections: [
-      { type: "intro", content: "Newark has a high percentage of oil-heated homes, particularly in the North Ward, Forest Hill, and Ironbound neighborhoods. These homeowners face rising oil costs and aging equipment — but also have access to up to $16,000 in combined rebates to switch to efficient heat pump systems. As a Newark-based HVAC contractor, Mechanical Enterprise is uniquely positioned to help." },
-      { type: "h2", content: "Newark Oil Heat by the Numbers" },
-      { type: "paragraph", content: "Thousands of Newark homes still use oil heat, many with systems installed 20-30+ years ago. Average heating costs for oil-heated Newark homes run $2,500-$3,500 per winter. A new heat pump can cut that in half while also providing air conditioning in summer — something most oil-heated homes don't have. With PSE&G rebates up to $16,000, the upgrade often costs nothing out of pocket." },
-      { type: "stat_box", content: "Newark Oil Heating Cost: $2,500-$3,500/yr | Heat Pump Cost: $1,200-$1,800/yr | Rebates: Up to $16,000" },
-      { type: "h2", content: "Newark's Local HVAC Contractor" },
-      { type: "paragraph", content: "Mechanical Enterprise is based right here in Newark. We're WMBE-certified, licensed in New Jersey, and approved by PSE&G. We understand Newark's housing stock — from Ironbound row houses to North Ward multi-families to Vailsburg singles. We provide free assessments, handle all permits and rebate paperwork. Call (862) 419-1763 to get started." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Oil Heat Replacement in Newark NJ: Local Guide",
+    "slug": "oil-heat-newark-nj-replacement",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "Oil Heat Replacement",
+    "metaDescription": "Newark NJ oil heat replacement guide. Local WMBE-certified contractor. Free assessment.",
+    "excerpt": "Mechanical Enterprise is your local Newark HVAC contractor.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Newark has a high percentage of oil-heated homes, particularly in the North Ward, Forest Hill, and Ironbound neighborhoods. As a Newark-based HVAC contractor, Mechanical Enterprise is uniquely positioned to help."
+      },
+      {
+        "type": "h2",
+        "content": "Newark Oil Heat by the Numbers"
+      },
+      {
+        "type": "paragraph",
+        "content": "Thousands of Newark homes still use oil heat, many with systems installed 20-30+ years ago. Average heating costs for oil-heated Newark homes run $2,500-$3,500 per winter. A new heat pump can cut that in half while also providing air conditioning in summer — something most oil-heated homes don't have."
+      },
+      {
+        "type": "h2",
+        "content": "Newark's Local HVAC Contractor"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise is based right here in Newark. We understand Newark's housing stock — from Ironbound row houses to North Ward multi-families to Vailsburg singles. Call (862) 419-1763 to get started."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "VRF/VRV System Installation in NJ: Complete Guide",
-    slug: "vrf-vrv-system-installation-nj",
-    date: "April 12, 2026",
-    readTime: "8 min read",
-    category: "Commercial HVAC",
-    metaDescription: "VRF/VRV system installation guide for NJ businesses. Up to 80% covered by PSE&G. Mechanical Enterprise are VRV specialists.",
-    excerpt: "VRF/VRV systems provide the most efficient commercial heating and cooling. NJ businesses can get up to 80% covered by PSE&G Direct Install.",
-    sections: [
-      { type: "intro", content: "Variable Refrigerant Flow (VRF/VRV) systems represent the cutting edge of commercial HVAC technology. They provide simultaneous heating and cooling to different zones, operate at exceptional efficiency levels, and significantly reduce energy costs. For NJ businesses, the economics are even better — PSE&G's Direct Install program can cover up to 80% of VRF installation costs." },
-      { type: "h2", content: "What Makes VRF/VRV Systems Superior?" },
-      { type: "paragraph", content: "VRF systems use variable-speed compressors that adjust output to match exactly what each zone needs. Traditional systems are either on or off — VRF systems modulate continuously, resulting in 30-50% energy savings compared to conventional HVAC. Each zone can be independently controlled, so a south-facing office can cool while a north-facing conference room heats. The systems are also remarkably quiet, making them ideal for offices, medical facilities, and hospitality environments." },
-      { type: "checklist", items: ["Individual zone control for every room","Simultaneous heating and cooling capability","30-50% energy savings vs conventional systems","Ultra-quiet operation","Compact outdoor units save rooftop space","PSE&G Direct Install covers up to 80% of cost"] },
-      { type: "h2", content: "Best Applications for VRF in NJ" },
-      { type: "paragraph", content: "VRF systems excel in multi-story office buildings, medical facilities, hotels, retail spaces, and mixed-use developments. Mechanical Enterprise specializes in VRF/VRV design and installation throughout New Jersey. We're certified by Daikin and Mitsubishi — the two leading VRF manufacturers — and have installed systems in hundreds of NJ commercial properties." },
-      { type: "h2", content: "PSE&G Coverage for VRF Systems" },
-      { type: "paragraph", content: "VRF systems qualify for PSE&G's Direct Install program, with coverage up to 80% of total project cost. Given that VRF installations can range from $50,000 to $200,000+ depending on building size, the PSE&G subsidy represents enormous savings. Contact Mechanical Enterprise at (862) 419-1763 for a free VRF assessment." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "VRF/VRV System Installation in NJ: Complete Guide",
+    "slug": "vrf-vrv-system-installation-nj",
+    "date": "April 12, 2026",
+    "readTime": "8 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "VRF/VRV system installation guide for NJ businesses. Up to 80% covered by PSE&G. Mechanical Enterprise are VRV specialists.",
+    "excerpt": "VRF/VRV systems provide the most efficient commercial heating and cooling. NJ businesses can get up to 80% covered by PSE&G Direct Install.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Variable Refrigerant Flow (VRF/VRV) systems represent the cutting edge of commercial HVAC technology. They provide simultaneous heating and cooling to different zones, operate at exceptional efficiency levels, and significantly reduce energy costs. For NJ businesses, the economics are even better — PSE&G's Direct Install program can cover up to 80% of VRF installation costs."
+      },
+      {
+        "type": "h2",
+        "content": "What Makes VRF/VRV Systems Superior?"
+      },
+      {
+        "type": "paragraph",
+        "content": "VRF systems use variable-speed compressors that adjust output to match exactly what each zone needs. Traditional systems are either on or off — VRF systems modulate continuously, resulting in 30-50% energy savings compared to conventional HVAC. Each zone can be independently controlled, so a south-facing office can cool while a north-facing conference room heats. The systems are also remarkably quiet, making them ideal for offices, medical facilities, and hospitality environments."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Individual zone control for every room",
+          "Simultaneous heating and cooling capability",
+          "30-50% energy savings vs conventional systems",
+          "Ultra-quiet operation",
+          "Compact outdoor units save rooftop space",
+          "PSE&G Direct Install covers up to 80% of cost"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Best Applications for VRF in NJ"
+      },
+      {
+        "type": "paragraph",
+        "content": "VRF systems excel in multi-story office buildings, medical facilities, hotels, retail spaces, and mixed-use developments. Mechanical Enterprise specializes in VRF/VRV design and installation throughout New Jersey. We're certified by Daikin and Mitsubishi — the two leading VRF manufacturers — and have installed systems in hundreds of NJ commercial properties."
+      },
+      {
+        "type": "h2",
+        "content": "PSE&G Coverage for VRF Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "VRF systems qualify for PSE&G's Direct Install program, with coverage up to 80% of total project cost. Given that VRF installations can range from $50,000 to $200,000+ depending on building size, the PSE&G subsidy represents enormous savings. Contact Mechanical Enterprise at (862) 419-1763 for a free VRF assessment."
+      },
+      {
+        "type": "cta_box",
+        "content": "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.",
+        "buttonText": "Get Free Commercial Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
     title: "Commercial Heat Pump Rebates in NJ 2026",
@@ -3894,58 +4134,130 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "Warehouse HVAC Solutions in NJ",
-    slug: "warehouse-hvac-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "Commercial HVAC",
-    metaDescription: "Warehouse HVAC solutions in NJ. PSE&G Direct Install covers up to 80%. Free assessment from Mechanical Enterprise.",
-    excerpt: "NJ warehouses can upgrade HVAC with PSE&G covering up to 80% of costs. Plus 100% free lighting upgrades. Free assessment available.",
-    sections: [
-      { type: "intro", content: "New Jersey's warehouses and distribution centers face unique HVAC challenges: large open spaces, high ceilings, loading dock exposure, and the need to maintain specific temperature ranges for inventory protection. PSE&G's Direct Install program makes warehouse HVAC upgrades dramatically more affordable, covering up to 80% of replacement costs." },
-      { type: "h2", content: "Warehouse HVAC Options" },
-      { type: "paragraph", content: "Mechanical Enterprise designs warehouse HVAC systems tailored to your specific operation. Options include rooftop units for zone heating/cooling, high-volume low-speed (HVLS) fans for air circulation, radiant heating for loading dock areas, and VRF systems for office spaces within the warehouse. We also handle warehouse lighting upgrades — 100% free through the Direct Install program." },
-      { type: "stat_box", content: "HVAC: Up to 80% Covered | Lighting: 100% Free | OBR: 0% Interest" },
-      { type: "h2", content: "Get a Free Warehouse Assessment" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free warehouse HVAC assessments throughout New Jersey. We evaluate your current system, calculate Direct Install savings, and design a solution that meets your operational needs. Call (862) 419-1763 to schedule." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Warehouse HVAC Solutions in NJ",
+    "slug": "warehouse-hvac-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Warehouse HVAC solutions in NJ. PSE&G Direct Install covers up to 80%. Free assessment from Mechanical Enterprise.",
+    "excerpt": "NJ warehouses can upgrade HVAC with PSE&G covering up to 80% of costs. Plus 100% free lighting upgrades. Free assessment available.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "New Jersey's warehouses and distribution centers face unique HVAC challenges: large open spaces, high ceilings, loading dock exposure, and the need to maintain specific temperature ranges for inventory protection. PSE&G's Direct Install program makes warehouse HVAC upgrades dramatically more affordable, covering up to 80% of replacement costs."
+      },
+      {
+        "type": "h2",
+        "content": "Warehouse HVAC Options"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise designs warehouse HVAC systems tailored to your specific operation. Options include rooftop units for zone heating/cooling, high-volume low-speed (HVLS) fans for air circulation, radiant heating for loading dock areas, and VRF systems for office spaces within the warehouse. We also handle warehouse lighting upgrades — 100% free through the Direct Install program."
+      },
+      {
+        "type": "h2",
+        "content": "Get a Free Warehouse Assessment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise provides free warehouse HVAC assessments throughout New Jersey. We evaluate your current system, calculate Direct Install savings, and design a solution that meets your operational needs. Call (862) 419-1763 to schedule."
+      },
+      {
+        "type": "cta_box",
+        "content": "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.",
+        "buttonText": "Get Free Commercial Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Restaurant HVAC Contractor in NJ",
-    slug: "restaurant-hvac-contractor-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "Commercial HVAC",
-    metaDescription: "Restaurant HVAC contractor in NJ. PSE&G Direct Install covers up to 80% of HVAC costs. 100% free lighting. Free assessment.",
-    excerpt: "NJ restaurants can get HVAC upgraded with PSE&G covering up to 80%. Plus free lighting. Mechanical Enterprise serves all of NJ.",
-    sections: [
-      { type: "intro", content: "Restaurants have some of the most demanding HVAC requirements of any commercial property. Kitchen heat, customer comfort, ventilation requirements, and high energy costs make efficient HVAC critical for profitability. NJ restaurant owners can get up to 80% of HVAC replacement costs covered through PSE&G's Direct Install program." },
-      { type: "h2", content: "Restaurant-Specific HVAC Challenges" },
-      { type: "paragraph", content: "Restaurants generate enormous amounts of heat from cooking equipment, requiring HVAC systems that can handle the load while keeping dining areas comfortable. Proper kitchen ventilation and makeup air systems are also essential for health code compliance. Mechanical Enterprise designs restaurant HVAC systems that balance kitchen demands with dining room comfort — and we ensure everything meets NJ health department requirements." },
-      { type: "stat_box", content: "HVAC Coverage: Up to 80% | Kitchen Lighting: 100% Free | Walk-in Cooler Efficiency: Included" },
-      { type: "h2", content: "Free Restaurant Assessment" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments for NJ restaurants. We evaluate your kitchen ventilation, dining area comfort, and energy usage to design the optimal system. PSE&G covers up to 80% of costs and lighting upgrades are completely free. Call (862) 419-1763 to schedule your assessment." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Restaurant HVAC Contractor in NJ",
+    "slug": "restaurant-hvac-contractor-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Restaurant HVAC contractor in NJ. PSE&G Direct Install covers up to 80% of HVAC costs. 100% free lighting. Free assessment.",
+    "excerpt": "NJ restaurants can get HVAC upgraded with PSE&G covering up to 80%. Plus free lighting. Mechanical Enterprise serves all of NJ.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Restaurants have some of the most demanding HVAC requirements of any commercial property. Kitchen heat, customer comfort, ventilation requirements, and high energy costs make efficient HVAC critical for profitability. NJ restaurant owners can get up to 80% of HVAC replacement costs covered through PSE&G's Direct Install program."
+      },
+      {
+        "type": "h2",
+        "content": "Restaurant-Specific HVAC Challenges"
+      },
+      {
+        "type": "paragraph",
+        "content": "Restaurants generate enormous amounts of heat from cooking equipment, requiring HVAC systems that can handle the load while keeping dining areas comfortable. Proper kitchen ventilation and makeup air systems are also essential for health code compliance. Mechanical Enterprise designs restaurant HVAC systems that balance kitchen demands with dining room comfort — and we ensure everything meets NJ health department requirements."
+      },
+      {
+        "type": "stat_box",
+        "content": "HVAC Coverage: Up to 80% | Kitchen Lighting: 100% Free | Walk-in Cooler Efficiency: Included"
+      },
+      {
+        "type": "h2",
+        "content": "Free Restaurant Assessment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise provides free HVAC assessments for NJ restaurants. We evaluate your kitchen ventilation, dining area comfort, and energy usage to design the optimal system. PSE&G covers up to 80% of costs and lighting upgrades are completely free. Call (862) 419-1763 to schedule your assessment."
+      },
+      {
+        "type": "cta_box",
+        "content": "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.",
+        "buttonText": "Get Free Commercial Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Office Building HVAC Solutions in NJ",
-    slug: "office-building-hvac-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "Commercial HVAC",
-    metaDescription: "Office building HVAC solutions in NJ. VRF/VRV systems with PSE&G covering up to 80%. Free assessment from Mechanical Enterprise.",
-    excerpt: "NJ office buildings can upgrade to VRF/VRV HVAC systems with PSE&G Direct Install covering up to 80% of costs.",
-    sections: [
-      { type: "intro", content: "Office buildings require HVAC systems that provide consistent comfort across multiple zones while minimizing energy costs. In New Jersey, office building owners and property managers can upgrade to modern VRF/VRV systems with PSE&G's Direct Install program covering up to 80% of the cost — making this the ideal time to modernize your building's climate control." },
-      { type: "h2", content: "Why VRF/VRV for Office Buildings?" },
-      { type: "paragraph", content: "VRF systems are the gold standard for office buildings because they provide individual zone control, simultaneous heating and cooling, and 30-50% energy savings compared to traditional systems. Each office or conference room can be set to a different temperature, eliminating the constant thermostat battles that plague traditional HVAC setups. The systems are also extremely quiet — no more noisy rooftop units disrupting meetings." },
-      { type: "checklist", items: ["Individual temperature control per office/zone","30-50% lower energy costs","Quiet operation — no disruptive noise","Compact equipment footprint","PSE&G covers up to 80% of installation","100% free lighting upgrades included"] },
-      { type: "h2", content: "Get Started" },
-      { type: "paragraph", content: "Mechanical Enterprise specializes in office building VRF/VRV installations throughout New Jersey. We provide free building assessments, handle all PSE&G Direct Install paperwork, and coordinate installation to minimize disruption to your tenants. Call (862) 419-1763 to schedule your free assessment." },
-      { type: "cta_box", content: "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.", buttonText: "Get Free Commercial Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Office Building HVAC Solutions in NJ",
+    "slug": "office-building-hvac-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Office building HVAC solutions in NJ. VRF/VRV systems with PSE&G covering up to 80%. Free assessment from Mechanical Enterprise.",
+    "excerpt": "NJ office buildings can upgrade to VRF/VRV HVAC systems with PSE&G Direct Install covering up to 80% of costs.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Office buildings require HVAC systems that provide consistent comfort across multiple zones while minimizing energy costs. In New Jersey, office building owners and property managers can upgrade to modern VRF/VRV systems with PSE&G's Direct Install program covering up to 80% of the cost — making this the ideal time to modernize your building's climate control."
+      },
+      {
+        "type": "h2",
+        "content": "Why VRF/VRV for Office Buildings?"
+      },
+      {
+        "type": "paragraph",
+        "content": "VRF systems are the gold standard for office buildings because they provide individual zone control, simultaneous heating and cooling, and 30-50% energy savings compared to traditional systems. Each office or conference room can be set to a different temperature, eliminating the constant thermostat battles that plague traditional HVAC setups. The systems are also extremely quiet — no more noisy rooftop units disrupting meetings."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Individual temperature control per office/zone",
+          "30-50% lower energy costs",
+          "Quiet operation — no disruptive noise",
+          "Compact equipment footprint",
+          "PSE&G covers up to 80% of installation",
+          "100% free lighting upgrades included"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Get Started"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise specializes in office building VRF/VRV installations throughout New Jersey. We provide free building assessments, handle all PSE&G Direct Install paperwork, and coordinate installation to minimize disruption to your tenants. Call (862) 419-1763 to schedule your free assessment."
+      },
+      {
+        "type": "cta_box",
+        "content": "Mechanical Enterprise provides free commercial HVAC assessments throughout NJ. We handle all PSE&G Direct Install paperwork. Call (862) 419-1763 today.",
+        "buttonText": "Get Free Commercial Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
     title: "PSE&G Approved HVAC Contractor in NJ: What It Means",
@@ -4180,41 +4492,116 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "HVAC Not Working in Summer? NJ Emergency Guide",
-    slug: "hvac-not-working-summer-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "HVAC Tips & Maintenance",
-    metaDescription: "AC not working in NJ summer? Quick troubleshooting guide plus when it's time to replace. Free assessments from Mechanical Enterprise.",
-    excerpt: "Your AC stopped working in the NJ summer heat? Here's what to check before calling a pro — and when to call for emergency service.",
-    sections: [
-      { type: "intro", content: "NJ summers are brutal, and a broken HVAC system can quickly become a health hazard — especially for elderly residents and young children. Before you panic, there are a few things you can check yourself. And if your system keeps failing, it may be time for a replacement." },
-      { type: "h2", content: "Quick Troubleshooting Checklist" },
-      { type: "numbered_list", items: ["Check your thermostat — is it set to COOL and below current room temperature?","Check the circuit breaker — has the HVAC breaker tripped?","Check the air filter — a clogged filter can cause the system to shut down","Check the outdoor unit — is it running? Is it blocked by debris?","Check the drain line — a clogged condensate drain triggers many shutdowns","If none of these fix it, call a professional"] },
-      { type: "h2", content: "When It's an Emergency" },
-      { type: "paragraph", content: "If the temperature inside your home exceeds 85°F and you have elderly residents, infants, or pets, treat it as an emergency. Call Mechanical Enterprise at (862) 419-1763 for a free replacement assessment. If your system is older than 10 years and breaking down frequently, it may be time to consider replacement with PSE&G rebates covering up to $16,000 of a new system." },
-      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 419-1763 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
-    ],
+    "title": "HVAC Not Working in Summer? NJ Emergency Guide",
+    "slug": "hvac-not-working-summer-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "HVAC Tips & Maintenance",
+    "metaDescription": "AC not working in NJ summer? Quick troubleshooting guide plus when it's time to replace. Free assessments from Mechanical Enterprise.",
+    "excerpt": "Your AC stopped working in the NJ summer heat? Here's what to check before calling a pro — and when to call for emergency service.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "NJ summers are brutal, and a broken HVAC system can quickly become a health hazard — especially for elderly residents and young children. Before you panic, there are a few things you can check yourself. And if your system keeps failing, it may be time for a replacement."
+      },
+      {
+        "type": "h2",
+        "content": "Quick Troubleshooting Checklist"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
+          "Check your thermostat — is it set to COOL and below current room temperature?",
+          "Check the circuit breaker — has the HVAC breaker tripped?",
+          "Check the air filter — a clogged filter can cause the system to shut down",
+          "Check the outdoor unit — is it running? Is it blocked by debris?",
+          "Check the drain line — a clogged condensate drain triggers many shutdowns",
+          "If none of these fix it, call a professional"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "When It's an Emergency"
+      },
+      {
+        "type": "paragraph",
+        "content": "If the temperature inside your home exceeds 85°F and you have elderly residents, infants, or pets, treat it as an emergency. Call Mechanical Enterprise at (862) 419-1763 for a free replacement assessment."
+      },
+      {
+        "type": "cta_box",
+        "content": "System failing? Book a free in-home replacement assessment. Call (862) 419-1763 or schedule online.",
+        "buttonText": "Schedule Service",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "AC Breakdown in NJ: Repair vs Replace Guide",
-    slug: "ac-breakdown-nj-what-to-do",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Tips & Maintenance",
-    metaDescription: "AC broke down in NJ? Use this repair vs replace guide. If system is 10+ years old, replacement with rebates may cost less than repair.",
-    excerpt: "Should you repair or replace your broken AC in NJ? Here's how to make the right decision based on system age, cost, and available rebates.",
-    sections: [
-      { type: "intro", content: "Your air conditioning just died. The repair quote is $800-$2,000. Is it worth fixing, or should you replace the whole system? The answer depends on your system's age, the cost of repair, and the substantial rebates available for replacement in NJ." },
-      { type: "h2", content: "The Repair vs Replace Decision" },
-      { type: "paragraph", content: "Use this simple rule: if the repair cost is more than 50% of the cost of a new system (after rebates), replace it. For example, if a repair costs $1,500 and a new heat pump costs $12,000 before rebates but only $0-$2,000 after PSE&G rebates, replacement is clearly the better investment. You get a new system with a full warranty, lower energy bills, and both heating and cooling in one unit." },
-      { type: "stat_box", content: "Repair Cost: $800-$2,000 | New System After Rebates: $0-$2,000 | Annual Energy Savings: $1,200+" },
-      { type: "h2", content: "Signs You Should Replace Rather Than Repair" },
-      { type: "checklist", items: ["System is 10+ years old","Uses R22 refrigerant (banned — cannot be recharged affordably)","Needs frequent repairs (more than once per year)","Energy bills have been increasing steadily","System doesn't cool or heat evenly","Makes unusual noises during operation"] },
-      { type: "h2", content: "Get a Professional Opinion" },
-      { type: "paragraph", content: "Mechanical Enterprise provides honest repair vs replace assessments. We'll never pressure you to replace a system that can be economically repaired. But when replacement makes financial sense — especially with rebates up to $16,000 — we'll show you the numbers. Call (862) 419-1763 for a free assessment." },
-      { type: "cta_box", content: "System failing? Book a free in-home replacement assessment. Call (862) 419-1763 or schedule online.", buttonText: "Schedule Service", buttonUrl: "https://mechanicalenterprise.com/contact" },
-    ],
+    "title": "AC Breakdown in NJ: Repair vs Replace Guide",
+    "slug": "ac-breakdown-nj-what-to-do",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Tips & Maintenance",
+    "metaDescription": "AC broke down in NJ? Use this repair vs replace guide.",
+    "excerpt": "Should you repair or replace your broken AC in NJ?",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Your air conditioning just died. The repair quote is $800-$2,000. Is it worth fixing, or should you replace the whole system?"
+      },
+      {
+        "type": "h2",
+        "content": "The Repair vs Replace Decision"
+      },
+      {
+        "type": "paragraph",
+        "content": "You get a new system with a full warranty, lower energy bills, and both heating and cooling in one unit."
+      },
+      {
+        "type": "h2",
+        "content": "Signs You Should Replace Rather Than Repair"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "System is 10+ years old",
+          "Uses R22 refrigerant (banned — cannot be recharged affordably)",
+          "Needs frequent repairs (more than once per year)",
+          "Energy bills have been increasing steadily",
+          "System doesn't cool or heat evenly",
+          "Makes unusual noises during operation"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Get a Professional Opinion"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise provides honest repair vs replace assessments. We'll never pressure you to replace a system that can be economically repaired. Call (862) 419-1763 for a free assessment."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "System failing? Book a free in-home replacement assessment. Call (862) 419-1763 or schedule online.",
+        "buttonText": "Schedule Service",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
     title: "HVAC Maintenance Checklist for NJ Homeowners",
@@ -4236,202 +4623,598 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "When to Replace Your HVAC System in NJ",
-    slug: "when-to-replace-hvac-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Tips & Maintenance",
-    metaDescription: "When should you replace your HVAC system in NJ? Age, efficiency, repair frequency, and rebate timing guide. Free assessment.",
-    excerpt: "Not sure if your NJ HVAC system needs replacement? Here are the definitive signs it's time — and why 2026 is the best year to do it.",
-    sections: [
-      { type: "intro", content: "Every HVAC system eventually reaches the point where replacement makes more sense than repair. For NJ homeowners, the decision is made easier by generous rebate programs that can cover most or all of the replacement cost. Here's how to know when it's time." },
-      { type: "h2", content: "Signs It's Time to Replace" },
-      { type: "checklist", items: ["System is 10-15+ years old","Repair costs exceed $1,000 per year","Energy bills are rising despite no usage changes","System uses R22 refrigerant (banned — increasingly expensive)","Uneven heating or cooling throughout your home","Unusual noises, smells, or frequent cycling","Home never reaches set temperature","Excessive dust or humidity problems"] },
-      { type: "h2", content: "Why 2026 Is the Best Year to Replace" },
-      { type: "paragraph", content: "NJ HVAC rebates in 2026 are at their highest levels ever. PSE&G offers up to $16,000. These incentive levels are not guaranteed to continue — they can be reduced or eliminated in future years. Additionally, heat pump technology has advanced significantly, making modern systems far more efficient and capable in NJ's cold winters than even five years ago." },
-      { type: "stat_box", content: "2026 Rebates: Up to $16,000 | Future Rebates: Not Guaranteed | Average System Lifespan: 15-20 years" },
-      { type: "h2", content: "Free Replacement Assessment" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC replacement assessments for NJ homeowners. We'll inspect your current system, give you an honest opinion on repair vs replace, and calculate your exact rebate amount if replacement is recommended. Call (862) 419-1763." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "When to Replace Your HVAC System in NJ",
+    "slug": "when-to-replace-hvac-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Tips & Maintenance",
+    "metaDescription": "When should you replace your HVAC system in NJ? Free assessment.",
+    "excerpt": "Not sure if your NJ HVAC system needs replacement? Here are the definitive signs it's time — and why 2026 is the best year to do it.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Every HVAC system eventually reaches the point where replacement makes more sense than repair. Here's how to know when it's time."
+      },
+      {
+        "type": "h2",
+        "content": "Signs It's Time to Replace"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "System is 10-15+ years old",
+          "Repair costs exceed $1,000 per year",
+          "Energy bills are rising despite no usage changes",
+          "System uses R22 refrigerant (banned — increasingly expensive)",
+          "Uneven heating or cooling throughout your home",
+          "Unusual noises, smells, or frequent cycling",
+          "Home never reaches set temperature",
+          "Excessive dust or humidity problems"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Why 2026 Is the Best Year to Replace"
+      },
+      {
+        "type": "paragraph",
+        "content": "Additionally, heat pump technology has advanced significantly, making modern systems far more efficient and capable in NJ's cold winters than even five years ago."
+      },
+      {
+        "type": "h2",
+        "content": "Free Replacement Assessment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise provides free HVAC replacement assessments for NJ homeowners. Call (862) 419-1763."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "HVAC System Lifespan Guide for NJ Homeowners",
-    slug: "hvac-lifespan-nj-guide",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "HVAC Tips & Maintenance",
-    metaDescription: "How long do HVAC systems last in NJ? Lifespan guide by system type. Furnaces, AC, heat pumps, boilers compared.",
-    excerpt: "How long should your HVAC system last in NJ? Here's the expected lifespan for every system type and tips to maximize yours.",
-    sections: [
-      { type: "intro", content: "New Jersey's climate — with temperature swings from below-zero winters to 95°F+ summers — puts significant stress on HVAC systems. Understanding your system's expected lifespan helps you plan for replacement and take advantage of rebates before emergency failure forces a rushed decision." },
-      { type: "h2", content: "Expected Lifespans by System Type" },
-      { type: "stat_box", content: "Central AC: 15-20 years | Gas Furnace: 15-20 years | Heat Pump: 15 years | Oil Furnace: 15-25 years | Boiler: 20-30 years | Ductless Mini-Split: 15-20 years" },
-      { type: "h2", content: "Factors That Shorten Lifespan in NJ" },
-      { type: "paragraph", content: "NJ's coastal humidity accelerates corrosion on outdoor equipment. Salt air in shore communities is particularly damaging. Lack of annual maintenance is the number one lifespan reducer — systems without professional tune-ups typically fail 5-7 years sooner. Oversized or undersized systems also wear out faster because they cycle too frequently or run continuously." },
-      { type: "h2", content: "Planning Your Replacement" },
-      { type: "paragraph", content: "If your system is approaching its expected lifespan, start planning now rather than waiting for it to fail. In 2026, PSE&G rebates up to $16,000 make proactive replacement financially smart. Mechanical Enterprise provides free assessments to evaluate your system's condition and remaining life. Call (862) 419-1763." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC System Lifespan Guide for NJ Homeowners",
+    "slug": "hvac-lifespan-nj-guide",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "HVAC Tips & Maintenance",
+    "metaDescription": "How long do HVAC systems last in NJ? Lifespan guide by system type. Furnaces, AC, heat pumps, boilers compared.",
+    "excerpt": "How long should your HVAC system last in NJ? Here's the expected lifespan for every system type and tips to maximize yours.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "New Jersey's climate — with temperature swings from below-zero winters to 95°F+ summers — puts significant stress on HVAC systems."
+      },
+      {
+        "type": "h2",
+        "content": "Expected Lifespans by System Type"
+      },
+      {
+        "type": "stat_box",
+        "content": "Central AC: 15-20 years | Gas Furnace: 15-20 years | Heat Pump: 15 years | Oil Furnace: 15-25 years | Boiler: 20-30 years | Ductless Mini-Split: 15-20 years"
+      },
+      {
+        "type": "h2",
+        "content": "Factors That Shorten Lifespan in NJ"
+      },
+      {
+        "type": "paragraph",
+        "content": "NJ's coastal humidity accelerates corrosion on outdoor equipment. Salt air in shore communities is particularly damaging. Lack of annual maintenance is the number one lifespan reducer — systems without professional tune-ups typically fail 5-7 years sooner. Oversized or undersized systems also wear out faster because they cycle too frequently or run continuously."
+      },
+      {
+        "type": "h2",
+        "content": "Planning Your Replacement"
+      },
+      {
+        "type": "paragraph",
+        "content": "If your system is approaching its expected lifespan, start planning now rather than waiting for it to fail. Mechanical Enterprise provides free assessments to evaluate your system's condition and remaining life. Call (862) 419-1763."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Best HVAC Brands for NJ Homeowners in 2026",
-    slug: "best-hvac-brands-nj-2026",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Tips & Maintenance",
-    metaDescription: "Best HVAC brands for NJ homes in 2026. Mitsubishi, Daikin, Carrier, Lennox reviewed. All qualify for PSE&G rebates.",
-    excerpt: "Which HVAC brands are best for NJ homes? We compare Mitsubishi, Daikin, Carrier, and Lennox — all qualifying for PSE&G rebates.",
-    sections: [
-      { type: "intro", content: "Choosing the right HVAC brand for your NJ home matters — it affects your comfort, energy bills, and rebate qualification. Mechanical Enterprise installs all major brands and recommends specific models based on each home's needs. Here's our honest assessment of the top HVAC brands for New Jersey in 2026." },
-      { type: "h2", content: "Top Brands for NJ" },
-      { type: "paragraph", content: "Mitsubishi is our top recommendation for most NJ homes. Their Hyper-Heat technology maintains full heating capacity down to -13°F, making them ideal for NJ winters. Daikin offers excellent value with strong cold-climate performance and is the world's largest HVAC manufacturer. Carrier provides a wide range of options from budget to premium, with strong NJ dealer support. Lennox offers high-efficiency models with some of the quietest operation available." },
-      { type: "h2", content: "Brand Comparison" },
-      { type: "stat_box", content: "Mitsubishi: Best Cold Climate | Daikin: Best Value | Carrier: Widest Range | Lennox: Quietest Operation" },
-      { type: "h2", content: "All Qualify for NJ Rebates" },
-      { type: "paragraph", content: "Every brand Mechanical Enterprise installs qualifies for PSE&G rebates up to $16,000 and. The specific model matters more than the brand for rebate qualification — we select models that meet the highest efficiency tiers to maximize your rebate. Call (862) 419-1763 for a free assessment with brand and model recommendations specific to your home." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Best HVAC Brands for NJ Homeowners in 2026",
+    "slug": "best-hvac-brands-nj-2026",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Tips & Maintenance",
+    "metaDescription": "Best HVAC brands for NJ homes in 2026. Mitsubishi, Daikin, Carrier, Lennox reviewed.",
+    "excerpt": "Which HVAC brands are best for NJ homes?",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Mechanical Enterprise installs all major brands and recommends specific models based on each home's needs. Here's our honest assessment of the top HVAC brands for New Jersey in 2026."
+      },
+      {
+        "type": "h2",
+        "content": "Top Brands for NJ"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mitsubishi is our top recommendation for most NJ homes. Their Hyper-Heat technology maintains full heating capacity down to -13°F, making them ideal for NJ winters. Daikin offers excellent value with strong cold-climate performance and is the world's largest HVAC manufacturer. Carrier provides a wide range of options from budget to premium, with strong NJ dealer support. Lennox offers high-efficiency models with some of the quietest operation available."
+      },
+      {
+        "type": "h2",
+        "content": "Brand Comparison"
+      },
+      {
+        "type": "stat_box",
+        "content": "Mitsubishi: Best Cold Climate | Daikin: Best Value | Carrier: Widest Range | Lennox: Quietest Operation"
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "HVAC Contractor in Paterson NJ",
-    slug: "hvac-contractor-paterson-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "Local HVAC Services",
-    metaDescription: "Trusted HVAC contractor in Paterson NJ. PSE&G-approved. Up to $16,000 in rebates. Free assessment from Mechanical Enterprise.",
-    excerpt: "Paterson homeowners trust Mechanical Enterprise for HVAC installation, repair, and rebate assistance. Up to $16,000 in savings available.",
-    sections: [
-      { type: "intro", content: "Paterson's diverse housing stock — from historic Eastside homes to Northside colonials to multi-family properties throughout the city — requires an HVAC contractor with experience across all building types. Mechanical Enterprise is a PSE&G-approved contractor serving all of Paterson with free assessments and rebates up to $16,000." },
-      { type: "h2", content: "HVAC Services in Paterson" },
-      { type: "paragraph", content: "We install heat pumps, central AC systems, ductless mini-splits, and provide oil-to-heat-pump conversions throughout Paterson. Many Paterson homes still use oil heat, making them ideal candidates for conversion with maximum PSE&G rebates up to $16,000." },
-      { type: "h2", content: "Get Your Free Assessment" },
-      { type: "paragraph", content: "Mechanical Enterprise provides free HVAC assessments for Paterson homeowners. We'll evaluate your system, calculate your exact rebate amount, and provide a no-obligation quote. Call (862) 419-1763 to schedule." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC Contractor in Paterson NJ",
+    "slug": "hvac-contractor-paterson-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "Local HVAC Services",
+    "metaDescription": "Trusted HVAC contractor in Paterson NJ. Free assessment from Mechanical Enterprise.",
+    "excerpt": "Paterson's diverse housing stock — from historic Eastside homes to Northside colonials to multi-family properties throughout the city — requires an HVAC contractor with experience across all building types.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Paterson's diverse housing stock — from historic Eastside homes to Northside colonials to multi-family properties throughout the city — requires an HVAC contractor with experience across all building types."
+      },
+      {
+        "type": "h2",
+        "content": "HVAC Services in Paterson"
+      },
+      {
+        "type": "paragraph",
+        "content": "We install heat pumps, central AC systems, ductless mini-splits, and provide oil-to-heat-pump conversions throughout Paterson."
+      },
+      {
+        "type": "h2",
+        "content": "Get Your Free Assessment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise provides free HVAC assessments for Paterson homeowners. Call (862) 419-1763 to schedule."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "HVAC Contractor in Trenton NJ",
-    slug: "hvac-contractor-trenton-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "Local HVAC Services",
-    metaDescription: "HVAC contractor serving Trenton NJ. PSE&G-approved with rebates up to $16,000. Free assessment from Mechanical Enterprise.",
-    excerpt: "Trenton homeowners can upgrade HVAC with rebates up to $16,000. Mechanical Enterprise serves all of Mercer County.",
-    sections: [
-      { type: "intro", content: "As New Jersey's capital city, Trenton has a rich mix of historic homes and modern developments that all need reliable HVAC. Mechanical Enterprise serves Trenton and all of Mercer County with PSE&G-approved HVAC installations, repairs, and rebate assistance. Trenton homeowners can qualify for up to $16,000 in combined rebates." },
-      { type: "h2", content: "Trenton HVAC Services" },
-      { type: "paragraph", content: "We provide heat pump installation, central AC replacement, ductless mini-splits, oil-to-heat-pump conversions, and emergency repair throughout Trenton. Many of Trenton's older homes have oil or outdated gas heating systems that qualify for maximum PSE&G rebate amounts when replaced with modern heat pumps." },
-      { type: "h2", content: "Get Started" },
-      { type: "paragraph", content: "Call (862) 419-1763 for a free assessment. We handle all rebate paperwork and ensure you receive the maximum available amount." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC Contractor in Trenton NJ",
+    "slug": "hvac-contractor-trenton-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "Local HVAC Services",
+    "metaDescription": "HVAC contractor serving Trenton NJ. Free assessment from Mechanical Enterprise.",
+    "excerpt": "Mechanical Enterprise serves all of Mercer County.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "As New Jersey's capital city, Trenton has a rich mix of historic homes and modern developments that all need reliable HVAC."
+      },
+      {
+        "type": "h2",
+        "content": "Trenton HVAC Services"
+      },
+      {
+        "type": "paragraph",
+        "content": "We provide heat pump installation, central AC replacement, ductless mini-splits, oil-to-heat-pump conversions, and emergency repair throughout Trenton."
+      },
+      {
+        "type": "h2",
+        "content": "Get Started"
+      },
+      {
+        "type": "paragraph",
+        "content": "Call (862) 419-1763 for a free assessment."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "HVAC Contractor in Edison NJ",
-    slug: "hvac-contractor-edison-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "Local HVAC Services",
-    metaDescription: "Top HVAC contractor in Edison NJ. PSE&G-approved. Rebates up to $16,000. Free assessment from Mechanical Enterprise.",
-    excerpt: "Edison NJ homeowners can save up to $16,000 on HVAC replacement. Free assessment from Mechanical Enterprise.",
-    sections: [
-      { type: "intro", content: "Edison, one of NJ's largest townships, has thousands of homes built in the 1960s-1980s with original HVAC systems that are well past their useful life. These Edison homeowners are perfectly positioned to benefit from NJ's generous rebate programs — up to $16,000 in combined savings for a new heat pump system." },
-      { type: "h2", content: "Edison HVAC Services" },
-      { type: "paragraph", content: "Mechanical Enterprise provides complete HVAC services throughout Edison and Middlesex County. Heat pump installation, central AC replacement, ductless mini-splits, and commercial HVAC. We're PSE&G-approved and handle all rebate paperwork at no cost. Edison's typical ranch and split-level homes are ideal candidates for central heat pump systems that provide both heating and cooling." },
-      { type: "h2", content: "Free Assessment" },
-      { type: "paragraph", content: "Call (862) 419-1763 for a free HVAC assessment in Edison. We'll calculate your exact rebate amount and provide a no-obligation quote." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC Contractor in Edison NJ",
+    "slug": "hvac-contractor-edison-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "Local HVAC Services",
+    "metaDescription": "Top HVAC contractor in Edison NJ. Free assessment from Mechanical Enterprise.",
+    "excerpt": "Free assessment from Mechanical Enterprise.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Edison, one of NJ's largest townships, has thousands of homes built in the 1960s-1980s with original HVAC systems that are well past their useful life."
+      },
+      {
+        "type": "h2",
+        "content": "Edison HVAC Services"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise provides complete HVAC services throughout Edison and Middlesex County. Heat pump installation, central AC replacement, ductless mini-splits, and commercial HVAC. Edison's typical ranch and split-level homes are ideal candidates for central heat pump systems that provide both heating and cooling."
+      },
+      {
+        "type": "h2",
+        "content": "Free Assessment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Call (862) 419-1763 for a free HVAC assessment in Edison."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "HVAC Contractor in Toms River NJ",
-    slug: "hvac-contractor-toms-river-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "Local HVAC Services",
-    metaDescription: "HVAC contractor serving Toms River NJ. Rebates up to $16,000. Heat pumps ideal for shore climate. Free assessment available.",
-    excerpt: "Toms River homeowners can upgrade HVAC with rebates up to $16,000. Heat pumps are ideal for Ocean County's shore climate.",
-    sections: [
-      { type: "intro", content: "Toms River and Ocean County homeowners face unique HVAC challenges — coastal humidity, salt air, and extreme summer cooling demands. Modern heat pumps handle these conditions exceptionally well while qualifying for up to $16,000 in combined NJ rebates. Mechanical Enterprise serves all of Toms River and Ocean County." },
-      { type: "h2", content: "Why Heat Pumps for Toms River" },
-      { type: "paragraph", content: "Heat pumps are ideal for Toms River's climate — they provide efficient cooling during hot, humid summers and reliable heating during mild-to-cold winters. The latest cold-climate models handle even the coldest shore nights. Plus, they eliminate the need for separate heating and cooling systems, simplifying maintenance. With rebates covering most of the cost, the upgrade makes financial sense." },
-      { type: "h2", content: "Get Your Free Assessment" },
-      { type: "paragraph", content: "Call (862) 419-1763 for a free HVAC assessment in Toms River. PSE&G rebates up to $16,000 available." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC Contractor in Toms River NJ",
+    "slug": "hvac-contractor-toms-river-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "Local HVAC Services",
+    "metaDescription": "HVAC contractor serving Toms River NJ. Heat pumps ideal for shore climate. Free assessment available.",
+    "excerpt": "Heat pumps are ideal for Ocean County's shore climate.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Toms River and Ocean County homeowners face unique HVAC challenges — coastal humidity, salt air, and extreme summer cooling demands. Mechanical Enterprise serves all of Toms River and Ocean County."
+      },
+      {
+        "type": "h2",
+        "content": "Why Heat Pumps for Toms River"
+      },
+      {
+        "type": "paragraph",
+        "content": "Heat pumps are ideal for Toms River's climate — they provide efficient cooling during hot, humid summers and reliable heating during mild-to-cold winters. The latest cold-climate models handle even the coldest shore nights. Plus, they eliminate the need for separate heating and cooling systems, simplifying maintenance."
+      },
+      {
+        "type": "h2",
+        "content": "Get Your Free Assessment"
+      },
+      {
+        "type": "paragraph",
+        "content": "Call (862) 419-1763 for a free HVAC assessment in Toms River."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "HVAC Contractor in Camden NJ",
-    slug: "hvac-contractor-camden-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "Local HVAC Services",
-    metaDescription: "HVAC contractor serving Camden NJ. Rebates up to $16,000. Income-qualified programs available. Free assessment.",
-    excerpt: "Camden homeowners can upgrade HVAC with rebates up to $16,000. Income-qualified programs may cover 100% of costs.",
-    sections: [
-      { type: "intro", content: "Camden homeowners have access to exceptional HVAC rebate opportunities, including both standard programs and enhanced income-qualified incentives that can cover 100% of costs. Mechanical Enterprise serves Camden and all of Camden County with free assessments and full rebate assistance." },
-      { type: "h2", content: "Camden Rebate Programs" },
-      { type: "paragraph", content: "Standard PSE&G rebates provide up to $16,000 for heat pump installations. Camden residents may also qualify for enhanced income-qualified programs through PSE&G's Comfort Partners and similar initiatives, which can provide free or dramatically reduced-cost HVAC equipment. Mechanical Enterprise helps determine which programs you qualify for." },
-      { type: "h2", content: "Get Started" },
-      { type: "paragraph", content: "Call (862) 419-1763 for a free assessment. We'll determine your eligibility for all available programs including income-qualified incentives." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC Contractor in Camden NJ",
+    "slug": "hvac-contractor-camden-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "Local HVAC Services",
+    "metaDescription": "HVAC contractor for Camden NJ homes: heat pump, central AC and ductless installation sized to your home. Free assessment: (862) 419-1763.",
+    "excerpt": "Heat pump, central AC and ductless installation for Camden homes, starting with a free in-home assessment.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Camden homeowners replacing an aging heating or cooling system need a contractor who sizes the new system to the home instead of guessing. Mechanical Enterprise installs heat pumps, central AC and ductless systems, starting with a free in-home assessment."
+      },
+      {
+        "type": "h2",
+        "content": "Get Started"
+      },
+      {
+        "type": "paragraph",
+        "content": "Call (862) 419-1763 for a free assessment."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Heat Pump Installation in NJ: Complete 2026 Guide",
-    slug: "heat-pump-installation-nj-guide",
-    date: "April 12, 2026",
-    readTime: "8 min read",
-    category: "HVAC Guides",
-    metaDescription: "Complete heat pump installation guide for NJ homeowners. Types, costs, rebates up to $16K, and what to expect. Free assessment.",
-    excerpt: "Everything NJ homeowners need to know about heat pump installation in 2026 — types, costs, rebates, and the installation process.",
-    sections: [
-      { type: "intro", content: "Heat pump installation is the most popular HVAC upgrade in New Jersey, and for good reason. Heat pumps provide both heating and cooling, operate at 300-400% efficiency, and qualify for up to $16,000 in combined NJ rebates. This guide covers everything you need to know about heat pump installation in NJ." },
-      { type: "h2", content: "Types of Heat Pumps for NJ Homes" },
-      { type: "paragraph", content: "Central ducted heat pumps replace your existing furnace and AC with one efficient system using existing ductwork. Ductless mini-splits are perfect for homes without ducts — they mount on walls and provide zone-by-zone control. Multi-zone systems combine an outdoor unit with multiple indoor units. Cold-climate heat pumps are specifically designed for NJ winters, maintaining full capacity below 0°F." },
-      { type: "stat_box", content: "Central Heat Pump: $10K-$15K | Mini-Split: $8K-$13K | After Rebates: Often $0-$2K" },
-      { type: "h2", content: "The Installation Process" },
-      { type: "numbered_list", items: ["Free assessment and Manual J load calculation","System design and equipment selection","Rebate pre-approval submitted to PSE&G","Permits pulled (Mechanical Enterprise handles this)","Installation day (typically 1-2 days)","System testing and commissioning","Homeowner walkthrough and thermostat training","Rebate paperwork submitted"] },
-      { type: "h2", content: "Get Started" },
-      { type: "paragraph", content: "Mechanical Enterprise is a PSE&G-approved heat pump installer serving all of NJ. Call (862) 419-1763 for your free assessment and exact rebate calculation." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Heat Pump Installation in NJ: Complete 2026 Guide",
+    "slug": "heat-pump-installation-nj-guide",
+    "date": "April 12, 2026",
+    "readTime": "8 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "Complete heat pump installation guide for NJ homeowners. Free assessment.",
+    "excerpt": "Heat pump installation is the most popular HVAC upgrade in New Jersey, and for good reason.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Heat pump installation is the most popular HVAC upgrade in New Jersey, and for good reason. This guide covers everything you need to know about heat pump installation in NJ."
+      },
+      {
+        "type": "h2",
+        "content": "Types of Heat Pumps for NJ Homes"
+      },
+      {
+        "type": "paragraph",
+        "content": "Central ducted heat pumps replace your existing furnace and AC with one efficient system using existing ductwork. Ductless mini-splits are perfect for homes without ducts — they mount on walls and provide zone-by-zone control. Multi-zone systems combine an outdoor unit with multiple indoor units. Cold-climate heat pumps are specifically designed for NJ winters, maintaining full capacity below 0°F."
+      },
+      {
+        "type": "h2",
+        "content": "The Installation Process"
+      },
+      {
+        "type": "numbered_list",
+        "items": [
+          "Free assessment and Manual J load calculation",
+          "System design and equipment selection",
+          "Permits pulled (Mechanical Enterprise handles this)",
+          "Installation day (typically 1-2 days)",
+          "System testing and commissioning",
+          "Homeowner walkthrough and thermostat training"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Get Started"
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Mini-Split Installation in NJ: Complete Guide",
-    slug: "mini-split-installation-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Guides",
-    metaDescription: "Mini-split installation guide for NJ homes. Costs, rebates up to $16K, best brands, and installation process. Free assessment.",
-    excerpt: "Mini-split systems are ideal for NJ homes without ductwork. Here's everything you need to know about installation, costs, and rebates.",
-    sections: [
-      { type: "intro", content: "Ductless mini-split heat pumps are the fastest-growing HVAC segment in New Jersey. They're perfect for older homes without ductwork, room additions, converted attics, and finished basements. In 2026, mini-splits qualify for the same generous rebates as central heat pumps — up to $16,000 in combined savings." },
-      { type: "h2", content: "Why Mini-Splits for NJ Homes" },
-      { type: "paragraph", content: "Many NJ homes — especially pre-1960s construction — lack central ductwork. Mini-splits solve this by requiring only a small hole in the wall for refrigerant lines. Each indoor unit provides heating and cooling for one zone, with individual temperature control. Multi-zone systems can cover an entire house with 2-8 indoor units connected to one outdoor unit." },
-      { type: "stat_box", content: "Single Zone: $4K-$6K | Multi-Zone (3-4): $10K-$14K | After Rebates: Often $0" },
-      { type: "h2", content: "Installation Process" },
-      { type: "paragraph", content: "Mini-split installation is minimally invasive. Each indoor unit requires a 3-inch hole for refrigerant and electrical lines. No ductwork, no major construction. A single-zone system can be installed in half a day; a full multi-zone house system takes 1-2 days. Mechanical Enterprise handles all permits and PSE&G rebate paperwork. Call (862) 419-1763." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Mini-Split Installation in NJ: Complete Guide",
+    "slug": "mini-split-installation-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "Mini-split installation guide for NJ homes. Free assessment.",
+    "excerpt": "Mini-split systems are ideal for NJ homes without ductwork.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Ductless mini-split heat pumps are the fastest-growing HVAC segment in New Jersey. They're perfect for older homes without ductwork, room additions, converted attics, and finished basements."
+      },
+      {
+        "type": "h2",
+        "content": "Why Mini-Splits for NJ Homes"
+      },
+      {
+        "type": "paragraph",
+        "content": "Many NJ homes — especially pre-1960s construction — lack central ductwork. Mini-splits solve this by requiring only a small hole in the wall for refrigerant lines. Each indoor unit provides heating and cooling for one zone, with individual temperature control. Multi-zone systems can cover an entire house with 2-8 indoor units connected to one outdoor unit."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Process"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mini-split installation is minimally invasive. Each indoor unit requires a 3-inch hole for refrigerant and electrical lines. No ductwork, no major construction. A single-zone system can be installed in half a day; a full multi-zone house system takes 1-2 days. Call (862) 419-1763."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Ductless AC in NJ: Complete Homeowner Guide",
-    slug: "ductless-ac-nj-guide",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Guides",
-    metaDescription: "Ductless AC guide for NJ homeowners. Costs, benefits, rebates up to $16K, and best systems for NJ climate. Free assessment.",
-    excerpt: "Ductless AC systems provide efficient cooling without ductwork. NJ homeowners can get up to $16,000 in rebates. Complete guide inside.",
-    sections: [
-      { type: "intro", content: "Ductless air conditioning — also called mini-splits — provides whole-home or room-specific cooling without the need for ductwork. In NJ's hot, humid summers, ductless AC offers superior comfort with individual zone control and dramatically lower energy bills. Plus, modern ductless systems provide heating too, qualifying for up to $16,000 in NJ rebates." },
-      { type: "h2", content: "Benefits of Ductless AC in NJ" },
-      { type: "checklist", items: ["No ductwork required — perfect for older NJ homes","Individual temperature control per room","30-40% more efficient than window units","Provides heating AND cooling (heat pump)","Quiet operation — no noisy window units","Qualifies for up to $16,000 in NJ rebates","Easy installation — typically one day per zone"] },
-      { type: "h2", content: "Cost and Rebates" },
-      { type: "paragraph", content: "A single-zone ductless system costs $4,000-$6,000 installed. Multi-zone systems for a whole house run $10,000-$14,000. With PSE&G rebates up to $16,000, most NJ homeowners pay little to nothing out of pocket. Mechanical Enterprise provides free assessments and handles all rebate paperwork. Call (862) 419-1763." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Ductless AC in NJ: Complete Homeowner Guide",
+    "slug": "ductless-ac-nj-guide",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "Ductless AC guide for NJ homeowners. Free assessment.",
+    "excerpt": "Ductless AC systems provide efficient cooling without ductwork. Complete guide inside.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Ductless air conditioning — also called mini-splits — provides whole-home or room-specific cooling without the need for ductwork. In NJ's hot, humid summers, ductless AC offers superior comfort with individual zone control and dramatically lower energy bills."
+      },
+      {
+        "type": "h2",
+        "content": "Benefits of Ductless AC in NJ"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "No ductwork required — perfect for older NJ homes",
+          "Individual temperature control per room",
+          "30-40% more efficient than window units",
+          "Provides heating AND cooling (heat pump)",
+          "Quiet operation — no noisy window units",
+          "Easy installation — typically one day per zone"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
     "title": "Central AC Replacement Cost in NJ: Quote Checklist",
@@ -4477,14 +5260,6 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "h2",
-        "content": "Separate the installation price from possible incentives"
-      },
-      {
-        "type": "paragraph",
-        "content": "Keep the full project price, any confirmed incentive and the amount you must pay as separate figures. An incentive estimate is not approval, and central AC and heat-pump projects may have different requirements. Ask which program applies to the actual equipment and utility account, what must happen before installation, and what evidence confirms eligibility. Review current options through our [NJ rebate guide](/rebate-guide). Do not assume a rebate makes every replacement free."
-      },
-      {
-        "type": "h2",
         "content": "What to send for a useful replacement assessment"
       },
       {
@@ -4507,7 +5282,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "For replacement planning, see [central AC installation in NJ](/central-ac-installation-nj). If you are deciding whether to keep an existing system, start with [AC repair and assessment](/ac-repair-nj). Property managers coordinating multiple units can use our [commercial property management services](/commercial/for-property-management). The assessment form below lets you request help without assuming a particular rebate, price or installation date."
+        "content": "For replacement planning, see [central AC installation in NJ](/central-ac-installation-nj). If you are deciding whether to keep an existing system, start with [AC repair and assessment](/ac-repair-nj). Property managers coordinating multiple units can use our [commercial property management services](/commercial/for-property-management)."
       },
       {
         "type": "cta_box",
@@ -4524,49 +5299,115 @@ export const blogPosts: BlogPostData[] = [
       {
         "question": "Should I compare quotes only by their total price?",
         "answer": "Compare the equipment and scope, exclusions, startup documentation, warranty terms and payment milestones alongside the total price."
-      },
-      {
-        "question": "Does every central AC replacement qualify for a rebate?",
-        "answer": "No. Eligibility depends on the current program, utility account, equipment and project requirements. Confirm it before relying on an incentive in your budget."
       }
     ],
     "updatedDate": "October 21, 2026"
   },
   {
-    title: "HVAC Financing Options in NJ",
-    slug: "hvac-financing-nj-options",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "HVAC Guides",
-    metaDescription: "HVAC financing options in NJ. PSE&G On-Bill Repayment at 0% interest plus rebates up to $16K. Many pay $0 out of pocket.",
-    excerpt: "NJ homeowners have multiple HVAC financing options including PSE&G 0% interest On-Bill Repayment. Many pay $0 out of pocket.",
-    sections: [
-      { type: "intro", content: "Worried about the cost of a new HVAC system? NJ homeowners have excellent financing options that, combined with rebates up to $16,000, make HVAC upgrades surprisingly affordable. Most of our customers pay $0 out of pocket." },
-      { type: "h2", content: "Financing Options" },
-      { type: "paragraph", content: "PSE&G On-Bill Repayment (OBR) is the most popular option — 0% interest, payments added to your monthly PSE&G bill, no credit check required. Most homeowners see net lower monthly bills because energy savings exceed the OBR payment. Traditional financing through HVAC manufacturers (Carrier Credit, Wells Fargo) offers 0% promotional rates for 12-60 months. FHA Title I home improvement loans are available for larger projects." },
-      { type: "stat_box", content: "PSE&G OBR: 0% Interest | Manufacturer Financing: 0% for 12-60 months | After Rebates: Often $0 Down" },
-      { type: "h2", content: "Calculate Your Monthly Cost" },
-      { type: "paragraph", content: "Mechanical Enterprise provides detailed financing calculations during your free assessment. We show you the total cost, rebate amounts, financing options, and projected monthly payments vs. energy savings. Call (862) 419-1763 to get started." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC Financing Options in NJ",
+    "slug": "hvac-financing-nj-options",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "HVAC financing options in NJ.",
+    "excerpt": "Worried about the cost of a new HVAC system?",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Worried about the cost of a new HVAC system?"
+      },
+      {
+        "type": "h2",
+        "content": "Financing Options"
+      },
+      {
+        "type": "paragraph",
+        "content": "Traditional financing through HVAC manufacturers (Carrier Credit, Wells Fargo) offers 0% promotional rates for 12-60 months. FHA Title I home improvement loans are available for larger projects."
+      },
+      {
+        "type": "h2",
+        "content": "Calculate Your Monthly Cost"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise provides detailed financing calculations during your free assessment. Call (862) 419-1763 to get started."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Energy Efficient HVAC Systems for NJ Homes",
-    slug: "energy-efficient-hvac-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Guides",
-    metaDescription: "Guide to energy efficient HVAC systems for NJ homes. Cut energy bills 30-50%. Up to $16K in rebates. Free assessment.",
-    excerpt: "Energy efficient HVAC systems can cut NJ energy bills by 30-50%. Plus, the most efficient systems qualify for the highest rebates.",
-    sections: [
-      { type: "intro", content: "Energy efficiency isn't just good for the environment — it's good for your wallet. The most energy efficient HVAC systems qualify for the highest NJ rebates (up to $16,000) while cutting your energy bills by 30-50%. Here's what NJ homeowners need to know about energy efficient HVAC in 2026." },
-      { type: "h2", content: "Efficiency Ratings Explained" },
-      { type: "paragraph", content: "SEER2 measures cooling efficiency (higher is better — look for 16+). HSPF2 measures heating efficiency (look for 9+). COP measures heat pump efficiency at specific temperatures. The highest-efficiency systems cost more upfront but qualify for the largest PSE&G rebates, often making them the cheapest option after incentives. Mechanical Enterprise recommends systems that balance efficiency, comfort, and rebate qualification." },
-      { type: "stat_box", content: "Minimum for Rebate: SEER2 15+ | Best Efficiency: SEER2 20+ | Energy Savings: 30-50%" },
-      { type: "h2", content: "Most Efficient Options for NJ" },
-      { type: "paragraph", content: "Variable-speed heat pumps are the most efficient option, adjusting output continuously rather than cycling on and off. Ductless mini-splits with inverter technology are extremely efficient for zone control. Cold-climate heat pumps maintain high efficiency even in NJ's coldest weather. Mechanical Enterprise helps you choose the right balance of efficiency and value. Call (862) 419-1763." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Energy Efficient HVAC Systems for NJ Homes",
+    "slug": "energy-efficient-hvac-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "Guide to energy efficient HVAC systems for NJ homes. Cut energy bills 30-50%. Free assessment.",
+    "excerpt": "Energy efficient HVAC systems can cut NJ energy bills by 30-50%.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Energy efficiency isn't just good for the environment — it's good for your wallet. Here's what NJ homeowners need to know about energy efficient HVAC in 2026."
+      },
+      {
+        "type": "h2",
+        "content": "Efficiency Ratings Explained"
+      },
+      {
+        "type": "paragraph",
+        "content": "SEER2 measures cooling efficiency (higher is better — look for 16+). HSPF2 measures heating efficiency (look for 9+). COP measures heat pump efficiency at specific temperatures."
+      },
+      {
+        "type": "h2",
+        "content": "Most Efficient Options for NJ"
+      },
+      {
+        "type": "paragraph",
+        "content": "Variable-speed heat pumps are the most efficient option, adjusting output continuously rather than cycling on and off. Ductless mini-splits with inverter technology are extremely efficient for zone control. Cold-climate heat pumps maintain high efficiency even in NJ's coldest weather. Mechanical Enterprise helps you choose the right balance of efficiency and value. Call (862) 419-1763."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
     title: "HVAC Tax Credits in NJ 2026: What You Can Actually Claim",
@@ -4624,97 +5465,247 @@ export const blogPosts: BlogPostData[] = [
     ],
   },
   {
-    title: "HVAC Installation Cost in NJ 2026: What to Budget",
-    slug: "hvac-installation-cost-nj-2026",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Guides",
-    metaDescription: "HVAC installation costs in NJ 2026. Complete price guide by system type. After rebates, many pay $0. Free quote available.",
-    excerpt: "What does HVAC installation cost in NJ in 2026? Prices range from $8K-$15K before rebates, but after PSE&G rebates, many pay $0.",
-    sections: [
-      { type: "intro", content: "Planning your 2026 HVAC budget? Here's a comprehensive breakdown of installation costs in New Jersey, including how rebates dramatically reduce — and often eliminate — out-of-pocket expenses." },
-      { type: "h2", content: "2026 NJ HVAC Installation Costs" },
-      { type: "stat_box", content: "Single-Zone Mini-Split: $4K-$6K | Multi-Zone Mini-Split: $10K-$14K | Central Heat Pump: $10K-$15K | Commercial VRF: $30K-$200K+" },
-      { type: "h2", content: "After Rebates" },
-      { type: "paragraph", content: "PSE&G rebates cover up to $16,000 of residential installations. For a typical $12,000 central heat pump installation, rebates of $14,000+ mean you receive money back beyond the cost of the system. Commercial properties get up to 80% covered through Direct Install. Mechanical Enterprise provides exact pricing with rebates calculated before you commit to anything." },
-      { type: "h2", content: "Get a Free Quote" },
-      { type: "paragraph", content: "Call (862) 419-1763 for a free assessment and detailed quote showing your cost before and after all applicable rebates." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC Installation Cost in NJ 2026: What to Budget",
+    "slug": "hvac-installation-cost-nj-2026",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "HVAC installation costs in NJ 2026. Complete price guide by system type. Free quote available.",
+    "excerpt": "What does HVAC installation cost in NJ in 2026?",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Planning your 2026 HVAC budget?"
+      },
+      {
+        "type": "h2",
+        "content": "2026 NJ HVAC Installation Costs"
+      },
+      {
+        "type": "stat_box",
+        "content": "Single-Zone Mini-Split: $4K-$6K | Multi-Zone Mini-Split: $10K-$14K | Central Heat Pump: $10K-$15K | Commercial VRF: $30K-$200K+"
+      },
+      {
+        "type": "h2",
+        "content": "Get a Free Quote"
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "How to Choose the Best HVAC Contractor in NJ",
-    slug: "best-hvac-contractor-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Guides",
-    metaDescription: "How to choose the best HVAC contractor in NJ. Licensing, PSE&G approval, reviews, and pricing tips. Free assessment.",
-    excerpt: "Choosing the right HVAC contractor in NJ is critical for quality work and maximum rebates. Here's what to look for.",
-    sections: [
-      { type: "intro", content: "Your HVAC contractor selection directly impacts the quality of installation, the rebate amount you receive, and your long-term satisfaction. Here's what to look for when choosing an HVAC contractor in New Jersey — and why these factors matter." },
-      { type: "h2", content: "What to Look For" },
-      { type: "checklist", items: ["NJ Home Improvement Contractor license (required by law)","PSE&G-approved contractor (essential for maximum rebates)","Proper insurance — liability and workers' compensation","Experience with your specific system type","Written quotes with itemized pricing","References and online reviews","Warranty on labor and equipment","Handles all permit and rebate paperwork"] },
-      { type: "h2", content: "Red Flags to Avoid" },
-      { type: "paragraph", content: "Be wary of contractors who can't provide a license number, want full payment upfront, pressure you to decide immediately, don't offer written quotes, or aren't PSE&G-approved (meaning you won't get full rebates). A reputable contractor like Mechanical Enterprise provides free assessments, written quotes, and handles all paperwork at no extra cost." },
-      { type: "h2", content: "Why Mechanical Enterprise" },
-      { type: "paragraph", content: "We're NJ-licensed, PSE&G-approved, WMBE-certified, fully insured, and handle all rebate paperwork. Free assessments, transparent pricing, and no-pressure quotes. Call (862) 419-1763." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "How to Choose the Best HVAC Contractor in NJ",
+    "slug": "best-hvac-contractor-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "How to choose the best HVAC contractor in NJ. Free assessment.",
+    "excerpt": "Here's what to look for.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Here's what to look for when choosing an HVAC contractor in New Jersey — and why these factors matter."
+      },
+      {
+        "type": "h2",
+        "content": "What to Look For"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "NJ Home Improvement Contractor license (required by law)",
+          "Proper insurance — liability and workers' compensation",
+          "Experience with your specific system type",
+          "Written quotes with itemized pricing",
+          "References and online reviews",
+          "Warranty on labor and equipment"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Red Flags to Avoid"
+      },
+      {
+        "type": "paragraph",
+        "content": "A reputable contractor like Mechanical Enterprise provides free assessments, written quotes, and handles all paperwork at no extra cost."
+      },
+      {
+        "type": "h2",
+        "content": "Why Mechanical Enterprise"
+      },
+      {
+        "type": "paragraph",
+        "content": "Free assessments, transparent pricing, and no-pressure quotes. Call (862) 419-1763."
+      },
+      {
+        "type": "h2",
+        "content": "What a Proper Installation Includes"
+      },
+      {
+        "type": "paragraph",
+        "content": "A good installation starts with a load calculation for your home, not a rule of thumb. We check your ductwork, electrical service and where the outdoor unit will sit, then size the system so it runs efficiently and keeps every room comfortable. You get a written quote that spells out the equipment, the scope of work and the timeline before you decide."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations can be paired with optional 10-year parts & labor coverage. It is a paid add-on, not something bundled into the price, and we walk you through what it covers during the assessment so you can decide whether it makes sense for your home."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "HVAC Permits in NJ: What Homeowners Need to Know",
-    slug: "hvac-permits-nj-guide",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "HVAC Guides",
-    metaDescription: "NJ HVAC permit guide for homeowners. When permits are needed, costs, and why your contractor should handle them.",
-    excerpt: "Do you need a permit for HVAC work in NJ? Usually yes. Here's what homeowners need to know about NJ HVAC permits.",
-    sections: [
-      { type: "intro", content: "In New Jersey, most HVAC installations and replacements require building permits. Working without permits can result in fines, insurance issues, and problems when selling your home. A reputable contractor handles all permits for you — here's what you need to know." },
-      { type: "h2", content: "When Permits Are Required" },
-      { type: "checklist", items: ["New HVAC system installation","System replacement (same type or different)","Adding ductwork","Electrical modifications for HVAC","Gas line work","Oil tank decommissioning"] },
-      { type: "h2", content: "When Permits Are NOT Required" },
-      { type: "paragraph", content: "Routine maintenance, filter changes, thermostat replacement, and minor repairs typically don't require permits in NJ. However, if your repair involves refrigerant work, electrical modifications, or gas connections, a permit may be needed." },
-      { type: "h2", content: "Mechanical Enterprise Handles Everything" },
-      { type: "paragraph", content: "When you work with Mechanical Enterprise, we pull all required permits, schedule inspections, and ensure your installation meets all NJ building codes. Permit costs are included in our quotes — no surprises. Call (862) 419-1763." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "HVAC Permits in NJ: What Homeowners Need to Know",
+    "slug": "hvac-permits-nj-guide",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "NJ HVAC permit guide for homeowners. When permits are needed, costs, and why your contractor should handle them.",
+    "excerpt": "Do you need a permit for HVAC work in NJ? Usually yes. Here's what homeowners need to know about NJ HVAC permits.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "In New Jersey, most HVAC installations and replacements require building permits. Working without permits can result in fines, insurance issues, and problems when selling your home. A reputable contractor handles all permits for you — here's what you need to know."
+      },
+      {
+        "type": "h2",
+        "content": "When Permits Are Required"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "New HVAC system installation",
+          "System replacement (same type or different)",
+          "Adding ductwork",
+          "Electrical modifications for HVAC",
+          "Gas line work",
+          "Oil tank decommissioning"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "When Permits Are NOT Required"
+      },
+      {
+        "type": "paragraph",
+        "content": "Routine maintenance, filter changes, thermostat replacement, and minor repairs typically don't require permits in NJ. However, if your repair involves refrigerant work, electrical modifications, or gas connections, a permit may be needed."
+      },
+      {
+        "type": "h2",
+        "content": "Mechanical Enterprise Handles Everything"
+      },
+      {
+        "type": "paragraph",
+        "content": "When you work with Mechanical Enterprise, we pull all required permits, schedule inspections, and ensure your installation meets all NJ building codes. Permit costs are included in our quotes — no surprises. Call (862) 419-1763."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Heat Pump Water Heaters in NJ: Complete Guide",
-    slug: "heat-pump-water-heater-nj",
-    date: "April 12, 2026",
-    readTime: "6 min read",
-    category: "HVAC Guides",
-    metaDescription: "Heat pump water heaters save NJ homeowners 50-70% on water heating. Rebates available. Complete guide from Mechanical Enterprise.",
-    excerpt: "Heat pump water heaters use 50-70% less energy than traditional electric water heaters. NJ rebates make them even more affordable.",
-    sections: [
-      { type: "intro", content: "Heat pump water heaters are one of the most impactful energy upgrades NJ homeowners can make. They use the same heat pump technology as HVAC systems but for water heating, using 50-70% less energy than traditional electric water heaters. Rebates make them surprisingly affordable." },
-      { type: "h2", content: "How They Work" },
-      { type: "paragraph", content: "Heat pump water heaters extract heat from the surrounding air and transfer it to your water tank. They're essentially air conditioners in reverse — cooling the room they're in while heating your water. This makes basements and garages ideal locations. Modern units maintain consistent hot water delivery even in NJ's colder weather." },
-      { type: "stat_box", content: "Energy Savings: 50-70% | Annual Savings: $300-$500 | Lifespan: 13-15 years" },
-      { type: "h2", content: "Rebates and Tax Credits" },
-      { type: "paragraph", content: "NJ utility programs may offer additional rebates. Mechanical Enterprise installs heat pump water heaters throughout NJ. Call (862) 419-1763 for a free assessment." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Heat Pump Water Heaters in NJ: Complete Guide",
+    "slug": "heat-pump-water-heater-nj",
+    "date": "April 12, 2026",
+    "readTime": "6 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "Heat pump water heaters save NJ homeowners 50-70% on water heating. Complete guide from Mechanical Enterprise.",
+    "excerpt": "Heat pump water heaters use 50-70% less energy than traditional electric water heaters.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Heat pump water heaters are one of the most impactful energy upgrades NJ homeowners can make. They use the same heat pump technology as HVAC systems but for water heating, using 50-70% less energy than traditional electric water heaters."
+      },
+      {
+        "type": "h2",
+        "content": "How They Work"
+      },
+      {
+        "type": "paragraph",
+        "content": "Heat pump water heaters extract heat from the surrounding air and transfer it to your water tank. They're essentially air conditioners in reverse — cooling the room they're in while heating your water. This makes basements and garages ideal locations. Modern units maintain consistent hot water delivery even in NJ's colder weather."
+      },
+      {
+        "type": "stat_box",
+        "content": "Energy Savings: 50-70% | Annual Savings: $300-$500 | Lifespan: 13-15 years"
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
-    title: "Geothermal Heat Pumps in NJ: Worth the Investment?",
-    slug: "geothermal-heat-pump-nj",
-    date: "April 12, 2026",
-    readTime: "7 min read",
-    category: "HVAC Guides",
-    metaDescription: "Geothermal heat pump guide for NJ homeowners. 30% federal tax credit. 300-500% efficiency. Complete cost and benefit analysis.",
-    excerpt: "Geothermal heat pumps offer 300-500% efficiency and qualify for a 30% federal tax credit. Here's what NJ homeowners need to know.",
-    sections: [
-      { type: "intro", content: "Geothermal heat pumps are the most efficient heating and cooling systems available — they use the earth's constant underground temperature to provide 300-500% efficiency. While they cost more upfront than air-source heat pumps, the federal government offers a 30% tax credit (no cap) for geothermal installations, making them a compelling option for NJ homeowners." },
-      { type: "h2", content: "How Geothermal Works" },
-      { type: "paragraph", content: "Geothermal systems circulate fluid through underground loops to exchange heat with the earth, which maintains a constant 50-55°F year-round in NJ. In winter, the system extracts heat from the ground. In summer, it deposits heat into the ground. Because ground temperatures are stable, geothermal systems operate at extreme efficiency regardless of outdoor weather conditions." },
-      { type: "stat_box", content: "Efficiency: 300-500% | Federal Credit: 30% (no cap) | Lifespan: 25+ years | Loop Lifespan: 50+ years" },
-      { type: "h2", content: "Is Geothermal Right for Your NJ Home?" },
-      { type: "paragraph", content: "Geothermal works best on properties with sufficient yard space for horizontal loops or the ability to drill vertical boreholes. Installation costs range from $20,000-$40,000, but the 30% federal tax credit (worth $6,000-$12,000) significantly reduces the investment. Mechanical Enterprise evaluates geothermal feasibility as part of our free assessment. Call (862) 419-1763." },
-      { type: "cta_box", content: "Ready to get started? Mechanical Enterprise handles everything — from assessment to installation to rebate paperwork. Call (862) 419-1763 or get your free estimate online.", buttonText: "Get Free Assessment", buttonUrl: "https://mechanicalenterprise.com/rebate-calculator" },
-    ],
+    "title": "Geothermal Heat Pumps in NJ: Worth the Investment?",
+    "slug": "geothermal-heat-pump-nj",
+    "date": "April 12, 2026",
+    "readTime": "7 min read",
+    "category": "HVAC Guides",
+    "metaDescription": "Geothermal heat pump guide for NJ homeowners. 300-500% efficiency. Complete cost and benefit analysis.",
+    "excerpt": "Here's what NJ homeowners need to know.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Geothermal heat pumps are the most efficient heating and cooling systems available — they use the earth's constant underground temperature to provide 300-500% efficiency."
+      },
+      {
+        "type": "h2",
+        "content": "How Geothermal Works"
+      },
+      {
+        "type": "paragraph",
+        "content": "Geothermal systems circulate fluid through underground loops to exchange heat with the earth, which maintains a constant 50-55°F year-round in NJ. In winter, the system extracts heat from the ground. In summer, it deposits heat into the ground. Because ground temperatures are stable, geothermal systems operate at extreme efficiency regardless of outdoor weather conditions."
+      },
+      {
+        "type": "stat_box",
+        "content": "Efficiency: 300-500% | Federal Credit: 30% (no cap) | Lifespan: 25+ years | Loop Lifespan: 50+ years"
+      },
+      {
+        "type": "h2",
+        "content": "Is Geothermal Right for Your NJ Home?"
+      },
+      {
+        "type": "paragraph",
+        "content": "Geothermal works best on properties with sufficient yard space for horizontal loops or the ability to drill vertical boreholes. Mechanical Enterprise evaluates geothermal feasibility as part of our free assessment. Call (862) 419-1763."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to get started? Call (862) 419-1763 or get your free estimate online.",
+        "buttonText": "Get Free Assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/contact"
+      }
+    ]
   },
   {
     title: "Smart Thermostat Rebates in NJ 2026",
