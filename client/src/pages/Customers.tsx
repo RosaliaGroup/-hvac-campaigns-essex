@@ -28,6 +28,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { formatDisplayName } from "@shared/nameFormat";
+import { socialLinkLabel } from "@shared/contactSocialSummary";
 import { MAX_SMS_SELECTION, toggleContactSelection, selectContactsFromPage, deselectContactsFromPage, isOct27HvacImport } from "@/lib/customerSelection";
 import { CUSTOMER_SMS_TEMPLATES, getCustomerSmsTemplate } from "@/lib/customerSmsTemplates";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -35,6 +36,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 type Filters = {
   search: string;
   source: "all" | "gmail" | "other" | "purchased_hvac" | "hvac_import_oct27";
+  social?: "all" | "with" | "without";
   status: "default" | "active" | "inactive" | "archived";
   sort: "newest" | "name";
 };
@@ -49,6 +51,7 @@ const columns = [
   "Email",
   "Phone",
   "Company",
+  "Social",
   "Lifecycle stage",
   "Contact role",
   "Service type",
@@ -106,7 +109,10 @@ export default function Customers() {
   // Reload preferences when the signed-in account changes.
   useEffect(() => {
     setSaved(readStored(key, []));
-    setVisible(readStored(`${key}:columns`, columns));
+    // v2 adds the Social column; older saved column choices get it switched on once.
+    const savedV2 = readStored<string[] | null>(`${key}:columns:v2`, null);
+    const savedV1 = readStored<string[] | null>(`${key}:columns`, null);
+    setVisible(savedV2 ?? (savedV1 ? Array.from(new Set([...savedV1, "Social"])) : columns));
   }, [key]);
   const change = (patch: Partial<Filters>) => {
     setFilters(f => ({ ...f, ...patch }));
@@ -117,6 +123,7 @@ export default function Customers() {
       {
         search: filters.search || undefined,
         source: filters.source === "all" ? undefined : filters.source,
+        social: !filters.social || filters.social === "all" ? undefined : filters.social,
         completedOnly: true,
         status: filters.status === "default" ? undefined : filters.status,
         sort: filters.sort,
@@ -257,6 +264,18 @@ export default function Customers() {
               <option value="other">Other sources</option>
             </select>
             <select
+              aria-label="Social profiles filter"
+              className="border rounded p-2 text-sm"
+              value={filters.social ?? "all"}
+              onChange={e =>
+                change({ social: e.target.value as Filters["social"] })
+              }
+            >
+              <option value="all">Any social</option>
+              <option value="with">Has social profiles</option>
+              <option value="without">No social profiles yet</option>
+            </select>
+            <select
               aria-label="Status filter"
               className="border rounded p-2 text-sm"
               value={filters.status}
@@ -327,7 +346,7 @@ export default function Customers() {
                         ? [...visible, c]
                         : visible.filter(x => x !== c);
                       setVisible(next);
-                      persist(`${key}:columns`, next);
+                      persist(`${key}:columns:v2`, next);
                     }}
                   />
                   {c}
@@ -423,6 +442,20 @@ export default function Customers() {
                       ),
                       Phone: c.phone || "—",
                       Company: c.companyName || "—",
+                      Social: c.socialLinks?.length ? (
+                        <span className="flex flex-wrap gap-1 normal-case">
+                          {c.socialLinks.map(l => (
+                            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer"
+                              onClick={e => e.stopPropagation()}
+                              title={`${socialLinkLabel(l)}${l.followed ? " · followed" : ""}`}
+                              className={`rounded border px-1.5 py-0.5 text-xs hover:underline ${l.followed ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-slate-200 text-[#007a8c]"}`}>
+                              {socialLinkLabel(l)}{l.followed ? " ✓" : ""}
+                            </a>
+                          ))}
+                        </span>
+                      ) : (
+                        "—"
+                      ),
                       "Lifecycle stage": (
                         <Badge variant="secondary">{c.lifecycle}</Badge>
                       ),
@@ -482,6 +515,11 @@ export default function Customers() {
               {total
                 ? `${page * 50 + 1}–${Math.min((page + 1) * 50, total)} of ${total}`
                 : "0 contacts"}
+              {data?.socialSummary && (
+                <span className="ml-3 text-slate-500">
+                  Social: {data.socialSummary.contactsWithSocial} contacts with profiles · {data.socialSummary.profilesFollowed} profiles followed ({data.socialSummary.contactsFollowed} contacts)
+                </span>
+              )}
             </span>
             <div className="flex items-center gap-3">
               <Button

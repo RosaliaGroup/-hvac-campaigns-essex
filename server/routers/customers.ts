@@ -25,6 +25,18 @@ import {
   type Relationship,
 } from "@shared/leadPipeline";
 import { contactClassification } from "@shared/contactClassification";
+import { socialLinksFromProfiles, type SocialLink } from "@shared/contactSocialSummary";
+
+/** crmContactProfiles is created lazily by contact research; make sure it exists before joining it. */
+async function ensureContactProfilesTable(db: NonNullable<Awaited<ReturnType<typeof getDb>>>) {
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS crmContactProfiles (contactId int NOT NULL PRIMARY KEY, identity varchar(1000) NOT NULL, profile json NOT NULL, updatedAt timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS crmContactSocialFollows (
+    id int NOT NULL AUTO_INCREMENT PRIMARY KEY, contactId int NOT NULL,
+    url varchar(500) NOT NULL, platform varchar(40) NOT NULL,
+    followedAt timestamp NOT NULL,
+    UNIQUE KEY crmContactSocialFollows_contact_url_uq (contactId,url)
+  )`);
+}
 import { assembleCustomerRelations } from "./customerRelations";
 
 // ─────────────────────────────────────────────────────────────
@@ -378,6 +390,8 @@ export const customersRouter = router({
           status: z.enum(["active", "inactive", "archived"]).optional(),
           assignedToId: z.number().int().optional(),
           source: z.enum(["gmail", "other", "purchased_hvac", "hvac_import_oct27"]).optional(),
+          /** "with": has at least one verified social profile (person or company); "without": none yet. */
+          social: z.enum(["with", "without"]).optional(),
           completedOnly: z.boolean().default(false),
           sort: z.enum(["newest", "name"]).default("newest"),
           limit: z.number().int().min(1).max(100).default(50),
@@ -435,6 +449,13 @@ export const customersRouter = router({
       );
       if (input.assignedToId)
         conditions.push(eq(customers.assignedToId, input.assignedToId));
+      if (input.social) {
+        await ensureContactProfilesTable(db);
+        const hasSocial = sql`EXISTS (SELECT 1 FROM crmExternalContacts sx JOIN crmContactProfiles sp ON sp.contactId = sx.id
+          WHERE sx.customerId = ${customers.id}
+            AND (JSON_LENGTH(JSON_EXTRACT(sp.profile, '$.social')) > 0 OR JSON_LENGTH(JSON_EXTRACT(sp.profile, '$.companySocial')) > 0))`;
+        conditions.push(input.social === "with" ? hasSocial : sql`NOT ${hasSocial}`);
+      }
 
       const where = and(...conditions);
       const [rows, totalRows] = await Promise.all([
@@ -490,11 +511,39 @@ export const customersRouter = router({
           leadStages: stagesByCustomer.get(r.id) ?? [],
         }))
       );
+      // Verified social profiles (contact research), for the Social column.
+      const socialByCustomer = new Map<number, SocialLink[]>();
+      const followedByCustomer = new Map<number, Set<string>>();
+      if (rows.length) {
+        try {
+          await ensureContactProfilesTable(db);
+          const res = await db.execute(sql`SELECT x.customerId AS customerId, p.profile AS profile
+            FROM crmExternalContacts x JOIN crmContactProfiles p ON p.contactId = x.id
+            WHERE x.customerId IN (${sql.join(rows.map(r => sql`${r.id}`), sql`, `)})`);
+          const found = new Map<number, unknown[]>();
+          for (const row of ((res as any)?.[0] ?? []) as { customerId: number; profile: unknown }[]) {
+            const profile = typeof row.profile === "string" ? JSON.parse(row.profile) : row.profile;
+            (found.get(Number(row.customerId)) ?? found.set(Number(row.customerId), []).get(Number(row.customerId))!).push(profile);
+          }
+          for (const [id, profiles] of Array.from(found)) socialByCustomer.set(id, socialLinksFromProfiles(profiles as any));
+          const fol = await db.execute(sql`SELECT x.customerId AS customerId, f.url AS url
+            FROM crmExternalContacts x JOIN crmContactSocialFollows f ON f.contactId = x.id
+            WHERE x.customerId IN (${sql.join(rows.map(r => sql`${r.id}`), sql`, `)})`);
+          for (const row of ((fol as any)?.[0] ?? []) as { customerId: number; url: string }[])
+            (followedByCustomer.get(Number(row.customerId)) ?? followedByCustomer.set(Number(row.customerId), new Set()).get(Number(row.customerId))!)
+              .add(String(row.url).replace(/\/+$/, "").toLowerCase());
+        } catch (e) {
+          console.warn("[customers.list] social profiles unavailable", (e as Error).message.slice(0, 160));
+        }
+      }
       const items = rows.map(r => {
         const relationship =
           relationships.get(r.id) ?? ("lead" as Relationship);
         return {
           ...r,
+          socialLinks: (socialByCustomer.get(r.id) ?? []).map(l => ({
+            ...l, followed: followedByCustomer.get(r.id)?.has(l.url.replace(/\/+$/, "").toLowerCase()) ?? false,
+          })),
           relationship,
           ...contactClassification(
             r,
@@ -503,7 +552,21 @@ export const customersRouter = router({
           ),
         };
       });
-      return { items, total: Number(totalRows[0]?.count ?? 0) };
+      // Totals across all Contacts: how many have verified social profiles, and how many
+      // profiles someone confirmed following ("Mark followed" on the contact).
+      let socialSummary = { contactsWithSocial: 0, profilesFollowed: 0, contactsFollowed: 0 };
+      try {
+        await ensureContactProfilesTable(db);
+        const [w] = ((await db.execute(sql`SELECT COUNT(DISTINCT x.customerId) AS n FROM crmExternalContacts x
+          JOIN crmContactProfiles p ON p.contactId = x.id
+          WHERE x.customerId IS NOT NULL AND (JSON_LENGTH(JSON_EXTRACT(p.profile, '$.social')) > 0 OR JSON_LENGTH(JSON_EXTRACT(p.profile, '$.companySocial')) > 0)`)) as any)?.[0] ?? [];
+        const [f] = ((await db.execute(sql`SELECT COUNT(*) AS profiles, COUNT(DISTINCT x.customerId) AS contacts
+          FROM crmContactSocialFollows f JOIN crmExternalContacts x ON x.id = f.contactId WHERE x.customerId IS NOT NULL`)) as any)?.[0] ?? [];
+        socialSummary = { contactsWithSocial: Number(w?.n ?? 0), profilesFollowed: Number(f?.profiles ?? 0), contactsFollowed: Number(f?.contacts ?? 0) };
+      } catch (e) {
+        console.warn("[customers.list] social summary unavailable", (e as Error).message.slice(0, 160));
+      }
+      return { items, total: Number(totalRows[0]?.count ?? 0), socialSummary };
     }),
 
   /**
