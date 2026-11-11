@@ -284,3 +284,44 @@ export async function spreadOverdueTasks(db: Db, now = new Date()) {
   await db.execute(sql`UPDATE crmBackfillRuns SET summary = ${JSON.stringify(out)} WHERE name = ${SPREAD_OVERDUE_NAME}`);
   return out;
 }
+
+/**
+ * Follow-up to spreadOverdueTasks (owner, Nov 11, 2026): that spread pushed 1,744 tasks out to
+ * March. Plan: cancel tasks for contacts whose 30-day sequence ended more than 14 days ago
+ * (intro older than 44 days), and re-spread the rest 40 per business day, newest intro first.
+ * Dry run (counts only) unless TASK_CLEANUP_APPLY=true; each mode runs once.
+ */
+export const TASK_CLEANUP_PER_DAY = 40;
+const STALE_INTRO_DAYS = 44;
+export async function cleanupSpreadTasks(db: Db, apply: boolean, now = new Date()) {
+  const name = apply ? "stale-task-cleanup-apply-2026-11-11" : "stale-task-cleanup-dryrun-2026-11-11";
+  if (!(await claim(db, name))) return null;
+  const staleBefore = new Date(now.getTime() - STALE_INTRO_DAYS * 86_400_000);
+  // Tasks the Nov 11 spread rescheduled (it ran at 19:32 UTC); anything since completed is no longer open.
+  const res = await db.execute(sql`SELECT id, recipientEmail, introAt FROM crmOutreach30DayTasks
+    WHERE status = 'open' AND updatedAt >= ${new Date("2026-11-11T19:30:00Z")} AND updatedAt < ${new Date("2026-11-11T19:40:00Z")}
+    ORDER BY introAt DESC, touchNumber ASC, id ASC`);
+  const rows = (((res as any)?.[0] ?? []) as { id: number; recipientEmail: string; introAt: string | Date }[]);
+  const stale = rows.filter(r => new Date(r.introAt) < staleBefore);
+  const keep = rows.filter(r => new Date(r.introAt) >= staleBefore);
+  const contacts = (xs: typeof rows) => new Set(xs.map(r => r.recipientEmail.toLowerCase())).size;
+  const out = {
+    apply, touchedBySpread: rows.length,
+    stale: { tasks: stale.length, contacts: contacts(stale) },
+    keep: { tasks: keep.length, contacts: contacts(keep), businessDaysAt40: Math.ceil(keep.length / TASK_CLEANUP_PER_DAY) },
+  };
+  if (apply) {
+    for (const r of stale) await db.execute(sql`UPDATE crmOutreach30DayTasks SET status = 'cancelled',
+      note = 'Cancelled Nov 11, 2026 (owner): 30-day sequence ended more than 14 days ago.'
+      WHERE id = ${r.id} AND status = 'open'`);
+    const thursday9 = new Date("2026-11-12T14:00:00Z");
+    const base = now > thursday9 ? now : thursday9;
+    for (let i = 0; i < keep.length; i++) {
+      const day = Math.floor(i / TASK_CLEANUP_PER_DAY);
+      await db.execute(sql`UPDATE crmOutreach30DayTasks SET dueAt = ${day === 0 ? base : addBusinessDays(base, day)}
+        WHERE id = ${keep[i].id} AND status = 'open'`);
+    }
+  }
+  await db.execute(sql`UPDATE crmBackfillRuns SET summary = ${JSON.stringify(out)} WHERE name = ${name}`);
+  return out;
+}
