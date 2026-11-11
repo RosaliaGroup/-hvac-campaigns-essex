@@ -89,10 +89,16 @@
         // string "%VITE_META_PIXEL_ID%" untouched — the indexOf('%VITE') guard
         // catches that case and prevents init against a bogus id. Also skip if
         // the value is empty.
-        if (metaPixelId && metaPixelId.indexOf('%VITE') === -1) {
-          fbq('init', metaPixelId);
-          fbq('track', 'PageView');
-        }
+        // Second pixel: "Ana Haynes Pixel" (1089473949691559), owned by the
+        // personal ad account 1045370987135100 where the Facebook campaigns run
+        // since Nov 11 2026 — lets that account build website-visitor
+        // (retargeting) audiences. fbq('track') fires to every initialized pixel,
+        // so PageView and the Lead event (fbLeadEvent) reach both.
+        var secondPixelId = '1089473949691559';
+        var hasPrimary = metaPixelId && metaPixelId.indexOf('%VITE') === -1;
+        if (hasPrimary) fbq('init', metaPixelId);
+        if (secondPixelId !== metaPixelId) fbq('init', secondPixelId);
+        fbq('track', 'PageView');
       })();
     </script>
     <!-- noscript fallback: when VITE_META_PIXEL_ID is unset the placeholder is
