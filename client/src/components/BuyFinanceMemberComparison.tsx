@@ -22,8 +22,8 @@ export default function BuyFinanceMemberComparison() {
     {
       key: "finance",
       title: "Finance",
-      subtitle: "PSE&G On-Bill Repayment",
-      items: ["You own the system", "Project cost added to your monthly utility bill, 0% interest", "Optional coverage priced separately"],
+      subtitle: "Pay over time",
+      items: ["You own the system", "Ask about current financing options at your free assessment", "Optional coverage priced separately"],
     },
     {
       key: "member",

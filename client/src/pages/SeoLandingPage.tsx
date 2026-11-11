@@ -30,7 +30,8 @@ import { VERIFIED_FACTS } from "@shared/verifiedFacts";
  */
 
 const BASE = "https://mechanicalenterprise.com";
-const REBATE_URL = `${BASE}/rebate-calculator`;
+const BOOK_URL = `${BASE}/contact`;
+const COMMERCIAL_REBATE_URL = `${BASE}/commercial#rebate-calculator`;
 // Residential and commercial used to advertise different numbers; there is
 // now a single business line for both (see shared/business.ts).
 const PHONE_RESIDENTIAL = PHONE_DISPLAY;
@@ -41,7 +42,7 @@ const PHONE_COMMERCIAL_TEL = PHONE_TEL;
 const WHY_US_RESIDENTIAL = [
   { icon: "⚡", title: "Fast, Local Response", desc: "Free in-home assessments and written quotes. Based in Newark, serving towns within 25 miles." },
   { icon: "🧰", title: "All Makes & Models", desc: "Factory-trained on every major brand. Honest diagnosis and an upfront price before we start." },
-  { icon: "💰", title: "Repair or Upgrade — We Maximize Rebates", desc: "If replacement makes sense, we unlock every NJ rebate you qualify for." },
+  { icon: "📝", title: "Repair or Replace — Honest Advice", desc: "If replacement makes sense, you get a written quote sized to your home before you decide." },
   { icon: "🛡️", title: "Licensed & Insured", desc: "Fully licensed, bonded, and insured NJ contractor. WMBE/SBE certified. Warrantied workmanship." },
 ];
 
@@ -85,7 +86,7 @@ function leadCaptureVariant(data: SeoLandingPageData): InlineLeadVariant {
   // Owner Nov 1, 2026: no 24/7 or emergency service, installs/replacements only — the red
   // "Call Tech Now / under 60 seconds" emergency card is never shown.
   if (/emergency|24[- ]?7|no[- ]?heat/.test(s)) return "residential";
-  if (/rebate|heat[- ]?pump|pseg|incentive/.test(s)) return "rebate";
+  if (/rebate|pseg|incentive/.test(s)) return "rebate";
   return data.category === "commercial" ? "commercial" : "residential";
 }
 
@@ -143,7 +144,7 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
     : [
         { big: "10-Year", small: "Optional Coverage" },
         { big: "All Makes", small: "& Models" },
-        { big: "Up to $16,000", small: "NJ Rebates on Upgrades" },
+        { big: "Written", small: "Quote Before You Decide" },
         { big: "Licensed & Insured", small: "NJ Contractor" },
       ];
 
@@ -175,9 +176,9 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
                   </Button>
                 </a>
               ) : (
-                <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+                <a href={isCommercial ? COMMERCIAL_REBATE_URL : BOOK_URL}>
                   <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
-                    💰 Check Rebate Eligibility
+                    {isCommercial ? "💰 Check Direct Install Eligibility" : "📅 Book Free Assessment"}
                   </Button>
                 </a>
               )}
@@ -300,24 +301,26 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
               </a>
             </div>
             <div className="rounded-xl p-8 bg-gradient-to-br from-[#1f7a41] to-[#146130] text-white">
-              <p className="text-sm font-semibold uppercase tracking-wide text-white/90 mb-2">Rebates &amp; Tax Credits</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-white/90 mb-2">{isCommercial ? "Direct Install" : "Coverage"}</p>
               <h3 className="text-2xl font-bold mb-3">
-                {isCommercial ? "Up to 80% Covered" : "Up to $16,000 in NJ Rebates"}
+                {isCommercial ? "Up to 80% Covered" : "Optional 10-Year Parts & Labor Coverage"}
               </h3>
               <p className="text-white/85 leading-relaxed mb-4">
                 {isCommercial
                   ? "If your repair leads to an upgrade, PSE&G Direct Install can cover up to 80% of qualifying commercial HVAC costs. We handle the paperwork."
-                  : "When replacement is the smart call, NJ rebates up to $16,000 can dramatically cut your cost. We handle every application."}
+                  : "When replacement is the smart call, you can pair the new system with optional 10-year parts & labor coverage — a paid add-on we explain up front."}
               </p>
-              <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
-                <Button className="bg-white text-[#146130] hover:bg-white/90">See What You Qualify For</Button>
+              <a href={isCommercial ? COMMERCIAL_REBATE_URL : BOOK_URL}>
+                <Button className="bg-white text-[#146130] hover:bg-white/90">{isCommercial ? "See What You Qualify For" : "Book a Free Assessment"}</Button>
               </a>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-6 text-center max-w-3xl mx-auto">
-            * Rebate and incentive eligibility depends on equipment, property type, and utility provider. We confirm exactly
-            what you qualify for at no cost during your assessment.
-          </p>
+          {isCommercial && (
+            <p className="text-xs text-gray-400 mt-6 text-center max-w-3xl mx-auto">
+              * Direct Install eligibility depends on equipment, property type, and utility provider. We confirm exactly
+              what you qualify for at no cost during your assessment.
+            </p>
+          )}
         </div>
       </section>}
 
@@ -395,9 +398,9 @@ export default function SeoLandingPage({ data }: { data: SeoLandingPageData }) {
                   </Button>
                 </Link>
               ) : (
-                <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+                <a href={isCommercial ? COMMERCIAL_REBATE_URL : BOOK_URL}>
                   <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
-                    Check Rebate Eligibility <ArrowRight className="ml-2 h-5 w-5" />
+                    {isCommercial ? "Check Direct Install Eligibility" : "Book Free Assessment"} <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
                 </a>
               )}

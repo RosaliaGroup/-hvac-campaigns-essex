@@ -1,6 +1,7 @@
 /**
- * Qualify Landing Page — NJ Heat Pump Rebate Calculator
- * Homeowners enter house details → see rebate amount → out-of-pocket cost → book free assessment
+ * Qualify Landing Page — free in-home assessment booking (Jessica's booking-link destination).
+ * Homeowners enter home details → pick a preferred time → book a free assessment.
+ * Owner decision Nov 10 2026: no rebate amounts, out-of-pocket estimates or income questions.
  */
 import { useState, useRef } from "react";
 import { captureContext } from "@/lib/captureContext";
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle, ArrowRight, Phone, Home, Zap, DollarSign, Calendar } from "lucide-react";
+import { CheckCircle, ArrowRight, Phone, Home } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields";
@@ -18,38 +19,7 @@ import { trackConversion } from "@/lib/conversions";
 import { TcpaDisclosure } from "@/components/TcpaDisclosure";
 import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
 
-// NJ Rebate calculation logic based on home type and current system
-function calculateRebate(homeType: string, sqft: number, currentSystem: string, income: string) {
-  let baseRebate = 0;
-
-  // Base rebate by home type
-  if (homeType === "single") baseRebate = 8000;
-  else if (homeType === "multi") baseRebate = 10000;
-  else if (homeType === "condo") baseRebate = 5000;
-  else baseRebate = 7000;
-
-  // Bonus for replacing oil/propane (higher incentive)
-  if (currentSystem === "oil" || currentSystem === "propane") baseRebate += 4000;
-  else if (currentSystem === "electric") baseRebate += 2000;
-  else baseRebate += 1000;
-
-  // Income-based bonus (moderate income households get more)
-  if (income === "low") baseRebate += 2000;
-  else if (income === "moderate") baseRebate += 1000;
-
-  // Cap at $16,000
-  return Math.min(baseRebate, 16000);
-}
-
-function estimateSystemCost(sqft: number, homeType: string): number {
-  const base = homeType === "multi" ? 18000 : 12000;
-  if (sqft < 1000) return base - 2000;
-  if (sqft < 2000) return base;
-  if (sqft < 3000) return base + 4000;
-  return base + 8000;
-}
-
-type Step = "details" | "results" | "book";
+type Step = "details" | "book";
 
 export default function Qualify() {
   const [step, setStep] = useState<Step>("details");
@@ -62,7 +32,8 @@ export default function Qualify() {
     homeType: "",
     sqft: "",
     currentSystem: "",
-    income: "",
+    replacing: "",
+    timing: "",
     ownOrRent: "",
   });
   const [bookingForm, setBookingForm] = useState({
@@ -77,15 +48,8 @@ export default function Qualify() {
   const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
   const loadedAt = useRef(Date.now());
 
-  const sqftNum = parseInt(form.sqft) || 1500;
-  const rebate = calculateRebate(form.homeType, sqftNum, form.currentSystem, form.income);
-  const systemCost = estimateSystemCost(sqftNum, form.homeType);
-  const outOfPocket = Math.max(0, systemCost - rebate);
-  const monthlySavings = Math.round((sqftNum * 0.08) / 12);
-  const paybackMonths = outOfPocket > 0 ? Math.round(outOfPocket / monthlySavings) : 0;
-
-  const canCalculate =
-    form.firstName && form.phone && form.zip && form.homeType && form.sqft && form.currentSystem && form.income && form.ownOrRent;
+  const canContinue =
+    form.firstName && form.phone && form.zip && form.homeType && form.currentSystem && form.replacing && form.ownOrRent;
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -95,8 +59,8 @@ export default function Qualify() {
       setTurnstileToken(""); // single-use token
       // Confirmed-success only — fires once per submission via dedupeKey.
       // form_type=assessment per PR-1; event bucket is residential_quote_request,
-      // the closest existing category (this page is the residential heat-pump
-      // rebate/assessment funnel). GTM migration is tracked for PR-2.
+      // the closest existing category (this page is the residential
+      // assessment booking funnel). GTM migration is tracked for PR-2.
       trackConversion(
         "residential_quote_request",
         { form_type: "assessment", service_category: "assessment", customer_segment: "residential" },
@@ -122,7 +86,7 @@ export default function Qualify() {
       phone: form.phone || undefined,
       captureType: "qualify_form",
       ...captureContext(),
-      message: `Service: Heat Pump Assessment\nHome Type: ${form.homeType}\nSq Ft: ${form.sqft}\nCurrent System: ${form.currentSystem}\nIncome Level: ${form.income}\nOwn/Rent: ${form.ownOrRent}\nZIP: ${form.zip}\nEstimated Rebate: $${rebate.toLocaleString()}\nOut of Pocket: $${outOfPocket.toLocaleString()}\nPreferred Date: ${bookingForm.preferredDate || "Not specified"}\nPreferred Time: ${bookingForm.preferredTime || "Not specified"}\nNotes: ${bookingForm.notes || "None"}`,
+      message: `Service: Free In-Home Assessment\nReplacing: ${form.replacing}\nTiming: ${form.timing || "Not specified"}\nHome Type: ${form.homeType}\nSq Ft: ${form.sqft || "Not specified"}\nCurrent System: ${form.currentSystem}\nOwn/Rent: ${form.ownOrRent}\nZIP: ${form.zip}\nPreferred Date: ${bookingForm.preferredDate || "Not specified"}\nPreferred Time: ${bookingForm.preferredTime || "Not specified"}\nNotes: ${bookingForm.notes || "None"}`,
       website: honeypot.website || undefined,
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
@@ -141,11 +105,6 @@ export default function Qualify() {
             <p className="text-gray-600 mb-6">
               Our team will call you within 24 hours to confirm your FREE assessment. Check your phone for a confirmation text.
             </p>
-            <div className="bg-green-50 rounded-lg p-4 mb-6 text-left">
-              <p className="text-sm font-semibold text-green-800 mb-1">Your Estimated Rebate</p>
-              <p className="text-3xl font-bold text-green-700">${rebate.toLocaleString()}</p>
-              <p className="text-sm text-green-600">Out-of-pocket after rebate: ${outOfPocket.toLocaleString()}</p>
-            </div>
             <p className="text-sm text-gray-500">
               Questions? Call us at{" "}
               <a href="tel:+18624191763" className="text-[#ff6b35] font-semibold">(862) 419-1763</a>
@@ -166,30 +125,29 @@ export default function Qualify() {
             <span className="text-sm font-semibold text-[#ff6b35] uppercase tracking-wide">Mechanical Enterprise</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
-            See How Much You Qualify For
+            Book Your Free In-Home Assessment
           </h1>
           <p className="text-white/80 text-lg">
-            NJ homeowners are getting up to <span className="text-[#ff6b35] font-bold">$16,000 back</span> on heat pump upgrades.
-            Find out your exact amount in 60 seconds.
+            We size the new system to your home and give you a written quote before you decide.
+            Takes about 60 seconds to book.
           </p>
           {/* Progress */}
           <div className="flex items-center justify-center gap-2 mt-6">
-            {(["details", "results", "book"] as Step[]).map((s, i) => (
+            {(["details", "book"] as Step[]).map((s, i) => (
               <div key={s} className="flex items-center gap-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
                   step === s ? "bg-[#ff6b35] text-white" :
-                  (step === "results" && i === 0) || (step === "book" && i <= 1) ? "bg-white/30 text-white" : "bg-white/10 text-white/50"
+                  step === "book" && i === 0 ? "bg-white/30 text-white" : "bg-white/10 text-white/50"
                 }`}>
-                  {(step === "results" && i === 0) || (step === "book" && i <= 1) ? <CheckCircle className="h-4 w-4" /> : i + 1}
+                  {step === "book" && i === 0 ? <CheckCircle className="h-4 w-4" /> : i + 1}
                 </div>
-                {i < 2 && <div className="w-8 h-0.5 bg-white/20" />}
+                {i < 1 && <div className="w-8 h-0.5 bg-white/20" />}
               </div>
             ))}
           </div>
           <div className="flex justify-center gap-12 mt-1 text-xs text-white/60">
-            <span>Your Details</span>
-            <span>Your Rebate</span>
-            <span>Book Free Visit</span>
+            <span>Your Home</span>
+            <span>Pick a Time</span>
           </div>
         </div>
       </div>
@@ -265,7 +223,7 @@ export default function Qualify() {
               </div>
 
               <div>
-                <Label>Approximate Square Footage *</Label>
+                <Label>Approximate Square Footage</Label>
                 <Select value={form.sqft} onValueChange={v => setForm(f => ({ ...f, sqft: v }))}>
                   <SelectTrigger><SelectValue placeholder="Select size" /></SelectTrigger>
                   <SelectContent>
@@ -292,13 +250,27 @@ export default function Qualify() {
               </div>
 
               <div>
-                <Label>Household Income Range *</Label>
-                <Select value={form.income} onValueChange={v => setForm(f => ({ ...f, income: v }))}>
-                  <SelectTrigger><SelectValue placeholder="Select income range" /></SelectTrigger>
+                <Label>What Do You Want to Replace? *</Label>
+                <Select value={form.replacing} onValueChange={v => setForm(f => ({ ...f, replacing: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select what to replace" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Under $75,000/year</SelectItem>
-                    <SelectItem value="moderate">$75,000 – $150,000/year</SelectItem>
-                    <SelectItem value="high">Over $150,000/year</SelectItem>
+                    <SelectItem value="heating-and-cooling">Heating and cooling</SelectItem>
+                    <SelectItem value="heating">Heating only</SelectItem>
+                    <SelectItem value="cooling">Central AC only</SelectItem>
+                    <SelectItem value="not-sure">Not sure yet</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>When Are You Planning to Replace?</Label>
+                <Select value={form.timing} onValueChange={v => setForm(f => ({ ...f, timing: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Select timing" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asap">As soon as possible</SelectItem>
+                    <SelectItem value="1-3-months">In the next 1–3 months</SelectItem>
+                    <SelectItem value="3-plus-months">In 3+ months</SelectItem>
+                    <SelectItem value="researching">Just researching</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -316,109 +288,35 @@ export default function Qualify() {
 
               {form.ownOrRent === "rent" && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
-                  Rebates are typically available to homeowners. However, your landlord may qualify — we can help facilitate that conversation.
+                  Replacement decisions are usually made by the owner. If you rent, we're happy to talk with your landlord — just let us know in the notes.
                 </div>
               )}
 
               <Button
                 className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold text-lg py-6"
-                disabled={!canCalculate}
-                onClick={() => setStep("results")}
+                disabled={!canContinue}
+                onClick={() => setStep("book")}
               >
-                Calculate My Rebate <ArrowRight className="ml-2 h-5 w-5" />
+                Continue <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
 
               <p className="text-xs text-center text-gray-400">
-                No commitment. No spam. Your info is only used to calculate your rebate and schedule your free assessment.
+                No commitment. No spam. Your info is only used to schedule your free assessment.
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* STEP 2: Results */}
-        {step === "results" && (
-          <div className="space-y-4">
-            <Card className="border-2 border-green-400">
-              <CardContent className="pt-6">
-                <div className="text-center mb-6">
-                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                  <h2 className="text-2xl font-bold text-[#1e3a5f]">Great news, {form.firstName}!</h2>
-                  <p className="text-gray-600">Based on your home details, here's your estimated rebate:</p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 mb-6">
-                  <div className="bg-green-50 rounded-xl p-5 text-center">
-                    <DollarSign className="h-8 w-8 text-green-600 mx-auto mb-1" />
-                    <p className="text-sm text-green-700 font-medium">Estimated Rebate Amount</p>
-                    <p className="text-5xl font-bold text-green-700">${rebate.toLocaleString()}</p>
-                    <p className="text-xs text-green-600 mt-1">NJ Residential Decarbonization Program</p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-blue-50 rounded-xl p-4 text-center">
-                      <p className="text-xs text-blue-600 font-medium mb-1">Estimated System Cost</p>
-                      <p className="text-2xl font-bold text-blue-700">${systemCost.toLocaleString()}</p>
-                    </div>
-                    <div className="bg-orange-50 rounded-xl p-4 text-center">
-                      <p className="text-xs text-orange-600 font-medium mb-1">Your Out-of-Pocket</p>
-                      <p className="text-2xl font-bold text-orange-700">${outOfPocket.toLocaleString()}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-purple-50 rounded-xl p-4 text-center">
-                    <Zap className="h-6 w-6 text-purple-600 mx-auto mb-1" />
-                    <p className="text-xs text-purple-600 font-medium mb-1">Estimated Monthly Energy Savings</p>
-                    <p className="text-2xl font-bold text-purple-700">~${monthlySavings}/month</p>
-                    {paybackMonths > 0 && (
-                      <p className="text-xs text-purple-500 mt-1">Pays for itself in ~{paybackMonths} months</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600 mb-4">
-                  <p className="font-semibold text-gray-700 mb-1">What's included:</p>
-                  <ul className="space-y-1">
-                    <li className="flex items-center gap-2"><CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" /> Heat pump installation & labor</li>
-                    <li className="flex items-center gap-2"><CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" /> Rebate paperwork handled by us</li>
-                    <li className="flex items-center gap-2"><CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" /> No upfront cost — payments on utility bill</li>
-                    <li className="flex items-center gap-2"><CheckCircle className="h-3 w-3 text-green-500 flex-shrink-0" /> 1-year workmanship warranty</li>
-                  </ul>
-                </div>
-
-                <p className="text-xs text-gray-400 text-center mb-4">
-                  * Estimates based on NJ Residential Decarbonization Program guidelines. Final amounts confirmed during free assessment.
-                </p>
-
-                <Button
-                  className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold text-lg py-6"
-                  onClick={() => setStep("book")}
-                >
-                  Book My FREE Assessment <Calendar className="ml-2 h-5 w-5" />
-                </Button>
-                <p className="text-center text-sm text-gray-500 mt-2">Zero obligation — takes 10 minutes at your home</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* STEP 3: Book */}
+        {/* STEP 2: Book */}
         {step === "book" && (
           <Card>
             <CardHeader>
               <CardTitle className="text-[#1e3a5f]">Book Your FREE Assessment</CardTitle>
               <p className="text-sm text-gray-500">
-                Our technician will visit your home, confirm your rebate, and walk you through the installation plan — no cost, no obligation.
+                Our technician will visit your home, check your current system and walk you through the installation plan — no cost, no obligation.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-3">
-                <DollarSign className="h-8 w-8 text-green-600 flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-green-800">Your estimated rebate: ${rebate.toLocaleString()}</p>
-                  <p className="text-xs text-green-600">Out-of-pocket after rebate: ${outOfPocket.toLocaleString()}</p>
-                </div>
-              </div>
-
               <div>
                 <Label>Preferred Date</Label>
                 <Input
@@ -485,19 +383,19 @@ export default function Qualify() {
           </Card>
         )}
 
-        {/* Trust badges */}
+        {/* What you get */}
         <div className="mt-6 grid grid-cols-3 gap-3 text-center">
           <div className="bg-white rounded-lg p-3 shadow-sm">
-            <p className="text-xs font-semibold text-[#1e3a5f]">WMBE/SBE</p>
-            <p className="text-xs text-gray-500">Certified</p>
+            <p className="text-xs font-semibold text-[#1e3a5f]">Free</p>
+            <p className="text-xs text-gray-500">In-home assessment</p>
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm">
-            <p className="text-xs font-semibold text-[#1e3a5f]">4,000+</p>
-            <p className="text-xs text-gray-500">Installations</p>
+            <p className="text-xs font-semibold text-[#1e3a5f]">Written</p>
+            <p className="text-xs text-gray-500">Quote before you decide</p>
           </div>
           <div className="bg-white rounded-lg p-3 shadow-sm">
-            <p className="text-xs font-semibold text-[#1e3a5f]">15 Counties</p>
-            <p className="text-xs text-gray-500">Served in NJ</p>
+            <p className="text-xs font-semibold text-[#1e3a5f]">Optional</p>
+            <p className="text-xs text-gray-500">10-year parts &amp; labor coverage</p>
           </div>
         </div>
 

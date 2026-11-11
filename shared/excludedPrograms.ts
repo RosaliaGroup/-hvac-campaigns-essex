@@ -13,8 +13,8 @@ export function factsForWriters<T extends Pick<VerifiedFacts, "incentives">>(fac
 }
 
 /**
- * Owner decision 2026-11-10: no residential rebate promotion in new copy. The 49 posts whose whole topic is
- * rebates / incentives / tax credits / utility programs stay live exactly as they are ("just leave them") —
+ * Owner decision 2026-11-10: no residential rebate promotion in new copy. The 47 posts whose whole topic is
+ * rebates / incentives / tax credits / utility programs stay live exactly as they are ("just leave them"; the two On-Bill Repayment posts were taken down the same night) —
  * the automatic writers never refresh them and the meta lane never rewrites their title/description.
  * Everywhere else, new or rewritten copy must not mention rebates, incentives, tax credits or utility programs.
  */
@@ -24,7 +24,6 @@ export const KEPT_REBATE_TOPIC_POSTS: readonly string[] = [
   "pseg-heat-pump-rebates-explained",
   "nj-clean-heat-program-2026",
   "hvac-rebates-essex-county-nj",
-  "nj-on-bill-repayment-zero-upfront-hvac",
   "commercial-hvac-rebates-nj-2026",
   "federal-25c-tax-credit-hvac-2026",
   "is-nj-hvac-rebate-worth-it-honest-answer",
@@ -49,7 +48,6 @@ export const KEPT_REBATE_TOPIC_POSTS: readonly string[] = [
   "commercial-heat-pump-rebates-nj",
   "pseg-approved-hvac-contractor-nj",
   "pseg-instant-rebate-program-nj",
-  "pseg-on-bill-repayment-hvac",
   "pseg-clean-heat-program-nj",
   "pseg-rebate-application-process",
   "pseg-rebate-vs-federal-tax-credit",

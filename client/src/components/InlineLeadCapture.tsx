@@ -91,7 +91,7 @@ const VARIANTS: Record<InlineLeadVariant, VariantConfig> = {
     buttonClass: "w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white text-base py-6",
     buttonLabel: "Get My Free Assessment",
     defaultTitle: "Get Your Free Assessment",
-    defaultSubtitle: "See every NJ rebate you qualify for — no cost, no obligation.",
+    defaultSubtitle: "A written quote sized to your home — no cost, no obligation.",
     successMessage: "Tech will call you in under 60 seconds",
   },
   commercial: {
@@ -122,10 +122,10 @@ const VARIANTS: Record<InlineLeadVariant, VariantConfig> = {
     headerClass: "bg-gradient-to-r from-green-600 to-green-500 text-white p-4 rounded-t-lg",
     titleClass: "text-xl font-bold",
     buttonClass: "w-full bg-green-600 hover:bg-green-700 text-white text-base py-6",
-    buttonLabel: "Check My Rebate Amount",
-    defaultTitle: "Check Your NJ Rebate",
-    defaultSubtitle: "See exactly what you qualify for — up to $16,000 in NJ rebates.",
-    successMessage: "We'll email your rebate breakdown shortly",
+    buttonLabel: "Get My Free Assessment",
+    defaultTitle: "Get Your Free Assessment",
+    defaultSubtitle: "A written quote sized to your home — no cost, no obligation.",
+    successMessage: "We'll call you to schedule your free assessment",
     icon: <DollarSign className="h-5 w-5" />,
   },
   warranty: {

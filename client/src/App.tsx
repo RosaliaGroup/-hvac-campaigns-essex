@@ -50,7 +50,6 @@ import LPCommercialVRV from "./pages/lp/LPCommercialVRV";
 import LPFBResidential from "./pages/lp/LPFBResidential";
 import LPFBCommercial from "./pages/lp/LPFBCommercial";
 import LPReferralPartner from "./pages/lp/LPReferralPartner";
-import PromosLanding from "./pages/PromosLanding";
 import Qualify from "./pages/Qualify";
 import CommandCenter from "./pages/CommandCenter";
 import LeadDashboard from "./pages/LeadDashboard";
@@ -183,7 +182,7 @@ function Router() {
       <Route path={"/lp/referral-partner"} component={LPReferralPartner} />
       <Route path={"/pseg-rebate-contractor-nj"}><Redirect to="/residential" /></Route>
       <Route path={"/pseg-rebate-checklist"}><Redirect to="/contact" /></Route>
-      <Route path={"/promos"} component={PromosLanding} />
+      <Route path={"/promos"}><Redirect to="/residential" /></Route>
       <Route path={"/qualify"} component={Qualify} />
       <Route path={"/assessment"} component={Qualify} />
       <Route path={"/rebate-calculator"}><Redirect to="/contact" /></Route>
@@ -258,14 +257,14 @@ function Router() {
       <Route path={"/hvac-cliffside-park-nj"} component={() => <CityPage city="Cliffside Park" slug="cliffside-park" />} />
 
       {/* Service-specific pages */}
-      <Route path={"/heat-pump-installation-nj"} component={() => <ServicePage service="Heat Pump" slug="heat-pump-installation-nj" description="High-efficiency heat pump systems fully eligible for NJ rebates. Replace your old heating system with a modern heat pump and qualify for up to $16,000 in NJ rebates. Heat pumps provide both heating and cooling in one system, reducing energy bills by up to 50%." />} />
-      <Route path={"/central-ac-installation-nj"} component={() => <ServicePage service="Central AC" slug="central-ac-installation-nj" description="New central air conditioning installation for NJ homes. Modern high-efficiency systems with SEER2 ratings of 15+ qualify for NJ rebates up to $16,000. We handle sizing, installation, permits, and all rebate paperwork." />} />
-      <Route path={"/ductless-mini-split-installation-nj"} component={() => <ServicePage service="Ductless Mini-Split" slug="ductless-mini-split-installation-nj" description="Perfect for NJ homes without existing ductwork. Multi-zone ductless mini-split systems provide room-by-room temperature control with maximum energy efficiency. Fully eligible for NJ rebates up to $16,000." />} />
-      <Route path={"/hvac-system-replacement-nj"} component={() => <ServicePage service="Full HVAC System Replacement" slug="hvac-system-replacement-nj" description="Complete HVAC system replacement for NJ homes and businesses. We assess your current system, recommend the best replacement options, handle full installation, permits, inspections, and all rebate paperwork. Most homeowners qualify for significant rebates." />} />
-      <Route path={"/commercial-hvac-installation-nj"} component={() => <ServicePage service="Commercial HVAC" slug="commercial-hvac-installation-nj" description="Commercial HVAC installation for offices, retail stores, restaurants, healthcare facilities, and warehouses across NJ. Rebates can cover up to 80% of commercial installation costs. Free commercial assessment available." />} />
-      <Route path={"/vrv-vrf-installation-nj"} component={() => <ServicePage service="VRV/VRF System" slug="vrv-vrf-installation-nj" description="VRV/VRF variable refrigerant systems for NJ commercial properties. Multi-zone systems with individual room control, maximum energy efficiency, and rebates covering up to 80% of installation costs. Ideal for offices, retail, and multi-floor buildings." />} />
+      <Route path={"/heat-pump-installation-nj"} component={() => <ServicePage service="Heat Pump" slug="heat-pump-installation-nj" description="High-efficiency heat pump systems sized to your NJ home. Heat pumps provide both heating and cooling in one system, reducing energy bills by up to 50%." />} />
+      <Route path={"/central-ac-installation-nj"} component={() => <ServicePage service="Central AC" slug="central-ac-installation-nj" description="New central air conditioning installation for NJ homes, sized to your home and ductwork, with optional 10-year parts & labor coverage." />} />
+      <Route path={"/ductless-mini-split-installation-nj"} component={() => <ServicePage service="Ductless Mini-Split" slug="ductless-mini-split-installation-nj" description="Perfect for NJ homes without existing ductwork. Multi-zone ductless mini-split systems provide room-by-room temperature control with maximum energy efficiency." />} />
+      <Route path={"/hvac-system-replacement-nj"} component={() => <ServicePage service="Full HVAC System Replacement" slug="hvac-system-replacement-nj" description="Complete HVAC system replacement for NJ homes and businesses. We assess your current system, size the new one to your property and handle permits and inspections." />} />
+      <Route path={"/commercial-hvac-installation-nj"} component={() => <ServicePage service="Commercial HVAC" slug="commercial-hvac-installation-nj" description="Commercial HVAC installation for offices, retail stores, restaurants, healthcare facilities, and warehouses across NJ. Free commercial assessment available." />} />
+      <Route path={"/vrv-vrf-installation-nj"} component={() => <ServicePage service="VRV/VRF System" slug="vrv-vrf-installation-nj" description="VRV/VRF variable refrigerant systems for NJ commercial properties. Ideal for offices, retail, and multi-floor buildings." />} />
       <Route path={"/heat-pump-rebates-nj"}><Redirect to="/heat-pump-installation-nj" /></Route>
-      <Route path={"/hvac-financing-nj"} component={() => <ServicePage service="HVAC Financing" slug="hvac-financing-nj" description="0% financing options available for NJ homeowners replacing their HVAC system. When combined with NJ rebates up to $16,000, many homeowners pay $0 out of pocket for a brand new system." />} />
+      <Route path={"/hvac-financing-nj"} component={() => <ServicePage service="HVAC Financing" slug="hvac-financing-nj" description="0% financing options available for NJ homeowners replacing their HVAC system. Ask about current terms during your free in-home assessment." />} />
 
       {/* ── SEO landing pages (repair/service intent) — content in data/seoLandingPages.ts ── */}
       {/* Residential */}

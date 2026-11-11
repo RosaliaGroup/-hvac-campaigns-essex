@@ -10,9 +10,10 @@ import { getNearbyCities, pickDeterministic } from "@/data/njCounties";
 import { blogPosts } from "@/data/blogPosts";
 import { directInstallIndustries } from "@/data/directInstallIndustries";
 import InlineLeadCapture from "@/components/InlineLeadCapture";
+import { isKeptRebateTopicPost } from "@shared/excludedPrograms";
 
 const BASE = "https://mechanicalenterprise.com";
-const REBATE_URL = `${BASE}/rebate-calculator`;
+const BOOK_URL = `${BASE}/contact`;
 const PHONE = "(862) 419-1763";
 const PHONE_TEL = "tel:+18624191763";
 
@@ -28,7 +29,7 @@ const PREMIUM_SYSTEMS = [
 export default function LuxuryAreaPage({ area, slug, county, incomeContext }: LuxuryAreaPageProps) {
   useSEO({
     title: `Premium HVAC Installation ${area} NJ | Carrier Trane Lennox | Mechanical Enterprise`,
-    description: `Premium heat pump and HVAC installation in ${area} NJ. Carrier, Trane, Lennox systems. Smart zoning. NJ rebates up to $16,000. Free assessment. Call ${PHONE}.`,
+    description: `Premium heat pump and HVAC installation in ${area} NJ. Carrier, Trane, Lennox systems. Smart zoning. Optional 10-year coverage. Free assessment. Call ${PHONE}.`,
     ogUrl: `${BASE}/hvac-${slug}-nj`,
   });
 
@@ -38,7 +39,7 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
     { q: `What are the best HVAC systems for large homes in ${area}?`, a: `For larger ${area} homes, we typically recommend multi-zone heat pump systems from Carrier, Trane, or Lennox. These provide independent temperature control for each room and integrate with smart home systems. We assess your property and design a custom solution during your free consultation.` },
     { q: `Can I get smart home integration with my new HVAC system?`, a: `Absolutely. All of our premium systems — Carrier Infinity, Trane XV, and Lennox Signature — include smart home integration. Control your system remotely, set zone-by-zone temperatures, and monitor efficiency from your phone.` },
     { q: `How long does installation take for a whole-home system?`, a: `Whole-home premium installations in ${area} typically take 2-4 days depending on the number of zones and complexity. We coordinate everything including permits and inspections to minimize disruption.` },
-    { q: `Do premium systems qualify for NJ rebates?`, a: `Yes — even premium Carrier, Trane, and Lennox systems qualify for full NJ rebates up to $16,000. Most ${area} homeowners receive the maximum rebate amounts.` },
+    { q: `Is there coverage beyond the manufacturer warranty?`, a: `New installations can be paired with optional 10-year parts & labor coverage, a paid add-on we explain during your free consultation.` },
     { q: `What warranty do premium HVAC systems come with?`, a: `Premium systems come with manufacturer warranties of 10-12 years on parts and compressors. We also offer extended service agreements for complete peace of mind. Our installation workmanship is guaranteed.` },
   ];
 
@@ -49,8 +50,8 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
         "name": "Mechanical Enterprise LLC", "telephone": PHONE,
         "email": "sales@mechanicalenterprise.com", "url": BASE,
         "areaServed": { "@type": "City", "name": `${area}, New Jersey` },
-        "priceRange": "Free Assessment", "openingHours": "Mo-Su 00:00-23:59",
-        "description": `Premium heat pump and HVAC installation in ${area} NJ. Carrier, Trane, Lennox systems with NJ rebates up to $16,000.`,
+        "priceRange": "Free Assessment",
+        "description": `Premium heat pump and HVAC installation in ${area} NJ. Carrier, Trane and Lennox systems with whole-home zoning.`,
       }) }} />
       {/* FAQPage Schema for rich snippets */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
@@ -71,17 +72,17 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
               Premium HVAC Installation in {area}, NJ
             </h1>
             <p className="text-lg md:text-xl text-white/75 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Whole-home comfort systems · Smart zoning · Top-tier brands · NJ rebates up to $16,000
+              Whole-home comfort systems · Smart zoning · Top-tier brands · Optional 10-year coverage
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+              <a href={BOOK_URL}>
                 <Button size="lg" className="bg-[#e8813a] hover:bg-[#d5732f] text-white px-8 py-6 text-lg w-full sm:w-auto">
-                  💰 Check My Rebate Eligibility
+                  📅 Book Free Consultation
                 </Button>
               </a>
-              <a href={BASE}>
+              <a href="tel:+18624191763">
                 <Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
-                  📅 Book Free Consultation
+                  📞 Call {PHONE}
                 </Button>
               </a>
             </div>
@@ -98,7 +99,7 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
               pageContext={`luxury:${slug}`}
               defaultService="Heat Pump Installation"
               title={`Premium HVAC Consultation — ${area}`}
-              subtitle="Whole-home comfort design. Carrier, Trane, Lennox. NJ rebates included."
+              subtitle="Whole-home comfort design. Carrier, Trane, Lennox. Optional 10-year coverage."
             />
           </div>
         </div>
@@ -109,8 +110,8 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto text-center">
             {[
-              { big: "Up to $16,000", small: "NJ Rebates Available" },
-              { big: "MWBE Certified", small: "PSE&G-Approved Contractor" },
+              { big: "10-Year", small: "Optional Parts & Labor Coverage" },
+              { big: "Written", small: "Quote Before You Decide" },
               { big: "Free", small: "Consultation & Design" },
               { big: "Premium Brands", small: "Carrier · Trane · Lennox" },
             ].map((s, i) => (
@@ -160,28 +161,6 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
         </div>
       </section>
 
-      {/* Rebate Section */}
-      <section className="py-16 bg-white">
-        <div className="container">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl font-bold text-[#0a1628] mb-3">Rebates</h2>
-            <p className="text-gray-600 mb-8">Even premium systems qualify for full NJ rebates. Most {area} homeowners receive up to $16,000 in combined rebates.</p>
-            <div className="rounded-xl overflow-hidden border-2 border-[#e8813a] mb-4">
-              <div className="flex justify-between items-center p-5 bg-white">
-                <span className="font-medium text-[#0a1628]">NJ State Rebates</span>
-                <span className="font-bold text-lg text-[#e8813a]">Up to $16,000</span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-400 mb-6">* Eligibility depends on equipment, property type, and utility provider.</p>
-            <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
-              <Button className="bg-[#e8813a] hover:bg-[#d5732f] text-white px-8 py-5 text-base">
-                Check My Eligibility <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </a>
-          </div>
-        </div>
-      </section>
-
       {/* Why Choose Us */}
       <section className="py-16 bg-[#0a1628]">
         <div className="container">
@@ -191,7 +170,7 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {[
               { icon: "🏠", title: "Custom Whole-Home Design", desc: `We design complete comfort systems tailored to ${area} properties — not one-size-fits-all solutions.` },
-              { icon: "💰", title: "Full Rebate Maximization", desc: "We handle all rebate paperwork and ensure you receive every dollar you're entitled to." },
+              { icon: "🛡️", title: "Optional 10-Year Coverage", desc: "Pair a new installation with optional 10-year parts & labor coverage — a paid add-on we explain up front." },
               { icon: "⚡", title: "Premium Brand Specialists", desc: "Factory-trained on Carrier, Trane, and Lennox premium product lines." },
               { icon: "📞", title: "Dedicated Project Manager", desc: `Your ${area} installation gets a single point of contact from consultation through completion.` },
             ].map((item, i) => (
@@ -251,7 +230,7 @@ export default function LuxuryAreaPage({ area, slug, county, incomeContext }: Lu
           <div className="mt-10 max-w-3xl mx-auto">
             <h3 className="text-xl font-bold text-[#0a1628] mb-4">HVAC Guides for {area} Homeowners</h3>
             <div className="grid md:grid-cols-2 gap-3">
-              {pickDeterministic(blogPosts, slug, 4).map((post) => (
+              {pickDeterministic(blogPosts.filter((p) => !isKeptRebateTopicPost(p.slug)), slug, 4).map((post) => (
                 <Link key={post.slug} href={`/blog/${post.slug}`}>
                   <div className="bg-white rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
                     {post.title.length > 60 ? post.title.slice(0, 57) + "..." : post.title}

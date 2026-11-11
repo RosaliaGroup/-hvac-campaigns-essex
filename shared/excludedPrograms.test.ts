@@ -3,9 +3,9 @@ import { KEPT_REBATE_TOPIC_POSTS, isKeptRebateTopicPost, isRebateWordingExemptPa
 import { blogPosts } from "../client/src/data/blogPosts";
 
 describe("kept rebate-topic posts (owner 2026-11-10: leave them as-is)", () => {
-  it("lists 49 unique slugs that all exist as blog posts", () => {
-    expect(KEPT_REBATE_TOPIC_POSTS).toHaveLength(49);
-    expect(new Set(KEPT_REBATE_TOPIC_POSTS).size).toBe(49);
+  it("lists 47 unique slugs that all exist as blog posts", () => {
+    expect(KEPT_REBATE_TOPIC_POSTS).toHaveLength(47);
+    expect(new Set(KEPT_REBATE_TOPIC_POSTS).size).toBe(47);
     const slugs = new Set(blogPosts.map((p) => p.slug));
     for (const s of KEPT_REBATE_TOPIC_POSTS) expect(slugs.has(s), s).toBe(true);
   });

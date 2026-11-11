@@ -194,6 +194,7 @@ const SITEMAP_EXCLUDE = new Set([
   "/pseg-rebate-contractor-nj",
   "/pseg-rebate-checklist",
   "/heat-pump-rebates-nj",
+  "/promos",
 ]);
 const sitemapEntries = entries.filter((e) => !SITEMAP_EXCLUDE.has(e.loc.replace(BASE, "") || "/"));
 

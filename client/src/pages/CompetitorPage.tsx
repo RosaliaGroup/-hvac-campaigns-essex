@@ -7,7 +7,7 @@ import { useSEO } from "@/hooks/useSEO";
 import { useState } from "react";
 
 const BASE = "https://mechanicalenterprise.com";
-const REBATE_URL = `${BASE}/rebate-calculator`;
+const BOOK_URL = `${BASE}/contact`;
 const PHONE = "(862) 419-1763";
 const PHONE_TEL = "tel:+18624191763";
 
@@ -18,16 +18,16 @@ type CompetitorPageProps = {
 
 const COMPARISON_ROWS = [
   { feature: "Free Assessment", us: "Always free", them: "Fees apply", usGood: true, themGood: false },
-  { feature: "NJ Rebate Assistance", us: "Up to $16,000", them: "Limited", usGood: true, themGood: null },
-  { feature: "Rebate Paperwork", us: "We handle it all", them: "You handle it", usGood: true, themGood: false },
+  { feature: "Written Quote", us: "Before you decide", them: "Varies", usGood: true, themGood: null },
+  { feature: "Optional 10-Year Parts & Labor Coverage", us: "Available", them: "Varies", usGood: true, themGood: null },
   { feature: "Local Newark Based", us: "Newark, NJ", them: "Regional chain", usGood: true, themGood: false },
   { feature: "WMBE/SBE Certified", us: "Certified", them: "No", usGood: true, themGood: false },
   { feature: "Installation Focus", us: "Specialists", them: "Service calls", usGood: true, themGood: null },
 ];
 
 const WHY_CARDS = [
-  { icon: "💰", title: "Rebate Specialists", desc: "We specialize in NJ rebate programs. Most competitors don't maximize your rebate eligibility — we do." },
-  { icon: "📋", title: "We Handle Everything", desc: "Assessment, installation, permits, all rebate paperwork done for you. No runaround, no surprises." },
+  { icon: "🛡️", title: "Optional 10-Year Coverage", desc: "Pair a new installation with optional 10-year parts & labor coverage — a paid add-on we explain up front." },
+  { icon: "📋", title: "We Handle Everything", desc: "Assessment, installation, permits and inspections done for you. No runaround, no surprises." },
   { icon: "🏘️", title: "Local Newark Business", desc: "We're based in Newark and serve our community. Not a regional chain with a call center." },
   { icon: "⚡", title: "Installation Specialists", desc: "We focus on heat pump and HVAC installations — not just service calls. We're here to upgrade your system." },
 ];
@@ -36,8 +36,8 @@ const WHY_CARDS = [
 const COMPETITOR_CONTENT: Record<string, string[]> = {
   "aj-perri": [
     "A.J. Perri is a well-known regional HVAC and plumbing company that has served New Jersey homeowners for decades. As a large operation with multiple service vans across the state, they offer broad coverage but operate more like a general service company than a specialized installation firm. If you're considering A.J. Perri for a new heat pump or HVAC system, it's worth understanding how the experience differs from working with a local, installation-focused contractor like Mechanical Enterprise.",
-    "The biggest difference between Mechanical Enterprise and A.J. Perri is our approach to NJ rebates and incentives. Mechanical Enterprise was built around the NJ Clean Energy rebate programs — it's the core of what we do. We assess every property for maximum rebate qualification, select equipment specifically to hit the highest rebate tiers, and file all PSE&G and NJ Clean Energy paperwork on your behalf at no extra charge. Many of our customers qualify for up to $16,000 in NJ rebates. A.J. Perri offers HVAC installation among many other services, but rebate optimization is not their primary focus — homeowners often end up handling their own rebate paperwork or not qualifying for the maximum amounts.",
-    "Pricing transparency is another key differentiator. Mechanical Enterprise provides detailed written quotes showing equipment costs, labor, permits, and exact rebate amounts you can expect — so you know your true out-of-pocket cost before committing. With NJ's On-Bill Repayment (OBR) program, many of our customers pay $0 upfront and repay through their utility bill at zero interest. A.J. Perri uses a flat-rate pricing model that can make it harder to understand exactly what you're paying for. Their diagnostic fees, which typically range from $80 to $120, are charged even for assessment visits — Mechanical Enterprise assessments are always 100% free.",
+    "The biggest difference between Mechanical Enterprise and A.J. Perri is focus. Mechanical Enterprise is an installation contractor first: we start every project with a load calculation, size the new system to your home, and walk you through the equipment, scope of work and timeline before anything is installed. New installations can be paired with optional 10-year parts & labor coverage, a paid add-on we explain up front. A.J. Perri offers HVAC installation among many other services, so the experience is closer to a general service company.",
+    "Pricing transparency is another key differentiator. Mechanical Enterprise provides detailed written quotes showing equipment costs, labor and permits, so you know what you are paying for before committing. A.J. Perri uses a flat-rate pricing model that can make it harder to understand exactly what you're paying for. Their diagnostic fees, which typically range from $80 to $120, are charged even for assessment visits — Mechanical Enterprise assessments are always 100% free.",
     "Mechanical Enterprise is a WMBE (Women/Minority Business Enterprise) and SBE (Small Business Enterprise) certified contractor, meaning we meet rigorous state certification standards. We are locally based in Newark, NJ and serve 15 NJ counties. Our team focuses exclusively on HVAC installation and system upgrades — we don't do general plumbing, drain cleaning, or appliance repair. This specialization means every installation gets our full engineering attention. When you call Mechanical Enterprise, you talk to the people who will actually install your system — not a call center.",
   ],
 };
@@ -50,8 +50,8 @@ function StatusIcon({ good }: { good: boolean | null }) {
 
 export default function CompetitorPage({ competitor, slug }: CompetitorPageProps) {
   useSEO({
-    title: `${competitor} Alternative NJ | Free Assessment & $16K Rebates | Mechanical Enterprise`,
-    description: `Looking for an alternative to ${competitor} in NJ? Mechanical Enterprise offers free HVAC assessments, NJ rebates up to $16,000, and local Newark-based service. Call ${PHONE}.`,
+    title: `${competitor} Alternative NJ | Free Assessment | Mechanical Enterprise`,
+    description: `Looking for an alternative to ${competitor} in NJ? Mechanical Enterprise offers free HVAC assessments, optional 10-year parts & labor coverage, and local Newark-based service. Call ${PHONE}.`,
     ogUrl: `${BASE}/vs-${slug}`,
   });
 
@@ -60,19 +60,15 @@ export default function CompetitorPage({ competitor, slug }: CompetitorPageProps
   const faqs = [
     {
       q: `How does Mechanical Enterprise compare to ${competitor}?`,
-      a: `Mechanical Enterprise is a Newark-based HVAC installation specialist focused on heat pumps and system upgrades. We offer free assessments and specialize in maximizing NJ rebates up to $16,000 for qualifying homeowners.`,
+      a: `Mechanical Enterprise is a Newark-based HVAC installation specialist focused on heat pumps and system upgrades. We offer free in-home assessments, written quotes and optional 10-year parts & labor coverage.`,
     },
     {
       q: `Why should I choose Mechanical Enterprise over ${competitor}?`,
-      a: `We're locally based in Newark, WMBE/SBE certified, and focused on installation and rebate maximization — not just service calls. Our assessments are always free.`,
-    },
-    {
-      q: `Does Mechanical Enterprise offer better rebates than ${competitor}?`,
-      a: `We specialize in NJ rebate programs and handle all paperwork for you. Many homeowners qualify for up to $16,000 in NJ rebates.`,
+      a: `We're locally based in Newark, WMBE/SBE certified, and focused on installation — not just service calls. Our assessments are always free.`,
     },
     {
       q: `How do I get started with Mechanical Enterprise?`,
-      a: `Book a free assessment online or call ${PHONE}. We come to you, assess your system, and show you exactly what rebates you qualify for — no cost, no obligation.`,
+      a: `Book a free assessment online or call ${PHONE}. We come to you, assess your system, and give you a written quote — no cost, no obligation.`,
     },
   ];
 
@@ -88,8 +84,7 @@ export default function CompetitorPage({ competitor, slug }: CompetitorPageProps
         "address": { "@type": "PostalAddress", "addressLocality": "Newark", "addressRegion": "NJ", "addressCountry": "US" },
         "areaServed": "New Jersey",
         "priceRange": "$100-$550",
-        "openingHours": "Mo-Su 00:00-23:59",
-        "description": `Expert HVAC solutions in NJ. Heat pumps, VRV/VRF systems, free assessments with rebates up to $16,000. Alternative to ${competitor}.`,
+        "description": `Expert HVAC solutions in NJ. Heat pumps, VRV/VRF systems, free in-home assessments. Alternative to ${competitor}.`,
       }) }} />
       <Navigation />
 
@@ -101,12 +96,12 @@ export default function CompetitorPage({ competitor, slug }: CompetitorPageProps
               Looking for an Alternative to {competitor} in NJ?
             </h1>
             <p className="text-lg md:text-xl text-white/80 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Mechanical Enterprise offers free assessments, NJ rebates up to $16,000, and local Newark-based service with no large-company runaround.
+              Mechanical Enterprise offers free in-home assessments, written quotes and local Newark-based service with no large-company runaround.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+              <a href={PHONE_TEL}>
                 <Button size="lg" className="bg-[#e8813a] hover:bg-[#d5732f] text-white px-8 py-6 text-lg w-full sm:w-auto">
-                  💰 Check My Rebate Eligibility
+                  📞 Call {PHONE}
                 </Button>
               </a>
               <a href={BASE}>
@@ -173,7 +168,7 @@ export default function CompetitorPage({ competitor, slug }: CompetitorPageProps
                 <p key={i} className="text-gray-700 leading-relaxed mb-4">{para}</p>
               ))}
               <div className="not-prose mt-6">
-                <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+                <a href={BOOK_URL}>
                   <Button className="bg-[#e8813a] hover:bg-[#d5732f] text-white">
                     Get a Free Assessment — See the Difference <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -200,26 +195,6 @@ export default function CompetitorPage({ competitor, slug }: CompetitorPageProps
                 </CardContent>
               </Card>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Rebate Breakdown ──────────────────────────────────────── */}
-      <section className="py-16 bg-white">
-        <div className="container">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-[#0a1628] mb-8">
-              Available Rebates
-            </h2>
-            <div className="rounded-xl overflow-hidden border-2 border-[#e8813a]">
-              <div className="flex justify-between items-center p-5">
-                <span className="font-medium text-[#0a1628]">NJ State Rebates</span>
-                <span className="font-bold text-lg text-[#e8813a]">Up to $16,000</span>
-              </div>
-            </div>
-            <p className="text-sm text-gray-500 mt-4 text-center">
-              Most competitors don't specialize in rebate maximization. We do — and we handle all the paperwork for free.
-            </p>
           </div>
         </div>
       </section>
