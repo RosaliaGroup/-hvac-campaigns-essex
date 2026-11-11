@@ -69,7 +69,7 @@ export interface LpSection {
 
 const HUB_RES: LpLink = { href: "/residential", label: "All Residential HVAC", sub: "Browse home services" };
 const HUB_COM: LpLink = { href: "/commercial", label: "All Commercial HVAC", sub: "Browse business services" };
-const REBATE_LINK: LpLink = { href: "/rebate-calculator", label: "Rebate Calculator", sub: "See your NJ savings" };
+const ASSESSMENT_LINK: LpLink = { href: "/contact", label: "Free Assessment", sub: "Written quote before you decide" };
 const PM_HUB: LpLink = { href: "/commercial/for-property-management", label: "HVAC for Property Managers", sub: "Request a portfolio review" };
 
 export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
@@ -82,10 +82,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     formCaptureType: "qualify_form",
     h1: "AC Not Cooling? We'll Have You Comfortable Today.",
     heroSub:
-      "Failing air conditioner in New Jersey? We assess central AC, ductless and heat-pump systems and give you a written replacement quote, with every rebate you qualify for.",
+      "Failing air conditioner in New Jersey? We assess central AC, ductless and heat-pump systems and give you a written replacement quote sized to your home.",
     metaTitle: "AC Replacement NJ | Failing Air Conditioner? Free Assessment | Mechanical Enterprise",
     metaDescription:
-      "Failing AC in NJ? Free in-home assessment and written replacement quote, plus rebates on new systems. Call (862) 419-1763.",
+      "Failing AC in NJ? Free in-home assessment and a written replacement quote sized to your home. Call (862) 419-1763.",
     introHeading: "Fast, Reliable Air Conditioning Repair in NJ",
     intro:
       "When your AC quits during a New Jersey heat wave, every hour matters. Our EPA-certified technicians find the real problem, quote a flat price before touching a tool, and carry common parts to finish most repairs in a single visit.",
@@ -100,7 +100,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
     faqs: [
       { q: "How much does AC repair cost in NJ?", a: "Most common repairs — capacitors, contactors, thermostats, and refrigerant service — vary with the part and the system. The technician diagnoses the problem and gives you an exact flat-rate price before any work begins." },
       { q: "How fast can you come out?", a: "Call (862) 419-1763 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
-      { q: "Should I repair or replace my air conditioner?", a: "As a rule of thumb, replace if the system is 12–15+ years old, uses discontinued R-22, or the repair exceeds about half of replacement cost. If replacement makes sense, we'll show you the NJ rebates and financing that make it affordable." },
+      { q: "Should I repair or replace my air conditioner?", a: "As a rule of thumb, replace if the system is 12–15+ years old, uses discontinued R-22, or the repair exceeds about half of replacement cost. If replacement makes sense, we'll give you a written quote and talk through financing options." },
       { q: "Do you repair ductless mini-splits and heat pumps?", a: "Yes — we're factory-trained on Mitsubishi, Daikin, Fujitsu, and all major ductless and heat-pump brands, plus conventional central air." },
       { q: "Are your technicians licensed and insured?", a: "Every technician is EPA-certified, fully licensed, and insured. Mechanical Enterprise is a WMBE/SBE-certified NJ contractor and all repairs are warrantied." },
       { q: "Do you serve my town?", a: "We serve all of New Jersey from our Newark base — Essex, Hudson, Bergen, Union, Passaic, Morris and surrounding counties." },
@@ -109,10 +109,10 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { href: "/central-ac-installation-nj", label: "Central AC Installation", sub: "Time for a new system?" },
       { href: "/heat-pump-repair-nj", label: "Heat Pump Repair", sub: "Ducted & ductless" },
       { href: "/emergency-hvac-repair-nj", label: "Failing System", sub: "Replacement assessment" },
-      REBATE_LINK,
+      ASSESSMENT_LINK,
     ],
     ctaHeading: "Stop Sweating — Get Your AC Fixed Today",
-    ctaSub: "Free in-home assessments across New Jersey, with every rebate you qualify for on a new system.",
+    ctaSub: "Free in-home assessments across New Jersey, with a written quote before you decide.",
   },
   {
     slug: "heating-repair-nj",
@@ -142,7 +142,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "How much does heating repair cost?", a: "It depends on the part and the system. The technician diagnoses the problem first, and you approve an exact flat-rate price before we begin." },
       { q: "My heat works but some rooms are cold — can you help?", a: "Yes. Uneven heating is usually airflow, zoning, or distribution. We diagnose the cause and fix it rather than just band-aiding symptoms." },
       { q: "Do you handle both gas and electric heating?", a: "We service gas and electric furnaces, gas and oil boilers, and electric/gas heat pumps." },
-      { q: "When should I replace instead of repair?", a: "If the system is old, unsafe, or facing a major repair, replacement may be smarter — and NJ rebates up to $16,000 can offset the cost. We'll give you an honest recommendation." },
+      { q: "When should I replace instead of repair?", a: "If the system is old, unsafe, or facing a major repair, replacement may be smarter. We'll give you an honest recommendation and a written quote." },
       { q: "Are you licensed and insured?", a: "Yes — fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied workmanship." },
     ],
     related: [
@@ -182,7 +182,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Is a cracked heat exchanger dangerous?", a: "Yes — it can leak carbon monoxide. If we find one we'll show you the evidence and your safe options. We never scare you into a sale." },
       { q: "Should I repair or replace my furnace?", a: "We focus on replacements. At a free in-home assessment we look at age, condition and efficiency and give you a written quote. Call (862) 419-1763." },
       { q: "Why does my furnace keep shutting off?", a: "Short cycling is often a dirty filter, a failing limit switch, or an oversized system. We pinpoint the exact cause." },
-      { q: "Should I repair or replace my furnace?", a: "If it's 15+ years old or facing a major repair, replacement may pay off — and NJ rebates up to $16,000 can offset a new high-efficiency system. We'll advise honestly." },
+      { q: "Should I repair or replace my furnace?", a: "If it's 15+ years old or facing a major repair, replacement may pay off with a new high-efficiency system sized to your home. We'll advise honestly." },
       { q: "Do you offer maintenance to prevent breakdowns?", a: "Yes — a seasonal tune-up prevents most no-heat emergencies and keeps your warranty valid." },
     ],
     related: [
@@ -222,7 +222,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Do you work on both steam and hot-water boilers?", a: "Yes. We service steam and hot-water (hydronic) boilers, gas and oil, including the older systems common in NJ." },
       { q: "Why are some of my radiators cold?", a: "Usually trapped air, a failing circulator, or a balancing issue. We diagnose the exact cause instead of guessing." },
       { q: "How fast can you come out?", a: "Call (862) 419-1763 and we'll book a free in-home assessment at the earliest open time during business hours (Mon–Fri 9–6, Sat 9–2)." },
-      { q: "Is it worth repairing an old boiler?", a: "Often yes, but if it's inefficient or failing we'll show you replacement options — high-efficiency systems may qualify for NJ rebates up to $16,000." },
+      { q: "Is it worth repairing an old boiler?", a: "Often yes, but if it's inefficient or failing we'll show you replacement options and give you a written quote." },
       { q: "Are you licensed and insured?", a: "Fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied repairs." },
     ],
     related: [
@@ -262,7 +262,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "What's the best air-quality upgrade for the money?", a: "It depends on your home and health goals. For many NJ households a high-MERV media filter plus humidity control delivers the biggest improvement per dollar." },
       { q: "Can you help with mold and humidity in my basement?", a: "Yes — humidity control, ventilation, and UV treatment address the damp conditions common in NJ basements." },
       { q: "Do these systems work with my current HVAC?", a: "In most cases, yes. We integrate purifiers, filters, UV, and humidity control with your existing furnace, heat pump, or air handler." },
-      { q: "Do air-quality upgrades qualify for rebates?", a: "Some efficiency-related upgrades may qualify; many IAQ add-ons don't. We confirm exactly what's eligible during your assessment rather than overpromising." },
+      { q: "Which air-quality upgrades are worth it?", a: "It depends on your home and what's bothering you. We look at your system and ductwork during the assessment and recommend only what will make a real difference." },
       { q: "Is the assessment really free?", a: "Yes — we assess your home's air quality and options at no cost or obligation." },
     ],
     related: [
@@ -285,7 +285,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       "Expert heat-pump repair across New Jersey for ducted and ductless systems — no heat, no cooling, defrost problems, and refrigerant faults. All brands.",
     metaTitle: "Heat Pump Repair NJ | Ducted & Ductless | Mechanical Enterprise",
     metaDescription:
-      "Expert heat pump repair across NJ — no heat/cooling, defrost & refrigerant faults, all brands. Upgrade rebates. Call (862) 419-1763.",
+      "Expert heat pump repair across NJ — no heat/cooling, defrost & refrigerant faults, all brands. Call (862) 419-1763.",
     introHeading: "Heat Pump Repair Done Right in New Jersey",
     intro:
       "Heat pumps heat and cool in one system, so a fault affects your comfort year-round. Our technicians know cold-climate heat pumps inside and out — from reversing valves to defrost boards — and fix the true cause fast.",
@@ -301,14 +301,14 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "Why is my heat pump not heating in cold weather?", a: "Common causes are a stuck reversing valve, a failed defrost board, low refrigerant, or a fault in the backup heat. We diagnose the exact issue rather than guessing." },
       { q: "Why is my outdoor unit covered in ice?", a: "A little frost is normal; a solid block of ice usually means the defrost cycle has failed. We repair the defrost control and sensors." },
       { q: "How much does heat pump repair cost in NJ?", a: "It depends on the part — inverter boards and compressors are bigger repairs than sensors or controls. You approve an exact price upfront, before any work starts." },
-      { q: "Should I repair or replace my heat pump?", a: "If it's newer, repair is usually best. If it's aging or facing a major repair, a new cold-climate heat pump may qualify for NJ rebates up to $16,000 — we'll show you the numbers." },
+      { q: "Should I repair or replace my heat pump?", a: "If it's newer, repair is usually best. If it's aging or facing a major repair, a new cold-climate heat pump may be the better value — we'll give you a written quote so you can compare." },
       { q: "Do you service ductless mini-split heat pumps?", a: "Yes — see our dedicated mini-split repair service, and we handle multi-zone systems from every major brand." },
       { q: "Are you licensed and insured?", a: "Fully licensed, insured, WMBE/SBE-certified NJ contractor with warrantied repairs." },
     ],
     related: [
-      { href: "/heat-pump-installation-nj", label: "Heat Pump Installation", sub: "New system & rebates" },
+      { href: "/heat-pump-installation-nj", label: "Heat Pump Installation", sub: "New system, sized to your home" },
       { href: "/ductless-mini-split-repair-nj", label: "Mini-Split Repair", sub: "Ductless systems" },
-      { href: "/heat-pump-rebates-nj", label: "Heat Pump Rebates", sub: "Up to $16K in NJ" },
+      { href: "/contact", label: "Free Assessment", sub: "Written quote before you decide" },
       { href: "/emergency-hvac-repair-nj", label: "Failing System", sub: "Replacement assessment" },
     ],
     ctaHeading: "Get Your Heat Pump Back in Action",
@@ -342,7 +342,7 @@ export const SEO_LANDING_PAGES: SeoLandingPageData[] = [
       { q: "What do the blinking lights on my mini-split mean?", a: "They're a fault code specific to your brand. We read the code, confirm the cause, and repair it — no guesswork." },
       { q: "One zone works but another doesn't — can you fix that?", a: "Yes. Multi-zone issues are often a communication fault, a failed indoor board, or a refrigerant problem to that head. We isolate and repair the affected zone." },
       { q: "How much does mini-split repair cost in NJ?", a: "It depends on the fault — clearing a drain line is a much smaller job than replacing an inverter board. You approve an exact price upfront, before any work starts." },
-      { q: "Do you install new mini-splits too?", a: "We do — and new ductless heat-pump systems may qualify for NJ rebates up to $16,000. Ask us during your visit." },
+      { q: "Do you install new mini-splits too?", a: "We do — new ductless heat-pump systems sized to your rooms. Ask us during your visit." },
       { q: "Are you factory-trained on my brand?", a: "We're trained across Mitsubishi, Daikin, Fujitsu, and all major ductless brands." },
     ],
     related: [

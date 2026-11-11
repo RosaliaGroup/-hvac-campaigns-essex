@@ -631,6 +631,7 @@ export default async function handler(request: Request, context: any) {
     "/pseg-rebate-contractor-nj": "/residential",
     "/pseg-rebate-checklist": "/contact",
     "/heat-pump-rebates-nj": "/heat-pump-installation-nj",
+    "/promos": "/residential",
     // Owner rule: no PSE&G On-Bill Repayment in marketing — both OBR posts taken down Nov 10 2026.
     "/blog/pseg-on-bill-repayment-hvac": "/blog/hvac-financing-nj-options",
     "/blog/nj-on-bill-repayment-zero-upfront-hvac": "/blog/hvac-financing-nj-options",

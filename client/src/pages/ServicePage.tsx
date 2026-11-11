@@ -33,7 +33,7 @@ function pickServiceVariant(slug: string): InlineLeadVariant {
 }
 
 const BASE = "https://mechanicalenterprise.com";
-const REBATE_URL = `${BASE}/rebate-calculator`;
+const BOOK_URL = `${BASE}/contact`;
 const PHONE = "(862) 419-1763";
 const PHONE_TEL = "tel:+18624191763";
 
@@ -45,21 +45,21 @@ export default function ServicePage({ service, slug, description }: ServicePageP
   const priceRanges = VERIFIED_FACTS.priceRanges.filter((r) => r.page === `/${slug}`);
 
   useSEO({
-    title: `${service} Installation NJ | Free Assessment & Rebates | Mechanical Enterprise`,
+    title: `${service} Installation NJ | Free Assessment | Mechanical Enterprise`,
     description: showWarrantySection
-      ? `${service} installation in NJ with optional 10-year parts & labor coverage. Free assessment, rebates up to $16,000. Call ${PHONE}.`
-      : `${service} installation in NJ. Free assessment, rebates up to $16,000. Licensed NJ contractor. Call ${PHONE}.`,
+      ? `${service} installation in NJ with optional 10-year parts & labor coverage. Free in-home assessment. Call ${PHONE}.`
+      : `${service} installation in NJ, sized to your property. Free assessment from a licensed NJ contractor. Call ${PHONE}.`,
     ogUrl: `${BASE}/${slug}`,
   });
 
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const faqs = [
-    { q: `How much does ${service.toLowerCase()} installation cost in NJ?`, a: `Costs vary by system size and property. With NJ rebates up to $16,000, many NJ homeowners significantly reduce their out-of-pocket cost. Book a free assessment to get your exact numbers.` },
-    { q: `What rebates are available for ${service.toLowerCase()} installation in NJ?`, a: `NJ homeowners may qualify for state rebates up to $16,000. Eligibility depends on your equipment and property. We assess your exact eligibility for free.` },
-    { q: `How long does ${service.toLowerCase()} installation take?`, a: `Most residential installations take 1-2 days. We handle all permits, inspections, and rebate paperwork so you don't have to.` },
-    { q: `Do you handle the rebate paperwork for ${service.toLowerCase()} installation?`, a: `Yes — we handle 100% of the rebate paperwork for you. Assessment, installation, permits, and all rebate applications are included at no extra charge.` },
-    { q: `How do I get started with ${service.toLowerCase()} installation?`, a: `Call ${PHONE} or book online. We come to your property, assess your system, and show you every rebate you qualify for — completely free, no obligation.` },
+    { q: `How much does ${service.toLowerCase()} installation cost in NJ?`, a: `Costs vary by system size, your property and the work needed. Book a free assessment and you'll get a written quote before you decide.` },
+    { q: `Do you offer coverage on new ${service.toLowerCase()} installations?`, a: `Yes. New installations can be paired with optional 10-year parts & labor coverage, a paid add-on we explain during your free assessment.` },
+    { q: `How long does ${service.toLowerCase()} installation take?`, a: `Most residential installations take 1-2 days. We handle all permits and inspections so you don't have to.` },
+    { q: `Do you pull the permits for ${service.toLowerCase()} installation?`, a: `Yes — we handle the permits and inspections for your installation as part of the job.` },
+    { q: `How do I get started with ${service.toLowerCase()} installation?`, a: `Call ${PHONE} or book online. We come to your property, assess your system, and give you a written quote — completely free, no obligation.` },
   ];
 
   return (
@@ -70,7 +70,7 @@ export default function ServicePage({ service, slug, description }: ServicePageP
         "email": "sales@mechanicalenterprise.com", "url": BASE,
         "areaServed": "New Jersey", "priceRange": "Free Assessment",
         "openingHours": "Mo-Su 00:00-23:59",
-        "description": `${service} installation in NJ. Free assessments, NJ rebates up to $16,000.`,
+        "description": `${service} installation in NJ. Free in-home assessments and optional 10-year parts & labor coverage.`,
         // docs/positioning-warranty-spec.md §9b — Offer/priceRange schema, only emitted once a verified range exists for this page.
         ...(priceRanges.length > 0 ? { makesOffer: priceRanges.map((r) => ({ "@type": "Offer", "itemOffered": r.item, "priceCurrency": "USD", "priceRange": `${r.low}-${r.high}` })) } : {}),
       }) }} />
@@ -84,17 +84,17 @@ export default function ServicePage({ service, slug, description }: ServicePageP
               {service} Installation in New Jersey
             </h1>
             <p className="text-lg md:text-xl text-white/80 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Free assessment · NJ rebates up to $16,000 · Licensed NJ contractor
+              Free assessment · Sized to your property · Licensed NJ contractor
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+              <a href={BOOK_URL}>
                 <Button size="lg" className="bg-[#e8813a] hover:bg-[#d5732f] text-white px-8 py-6 text-lg w-full sm:w-auto">
-                  💰 Check My Rebate Eligibility
+                  📅 Book Free Assessment
                 </Button>
               </a>
-              <a href={BASE}>
+              <a href={PHONE_TEL}>
                 <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 px-8 py-6 text-lg w-full sm:w-auto">
-                  📅 Book Free Assessment
+                  📞 Call {PHONE}
                 </Button>
               </a>
             </div>
@@ -120,9 +120,9 @@ export default function ServicePage({ service, slug, description }: ServicePageP
         <div className="container">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto text-center">
             {[
-              { big: "Up to $16,000", small: "NJ Rebates Available" },
-              { big: "MWBE Certified", small: "PSE&G-Approved Contractor" },
-              { big: "Free", small: "Assessment & Paperwork" },
+              { big: "10-Year", small: "Optional Parts & Labor Coverage" },
+              { big: "Written", small: "Quote Before You Decide" },
+              { big: "Free", small: "In-Home Assessment" },
               { big: "Licensed & Insured", small: "NJ Contractor" },
             ].map((s, i) => (
               <div key={i}>
@@ -142,19 +142,10 @@ export default function ServicePage({ service, slug, description }: ServicePageP
               About {service} Installation
             </h2>
             <p className="text-gray-600 leading-relaxed text-lg text-center mb-8">{description}</p>
-            <div className="rounded-xl overflow-hidden border-2 border-[#e8813a] mb-4">
-              <div className="flex justify-between items-center p-5 bg-white">
-                <span className="font-medium text-[#0a1628]">NJ State Rebates</span>
-                <span className="font-bold text-lg text-[#e8813a]">Up to $16,000</span>
-              </div>
-            </div>
-            <p className="text-xs text-gray-400 mb-6 text-center">
-              * Rebate eligibility depends on equipment, property type, and utility provider. We determine exactly what you qualify for at no cost during your free assessment.
-            </p>
             <div className="text-center">
-              <a href={REBATE_URL} target="_blank" rel="noopener noreferrer">
+              <a href={BOOK_URL}>
                 <Button className="bg-[#e8813a] hover:bg-[#d5732f] text-white px-8 py-5 text-base">
-                  Check My Eligibility <ArrowRight className="ml-2 h-5 w-5" />
+                  Book a Free Assessment <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </a>
             </div>
@@ -179,8 +170,8 @@ export default function ServicePage({ service, slug, description }: ServicePageP
           </h2>
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {[
-              { icon: "📋", title: "We Handle Everything", desc: "Assessment, installation, permits, and all rebate paperwork — done for you." },
-              { icon: "💰", title: "Maximize Your Rebates", desc: "We know every NJ rebate program and make sure you get every dollar you're entitled to." },
+              { icon: "📋", title: "We Handle Everything", desc: "Assessment, installation, permits and inspections — done for you." },
+              { icon: "🛡️", title: "Optional 10-Year Coverage", desc: "Pair a new installation with optional 10-year parts & labor coverage — a paid add-on we explain up front." },
               { icon: "⚡", title: "Licensed NJ Contractor", desc: "Fully licensed, bonded, and insured. WMBE/SBE certified. Serving NJ since day one." },
               { icon: "📞", title: "Local & Responsive", desc: `Based in Newark. Serving all of NJ. Call ${PHONE}.` },
             ].map((item, i) => (

@@ -29,8 +29,8 @@ export const COVERAGE_FOOTNOTE =
 export default function LPFBResidential() {
   const { toast } = useToast();
   useSEO({
-    title: "NJ Heat Pump Rebates Up to $16,000 | Free Assessment | Mechanical Enterprise",
-    description: "NJ homeowners may qualify for up to $16,000 in heat pump rebates. Free in-home assessment from a licensed NJ HVAC contractor — we handle the rebate paperwork.",
+    title: "Replace Your Old Heating or AC | Free NJ Assessment | Mechanical Enterprise",
+    description: "Replacing an old furnace, boiler or central AC? Free in-home assessment and written quote from a licensed NJ HVAC contractor. Optional 10-year coverage.",
     ogUrl: "https://mechanicalenterprise.com/lp/fb-residential",
   });
   // Short form on purpose (Nov 1): name + phone + optional email. The old 4-field
@@ -80,7 +80,7 @@ export default function LPFBResidential() {
       phone: form.phone,
       captureType: "lp_fb_residential",
       ...captureContext(),
-      message: "Facebook LP: Residential Homeowners Rebate",
+      message: "Facebook LP: Residential Homeowners Replacement",
       website: honeypot.website || undefined,
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
@@ -93,7 +93,7 @@ export default function LPFBResidential() {
     <div className="min-h-screen bg-white font-sans">
       {/* Top Bar */}
       <div className="bg-[#1e3a5f] text-white py-2 px-4 text-center text-sm font-medium">
-        🏠 NJ Homeowners: See If You Qualify for Up to <strong className="text-[#ff6b35]">$16,000</strong> in Heat Pump Incentives
+        🏠 NJ Homeowners: Free In-Home Replacement Assessment + <strong className="text-[#ff6b35]">Optional 10-Year</strong> Parts &amp; Labor Coverage
       </div>
 
       {/* Hero — Facebook style: story-driven, visual, emotional */}
@@ -101,10 +101,10 @@ export default function LPFBResidential() {
         <div className="max-w-4xl mx-auto text-center">
           <Badge className="hidden md:inline-flex mb-4 bg-green-100 text-green-800 border border-green-200">✅ For NJ Homeowners — Free Assessment</Badge>
           <h1 className="text-2xl md:text-5xl font-bold text-[#1e3a5f] leading-tight mb-2 md:mb-4">
-            NJ Homeowners May Qualify for <span className="text-[#ff6b35]">Up to $16,000</span> in Heat Pump Rebates
+            Replace Your Old Heating or AC <span className="text-[#ff6b35]">Before It Fails</span>
           </h1>
           <p className="text-base md:text-xl text-gray-600 mb-4 md:mb-6 max-w-2xl mx-auto">
-            Replacing an old furnace, boiler or central AC? A licensed NJ contractor checks your eligibility at a free in-home assessment, and we handle the rebate paperwork.
+            Replacing an old furnace, boiler or central AC? A licensed NJ contractor sizes the new system to your home at a free in-home assessment, and you get a written quote before you decide.
           </p>
 
           {/* Lead Form — centered, prominent */}
@@ -113,7 +113,7 @@ export default function LPFBResidential() {
               <div className="text-center py-6">
                 <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-3" />
                 <h3 className="text-xl font-bold text-[#1e3a5f] mb-2">You're In!</h3>
-                <p className="text-gray-600 text-sm mb-4">We'll call you to check your eligibility and schedule your free assessment.</p>
+                <p className="text-gray-600 text-sm mb-4">We'll call you to schedule your free assessment.</p>
                 <a href="tel:+18624191763">
                   <Button className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-bold">
                     <Phone className="h-4 w-4 mr-2" /> Call (862) 419-1763
@@ -149,13 +149,13 @@ export default function LPFBResidential() {
           <div className="flex flex-wrap justify-center gap-6 mt-6 text-sm text-gray-500">
             <span className="flex items-center gap-1"><CheckCircle className="h-4 w-4 text-green-500" /> NJ Master HVACR License #19HC00400700</span>
             <span className="flex items-center gap-1"><Home className="h-4 w-4 text-[#ff6b35]" /> Free in-home assessment</span>
-            <span className="flex items-center gap-1"><Clock className="h-4 w-4 text-[#1e3a5f]" /> We handle the rebate paperwork</span>
+            <span className="flex items-center gap-1"><Clock className="h-4 w-4 text-[#1e3a5f]" /> Written quote before you decide</span>
           </div>
 
         </div>
       </section>
 
-      {/* How it works — verified facts only (VERIFIED_FACTS: up to $16,000 residential rebate). No price
+      {/* How it works — verified facts only (no rebate promotion, owner Nov 10 2026). No price
           estimates or testimonials until real, attributable ones exist. */}
       <section className="py-12 px-4 bg-[#1e3a5f] text-white">
         <div className="max-w-4xl mx-auto text-center">
@@ -163,9 +163,9 @@ export default function LPFBResidential() {
           <p className="text-white/70 mb-8">Three steps from old system to new heat pump</p>
           <div className="grid md:grid-cols-3 gap-4">
             {[
-              { label: "1. Free assessment", sub: "We look at your home, your current system and which rebates you may qualify for.", icon: Home },
-              { label: "2. Clear quote", sub: "You get a written quote and the eligible rebate amount before you decide anything.", icon: DollarSign },
-              { label: "3. Install + paperwork", sub: "Licensed installation, and we file the rebate paperwork for you.", icon: Leaf },
+              { label: "1. Free assessment", sub: "We look at your home, your current system and your ductwork, and size the new system.", icon: Home },
+              { label: "2. Clear quote", sub: "You get a written quote with the equipment, scope and timeline before you decide anything.", icon: DollarSign },
+              { label: "3. Installation", sub: "Licensed installation, permits and inspections handled for you. Optional 10-year parts & labor coverage.", icon: Leaf },
             ].map((item) => (
               <div key={item.label} className="bg-white/10 rounded-xl p-5 text-left">
                 <item.icon className="h-6 w-6 text-[#ff6b35] mb-2" />
@@ -174,7 +174,6 @@ export default function LPFBResidential() {
               </div>
             ))}
           </div>
-          <p className="text-white/50 text-xs mt-4">Rebates of up to $16,000 are available to eligible NJ homeowners. Eligibility and amounts depend on your utility, home and equipment, and are confirmed at the assessment.</p>
         </div>
       </section>
 
