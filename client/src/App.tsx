@@ -3,7 +3,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { isInternalRoute } from "@/lib/navigation";
 import { trackPageView } from "@/lib/analytics";
 import { useCrmMeta } from "@/hooks/useCrmMeta";
-import { Route, Switch, useLocation } from "wouter";
+import { Redirect, Route, Switch, useLocation } from "wouter";
 import { useEffect } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -13,7 +13,6 @@ import About from "./pages/About";
 import Company from "./pages/Company";
 import Services from "./pages/Services";
 import Contact from "./pages/Contact";
-import RebateGuide from "./pages/RebateGuide";
 import ResidentialCampaigns from "./pages/ResidentialCampaigns";
 import CommercialCampaigns from "./pages/CommercialCampaigns";
 import MaintenanceSubscription from "./pages/MaintenanceSubscription";
@@ -47,17 +46,12 @@ import FacebookAdsCampaigns from "./pages/FacebookAdsCampaigns";
 import EmailSMSCampaigns from "./pages/EmailSMSCampaigns";
 import SmsCampaigns from "./pages/SmsCampaigns";
 import CampaignGenerator from "./pages/CampaignGenerator";
-import LPHeatPumpRebates from "./pages/lp/LPHeatPumpRebates";
 import LPCommercialVRV from "./pages/lp/LPCommercialVRV";
 import LPFBResidential from "./pages/lp/LPFBResidential";
 import LPFBCommercial from "./pages/lp/LPFBCommercial";
-import LPRebateGuide from "./pages/lp/LPRebateGuide";
 import LPReferralPartner from "./pages/lp/LPReferralPartner";
-import LPPsegRebate from "./pages/lp/LPPsegRebate";
-import LPPsegChecklist from "./pages/lp/LPPsegChecklist";
 import PromosLanding from "./pages/PromosLanding";
 import Qualify from "./pages/Qualify";
-import RebateCalculator from "./pages/RebateCalculator";
 import CommandCenter from "./pages/CommandCenter";
 import LeadDashboard from "./pages/LeadDashboard";
 import GrowthDashboard from "./pages/growth/GrowthDashboard";
@@ -155,7 +149,7 @@ function Router() {
       <Route path={"/company"} component={Company} />
       <Route path={"/services"} component={Services} />
       <Route path={"/contact"} component={Contact} />
-      <Route path={"/rebate-guide"} component={RebateGuide} />
+      <Route path={"/rebate-guide"}><Redirect to="/residential" /></Route>
       <Route path={"/residential"} component={ResidentialCampaigns} />
       <Route path={"/commercial"} component={CommercialCampaigns} />
       <Route path={"/maintenance"} component={MaintenanceSubscription} />
@@ -178,22 +172,22 @@ function Router() {
       <Route path={"/reset-password"} component={ResetPassword} />
 
       {/* Campaign Landing Pages — no nav, optimized for paid traffic */}
-      <Route path={"/lp/heat-pump-rebates"} component={LPHeatPumpRebates} />
+      <Route path={"/lp/heat-pump-rebates"}><Redirect to="/lp/fb-residential" /></Route>
       <Route path={"/lp/commercial-vrv"} component={LPCommercialVRV} />
       {/* Owner Nov 1, 2026: no 24/7 / emergency or maintenance service — these URLs show the residential replacement page. */}
       <Route path={"/lp/emergency-hvac"} component={LPFBResidential} />
       <Route path={"/lp/fb-residential"} component={LPFBResidential} />
       <Route path={"/lp/fb-commercial"} component={LPFBCommercial} />
-      <Route path={"/lp/rebate-guide"} component={LPRebateGuide} />
+      <Route path={"/lp/rebate-guide"}><Redirect to="/lp/fb-residential" /></Route>
       <Route path={"/lp/maintenance-offer"} component={LPFBResidential} />
       <Route path={"/lp/referral-partner"} component={LPReferralPartner} />
-      <Route path={"/pseg-rebate-contractor-nj"} component={LPPsegRebate} />
-      <Route path={"/pseg-rebate-checklist"} component={LPPsegChecklist} />
+      <Route path={"/pseg-rebate-contractor-nj"}><Redirect to="/residential" /></Route>
+      <Route path={"/pseg-rebate-checklist"}><Redirect to="/contact" /></Route>
       <Route path={"/promos"} component={PromosLanding} />
       <Route path={"/qualify"} component={Qualify} />
       <Route path={"/assessment"} component={Qualify} />
-      <Route path={"/rebate-calculator"} component={RebateCalculator} />
-      <Route path={"/rebate-calc"} component={RebateCalculator} />
+      <Route path={"/rebate-calculator"}><Redirect to="/contact" /></Route>
+      <Route path={"/rebate-calc"}><Redirect to="/contact" /></Route>
       <Route path={"/courses"} component={Courses} />
       <Route path={"/courses/:id"} component={CourseDetail} />
 
@@ -270,7 +264,7 @@ function Router() {
       <Route path={"/hvac-system-replacement-nj"} component={() => <ServicePage service="Full HVAC System Replacement" slug="hvac-system-replacement-nj" description="Complete HVAC system replacement for NJ homes and businesses. We assess your current system, recommend the best replacement options, handle full installation, permits, inspections, and all rebate paperwork. Most homeowners qualify for significant rebates." />} />
       <Route path={"/commercial-hvac-installation-nj"} component={() => <ServicePage service="Commercial HVAC" slug="commercial-hvac-installation-nj" description="Commercial HVAC installation for offices, retail stores, restaurants, healthcare facilities, and warehouses across NJ. Rebates can cover up to 80% of commercial installation costs. Free commercial assessment available." />} />
       <Route path={"/vrv-vrf-installation-nj"} component={() => <ServicePage service="VRV/VRF System" slug="vrv-vrf-installation-nj" description="VRV/VRF variable refrigerant systems for NJ commercial properties. Multi-zone systems with individual room control, maximum energy efficiency, and rebates covering up to 80% of installation costs. Ideal for offices, retail, and multi-floor buildings." />} />
-      <Route path={"/heat-pump-rebates-nj"} component={() => <ServicePage service="Heat Pump Rebates NJ" slug="heat-pump-rebates-nj" description="NJ homeowners can qualify for up to $16,000 in heat pump rebates in 2026. We assess your exact eligibility, recommend qualifying equipment, and handle all rebate applications at no cost to you." />} />
+      <Route path={"/heat-pump-rebates-nj"}><Redirect to="/heat-pump-installation-nj" /></Route>
       <Route path={"/hvac-financing-nj"} component={() => <ServicePage service="HVAC Financing" slug="hvac-financing-nj" description="0% financing options available for NJ homeowners replacing their HVAC system. When combined with NJ rebates up to $16,000, many homeowners pay $0 out of pocket for a brand new system." />} />
 
       {/* ── SEO landing pages (repair/service intent) — content in data/seoLandingPages.ts ── */}

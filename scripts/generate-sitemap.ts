@@ -186,6 +186,14 @@ const SITEMAP_EXCLUDE = new Set([
   "/lp/fb-residential",
   "/lp/referral-partner",
   "/lp/rebate-guide",
+  // Owner decision Nov 10 2026: rebate pages retired — 301 to install/contact pages
+  // (netlify/edge-functions/inject-meta.ts REDIRECTS). Kept out of the sitemap.
+  "/rebate-calculator",
+  "/rebate-guide",
+  "/lp/heat-pump-rebates",
+  "/pseg-rebate-contractor-nj",
+  "/pseg-rebate-checklist",
+  "/heat-pump-rebates-nj",
 ]);
 const sitemapEntries = entries.filter((e) => !SITEMAP_EXCLUDE.has(e.loc.replace(BASE, "") || "/"));
 

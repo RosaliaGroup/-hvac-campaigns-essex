@@ -56,7 +56,7 @@ const MAIN_MENU = ["🏠 Residential", "🏢 Commercial", "💼 Careers", "🤝 
 const FOLLOW_UP_CONFIG: Record<string, { reply: string; buttons: string[] }> = {
   "🏠 Residential": {
     reply: "Great! What do you need help with for your home?",
-    buttons: ["🆓 Free Assessment", RES_SERVICE, RES_EMERGENCY, "💰 Rebate Calculator", "🔄 Maintenance Plan"],
+    buttons: ["🆓 Free Assessment", RES_SERVICE, RES_EMERGENCY, "🔄 Maintenance Plan"],
   },
   "🏢 Commercial": {
     reply: "Got it! What can we help with for your commercial property?",
@@ -87,12 +87,12 @@ const CATEGORY_MAP: Record<string, FlowCategory> = {
 
 /* ── Follow-up one-liners ──────────────────────────────────────────── */
 const FOLLOW_UP_REPLIES: Record<string, string> = {
-  "🆓 Free Assessment": "Perfect! A free assessment takes about 60 min and we handle all rebate paperwork.",
+  "🆓 Free Assessment": "Perfect! A free in-home assessment takes about 60 minutes and you get a written quote.",
   [RES_SERVICE]: `Got it — the ${P.residential.standard.price} service call ${FEE_NOTE}. Fill out the form below and we'll get you scheduled.`,
   [RES_EMERGENCY]: `The ${P.residential.emergency.price} emergency call gets priority scheduling and ${FEE_NOTE}. Fill out the form and we'll call you back for the earliest slot.`,
   [COM_SERVICE]: `Got it — the ${P.commercial.standard.price} commercial service call ${FEE_NOTE}. Fill out the form below and we'll get you scheduled.`,
   [COM_EMERGENCY]: `The ${P.commercial.emergency.price} commercial emergency call gets priority scheduling and ${FEE_NOTE}. Fill out the form and we'll call you back for the earliest slot.`,
-  "💰 Rebate Calculator": "Check your estimate instantly — up to $16,000 residential, 80% commercial.",
+  "💰 Rebate Calculator": "Our commercial rebate calculator estimates your savings based on building size, current system, and property type.",
   "🔄 Maintenance Plan": "We'd be glad to put together maintenance plan options for your system. Leave your details and we'll follow up.",
   "🏭 VRV/VRF Systems": "We design and install VRV/VRF systems — ideal for multi-zone buildings.",
   "💸 80% Rebates": "Commercial properties can qualify for rebates covering up to 80% of upgrade costs.",
@@ -292,7 +292,7 @@ export default function LiveChatWidget() {
       if (flowCategory === "commercial") {
         return { reply: "Our commercial rebate calculator estimates your savings based on building size, current system, and property type.", menu: "booking-commercial-rebate" };
       }
-      return { reply: "Check your estimate instantly — up to $16,000 residential, 80% commercial.", menu: "booking-rebate" };
+      return { reply: "Here's your direct booking link for a free in-home assessment — takes 2 minutes!", menu: "booking-assessment" };
     }
     return null;
   };
@@ -361,7 +361,6 @@ export default function LiveChatWidget() {
       ];
       default: return [
         { label: "📋 Schedule a Free Assessment", handler: () => handleFinalAction("📋 Schedule a Free Assessment", "Here's your direct booking link — takes 2 minutes!", "booking-assessment") },
-        { label: "💰 See How Much I Qualify For", handler: () => handleFinalAction("💰 See How Much I Qualify For", "Check your rebate estimate instantly — up to $16,000 for residential, 80% for commercial.", "booking-rebate") },
       ];
     }
   };

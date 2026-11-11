@@ -69,11 +69,9 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Resources</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/blog/nj-hvac-rebates-2026-complete-guide" className="text-white/80 hover:text-white transition-colors">NJ HVAC Rebates Guide</Link></li>
+              <li><Link href="/blog/central-ac-replacement-nj-cost" className="text-white/80 hover:text-white transition-colors">AC Replacement Guide</Link></li>
               <li><Link href="/blog/heat-pump-installation-nj-guide" className="text-white/80 hover:text-white transition-colors">Heat Pump Guide</Link></li>
-              <li><Link href="/blog/pseg-heat-pump-rebates-explained" className="text-white/80 hover:text-white transition-colors">PSE&G Rebates Explained</Link></li>
-              <li><Link href="/rebate-calculator" className="text-white/80 hover:text-white transition-colors">Rebate Calculator</Link></li>
-              <li><Link href="/pseg-rebate-contractor-nj" className="text-white/80 hover:text-white transition-colors">PSE&G Contractor Info</Link></li>
+              <li><Link href="/blog/10-year-hvac-warranty-coverage-explained" className="text-white/80 hover:text-white transition-colors">10-Year Coverage Explained</Link></li>
               <li><Link href="/blog" className="text-white/80 hover:text-white transition-colors">All Blog Posts</Link></li>
             </ul>
           </div>
