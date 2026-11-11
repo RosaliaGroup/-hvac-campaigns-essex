@@ -13,10 +13,64 @@
  * Required permissions: leads_retrieval, pages_manage_metadata
  */
 import type { Express, Request, Response } from "express";
+import { sql } from "drizzle-orm";
 import { getDb } from "../db";
 import { leadCaptures } from "../../drizzle/schema";
 import { notifyOwner } from "../_core/notification";
 import { enqueueLeadCustomerSync } from "./leadCustomerAutoSync";
+import { enrollSpeedToLead } from "./growth/speedToLead";
+
+const SALES_ALERT_EMAIL = "sales@mechanicalenterprise.com";
+const STANDARD_FIELDS = new Set(["full_name", "first_name", "last_name", "email", "phone_number"]);
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+/** Human-readable "Question: answer" lines for every non-contact field on the form. */
+export function formatExtraFields(fields: MetaLeadField[]): string[] {
+  return fields
+    .filter((f) => !STANDARD_FIELDS.has(f.name))
+    .map((f) => `${f.name.replace(/_/g, " ").replace(/\?$/, "")}: ${(f.values ?? []).join(", ")}`);
+}
+
+/** Email the sales inbox about a new Facebook lead (same Resend path as website leads). */
+async function sendSalesAlert(lead: { name: string; email?: string; phone?: string; extra: string[]; leadId: string }): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    console.warn("[MetaLeadWebhook] RESEND_API_KEY missing — sales alert email skipped");
+    return;
+  }
+  const rows: Array<[string, string]> = [
+    ["Name", lead.name || "—"],
+    ["Phone", lead.phone ?? "—"],
+    ["Email", lead.email ?? "—"],
+    ...lead.extra.map((line): [string, string] => {
+      const i = line.indexOf(": ");
+      return i > 0 ? [line.slice(0, i), line.slice(i + 2)] : [line, ""];
+    }),
+    ["Source", "Facebook Instant Form"],
+  ];
+  const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+    <h2 style="color:#1e3a5f;margin-top:0">New Facebook Lead</h2>
+    <p>Follow up as soon as possible — the lead is saved in the website CRM (Leads).</p>
+    <table style="width:100%;border-collapse:collapse">${rows
+      .map(([k, v]) => `<tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;width:40%">${escapeHtml(k)}</td><td style="padding:8px;border-bottom:1px solid #eee">${escapeHtml(v)}</td></tr>`)
+      .join("")}</table>
+    <p style="color:#888;font-size:12px">Meta lead ID ${escapeHtml(lead.leadId)}</p>
+  </div>`;
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
+      to: [SALES_ALERT_EMAIL],
+      subject: `New Facebook Lead – ${lead.name || lead.phone || "Homeowner"}`,
+      html,
+    }),
+  });
+  if (!res.ok) console.error("[MetaLeadWebhook] Sales alert email failed:", res.status, await res.text().catch(() => ""));
+}
 
 const META_API_VERSION = "v25.0";
 const META_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
@@ -151,19 +205,33 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
             const pageToken = savedPageToken || await getPageAccessToken(page_id, userToken!);
             const lead = await fetchLeadData(leadgen_id, pageToken);
 
-            const fullName = extractField(lead.field_data, "full_name") ?? "";
+            const fullName =
+              extractField(lead.field_data, "full_name") ??
+              [extractField(lead.field_data, "first_name"), extractField(lead.field_data, "last_name")].filter(Boolean).join(" ");
             const email = extractField(lead.field_data, "email");
             const phone = extractField(lead.field_data, "phone_number");
+            const extra = formatExtraFields(lead.field_data);
 
             // Split full name into first/last
             const nameParts = fullName.trim().split(/\s+/);
             const firstName = nameParts[0] || undefined;
             const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
+            const marker = `Lead ${leadgen_id}`;
 
-            // Save to leadCaptures table
+            // Save to leadCaptures table (the website CRM's Leads list)
             const db = await getDb();
             if (db) {
-              await db.insert(leadCaptures).values({
+              // Meta retries webhooks — skip a lead we already saved.
+              const existing = await db
+                .select({ id: leadCaptures.id })
+                .from(leadCaptures)
+                .where(sql`${leadCaptures.captureType} = 'meta_lead_ad' AND ${leadCaptures.message} LIKE ${`%${marker}%`}`)
+                .limit(1);
+              if (existing.length > 0) {
+                console.log(`[MetaLeadWebhook] Duplicate lead ${leadgen_id} — already saved`);
+                continue;
+              }
+              const inserted = await db.insert(leadCaptures).values({
                 email: email ?? null,
                 phone: phone ?? null,
                 firstName: firstName ?? null,
@@ -171,10 +239,16 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
                 name: fullName || null,
                 captureType: "meta_lead_ad",
                 pageUrl: `https://facebook.com/${page_id}`,
-                message: `Meta Lead Gen — Form ${change.value.form_id}, Lead ${leadgen_id}`,
+                message: [...extra, `Meta Lead Gen — Form ${change.value.form_id}, ${marker}`].join("\n"),
+                utmSource: "facebook",
+                utmMedium: "paid_social",
+                channel: "paid",
                 status: "new",
               });
-              console.log(`[MetaLeadWebhook] Saved lead: ${fullName} (${email}, ${phone})`);
+              console.log(`[MetaLeadWebhook] Saved lead ${leadgen_id}`);
+
+              const newId = Number((inserted as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
+              if (newId > 0) void enrollSpeedToLead({ table: "leadCaptures", id: newId });
 
               // Policy: every new lead becomes a QuickBooks customer. Fire-and-forget —
               // never blocks or fails webhook processing (QBO errors are swallowed).
@@ -189,10 +263,13 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
               });
             }
 
-            // Notify owner about new lead
+            // Email alert to the sales inbox so someone follows up.
+            await sendSalesAlert({ name: fullName, email, phone, extra, leadId: leadgen_id }).catch((err) =>
+              console.error("[MetaLeadWebhook] Sales alert error:", err),
+            );
             await notifyOwner({
               title: `New Meta Lead: ${fullName}`,
-              content: `A new lead submitted the Instant Form on Facebook.\n\nName: ${fullName}\nEmail: ${email ?? "N/A"}\nPhone: ${phone ?? "N/A"}\n\nLead ID: ${leadgen_id}`,
+              content: `A new lead submitted the Instant Form on Facebook.\n\nName: ${fullName}\nEmail: ${email ?? "N/A"}\nPhone: ${phone ?? "N/A"}\n${extra.join("\n")}\n\nLead ID: ${leadgen_id}`,
             }).catch((err) => console.error("[MetaLeadWebhook] Notification error:", err));
           } catch (err) {
             console.error(`[MetaLeadWebhook] Failed to process lead ${leadgen_id}:`, err);
