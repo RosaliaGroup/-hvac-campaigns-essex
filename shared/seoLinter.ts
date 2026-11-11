@@ -11,6 +11,7 @@
  */
 import { PHONE_DISPLAY, PHONE_E164 } from "./business";
 import { VERIFIED_FACTS } from "./verifiedFacts";
+import { REBATE_PROMO_RE, isRebateWordingExemptPath } from "./excludedPrograms";
 import { splitSentences, isQuestion, hasNegation, OPTIONAL_COVERAGE_RE, isQuotedAt, clauseBefore, stripFalseNegations } from "./claimContext";
 
 export type LintSeverity = "block" | "warn";
@@ -781,6 +782,13 @@ export function lintPageMeta(input: LintInput, opts: LintOptions = {}): LintResu
     if (includesPhrase(combined, phrase)) {
       findings.push(blockFinding("both", "expired_incentive", `Expired or unverified incentive claim: "${phrase}".`));
     }
+  }
+
+  // Owner decision (2026-11-10): no rebate / incentive / tax-credit promotion in titles or descriptions, except on
+  // the kept rebate-topic posts (left as-is) and the commercial Direct Install / commercial pages.
+  const rebateHit = combined.match(REBATE_PROMO_RE);
+  if (rebateHit && !isRebateWordingExemptPath(input.pagePath)) {
+    findings.push(blockFinding("both", "rebate_promo", `Mentions "${rebateHit[0]}" — rebates, incentives, tax credits and utility programs are no longer promoted (owner, Nov 10, 2026). Lead with installation quality, system fit and the optional 10-year parts & labor coverage instead.`));
   }
 
   // Certification wording

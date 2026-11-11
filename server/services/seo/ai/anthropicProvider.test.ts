@@ -183,14 +183,15 @@ describe("AnthropicOptimizationProvider — output budget and owner rules in the
     for (const [opts] of vi.mocked(callAnthropicModelChain).mock.calls) expect((opts as { maxTokens: number }).maxTokens).toBeGreaterThanOrEqual(1000);
   });
 
-  it("tells the model the range / 24-7 / same-day rules and that rebates are never the first clause of a title", async () => {
+  it("tells the model the range / 24-7 / same-day rules and never to mention rebates (owner 2026-11-10)", async () => {
     vi.mocked(callAnthropicModelChain).mockResolvedValueOnce(ok("Clean Title"));
     await new AnthropicOptimizationProvider("key").generateTitle(ctx());
     const system = (vi.mocked(callAnthropicModelChain).mock.calls[0][0] as { system: string }).system;
     expect(system).toContain("Never write a dollar range");
     expect(system).toContain("24/7");
     expect(system).toContain("same-day");
-    expect(system).toContain("never the first clause of a title");
+    expect(system).toContain("Do not mention rebates, incentives or tax credits at all");
+    expect(system).toContain("Never mention rebates, incentives, tax credits");
   });
 });
 

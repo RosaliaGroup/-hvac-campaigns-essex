@@ -35,6 +35,7 @@ import { countPostStructure, renderPostPlainText, extractInternalLinkPaths, extr
 import { replaceBlogPostInSource } from "../../../shared/blogSourceEdit";
 import { blogPosts, type BlogPostData } from "../../../client/src/data/blogPosts";
 import { draftRefreshPost, isResidentialPost } from "./refreshDrafting";
+import { isKeptRebateTopicPost } from "../../../shared/excludedPrograms";
 import { nextTopicToProcess, updateQueueStatus } from "./contentQueue";
 import { draftContentPost, ContentDraftParseError } from "./contentDrafting";
 import { runCriticPass, type CriticVerdict } from "./criticPass";
@@ -259,6 +260,14 @@ async function draftNextContent(facts: VerifiedFacts): Promise<ContentDraftOutco
       if (!current) {
         await updateQueueStatus(topic.id, "drafted");
         console.warn(`[SEO] refresh topic #${topic.id}: /blog/${slug} is not a blog post — set aside.`);
+        blockedTopicIds.push(topic.id);
+        lastBlocked = { status: "refresh_target_missing", topicId: topic.id, slug };
+        continue;
+      }
+      if (isKeptRebateTopicPost(current.slug)) {
+        // Owner (2026-11-10): the rebate-topic posts stay live exactly as they are — never refreshed.
+        await updateQueueStatus(topic.id, "drafted");
+        console.warn(`[SEO] refresh topic #${topic.id}: /blog/${slug} is a kept rebate-topic post — left as-is, set aside.`);
         blockedTopicIds.push(topic.id);
         lastBlocked = { status: "refresh_target_missing", topicId: topic.id, slug };
         continue;

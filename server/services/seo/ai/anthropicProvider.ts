@@ -42,7 +42,7 @@ const LINTER_RULES_PROMPT = `
 Hard rules. An automated linter checks every one of these; breaking any of them gets the draft rejected:
 - Never use superlatives or unsupported claims: "#1", "number one", "best", "top-rated", "award-winning", "guaranteed", "lowest price", "cheapest".
 - Never mention "federal tax credit", "tax credit", "25C", "IRA credit", "$2,000 credit", "$2K", "HEAR", or "HOMES rebate" — these incentive programs are expired or unverified.
-- Never state a dollar figure above $16,000. Only mention "$16,000"/"$16K" if the page's city/utility territory (given below) is confirmed PSE&G.
+- Never mention rebates, incentives, tax credits, utility programs (PSE&G, Clean Heat, NJ Clean Energy), "$16,000"/"$16K" or on-bill repayment — the owner stopped all rebate promotion (Nov 10, 2026). The only exception is a commercial Direct Install / commercial page, where the existing program wording may stay.
 - Never use certification wording ("certified", "MWBE", "WMBE", "SBE", "SEDB", "DBE") — none are pre-approved right now.
 - The ONLY phone number you may ever use is the canonical one given below. Never invent or alter a phone number.
 - Never mention a competitor by name: A.J. Perri, Gold Medal, Horizon, Hutchinson.
@@ -62,7 +62,7 @@ Hard rules. An automated linter checks every one of these; breaking any of them 
 
 // docs/positioning-warranty-spec.md §6 — verbatim positioning sentence, added to both the meta lane (here) and the content lane (contentDrafting.ts).
 const WARRANTY_POSITIONING_PROMPT =
-  "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Mention rebates only as a secondary benefit and only using figures from VERIFIED_FACTS. Never describe coverage as included or free. Rebates are secondary and never the first clause of a title.";
+  "Lead with installation quality, system fit and the optional 10-year parts & labor coverage. Do not mention rebates, incentives or tax credits at all. Never describe coverage as included or free.";
 
 /** Installation-page titles carry the 10-year coverage when there is room (owner decision 2026-09-30). */
 const INSTALL_TITLE_HINT =
@@ -87,7 +87,7 @@ function buildUserPrompt(field: "title" | "metaDescription", ctx: PageContext, r
     `Current title: ${ctx.title || "(none)"}`,
     `Current meta description: ${ctx.metaDescription || "(none)"}`,
     `Current H1: ${ctx.h1 || "(none)"}`,
-    `City/utility territory: ${ctx.cityUtilityTerritory} (only mention "$16K" PSE&G rebates if this is "pseg")`,
+    `City/utility territory: ${ctx.cityUtilityTerritory} (for context only — never mention rebates or "$16K")`,
     `Top Search Console queries landing on this page: ${ctx.topQueries.length ? ctx.topQueries.join(", ") : "(none synced yet)"}`,
     `First ~800 words of the page's live body content, for grounding:\n${ctx.bodyExcerpt || "(unavailable — write from the fields above only)"}`,
     ``,

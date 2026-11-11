@@ -441,8 +441,23 @@ describe("lintPageMeta — dollar ranges, service hours, rebate-leading titles (
       const r = meta(title, "Quality installation with optional 10-year parts & labor coverage.", path);
       expect(codes(r), title).toContain("title_leads_with_rebate");
       expect(r.findings.find((f) => f.code === "title_leads_with_rebate")?.severity).toBe("warn");
-      expect(r.passes, title).toBe(true);
+      // Owner decision 2026-11-10: any rebate/incentive wording now BLOCKS outside the exempt pages.
+      expect(codes(r), title).toContain("rebate_promo");
+      expect(r.passes, title).toBe(false);
     }
+  });
+
+  it("BLOCKS rebate / incentive / tax-credit wording except on kept rebate-topic posts and commercial pages (owner 2026-11-10)", () => {
+    const desc = "Quality installation with optional 10-year parts & labor coverage.";
+    const blocked = meta("Montclair NJ HVAC Installation | Quality Installs", "Heat pump installs in Montclair. PSE&G rebates up to $16K may apply.", "/hvac-montclair-nj");
+    expect(codes(blocked)).toContain("rebate_promo");
+    expect(blocked.passes).toBe(false);
+    expect(codes(meta("Heat Pump Installation NJ | 10-Year Parts & Labor", "Ask about incentives. " + desc, "/heat-pump-installation-nj"))).toContain("rebate_promo");
+    expect(codes(meta("Heat Pump Guide NJ", "Federal tax credits explained. " + desc, "/blog/heat-pump-installation-nj-guide"))).toContain("rebate_promo");
+    // kept rebate-topic post and B2B pages are exempt
+    expect(codes(meta("HVAC Rebates in Essex County NJ", desc, "/blog/hvac-rebates-essex-county-nj"))).not.toContain("rebate_promo");
+    expect(codes(meta("NJ Direct Install Program", "Up to 80% incentives for small businesses. " + desc, "/direct-install"))).not.toContain("rebate_promo");
+    expect(codes(meta("Heat Pump Installation NJ | 10-Year Parts & Labor", desc, "/heat-pump-installation-nj"))).not.toContain("rebate_promo");
   });
 
   it("does NOT warn when rebates are a later clause, on blog posts, or on /direct-install pages", () => {
