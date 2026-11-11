@@ -14,7 +14,9 @@
 export const FOLLOW_UP_BUSINESS_DAYS = [4, 10, 18, 26] as const;
 export const CATCH_UP_HOURLY_CAP = 20;
 export const NORMAL_HOURLY_CAP = 10;
-export const MAX_CANDIDATES_PER_PHASE = 5; // follow-ups inspected per hour
+export const MAX_CANDIDATES_PER_PHASE = 5; // follow-ups inspected in Gmail per hour
+/** Follow-up rows looked at per hour, including ones removed by database-only gates. */
+export const MAX_FOLLOW_UP_SWEEP = 50;
 /** New introductions per hour (PROSPECT_INTROS_PER_HOUR, 1–15). Still bounded by the shared hourly cap. */
 export const DEFAULT_INTROS_PER_HOUR = 10;
 export function introsPerHour(env: Record<string, string | undefined> = process.env): number {

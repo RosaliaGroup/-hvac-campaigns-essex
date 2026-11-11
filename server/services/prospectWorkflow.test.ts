@@ -528,6 +528,26 @@ describe("public bodies and schools are never contacted (public bidding)", () =>
     expect(outreach(sends)).toHaveLength(0);
     expect(log.cancelled).toEqual([row.email]);
   });
+  it("excluded rows at the head of the backlog don't use up the five Gmail inspections", async () => {
+    const owned = Array.from({ length: 12 }, () => followUp());
+    const ok = [followUp(), followUp()];
+    const holds = Object.fromEntries(owned.map(r => [r.email, "existing_customer" as HoldReason]));
+    const { store } = makeStore([...owned, ...ok], { holds });
+    const { mb, sends } = makeMailbox();
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(r.stopped).toHaveLength(12);
+    expect(outreach(sends).map(s => s.to)).toEqual(ok.map(o => o.email));
+  });
+  it("introductions still go out when no follow-up could be sent this hour", async () => {
+    const replied = Array.from({ length: 8 }, () => followUp());
+    const queued = [intro(), intro()];
+    const { store } = makeStore([...replied, ...queued]);
+    const { mb, sends } = makeMailbox({ thread: { replied: true } });
+    const r = await runCycle(store, async () => mb, WED_11AM);
+    expect(r.stopped).toHaveLength(5);
+    expect(r.sent.map(s => s.kind)).toEqual(["intro", "intro"]);
+    expect(outreach(sends).every((s: any) => !s.threadId)).toBe(true);
+  });
   it("the hourly sweep count appears in the report", async () => {
     const { store } = makeStore([]);
     store.sweepPublicEntities = async () => 9;

@@ -17,7 +17,7 @@
  * Pure orchestration: every side effect goes through `CycleStore` / `ProspectMailbox`.
  */
 import {
-  MAX_CANDIDATES_PER_PHASE, MAX_INTRO_CANDIDATES, introsPerHour, cycleHour, easternHourStartEpochSec, hourlyCap,
+  MAX_CANDIDATES_PER_PHASE, MAX_FOLLOW_UP_SWEEP, MAX_INTRO_CANDIDATES, introsPerHour, cycleHour, easternHourStartEpochSec, hourlyCap,
   nextFollowUpDue, normalizeCompany, remainingAllowance, replySubject, reportSubject, sendingHour,
 } from "../../shared/prospectCadence";
 import { isExcludedProspect, isPublicBidEntity } from "./outreachProspectRules";
@@ -214,13 +214,19 @@ export async function runCycle(
         return true;
       };
 
-      // ---- Phase A: follow-ups (oldest due first, max 5 inspected) ----
+      // ---- Phase A: follow-ups (oldest due first, max 5 Gmail inspections) ----
+      // Rows removed by the database-only gates (public body, opt-out, human-owned, same company)
+      // don't use up the 5 Gmail inspections; otherwise a run of excluded rows at the head of the
+      // backlog blocks every send (Nov 5–11, 2026: 0 sent, backlog 1 → 150).
       let inspected = 0;
+      let looked = 0;
+      let followUpsSent = 0;
       for (const { row } of pool) {
-        if (inspected >= MAX_CANDIDATES_PER_PHASE) break;
+        if (inspected >= MAX_CANDIDATES_PER_PHASE || looked >= MAX_FOLLOW_UP_SWEEP) break;
         if (remaining <= 0) break;
-        inspected++;
+        looked++;
         if (!(await gates(row, "follow_up"))) continue;
+        inspected++;
         if (!row.threadId) { await hold(row, "original Gmail thread unknown — cannot follow up in thread"); continue; }
         let state: ThreadState;
         try {
@@ -267,11 +273,14 @@ export async function runCycle(
         await store.update(row.id, { state: next ? "nurture" : "complete", touchCount: count, nextTouchAt: next, emailMessageId: sent.id });
         const crmSaved = await store.logSent(row, sent, subject, body, "follow_up", now);
         result.sent.push({ kind: "follow_up", to: row.email, company: row.company, subject, gmailId: sent.id, threadId: sent.threadId, crmSaved });
+        followUpsSent++;
       }
-      const followUpsRemaining = pool.length - inspected;
+      const followUpsRemaining = pool.length - looked;
 
-      // ---- Phase B: new introductions, sent only when the follow-up cohort has nothing more ready ----
-      if (remaining > 0 && followUpsRemaining <= 0) {
+      // ---- Phase B: new introductions, sent when the follow-up cohort has nothing more ready,
+      // or when no follow-up could be sent this hour (every candidate stopped or held), so a
+      // backlog of unsendable follow-ups never freezes outreach.
+      if (remaining > 0 && (followUpsRemaining <= 0 || followUpsSent === 0)) {
         const introTarget = introsPerHour();
         let introsSent = 0;
         const inspectedIds = new Set<number>();
