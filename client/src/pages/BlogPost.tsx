@@ -96,7 +96,7 @@ export default function BlogPost({ slug }: { slug: string }) {
 
   useSEO({
     title: post ? `${post.title} | Mechanical Enterprise` : "Blog | Mechanical Enterprise",
-    description: post?.metaDescription ?? "HVAC tips and rebate guides for NJ homeowners.",
+    description: post?.metaDescription ?? "HVAC installation guides for NJ homeowners.",
     ogUrl: `${BASE}/blog/${slug}`,
   });
 
@@ -265,8 +265,8 @@ export default function BlogPost({ slug }: { slug: string }) {
       <section className="py-16 bg-[#e8813a]">
         <div className="container">
           <div className="max-w-2xl mx-auto text-center text-white">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">{commercial ? "Need Commercial HVAC Service or a Replacement Review?" : "Ready to Claim Your NJ Rebates?"}</h2>
-            <p className="text-lg text-white/90 mb-8">{commercial ? "Repairs, maintenance contracts and replacement planning for NJ property managers and building owners." : "Free assessment — we handle all paperwork"}</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">{commercial ? "Need Commercial HVAC Service or a Replacement Review?" : "Ready to Replace Your Heating or AC?"}</h2>
+            <p className="text-lg text-white/90 mb-8">{commercial ? "Repairs, maintenance contracts and replacement planning for NJ property managers and building owners." : "Free in-home assessment and a written quote before you decide"}</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href={commercial ? `${BASE}/commercial/for-property-management` : BASE}>
                 <Button size="lg" className="bg-[#0a1628] hover:bg-[#0a1628]/90 text-white px-8 py-6 text-lg w-full sm:w-auto">
