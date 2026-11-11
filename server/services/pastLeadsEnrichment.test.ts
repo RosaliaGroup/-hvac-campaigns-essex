@@ -143,4 +143,33 @@ describe("past outreach leads", () => {
     expect(due[20]).toBe("2026-11-13T14:00:00.000Z");
     expect(due[44]).toBe("2026-11-16T14:00:00.000Z");
   });
+  it("cleanup dry run only counts; apply cancels stale tasks and re-spreads the rest newest first", async () => {
+    const { cleanupSpreadTasks } = await import("./pastLeadsEnrichment");
+    const now = new Date("2026-11-11T21:00:00Z");
+    const rows = [
+      { id: 1, recipientEmail: "new@a.com", introAt: new Date("2026-11-01T14:00:00Z") },
+      { id: 2, recipientEmail: "new@a.com", introAt: new Date("2026-11-01T14:00:00Z") },
+      { id: 3, recipientEmail: "old@b.com", introAt: new Date("2026-09-01T14:00:00Z") },
+    ];
+    const make = () => {
+      const updates: string[] = [];
+      const db: any = { execute: vi.fn(async (q: any) => {
+        const t = JSON.stringify(q);
+        if (t.includes("INSERT IGNORE INTO crmBackfillRuns")) return [{ affectedRows: 1 }];
+        if (t.includes("SELECT id, recipientEmail, introAt")) return [rows];
+        if (t.includes("UPDATE crmOutreach30DayTasks")) updates.push(t.includes("cancelled") ? "cancel" : "respread");
+        return [{}];
+      }) };
+      return { db, updates };
+    };
+    const dry = make();
+    expect(await cleanupSpreadTasks(dry.db, false, now)).toEqual({
+      apply: false, touchedBySpread: 3,
+      stale: { tasks: 1, contacts: 1 }, keep: { tasks: 2, contacts: 1, businessDaysAt40: 1 },
+    });
+    expect(dry.updates).toEqual([]);
+    const live = make();
+    await cleanupSpreadTasks(live.db, true, now);
+    expect(live.updates).toEqual(["cancel", "respread", "respread"]);
+  });
 });
