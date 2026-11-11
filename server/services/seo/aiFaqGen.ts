@@ -7,6 +7,7 @@
 import { validateFaqSet, validateFaqItem, MIN_FAQ_ITEMS, MAX_FAQ_ITEMS, type AiFaqFile, type AiFaqPage, type FaqItem } from "../../../shared/aiFaq";
 import type { VerifiedFacts } from "../../../shared/verifiedFacts";
 import { ALL_CITIES, NJ_COUNTIES } from "../../../client/src/data/njCounties";
+import { EXCLUDED_PROGRAM_RE, REBATE_PROMO_RE, isRebateWordingExemptPath } from "../../../shared/excludedPrograms";
 
 /** Places an answer may name: registry cities, our counties, and the page's own city. */
 export function allowedPlacesFor(facts: VerifiedFacts, target?: FaqTarget): Set<string> {
@@ -81,6 +82,7 @@ export function buildFaqSystemPrompt(target: FaqTarget, facts: VerifiedFacts, qu
     "- NO prices, durations, response times, 'same day', '24/7', 'emergency', licensing, certifications, ratings, reviews, years in business as a founding date, customer names, project counts, brand names, or comparisons to other companies.",
     "- NO superlatives or guarantees (best, top, #1, guaranteed, cheapest, lowest price). Coverage is OPTIONAL and not included by default; say so whenever coverage is mentioned.",
     "- Dollar figures and numbers may ONLY be ones that appear in the FACTS, worded the same way.",
+    "- Never mention rebates, incentives, tax credits or utility programs (owner decision, Nov 10 2026), except on a commercial / Direct Install page. Never mention On-Bill Repayment on any page.",
     "- Describe incentive programs ONLY as programs (what they are); never say the company provides access to, connects customers to, handles, administers, is approved/authorized/licensed/insured for, or partners with any program or agency.",
     "- Never write \"N years of experience\". If experience is mentioned it must read \"over 20 years of combined team experience\".",
     "- Only name cities/counties that appear in the FACTS or are this page's own city. If a search query names any other place, skip that query — do not answer about it.",
@@ -113,6 +115,9 @@ export async function generateForTarget(target: FaqTarget, facts: VerifiedFacts,
     let items: FaqItem[];
     try {
       items = parseFaqResponse(await callModel(buildFaqSystemPrompt(target, facts, queries, priorIssues)));
+      // Owner (2026-11-10): no rebate / incentive / On-Bill Repayment wording outside commercial & Direct Install pages; OBR never.
+      const rebateOk = isRebateWordingExemptPath(target.path);
+      items = items.filter((it) => !EXCLUDED_PROGRAM_RE.test(`${it.q} ${it.a}`) && (rebateOk || !REBATE_PROMO_RE.test(`${it.q} ${it.a}`)));
     } catch (err) {
       priorIssues = [`unparseable response: ${(err as Error).message}`];
       continue;

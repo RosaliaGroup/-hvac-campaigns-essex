@@ -12,6 +12,7 @@ import { blogPosts } from "@/data/blogPosts";
 import { directInstallIndustries } from "@/data/directInstallIndustries";
 import InlineLeadCapture, { type InlineLeadVariant } from "@/components/InlineLeadCapture";
 import AiFaqSection from "@/components/AiFaqSection";
+import { isKeptRebateTopicPost } from "@shared/excludedPrograms";
 
 // City slugs are plain town names, so this always resolves to "residential"
 // today — kept as a function (rather than a hardcoded prop) to match the
@@ -630,7 +631,7 @@ export default function CityPage({ city, slug }: CityPageProps) {
           <div className="mt-10 max-w-3xl mx-auto">
             <h3 className="text-xl font-bold text-[#0a1628] mb-4">HVAC Guides for {city} Homeowners</h3>
             <div className="grid md:grid-cols-2 gap-3">
-              {pickDeterministic(blogPosts, slug, 4).map((post) => (
+              {pickDeterministic(blogPosts.filter((p) => !isKeptRebateTopicPost(p.slug)), slug, 4).map((post) => (
                 <Link key={post.slug} href={`/blog/${post.slug}`}>
                   <div className="bg-white rounded-lg border px-4 py-3 text-sm font-medium text-[#0a1628] hover:border-[#e8813a] hover:text-[#e8813a] transition-colors cursor-pointer">
                     {post.title.length > 60 ? post.title.slice(0, 57) + "..." : post.title}
