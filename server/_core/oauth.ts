@@ -2,7 +2,7 @@ import { COOKIE_NAME } from "@shared/const";
 import type { Express, Request, Response } from "express";
 import * as db from "../db";
 import { exchangeCodeForTokens } from "../googleAds";
-import { exchangeCodeForToken, getLongLivedToken, getPageAccessToken, getInstagramBusinessAccountId } from "../metaAds";
+import { exchangeCodeForToken, getLongLivedToken, getPageAccessToken, getInstagramBusinessAccountId, ensureLeadgenSubscription } from "../metaAds";
 import { saveAiVaCredentials } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
@@ -95,6 +95,8 @@ export function registerOAuthRoutes(app: Express) {
         token_created_at: new Date().toISOString(),
       });
       console.log("[Meta Ads] OAuth authorization saved for account and Page access");
+      const sub = await ensureLeadgenSubscription(PAGE_ID, pageToken);
+      console.log(`[Meta Ads] Leadgen webhook subscription — app: ${sub.app}; page: ${sub.page}`);
       res.redirect(302, "/facebook-campaigns?connected=1");
     } catch (error) {
       console.error("[Meta Ads] OAuth callback failed", error);

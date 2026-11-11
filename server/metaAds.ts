@@ -130,6 +130,43 @@ export async function getLongLivedToken(shortToken: string): Promise<string> {
 // Exchange a long-lived user token for a Page Access Token.
 // Page tokens derived from long-lived user tokens never expire and have
 // page-level permissions (pages_manage_ads) built in.
+/**
+ * Make Meta push Instant Form leads to our webhook (/api/meta/leadgen):
+ *  1. app-level subscription: object=page, field=leadgen, our callback URL
+ *  2. page-level: subscribe this app to the Page's leadgen events
+ * Returns a short status per step; never throws.
+ */
+export async function ensureLeadgenSubscription(pageId: string, pageToken: string): Promise<{ app: string; page: string }> {
+  const out = { app: "skipped", page: "skipped" };
+  const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN ?? "me_leadgen_verify";
+  if (APP_ID && APP_SECRET) {
+    try {
+      const params = new URLSearchParams({
+        object: "page",
+        callback_url: "https://mechanicalenterprise.com/api/meta/leadgen",
+        fields: "leadgen",
+        include_values: "true",
+        verify_token: verifyToken,
+        access_token: `${APP_ID}|${APP_SECRET}`,
+      });
+      const res = await fetch(`${META_BASE}/${APP_ID}/subscriptions`, { method: "POST", body: params });
+      const json = (await res.json()) as { success?: boolean; error?: { message?: string } };
+      out.app = json.success ? "ok" : `error: ${json.error?.message ?? res.status}`;
+    } catch (err) {
+      out.app = `error: ${(err as Error).message}`;
+    }
+  }
+  try {
+    const params = new URLSearchParams({ subscribed_fields: "leadgen", access_token: pageToken });
+    const res = await fetch(`${META_BASE}/${pageId}/subscribed_apps`, { method: "POST", body: params });
+    const json = (await res.json()) as { success?: boolean; error?: { message?: string } };
+    out.page = json.success ? "ok" : `error: ${json.error?.message ?? res.status}`;
+  } catch (err) {
+    out.page = `error: ${(err as Error).message}`;
+  }
+  return out;
+}
+
 export async function getPageAccessToken(
   userToken: string,
   pageId: string
