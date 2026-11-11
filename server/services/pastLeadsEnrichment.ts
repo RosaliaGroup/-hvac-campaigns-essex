@@ -260,3 +260,27 @@ export async function spreadFollowBacklog(db: Db, now = new Date()) {
   await db.execute(sql`UPDATE crmBackfillRuns SET summary = ${JSON.stringify(out)} WHERE name = ${SPREAD_FOLLOW_NAME}`);
   return out;
 }
+
+/**
+ * One-time (owner, Nov 11, 2026): the restore of wrongly stopped prospects recreated ~880 call
+ * and follow tasks on their original schedule, so hundreds were overdue at once. Spread every
+ * open overdue task 20 per business day from Thursday Nov 12, 9 AM ET, oldest first.
+ */
+export const SPREAD_OVERDUE_NAME = "spread-overdue-tasks-2026-11-11";
+export async function spreadOverdueTasks(db: Db, now = new Date()) {
+  if (!(await claim(db, SPREAD_OVERDUE_NAME))) return null;
+  const thursday9 = new Date("2026-11-12T14:00:00Z"); // 9:00 AM EST
+  const base = now > thursday9 ? now : thursday9;
+  const res = await db.execute(sql`SELECT id FROM crmOutreach30DayTasks
+    WHERE status = 'open' AND dueAt <= ${now}
+    ORDER BY dueAt ASC, id ASC`);
+  const ids = (((res as any)?.[0] ?? []) as { id: number }[]).map(r => Number(r.id));
+  for (let i = 0; i < ids.length; i++) {
+    const day = Math.floor(i / FOLLOW_TASKS_PER_DAY);
+    await db.execute(sql`UPDATE crmOutreach30DayTasks SET dueAt = ${day === 0 ? base : addBusinessDays(base, day)}
+      WHERE id = ${ids[i]} AND status = 'open'`);
+  }
+  const out = { spread: ids.length, businessDays: Math.ceil(ids.length / FOLLOW_TASKS_PER_DAY) };
+  await db.execute(sql`UPDATE crmBackfillRuns SET summary = ${JSON.stringify(out)} WHERE name = ${SPREAD_OVERDUE_NAME}`);
+  return out;
+}

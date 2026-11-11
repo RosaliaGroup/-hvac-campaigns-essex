@@ -127,4 +127,20 @@ describe("past outreach leads", () => {
     expect(due[20]).toBe("2026-11-03T14:00:00.000Z");
     expect(due[44]).toBe("2026-11-04T14:00:00.000Z");
   });
+  it("spreads overdue tasks 20 per business day from Thursday Nov 12, 9 AM, skipping the weekend", async () => {
+    const { spreadOverdueTasks } = await import("./pastLeadsEnrichment");
+    const due: string[] = [];
+    const db: any = { execute: vi.fn(async (q: any) => {
+      const t = JSON.stringify(q);
+      if (t.includes("INSERT IGNORE INTO crmBackfillRuns")) return [{ affectedRows: 1 }];
+      if (t.includes("SELECT id FROM crmOutreach30DayTasks")) return [Array.from({ length: 45 }, (_, i) => ({ id: i + 1 }))];
+      if (t.includes("SET dueAt")) due.push(q.queryChunks.find((c: any) => c instanceof Date)?.toISOString());
+      return [{}];
+    }) };
+    const out = await spreadOverdueTasks(db, new Date("2026-11-11T19:30:00Z"));
+    expect(out).toEqual({ spread: 45, businessDays: 3 });
+    expect(due[0]).toBe("2026-11-12T14:00:00.000Z");
+    expect(due[20]).toBe("2026-11-13T14:00:00.000Z");
+    expect(due[44]).toBe("2026-11-16T14:00:00.000Z");
+  });
 });
