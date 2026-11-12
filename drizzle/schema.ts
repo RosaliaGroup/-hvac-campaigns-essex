@@ -206,6 +206,37 @@ export type CallLog = typeof callLogs.$inferSelect;
 export type InsertCallLog = typeof callLogs.$inferInsert;
 
 /**
+ * Per-call quality control (migration 0085). One row per recorded call log:
+ * transcript + AI score against the rep playbook (shared/callQc.ts).
+ */
+export const callQcReviews = mysqlTable(
+  "callQcReviews",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    callLogId: int("callLogId").notNull(),
+    agentTeamMemberId: int("agentTeamMemberId"),
+    status: mysqlEnum("status", ["pending", "done", "skipped", "failed"]).default("pending").notNull(),
+    score: int("score"),
+    verdict: varchar("verdict", { length: 20 }),
+    outcome: varchar("outcome", { length: 40 }),
+    /** shared/callQc.ts CallQcReview */
+    review: json("review"),
+    transcript: mediumtext("transcript"),
+    model: varchar("model", { length: 64 }),
+    error: text("error"),
+    attempts: int("attempts").default(0).notNull(),
+    emailedAt: timestamp("emailedAt"),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  },
+  table => ({
+    callLogUq: uniqueIndex("callQcReviews_callLog_uq").on(table.callLogId),
+    agentIdx: index("callQcReviews_agent_idx").on(table.agentTeamMemberId, table.createdAt),
+  }),
+);
+export type CallQcReviewRow = typeof callQcReviews.$inferSelect;
+
+/**
  * SMS Conversations - AI VA inbound/outbound text message records (Telnyx)
  */
 export const smsConversations = mysqlTable("smsConversations", {
