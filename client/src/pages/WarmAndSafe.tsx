@@ -14,9 +14,9 @@ import { useSEO } from "@/hooks/useSEO";
 /**
  * Warm & Safe (owner, Nov 11 2026): senior heat-safety awareness + "nominate a
  * senior who needs safe heat". Owner Nov 12: no individual beneficiary, and no claims that sales fund
- * help — only true statements (facts, free help lines, our standard free in-home assessment).
- * No rebate wording (owner, Nov 10). Phone for this campaign = (862) 423-9396 (owner, Nov 12; rest of site stays 419-1763).
- * Facts on this page are sourced (CDC, NFPA, NJ DCA energy-assistance brochure 2025-26).
+ * help — only true statements (safety facts, our standard free in-home assessment).
+ * No rebate, incentive or assistance-program wording (owner, Nov 10 and Nov 12). Phone for this campaign = (862) 423-9396 (owner, Nov 12; rest of site stays 419-1763).
+ * Facts on this page are sourced (CDC, NFPA).
  */
 export const WARM_SAFE_PATH = "/warm-and-safe";
 
@@ -25,7 +25,7 @@ export default function WarmAndSafe() {
   useSEO({
     title: "Warm & Safe — Help a Senior Neighbor Stay Warm This Winter | Mechanical Enterprise",
     description:
-      "Know a New Jersey senior heading into winter without safe heat? Nominate them for Warm & Safe. Plus heat-safety warning signs and free NJ assistance programs.",
+      "Know a New Jersey senior heading into winter without safe heat? Nominate them for a free in-home heating assessment. Plus heat-safety warning signs to check this winter.",
     ogUrl: `https://mechanicalenterprise.com${WARM_SAFE_PATH}`,
   });
 
@@ -204,7 +204,7 @@ export default function WarmAndSafe() {
             {[
               { icon: Heart, title: "1. Nominate", body: "Tell us about a senior who needs safe heat. It takes two minutes." },
               { icon: Users, title: "2. We call you first", body: "We call you before contacting them, and only reach out with their permission." },
-              { icon: Home, title: "3. Free in-home assessment", body: "We look at their heating system at no cost and point them to free NJ assistance programs they may qualify for." },
+              { icon: Home, title: "3. Free in-home assessment", body: "We look at their heating system at no cost and explain, in plain terms, whether it's safe and what their options are." },
             ].map(({ icon: Icon, title, body }) => (
               <div key={title} className="rounded-2xl border border-gray-100 p-6 text-center">
                 <Icon className="h-9 w-9 text-[#ff6b35] mx-auto mb-3" />
@@ -264,28 +264,6 @@ export default function WarmAndSafe() {
               </form>
             </>
           )}
-        </div>
-      </section>
-
-      {/* Free help */}
-      <section className="px-4 py-12">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-[#1e3a5f] mb-2">Free help available to New Jersey seniors</h2>
-          <p className="text-gray-600 mb-6">These state programs can help with heating costs and home energy upgrades. Eligibility depends on income.</p>
-          <ul className="space-y-4 text-gray-800">
-            <li>
-              <strong>Home energy assistance (LIHEAP) and Universal Service Fund</strong> — help with heating bills.{" "}
-              <a className="text-[#1e3a5f] underline" href="tel:+18005103102">800-510-3102</a>
-            </li>
-            <li>
-              <strong>Comfort Partners</strong> — no-cost energy-saving improvements for qualifying households.{" "}
-              <a className="text-[#1e3a5f] underline" href="tel:+18663784345">1-866-378-4345</a>
-            </li>
-            <li>
-              <strong>NJ 2-1-1</strong> — 24/7 referrals to local help, including emergency heating assistance. Dial{" "}
-              <a className="text-[#1e3a5f] underline" href="tel:211">2-1-1</a>
-            </li>
-          </ul>
         </div>
       </section>
 

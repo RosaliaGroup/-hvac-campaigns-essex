@@ -5,7 +5,7 @@ Warm & Safe awareness video (DRAFT for owner review, Nov 11 2026).
 1080x1920, ~40 s, Piper TTS narration + the generated music bed from
 make-reels.py, captions in the same style as the Reels. Facts: CDC (CO death
 rate highest over 65; peaks fall/winter) and NFPA 2019-2023 (space heaters and
-heating stoves ~29% of home heating fires). No rebates, no prices.
+heating stoves ~29% of home heating fires). No rebates, incentives or assistance programs, no prices (owner, Nov 12).
 Phone (862) 423-9396 (owner, Nov 12, for this campaign only). No individual beneficiary is named or described (owner, Nov 12).
 
 Usage: python3 scripts/make-warm-safe-video.py <piper-model.onnx>
@@ -41,7 +41,7 @@ SCENES = [
      "Space heaters: about *3 in 10* home heating fires", "furnace-basement", "Source: NFPA, 2019–2023"),
     ("Know a senior who needs safe heat? Nominate them.",
      "Know a senior who needs safe heat? *Nominate them.*", "rowhouse-window-ac", None),
-    ("We'll give them a free in-home heating assessment, and point them to free New Jersey assistance programs.",
+    ("We'll give them a free in-home heating assessment, at no cost and no obligation.",
      "A *free in-home* heating assessment", "heat-pump-outdoor", None),
     ("This is Warm and Safe, from Mechanical Enterprise.",
      "CTA", "air-handler-attic", None),
