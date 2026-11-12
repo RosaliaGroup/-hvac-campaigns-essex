@@ -35,7 +35,7 @@ export default function WarmAndSafe() {
     title: "Warm & Safe — Help a Senior Neighbor Stay Warm This Winter | Mechanical Enterprise",
     description:
       "Know a New Jersey senior heading into winter without safe heat? Nominate them for a free in-home heating assessment. Plus heat-safety warning signs to check this winter.",
-    ogUrl: `https://mechanicalenterprise.com${WARM_SAFE_PATH}`,
+    ogUrl: `https://mechanicalenterprise.com${typeof window !== "undefined" && window.location.pathname === "/safe-and-warm" ? "/safe-and-warm" : WARM_SAFE_PATH}`,
     ogImage: "https://mechanicalenterprise.com/og-warm-and-safe.jpg",
   });
 
