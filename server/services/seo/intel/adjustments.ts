@@ -303,8 +303,10 @@ export async function executeItem(
         const outcome = await queueRefresh({ slug, brief, source });
         const reason = outcome === "already_in_progress"
           ? `refresh of ${evidence.page} already in progress`
+          : outcome === "cooldown"
+          ? `${evidence.page} was refreshed recently — left alone for 30 days so the rewrite can take effect`
           : `queued for automatic refresh — rewritten in place on the next content run (fact-checked, 6h hold, revertable)`;
-        return { result: { status: "staged", reason }, counts: outcome === "already_in_progress" ? ctx.counts : recordExecution(ctx.counts, kind) };
+        return { result: { status: "staged", reason }, counts: outcome === "already_in_progress" || outcome === "cooldown" ? ctx.counts : recordExecution(ctx.counts, kind) };
       } catch (err) {
         return { result: { status: "staged", reason: `refresh queueing failed: ${(err as Error).message}` }, counts: ctx.counts };
       }

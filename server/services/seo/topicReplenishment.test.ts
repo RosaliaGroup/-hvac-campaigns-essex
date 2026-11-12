@@ -41,6 +41,10 @@ describe("automatic topic recovery", () => {
     expect(await replenishContentTopics(facts,[])).toBe(0);
     expect(updateQueueStatus).not.toHaveBeenCalled();
   });
+  it("still plans new topics when only a refresh is pending", async () => {
+    vi.mocked(listContentQueue).mockResolvedValue([{status:"refresh_due", refreshesSlug:"a", title:"Refresh: /blog/a"}] as never);
+    expect(await replenishContentTopics(facts,[])).toBeGreaterThan(0);
+  });
   it("does not generate while topics remain or automatic publishing is off", async () => {
     vi.mocked(listContentQueue).mockResolvedValue([{status:"queued"}] as never);
     expect(await replenishContentTopics(facts,[])).toBe(0);
