@@ -150,6 +150,7 @@ function Router() {
       <Route path={"/services"} component={Services} />
       <Route path={"/contact"} component={Contact} />
       <Route path={"/warm-and-safe"} component={WarmAndSafe} />
+      <Route path={"/safe-and-warm"} component={WarmAndSafe} />
       <Route path={"/rebate-guide"}><Redirect to="/residential" /></Route>
       <Route path={"/residential"} component={ResidentialCampaigns} />
       <Route path={"/commercial"} component={CommercialCampaigns} />
