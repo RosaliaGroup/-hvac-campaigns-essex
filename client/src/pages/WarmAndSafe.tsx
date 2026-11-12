@@ -13,7 +13,8 @@ import { useSEO } from "@/hooks/useSEO";
 
 /**
  * Warm & Safe (owner, Nov 11 2026): senior heat-safety awareness + "nominate a
- * senior who needs safe heat" + "your installation could help your neighbor".
+ * senior who needs safe heat". Owner Nov 12: no individual beneficiary, and no claims that sales fund
+ * help — only true statements (facts, free help lines, our standard free in-home assessment).
  * No rebate wording (owner, Nov 10). Phone for this campaign = (862) 423-9396 (owner, Nov 12; rest of site stays 419-1763).
  * Facts on this page are sourced (CDC, NFPA, NJ DCA energy-assistance brochure 2025-26).
  */
@@ -103,8 +104,8 @@ export default function WarmAndSafe() {
             Some of our senior neighbors are heading into winter <span className="text-[#ff6b35]">without safe heat.</span>
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-8">
-            Warm &amp; Safe is how Mechanical Enterprise helps them. Know a senior who needs help? Nominate them. Replacing your own
-            system? <strong className="text-white">Your installation could help your neighbor.</strong>
+            Know the warning signs, check on the older people in your life, and if a senior near you needs safe heat,{" "}
+            <strong className="text-white">nominate them for a free in-home heating assessment.</strong>
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="#nominate">
@@ -195,18 +196,6 @@ export default function WarmAndSafe() {
         </div>
       </section>
 
-      {/* First neighbor */}
-      <section className="px-4 py-12 bg-[#1e3a5f] text-white">
-        <div className="max-w-3xl mx-auto">
-          <p className="text-sm font-semibold uppercase tracking-wider text-[#ffb27a] mb-2">Our first neighbor</p>
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">A senior in Hillside, NJ</h2>
-          <p className="text-white/85 leading-relaxed">
-            Her heating system needs to be replaced. She lives on her pension, and after a credit-repair scam damaged her credit,
-            financing isn't an option. Warm &amp; Safe starts with her, and with every neighbor like her that you tell us about.
-          </p>
-        </div>
-      </section>
-
       {/* How it works */}
       <section className="px-4 py-12 md:py-16">
         <div className="max-w-5xl mx-auto">
@@ -214,8 +203,8 @@ export default function WarmAndSafe() {
           <div className="grid md:grid-cols-3 gap-5">
             {[
               { icon: Heart, title: "1. Nominate", body: "Tell us about a senior who needs safe heat. It takes two minutes." },
-              { icon: Users, title: "2. We reach out", body: "Our team reviews every nomination and contacts the family, with their permission, to look at the heating system." },
-              { icon: Home, title: "3. Your installation helps", body: "When you replace your own system with Mechanical Enterprise, your installation could help your neighbor." },
+              { icon: Users, title: "2. We call you first", body: "We call you before contacting them, and only reach out with their permission." },
+              { icon: Home, title: "3. Free in-home assessment", body: "We look at their heating system at no cost and point them to free NJ assistance programs they may qualify for." },
             ].map(({ icon: Icon, title, body }) => (
               <div key={title} className="rounded-2xl border border-gray-100 p-6 text-center">
                 <Icon className="h-9 w-9 text-[#ff6b35] mx-auto mb-3" />
@@ -244,7 +233,7 @@ export default function WarmAndSafe() {
                 <HoneypotFields values={honeypot} onChange={setHoneypot} />
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pt-1">About them</p>
                 <Input placeholder="Their first name (optional)" value={form.nomineeFirstName} onChange={set("nomineeFirstName")} />
-                <Input required placeholder="Their town (e.g. Hillside)" value={form.nomineeTown} onChange={set("nomineeTown")} />
+                <Input required placeholder="Their town (e.g. Newark)" value={form.nomineeTown} onChange={set("nomineeTown")} />
                 <textarea
                   required
                   minLength={10}
@@ -304,7 +293,7 @@ export default function WarmAndSafe() {
       <section className="px-4 py-12 bg-[#ff6b35] text-white text-center">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-bold mb-3">Replacing your own heating system?</h2>
-          <p className="text-white/90 mb-6">Book a free in-home assessment. Your installation could help your neighbor.</p>
+          <p className="text-white/90 mb-6">Book a free in-home assessment and a written quote before you decide.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="tel:+18624239396">
               <Button size="lg" className="w-full sm:w-auto bg-white text-[#ff6b35] hover:bg-gray-100 font-bold px-8">
