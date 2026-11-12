@@ -3,6 +3,7 @@ import { join } from "path";
 import { describe, expect, it } from "vitest";
 import {
   REEL_CALENDAR,
+  REEL_PHOTO_CREDITS,
   dueReels,
   isImageUrl,
   socialRuleViolation,
@@ -25,6 +26,8 @@ describe("instagram — content rules", () => {
       expect(socialRuleViolation(r.caption), r.slug).toBeNull();
       expect(r.caption.length).toBeLessThanOrEqual(2200);
       expect(existsSync(join(dir, `${r.slug}.mp4`)), `${r.slug}.mp4`).toBe(true);
+      expect(r.caption, `${r.slug} photo credit`).toContain("📷 Equipment photos:");
+      expect(REEL_PHOTO_CREDITS[r.slug], r.slug).toBeTruthy();
     }
   });
 });

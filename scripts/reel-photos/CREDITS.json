@@ -1,0 +1,79 @@
+{
+  "furnace-basement": {
+    "title": "Gas furnace",
+    "creator": "Bonnie Bogle",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/",
+    "source_url": "https://www.flickr.com/photos/41387699@N00/5608720784",
+    "size": [
+      1024,
+      765
+    ]
+  },
+  "oil-furnace": {
+    "title": "Oil Furnace",
+    "creator": "Gnomedude",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/",
+    "source_url": "https://www.flickr.com/photos/19622227@N00/2736805300",
+    "size": [
+      768,
+      1024
+    ]
+  },
+  "condensers": {
+    "title": "Condensing Units",
+    "creator": "Mike On Maui",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/",
+    "source_url": "https://www.flickr.com/photos/15567950@N00/40661968044",
+    "size": [
+      1024,
+      680
+    ]
+  },
+  "air-handler-attic": {
+    "title": "The new air handler",
+    "creator": "engelcox",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/",
+    "source_url": "https://www.flickr.com/photos/93321649@N00/457257238",
+    "size": [
+      1024,
+      768
+    ]
+  },
+  "rowhouse-window-ac": {
+    "title": "Rowhouse with window air conditioner",
+    "creator": "Eric Fischer",
+    "license": "CC BY 2.0",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/",
+    "source_url": "https://www.flickr.com/photos/24431382@N03/39353995475",
+    "size": [
+      1024,
+      768
+    ]
+  },
+  "heat-pump-outdoor": {
+    "title": "Air Source Heat Pump - Vailliant aroTherm Plus on a terraced house",
+    "creator": "Southend-on-Sea Borough Council, UK",
+    "license": "CC0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/deed.en/",
+    "source_url": "https://commons.wikimedia.org/w/index.php?curid=157502440",
+    "size": [
+      1600,
+      1201
+    ]
+  },
+  "home-oil-furnace": {
+    "title": "Home oil furnace",
+    "creator": "Versageek",
+    "license": "CC BY 2.5",
+    "license_url": "https://creativecommons.org/licenses/by/2.5/",
+    "source_url": "https://commons.wikimedia.org/w/index.php?curid=1475045",
+    "size": [
+      767,
+      520
+    ]
+  }
+}
