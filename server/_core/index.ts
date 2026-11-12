@@ -20,6 +20,7 @@ import { startScheduledSmsProcessor } from "../services/scheduledSms";
 import { startSalesDocPoller } from "../services/salesDocPoller";
 import { startDueReminderSweep } from "../services/dueReminderSweep";
 import { registerClickToCallRoutes } from "../services/clickToCall";
+import { startCallQcSweep } from "../services/callQc";
 import { registerSmsWebhookRoutes, assertWebhookSecurityOrExit } from "../services/smsWebhook";
 import { registerHvacHomeownerImportRoute } from "../services/hvacHomeownerImportRoute";
 import { registerHomeownerUnsubscribeRoute, startHomeownerEmailLane } from "../services/homeownerEmailLane";
@@ -197,6 +198,8 @@ async function startServer() {
     // Daily Market Intelligence Report (docs/market-intel-spec.md) — gated
     // off by default via SEO_INTEL_ENABLED.
     startMarketIntelScheduler();
+    // Per-call QC (transcribe + score recorded rep calls) — gated by CALL_QC_ENABLED, needs migration 0085.
+    startCallQcSweep();
   });
 }
 
