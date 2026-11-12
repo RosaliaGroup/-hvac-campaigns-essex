@@ -45,8 +45,8 @@ SCENES = [
      "A *free in-home* heating assessment", "heat-pump-outdoor", None),
     ("Replacing your own heating or cooling system? Your installation helps. For every twenty installations this winter, we install a heating system for a nominated senior, at no cost to them.",
      "Every *20 installations* = 1 free heating system for a senior", "condensers", "Terms on our website"),
-    ("We need your help to make Warm and Safe a success. Nominate a senior, and share this video.",
-     "We need *your help* to make Warm & Safe a success", "air-handler-attic", None),
+    ("We need your help to make Warm and Safe a success. Our goal is one for one: a senior helped for every installation we complete. Nominate a senior, and share this video.",
+     "We need *your help*. Our goal: *1-for-1*, a senior helped for every installation", "air-handler-attic", None),
     ("This is Warm and Safe, from Mechanical Enterprise.",
      "CTA", "air-handler-attic", None),
 ]

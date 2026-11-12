@@ -234,6 +234,11 @@ export default function WarmAndSafe() {
       <section className="px-4 py-12 md:py-16 bg-[#fff6f0]">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl md:text-4xl font-bold text-[#1e3a5f] mb-3">We need your help to make Warm &amp; Safe a success</h2>
+          <p className="text-gray-700 max-w-2xl mx-auto mb-4">
+            Today we commit to one free heating system for every 20 installations.{" "}
+            <strong className="text-[#1e3a5f]">Our goal is to grow Warm &amp; Safe to 1-for-1: one senior helped for every installation we complete.</strong>{" "}
+            With your help, we can get there.
+          </p>
           <p className="text-gray-700 max-w-2xl mx-auto mb-8">Three ways you can help a senior neighbor stay warm and safe this winter:</p>
           <div className="grid md:grid-cols-3 gap-5 text-left">
             {[
