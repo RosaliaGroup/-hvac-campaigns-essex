@@ -36,6 +36,7 @@ export default function WarmAndSafe() {
     description:
       "Know a New Jersey senior heading into winter without safe heat? Nominate them for a free in-home heating assessment. Plus heat-safety warning signs to check this winter.",
     ogUrl: `https://mechanicalenterprise.com${WARM_SAFE_PATH}`,
+    ogImage: "https://mechanicalenterprise.com/og-warm-and-safe.jpg",
   });
 
   const [form, setForm] = useState({
@@ -62,8 +63,14 @@ export default function WarmAndSafe() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nominatorName || !form.nominatorPhone || !form.nomineeTown || form.heatingSituation.trim().length < 10) {
-      toast({ title: "Please fill in your name, phone, their town, and a few words about their heat", variant: "destructive" });
+    const missing = [
+      !form.nomineeTown.trim() && "their town",
+      !form.heatingSituation.trim() && "what's going on with their heat",
+      !form.nominatorName.trim() && "your name",
+      form.nominatorPhone.replace(/\D/g, "").length < 10 && "your 10-digit phone number",
+    ].filter(Boolean);
+    if (missing.length) {
+      toast({ title: "Almost there", description: `Please add ${missing.join(", ")}.`, variant: "destructive" });
       return;
     }
     try {
@@ -94,8 +101,9 @@ export default function WarmAndSafe() {
       }
       setSubmitted(true);
       setTurnstileToken("");
-    } catch {
-      toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
+    } catch (err) {
+      console.error("[warm-safe] nomination failed", err);
+      toast({ title: "We couldn't send that", description: "Please try again, or call or text (862) 423-9396.", variant: "destructive" });
     }
   };
 
@@ -295,7 +303,6 @@ export default function WarmAndSafe() {
                 <Input required placeholder="Their town (e.g. Newark)" value={form.nomineeTown} onChange={set("nomineeTown")} />
                 <textarea
                   required
-                  minLength={10}
                   rows={4}
                   className="w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
                   placeholder="What's going on with their heat? (e.g. very old furnace, using space heaters, no heat in some rooms)"

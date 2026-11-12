@@ -25,13 +25,16 @@ const esc = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 export const nominationInput = z.object({
-  nominatorName: z.string().trim().min(1).max(120),
-  nominatorPhone: z.string().trim().min(7).max(30),
-  nominatorEmail: z.string().trim().email().max(200).optional().or(z.literal("")),
-  relationship: z.string().trim().max(80).optional(),
-  nomineeFirstName: z.string().trim().max(60).optional(),
-  nomineeTown: z.string().trim().min(2).max(80),
-  heatingSituation: z.string().trim().min(10).max(2000),
+  // Lenient on purpose (Nov 12: owner's test nominations were rejected with a
+  // silent 400). Anything the form lets a person type is accepted; a human
+  // reads every nomination, so an imperfect email or short answer is fine.
+  nominatorName: z.string().trim().min(1).max(200),
+  nominatorPhone: z.string().trim().min(1).max(40),
+  nominatorEmail: z.string().trim().max(254).optional(),
+  relationship: z.string().trim().max(200).optional(),
+  nomineeFirstName: z.string().trim().max(120).optional(),
+  nomineeTown: z.string().trim().min(1).max(120),
+  heatingSituation: z.string().trim().min(1).max(4000),
   nomineeKnows: z.boolean(),
   wantsOwnAssessment: z.boolean().optional(),
   pageUrl: z.string().max(500).optional(),
@@ -77,7 +80,7 @@ export const warmSafeRouter = router({
     }
     const guard = evaluateSpam({
       name: input.nominatorName,
-      email: input.nominatorEmail || undefined,
+      email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.nominatorEmail ?? "") ? input.nominatorEmail : undefined,
       phone: input.nominatorPhone,
       website: input.website,
       company_url: input.company_url,
