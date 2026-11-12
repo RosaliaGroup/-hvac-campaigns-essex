@@ -59,6 +59,10 @@ export interface ReelEntry {
   /** ISO time (UTC). Tue/Thu 6:30 PM New York. */
   publishAt: string;
   caption: string;
+  /** Video URL when it isn't /reels/<slug>.mp4. */
+  videoUrl?: string;
+  /** When set, the same video is also posted to the Facebook Page with this text. */
+  facebookCaption?: string;
 }
 
 /**
@@ -67,6 +71,7 @@ export interface ReelEntry {
  * required by CC BY and keeps that clear.
  */
 export const REEL_PHOTO_CREDITS: Record<string, string> = {
+  "warm-and-safe": "Gnomedude, Bonnie Bogle, Eric Fischer, Mike On Maui, engelcox (Flickr, CC BY 2.0); Southend-on-Sea Borough Council (public domain)",
   "signs-to-replace": "Gnomedude, Bonnie Bogle, Mike On Maui, engelcox (Flickr, CC BY 2.0)",
   "quote-checklist": "engelcox, Mike On Maui, Bonnie Bogle, Gnomedude (Flickr, CC BY 2.0); Southend-on-Sea Borough Council (public domain)",
   "premium-honestly-priced": "engelcox, Mike On Maui (Flickr, CC BY 2.0); Southend-on-Sea Borough Council (public domain)",
@@ -78,7 +83,29 @@ export const REEL_PHOTO_CREDITS: Record<string, string> = {
 const reelCaption = (slug: string, body: string) =>
   `${body}\n\n${IG_CTA}\n\n${IG_HASHTAGS}\n\n📷 Equipment photos: ${REEL_PHOTO_CREDITS[slug]}`;
 
+const WS_URL = `${SITE}/safe-and-warm`;
+const WS_CREDITS = REEL_PHOTO_CREDITS["warm-and-safe"];
+const WS_BODY =
+  "Some of our senior neighbors are heading into winter without safe heat. 🔥\n\n" +
+  "Warm & Safe is our new community initiative:\n" +
+  "• Know a senior (65+) without safe heat? Nominate them for a free in-home heating assessment.\n" +
+  "• Your installation helps: for every 20 installations we complete, we install a heating system for a nominated senior, at no cost to them. Our goal is to grow this to 1-for-1.\n\n" +
+  "We need your help to make Warm & Safe a success: nominate a senior, share this post, and choose us for your installation.";
+
+/** Warm & Safe launch video (owner, Nov 12 2026: "let's do it, post and run the campaigns"). */
+export const WARM_SAFE_LAUNCH: ReelEntry = {
+  slug: "warm-and-safe",
+  publishAt: "2026-11-12T19:45:00Z",
+  videoUrl: `${SITE}/videos/warm-and-safe.mp4`,
+  caption:
+    `${WS_BODY}\n\nNominate at mechanicalenterprise.com/safe-and-warm, or call or text (862) 423-9396. Terms on our website.\n\n` +
+    `#WarmAndSafe #NewJersey #NJSeniors #EssexCounty #HeatingSafety #CommunityFirst\n\n📷 Equipment photos: ${WS_CREDITS}`,
+  facebookCaption:
+    `${WS_BODY}\n\nNominate a senior: ${WS_URL}\nCall or text (862) 423-9396. Terms: ${WS_URL}\n\n📷 Equipment photos: ${WS_CREDITS}`,
+};
+
 export const REEL_CALENDAR: ReelEntry[] = [
+  WARM_SAFE_LAUNCH,
   {
     slug: "signs-to-replace",
     publishAt: "2026-11-12T23:30:00Z",
@@ -134,6 +161,7 @@ export const REEL_CALENDAR: ReelEntry[] = [
 ];
 
 export const reelVideoUrl = (slug: string) => `${SITE}/reels/${slug}.mp4`;
+export const reelUrl = (r: ReelEntry) => r.videoUrl ?? reelVideoUrl(r.slug);
 
 /** Entries due now: publishAt has passed but by less than `graceMs` (no backlog dumps after downtime). */
 export function dueReels(now: Date, calendar: ReelEntry[] = REEL_CALENDAR, graceMs = 36 * 3600 * 1000): ReelEntry[] {
