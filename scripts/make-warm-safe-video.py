@@ -48,11 +48,55 @@ SCENES = [
     ("This is Warm and Safe, from Mechanical Enterprise.",
      "CTA", "air-handler-attic", None),
 ]
-PAD_BEFORE, PAD_AFTER = 0.25, 0.55
+PAD_BEFORE, PAD_AFTER = 0.3, 0.7
+
+
+# ── v2 look (owner Nov 12: "a bit dark, people might not read it") ──────────
+from PIL import ImageEnhance
+
+BRIGHT = {}
+
+
+def bright_photo(name):
+    """Photos brightened instead of darkened; readability comes from caption boxes."""
+    if name not in BRIGHT:
+        im = R.photo_base(name)
+        im = ImageEnhance.Brightness(im).enhance(1.18)
+        im = ImageEnhance.Contrast(im).enhance(1.06)
+        BRIGHT[name] = ImageEnhance.Color(im).enhance(1.1)
+    return BRIGHT[name]
+
+
+LIGHT = None
+
+
+def light_scrim():
+    """Only a soft band at the top (wordmark) and bottom (Instagram UI)."""
+    global LIGHT
+    if LIGHT is None:
+        y = np.arange(H, dtype=np.float32)[:, None] * np.ones((1, W), np.float32)
+        a = np.clip((440 - y) / 440, 0, 1) * 150 + np.clip((y - 1560) / 360, 0, 1) * 140
+        LIGHT = Image.fromarray(np.clip(a, 0, 200).astype(np.uint8), "L")
+    return LIGHT
+
+
+def boxed_caption(d, s, f, cy, max_w, reveal=1.0, alpha=255):
+    """Caption on a solid navy box with an orange edge — readable on any photo."""
+    lines, space = R.layout(d, R.tokens(s), f, max_w)
+    lh = int(f.size * 1.12)
+    widest = max(sum(w for _, _, w in ln) + space * (len(ln) - 1) for ln in lines)
+    pad_x, pad_y = 44, 34
+    top = cy - (lh * len(lines)) // 2 - pad_y
+    bottom = cy + (lh * len(lines)) // 2 + pad_y // 2
+    a = int(alpha * 0.92)
+    d.rounded_rectangle([(W - widest) / 2 - pad_x, top, (W + widest) / 2 + pad_x, bottom], radius=34,
+                        fill=(14, 30, 52, a), outline=R.ORANGE + (alpha,), width=6)
+    R.caption(d, s, f, cy, max_w, reveal=reveal, alpha=alpha)
+    return top, bottom
 
 
 def tts(model, text, path):
-    subprocess.run([sys.executable, "-m", "piper", "-m", model, "--length-scale", "1.0", "-f", path],
+    subprocess.run([sys.executable, "-m", "piper", "-m", model, "--length-scale", "1.08", "-f", path],
                    input=text.encode(), check=True, capture_output=True)
     with wave.open(path) as w:
         return w.getnframes() / w.getframerate()
@@ -72,14 +116,14 @@ def read_mono(path, sr=44100):
 def render(scene_list, total, t):
     sc = next((s for s in scene_list if s["start"] <= t < s["start"] + s["dur"]), scene_list[-1])
     lt = t - sc["start"]
-    base = R.photo_base(sc["photo"])
+    base = bright_photo(sc["photo"])
     z = 1.04 + 0.08 * (lt / sc["dur"]) + 0.05 * (1 - R.ease_out(lt / 0.25))
     cw, ch = max(int(base.width / z), W), max(int(base.height / z), H)
     dx = int(((sc["idx"] % 2) * 2 - 1) * 30 * lt / sc["dur"])
     x = max(0, min(base.width - cw, (base.width - cw) // 2 + dx))
     y = (base.height - ch) // 2
     img = base.crop((x, y, x + cw, y + ch)).resize((W, H), Image.BILINEAR)
-    img.paste(Image.new("RGB", (W, H), R.NAVY), (0, 0), R.scrim())
+    img.paste(Image.new("RGB", (W, H), R.NAVY), (0, 0), light_scrim())
     img = img.convert("RGBA")
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
@@ -97,14 +141,14 @@ def render(scene_list, total, t):
     max_w = W - 140
     if sc["caption"] != "CTA":
         reveal = min(1.0, 0.3 + lt / 0.6) if sc["idx"] > 0 else 1.0
-        R.caption(d, sc["caption"], R.font(R.F_BLACK, 96), 900, max_w, reveal=reveal)
+        boxed_caption(d, sc["caption"], R.font(R.F_BLACK, 92), 960, max_w - 60, reveal=reveal)
         if sc["source"]:
             sf = R.font(R.F_BOLD, 34)
-            d.text(((W - d.textlength(sc["source"], font=sf)) / 2, 1130), sc["source"], font=sf,
+            d.text(((W - d.textlength(sc["source"], font=sf)) / 2, 1250), sc["source"], font=sf,
                    fill=(255, 255, 255, 210), stroke_width=3, stroke_fill=(0, 0, 0, 180))
     else:
         p = R.ease_out(lt / 0.4)
-        top, bottom = R.caption(d, "Warm & *Safe*", R.font(R.F_BLACK, 128), 760, max_w, alpha=int(255 * p))
+        top, bottom = boxed_caption(d, "Warm & *Safe*", R.font(R.F_BLACK, 128), 760, max_w, alpha=int(255 * p))
         bp = R.ease_out((lt - 0.35) / 0.4)
         if bp > 0:
             a = int(255 * bp)
@@ -112,6 +156,8 @@ def render(scene_list, total, t):
                      ("mechanicalenterprise.com/warm-and-safe", R.font(R.F_BLACK, 46), R.ORANGE),
                      ("(862) 423-9396", R.font(R.F_BLACK, 64), R.WHITE)]
             yy = bottom + 60
+            d.rounded_rectangle([60, yy - 30, W - 60, yy + sum(int(f.size * 1.5) for _, f, _ in lines)], radius=34,
+                                fill=(14, 30, 52, int(a * 0.92)))
             for txt, f, col in lines:
                 d.text(((W - d.textlength(txt, font=f)) / 2, yy), txt, font=f, fill=col + (a,),
                        stroke_width=3, stroke_fill=(0, 0, 0, int(a * 0.8)))
@@ -147,7 +193,7 @@ def main():
         m = read_mono(music_wav)[:n]
         m = np.pad(m, (0, max(0, n - len(m))))
         env = np.convolve(np.abs(voice), np.ones(4410) / 4410, mode="same")
-        mix = voice + 0.35 * m * (1 - 0.6 * np.clip(env * 12, 0, 1))
+        mix = voice + 0.2 * m * (1 - 0.7 * np.clip(env * 12, 0, 1))
         mix = np.clip(np.tanh(mix * 1.05) * 0.95, -1, 1)
         mixwav = os.path.join(tmp, "mix.wav")
         with wave.open(mixwav, "wb") as w:
