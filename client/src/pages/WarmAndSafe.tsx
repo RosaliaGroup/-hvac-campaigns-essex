@@ -14,7 +14,7 @@ import { useSEO } from "@/hooks/useSEO";
 /**
  * Warm & Safe (owner, Nov 11 2026): senior heat-safety awareness + "nominate a
  * senior who needs safe heat" + "your installation could help your neighbor".
- * No rebate wording (owner, Nov 10). Public phone = (862) 419-1763; texts (551) 600-7027.
+ * No rebate wording (owner, Nov 10). Phone for this campaign = (862) 423-9396 (owner, Nov 12; rest of site stays 419-1763).
  * Facts on this page are sourced (CDC, NFPA, NJ DCA energy-assistance brochure 2025-26).
  */
 export const WARM_SAFE_PATH = "/warm-and-safe";
@@ -85,7 +85,7 @@ export default function WarmAndSafe() {
       setSubmitted(true);
       setTurnstileToken("");
     } catch {
-      toast({ title: "Something went wrong", description: "Please call (862) 419-1763", variant: "destructive" });
+      toast({ title: "Something went wrong", description: "Please call (862) 423-9396", variant: "destructive" });
     }
   };
 
@@ -306,9 +306,9 @@ export default function WarmAndSafe() {
           <h2 className="text-2xl md:text-3xl font-bold mb-3">Replacing your own heating system?</h2>
           <p className="text-white/90 mb-6">Book a free in-home assessment. Your installation could help your neighbor.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href="tel:+18624191763">
+            <a href="tel:+18624239396">
               <Button size="lg" className="w-full sm:w-auto bg-white text-[#ff6b35] hover:bg-gray-100 font-bold px-8">
-                <Phone className="h-5 w-5 mr-2" /> Call (862) 419-1763
+                <Phone className="h-5 w-5 mr-2" /> Call (862) 423-9396
               </Button>
             </a>
             <a href="/contact">
@@ -317,7 +317,7 @@ export default function WarmAndSafe() {
               </Button>
             </a>
           </div>
-          <p className="text-sm text-white/80 mt-4">Prefer to text? (551) 600-7027</p>
+          <p className="text-sm text-white/80 mt-4">Prefer to text? Text (862) 423-9396</p>
         </div>
       </section>
     </div>

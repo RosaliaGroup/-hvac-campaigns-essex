@@ -6,7 +6,7 @@ Warm & Safe awareness video (DRAFT for owner review, Nov 11 2026).
 make-reels.py, captions in the same style as the Reels. Facts: CDC (CO death
 rate highest over 65; peaks fall/winter) and NFPA 2019-2023 (space heaters and
 heating stoves ~29% of home heating fires). No rebates, no prices.
-Public phone (862) 419-1763. The Hillside senior stays anonymous.
+Phone (862) 423-9396 (owner, Nov 12, for this campaign only). The Hillside senior stays anonymous.
 
 Usage: python3 scripts/make-warm-safe-video.py <piper-model.onnx>
 Output: client/public/videos/warm-and-safe.mp4 (+ .jpg poster)
@@ -110,7 +110,7 @@ def render(scene_list, total, t):
             a = int(255 * bp)
             lines = [("Nominate a senior · Book a free assessment", R.font(R.F_BOLD, 44), R.WHITE),
                      ("mechanicalenterprise.com/warm-and-safe", R.font(R.F_BLACK, 46), R.ORANGE),
-                     ("(862) 419-1763", R.font(R.F_BLACK, 64), R.WHITE)]
+                     ("(862) 423-9396", R.font(R.F_BLACK, 64), R.WHITE)]
             yy = bottom + 60
             for txt, f, col in lines:
                 d.text(((W - d.textlength(txt, font=f)) / 2, yy), txt, font=f, fill=col + (a,),
