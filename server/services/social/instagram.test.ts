@@ -25,7 +25,9 @@ describe("instagram — content rules", () => {
     for (const r of REEL_CALENDAR) {
       expect(socialRuleViolation(r.caption), r.slug).toBeNull();
       expect(r.caption.length).toBeLessThanOrEqual(2200);
-      expect(existsSync(join(dir, `${r.slug}.mp4`)), `${r.slug}.mp4`).toBe(true);
+      const file = r.videoUrl ? join(__dirname, "../../../client/public", new URL(r.videoUrl).pathname) : join(dir, `${r.slug}.mp4`);
+      expect(existsSync(file), file).toBe(true);
+      if (r.facebookCaption) expect(socialRuleViolation(r.facebookCaption), `${r.slug} fb`).toBeNull();
       expect(r.caption, `${r.slug} photo credit`).toContain("📷 Equipment photos:");
       expect(REEL_PHOTO_CREDITS[r.slug], r.slug).toBeTruthy();
     }
@@ -89,7 +91,8 @@ describe("instagram — reel calendar", () => {
 
   it("calendar is in order and on Tue/Thu evenings New York time", () => {
     let prev = 0;
-    for (const r of REEL_CALENDAR) {
+    // Campaign launches (videoUrl set, e.g. Warm & Safe) post when the owner says go.
+    for (const r of REEL_CALENDAR.filter((e) => !e.videoUrl)) {
       const t = Date.parse(r.publishAt);
       expect(t).toBeGreaterThan(prev);
       prev = t;

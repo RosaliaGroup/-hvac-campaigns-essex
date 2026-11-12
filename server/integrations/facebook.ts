@@ -31,6 +31,19 @@ export async function postToFacebook(
   // An image file is posted as a photo (shows the picture with the text as its caption). Any other URL is
   // posted as a link post. Before Oct 31, 2026 an image URL was sent as `link`, which published a bare
   // link to the .png instead of the picture.
+  // A video file (.mp4/.mov) is uploaded to the Page as a video post (Nov 12, 2026).
+  if (imageUrl && /\.(mp4|mov)(\?|$)/i.test(imageUrl)) {
+    const vr = await fetch(`https://graph-video.facebook.com/v18.0/${pageId}/videos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_url: imageUrl, description: content, access_token: accessToken }),
+    });
+    if (!vr.ok) throw new Error(`Facebook API error: ${JSON.stringify(await vr.json().catch(() => ({})))}`);
+    const v = await vr.json();
+    console.log("[Facebook] Video published:", v.id);
+    return String(v.id) as string;
+  }
+
   const isImage = !!imageUrl && /\.(png|jpe?g|gif|webp)(\?|$)/i.test(imageUrl);
   const url = `https://graph.facebook.com/v18.0/${pageId}/${isImage ? "photos" : "feed"}`;
 

@@ -18,7 +18,7 @@ import { publishSocialPost } from "../socialPublisher";
 import {
   dueReels,
   isImageUrl,
-  reelVideoUrl,
+  reelUrl,
   socialRuleViolation,
   toInstagramCaption,
   type ReelEntry,
@@ -92,15 +92,30 @@ async function crossPostToInstagram(fbPostId: number, content: string, imageUrl:
 }
 
 async function publishReel(reel: ReelEntry): Promise<number> {
+  let n = 0;
   try {
-    if (await findReusableSocialPost("instagram", reel.caption)) return 0; // posted or attempted already
-    const r = await publishSocialPost({ platform: "instagram", content: reel.caption, contentType: "reel", mediaUrls: [reelVideoUrl(reel.slug)], approved: true });
-    console.log(`[SocialScheduler] published reel "${reel.slug}" to instagram as #${r.id}`);
-    return 1;
+    if (!(await findReusableSocialPost("instagram", reel.caption))) { // posted or attempted already → skip
+      const r = await publishSocialPost({ platform: "instagram", content: reel.caption, contentType: "reel", mediaUrls: [reelUrl(reel)], approved: true });
+      console.log(`[SocialScheduler] published reel "${reel.slug}" to instagram as #${r.id}`);
+      n++;
+    }
   } catch (error) {
     console.error(`[SocialScheduler] reel "${reel.slug}" failed:`, error instanceof Error ? error.message : String(error));
-    return 1;
+    n++;
   }
+  if (reel.facebookCaption) {
+    try {
+      if (!(await findReusableSocialPost("facebook", reel.facebookCaption))) {
+        const r = await publishSocialPost({ platform: "facebook", content: reel.facebookCaption, contentType: "video", mediaUrls: [reelUrl(reel)], approved: true });
+        console.log(`[SocialScheduler] published video "${reel.slug}" to facebook as #${r.id}`);
+        n++;
+      }
+    } catch (error) {
+      console.error(`[SocialScheduler] facebook video "${reel.slug}" failed:`, error instanceof Error ? error.message : String(error));
+      n++;
+    }
+  }
+  return n;
 }
 
 export function startScheduledSocialPostWorker(): void {
