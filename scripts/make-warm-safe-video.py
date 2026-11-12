@@ -83,7 +83,7 @@ def boxed_caption(d, s, f, cy, max_w, reveal=1.0, alpha=255):
     lines, space = R.layout(d, R.tokens(s), f, max_w)
     lh = int(f.size * 1.12)
     widest = max(sum(w for _, _, w in ln) + space * (len(ln) - 1) for ln in lines)
-    pad_x, pad_y = 44, 34
+    pad_x, pad_y = 40, 34
     top = cy - (lh * len(lines)) // 2 - pad_y
     bottom = cy + (lh * len(lines)) // 2 + pad_y // 2
     a = int(alpha * 0.92)
@@ -91,6 +91,16 @@ def boxed_caption(d, s, f, cy, max_w, reveal=1.0, alpha=255):
                         fill=(14, 30, 52, a), outline=R.ORANGE + (alpha,), width=6)
     R.caption(d, s, f, cy, max_w, reveal=reveal, alpha=alpha)
     return top, bottom
+
+
+SAFE = (90, 285, 990, 1635)  # x0, y0, x1, y1 — 4:5 feed crop with side margins
+
+
+def fit(d, text, path, size, max_w):
+    """Largest font size <= size whose text fits max_w."""
+    while size > 18 and d.textlength(text, font=R.font(path, size)) > max_w:
+        size -= 2
+    return R.font(path, size)
 
 
 def tts(model, text, path):
@@ -125,41 +135,48 @@ def render(scene_list, total, t):
     img = img.convert("RGBA")
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
+    # Everything stays inside SAFE: the 4:5 area Facebook/Instagram feeds show
+    # (y 285-1635) with side margins, so no word is ever cut off.
+    sx0, sy0, sx1, sy1 = SAFE
     f1, f2 = R.font(R.F_BLACK, 38), R.font(R.F_BOLD, 26)
-    d.text(((W - d.textlength("MECHANICAL", font=f1)) / 2, 210), "MECHANICAL", font=f1, fill=R.WHITE + (235,))
-    d.text(((W - d.textlength("ENTERPRISE", font=f2)) / 2, 256), "ENTERPRISE", font=f2, fill=R.ORANGE + (235,))
+    d.text(((W - d.textlength("MECHANICAL", font=f1)) / 2, sy0 + 30), "MECHANICAL", font=f1, fill=R.WHITE + (235,))
+    d.text(((W - d.textlength("ENTERPRISE", font=f2)) / 2, sy0 + 76), "ENTERPRISE", font=f2, fill=R.ORANGE + (235,))
     tag = "WARM & SAFE"
     tf = R.font(R.F_BLACK, 30)
     tw = d.textlength(tag, font=tf)
-    d.rounded_rectangle([(W - tw) / 2 - 22, 300, (W + tw) / 2 + 22, 350], radius=25, fill=R.ORANGE + (230,))
-    d.text(((W - tw) / 2, 306), tag, font=tf, fill=R.WHITE + (255,))
+    d.rounded_rectangle([(W - tw) / 2 - 22, sy0 + 120, (W + tw) / 2 + 22, sy0 + 170], radius=25, fill=R.ORANGE + (230,))
+    d.text(((W - tw) / 2, sy0 + 126), tag, font=tf, fill=R.WHITE + (255,))
     cr = R.credit_text(sc["photo"])
     if cr:
-        d.text((40, 372), cr, font=R.font(R.F_MED, 22), fill=(255, 255, 255, 140))
-    max_w = W - 140
+        cf = fit(d, cr, R.F_MED, 22, sx1 - sx0)
+        d.text((sx0, sy1 - 40), cr, font=cf, fill=(255, 255, 255, 170), stroke_width=2, stroke_fill=(0, 0, 0, 140))
+    max_w = (sx1 - sx0) - 100  # text width inside the caption box padding
     if sc["caption"] != "CTA":
         reveal = min(1.0, 0.3 + lt / 0.6) if sc["idx"] > 0 else 1.0
-        boxed_caption(d, sc["caption"], R.font(R.F_BLACK, 92), 960, max_w - 60, reveal=reveal)
+        boxed_caption(d, sc["caption"], R.font(R.F_BLACK, 88), 940, max_w, reveal=reveal)
         if sc["source"]:
             sf = R.font(R.F_BOLD, 34)
-            d.text(((W - d.textlength(sc["source"], font=sf)) / 2, 1250), sc["source"], font=sf,
+            d.text(((W - d.textlength(sc["source"], font=sf)) / 2, 1230), sc["source"], font=sf,
                    fill=(255, 255, 255, 210), stroke_width=3, stroke_fill=(0, 0, 0, 180))
     else:
         p = R.ease_out(lt / 0.4)
-        top, bottom = boxed_caption(d, "Warm & *Safe*", R.font(R.F_BLACK, 128), 760, max_w, alpha=int(255 * p))
+        top, bottom = boxed_caption(d, "Warm & *Safe*", R.font(R.F_BLACK, 116), 720, max_w, alpha=int(255 * p))
         bp = R.ease_out((lt - 0.35) / 0.4)
         if bp > 0:
             a = int(255 * bp)
-            lines = [("Nominate a senior · Book a free assessment", R.font(R.F_BOLD, 44), R.WHITE),
-                     ("mechanicalenterprise.com/warm-and-safe", R.font(R.F_BLACK, 46), R.ORANGE),
-                     ("(862) 423-9396", R.font(R.F_BLACK, 64), R.WHITE)]
-            yy = bottom + 60
-            d.rounded_rectangle([60, yy - 30, W - 60, yy + sum(int(f.size * 1.5) for _, f, _ in lines)], radius=34,
+            inner = (sx1 - sx0) - 80
+            lines = [("Nominate a senior", fit(d, "Nominate a senior", R.F_BOLD, 48, inner), R.WHITE),
+                     ("Book a free assessment", fit(d, "Book a free assessment", R.F_BOLD, 48, inner), R.WHITE),
+                     ("mechanicalenterprise.com", fit(d, "mechanicalenterprise.com", R.F_BLACK, 54, inner), R.ORANGE),
+                     ("/warm-and-safe", fit(d, "/warm-and-safe", R.F_BLACK, 54, inner), R.ORANGE),
+                     ("(862) 423-9396", fit(d, "(862) 423-9396", R.F_BLACK, 72, inner), R.WHITE)]
+            yy = bottom + 50
+            d.rounded_rectangle([sx0, yy - 30, sx1, yy + sum(int(f.size * 1.4) for _, f, _ in lines)], radius=34,
                                 fill=(14, 30, 52, int(a * 0.92)))
             for txt, f, col in lines:
                 d.text(((W - d.textlength(txt, font=f)) / 2, yy), txt, font=f, fill=col + (a,),
                        stroke_width=3, stroke_fill=(0, 0, 0, int(a * 0.8)))
-                yy += int(f.size * 1.5)
+                yy += int(f.size * 1.4)
     d.rectangle([0, H - 10, int(W * t / total), H], fill=R.ORANGE + (230,))
     img.alpha_composite(layer)
     return img.convert("RGB")
