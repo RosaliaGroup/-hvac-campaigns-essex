@@ -36,7 +36,7 @@ import { replaceBlogPostInSource } from "../../../shared/blogSourceEdit";
 import { blogPosts, type BlogPostData } from "../../../client/src/data/blogPosts";
 import { draftRefreshPost, isResidentialPost } from "./refreshDrafting";
 import { isKeptRebateTopicPost } from "../../../shared/excludedPrograms";
-import { nextTopicToProcess, updateQueueStatus } from "./contentQueue";
+import { hasQueuedNewTopic, nextTopicToProcess, updateQueueStatus } from "./contentQueue";
 import { draftContentPost, ContentDraftParseError } from "./contentDrafting";
 import { runCriticPass, type CriticVerdict } from "./criticPass";
 import { checkCircuitBreakerConditions } from "./circuitBreaker";
@@ -241,6 +241,12 @@ async function draftNextContent(facts: VerifiedFacts): Promise<ContentDraftOutco
   const blockedTopicIds: number[] = [];
   let lastBlocked: ContentDraftOutcome | null = null;
   let replenished = false;
+
+  // Keep new posts coming: top up the new-topic backlog whenever it is empty, even if a refresh is pending.
+  if (!(await hasQueuedNewTopic())) {
+    replenished = true;
+    await replenishContentTopics(facts, readLocalExistingTitles());
+  }
 
   while (blockedTopicIds.length < MAX_BLOCKED_TOPICS_PER_RUN) {
     let topic = await nextTopicToProcess();

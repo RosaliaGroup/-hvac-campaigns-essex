@@ -15,7 +15,7 @@ vi.mock("drizzle-orm", async (importOriginal) => {
 
 import { getDb } from "../../db";
 import { logAudit } from "./auditLog";
-import { seedContentQueue, listContentQueue, proposeTopic, updateQueueStatus, nextTopicToProcess, SEED_TOPICS } from "./contentQueue";
+import { seedContentQueue, listContentQueue, proposeTopic, updateQueueStatus, nextTopicToProcess, queueRefresh, hasQueuedNewTopic, SEED_TOPICS } from "./contentQueue";
 
 type Cond = { __op: "eq"; col: { name: string }; val: unknown } | { __op: "or" | "and"; conds: Cond[] } | undefined;
 
@@ -34,6 +34,7 @@ function makeDb(initialRows: Array<Record<string, any>> = []) {
         where: (cond: Cond) => ({
           orderBy: () => ({ limit: (n: number) => Promise.resolve(rows.filter((r) => rowMatches(r, cond)).slice(0, n)) }),
           limit: (n: number) => Promise.resolve(rows.filter((r) => rowMatches(r, cond)).slice(0, n)),
+          then: (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve(rows.filter((r) => rowMatches(r, cond))).then(res, rej),
         }),
         orderBy: () => Promise.resolve([...rows]),
         then: (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => Promise.resolve([...rows]).then(res, rej),
@@ -178,5 +179,48 @@ describe("SEED_TOPICS — docs/positioning-warranty-spec.md §5", () => {
     for (const topic of SEED_TOPICS) {
       expect(isResidentialOrRebateTopic(topic), topic.title).toBe(false);
     }
+  });
+});
+
+describe("refreshes can't crowd out new posts (2026-11-11)", () => {
+  const DAY = 86_400_000;
+  it("picks a new topic over a pending refresh when a refresh was published in the last 7 days", async () => {
+    const { db } = makeDb([
+      { id: 1, title: "Refresh: /blog/a", status: "refresh_due", refreshesSlug: "a", source: "market-intel:decaying_page", createdAt: 1 },
+      { id: 2, title: "Old refresh", status: "published", refreshesSlug: "b", createdAt: 0, updatedAt: new Date(Date.now() - 2 * DAY) },
+      { id: 3, title: "New topic", status: "queued", source: "seed", createdAt: 2 },
+    ]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    expect((await nextTopicToProcess())?.title).toBe("New topic");
+  });
+  it("allows one refresh when none was published in the last 7 days", async () => {
+    const { db } = makeDb([
+      { id: 1, title: "Refresh: /blog/a", status: "refresh_due", refreshesSlug: "a", source: "market-intel:decaying_page", createdAt: 1 },
+      { id: 2, title: "Old refresh", status: "published", refreshesSlug: "b", createdAt: 0, updatedAt: new Date(Date.now() - 10 * DAY) },
+      { id: 3, title: "New topic", status: "queued", source: "seed", createdAt: 2 },
+    ]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    expect((await nextTopicToProcess())?.title).toBe("Refresh: /blog/a");
+  });
+  it("does not re-queue a post refreshed within 30 days", async () => {
+    const { db, rows } = makeDb([
+      { id: 1, title: "Refresh: /blog/a", status: "published", refreshesSlug: "a", source: "market-intel:decaying_page", createdAt: 1, updatedAt: new Date(Date.now() - 3 * DAY) },
+    ]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    expect(await queueRefresh({ slug: "a", brief: "down", source: "market-intel:decaying_page" })).toBe("cooldown");
+    expect(rows[0].status).toBe("published");
+  });
+  it("re-queues a post whose last refresh is older than 30 days", async () => {
+    const { db, rows } = makeDb([
+      { id: 1, title: "Refresh: /blog/a", status: "published", refreshesSlug: "a", source: "market-intel:decaying_page", createdAt: 1, updatedAt: new Date(Date.now() - 40 * DAY) },
+    ]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    expect(await queueRefresh({ slug: "a", brief: "down", source: "market-intel:decaying_page" })).toBe("promoted");
+    expect(rows[0].status).toBe("refresh_due");
+  });
+  it("hasQueuedNewTopic ignores queued refreshes", async () => {
+    const { db } = makeDb([{ id: 1, title: "r", status: "queued", refreshesSlug: "a", createdAt: 1 }]);
+    vi.mocked(getDb).mockResolvedValue(db as never);
+    expect(await hasQueuedNewTopic()).toBe(false);
   });
 });

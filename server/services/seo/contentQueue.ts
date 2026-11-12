@@ -126,6 +126,19 @@ export async function hasExistingProposal(refreshesSlug: string, source: string)
   return !!row;
 }
 
+/** Days a refreshed (or set-aside) post is left alone before it can be queued for another refresh. */
+export const REFRESH_COOLDOWN_DAYS = 30;
+/** At most one refresh per this many days; the other runs write new posts. */
+export const REFRESH_MIN_GAP_DAYS = 7;
+
+function withinDays(when: Date | string | number | null | undefined, days: number, now: number): boolean {
+  if (when === null || when === undefined) return false;
+  const t = when instanceof Date ? when.getTime() : new Date(when).getTime();
+  return Number.isFinite(t) && now - t < days * 86_400_000;
+}
+
+const isRefreshRow = (r: Pick<SeoContentQueueRow, "status" | "refreshesSlug">) => r.status === "refresh_due" || !!r.refreshesSlug;
+
 /**
  * Queue an automatic in-place refresh of an existing blog post (owner decision 2026-10-29: decaying posts
  * are refreshed automatically). Creates — or promotes an earlier "proposed" row to — status "refresh_due",
@@ -133,7 +146,7 @@ export async function hasExistingProposal(refreshesSlug: string, source: string)
  * publishes it like any post, and the PR can be reverted. Returns what happened, never throws on a
  * duplicate: a slug already queued/drafted/in a PR is left alone.
  */
-export async function queueRefresh(input: { slug: string; brief: string; source: string }): Promise<"queued" | "promoted" | "already_in_progress"> {
+export async function queueRefresh(input: { slug: string; brief: string; source: string }): Promise<"queued" | "promoted" | "already_in_progress" | "cooldown"> {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
   // Earlier market-intel proposals stored the path form ("blog/<slug>"); match both. Older reports could
@@ -141,6 +154,12 @@ export async function queueRefresh(input: { slug: string; brief: string; source:
   const rows = await db.select().from(seoContentQueue)
     .where(or(eq(seoContentQueue.refreshesSlug, input.slug), eq(seoContentQueue.refreshesSlug, `blog/${input.slug}`)));
   if (rows.some((r) => ["refresh_due", "queued", "in_review", "pr_open"].includes(r.status))) return "already_in_progress";
+  // Cooldown (owner 2026-11-11, "the system was supposed to fix itself"): a refreshed post keeps showing
+  // "decaying" in the click comparison for weeks after it's rewritten, so without this the same post was
+  // re-queued the next day and rewritten on every run (heat-pump-vs-gas-furnace: Nov 4, 6, 9, 11) while no
+  // new posts were written. A post refreshed or set aside within REFRESH_COOLDOWN_DAYS is left alone.
+  const now = Date.now();
+  if (rows.some((r) => (r.status === "published" || r.status === "drafted") && withinDays(r.updatedAt, REFRESH_COOLDOWN_DAYS, now))) return "cooldown";
   const existing = rows.find((r) => r.status === "proposed") ?? rows.find((r) => r.status === "published" || r.status === "drafted");
   if (existing) {
     // A finished refresh (published) or a set-aside one (drafted) may be retried once the page decays again.
@@ -186,23 +205,35 @@ export async function updateQueueStatus(id: number, status: SeoContentQueueRow["
   await db.update(seoContentQueue).set({ status, ...(contentBatchId !== undefined ? { contentBatchId } : {}) }).where(eq(seoContentQueue.id, id));
 }
 
-/** The next topic the weekly job should draft — "queued" or "refresh_due" ONLY (never "proposed" — the model cannot self-select). Oldest first. */
+/**
+ * The next topic the weekly job should draft — "queued" or "refresh_due" ONLY (never "proposed" — the model
+ * cannot self-select). New posts come first: a verified market-demand topic, then the oldest queued new
+ * topic. A refresh of an existing post runs only when no refresh was published in the last
+ * REFRESH_MIN_GAP_DAYS days, or when there is no new topic at all — so refreshes can no longer crowd out
+ * new posts (owner 2026-11-11).
+ */
 export async function nextTopicToProcess(): Promise<SeoContentQueueRow | null> {
   const db = await getDb();
   if (!db) return null;
-  // Prioritize one verified market-demand topic when available. This is
-  // still the same single-topic, linted and hold-gated publishing pipeline.
-  const market = await db.select().from(seoContentQueue)
-    .where(and(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.source, "market-intel:unserved_query")))
-    .orderBy(asc(seoContentQueue.createdAt)).limit(1);
-  if (market.length) return market[0];
-  // Then one market-intel refresh of a decaying post, ahead of the seeded backlog.
-  const refresh = await db.select().from(seoContentQueue)
-    .where(and(eq(seoContentQueue.status, "refresh_due"), eq(seoContentQueue.source, "market-intel:decaying_page")))
-    .orderBy(asc(seoContentQueue.createdAt)).limit(1);
-  if (refresh.length) return refresh[0];
   const rows = await db.select().from(seoContentQueue)
-    .where(or(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.status, "refresh_due")))
-    .orderBy(asc(seoContentQueue.createdAt)).limit(1);
-  return rows[0] ?? null;
+    .where(or(eq(seoContentQueue.status, "queued"), eq(seoContentQueue.status, "refresh_due"), eq(seoContentQueue.status, "published")))
+    .orderBy(asc(seoContentQueue.createdAt)).limit(1000);
+  const market = rows.find((r) => r.status === "queued" && r.source === "market-intel:unserved_query" && !isRefreshRow(r));
+  if (market) return market;
+  const newTopics = rows.filter((r) => r.status === "queued" && !isRefreshRow(r));
+  const refreshes = rows.filter((r) => (r.status === "refresh_due" || r.status === "queued") && isRefreshRow(r));
+  const decaying = refreshes.find((r) => r.source === "market-intel:decaying_page") ?? refreshes[0];
+  if (!decaying) return newTopics[0] ?? null;
+  if (!newTopics.length) return decaying;
+  const now = Date.now();
+  const refreshedRecently = rows.some((r) => r.status === "published" && !!r.refreshesSlug && withinDays(r.updatedAt, REFRESH_MIN_GAP_DAYS, now));
+  return refreshedRecently ? newTopics[0] : decaying;
+}
+
+/** True when at least one brand-new (non-refresh) topic is waiting to be drafted. */
+export async function hasQueuedNewTopic(): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select().from(seoContentQueue).where(eq(seoContentQueue.status, "queued")).limit(1000);
+  return rows.some((r) => !isRefreshRow(r));
 }

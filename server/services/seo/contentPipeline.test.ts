@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../../db", () => ({ getDb: vi.fn() }));
 vi.mock("fs", () => ({ default: { readFileSync: vi.fn(() => "export const blogPosts = [];") } }));
-vi.mock("./contentQueue", () => ({ nextTopicToProcess: vi.fn(), updateQueueStatus: vi.fn() }));
+vi.mock("./contentQueue", () => ({ nextTopicToProcess: vi.fn(), updateQueueStatus: vi.fn(), hasQueuedNewTopic: vi.fn(async () => true) }));
 vi.mock("./topicReplenishment", () => ({ replenishContentTopics: vi.fn(async () => 0) }));
 vi.mock("./contentDrafting", () => ({ draftContentPost: vi.fn(), ContentDraftParseError: class ContentDraftParseError extends Error {} }));
 vi.mock("./criticPass", () => ({ runCriticPass: vi.fn() }));

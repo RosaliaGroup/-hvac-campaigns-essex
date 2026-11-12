@@ -47,7 +47,8 @@ export function replenishContentTopics(facts: VerifiedFacts, publishedTitles: st
 
 async function refill(facts: VerifiedFacts, publishedTitles: string[]): Promise<number> {
   const queue = await listContentQueue();
-  if (queue.some(t => t.status === "queued" || t.status === "refresh_due")) return 0;
+  // Only new (non-refresh) queued topics count: a pending refresh must not stop new posts from being planned.
+  if (queue.some(t => t.status === "queued" && !t.refreshesSlug)) return 0;
   const existing = [...publishedTitles, ...queue.map(t => t.title)];
   let candidates: unknown[] = [];
   if (process.env.ANTHROPIC_API_KEY?.trim()) {
