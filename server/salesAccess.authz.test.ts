@@ -48,6 +48,7 @@ const PUBLIC = [
   /^rebateCalculator\.(calculate|submitCalculation|geocodeAddress|sendResultsSms|register|getByToken|autocompleteAddress)$/,
   /^portal\./,
   /^leadCaptures\.create$/,
+  /^warmSafe\.nominate$/,
   /^webhooks\./,
 ];
 

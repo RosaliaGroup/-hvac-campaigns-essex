@@ -42,6 +42,14 @@ interface PageMeta {
 
 const PAGE_META: Record<string, PageMeta> = {
   "/": { title: DEFAULT_TITLE, description: DEFAULT_DESC },
+  // Warm & Safe senior campaign (owner, Nov 12 2026): link previews must show
+  // the initiative, not the site default.
+  "/warm-and-safe": {
+    title: "Warm & Safe: Help a Senior Neighbor Stay Warm This Winter",
+    description:
+      "Know a NJ senior without safe heat? Nominate them for a free in-home heating assessment. For every 20 installations, Mechanical Enterprise installs a free heating system for a senior.",
+    ogImage: `${BASE}/og-warm-and-safe.jpg`,
+  },
   "/residential": {
     title: "Residential HVAC Installation NJ | Heat Pump & AC",
     description: "Expert residential HVAC installation in NJ. Heat pumps, central AC, ductless mini-splits & furnaces. Optional 10-year parts & labor coverage. Free in-home assessment.",
