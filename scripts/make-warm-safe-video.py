@@ -8,7 +8,7 @@ rate highest over 65; peaks fall/winter) and NFPA 2019-2023 (space heaters and
 heating stoves ~29% of home heating fires). No rebates, incentives or assistance programs, no prices (owner, Nov 12).
 Phone (862) 423-9396 (owner, Nov 12, for this campaign only). No individual beneficiary is named or described (owner, Nov 12).
 
-Usage: python3 scripts/make-warm-safe-video.py <piper-model.onnx>
+Usage: python3 scripts/make-warm-safe-video.py <kokoro-v1.0.onnx | piper-model.onnx>
 Output: client/public/videos/warm-and-safe.mp4 (+ .jpg poster)
 """
 import importlib.util
@@ -35,7 +35,7 @@ SCENES = [
      "Some seniors are heading into winter *without safe heat*", "oil-furnace", None),
     ("An old furnace or boiler can leak carbon monoxide. You can't see it, and you can't smell it.",
      "Old systems can leak *carbon monoxide*", "furnace-basement", None),
-    ("The C D C has found the death rate from carbon monoxide is highest for people over sixty five.",
+    ("The CDC has found the death rate from carbon monoxide is highest for people over sixty five.",
      "Highest risk: *people over 65*", "oil-furnace", "Source: CDC"),
     ("When the heat fails, many turn to space heaters. They're involved in about three in ten home heating fires.",
      "Space heaters: about *3 in 10* home heating fires", "furnace-basement", "Source: NFPA, 2019–2023"),
@@ -103,7 +103,22 @@ def fit(d, text, path, size, max_w):
     return R.font(path, size)
 
 
+KOKORO = None
+
+
 def tts(model, text, path):
+    """Narration. A Kokoro model (kokoro-*.onnx + voices-*.bin beside it) gives a much more
+    natural voice (default "af_heart"; KOKORO_VOICE overrides); otherwise Piper."""
+    global KOKORO
+    if os.path.basename(model).startswith("kokoro"):
+        import soundfile as sf
+        from kokoro_onnx import Kokoro
+        if KOKORO is None:
+            voices = os.path.join(os.path.dirname(model), "voices-v1.0.bin")
+            KOKORO = Kokoro(model, voices)
+        samples, sr = KOKORO.create(text, voice=os.environ.get("KOKORO_VOICE", "af_heart"), speed=0.95, lang="en-us")
+        sf.write(path, samples, sr, subtype="PCM_16")
+        return len(samples) / sr
     subprocess.run([sys.executable, "-m", "piper", "-m", model, "--length-scale", "1.08", "-f", path],
                    input=text.encode(), check=True, capture_output=True)
     with wave.open(path) as w:
