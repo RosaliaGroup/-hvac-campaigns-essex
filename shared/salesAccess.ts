@@ -61,6 +61,11 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "calls.start",
   "calls.listForContact",
   "calls.recordingUrl",
+  // Browser dialer (headset) + QC on her own calls (calls.qcForCall checks ownership)
+  "calls.webrtcToken",
+  "calls.webrtcStart",
+  "calls.webrtcFinish",
+  "calls.qcForCall",
 
   // Read-only call/text history on a contact the rep has open
   "crmCommunications.timeline",
