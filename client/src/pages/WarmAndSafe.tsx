@@ -150,12 +150,12 @@ export default function WarmAndSafe() {
               {
                 icon: ShieldAlert,
                 title: "Carbon monoxide",
-                body: "An old or damaged system can leak carbon monoxide, a gas you can't see or smell. The CDC has found the CO poisoning death rate is highest among people over 65, and poisonings peak in fall and winter.",
+                body: "An old or damaged system can leak carbon monoxide, a gas you can't see or smell. The CDC has found the death rate from accidental CO poisoning is highest among people 65 and older, and most poisonings happen in the colder months.",
               },
               {
                 icon: Flame,
                 title: "Space heaters and fire",
-                body: "When the heat fails, many people turn to space heaters. Space heaters and heating stoves are involved in about 3 in 10 U.S. home heating fires (NFPA, 2019–2023).",
+                body: "When the heat fails, many people turn to space heaters. Space heaters and heating stoves are involved in nearly 3 in 10 U.S. home heating fires (NFPA, 2019–2023).",
               },
               {
                 icon: Thermometer,
