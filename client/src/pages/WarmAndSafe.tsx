@@ -14,11 +14,20 @@ import { useSEO } from "@/hooks/useSEO";
 /**
  * Warm & Safe (owner, Nov 11 2026): senior heat-safety awareness + "nominate a
  * senior who needs safe heat". Owner Nov 12: no individual beneficiary, and no claims that sales fund
- * help — only true statements (safety facts, our standard free in-home assessment).
+ * help — only true statements. Owner Nov 12 ("add that your installation will help"): the ONLY
+ * sales tie-in is the published commitment WARM_SAFE_TERMS below — keep every mention consistent with it.
  * No rebate, incentive or assistance-program wording (owner, Nov 10 and Nov 12). Phone for this campaign = (862) 423-9396 (owner, Nov 12; rest of site stays 419-1763).
  * Facts on this page are sourced (CDC, NFPA).
  */
 export const WARM_SAFE_PATH = "/warm-and-safe";
+
+/** The one sales tie-in (owner, Nov 12 2026). Every mention on the page and in the video must match this. */
+export const WARM_SAFE_TERMS =
+  "For every 20 residential heating or cooling installations Mechanical Enterprise completes between the launch of Warm & Safe " +
+  "and March 31, 2027, we will install one heating system, equipment and labor, at no cost to a senior homeowner (65 or older) " +
+  "selected from Warm & Safe nominations. Recipients must live in our New Jersey service area, own the home, and have a heating " +
+  "system that needs replacement; we confirm this with a free in-home assessment and the homeowner's consent. We will post the " +
+  "installation count and each completed Warm & Safe installation (with the recipient's permission) on this page.";
 
 export default function WarmAndSafe() {
   const { toast } = useToast();
@@ -105,7 +114,11 @@ export default function WarmAndSafe() {
           </h1>
           <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto mb-8">
             Know the warning signs, check on the older people in your life, and if a senior near you needs safe heat,{" "}
-            <strong className="text-white">nominate them for a free in-home heating assessment.</strong>
+            <strong className="text-white">nominate them.</strong>
+          </p>
+          <p className="text-base md:text-lg text-white max-w-2xl mx-auto mb-8 rounded-xl bg-white/10 border border-white/20 px-4 py-3">
+            <strong className="text-[#ffb27a]">Your installation helps.</strong> For every 20 heating or cooling installations this
+            winter, we install a heating system for a nominated senior <strong>at no cost to them</strong>.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="#nominate">
@@ -200,16 +213,57 @@ export default function WarmAndSafe() {
       <section className="px-4 py-12 md:py-16">
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl md:text-4xl font-bold text-[#1e3a5f] text-center mb-10">How Warm &amp; Safe works</h2>
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               { icon: Heart, title: "1. Nominate", body: "Tell us about a senior who needs safe heat. It takes two minutes." },
               { icon: Users, title: "2. We call you first", body: "We call you before contacting them, and only reach out with their permission." },
               { icon: Home, title: "3. Free in-home assessment", body: "We look at their heating system at no cost and explain, in plain terms, whether it's safe and what their options are." },
+              { icon: Flame, title: "4. Every 20 installs = 1 free system", body: "For every 20 installations we complete this winter, one nominated senior gets a new heating system installed at no cost to them." },
             ].map(({ icon: Icon, title, body }) => (
               <div key={title} className="rounded-2xl border border-gray-100 p-6 text-center">
                 <Icon className="h-9 w-9 text-[#ff6b35] mx-auto mb-3" />
                 <h3 className="text-lg font-bold text-[#1e3a5f] mb-2">{title}</h3>
                 <p className="text-gray-700 text-sm">{body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* We need your help */}
+      <section className="px-4 py-12 md:py-16 bg-[#fff6f0]">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl md:text-4xl font-bold text-[#1e3a5f] mb-3">We need your help to make Warm &amp; Safe a success</h2>
+          <p className="text-gray-700 max-w-2xl mx-auto mb-8">Three ways you can help a senior neighbor stay warm and safe this winter:</p>
+          <div className="grid md:grid-cols-3 gap-5 text-left">
+            {[
+              { icon: Heart, title: "Nominate a senior", body: "Tell us about an older neighbor, parent or friend who needs safe heat.", href: "#nominate", cta: "Nominate" },
+              { icon: Users, title: "Share this page", body: "Send it to your family group chat, church or neighborhood group. Someone you know may know a senior who needs help.", href: "#share", cta: "Share" },
+              { icon: Home, title: "Choose us for your installation", body: "Every 20 installations this winter fund a heating system for a nominated senior, at no cost to them.", href: "/contact", cta: "Book a free assessment" },
+            ].map(({ icon: Icon, title, body, href, cta }) => (
+              <div key={title} className="rounded-2xl bg-white border border-[#ffd9c2] p-6 flex flex-col">
+                <Icon className="h-8 w-8 text-[#ff6b35] mb-3" />
+                <h3 className="text-lg font-bold text-[#1e3a5f] mb-2">{title}</h3>
+                <p className="text-gray-700 text-sm mb-4 flex-1">{body}</p>
+                {href === "#share" ? (
+                  <Button
+                    variant="outline"
+                    className="border-[#ff6b35] text-[#ff6b35] font-bold"
+                    onClick={async () => {
+                      const url = `https://mechanicalenterprise.com${WARM_SAFE_PATH}`;
+                      try {
+                        if (navigator.share) await navigator.share({ title: "Warm & Safe", text: "Know a senior who needs safe heat this winter?", url });
+                        else { await navigator.clipboard.writeText(url); toast({ title: "Link copied" }); }
+                      } catch { /* user cancelled */ }
+                    }}
+                  >
+                    {cta}
+                  </Button>
+                ) : (
+                  <a href={href}>
+                    <Button variant="outline" className="w-full border-[#ff6b35] text-[#ff6b35] font-bold">{cta}</Button>
+                  </a>
+                )}
               </div>
             ))}
           </div>
@@ -270,8 +324,10 @@ export default function WarmAndSafe() {
       {/* Bottom CTA */}
       <section className="px-4 py-12 bg-[#ff6b35] text-white text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold mb-3">Replacing your own heating system?</h2>
-          <p className="text-white/90 mb-6">Book a free in-home assessment and a written quote before you decide.</p>
+          <h2 className="text-2xl md:text-3xl font-bold mb-3">Replacing your own heating or cooling system?</h2>
+          <p className="text-white/90 mb-6">
+            Book a free in-home assessment and a written quote. Your installation counts toward the next free system for a senior in need.
+          </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <a href="tel:+18624239396">
               <Button size="lg" className="w-full sm:w-auto bg-white text-[#ff6b35] hover:bg-gray-100 font-bold px-8">
@@ -286,6 +342,13 @@ export default function WarmAndSafe() {
           </div>
           <p className="text-sm text-white/80 mt-4">Prefer to text? Text (862) 423-9396</p>
         </div>
+      </section>
+
+      {/* Terms of the installation commitment (keep in sync with WARM_SAFE_TERMS) */}
+      <section className="px-4 py-8 bg-gray-50">
+        <p className="max-w-3xl mx-auto text-xs text-gray-500 leading-relaxed">
+          <strong>Warm &amp; Safe terms:</strong> {WARM_SAFE_TERMS}
+        </p>
       </section>
     </div>
   );
