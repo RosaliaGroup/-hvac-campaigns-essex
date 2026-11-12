@@ -48,6 +48,7 @@ import SmsCampaigns from "./pages/SmsCampaigns";
 import CampaignGenerator from "./pages/CampaignGenerator";
 import LPCommercialVRV from "./pages/lp/LPCommercialVRV";
 import LPFBResidential from "./pages/lp/LPFBResidential";
+import WarmAndSafe from "./pages/WarmAndSafe";
 import LPFBCommercial from "./pages/lp/LPFBCommercial";
 import LPReferralPartner from "./pages/lp/LPReferralPartner";
 import Qualify from "./pages/Qualify";
@@ -148,6 +149,7 @@ function Router() {
       <Route path={"/company"} component={Company} />
       <Route path={"/services"} component={Services} />
       <Route path={"/contact"} component={Contact} />
+      <Route path={"/warm-and-safe"} component={WarmAndSafe} />
       <Route path={"/rebate-guide"}><Redirect to="/residential" /></Route>
       <Route path={"/residential"} component={ResidentialCampaigns} />
       <Route path={"/commercial"} component={CommercialCampaigns} />

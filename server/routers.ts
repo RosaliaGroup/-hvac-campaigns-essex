@@ -24,6 +24,7 @@ import { notifyOwner } from "./_core/notification";
 import { googleAdsRouter } from "./routers/googleAds";
 import { metaAdsRouter } from "./routers/metaAds";
 import { teamAuthRouter } from "./routers/teamAuth";
+import { warmSafeRouter } from "./routers/warmSafe";
 import { smsCampaignsRouter } from "./routers/smsCampaigns";
 import { conversationCrmRouter } from "./routers/conversationCrm";
 import { crmOutreachReviewRouter } from "./routers/crmOutreachReview";
@@ -110,6 +111,7 @@ export const appRouter = router({
   googleAds: googleAdsRouter,
   metaAds: metaAdsRouter,
   teamAuth: teamAuthRouter,
+  warmSafe: warmSafeRouter,
   smsCampaigns: smsCampaignsRouter,
   conversationCrm: conversationCrmRouter,
   crmOutreachReview: crmOutreachReviewRouter,
