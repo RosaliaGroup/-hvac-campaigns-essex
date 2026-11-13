@@ -658,7 +658,7 @@ export default async function handler(request: Request, context: any) {
     });
   }
 
-  // Private short links: /p/<slug> → URL, from the PRIVATE_SHORT_LINKS env var
+  // Private pages: /p/<slug> serves the page at URL (proxied), from the PRIVATE_SHORT_LINKS env var
   // (JSON {slug: url}) set in Netlify. Slugs and targets never live in this
   // public repo. Unknown slugs fall through to the normal 404.
   if (url.pathname.startsWith("/p/")) {
@@ -666,9 +666,15 @@ export default async function handler(request: Request, context: any) {
       const links = JSON.parse(Deno.env.get("PRIVATE_SHORT_LINKS") ?? "{}") as Record<string, string>;
       const target = links[url.pathname.slice(3).replace(/\/+$/, "")];
       if (target && /^https:\/\//.test(target)) {
-        return new Response(null, {
-          status: 302,
-          headers: { "Location": target, "X-Robots-Tag": "noindex, nofollow, noarchive", "Cache-Control": "no-store" },
+        // Serve the page in place so the address bar stays on our domain.
+        const upstream = await fetch(target, { headers: { "Accept": "text/html" } });
+        return new Response(upstream.body, {
+          status: upstream.status,
+          headers: {
+            "Content-Type": upstream.headers.get("content-type") ?? "text/html; charset=utf-8",
+            "X-Robots-Tag": "noindex, nofollow, noarchive",
+            "Cache-Control": "no-store",
+          },
         });
       }
     } catch { /* bad JSON → fall through */ }
