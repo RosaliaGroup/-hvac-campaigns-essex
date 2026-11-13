@@ -670,6 +670,11 @@ export default async function handler(request: Request, context: any) {
     return;
   }
 
+  // Partner update links are 302s to external pages (netlify.toml) — pass through.
+  if (url.pathname.startsWith("/partners/")) {
+    return;
+  }
+
   // Skip non-HTML requests (assets, API, etc.)
   if (
     url.pathname.startsWith("/api/") ||
