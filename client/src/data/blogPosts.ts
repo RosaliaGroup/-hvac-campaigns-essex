@@ -25,6 +25,102 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "NJ Commercial Central AC Replacement Guide",
+    "slug": "nj-commercial-central-ac-replacement-guide",
+    "date": "November 13, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Planning a commercial central AC replacement in NJ? Learn sizing, bid checklists, install quality, and optional coverage for property owners.",
+    "excerpt": "A practical guide for NJ property managers and building owners weighing a commercial central AC replacement — covering system fit, bidder vetting, installation quality, and optional long-term coverage.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Replacing a commercial central AC system is a capital decision, not a quick swap. For property managers and building owners across Essex, Bergen, Union, Middlesex, and the other counties Mechanical Enterprise serves, the right replacement plan balances tenant comfort, operating cost, and long-term reliability. This guide walks through when replacement makes sense, how to vet a bid, and what separates a durable install from a problem five years down the road."
+      },
+      {
+        "type": "h2",
+        "content": "When Central AC Replacement Makes Sense for Commercial Buildings"
+      },
+      {
+        "type": "paragraph",
+        "content": "Most commercial central AC systems are candidates for replacement once repair frequency climbs, refrigerant leaks recur, or tenant comfort complaints become routine rather than occasional. Age alone isn't the only signal — a unit that's been maintained consistently may still have service life left, while a neglected system half that age can be a liability. For multifamily buildings in Hudson or Essex County, or office and retail space in Bergen and Morris County, the practical trigger is usually a combination of rising repair cost, inconsistent zone temperatures, and energy bills that no longer match comparable buildings. A straightforward repair-versus-replace assessment, done by a technician who inspects the full system rather than just the failed component, gives you a clearer basis for the capital decision than guesswork."
+      },
+      {
+        "type": "h2",
+        "content": "System Sizing and Equipment Fit"
+      },
+      {
+        "type": "paragraph",
+        "content": "An oversized central AC system short-cycles, wastes energy, and struggles with humidity control — all of which show up as tenant complaints and higher utility costs. An undersized system runs constantly and wears out faster. Proper fit starts with a load calculation specific to the building: square footage alone doesn't account for occupancy patterns, window exposure, ceiling height, or how a multi-tenant layout actually uses the space. For portfolios spanning PTAC, split, mini-split, or rooftop unit (RTU) configurations, system fit also needs to account for how units interact across a building, not just room by room. This is where a generic replacement quote differs from one built around your building's actual load profile."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us When Requesting a Quote"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Building type and approximate conditioned square footage per zone or unit",
+          "Age and manufacturer of the existing central AC system(s)",
+          "Recent repair history, including any recurring issues or refrigerant leaks",
+          "Number of units/zones if this is a multifamily or multi-tenant property",
+          "Current utility bills or energy usage data, if available",
+          "Any known ductwork or electrical constraints (panel capacity, chase access)",
+          "Timeline and whether the project needs to be phased around occupancy"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "When comparing bidders, ask each one to show their load calculation method, confirm they're pulling permits where required, and specify exactly what's covered in their price — equipment, labor, disposal of the old unit, and any startup/commissioning work. A bid that's missing these details is harder to evaluate against one that isn't."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and Licensed Workmanship"
+      },
+      {
+        "type": "paragraph",
+        "content": "Equipment selection matters, but installation quality is usually what determines whether a system hits its rated efficiency and lifespan. Improper refrigerant charge, undersized ductwork modifications, or skipped commissioning steps can quietly undercut even a well-chosen unit. Mechanical Enterprise LLC holds an active NJ Master HVACR Contractor license (#19HC00400700) and has worked across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties for 20 years. For commercial projects, that means proper load calculations, documented commissioning, and installation practices that match manufacturer specifications — details that are easy to skip and hard to verify after the fact unless you ask for them upfront."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "Beyond the manufacturer's own equipment warranty, building owners can separately purchase extended parts and labor coverage with a 10-year term and no deductible, administered as a third-party service agreement backed by A-rated insurers. This coverage is available for new installations performed by Mechanical Enterprise, and eligible existing systems may qualify for it as well, subject to an inspection and program criteria — it is not automatic and not included with a standard installation. For a capital asset like a commercial central AC system, this optional coverage is worth evaluating alongside your total cost of ownership, particularly for buildings where unplanned downtime affects tenant leases."
+      },
+      {
+        "type": "h2",
+        "content": "Maintenance Agreements and Replacement Planning"
+      },
+      {
+        "type": "paragraph",
+        "content": "A replacement decision shouldn't happen in isolation from how the system will be maintained afterward. The Comfort Membership program includes parts and labor coverage for a chosen term (3, 5, or 10 years), two maintenance visits per year, priority scheduling, and a replacement credit that applies toward your next system — the equipment itself remains yours. For portfolios managing multiple PTAC, mini-split, RTU, or split systems across several properties, we also quote per-unit annual pricing with quarterly reporting, so building owners have a consistent record of equipment condition rather than reacting only when something fails. Planning replacement and maintenance together typically produces a more predictable operating budget than treating each system as a one-off repair decision."
+      },
+      {
+        "type": "cta_box",
+        "content": "Weighing a central AC replacement for your NJ commercial property? Request a service visit to get a load-based assessment and a bid you can actually compare.",
+        "buttonText": "Request a Commercial HVAC Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How do I know if my commercial central AC needs replacement or just another repair?",
+        "answer": "Look at repair frequency and cost trends over the past two years, not just the most recent breakdown. If repairs are recurring, refrigerant leaks keep appearing, or energy bills are climbing relative to comparable buildings, a full system assessment usually gives a clearer answer than guessing from the latest service call."
+      },
+      {
+        "question": "Does a commercial central AC replacement require permits in NJ?",
+        "answer": "Permit requirements vary by municipality and project scope. Any bidder should confirm up front whether permits apply to your project and include that in their proposal rather than leaving it as an assumption."
+      },
+      {
+        "question": "Is the 10-year parts and labor coverage available for an existing central AC system?",
+        "answer": "Eligible existing systems may qualify for the optional coverage after passing an inspection against program criteria. It's not automatic for every system, and it's a separately purchased agreement rather than something bundled into standard service."
+      }
+    ]
+  },
+
+  {
     "title": "NJ Commercial AC Installation Cost Guide",
     "slug": "nj-commercial-ac-installation-cost-guide",
     "date": "October 31, 2026",
