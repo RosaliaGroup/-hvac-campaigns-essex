@@ -62,6 +62,26 @@
   status = 302
   force = true
 
+# ── Partner update links (owner, Nov 13 2026). Short Mechanical URLs that
+# forward to the shared pages; only the redirect lives here (this repo is
+# public), never the content. 302 so the target can change later. ──
+[[redirects]]
+  from = "/partners/plan"
+  to = "https://claude.ai/artifact/D6ErdcmCpgJLrmDnbC9y3f"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/partners/plan-doc"
+  to = "https://claude.ai/artifact/784USPHL3WXQxkKfD1eVVb"
+  status = 302
+  force = true
+
+[[headers]]
+  for = "/partners/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+
 # The terms page is UNLISTED: publicly reachable via a direct proposal link,
 # but kept out of search indexes. Belt-and-suspenders with the page's noindex
 # meta tag, robots.txt Disallow: /terms/, and its absence from sitemap.xml.
