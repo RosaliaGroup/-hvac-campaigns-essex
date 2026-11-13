@@ -5,15 +5,22 @@ import { googleCalendarProvider } from "../integrations/google/calendar";
 import { CRM_MAILBOX, gmailCrmStatus } from "./gmailCrm";
 import { logCommunication } from "./crmCommunications";
 import { assertOutreachNotSuppressed } from "./outreachSuppression";
-export function composeMime(to: string, subject: string, body: string) {
+import { fromHeader, resolveSender } from "./gmailSendAs";
+export function composeMime(
+  to: string,
+  subject: string,
+  body: string,
+  from: string = CRM_MAILBOX
+) {
   if (
     !/^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/.test(to) ||
-    /[\r\n]/.test(subject)
+    /[\r\n]/.test(subject) ||
+    /[\r\n]/.test(from)
   )
     throw new Error("Invalid email headers");
   return Buffer.from(
     [
-      `From: ${CRM_MAILBOX}`,
+      `From: ${from}`,
       `To: ${to}`,
       `Subject: =?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`,
       "MIME-Version: 1.0",
@@ -33,6 +40,8 @@ export async function composeGmail(
     subject: string;
     body: string;
     action: "draft" | "send";
+    /** Signed-in CRM user; sends as their verified alias when they have one. */
+    senderEmail?: string | null;
   },
   fetchImpl: typeof fetch = fetch
 ) {
@@ -57,7 +66,6 @@ export async function composeGmail(
   const to = contact?.email?.trim().toLowerCase();
   if (!to) throw new Error("Save a valid contact email address first.");
   await assertOutreachNotSuppressed(db, to);
-  const raw = composeMime(to, input.subject, input.body);
   const { accessToken } = await googleCalendarProvider.getValidAccessToken();
   async function request(path: string, init: RequestInit = {}) {
     const res = await fetchImpl(
@@ -80,6 +88,8 @@ export async function composeGmail(
   const profile = await request("profile");
   if (String(profile.emailAddress).toLowerCase() !== CRM_MAILBOX)
     throw new Error(`Connect ${CRM_MAILBOX} before composing email.`);
+  const sender = await resolveSender(input.senderEmail, request);
+  const raw = composeMime(to, input.subject, input.body, fromHeader(sender));
   if (input.action === "draft") {
     const draft = await request("drafts", {
       method: "POST",
@@ -118,7 +128,7 @@ export async function composeGmail(
       provider: "gmail",
       providerMessageId: sent.id,
       providerThreadId: sent.threadId,
-      fromAddress: CRM_MAILBOX,
+      fromAddress: sender.email,
       toAddress: to,
       subject: input.subject,
       body: input.body,
