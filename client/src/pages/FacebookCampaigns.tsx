@@ -490,7 +490,9 @@ export default function FacebookAdsCampaigns() {
         {isConnected && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-[#1e3a5f]">Account Performance (Last 30 Days)</h2>
+              <h2 className="font-semibold text-[#1e3a5f]">
+                Account Performance (Last 30 Days{perfData?.window ? `: ${perfData.window.since} to ${perfData.window.until}` : ""})
+              </h2>
               <Button variant="ghost" size="sm" onClick={() => { refetchAccountCheck(); refetchPerf(); }} disabled={perfLoading || accountCheckLoading}>
                 <RefreshCw className={`h-4 w-4 mr-1.5 ${perfLoading ? "animate-spin" : ""}`} />
                 Refresh
@@ -508,10 +510,47 @@ export default function FacebookAdsCampaigns() {
               </div>
             ) : perfData?.campaigns && perfData.campaigns.length > 0 ? (
               <div className="space-y-3">
+                {perfData.crm && (
+                  <div className="bg-white border rounded-lg p-4 text-sm">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-muted-foreground text-xs">Facebook leads in CRM</p>
+                        <p className="font-semibold text-lg">{perfData.crm.total}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Leads Meta reports</p>
+                        <p className="font-semibold text-lg">{perfData.crm.metaReported}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Spend, all accounts</p>
+                        <p className="font-semibold text-lg">
+                          ${perfData.campaigns.reduce((sum: number, c: { spend: number }) => sum + c.spend, 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {perfData.crm.total === perfData.crm.metaReported
+                        ? "CRM and Meta agree."
+                        : perfData.crm.total < perfData.crm.metaReported
+                          ? "Meta reports more leads than reached the CRM — check the lead webhook (Railway logs, [MetaLeadWebhook])."
+                          : "The CRM has more Facebook leads than Meta reports — organic form fills, or leads from a campaign outside these accounts."}
+                      {perfData.crm.unmatched > 0 && ` ${perfData.crm.unmatched} CRM lead(s) have no campaign recorded (saved before campaign tracking, or organic).`}
+                      {perfData.crm.testLeadsExcluded > 0 && ` ${perfData.crm.testLeadsExcluded} Meta test lead(s) excluded.`}
+                    </p>
+                  </div>
+                )}
+                {perfData.accounts?.filter((a: { ok: boolean }) => !a.ok).map((a: { id: string; error: string | null }) => (
+                  <div key={a.id} role="alert" className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
+                    Ad account {a.id} couldn't be read: {a.error}. Its campaigns are missing from these totals.
+                  </div>
+                ))}
                 {perfData.campaigns.map((c: typeof perfData.campaigns[0]) => (
-                  <div key={c.id} className="bg-white border rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-sm text-[#1e3a5f]">{c.name}</span>
+                  <div key={`${c.adAccountId}-${c.id}`} className="bg-white border rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2 gap-2">
+                      <div className="min-w-0">
+                        <span className="font-medium text-sm text-[#1e3a5f]">{c.name}</span>
+                        <p className="text-xs text-muted-foreground">Ad account: {c.adAccountName ?? c.adAccountId}</p>
+                      </div>
                       <Badge
                         variant={c.status === "ACTIVE" ? "default" : "outline"}
                         className={c.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800 border-emerald-200" : ""}
@@ -519,7 +558,7 @@ export default function FacebookAdsCampaigns() {
                         {c.status}
                       </Badge>
                     </div>
-                    <div className="grid grid-cols-4 gap-3 text-sm">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
                       <div>
                         <p className="text-muted-foreground text-xs">Impressions</p>
                         <p className="font-semibold">{c.impressions.toLocaleString()}</p>
@@ -533,8 +572,12 @@ export default function FacebookAdsCampaigns() {
                         <p className="font-semibold">${c.spend.toFixed(2)}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground text-xs">Meta lead events (unverified)</p>
+                        <p className="text-muted-foreground text-xs">Leads (Meta)</p>
                         <p className="font-semibold">{c.conversions.toFixed(0)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground text-xs">Leads (CRM)</p>
+                        <p className="font-semibold">{c.crmLeads ?? "—"}</p>
                       </div>
                     </div>
                   </div>
@@ -542,7 +585,7 @@ export default function FacebookAdsCampaigns() {
               </div>
             ) : (
               <div className="bg-white border rounded-lg p-6 text-center text-muted-foreground text-sm">
-                No campaigns were returned for this connected account. Check Meta Ads Manager to confirm the selected account and whether other campaigns are running. Do not treat this as verified zero spend or zero leads.
+                No campaigns were returned for the connected ad accounts{perfData?.accounts ? ` (${perfData.accounts.map((a: { id: string }) => a.id).join(", ")})` : ""}. Check Meta Ads Manager to confirm the selected account and whether other campaigns are running. Do not treat this as verified zero spend or zero leads.
               </div>
             )}
           </div>

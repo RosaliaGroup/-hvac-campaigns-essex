@@ -11,7 +11,12 @@ import {
   testAdAccount,
   createNjTrafficCampaign,
   setMetaCampaignStatus, getOrCreateAdAccountPixel, searchMetaTargeting,
+  reportingWindow,
 } from "../metaAds";
+import type { MetaCampaignPerf } from "../metaAds";
+import { and, eq, gte } from "drizzle-orm";
+import { getDb } from "../db";
+import { leadCaptures } from "../../drizzle/schema";
 import { publishSocialPost } from "../services/socialPublisher";
 import { saveAiVaCredentials, getAiVaCredentials, getAiVaCredentialTimestamp } from "../db";
 import { ENV } from "../_core/env";
@@ -34,6 +39,48 @@ async function getToken(): Promise<string | null> {
 async function getAdAccountId(): Promise<string | null> {
   const creds = await getAiVaCredentials(SERVICE_KEY);
   return creds["ad_account_id"] ?? null;
+}
+
+/**
+ * Every ad account the dashboard reports on: the saved account (used for creating campaigns)
+ * plus META_REPORTING_AD_ACCOUNT_IDS (comma-separated), e.g. the personal "Ana Haynes"
+ * account the live ads moved to on Nov 11, 2026.
+ */
+async function getReportingAdAccountIds(): Promise<string[]> {
+  const primary = await getAdAccountId();
+  const extra = (process.env.META_REPORTING_AD_ACCOUNT_IDS ?? "").split(",");
+  const ids = [primary ?? "", ...extra].map((s) => s.trim().replace(/^act_/, "")).filter(Boolean);
+  return Array.from(new Set(ids));
+}
+
+/** Lines in a CRM Facebook lead that mark it as Meta's dummy test lead. */
+const TEST_LEAD_RE = /test lead: dummy data|Meta test lead/i;
+const CAMPAIGN_RE = /Meta campaign (\d+)/;
+
+/**
+ * Facebook leads saved in the CRM inside the reporting window, matched to Meta campaigns by the
+ * campaign id the lead webhook writes into the lead (leads saved before that existed stay unmatched).
+ */
+async function crmFacebookLeads(sinceDate: string) {
+  const db = await getDb();
+  if (!db) return null;
+  // sinceDate is an ET calendar day; 05:00 UTC is midnight EST (an hour early in EDT — close enough for a 30-day count).
+  const since = new Date(`${sinceDate}T05:00:00Z`);
+  const rows = await db
+    .select({ message: leadCaptures.message })
+    .from(leadCaptures)
+    .where(and(eq(leadCaptures.captureType, "meta_lead_ad"), gte(leadCaptures.createdAt, since)));
+  const byCampaign: Record<string, number> = {};
+  let total = 0, test = 0, unmatched = 0;
+  for (const r of rows) {
+    const msg = r.message ?? "";
+    if (TEST_LEAD_RE.test(msg)) { test++; continue; }
+    total++;
+    const m = msg.match(CAMPAIGN_RE);
+    if (m) byCampaign[m[1]] = (byCampaign[m[1]] ?? 0) + 1;
+    else unmatched++;
+  }
+  return { total, test, unmatched, byCampaign };
 }
 
 async function getPageId(): Promise<string | null> {
@@ -147,10 +194,41 @@ export const metaAdsRouter = router({
   // Get campaign performance
   getCampaignPerformance: protectedProcedure.query(async () => {
     const token = await getToken();
-    const adAccountId = await getAdAccountId();
-    if (!token || !adAccountId) throw new Error("Meta Ads not fully configured.");
-    const campaigns = await getCampaignPerformance(token, adAccountId);
-    return { campaigns };
+    const accountIds = await getReportingAdAccountIds();
+    if (!token || accountIds.length === 0) throw new Error("Meta Ads not fully configured.");
+    const window = reportingWindow();
+
+    const results = await Promise.allSettled(accountIds.map((id) => getCampaignPerformance(token, id, window)));
+    const accounts = accountIds.map((id, i) => {
+      const r = results[i];
+      return r.status === "fulfilled"
+        ? { id, name: r.value[0]?.adAccountName ?? null, ok: true as const, campaigns: r.value.length, error: null }
+        : { id, name: null, ok: false as const, campaigns: 0, error: String((r.reason as Error)?.message ?? r.reason) };
+    });
+    for (const a of accounts) if (!a.ok) console.warn(`[Meta Ads] Report failed for act_${a.id}: ${a.error}`);
+    if (accounts.every((a) => !a.ok)) throw new Error(accounts.map((a) => `act_${a.id}: ${a.error}`).join("; "));
+
+    const crm = await crmFacebookLeads(window.since).catch((err) => {
+      console.error("[Meta Ads] CRM lead count failed:", err);
+      return null;
+    });
+    const campaigns = results
+      .flatMap((r) => (r.status === "fulfilled" ? r.value : []))
+      .map((c: MetaCampaignPerf) => ({ ...c, crmLeads: crm ? crm.byCampaign[c.id] ?? 0 : null }))
+      // Campaigns that ran in the window first, then by spend.
+      .sort((a, b) => b.spend - a.spend || b.impressions - a.impressions);
+
+    return {
+      campaigns,
+      accounts,
+      window,
+      crm: crm && {
+        total: crm.total,
+        unmatched: crm.unmatched,
+        testLeadsExcluded: crm.test,
+        metaReported: campaigns.reduce((s, c) => s + c.conversions, 0),
+      },
+    };
   }),
 
   /** NJ-only website-traffic campaign to a mechanicalenterprise.com landing page (created PAUSED). Admin-only. */

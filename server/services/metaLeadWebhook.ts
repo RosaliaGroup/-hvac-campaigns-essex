@@ -85,6 +85,25 @@ interface MetaLeadData {
   id: string;
   created_time: string;
   field_data: MetaLeadField[];
+  /** Ad attribution — present for ad leads; absent for organic form submissions. */
+  ad_id?: string;
+  ad_name?: string;
+  adset_id?: string;
+  adset_name?: string;
+  campaign_id?: string;
+  campaign_name?: string;
+  platform?: string;
+  is_organic?: boolean;
+}
+
+/** Message line that ties a CRM lead to its Meta campaign; matched by getCampaignPerformance. */
+export function metaCampaignMarker(campaignId: string): string {
+  return `Meta campaign ${campaignId}`;
+}
+
+/** Meta's "Test lead" tool fills every field with "<test lead: dummy data for …>". */
+export function isMetaTestLead(fields: MetaLeadField[]): boolean {
+  return fields.some((f) => (f.values ?? []).some((v) => /test lead: dummy data/i.test(v)));
 }
 
 function extractField(fields: MetaLeadField[], name: string): string | undefined {
@@ -92,10 +111,21 @@ function extractField(fields: MetaLeadField[], name: string): string | undefined
   return field?.values?.[0];
 }
 
+const LEAD_BASE_FIELDS = "id,created_time,field_data";
+const LEAD_AD_FIELDS = "ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,platform,is_organic";
+
 async function fetchLeadData(leadId: string, accessToken: string): Promise<MetaLeadData> {
-  const url = `${META_BASE}/${leadId}?access_token=${encodeURIComponent(accessToken)}&fields=id,created_time,field_data`;
-  const res = await fetch(url);
-  const json = await res.json();
+  const get = async (fields: string) => {
+    const url = `${META_BASE}/${leadId}?access_token=${encodeURIComponent(accessToken)}&fields=${fields}`;
+    const res = await fetch(url);
+    return res.json();
+  };
+  let json = await get(`${LEAD_BASE_FIELDS},${LEAD_AD_FIELDS}`);
+  if (json.error) {
+    // Ad fields can need more access than the form answers; never lose the lead over them.
+    console.warn(`[MetaLeadWebhook] Lead ${leadId}: ad attribution fields unavailable (${json.error.message}) — saving without campaign`);
+    json = await get(LEAD_BASE_FIELDS);
+  }
   if (json.error) {
     throw new Error(`Meta Leads API error: ${json.error.message}`);
   }
@@ -217,6 +247,15 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
             const firstName = nameParts[0] || undefined;
             const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
             const marker = `Lead ${leadgen_id}`;
+            const testLead = isMetaTestLead(lead.field_data);
+            const attribution = [
+              lead.campaign_id ? `${metaCampaignMarker(lead.campaign_id)} (${lead.campaign_name ?? "?"})` : null,
+              lead.ad_id ? `Meta ad ${lead.ad_id} (${lead.ad_name ?? "?"})` : null,
+              lead.platform ? `Platform: ${lead.platform}` : null,
+              lead.is_organic ? "Organic (no ad)" : null,
+              testLead ? "Meta test lead — not a real customer" : null,
+            ].filter((x): x is string => !!x);
+            console.log(`[MetaLeadWebhook] Lead ${leadgen_id}: ${lead.campaign_id ? `campaign ${lead.campaign_id} / ad ${lead.ad_id ?? "?"}` : lead.is_organic ? "organic" : "no campaign returned"}${testLead ? " (test lead)" : ""}`);
 
             // Save to leadCaptures table (the website CRM's Leads list)
             const db = await getDb();
@@ -239,20 +278,24 @@ export function registerMetaLeadWebhookRoutes(app: Express): void {
                 name: fullName || null,
                 captureType: "meta_lead_ad",
                 pageUrl: `https://facebook.com/${page_id}`,
-                message: [...extra, `Meta Lead Gen — Form ${change.value.form_id}, ${marker}`].join("\n"),
+                message: [...extra, `Meta Lead Gen — Form ${change.value.form_id}, ${marker}`, ...attribution].join("\n"),
                 utmSource: "facebook",
-                utmMedium: "paid_social",
-                channel: "paid",
+                utmMedium: lead.is_organic ? "organic_social" : "paid_social",
+                utmCampaign: lead.campaign_name ? lead.campaign_name.slice(0, 255) : null,
+                utmContent: lead.ad_name ? lead.ad_name.slice(0, 255) : null,
+                channel: lead.is_organic ? "social" : "paid",
                 status: "new",
               });
               console.log(`[MetaLeadWebhook] Saved lead ${leadgen_id}`);
 
               const newId = Number((inserted as unknown as [{ insertId: number }])[0]?.insertId ?? 0);
-              if (newId > 0) void enrollSpeedToLead({ table: "leadCaptures", id: newId });
+              if (testLead) {
+                console.log(`[MetaLeadWebhook] Test lead ${leadgen_id} saved — skipping speed-to-lead and QuickBooks`);
+              } else if (newId > 0) void enrollSpeedToLead({ table: "leadCaptures", id: newId });
 
               // Policy: every new lead becomes a QuickBooks customer. Fire-and-forget —
               // never blocks or fails webhook processing (QBO errors are swallowed).
-              enqueueLeadCustomerSync({
+              if (!testLead) enqueueLeadCustomerSync({
                 name: fullName || null,
                 firstName: firstName ?? null,
                 lastName: lastName ?? null,

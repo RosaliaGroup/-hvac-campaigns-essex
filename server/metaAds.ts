@@ -207,21 +207,57 @@ export async function testAdAccount(token: string, adAccountId: string) {
 
 // ─── Performance ─────────────────────────────────────────────────────────────
 
-export async function getCampaignPerformance(token: string, adAccountId: string) {
-  const data = await metaGet(`/act_${adAccountId}/campaigns`, token, {
-    fields: "id,name,status,objective,daily_budget,insights.date_preset(last_30d){impressions,clicks,spend,actions,cpc,ctr}",
-    limit: "50",
-  });
+/** YYYY-MM-DD in New York time (the ad accounts report in ET). */
+function nyDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
+}
+
+/** Last 30 days INCLUDING today (Meta's last_30d preset leaves today out). */
+export function reportingWindow(now = new Date()): { since: string; until: string } {
+  return { since: nyDate(new Date(now.getTime() - 29 * 86400_000)), until: nyDate(now) };
+}
+
+const LEAD_ACTION_TYPES = ["lead", "onsite_conversion.lead_grouped", "offsite_conversion.fb_pixel_lead"];
+
+export interface MetaCampaignPerf {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+  dailyBudget: number | null;
+  impressions: number;
+  clicks: number;
+  spend: number;
+  ctr: number;
+  cpc: number;
+  conversions: number;
+  adAccountId: string;
+  adAccountName: string | null;
+}
+
+export async function getCampaignPerformance(
+  token: string,
+  adAccountId: string,
+  window = reportingWindow(),
+): Promise<MetaCampaignPerf[]> {
+  const id = adAccountId.replace(/^act_/, "");
+  const [data, account] = await Promise.all([
+    metaGet(`/act_${id}/campaigns`, token, {
+      fields: `id,name,status,effective_status,objective,daily_budget,insights.time_range({"since":"${window.since}","until":"${window.until}"}){impressions,clicks,spend,actions,cpc,ctr}`,
+      limit: "100",
+    }),
+    metaGet(`/act_${id}`, token, { fields: "name" }).catch(() => null),
+  ]);
 
   return (data.data ?? []).map((c: any) => {
     const ins = c.insights?.data?.[0] ?? {};
-    const conversions = (ins.actions ?? []).find((a: any) =>
-      ["lead", "offsite_conversion.fb_pixel_lead", "onsite_conversion.lead_grouped"].includes(a.action_type)
-    );
+    const actions: any[] = ins.actions ?? [];
+    // Take the first lead type Meta reports (in priority order) so form + pixel leads aren't double counted.
+    const conv = LEAD_ACTION_TYPES.map((t) => actions.find((a) => a.action_type === t)).find(Boolean);
     return {
       id: c.id,
       name: c.name,
-      status: c.status,
+      status: c.effective_status ?? c.status,
       objective: c.objective,
       dailyBudget: c.daily_budget ? Number(c.daily_budget) / 100 : null,
       impressions: Number(ins.impressions ?? 0),
@@ -229,7 +265,9 @@ export async function getCampaignPerformance(token: string, adAccountId: string)
       spend: Number(ins.spend ?? 0),
       ctr: Number(ins.ctr ?? 0),
       cpc: Number(ins.cpc ?? 0),
-      conversions: conversions ? Number(conversions.value) : 0,
+      conversions: conv ? Number(conv.value) : 0,
+      adAccountId: id,
+      adAccountName: account?.name ?? null,
     };
   });
 }
