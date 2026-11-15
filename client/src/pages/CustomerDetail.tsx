@@ -489,7 +489,7 @@ export default function CustomerDetail() {
               </h2>
               <div className="flex flex-wrap gap-2">
                 <CallButton phone={customer.phone} customerId={customerId} />
-                {!isSales && (
+                {(
                 <Button
                   size="sm"
                   variant="outline"
@@ -599,14 +599,16 @@ export default function CustomerDetail() {
                           · alt {customer.altPhone}
                         </span>
                       )}
-                      {customer.phone && !isSales && (
+                      {customer.phone && (
                         <Button
                           size="sm"
                           variant="ghost"
                           className="h-6 px-2 text-xs"
                           onClick={() =>
                             navigate(
-                              internalSmsConversationPath(customer.phone)
+                              isSales
+                                ? `/contacts/communications?customerId=${customerId}&compose=sms`
+                                : internalSmsConversationPath(customer.phone)
                             )
                           }
                           title="Text via Mechanical Enterprise (Telnyx)"
