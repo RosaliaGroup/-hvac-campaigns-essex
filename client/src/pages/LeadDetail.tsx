@@ -189,15 +189,15 @@ export default function LeadDetail() {
               <CardHeader className="pb-3"><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
               <CardContent className="flex flex-wrap gap-2">
                 <CallButton phone={cap.phone} leadCaptureId={leadId} customerId={cap.customerId} />
-                {!isSales && <Button size="sm" variant="outline" disabled={!cap.phone} onClick={() => cap.phone && navigate(internalSmsConversationPath(cap.phone))}>
+                <Button size="sm" variant="outline" disabled={!cap.phone} onClick={() => cap.phone && navigate(isSales ? `/contacts/communications?leadCaptureId=${leadId}&compose=sms` : internalSmsConversationPath(cap.phone))}>
                   <MessageSquare className="h-3.5 w-3.5 mr-1" /> Text
-                </Button>}
+                </Button>
                 <Button size="sm" variant="outline" onClick={() => setScheduleOpen(true)}>
                   <CalendarPlus className="h-3.5 w-3.5 mr-1" /> Schedule Assessment
                 </Button>
-                {!isSales && <Button size="sm" variant="outline" disabled={!cap.email} onClick={() => navigate(`/contacts/communications?leadCaptureId=${leadId}`)}>
+                <Button size="sm" variant="outline" disabled={!cap.email} onClick={() => navigate(`/contacts/communications?leadCaptureId=${leadId}${isSales ? "&compose=newEmail" : ""}`)}>
                   <Mail className="h-3.5 w-3.5 mr-1" /> Email
-                </Button>}
+                </Button>
                 {isSales ? null : cap.customerId ? (
                   <Button size="sm" variant="outline"
                     disabled={!qboStatus.data?.connected || qboPush.isPending}

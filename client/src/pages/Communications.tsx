@@ -93,7 +93,10 @@ export default function Communications() {
     }
   }, []);
   const [compose, setCompose] = useState<"email" | "newEmail" | "sms" | null>(
-    null
+    () => {
+      const c = new URLSearchParams(window.location.search).get("compose");
+      return c === "sms" || c === "newEmail" ? c : null;
+    }
   );
   const [sendJobId, setSendJobId] = useState<string | null>(null);
   const [cardName, setCardName] = useState("");
