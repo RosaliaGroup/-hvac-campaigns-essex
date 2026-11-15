@@ -1,4 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
+import { getViewAs, stopSalesPreview } from "@/lib/viewAs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Collapsible,
@@ -334,6 +335,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         {/* pb-24 on mobile keeps content clear of the fixed tab bar and the iOS home bar. */}
+        {getViewAs() === "sales" && (
+          <div className="flex flex-wrap items-center gap-2 border-b bg-amber-100 px-4 py-2 text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">
+            <span><b>Preview:</b> you're seeing the CRM exactly as a sales rep (setter) sees it.</span>
+            <button type="button" className="ml-auto rounded-md border border-amber-700/40 px-2 py-1 font-medium" onClick={stopSalesPreview}>
+              Exit preview
+            </button>
+          </div>
+        )}
         <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:pb-4">{children}</main>
         <MobileTabBar activePath={location.split("?")[0]} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
       </SidebarInset>
