@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation } from "wouter";
 import { internalSmsConversationPath } from "@/lib/internalSms";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { isSalesUser } from "@shared/salesAccess";
 import {
   ArrowLeft,
   Inbox,
@@ -29,6 +31,7 @@ type SyncResult = {
 };
 export default function Communications() {
   const [, navigate] = useLocation();
+  const isSales = isSalesUser(useAuth().user as { teamRole?: string } | null);
   const customerId = Number(
     new URLSearchParams(window.location.search).get("customerId")
   );
@@ -346,7 +349,7 @@ export default function Communications() {
           sales@mechanicalenterprise.com
         </span>
       </header>
-      <div className="flex flex-wrap items-center gap-3 text-sm">
+      {!isSales && <div className="flex flex-wrap items-center gap-3 text-sm">
         <Button
           variant="outline"
           size="sm"
@@ -383,7 +386,7 @@ export default function Communications() {
             permission.
           </p>
         )}
-      </div>
+      </div>}
       {notice && (
         <p
           role="status"
@@ -473,7 +476,7 @@ export default function Communications() {
                 >
                   Compose email
                 </Button>
-                <Button
+                {!isSales && <Button
                   size="sm"
                   variant="outline"
                   disabled={!cardName.trim() || saveCard.isPending}
@@ -486,12 +489,17 @@ export default function Communications() {
                   }
                 >
                   Save contact
-                </Button>
+                </Button>}
                 <Button
                   size="sm"
                   variant="outline"
                   disabled={!selectedContact?.phone}
-                  onClick={() => navigate(internalSmsConversationPath(selectedContact?.phone))}
+                  onClick={() => {
+                    if (isSales) {
+                      setCompose("sms");
+                      setDraft("");
+                    } else navigate(internalSmsConversationPath(selectedContact?.phone));
+                  }}
                 >
                   Send text message
                 </Button>
