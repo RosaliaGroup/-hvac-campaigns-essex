@@ -26,6 +26,13 @@ export async function createContext(
     const auth = await sdk.authenticateRequest(opts.req);
     user = auth.user;
 
+    // Admin "preview as sales rep" (client/src/lib/viewAs.ts). Only ever lowers
+    // privileges: an admin session is handled exactly like a sales session.
+    const viewAs = opts.req?.headers?.["x-view-as"];
+    if (user && viewAs === "sales" && (user.role === "admin" || user.teamRole === "admin")) {
+      user = { ...user, role: "user", teamRole: "sales" };
+    }
+
     // Sliding idle window: on every authenticated request, re-issue the session
     // cookie with a fresh 30-minute idle deadline (capped at the absolute
     // expiry). This is what "any authenticated request resets the timer" means

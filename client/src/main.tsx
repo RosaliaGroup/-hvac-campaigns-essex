@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { getViewAs } from "./lib/viewAs";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
@@ -45,9 +46,11 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       async fetch(input, init) {
+        const viewAs = getViewAs();
         const res = await globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+          ...(viewAs ? { headers: { ...((init?.headers as Record<string, string>) ?? {}), "x-view-as": viewAs } } : {}),
         });
         // Guard against non-JSON / empty-body proxy failures (e.g. Netlify's
         // ~10 MB /api request cap returns an empty 400; gateways return HTML

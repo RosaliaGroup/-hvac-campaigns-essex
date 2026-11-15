@@ -23,6 +23,8 @@ import {
   Copy, CheckCircle2, Pencil, Phone, Mail,
 } from "lucide-react";
 import { Link } from "wouter";
+import { Eye } from "lucide-react";
+import { startSalesPreview } from "@/lib/viewAs";
 import { useToast } from "@/hooks/use-toast";
 import { ContactFields } from "@/components/ContactFields";
 import {
@@ -228,9 +230,14 @@ export default function TeamManagement() {
             <p className="text-xs text-muted-foreground">Manage who can access the dashboard</p>
           </div>
         </div>
-        <Button className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 gap-2" onClick={openCreate}>
-          <UserPlus className="w-4 h-4" /> Add Team Member
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="gap-2" onClick={startSalesPreview} title="See the CRM exactly as a setter (Sales role) sees it">
+            <Eye className="w-4 h-4" /> View as sales rep
+          </Button>
+          <Button className="bg-[#1e3a5f] hover:bg-[#1e3a5f]/90 gap-2" onClick={openCreate}>
+            <UserPlus className="w-4 h-4" /> Add Team Member
+          </Button>
+        </div>
       </div>
 
       {/* Create / Edit dialog */}
