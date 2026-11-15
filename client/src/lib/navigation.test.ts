@@ -287,9 +287,9 @@ describe("getVisibleDepartments", () => {
   // resolves to these roles yet (resolveNavRole only returns admin/member/viewer);
   // they are kept and tested so the mechanism is ready when a role field is added.
 
-  it("sales sees only the Lead Inbox, Contacts and Calendar — no dashboard, money or marketing", () => {
+  it("sales sees only the Lead Inbox, email inbox, Contacts and Calendar — no dashboard, money or marketing", () => {
     expect(deptIds("sales")).toEqual(["sales", "dispatch"]);
-    expect(itemLabels("sales", "sales")).toEqual(["Lead Inbox", "Contacts"]);
+    expect(itemLabels("sales", "sales")).toEqual(["Lead Inbox", "Communications", "Contacts"]);
     expect(itemLabels("sales", "dispatch")).toEqual(["Calendar"]);
     for (const d of ["home", "marketing", "accounting", "ai", "analytics", "admin"]) {
       expect(deptIds("sales")).not.toContain(d);
