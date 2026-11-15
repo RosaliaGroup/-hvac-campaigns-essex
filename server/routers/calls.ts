@@ -151,7 +151,7 @@ export const callsRouter = router({
     if (isSalesUser(ctx.user as any) && log.agentTeamMemberId !== teamMemberIdOf(ctx.user)) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Not your call." });
     }
-    return qcForCallLog(input.callLogId);
+    return qcForCallLog(input.callLogId).catch(() => null);
   }),
 
   /** Admin: recent QC reviews, optionally for one rep. */

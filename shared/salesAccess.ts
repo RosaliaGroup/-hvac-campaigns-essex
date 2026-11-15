@@ -84,6 +84,8 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "crmCommunications.composeEmail",
   "crmCommunications.replyEmail",
   "crmCommunications.sendJob",
+  // Text from the Mechanical line (STOP / do-not-contact enforced in sendAndRecordSms)
+  "crmCommunications.sendText",
 ]);
 
 export function isSalesAllowedProcedure(path: string): boolean {

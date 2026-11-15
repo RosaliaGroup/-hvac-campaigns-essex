@@ -435,7 +435,41 @@ export async function runCallQcSweep(): Promise<void> {
   }
 }
 
+let qcTableReady: Promise<unknown> | undefined;
+/** Creates callQcReviews if missing (same DDL as drizzle/0085), so no manual migration is needed. */
+export async function ensureCallQcTable(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  qcTableReady ??= (db as any)
+    .execute(sql`
+    CREATE TABLE IF NOT EXISTS callQcReviews (
+      id int AUTO_INCREMENT NOT NULL PRIMARY KEY,
+      callLogId int NOT NULL,
+      agentTeamMemberId int,
+      status enum('pending','done','skipped','failed') NOT NULL DEFAULT 'pending',
+      score int,
+      verdict varchar(20),
+      outcome varchar(40),
+      review json,
+      transcript mediumtext,
+      model varchar(64),
+      error text,
+      attempts int NOT NULL DEFAULT 0,
+      emailedAt timestamp NULL,
+      createdAt timestamp NOT NULL DEFAULT (now()),
+      updatedAt timestamp NOT NULL DEFAULT (now()) ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY callQcReviews_callLog_uq (callLogId),
+      KEY callQcReviews_agent_idx (agentTeamMemberId, createdAt)
+    )`)
+    .catch((err: unknown) => {
+      qcTableReady = undefined;
+      console.error("[CallQC] could not create callQcReviews:", err instanceof Error ? err.message : err);
+    });
+  await qcTableReady;
+}
+
 export function startCallQcSweep(): void {
+  void ensureCallQcTable();
   if (!callQcEnabled()) return;
   if (!process.env.TELNYX_API_KEY?.trim()) {
     console.warn("[CallQC] CALL_QC_ENABLED but TELNYX_API_KEY missing — not starting");

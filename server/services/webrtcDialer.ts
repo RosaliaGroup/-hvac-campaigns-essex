@@ -22,6 +22,7 @@ import { and, eq } from "drizzle-orm";
 import { callLogs } from "../../drizzle/schema";
 import { getDb } from "../db";
 import { toE164 } from "./telnyxSms";
+import { isSmsRecipientSuppressed } from "./outreachSuppression";
 
 const TELNYX_API = "https://api.telnyx.com/v2";
 
@@ -91,6 +92,7 @@ export async function startBrowserCall(args: {
   if (!from) throw new Error("Caller ID number is not set.");
   const db = await getDb();
   if (!db) throw new Error("Database unavailable.");
+  if (await isSmsRecipientSuppressed(db as any, to)) throw new Error("This number is on the CRM do-not-contact list.");
   const inserted = await db.insert(callLogs).values({
     direction: "outbound",
     phoneNumber: to,

@@ -348,7 +348,7 @@ export const crmCommunicationsRouter = router({
         requestId: z.string().uuid(),
       })
     )
-    .mutation(({ input }) =>
+    .mutation(({ input, ctx }) =>
       startJob({
         kind: "crm-text",
         key: `crm-text:${input.requestId}`,
@@ -369,6 +369,7 @@ export const crmCommunicationsRouter = router({
             source: "inbox_reply",
             customerId: contact.customerId,
             leadId: contact.leadId,
+            sentByName: (ctx.user as { name?: string | null } | null)?.name ?? null,
           });
           if (!result.success)
             throw new Error(result.error ?? "Text message could not be sent.");
