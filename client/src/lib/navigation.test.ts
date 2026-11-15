@@ -27,6 +27,7 @@ const KNOWN_ROUTES = new Set<string>([
   "/contacts/communications",
   "/opportunities",
   "/lead-scoring",
+  "/call-qc",
   "/growth",
   "/calendar",
   "/jobs",

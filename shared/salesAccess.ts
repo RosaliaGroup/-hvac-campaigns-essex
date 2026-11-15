@@ -61,6 +61,11 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "calls.start",
   "calls.listForContact",
   "calls.recordingUrl",
+  // Browser dialer (headset) + QC on her own calls (calls.qcForCall checks ownership)
+  "calls.webrtcToken",
+  "calls.webrtcStart",
+  "calls.webrtcFinish",
+  "calls.qcForCall",
 
   // Read-only call/text history on a contact the rep has open
   "crmCommunications.timeline",
@@ -79,6 +84,8 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "crmCommunications.composeEmail",
   "crmCommunications.replyEmail",
   "crmCommunications.sendJob",
+  // Text from the Mechanical line (STOP / do-not-contact enforced in sendAndRecordSms)
+  "crmCommunications.sendText",
 ]);
 
 export function isSalesAllowedProcedure(path: string): boolean {
