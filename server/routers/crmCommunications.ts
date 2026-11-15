@@ -317,11 +317,11 @@ export const crmCommunicationsRouter = router({
         requestId: z.string().uuid(),
       })
     )
-    .mutation(({ input }) =>
+    .mutation(({ input, ctx }) =>
       startJob({
         kind: "crm-compose",
         key: `crm-compose:${input.requestId}`,
-        fn: () => composeGmail(input),
+        fn: () => composeGmail({ ...input, senderEmail: ctx.user?.email }),
       })
     ),
   replyEmail: protectedProcedure
@@ -333,11 +333,11 @@ export const crmCommunicationsRouter = router({
         requestId: z.string().uuid(),
       })
     )
-    .mutation(({ input }) =>
+    .mutation(({ input, ctx }) =>
       startJob({
         kind: "crm-reply",
         key: `crm-reply:${input.requestId}`,
-        fn: () => sendGmailReply(input),
+        fn: () => sendGmailReply({ ...input, senderEmail: ctx.user?.email }),
       })
     ),
   sendText: protectedProcedure

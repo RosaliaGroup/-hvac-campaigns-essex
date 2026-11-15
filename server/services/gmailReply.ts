@@ -6,21 +6,23 @@ import { googleCalendarProvider } from "../integrations/google/calendar";
 import { addresses, CRM_MAILBOX, gmailCrmStatus } from "./gmailCrm";
 import { logCommunication } from "./crmCommunications";
 import { assertOutreachNotSuppressed } from "./outreachSuppression";
+import { fromHeader, resolveSender } from "./gmailSendAs";
 
 export function replyMime(
   to: string,
   subject: string,
   body: string,
   messageId: string,
-  references: string
+  references: string,
+  from: string = CRM_MAILBOX
 ) {
-  if ([to, subject, messageId, references].some(value => /[\r\n]/.test(value)))
+  if ([to, subject, messageId, references, from].some(value => /[\r\n]/.test(value)))
     throw new Error("Invalid email headers");
   if (!/^<[^<>\s]+>$/.test(messageId))
     throw new Error("Original email has no valid Message-ID");
   return Buffer.from(
     [
-      `From: ${CRM_MAILBOX}`,
+      `From: ${from}`,
       `To: ${to}`,
       `Subject: =?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`,
       `In-Reply-To: ${messageId}`,
@@ -38,7 +40,13 @@ export function replyMime(
 }
 
 export async function sendGmailReply(
-  input: { externalContactId: number; messageId: number; body: string },
+  input: {
+    externalContactId: number;
+    messageId: number;
+    body: string;
+    /** Signed-in CRM user; replies as their verified alias when they have one. */
+    senderEmail?: string | null;
+  },
   fetchImpl: typeof fetch = fetch
 ) {
   const status = await gmailCrmStatus();
@@ -91,6 +99,7 @@ export async function sendGmailReply(
   const profile = await request("profile");
   if (String(profile.emailAddress).toLowerCase() !== CRM_MAILBOX)
     throw new Error(`Connect ${CRM_MAILBOX} before replying.`);
+  const sender = await resolveSender(input.senderEmail, request);
   const remote = await request(
     `messages/${encodeURIComponent(original.providerMessageId)}?format=metadata`
   );
@@ -130,7 +139,8 @@ export async function sendGmailReply(
         subject,
         input.body,
         header("Message-ID"),
-        header("References")
+        header("References"),
+        fromHeader(sender)
       ),
       threadId: remote.threadId,
     }),
@@ -147,7 +157,7 @@ export async function sendGmailReply(
       provider: "gmail",
       providerMessageId: sent.id,
       providerThreadId: sent.threadId,
-      fromAddress: CRM_MAILBOX,
+      fromAddress: sender.email,
       toAddress: to,
       subject,
       body: input.body,

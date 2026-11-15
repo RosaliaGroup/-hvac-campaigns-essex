@@ -75,7 +75,9 @@ export function parseGmailMessage(message: GmailMessage) {
     )?.value ?? "";
   const from = addresses(header("From"));
   const to = addresses(header("To"));
-  const direction = from.includes(CRM_MAILBOX)
+  // SENT covers mail the sales@ account sent as a team alias (e.g. heidi@).
+  const direction =
+    from.includes(CRM_MAILBOX) || message.labelIds?.includes("SENT")
     ? ("outbound" as const)
     : ("inbound" as const);
   if (
@@ -98,7 +100,7 @@ export function parseGmailMessage(message: GmailMessage) {
       : quoteContact
         ? [quoteContact.email]
         : from
-  ).filter(v => v !== CRM_MAILBOX);
+  ).filter(v => v !== CRM_MAILBOX && !(direction === "outbound" && from.includes(v)));
   const occurredAt = new Date(Number(message.internalDate));
   if (!contacts.length || !Number.isFinite(occurredAt.getTime())) return null;
   return {
@@ -221,7 +223,7 @@ export async function syncGmailPage(
   await seedKnownOutreachSuppressions(db);
   const params = new URLSearchParams({
     maxResults: "20",
-    q: `in:anywhere -in:spam -in:trash -in:drafts newer_than:${input.lookbackDays ?? 30}d {from:${CRM_MAILBOX} to:${CRM_MAILBOX} cc:${CRM_MAILBOX}}`,
+    q: `in:anywhere -in:spam -in:trash -in:drafts newer_than:${input.lookbackDays ?? 30}d {from:${CRM_MAILBOX} to:${CRM_MAILBOX} cc:${CRM_MAILBOX} deliveredto:${CRM_MAILBOX} in:sent}`,
   });
   if (input.pageToken) params.set("pageToken", input.pageToken);
   const page = await read(`messages?${params}`);

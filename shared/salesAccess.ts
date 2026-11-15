@@ -66,6 +66,19 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "crmCommunications.timeline",
   "crmCommunications.contactForCustomer",
   "smsCampaigns.listInboxMessages", // a phone or contact is required for sales
+
+  // CRM email inbox (/contacts/communications): read threads, email a contact and
+  // reply, sent from the rep's own verified @mechanicalenterprise.com alias
+  // (gmailSendAs). Texting, Gmail sync controls and contact-card edits stay off.
+  "crmCommunications.contacts",
+  "crmCommunications.contactCard",
+  "crmCommunications.gmailStatus",
+  "crmCommunications.leadOptions",
+  "crmCommunications.openCustomerContact",
+  "crmCommunications.openLeadContact",
+  "crmCommunications.composeEmail",
+  "crmCommunications.replyEmail",
+  "crmCommunications.sendJob",
 ]);
 
 export function isSalesAllowedProcedure(path: string): boolean {
@@ -148,6 +161,7 @@ export const SALES_ROUTE_PREFIXES: readonly string[] = [
   "/leads",
   "/customers",
   "/calendar",
+  "/contacts/communications",
 ];
 
 export const SALES_HOME = "/lead-dashboard";
