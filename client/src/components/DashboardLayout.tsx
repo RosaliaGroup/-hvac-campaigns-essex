@@ -38,7 +38,7 @@ import {
   type NavDepartment,
   type NavItem,
 } from "@/lib/navigation";
-import { Bell, ChevronRight, ClipboardCheck, Inbox, LayoutDashboard, ListTodo, LogOut, Mail, Menu, UserRound } from "lucide-react";
+import { Bell, ChevronRight, ClipboardCheck, Inbox, LayoutDashboard, LineChart, ListTodo, LogOut, Mail, Megaphone, Menu, UserRound } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -143,16 +143,23 @@ const SALES_MOBILE_TABS = [
   { label: "Contacts", path: "/customers", Icon: UserRound },
 ];
 
+/** Marketing only reaches the Marketing pages and the Daily Hub. */
+const MARKETING_MOBILE_TABS = [
+  { label: "Daily Hub", path: "/team-hub", Icon: ClipboardCheck },
+  { label: "Marketing", path: "/marketing-dashboard", Icon: Megaphone },
+  { label: "SEO", path: "/seo-intelligence", Icon: LineChart },
+];
+
 function MobileTabBar({
-  activePath, onNavigate, onMore, sales = false,
-}: { activePath: string; onNavigate: (path: string) => void; onMore: () => void; sales?: boolean }) {
+  activePath, onNavigate, onMore, sales = false, marketing = false,
+}: { activePath: string; onNavigate: (path: string) => void; onMore: () => void; sales?: boolean; marketing?: boolean }) {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 flex border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Primary"
     >
-      {(sales ? SALES_MOBILE_TABS : MOBILE_TABS).map(({ label, path, Icon }) => {
+      {(sales ? SALES_MOBILE_TABS : marketing ? MARKETING_MOBILE_TABS : MOBILE_TABS).map(({ label, path, Icon }) => {
         const active = activePath === path || activePath.startsWith(`${path}/`);
         return (
           <button
@@ -350,7 +357,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:pb-4">{children}</main>
-        <MobileTabBar sales={role === "sales"} activePath={location.split("?")[0]} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
+        <MobileTabBar sales={role === "sales"} marketing={role === "marketing"} activePath={location.split("?")[0]} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
       </SidebarInset>
     </>
   );

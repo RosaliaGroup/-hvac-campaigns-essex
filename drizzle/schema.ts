@@ -553,7 +553,7 @@ export const teamMembers = mysqlTable("teamMembers", {
   email: varchar("email", { length: 320 }).notNull().unique(),
   name: varchar("name", { length: 255 }).notNull(),
   passwordHash: text("passwordHash"),
-  role: mysqlEnum("role", ["admin", "member", "viewer", "sales"]).default("member").notNull(),
+  role: mysqlEnum("role", ["admin", "member", "viewer", "sales", "marketing"]).default("member").notNull(),
   status: mysqlEnum("status", ["invited", "active", "suspended"]).default("invited").notNull(),
   inviteToken: varchar("inviteToken", { length: 128 }),
   inviteExpiresAt: timestamp("inviteExpiresAt"),

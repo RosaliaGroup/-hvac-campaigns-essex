@@ -45,7 +45,7 @@ const statusBadge: Record<string, string> = {
   suspended: "bg-red-100 text-red-700",
 };
 
-type Role = "admin" | "member" | "viewer" | "sales";
+type Role = "admin" | "member" | "viewer" | "sales" | "marketing";
 type FormState = ContactFieldsValue & {
   firstName: string;
   lastName: string;
@@ -315,6 +315,7 @@ export default function TeamManagement() {
                         <SelectItem value="member">Member — standard access</SelectItem>
                         <SelectItem value="viewer">Viewer — read-only</SelectItem>
                         <SelectItem value="sales">Sales — leads, contacts, appointments &amp; calls only</SelectItem>
+                        <SelectItem value="marketing">Marketing — Marketing pages &amp; Daily Hub only</SelectItem>
                       </SelectContent>
                     </Select>
                   ) : (

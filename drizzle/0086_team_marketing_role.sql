@@ -1,0 +1,15 @@
+-- Additive: adds the "marketing" value to teamMembers.role (appended at the end,
+-- so existing rows and values are untouched). Apply manually following
+-- drizzle/README.md after a verified backup.
+--
+-- Marketing role = the Marketing department (Marketing Dashboard, SEO, Market
+-- Intel, Revenue Attribution, SMS Campaigns, Campaign Performance, Google Ads,
+-- Facebook/Instagram) and the Daily Hub. No leads/contacts lists, calendar,
+-- jobs, financials, AI settings or administration (enforced server-side:
+-- shared/marketingAccess.ts + server/_core/trpc.ts).
+--
+-- Rollback: first move any marketing rows to the most restrictive existing role
+-- and suspend them (never to 'member' — that would WIDEN their access), then narrow:
+--   UPDATE teamMembers SET role = 'viewer', status = 'suspended' WHERE role = 'marketing';
+--   ALTER TABLE `teamMembers` MODIFY COLUMN `role` enum('admin','member','viewer','sales') NOT NULL DEFAULT 'member';
+ALTER TABLE `teamMembers` MODIFY COLUMN `role` enum('admin','member','viewer','sales','marketing') NOT NULL DEFAULT 'member';

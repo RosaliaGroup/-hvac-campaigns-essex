@@ -229,12 +229,14 @@ describe("resolveNavRole", () => {
       { role: "user", teamRole: "viewer" },
       { role: "user", teamRole: "member" },
       { role: "user", teamRole: "sales" },
+      { role: "user", teamRole: "marketing" },
     ];
     for (const s of samples) {
       expect(PRODUCTION_ROLES).toContain(resolveNavRole(s));
     }
-    expect(PRODUCTION_ROLES).toEqual(["admin", "member", "viewer", "sales"]);
+    expect(PRODUCTION_ROLES).toEqual(["admin", "member", "viewer", "sales", "marketing"]);
     expect(resolveNavRole({ role: "user", teamRole: "sales" })).toBe("sales");
+    expect(resolveNavRole({ role: "user", teamRole: "marketing" })).toBe("marketing");
   });
 });
 
@@ -321,9 +323,9 @@ describe("getVisibleDepartments", () => {
     expect(deptIds("technician")).not.toContain("marketing");
   });
 
-  it("marketing sees Marketing, Lead Inbox and Analytics", () => {
-    expect(deptIds("marketing")).toEqual(["home", "sales", "marketing", "analytics"]);
-    expect(itemLabels("marketing", "sales")).toEqual(["Lead Inbox", "Prospecting & Follow-up"]);
+  it("marketing sees only the Daily Hub and the Marketing department", () => {
+    expect(deptIds("marketing")).toEqual(["sales", "marketing"]);
+    expect(itemLabels("marketing", "sales")).toEqual(["Daily Hub"]);
     expect(itemLabels("marketing", "marketing")).toEqual([
       "Marketing Dashboard",
       "SEO Intelligence",
