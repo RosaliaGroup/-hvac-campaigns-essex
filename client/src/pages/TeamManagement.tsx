@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { Eye } from "lucide-react";
-import { startSalesPreview } from "@/lib/viewAs";
+import { startMemberPreview, startSalesPreview } from "@/lib/viewAs";
 import { useToast } from "@/hooks/use-toast";
 import { ContactFields } from "@/components/ContactFields";
 import {
@@ -414,6 +414,11 @@ export default function TeamManagement() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
+                              {m.role !== "admin" && (
+                                <Button variant="ghost" size="icon" title={`See the CRM as ${m.name} sees it (read-only)`} onClick={() => startMemberPreview(m.id, m.name)}>
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                              )}
                               <Button variant="ghost" size="icon" title="Edit contact details" onClick={() => openEdit(m.id)}>
                                 <Pencil className="w-4 h-4" />
                               </Button>

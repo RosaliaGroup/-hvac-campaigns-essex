@@ -47,6 +47,10 @@ const requireUser = t.middleware(async opts => {
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
   }
+  // Admin preview ("View as …") never changes anything.
+  if (opts.type === "mutation" && (ctx.user as { preview?: boolean }).preview) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Preview is read-only. Exit preview to make changes." });
+  }
 
   return next({
     ctx: {

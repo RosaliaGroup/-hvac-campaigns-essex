@@ -86,6 +86,8 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "crmCommunications.sendJob",
   // Text from the Mechanical line (STOP / do-not-contact enforced in sendAndRecordSms)
   "crmCommunications.sendText",
+  // Team Hub inside the CRM (tasks, clock, reports)
+  "teamHub.link",
 ]);
 
 export function isSalesAllowedProcedure(path: string): boolean {
@@ -169,6 +171,7 @@ export const SALES_ROUTE_PREFIXES: readonly string[] = [
   "/customers",
   "/calendar",
   "/contacts/communications",
+  "/team-hub",
 ];
 
 export const SALES_HOME = "/lead-dashboard";

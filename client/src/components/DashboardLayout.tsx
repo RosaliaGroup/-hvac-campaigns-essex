@@ -1,5 +1,5 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getViewAs, stopSalesPreview } from "@/lib/viewAs";
+import { getViewAs, stopSalesPreview, viewAsName } from "@/lib/viewAs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Collapsible,
@@ -335,9 +335,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         {/* pb-24 on mobile keeps content clear of the fixed tab bar and the iOS home bar. */}
-        {getViewAs() === "sales" && (
+        {getViewAs() && (
           <div className="flex flex-wrap items-center gap-2 border-b bg-amber-100 px-4 py-2 text-sm text-amber-950 dark:bg-amber-900/40 dark:text-amber-100">
-            <span><b>Preview:</b> you're seeing the CRM exactly as a sales rep (setter) sees it.</span>
+            <span><b>Preview{viewAsName() ? `: ${viewAsName()}` : ""}</b> · you're seeing the CRM exactly as {viewAsName() ?? "a sales rep (setter)"} sees it. Read-only: nothing you click here is saved.</span>
             <button type="button" className="ml-auto rounded-md border border-amber-700/40 px-2 py-1 font-medium" onClick={stopSalesPreview}>
               Exit preview
             </button>

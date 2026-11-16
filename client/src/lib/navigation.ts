@@ -101,6 +101,7 @@ export const DEPARTMENTS: NavDepartment[] = [
     icon: "Users",
     primaryPath: "/lead-dashboard",
     items: [
+      { label: "Team Hub", path: "/team-hub", icon: "ClipboardCheck", roles: ["sales", "viewer", CRM] },
       { label: "Lead Inbox", path: "/lead-dashboard", icon: "Inbox", roles: ["sales", "marketing", CRM] },
       { label: "Communications", path: "/contacts/communications", icon: "MessageSquare", roles: ["sales", "dispatcher", CRM] },
       { label: "Tasks", path: "/tasks", icon: "ListTodo", roles: ["dispatcher", CRM] },

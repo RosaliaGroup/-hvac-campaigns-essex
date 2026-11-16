@@ -521,7 +521,7 @@ export default function Communications() {
                 </Button>}
                 <Button
                   size="sm"
-                  variant="outline"
+                  className="bg-blue-600 text-white hover:bg-blue-700"
                   disabled={!selectedContact?.phone}
                   onClick={() => {
                     if (isSales) {
