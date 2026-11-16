@@ -25,6 +25,109 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "Preventive HVAC Maintenance Checklist for Building Owners",
+    "slug": "preventive-hvac-maintenance-checklist-building-owners",
+    "date": "November 16, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "A practical HVAC preventive maintenance checklist for NJ property managers and building owners, plus what to ask before signing a service agreement.",
+    "excerpt": "A working preventive-maintenance checklist for commercial and multifamily building owners in New Jersey, covering installation quality, service intervals, and what to send bidders before you sign.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Preventive maintenance is the difference between a predictable HVAC budget and a season of emergency repair calls. For property managers, general contractors, and commercial or multifamily building owners across New Jersey, a documented maintenance program protects tenant comfort, equipment life, and capital planning. Mechanical Enterprise LLC has spent more than 20 years serving commercial and multifamily properties throughout Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, and the pattern is consistent: buildings with a real maintenance plan replace equipment on their own schedule, not the equipment's. This checklist walks through what a serious preventive maintenance program should cover, how installation quality affects long-term performance, and what to ask any contractor bidding on your portfolio."
+      },
+      {
+        "type": "h2",
+        "content": "Why Preventive Maintenance Protects Your NJ Portfolio"
+      },
+      {
+        "type": "paragraph",
+        "content": "Whether you oversee a multifamily property in Essex County, a mixed-use building in Hudson County, or an office park in Bergen County, the HVAC equation is the same: unplanned downtime costs more than scheduled service. Rooftop units, PTAC systems, mini-splits, and VRF systems all have moving parts, refrigerant circuits, and controls that drift out of calibration over a year of operation. Left unchecked, that drift shows up as higher utility bills, uneven tenant comfort, and compressor failures that force an emergency replacement instead of a planned one. A preventive maintenance agreement gives you visibility into equipment condition before it fails, which matters for capital budgeting, tenant retention, and documentation during due diligence or refinancing on a building or portfolio."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality Is the Real Starting Point"
+      },
+      {
+        "type": "paragraph",
+        "content": "No maintenance checklist can fully compensate for a system that was sized, installed, or commissioned incorrectly. Oversized or undersized equipment short-cycles, overworks components, and drives up repair frequency regardless of how often it's serviced. When Mechanical Enterprise installs a heat pump, central AC, ductless mini-split, VRV/VRF system, or full commercial replacement, the priority is matching equipment capacity to the actual building load, ductwork condition, and occupancy pattern, not just swapping in a like-for-like unit. That upfront fit determines how well every future maintenance visit actually performs. If your current systems were installed by another contractor and are underperforming despite regular service, a load and installation review is often more useful to a building owner than another filter change."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Inspect and replace air filters on a schedule appropriate to the unit type and building occupancy",
+          "Check refrigerant charge and inspect coils, line sets, and fittings for leak points",
+          "Clean condenser and evaporator coils to maintain heat transfer efficiency",
+          "Test and calibrate thermostats, sensors, and building automation controls",
+          "Inspect electrical connections, contactors, and capacitors for wear or corrosion",
+          "Clear condensate drains and check pumps to prevent water damage to units below",
+          "Verify belt tension, bearing lubrication, and blower operation on rooftop units",
+          "Inspect PTAC and mini-split units individually across multifamily buildings, not just common-area equipment",
+          "Document each visit with readings and photos for capital planning and insurance records"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Optional Extended Coverage for Eligible Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "New installations from Mechanical Enterprise can be paired with an optional 10-year parts and labor coverage plan, administered through a third-party extended service agreement rather than a manufacturer warranty, with no deductible. This is a separately purchased add-on, not a feature bundled into the installation price. Existing systems may qualify for the same coverage if they pass an eligibility inspection first; coverage is never automatic for equipment already in service, and approval depends on condition and program criteria at the time of inspection. Coverage, once approved, applies across all major brands. For building owners weighing a full replacement against continued repairs, understanding which path keeps coverage eligibility open is often part of the total cost of ownership conversation, alongside repair frequency and remaining equipment life."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us and What to Ask Any Bidder"
+      },
+      {
+        "type": "paragraph",
+        "content": "Getting an apples-to-apples maintenance or replacement quote starts with sending the right information up front, and asking bidders questions that reveal how they actually operate on a multi-unit property."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Send: equipment list with make, model, tonnage, and install date for every unit",
+          "Send: most recent service and repair history, including any recurring faults",
+          "Send: rooftop or mechanical room access details and site-specific safety requirements",
+          "Send: unit count by type (PTAC, mini-split, RTU, split) for portfolio-wide pricing",
+          "Ask bidders: what is your license number and insurance coverage",
+          "Ask bidders: how is pricing structured, per unit, per visit, or per portfolio",
+          "Ask bidders: what reporting do we receive after each service visit",
+          "Ask bidders: is optional extended coverage available, and what are the eligibility requirements"
+        ]
+      },
+      {
+        "type": "h2",
+        "content": "Building a Maintenance Plan That Fits Your Portfolio"
+      },
+      {
+        "type": "paragraph",
+        "content": "Every building portfolio is different, and pricing should reflect that. Mechanical Enterprise quotes commercial and multifamily maintenance agreements per unit, per year, scaled to your mix of PTAC, mini-split, RTU, and split systems rather than a flat per-building rate. Reporting is delivered on a quarterly cadence so property managers and ownership groups can track equipment condition alongside capital budgets, insurance renewals, and lender requirements. Priority scheduling and two maintenance visits per year are part of the optional Comfort Membership, which also carries a parts and labor coverage term you select, billed monthly as part of the membership itself, along with a replacement credit that applies coverage and membership payments toward your next system installed by Mechanical Enterprise. License #19HC00400700, NJ Master HVACR Contractor."
+      },
+      {
+        "type": "cta_box",
+        "content": "Ready to put a documented preventive maintenance plan in place for your building or portfolio? Talk to a commercial HVAC team that services properties across North and Central New Jersey.",
+        "buttonText": "Request a Service Visit",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "How often should commercial HVAC systems be serviced?",
+        "answer": "Service frequency depends on equipment type, usage, and building occupancy. A maintenance agreement with Mechanical Enterprise is scoped to your specific unit mix rather than a generic interval, so call (862) 419-1763 to discuss a schedule for your property."
+      },
+      {
+        "question": "Does the 10-year coverage apply to HVAC systems we already have installed?",
+        "answer": "Existing systems may qualify for the optional 10-year parts and labor coverage only after they pass an eligibility inspection; it is not automatic and depends on current condition and program criteria."
+      },
+      {
+        "question": "What counties does Mechanical Enterprise service for commercial maintenance agreements?",
+        "answer": "Mechanical Enterprise serves commercial and multifamily properties throughout Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties."
+      }
+    ]
+  },
+
+  {
     "title": "NJ Commercial Central AC Replacement Guide",
     "slug": "nj-commercial-central-ac-replacement-guide",
     "date": "November 13, 2026",
