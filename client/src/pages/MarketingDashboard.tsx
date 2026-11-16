@@ -61,6 +61,8 @@ const PLATFORMS = [
 type SocialPlatformValue = (typeof PLATFORMS)[number]["value"];
 
 function SocialPostManager() {
+  // Viewers are read-only (the server refuses their changes), so no action buttons.
+  const readOnly = (useAuth().user as { teamRole?: string } | null)?.teamRole === "viewer";
   const { toast } = useToast();
   const utils = trpc.useUtils();
   const [platform, setPlatform] = useState<SocialPlatformValue>("google_business");
@@ -141,7 +143,7 @@ function SocialPostManager() {
               <CardTitle>AI-Powered Social Posts</CardTitle>
               <CardDescription>Generate, schedule, and manage posts. Facebook &amp; Instagram publish automatically; other channels go to the manual queue to paste.</CardDescription>
             </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            {!readOnly && <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
                   <Plus className="h-4 w-4 mr-2" /> Create Post
@@ -221,7 +223,7 @@ function SocialPostManager() {
                   </Button>
                 </div>
               </DialogContent>
-            </Dialog>
+            </Dialog>}
           </div>
         </CardHeader>
         <CardContent>
@@ -255,7 +257,7 @@ function SocialPostManager() {
                       <p className="mt-1 text-xs text-destructive line-clamp-2">{post.errorMessage}</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
+                  {!readOnly && <div className="flex items-center gap-1 flex-shrink-0">
                     {post.status === "failed" && (
                       <Button
                         variant="ghost"
@@ -276,7 +278,7 @@ function SocialPostManager() {
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
-                  </div>
+                  </div>}
                 </div>
               ))}
             </div>

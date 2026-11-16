@@ -339,6 +339,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <SidebarInset className="min-w-0 overflow-x-hidden">
+        {user?.teamRole === "viewer" && (
+          <div className="bg-amber-50 text-amber-900 border-b border-amber-200 px-4 py-2 text-sm" role="status">
+            <b>View only.</b> You can look at everything here, but changes are turned off. Ask Ana if you need something changed.
+          </div>
+        )}
         {/* Header: hamburger on mobile, breadcrumb on all sizes. */}
         <header className="flex border-b h-14 items-center gap-2 bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
           <SidebarTrigger className="h-9 w-9 rounded-lg" aria-label="Toggle navigation" />
