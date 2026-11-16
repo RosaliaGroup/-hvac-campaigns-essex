@@ -137,6 +137,7 @@ describe("department structure", () => {
   it("puts the expected tools under Sales", () => {
     const sales = DEPARTMENTS.find((d) => d.id === "sales")!;
     expect(sales.items.map((i) => i.label)).toEqual([
+      "Team Hub",
       "Lead Inbox",
       "Communications",
       "Contacts",
@@ -290,7 +291,7 @@ describe("getVisibleDepartments", () => {
 
   it("sales sees only the Lead Inbox, email inbox, Contacts and Calendar — no dashboard, money or marketing", () => {
     expect(deptIds("sales")).toEqual(["sales", "dispatch"]);
-    expect(itemLabels("sales", "sales")).toEqual(["Lead Inbox", "Communications", "Contacts"]);
+    expect(itemLabels("sales", "sales")).toEqual(["Team Hub", "Lead Inbox", "Communications", "Contacts"]);
     expect(itemLabels("sales", "dispatch")).toEqual(["Calendar"]);
     for (const d of ["home", "marketing", "accounting", "ai", "analytics", "admin"]) {
       expect(deptIds("sales")).not.toContain(d);

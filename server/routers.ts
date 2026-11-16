@@ -1,5 +1,6 @@
 import { COOKIE_NAME } from "@shared/const";
 import { callsRouter } from "./routers/calls";
+import { teamHubRouter } from "./routers/teamHub";
 import { isSalesUser, redactLeadCaptureForSales } from "@shared/salesAccess";
 import { LEAD_STAGE_ENUM, buildLeadCapturePatch, deriveContactRelationship } from "@shared/leadPipeline";
 import { extractAttribution } from "@shared/attribution";
@@ -133,6 +134,7 @@ export const appRouter = router({
   // Commercial Opportunities (P2) extend the same system, nested under `commercial`.
   notifications: notificationsRouter,
   calls: callsRouter,
+  teamHub: teamHubRouter,
   opportunities: mergeRouters(opportunitiesRouter, router({ commercial: commercialOpportunitiesRouter })),
   bidAssistant: bidAssistantRouter,
   estimates: estimatesRouter,
