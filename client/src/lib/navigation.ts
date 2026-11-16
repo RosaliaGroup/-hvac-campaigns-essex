@@ -101,7 +101,7 @@ export const DEPARTMENTS: NavDepartment[] = [
     icon: "Users",
     primaryPath: "/lead-dashboard",
     items: [
-      { label: "Daily Hub", path: "/team-hub", icon: "ClipboardCheck", roles: ["sales", "marketing", "viewer", CRM] },
+      { label: "Daily Hub", path: "/team-hub", icon: "ClipboardCheck", roles: ["sales", "viewer", CRM] },
       { label: "Lead Inbox", path: "/lead-dashboard", icon: "Inbox", roles: [CRM] },
       { label: "Communications", path: "/contacts/communications", icon: "MessageSquare", roles: ["sales", "dispatcher", CRM] },
       { label: "Tasks", path: "/tasks", icon: "ListTodo", roles: ["dispatcher", CRM] },
@@ -132,6 +132,8 @@ export const DEPARTMENTS: NavDepartment[] = [
     icon: "Megaphone",
     primaryPath: "/marketing-dashboard",
     items: [
+      // Marketing staff get their Daily Hub inside Marketing (the team sees it under Sales).
+      { label: "Daily Hub", path: "/team-hub", icon: "ClipboardCheck", roles: ["marketing"] },
       { label: "Marketing Dashboard", path: "/marketing-dashboard", icon: "Megaphone", roles: ["marketing", CRM] },
       { label: "SEO Intelligence", path: "/seo-intelligence", icon: "LineChart", roles: ["marketing", CRM] },
       { label: "Market Intel", path: "/market-intel", icon: "Radar", roles: ["marketing", CRM] },

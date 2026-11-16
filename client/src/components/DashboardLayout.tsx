@@ -245,11 +245,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   const role = useMemo(() => resolveNavRole(user), [user]);
   const departments = useMemo(() => getVisibleDepartments(role), [role]);
-  const activeDeptId = getActiveDepartmentId(location);
   const activeItemKey = useMemo(
     () => getActiveItemKey(departments, location),
     [departments, location]
   );
+  // Expand the department that holds the highlighted item among the ones this
+  // role can see (a route can sit in two departments, e.g. /team-hub is under
+  // Sales for the CRM team and under Marketing for marketing staff).
+  const activeDeptId = activeItemKey ? activeItemKey.slice(0, activeItemKey.indexOf("::")) : getActiveDepartmentId(location);
   // Breadcrumb label derived from the canonical active item key (`deptId::label`).
   const activeLabel = activeItemKey
     ? activeItemKey.slice(activeItemKey.indexOf("::") + 2)
