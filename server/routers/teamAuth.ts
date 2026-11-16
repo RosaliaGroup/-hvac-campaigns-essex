@@ -566,8 +566,10 @@ export const teamAuthRouter = router({
       const token = generateToken();
       const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
       await db.setTeamMemberResetToken(member.id, token, expiresAt);
-      // Reuse reset token as new invite token
-      const inviteUrl = `${input.origin}/accept-invite?token=${token}`;
+      // The new token is stored as a reset token, so the link must go to
+      // /reset-password (resetPassword also activates an invited member).
+      // /accept-invite looks up inviteToken and would reject this token.
+      const inviteUrl = `${input.origin}/reset-password?token=${token}`;
 
       await notifyOwner({
         title: `Resent Invite: ${member.name} (${member.email})`,
