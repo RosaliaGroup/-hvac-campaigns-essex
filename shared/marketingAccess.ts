@@ -100,31 +100,8 @@ export const MARKETING_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "attribution.linkOpportunityToLeadCapture",
   "attribution.unlinkOpportunityAttribution",
 
-  // SMS Campaigns (STOP / do-not-contact enforced in the send path)
-  "smsCampaigns.cancelScheduledSend",
-  "smsCampaigns.conversationSendState",
-  "smsCampaigns.deleteContact",
-  "smsCampaigns.getConversations",
-  "smsCampaigns.getQuota",
-  "smsCampaigns.getSendHistory",
-  "smsCampaigns.getUnreadCount",
-  "smsCampaigns.importContacts",
-  "smsCampaigns.listContacts",
-  "smsCampaigns.listInboxMessages",
-  "smsCampaigns.listScheduledSends",
-  "smsCampaigns.markConversationRead",
-  "smsCampaigns.replyToConversation",
-  "smsCampaigns.scheduleSend",
-  "smsCampaigns.sendBulk",
-  "smsCampaigns.toggleOptOut",
-  "smsCampaigns.updateContact",
-  // The CRM panel inside an SMS conversation
-  "conversationCrm.context",
-  "conversationCrm.link",
-  "conversationCrm.quickCreateCustomer",
-  "conversationCrm.quickCreateLead",
-  "conversationCrm.selectProperty",
-  "conversationCrm.unlink",
+  // SMS Campaigns and its conversation panel are NOT here on purpose: they are
+  // customer phone numbers and private texts, which marketing doesn't need.
 
   // Campaign Performance + Google Ads + Facebook/Instagram
   "googleAds.createCampaign",
@@ -173,7 +150,6 @@ export const MARKETING_ROUTE_PREFIXES: readonly string[] = [
   "/seo-intelligence",
   "/market-intel",
   "/revenue-attribution",
-  "/sms-campaigns",
   "/campaign-performance",
   "/google-ads-campaigns",
   "/facebook-campaigns",

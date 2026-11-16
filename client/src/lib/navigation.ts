@@ -142,7 +142,7 @@ export const DEPARTMENTS: NavDepartment[] = [
       { label: "Analytics", path: "/marketing/analytics", icon: "BarChart3", roles: [] },
       // Admin-only: empty `roles` array means no non-admin role qualifies.
       { label: "Local SEO", path: "/local-seo", icon: "MapPin", roles: [] },
-      { label: "SMS Campaigns", path: "/sms-campaigns", icon: "MessageSquare", roles: ["marketing", CRM] },
+      { label: "SMS Campaigns", path: "/sms-campaigns", icon: "MessageSquare", roles: [CRM] },
       { label: "Campaign Performance", path: "/campaign-performance", icon: "BarChart3", roles: ["marketing", CRM] },
       { label: "Google Ads", path: "/google-ads-campaigns", icon: "Search", roles: ["marketing", CRM] },
       { label: "Facebook/Instagram", path: "/facebook-campaigns", icon: "Facebook", roles: ["marketing", CRM] },
