@@ -3,11 +3,29 @@
  * POST /api/team-hub/answer   header x-hub-secret: TEAM_HUB_SECRET
  * body: { question, guide }   guide = the tutorials and tasks that person sees.
  * Answers ONLY from the guide; when the guide doesn't clearly answer it, says
- * so (confident:false) and the question waits for the team.
+ * so (confident:false), the question waits for the team and, when the hub
+ * sends `escalate: {name, source}`, the owner is emailed right away.
+ * `escalate_only: true` just emails ("I still need help" on an auto answer).
  */
 import type { Express, Request, Response } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { callAnthropicModelChain } from "../_core/anthropic";
+import { sendEmail } from "./emailService";
+
+const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+
+/** The system couldn't answer: email the owner so the question never sits unseen. */
+export async function escalateToOwner(name: string, source: string, question: string): Promise<void> {
+  const who = name || "A team member";
+  const where = source === "abrevo" ? "the Abrevo Social Dashboard" : "the Daily Hub";
+  await sendEmail({
+    to: "sales@mechanicalenterprise.com",
+    subject: `Team question needs you: ${who}`.slice(0, 150),
+    html: `<p><b>${esc(who)}</b> asked a question in ${where} that the tutorials don't answer:</p>`
+      + `<blockquote style="border-left:3px solid #c2501b;margin:0;padding:6px 12px;white-space:pre-wrap">${esc(question)}</blockquote>`
+      + `<p>Answer it on the board: <a href="https://mechanicalenterprise.com/p/team-8b159de4">Daily Hub → Questions from the team</a>. Your answer shows in their Questions box.</p>`,
+  }).catch((e) => console.warn("[teamHub] escalate email failed", e));
+}
 
 function secretOk(req: Request): boolean {
   const want = process.env.TEAM_HUB_SECRET?.trim();
@@ -43,8 +61,17 @@ export function registerTeamHubAnswerRoute(app: Express) {
     const question = String(req.body?.question ?? "").trim().slice(0, 2000);
     const guide = String(req.body?.guide ?? "").slice(0, 80_000);
     if (!question) return res.status(400).json({ error: "question required" });
+    // Optional: who asked, so an unanswered question is emailed to the owner.
+    const asker = req.body?.escalate && typeof req.body.escalate === "object"
+      ? { name: String(req.body.escalate.name ?? "").slice(0, 80), source: String(req.body.escalate.source ?? "hub").slice(0, 20) }
+      : null;
+    const giveUp = async () => {
+      if (asker) await escalateToOwner(asker.name, asker.source, question);
+      return res.json({ confident: false, answer: "", escalated: !!asker });
+    };
+    if (req.body?.escalate_only === true) return giveUp();
     const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) return res.json({ confident: false, answer: "" });
+    if (!apiKey) return giveUp();
     const r = await callAnthropicModelChain({
       apiKey,
       models: ["claude-sonnet-5", "claude-haiku-4-5"],
@@ -54,8 +81,10 @@ export function registerTeamHubAnswerRoute(app: Express) {
     });
     if (!r.ok) {
       console.warn(JSON.stringify({ evt: "teamHub.answer.failed", code: r.code, status: r.status }));
-      return res.json({ confident: false, answer: "" });
+      return giveUp();
     }
-    return res.json(parseAnswer(r.text));
+    const out = parseAnswer(r.text);
+    if (!out.confident) return giveUp();
+    return res.json(out);
   });
 }
