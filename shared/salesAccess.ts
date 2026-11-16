@@ -98,6 +98,30 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "teamHub.assignment",
 ]);
 
+/**
+ * Procedures that act on one contact or lead. For a sales session the server
+ * also checks that the contact/lead is assigned to them (server/_core/trpc.ts).
+ */
+type OwnedTarget = { type: "customer" | "lead"; id: number } | null;
+const n = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+const cust = (v: unknown): OwnedTarget => (n(v) != null ? { type: "customer", id: v as number } : null);
+const lead = (v: unknown): OwnedTarget => (n(v) != null ? { type: "lead", id: v as number } : null);
+export const SALES_OWNED_TARGETS: Readonly<Record<string, (input: any) => OwnedTarget>> = {
+  "customers.getById": (i) => cust(i?.id),
+  "customers.update": (i) => cust(i?.id),
+  "customers.listProperties": (i) => cust(i?.customerId),
+  "customers.addProperty": (i) => cust(i?.customerId),
+  "leadCaptures.getById": (i) => lead(i?.id),
+  "leadCaptures.update": (i) => lead(i?.id),
+  "leadCaptures.updateStatus": (i) => lead(i?.id),
+  "leadCaptures.addNote": (i) => lead(i?.id),
+  "leadCaptures.appointments": (i) => lead(i?.id),
+  "crmCommunications.contactForCustomer": (i) => cust(i?.customerId),
+  "crmCommunications.openCustomerContact": (i) => cust(i?.customerId),
+  "crmCommunications.openLeadContact": (i) => (i?.kind === "capture" ? lead(i?.id) : null),
+  "calls.listForContact": (i) => cust(i?.customerId) ?? lead(i?.leadCaptureId),
+};
+
 export function isSalesAllowedProcedure(path: string): boolean {
   return SALES_ALLOWED_PROCEDURES.has(path);
 }
