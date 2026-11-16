@@ -50,6 +50,7 @@ export function AssignmentCard({ type, id, label, phone }: { type: "customer" | 
       {d && (
         <div className="space-y-1">
           {d.action && <div><span className="text-muted-foreground">What to do:</span> {d.action}</div>}
+          {d.talk && <div className="rounded-md bg-white/70 dark:bg-slate-900/40 p-2"><span className="font-medium">What to say:</span> {d.talk}</div>}
           {d.goal && <div><span className="text-muted-foreground">Goal:</span> {d.goal}</div>}
           <div>
             <span className="text-muted-foreground">Result:</span> {RESULT_LABEL[d.result ?? d.status] ?? d.result ?? "Not started"}
