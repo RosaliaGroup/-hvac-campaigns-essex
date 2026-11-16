@@ -20,6 +20,30 @@ async function hubCall(body: Record<string, unknown>): Promise<any> {
   return j;
 }
 
+/**
+ * CRM contacts and leads assigned to the team member with this login email,
+ * read through a short-lived hub session. Cached 5 minutes per email.
+ */
+const assignedCache = new Map<string, { at: number; customers: Set<number>; leads: Set<number> }>();
+export async function assignedIdsForEmail(emailRaw: string): Promise<{ customers: Set<number>; leads: Set<number> } | null> {
+  const email = emailRaw.trim().toLowerCase();
+  if (!email) return null;
+  const hit = assignedCache.get(email);
+  if (hit && Date.now() - hit.at < 5 * 60_000) return hit;
+  const sso = await hubCall({ action: "sso", email, readonly: true });
+  if (!sso?.found || typeof sso.key !== "string") return null;
+  const r = await fetch(HUB_FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: sso.key, action: "me" }) });
+  const j: any = await r.json().catch(() => ({}));
+  if (!r.ok || !Array.isArray(j?.assignments)) return null;
+  const entry = {
+    at: Date.now(),
+    customers: new Set<number>(j.assignments.filter((a: any) => a.crm_type === "customer").map((a: any) => Number(a.crm_id))),
+    leads: new Set<number>(j.assignments.filter((a: any) => a.crm_type === "lead").map((a: any) => Number(a.crm_id))),
+  };
+  assignedCache.set(email, entry);
+  return entry;
+}
+
 const target = z.object({ type: z.enum(["customer", "lead"]), id: z.number().int().positive() });
 
 export const teamHubRouter = router({

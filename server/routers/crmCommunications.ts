@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { contactProfile } from "../services/contactProfile/store";
 import { saveVerifiedProspect } from "../services/saveVerifiedProspect";
 import { createSelectedContact, listGmailContactCandidates } from "../services/crmContactIntake";
-import { and, desc, eq, isNotNull, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, like, or, sql } from "drizzle-orm";
 import { composeGmail } from "../services/gmailCompose";
 import { sendGmailReply } from "../services/gmailReply";
 import { sendAndRecordSms } from "../services/smsOutbound";
@@ -21,6 +21,8 @@ import { followupDatabase, followupTasks } from "../services/crmFollowupTasks";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
+import { isSalesUser } from "@shared/salesAccess";
+import { assignedIdsForEmail } from "./teamHub";
 import {
   getContactTimeline,
   logCommunication,
@@ -610,9 +612,15 @@ export const crmCommunicationsRouter = router({
         limit: z.number().int().min(1).max(200).default(100),
       })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await dbOrThrow();
       const term = `%${input.search ?? ""}%`;
+      // Setters see only emails with the contacts and leads assigned to them.
+      let own: { customers: Set<number>; leads: Set<number> } | null = null;
+      if (isSalesUser(ctx.user as { teamRole?: string } | null)) {
+        own = await assignedIdsForEmail(String(ctx.user?.email ?? "")).catch(() => null);
+        if (!own || (own.customers.size === 0 && own.leads.size === 0)) return [];
+      }
       const rows = await db
         .select({
           id: crmCommunications.id,
@@ -653,6 +661,16 @@ export const crmCommunicationsRouter = router({
                   like(crmExternalContacts.email, term),
                   like(crmExternalContacts.company, term),
                   like(crmCommunications.subject, term)
+                )
+              : undefined,
+            own
+              ? or(
+                  own.customers.size
+                    ? inArray(crmExternalContacts.customerId, Array.from(own.customers))
+                    : undefined,
+                  own.leads.size
+                    ? inArray(crmExternalContacts.leadCaptureId, Array.from(own.leads))
+                    : undefined
                 )
               : undefined
           )
