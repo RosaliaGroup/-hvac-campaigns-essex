@@ -108,7 +108,7 @@ export const DEPARTMENTS: NavDepartment[] = [
       { label: "Contacts", path: "/customers", icon: "UserRound", roles: ["sales", "dispatcher", CRM] },
       { label: "Opportunity Center", path: "/opportunities", icon: "Target", roles: [CRM] },
       { label: "Prospecting & Follow-up", path: "/growth", icon: "Target", roles: ["marketing", CRM] },
-      { label: "Lead Scoring", path: "/lead-scoring", icon: "Star", roles: [CRM] },
+      { label: "Lead Scoring", path: "/lead-scoring", icon: "Star", roles: ["sales", CRM] },
       { label: "Call QC", path: "/call-qc", icon: "ClipboardCheck", roles: [] },
     ],
   },
