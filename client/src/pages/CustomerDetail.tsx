@@ -636,13 +636,15 @@ export default function CustomerDetail() {
                       <Calendar className="h-4 w-4" /> Customer since{" "}
                       {formatDate(customer.createdAt)}
                     </div>
-                    {customer.notes && (
-                      <div className="md:col-span-3 text-muted-foreground whitespace-pre-wrap border-t pt-3">
-                        {customer.notes}
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
+
+                <ContactNotesCard
+                  key={`notes-${customerId}`}
+                  initial={customer.notes || ""}
+                  saving={updateCustomer.isPending}
+                  onSave={notes => updateCustomer.mutate({ id: customerId, notes })}
+                />
 
                 <CallHistoryCard phone={customer.phone} customerId={customerId} />
 
@@ -2218,6 +2220,28 @@ function QuickBooksCard({
             )}
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+
+/** Notes on a contact, editable in place (setters add call notes here). */
+function ContactNotesCard({ initial, saving, onSave }: { initial: string; saving: boolean; onSave: (notes: string) => void }) {
+  const [notes, setNotes] = useState(initial);
+  return (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-base">Notes</CardTitle></CardHeader>
+      <CardContent className="space-y-2">
+        <Textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Call notes, who you spoke to, what's next, and where you found any detail you added."
+          rows={4}
+        />
+        <Button size="sm" onClick={() => onSave(notes)} disabled={saving || notes === initial}>
+          {saving ? "Saving…" : "Save notes"}
+        </Button>
       </CardContent>
     </Card>
   );
