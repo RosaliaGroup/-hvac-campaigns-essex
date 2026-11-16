@@ -3,6 +3,7 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
 import { isSalesAllowedProcedure, isSalesUser } from "@shared/salesAccess";
+import { isMarketingAllowedProcedure, isMarketingUser } from "@shared/marketingAccess";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -93,11 +94,27 @@ export const restrictSalesToAllowlist = t.middleware(async opts => {
   return next();
 });
 
+/**
+ * Marketing role: DENY BY DEFAULT. A marketing session may only call the
+ * procedures in shared/marketingAccess.ts (Marketing department + Daily Hub).
+ */
+export const restrictMarketingToAllowlist = t.middleware(async opts => {
+  const { ctx, path, next } = opts;
+  if (isMarketingUser(ctx.user) && !isMarketingAllowedProcedure(path)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Marketing access covers the Marketing pages and the Daily Hub only.",
+    });
+  }
+  return next();
+});
+
 export const protectedProcedure = t.procedure
   .use(gatewayTimeoutGuard)
   .use(requireUser)
   .use(blockViewerMutations)
-  .use(restrictSalesToAllowlist);
+  .use(restrictSalesToAllowlist)
+  .use(restrictMarketingToAllowlist);
 
 /**
  * Requires a non-viewer authenticated user (member or admin) for BOTH
@@ -112,7 +129,7 @@ export const memberProcedure = t.procedure.use(gatewayTimeoutGuard).use(requireU
     }
     return next();
   }),
-).use(restrictSalesToAllowlist);
+).use(restrictSalesToAllowlist).use(restrictMarketingToAllowlist);
 
 export const adminProcedure = t.procedure.use(gatewayTimeoutGuard).use(
   t.middleware(async opts => {

@@ -49,7 +49,7 @@ export const ALL_ROLES: NavRole[] = [
 ];
 
 /** Roles a real user can currently be resolved to in production. */
-export const PRODUCTION_ROLES: NavRole[] = ["admin", "member", "viewer", "sales"];
+export const PRODUCTION_ROLES: NavRole[] = ["admin", "member", "viewer", "sales", "marketing"];
 
 /* ── Nav model ─────────────────────────────────────────────────────────── */
 
@@ -92,7 +92,7 @@ export const DEPARTMENTS: NavDepartment[] = [
     primaryPath: "/command-center",
     items: [
       // The single business-overview dashboard. (User-facing name: "Dashboard".)
-      { label: "Dashboard", path: "/command-center", icon: "LayoutDashboard", roles: ["dispatcher", "technician", "marketing", CRM] },
+      { label: "Dashboard", path: "/command-center", icon: "LayoutDashboard", roles: ["dispatcher", "technician", CRM] },
     ],
   },
   {
@@ -102,12 +102,12 @@ export const DEPARTMENTS: NavDepartment[] = [
     primaryPath: "/lead-dashboard",
     items: [
       { label: "Daily Hub", path: "/team-hub", icon: "ClipboardCheck", roles: ["sales", "viewer", CRM] },
-      { label: "Lead Inbox", path: "/lead-dashboard", icon: "Inbox", roles: ["marketing", CRM] },
+      { label: "Lead Inbox", path: "/lead-dashboard", icon: "Inbox", roles: [CRM] },
       { label: "Communications", path: "/contacts/communications", icon: "MessageSquare", roles: ["sales", "dispatcher", CRM] },
       { label: "Tasks", path: "/tasks", icon: "ListTodo", roles: ["dispatcher", CRM] },
       { label: "Contacts", path: "/customers", icon: "UserRound", roles: ["sales", "dispatcher", CRM] },
       { label: "Opportunity Center", path: "/opportunities", icon: "Target", roles: [CRM] },
-      { label: "Prospecting & Follow-up", path: "/growth", icon: "Target", roles: ["marketing", CRM] },
+      { label: "Prospecting & Follow-up", path: "/growth", icon: "Target", roles: [CRM] },
       { label: "Lead Scoring", path: "/lead-scoring", icon: "Star", roles: ["sales", CRM] },
       { label: "Call QC", path: "/call-qc", icon: "ClipboardCheck", roles: [] },
     ],
@@ -132,6 +132,8 @@ export const DEPARTMENTS: NavDepartment[] = [
     icon: "Megaphone",
     primaryPath: "/marketing-dashboard",
     items: [
+      // Marketing staff get their Daily Hub inside Marketing (the team sees it under Sales).
+      { label: "Daily Hub", path: "/team-hub", icon: "ClipboardCheck", roles: ["marketing"] },
       { label: "Marketing Dashboard", path: "/marketing-dashboard", icon: "Megaphone", roles: ["marketing", CRM] },
       { label: "SEO Intelligence", path: "/seo-intelligence", icon: "LineChart", roles: ["marketing", CRM] },
       { label: "Market Intel", path: "/market-intel", icon: "Radar", roles: ["marketing", CRM] },
@@ -181,7 +183,7 @@ export const DEPARTMENTS: NavDepartment[] = [
     items: [
       // Executive Dashboards — admin-only (empty roles array => no non-admin role qualifies).
       { label: "Executive Dashboards", path: "/executive-dashboards", icon: "BarChart3", roles: [] },
-      { label: "Analytics Dashboard", path: "/analytics", icon: "BarChart3", roles: ["marketing", CRM] },
+      { label: "Analytics Dashboard", path: "/analytics", icon: "BarChart3", roles: [CRM] },
       { label: "AI Take-Off", path: "/takeoff-ai", icon: "Ruler", roles: [CRM] },
     ],
   },
@@ -273,6 +275,7 @@ type UserLike =
   | {
       role?: string | null;
       teamRole?: string | null;
+      marketingOnly?: boolean | null;
     }
   | null
   | undefined;
@@ -288,10 +291,15 @@ type UserLike =
 export function resolveNavRole(user: UserLike): NavRole {
   if (!user) return "member";
   if (user.role === "admin" || user.teamRole === "admin") return "admin";
+  // Marketing-only viewer (server sets marketingOnly): read-only, Marketing only.
+  if (user.marketingOnly === true) return "marketing";
   if (user.teamRole === "viewer") return "viewer";
   // Sales: Lead Inbox, Contacts and Calendar only (server enforces the same
   // limits — see shared/salesAccess.ts).
   if (user.teamRole === "sales") return "sales";
+  // Marketing: the Marketing department and the Daily Hub only (server enforces
+  // the same limits — see shared/marketingAccess.ts).
+  if (user.teamRole === "marketing") return "marketing";
   return "member";
 }
 

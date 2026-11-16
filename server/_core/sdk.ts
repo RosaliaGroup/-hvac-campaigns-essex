@@ -37,7 +37,7 @@ export type SessionPayload = {
  * sets it with `refreshMaxAgeMs`.
  */
 export type AuthResult = {
-  user: (User & { teamRole?: "admin" | "member" | "viewer" | "sales" }) | null;
+  user: (User & { teamRole?: "admin" | "member" | "viewer" | "sales" | "marketing" }) | null;
   refreshedToken?: string;
   refreshMaxAgeMs?: number;
 };
@@ -347,7 +347,7 @@ class SDKServer {
 
     const sessionUserId = claims.openId;
     const signedInAt = new Date();
-    let resolved: (User & { teamRole?: "admin" | "member" | "viewer" | "sales" }) | null = null;
+    let resolved: (User & { teamRole?: "admin" | "member" | "viewer" | "sales" | "marketing" }) | null = null;
 
     // ── Team member session (openId starts with "team:") ──────────────────
     if (sessionUserId.startsWith(TEAM_SESSION_PREFIX)) {
@@ -378,7 +378,7 @@ class SDKServer {
         createdAt: member.createdAt,
         updatedAt: member.createdAt,
         lastSignedIn: signedInAt,
-      } as User & { teamRole: "admin" | "member" | "viewer" | "sales" };
+      } as User & { teamRole: "admin" | "member" | "viewer" | "sales" | "marketing" };
     } else {
       // ── Regular Manus OAuth session ─────────────────────────────────────
       let user = await db.getUserByOpenId(sessionUserId);

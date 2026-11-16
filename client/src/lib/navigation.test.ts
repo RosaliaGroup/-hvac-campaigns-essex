@@ -187,8 +187,9 @@ describe("department structure", () => {
 
   it("does not duplicate a route across departments except by deliberate shared-route rule", () => {
     // /calendar (Calendar+Appointments, same dept) and /opportunities
-    // (Opportunity Center in Sales + Estimates in Accounting) are the only
-    // intentional shared routes. Nothing else should repeat.
+    // (Opportunity Center in Sales + Estimates in Accounting) and /team-hub
+    // (Daily Hub under Sales for the team, under Marketing for marketing staff)
+    // are the only intentional shared routes. Nothing else should repeat.
     const seen = new Map<string, string[]>();
     for (const dept of DEPARTMENTS) {
       for (const item of dept.items) {
@@ -196,7 +197,7 @@ describe("department structure", () => {
       }
     }
     const shared = [...seen.entries()].filter(([, owners]) => owners.length > 1).map(([p]) => p);
-    expect(shared.sort()).toEqual(["/calendar", "/opportunities"]);
+    expect(shared.sort()).toEqual(["/calendar", "/opportunities", "/team-hub"]);
   });
 });
 
@@ -229,12 +230,16 @@ describe("resolveNavRole", () => {
       { role: "user", teamRole: "viewer" },
       { role: "user", teamRole: "member" },
       { role: "user", teamRole: "sales" },
+      { role: "user", teamRole: "marketing" },
     ];
     for (const s of samples) {
       expect(PRODUCTION_ROLES).toContain(resolveNavRole(s));
     }
-    expect(PRODUCTION_ROLES).toEqual(["admin", "member", "viewer", "sales"]);
+    expect(PRODUCTION_ROLES).toEqual(["admin", "member", "viewer", "sales", "marketing"]);
     expect(resolveNavRole({ role: "user", teamRole: "sales" })).toBe("sales");
+    expect(resolveNavRole({ role: "user", teamRole: "marketing" })).toBe("marketing");
+    expect(resolveNavRole({ role: "user", teamRole: "viewer", marketingOnly: true })).toBe("marketing");
+    expect(resolveNavRole({ role: "user", teamRole: "viewer", marketingOnly: false })).toBe("viewer");
   });
 });
 
@@ -321,10 +326,10 @@ describe("getVisibleDepartments", () => {
     expect(deptIds("technician")).not.toContain("marketing");
   });
 
-  it("marketing sees Marketing, Lead Inbox and Analytics", () => {
-    expect(deptIds("marketing")).toEqual(["home", "sales", "marketing", "analytics"]);
-    expect(itemLabels("marketing", "sales")).toEqual(["Lead Inbox", "Prospecting & Follow-up"]);
+  it("marketing sees only the Daily Hub and the Marketing department", () => {
+    expect(deptIds("marketing")).toEqual(["marketing"]);
     expect(itemLabels("marketing", "marketing")).toEqual([
+      "Daily Hub",
       "Marketing Dashboard",
       "SEO Intelligence",
       "Market Intel",
