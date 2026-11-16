@@ -41,17 +41,20 @@ Rules:
 - If the guide does not clearly answer it, or the question is about pay, hours, contracts, personal matters, prices or policies not in the guide, or needs a judgment call by the owner, do NOT guess: set confident to false.
 - If two parts of the guide disagree, set confident to false.
 - Never invent prices, promises, phone numbers, people or steps.
-Reply with JSON only: {"confident": true|false, "answer": "..."} (answer is "" when not confident).`;
+- If the question is too vague to act on (e.g. "some pages don't work", "I can't log in", "it's not working" without saying which page, account or task, or what error they see), set confident to false and put in "clarify" one short, friendly reply asking for exactly what's missing: which page/account/task (name or link) and what happens when they try (the exact error or what they see). Otherwise "clarify" is "".
+Reply with JSON only: {"confident": true|false, "answer": "...", "clarify": "..."} (answer is "" when not confident).`;
 
-export function parseAnswer(text: string | undefined): { confident: boolean; answer: string } {
+export function parseAnswer(text: string | undefined): { confident: boolean; answer: string; clarify: string } {
   const m = (text ?? "").match(/\{[\s\S]*\}/);
-  if (!m) return { confident: false, answer: "" };
+  if (!m) return { confident: false, answer: "", clarify: "" };
   try {
     const j = JSON.parse(m[0]);
     const answer = typeof j.answer === "string" ? j.answer.trim().slice(0, 1500) : "";
-    return { confident: j.confident === true && answer.length > 0, answer };
+    const clarify = typeof j.clarify === "string" ? j.clarify.trim().slice(0, 800) : "";
+    const confident = j.confident === true && answer.length > 0;
+    return { confident, answer: confident ? answer : "", clarify: confident ? "" : clarify };
   } catch {
-    return { confident: false, answer: "" };
+    return { confident: false, answer: "", clarify: "" };
   }
 }
 
@@ -65,9 +68,9 @@ export function registerTeamHubAnswerRoute(app: Express) {
     const asker = req.body?.escalate && typeof req.body.escalate === "object"
       ? { name: String(req.body.escalate.name ?? "").slice(0, 80), source: String(req.body.escalate.source ?? "hub").slice(0, 20) }
       : null;
-    const giveUp = async () => {
+    const giveUp = async (clarify = "") => {
       if (asker) await escalateToOwner(asker.name, asker.source, question);
-      return res.json({ confident: false, answer: "", escalated: !!asker });
+      return res.json({ confident: false, answer: "", clarify, escalated: !!asker });
     };
     if (req.body?.escalate_only === true) return giveUp();
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -84,7 +87,7 @@ export function registerTeamHubAnswerRoute(app: Express) {
       return giveUp();
     }
     const out = parseAnswer(r.text);
-    if (!out.confident) return giveUp();
+    if (!out.confident) return giveUp(out.clarify);
     return res.json(out);
   });
 }
