@@ -13,6 +13,7 @@ import { isSalesUser } from "@shared/salesAccess";
 import {
   ArrowLeft,
   Inbox,
+  PenSquare,
   Mail,
   MessageSquare,
   RefreshCw,
@@ -104,6 +105,10 @@ export default function Communications() {
   const [sendJobId, setSendJobId] = useState<string | null>(null);
   const [cardName, setCardName] = useState("");
   const [cardPhone, setCardPhone] = useState("");
+  const [cardEmail, setCardEmail] = useState("");
+  const [cardCompany, setCardCompany] = useState("");
+  // "New email" with no contact open: pick who it goes to first.
+  const [picking, setPicking] = useState(false);
   const card = trpc.crmCommunications.contactCard.useQuery(
     { id: contactId ?? 0 },
     { enabled: contactId !== null }
@@ -111,6 +116,8 @@ export default function Communications() {
   useEffect(() => {
     setCardName(card.data?.name ?? "");
     setCardPhone(card.data?.phone ?? "");
+    setCardEmail(card.data?.email ?? "");
+    setCardCompany(card.data?.company ?? "");
   }, [card.data]);
   // A ?compose=sms|newEmail link (Text / Email buttons on a lead or contact)
   // opens the composer once, after the contact has loaded.
@@ -247,6 +254,11 @@ export default function Communications() {
       })),
   ];
   const status = trpc.crmCommunications.gmailStatus.useQuery();
+  // Every email to and from CRM contacts, newest first (the mailbox view).
+  const recent = trpc.crmCommunications.recent.useQuery(
+    { folder: folder === "sms" ? "all" : folder, search: search || undefined, limit: 150 },
+    { enabled: contactId === null && !picking, refetchInterval: 60000 }
+  );
   const timeline = trpc.crmCommunications.timeline.useQuery(
     { externalContactId: contactId ?? 0 },
     { enabled: contactId !== null, refetchInterval: 30000 }
@@ -430,6 +442,7 @@ export default function Communications() {
               type="button"
               onClick={() => {
                 setContactId(null);
+                setPicking(false);
                 setFolder("all");
                 setMessageId(null);
                 setCompose(null);
@@ -440,6 +453,13 @@ export default function Communications() {
               <ArrowLeft className="h-4 w-4" /> All communications
             </button>
           ) : (
+          <>
+          <Button
+            className="mb-4 h-12 rounded-2xl bg-[#c2e7ff] px-5 text-slate-900 shadow-sm hover:bg-[#b3dcf7]"
+            onClick={() => { setPicking(true); setMessageId(null); }}
+          >
+            <PenSquare className="h-4 w-4 mr-2" /> New email
+          </Button>
           <nav aria-label="Communication folders" className="space-y-1 mb-6">
             {folders.filter(item => !(isSales && item.id === "sms")).map(item => (
               <button
@@ -451,6 +471,7 @@ export default function Communications() {
                   }
                   setFolder(item.id);
                   setMessageId(null);
+                  setPicking(false);
                 }}
                 aria-current={folder === item.id ? "page" : undefined}
                 className={`flex items-center gap-3 w-full rounded-full px-4 py-2 text-sm text-left ${folder === item.id ? "bg-[#d3e3fd] font-semibold text-blue-950" : "hover:bg-slate-200"}`}
@@ -460,6 +481,7 @@ export default function Communications() {
               </button>
             ))}
           </nav>
+          </>
           )}
 
           {contactId !== null && (
@@ -488,11 +510,29 @@ export default function Communications() {
                     className="mt-1 bg-white text-slate-800"
                   />
                 </label>
+                <label className="text-xs text-slate-500">
+                  Email
+                  <Input
+                    type="email"
+                    value={cardEmail}
+                    onChange={e => setCardEmail(e.target.value)}
+                    placeholder="Add email address"
+                    aria-label="Client email"
+                    readOnly={Boolean(card.data?.email)}
+                    className="mt-1 bg-white text-slate-800 read-only:bg-slate-50"
+                  />
+                </label>
+                <label className="text-xs text-slate-500">
+                  Company
+                  <Input
+                    value={cardCompany}
+                    onChange={e => setCardCompany(e.target.value)}
+                    placeholder="Add company"
+                    aria-label="Client company"
+                    className="mt-1 bg-white text-slate-800"
+                  />
+                </label>
               </div>
-              <p className="text-sm break-all">
-                {selectedContact?.email}
-                {selectedContact?.company && ` · ${selectedContact.company}`}
-              </p>
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
@@ -505,7 +545,7 @@ export default function Communications() {
                 >
                   Compose email
                 </Button>
-                {!isSales && <Button
+                <Button
                   size="sm"
                   variant="outline"
                   disabled={!cardName.trim() || saveCard.isPending}
@@ -514,11 +554,13 @@ export default function Communications() {
                       id: contactId,
                       name: cardName,
                       phone: cardPhone.trim() || undefined,
+                      email: !card.data?.email && cardEmail.trim() ? cardEmail.trim() : undefined,
+                      company: cardCompany.trim(),
                     })
                   }
                 >
-                  Save contact
-                </Button>}
+                  {saveCard.isPending ? "Saving…" : "Save details"}
+                </Button>
                 <Button
                   size="sm"
                   className="bg-blue-600 text-white hover:bg-blue-700"
@@ -569,7 +611,7 @@ export default function Communications() {
               <p className="text-xs text-slate-500 truncate">
                 {selectedContact?.email ??
                   selectedContact?.phone ??
-                  "Select a contact or lead to view communications"}
+                  (picking ? "New email" : "Emails to and from your contacts")}
               </p>
             </div>
             {contactId !== null && (
@@ -578,13 +620,63 @@ export default function Communications() {
               </span>
             )}
           </div>
-          {contactId === null ? (
+          {contactId === null && !picking ? (
+            recent.isLoading ? (
+              <p className="p-6 text-slate-500">Loading emails…</p>
+            ) : (recent.data ?? []).length === 0 ? (
+              <div className="flex flex-col items-center gap-3 py-10 px-6 text-center text-slate-500">
+                <Inbox className="h-10 w-10 text-blue-300" />
+                <p>{search ? "No emails match your search." : "No emails with CRM contacts in this folder yet."}</p>
+                <Button variant="outline" onClick={() => setPicking(true)}>
+                  <PenSquare className="h-4 w-4 mr-2" /> New email
+                </Button>
+              </div>
+            ) : (
+              <div aria-label="Emails with contacts">
+                {(recent.data ?? []).map(m => {
+                  const inbound = m.direction === "inbound";
+                  const when = new Date(m.occurredAt);
+                  const today = when.toDateString() === new Date().toDateString();
+                  return (
+                    <button
+                      key={m.id}
+                      onClick={() => {
+                        if (!m.externalContactId) return;
+                        setContactId(m.externalContactId);
+                        setMessageId(m.id);
+                      }}
+                      className="flex min-w-0 w-full items-center gap-3 border-b border-slate-100 px-5 py-3 text-left hover:bg-[#f2f6fc]"
+                    >
+                      <span className="min-w-0 w-28 md:w-48 shrink-0 truncate text-sm font-medium">
+                        {inbound ? m.contactName : `To: ${m.contactName}`}
+                        {m.contactCompany && (
+                          <span className="block truncate text-xs font-normal text-slate-500">{m.contactCompany}</span>
+                        )}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        <span className="mr-2 text-[10px] rounded bg-slate-100 px-1.5 py-0.5 text-slate-500">
+                          {inbound ? "Inbox" : "Sent"}
+                        </span>
+                        <span className="font-medium">{m.subject || "No subject"}</span>
+                        {m.snippet && <span className="text-slate-500"> — {m.snippet}</span>}
+                      </span>
+                      <span className="shrink-0 text-xs text-slate-500">
+                        {today
+                          ? when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+                          : when.toLocaleDateString([], { month: "short", day: "numeric" })}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )
+          ) : contactId === null ? (
             <div className="flex flex-col items-center justify-center gap-4 py-8 px-6 text-center text-slate-500">
-              <Inbox className="h-10 w-10 mb-4 text-blue-300" />
-              <p>
-                Select a contact or lead to view messages or compose a new
-                email.
-              </p>
+              <PenSquare className="h-10 w-10 mb-2 text-blue-300" />
+              <p>Who is this email to? Pick a contact or lead, or search above.</p>
+              <Button variant="ghost" size="sm" onClick={() => setPicking(false)}>
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back to emails
+              </Button>
               <details
                 open
                 className="w-full max-w-2xl rounded-xl border bg-white text-left"
@@ -605,6 +697,10 @@ export default function Communications() {
                     <button
                       key={contact.id}
                       onClick={() => {
+                        // Picked from "New email": open the composer once the contact loads.
+                        pendingCompose.current = "newEmail";
+                        setSubject("");
+                        setPicking(false);
                         if (contact.leadOption)
                           openLead.mutate(contact.leadOption);
                         else if (contact.id < 0)

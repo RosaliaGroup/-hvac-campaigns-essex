@@ -24,12 +24,12 @@ export function viewAsName(): string | null {
 
 export function startSalesPreview() {
   try { sessionStorage.setItem(KEY, "sales"); sessionStorage.removeItem(NAME); } catch { /* ignore */ }
-  window.location.assign("/lead-dashboard");
+  window.location.assign("/team-hub");
 }
 
 export function startMemberPreview(id: number, name: string) {
   try { sessionStorage.setItem(KEY, `member:${id}`); sessionStorage.setItem(NAME, name); } catch { /* ignore */ }
-  window.location.assign("/lead-dashboard");
+  window.location.assign("/team-hub");
 }
 
 export function stopSalesPreview() {

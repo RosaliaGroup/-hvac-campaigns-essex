@@ -38,7 +38,7 @@ import {
   type NavDepartment,
   type NavItem,
 } from "@/lib/navigation";
-import { Bell, ChevronRight, Inbox, LayoutDashboard, ListTodo, LogOut, Menu, UserRound } from "lucide-react";
+import { Bell, ChevronRight, ClipboardCheck, Inbox, LayoutDashboard, ListTodo, LogOut, Mail, Menu, UserRound } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -135,18 +135,24 @@ const MOBILE_TABS = [
   { label: "Leads", path: "/lead-dashboard", Icon: Inbox },
   { label: "Tasks", path: "/tasks", Icon: ListTodo },
   { label: "Contacts", path: "/customers", Icon: UserRound },
-] as const;
+];
+/** Sales (setters) only reach these pages, so their phone tabs match. */
+const SALES_MOBILE_TABS = [
+  { label: "Daily Hub", path: "/team-hub", Icon: ClipboardCheck },
+  { label: "Email", path: "/contacts/communications", Icon: Mail },
+  { label: "Contacts", path: "/customers", Icon: UserRound },
+];
 
 function MobileTabBar({
-  activePath, onNavigate, onMore,
-}: { activePath: string; onNavigate: (path: string) => void; onMore: () => void }) {
+  activePath, onNavigate, onMore, sales = false,
+}: { activePath: string; onNavigate: (path: string) => void; onMore: () => void; sales?: boolean }) {
   return (
     <nav
       className="fixed inset-x-0 bottom-0 z-50 flex border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       aria-label="Primary"
     >
-      {MOBILE_TABS.map(({ label, path, Icon }) => {
+      {(sales ? SALES_MOBILE_TABS : MOBILE_TABS).map(({ label, path, Icon }) => {
         const active = activePath === path || activePath.startsWith(`${path}/`);
         return (
           <button
@@ -344,7 +350,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         )}
         <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:pb-4">{children}</main>
-        <MobileTabBar activePath={location.split("?")[0]} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
+        <MobileTabBar sales={role === "sales"} activePath={location.split("?")[0]} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
       </SidebarInset>
     </>
   );
