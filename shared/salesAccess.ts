@@ -76,6 +76,8 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   // reply, sent from the rep's own verified @mechanicalenterprise.com alias
   // (gmailSendAs). Texting, Gmail sync controls and contact-card edits stay off.
   "crmCommunications.contacts",
+  "crmCommunications.recent",
+  "crmCommunications.saveContactCard",
   "crmCommunications.contactCard",
   "crmCommunications.gmailStatus",
   "crmCommunications.leadOptions",
@@ -165,9 +167,8 @@ export function redactCustomerDetailForSales<
 
 /* ── Client side (navigation only — not a security boundary) ─────────────── */
 
-/** CRM routes a sales user can open. Everything else redirects to the Lead Inbox. */
+/** CRM routes a sales user can open. Everything else redirects to the Daily Hub. */
 export const SALES_ROUTE_PREFIXES: readonly string[] = [
-  "/lead-dashboard",
   "/leads",
   "/customers",
   "/calendar",
@@ -175,7 +176,7 @@ export const SALES_ROUTE_PREFIXES: readonly string[] = [
   "/team-hub",
 ];
 
-export const SALES_HOME = "/lead-dashboard";
+export const SALES_HOME = "/team-hub";
 
 export function isSalesRoute(location: string): boolean {
   const path = (location || "/").split(/[?#]/)[0] || "/";

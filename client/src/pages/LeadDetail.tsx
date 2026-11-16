@@ -94,7 +94,7 @@ export default function LeadDetail() {
       <DashboardLayout><InternalNav />
         <div className="p-8 space-y-3">
           <p className="text-sm text-muted-foreground">Lead not found.</p>
-          <Button variant="outline" onClick={() => navigate("/lead-dashboard")}><ArrowLeft className="h-4 w-4 mr-1" /> Back to Leads</Button>
+          <Button variant="outline" onClick={() => navigate(isSales ? "/team-hub" : "/lead-dashboard")}><ArrowLeft className="h-4 w-4 mr-1" /> {isSales ? "Back to Daily Hub" : "Back to Leads"}</Button>
         </div>
       </DashboardLayout>
     );
@@ -116,8 +116,8 @@ export default function LeadDetail() {
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/lead-dashboard")} className="-ml-2 text-muted-foreground">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Leads
+            <Button variant="ghost" size="sm" onClick={() => navigate(isSales ? "/team-hub" : "/lead-dashboard")} className="-ml-2 text-muted-foreground">
+              <ArrowLeft className="h-4 w-4 mr-1" /> {isSales ? "Daily Hub" : "Leads"}
             </Button>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Users className="h-6 w-6 text-[#1e3a5f]" /> {name}

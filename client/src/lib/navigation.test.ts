@@ -137,7 +137,7 @@ describe("department structure", () => {
   it("puts the expected tools under Sales", () => {
     const sales = DEPARTMENTS.find((d) => d.id === "sales")!;
     expect(sales.items.map((i) => i.label)).toEqual([
-      "Team Hub",
+      "Daily Hub",
       "Lead Inbox",
       "Communications",
       "Contacts",
@@ -289,9 +289,9 @@ describe("getVisibleDepartments", () => {
   // resolves to these roles yet (resolveNavRole only returns admin/member/viewer);
   // they are kept and tested so the mechanism is ready when a role field is added.
 
-  it("sales sees only the Lead Inbox, email inbox, Contacts and Calendar — no dashboard, money or marketing", () => {
+  it("sales sees only the Daily Hub, email and Contacts — no lead inbox, dashboard, money or marketing", () => {
     expect(deptIds("sales")).toEqual(["sales", "dispatch"]);
-    expect(itemLabels("sales", "sales")).toEqual(["Team Hub", "Lead Inbox", "Communications", "Contacts"]);
+    expect(itemLabels("sales", "sales")).toEqual(["Daily Hub", "Communications", "Contacts"]);
     expect(itemLabels("sales", "dispatch")).toEqual(["Calendar"]);
     for (const d of ["home", "marketing", "accounting", "ai", "analytics", "admin"]) {
       expect(deptIds("sales")).not.toContain(d);

@@ -160,10 +160,23 @@ export const crmCommunicationsRouter = router({
             "Enter a valid phone number with area code."
           )
           .optional(),
+        email: z.string().trim().email("Enter a valid email address.").max(320).optional(),
+        company: z.string().trim().max(255).optional(),
       })
     )
     .mutation(async ({ input }) => {
       const db = await dbOrThrow();
+      const [current] = await db
+        .select({ email: crmExternalContacts.email })
+        .from(crmExternalContacts)
+        .where(eq(crmExternalContacts.id, input.id))
+        .limit(1);
+      if (!current) throw new TRPCError({ code: "NOT_FOUND", message: "Contact not found" });
+      // An email can be added to a contact that has none. Changing an existing
+      // address would detach its Gmail history, so that stays with the office.
+      if (input.email && current.email && current.email.toLowerCase() !== input.email.toLowerCase()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "This contact already has an email. Ask the office to change it." });
+      }
       await db
         .update(crmExternalContacts)
         .set({
@@ -171,6 +184,8 @@ export const crmCommunicationsRouter = router({
           ...(input.phone
             ? { phone: input.phone.replace(/[^0-9+]/g, "") }
             : {}),
+          ...(input.email && !current.email ? { email: input.email.toLowerCase() } : {}),
+          ...(input.company !== undefined ? { company: input.company || null } : {}),
         })
         .where(eq(crmExternalContacts.id, input.id));
       return { saved: true };
@@ -582,6 +597,74 @@ export const crmCommunicationsRouter = router({
       return contact ?? null;
     }),
 
+  /**
+   * Recent emails to and from CRM contacts, newest first, across all contacts.
+   * Only contacts that belong in Contacts (same sources as `contacts`), never
+   * generic Gmail-sync senders. Bodies are cut to a short snippet.
+   */
+  recent: protectedProcedure
+    .input(
+      z.object({
+        folder: z.enum(["all", "inbox", "sent"]).default("all"),
+        search: z.string().max(255).optional(),
+        limit: z.number().int().min(1).max(200).default(100),
+      })
+    )
+    .query(async ({ input }) => {
+      const db = await dbOrThrow();
+      const term = `%${input.search ?? ""}%`;
+      const rows = await db
+        .select({
+          id: crmCommunications.id,
+          externalContactId: crmCommunications.externalContactId,
+          direction: crmCommunications.direction,
+          subject: crmCommunications.subject,
+          body: sql<string>`LEFT(${crmCommunications.body}, 400)`,
+          fromAddress: crmCommunications.fromAddress,
+          toAddress: crmCommunications.toAddress,
+          occurredAt: crmCommunications.occurredAt,
+          contactName: crmExternalContacts.name,
+          contactEmail: crmExternalContacts.email,
+          contactCompany: crmExternalContacts.company,
+        })
+        .from(crmCommunications)
+        .innerJoin(
+          crmExternalContacts,
+          eq(crmExternalContacts.id, crmCommunications.externalContactId)
+        )
+        .where(
+          and(
+            eq(crmCommunications.channel, "email"),
+            input.folder === "all"
+              ? undefined
+              : eq(
+                  crmCommunications.direction,
+                  input.folder === "inbox" ? "inbound" : "outbound"
+                ),
+            sql`(
+              ${crmExternalContacts.source} IN
+                ('gmail-prospecting','verified-hvac-prospect','gmail-selected','crm-manual','crm')
+              OR (${crmExternalContacts.source} IS NULL AND
+                  ${crmExternalContacts.customerId} IS NOT NULL)
+            )`,
+            input.search
+              ? or(
+                  like(crmExternalContacts.name, term),
+                  like(crmExternalContacts.email, term),
+                  like(crmExternalContacts.company, term),
+                  like(crmCommunications.subject, term)
+                )
+              : undefined
+          )
+        )
+        .orderBy(desc(crmCommunications.occurredAt))
+        .limit(input.limit);
+      return rows.map(r => ({
+        ...r,
+        snippet: (r.body ?? "").replace(/\s+/g, " ").trim().slice(0, 160),
+        body: undefined,
+      }));
+    }),
   timeline: protectedProcedure
     .input(z.object({ externalContactId: z.number().int() }))
     .query(async ({ input }) =>
