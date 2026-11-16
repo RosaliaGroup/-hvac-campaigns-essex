@@ -280,6 +280,7 @@ export async function runQcForCall(callLogId: number): Promise<void> {
       error: null,
     });
     await emailCallReport(callLogId).catch((e) => console.error("[CallQC] email failed:", e instanceof Error ? e.message : e));
+    await pushReviewToHub(log, review, lead?.name ?? null).catch((e) => console.error("[CallQC] hub push failed:", e instanceof Error ? e.message : e));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error(`[CallQC] call ${callLogId} attempt ${attempts}: ${message}`);
@@ -360,6 +361,41 @@ export async function emailCallReport(callLogId: number): Promise<void> {
   </div>`;
   const ok = await sendEmail({ to: reportEmail(), subject, html });
   if (ok) await db.update(callQcReviews).set({ emailedAt: new Date() }).where(eq(callQcReviews.id, row.id));
+}
+
+const HUB_FN = "https://luznebxgkqglxtkpyksb.supabase.co/functions/v1/team-hub";
+
+/** The rep sees each review (summary, what went well, what to improve) in their Daily Hub. */
+export async function pushReviewToHub(
+  log: { id: number; agentTeamMemberId: number | null; phoneNumber: string | null; duration: number | null; createdAt: Date },
+  review: CallQcReview,
+  contactName: string | null,
+): Promise<void> {
+  const secret = process.env.TEAM_HUB_SECRET?.trim();
+  const db = await getDb();
+  if (!secret || !db || !log.agentTeamMemberId) return;
+  const m = (await db.select({ email: teamMembers.email }).from(teamMembers).where(eq(teamMembers.id, log.agentTeamMemberId)).limit(1))[0];
+  if (!m?.email) return;
+  await fetch(HUB_FN, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "callreview",
+      secret,
+      email: m.email,
+      call_log_id: log.id,
+      contact: contactName ?? log.phoneNumber ?? "",
+      seconds: log.duration ?? 0,
+      called_at: log.createdAt.toISOString(),
+      score: review.score,
+      verdict: review.verdict,
+      outcome: review.outcome,
+      summary: review.summary,
+      strengths: review.strengths,
+      coaching: review.coaching,
+      flags: review.flags.map((f) => QC_FLAG_LABEL[f.code] ?? f.code),
+    }),
+  });
 }
 
 /** Weekday digest: every rep's calls today, average score, flags. */
