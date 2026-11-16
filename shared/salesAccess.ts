@@ -77,6 +77,11 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   // (gmailSendAs). Texting, Gmail sync controls and contact-card edits stay off.
   "crmCommunications.contacts",
   "crmCommunications.recent",
+  // Lead Scoring page (hot / warm / cold leads)
+  "leadScoring.getScoreStats",
+  "leadScoring.getTopLeads",
+  "leadScoring.getScoredLeads",
+  "leadScoring.recalculateScore",
   "crmCommunications.saveContactCard",
   "crmCommunications.contactCard",
   "crmCommunications.gmailStatus",
@@ -174,6 +179,7 @@ export const SALES_ROUTE_PREFIXES: readonly string[] = [
   "/calendar",
   "/contacts/communications",
   "/team-hub",
+  "/lead-scoring",
 ];
 
 export const SALES_HOME = "/team-hub";
