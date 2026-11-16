@@ -146,10 +146,22 @@ export function isMarketingAllowedProcedure(path: string): boolean {
   return MARKETING_ALLOWED_PROCEDURES.has(path);
 }
 
-type MaybeTeamUser = { teamRole?: string | null } | null | undefined;
+type MaybeTeamUser = { teamRole?: string | null; marketingOnly?: boolean | null } | null | undefined;
 
+/** A marketing session: teamRole "marketing", or a viewer flagged marketing-only. */
 export function isMarketingUser(user: MaybeTeamUser): boolean {
-  return user?.teamRole === MARKETING_ROLE;
+  return user?.teamRole === MARKETING_ROLE || user?.marketingOnly === true;
+}
+
+/**
+ * Viewers limited to Marketing + Daily Hub without a role change: their login
+ * emails, comma-separated, in env MARKETING_ONLY_EMAILS (server only).
+ */
+export function isMarketingOnlyEmail(email: string | null | undefined, listArg?: string): boolean {
+  const list = listArg ?? (typeof process !== "undefined" ? process.env.MARKETING_ONLY_EMAILS : undefined);
+  const e = String(email ?? "").trim().toLowerCase();
+  if (!e || !list) return false;
+  return list.split(",").map((x) => x.trim().toLowerCase()).filter(Boolean).includes(e);
 }
 
 /* ── Client side (navigation only — not a security boundary) ─────────────── */

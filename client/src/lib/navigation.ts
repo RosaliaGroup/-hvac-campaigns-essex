@@ -275,6 +275,7 @@ type UserLike =
   | {
       role?: string | null;
       teamRole?: string | null;
+      marketingOnly?: boolean | null;
     }
   | null
   | undefined;
@@ -290,6 +291,8 @@ type UserLike =
 export function resolveNavRole(user: UserLike): NavRole {
   if (!user) return "member";
   if (user.role === "admin" || user.teamRole === "admin") return "admin";
+  // Marketing-only viewer (server sets marketingOnly): read-only, Marketing only.
+  if (user.marketingOnly === true) return "marketing";
   if (user.teamRole === "viewer") return "viewer";
   // Sales: Lead Inbox, Contacts and Calendar only (server enforces the same
   // limits — see shared/salesAccess.ts).

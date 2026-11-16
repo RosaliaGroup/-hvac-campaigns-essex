@@ -10,7 +10,7 @@ import { TRPCError } from "@trpc/server";
 import { appRouter } from "./routers";
 import { createCallerFactory } from "./_core/trpc";
 import type { AuthenticatedUser, TrpcContext } from "./_core/context";
-import { MARKETING_ALLOWED_PROCEDURES, isMarketingAllowedProcedure, isMarketingRoute } from "@shared/marketingAccess";
+import { MARKETING_ALLOWED_PROCEDURES, isMarketingAllowedProcedure, isMarketingOnlyEmail, isMarketingRoute, isMarketingUser } from "@shared/marketingAccess";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -99,5 +99,47 @@ describe("marketing role — server allowlist", () => {
     for (const no of ["/command-center", "/lead-dashboard", "/customers", "/calendar", "/opportunities", "/analytics", "/team-management"]) {
       expect(isMarketingRoute(no), no).toBe(false);
     }
+  });
+});
+
+describe("marketing-only viewer (no role change, env MARKETING_ONLY_EMAILS)", () => {
+  const viewerMk = () => {
+    const c = ctxFor("viewer");
+    (c.user as AuthenticatedUser).marketingOnly = true;
+    return createCaller(c);
+  };
+
+  it("matches emails case-insensitively from the list", () => {
+    expect(isMarketingOnlyEmail("Moses@Abrevo.co", "a@b.com, moses@abrevo.co")).toBe(true);
+    expect(isMarketingOnlyEmail("other@abrevo.co", "moses@abrevo.co")).toBe(false);
+    expect(isMarketingOnlyEmail("moses@abrevo.co", "")).toBe(false);
+    expect(isMarketingUser({ teamRole: "viewer", marketingOnly: true })).toBe(true);
+    expect(isMarketingUser({ teamRole: "viewer" })).toBe(false);
+  });
+
+  it("is limited to the marketing allowlist", async () => {
+    const mk = viewerMk();
+    const leaks: string[] = [];
+    for (const path of allPaths) {
+      if (isMarketingAllowedProcedure(path) || PUBLIC.some((re) => re.test(path))) continue;
+      const code = await codeOf(call(mk, path));
+      if (code !== "FORBIDDEN") leaks.push(`${path} → ${code}`);
+    }
+    expect(leaks).toEqual([]);
+  }, 120_000);
+
+  it("stays read-only: allowlisted mutations are still refused", async () => {
+    const mk = viewerMk();
+    for (const path of ["smsCampaigns.sendBulk", "aiVa.schedulePost", "marketIntel.runNow", "seo.setStatus"]) {
+      expect(await codeOf(call(mk, path)), path).toBe("FORBIDDEN");
+    }
+  });
+
+  it("can still open the Daily Hub", async () => {
+    expect(await codeOf(call(viewerMk(), "teamHub.link"))).not.toBe("FORBIDDEN");
+  });
+
+  it("an ordinary viewer is unchanged", async () => {
+    expect(await codeOf(call(createCaller(ctxFor("viewer")), "customers.list"))).not.toBe("FORBIDDEN");
   });
 });

@@ -4,13 +4,14 @@ import { sdk } from "./sdk";
 import * as db from "../db";
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./cookies";
+import { isMarketingOnlyEmail } from "@shared/marketingAccess";
 
 /**
  * Authenticated user with the (optional) real team role.
  * Team sessions carry teamRole "admin" | "member" | "viewer" | "sales" | "marketing";
  * Manus OAuth users have no teamRole (treated as member-level).
  */
-export type AuthenticatedUser = User & { teamRole?: "admin" | "member" | "viewer" | "sales" | "marketing"; preview?: boolean };
+export type AuthenticatedUser = User & { teamRole?: "admin" | "member" | "viewer" | "sales" | "marketing"; preview?: boolean; marketingOnly?: boolean };
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -50,6 +51,13 @@ export async function createContext(
           preview: true,
         } as AuthenticatedUser;
       }
+    }
+
+    // Marketing-only viewers (env MARKETING_ONLY_EMAILS): a read-only viewer who
+    // should only see the Marketing department and the Daily Hub. Viewer stays
+    // read-only; shared/marketingAccess.ts limits what they can open.
+    if (user && user.teamRole === "viewer" && isMarketingOnlyEmail(user.email)) {
+      user = { ...user, marketingOnly: true };
     }
 
     // Sliding idle window: on every authenticated request, re-issue the session

@@ -238,6 +238,8 @@ describe("resolveNavRole", () => {
     expect(PRODUCTION_ROLES).toEqual(["admin", "member", "viewer", "sales", "marketing"]);
     expect(resolveNavRole({ role: "user", teamRole: "sales" })).toBe("sales");
     expect(resolveNavRole({ role: "user", teamRole: "marketing" })).toBe("marketing");
+    expect(resolveNavRole({ role: "user", teamRole: "viewer", marketingOnly: true })).toBe("marketing");
+    expect(resolveNavRole({ role: "user", teamRole: "viewer", marketingOnly: false })).toBe("viewer");
   });
 });
 
