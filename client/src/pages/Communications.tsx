@@ -626,7 +626,7 @@ export default function Communications() {
             ) : (recent.data ?? []).length === 0 ? (
               <div className="flex flex-col items-center gap-3 py-10 px-6 text-center text-slate-500">
                 <Inbox className="h-10 w-10 text-blue-300" />
-                <p>{search ? "No emails match your search." : "No emails with CRM contacts in this folder yet."}</p>
+                <p>{search ? "No emails match your search." : (isSales ? "No emails with your assigned contacts yet. Use New email to write to one." : "No emails with CRM contacts in this folder yet.")}</p>
                 <Button variant="outline" onClick={() => setPicking(true)}>
                   <PenSquare className="h-4 w-4 mr-2" /> New email
                 </Button>
