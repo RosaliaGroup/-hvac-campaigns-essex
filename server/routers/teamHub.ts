@@ -27,7 +27,7 @@ export const teamHubRouter = router({
   assignment: protectedProcedure.input(target).query(async ({ input }) => {
     const j = await hubCall({ action: "assignment_for", crm_type: input.type, crm_id: input.id }).catch(() => null);
     return (j?.assignment ?? null) as null | {
-      id: number; person: string; personName: string; action: string | null; goal: string | null;
+      id: number; person: string; personName: string; action: string | null; goal: string | null; talk: string | null;
       status: string; result: string | null; note: string | null; updatedAt: string | null;
     };
   }),
