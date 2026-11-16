@@ -38,7 +38,7 @@ queryClient.getMutationCache().subscribe(event => {
     const error = event.mutation.state.error;
     redirectToLoginIfUnauthorized(error);
     if (error instanceof TRPCClientError && /read-only|requires member access|Marketing access covers/i.test(error.message)) {
-      toast.error("View only: changes are turned off for your login.");
+      toast.error("This is turned off for your login.");
     }
     console.error("[API Mutation Error]", error);
   }

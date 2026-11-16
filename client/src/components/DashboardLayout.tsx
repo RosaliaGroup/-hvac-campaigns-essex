@@ -39,7 +39,8 @@ import {
   type NavItem,
 } from "@/lib/navigation";
 import { Bell, ChevronRight, ClipboardCheck, Inbox, LayoutDashboard, LineChart, ListTodo, LogOut, Mail, Megaphone, Menu, UserRound } from "lucide-react";
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useHideActionsForViewers } from "./ViewOnlyActions";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -244,6 +245,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { isMobile, setOpenMobile } = useSidebar();
 
   const role = useMemo(() => resolveNavRole(user), [user]);
+  // Read-only users: hide controls that would try to change something.
+  const mainRef = useRef<HTMLElement>(null);
+  useHideActionsForViewers(mainRef, user?.teamRole === "viewer");
   const departments = useMemo(() => getVisibleDepartments(role), [role]);
   const activeItemKey = useMemo(
     () => getActiveItemKey(departments, location),
@@ -339,11 +343,6 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       </Sidebar>
 
       <SidebarInset className="min-w-0 overflow-x-hidden">
-        {user?.teamRole === "viewer" && (
-          <div className="bg-amber-50 text-amber-900 border-b border-amber-200 px-4 py-2 text-sm" role="status">
-            <b>View only.</b> You can look at everything here, but changes are turned off. Ask Ana if you need something changed.
-          </div>
-        )}
         {/* Header: hamburger on mobile, breadcrumb on all sizes. */}
         <header className="flex border-b h-14 items-center gap-2 bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
           <SidebarTrigger className="h-9 w-9 rounded-lg" aria-label="Toggle navigation" />
@@ -364,7 +363,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </button>
           </div>
         )}
-        <main className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:pb-4">{children}</main>
+        <main ref={mainRef} className="flex-1 min-w-0 overflow-x-hidden p-4 pb-24 md:pb-4">{children}</main>
         <MobileTabBar sales={role === "sales"} marketing={role === "marketing"} activePath={location.split("?")[0]} onNavigate={p => setLocation(p)} onMore={() => setOpenMobile(true)} />
       </SidebarInset>
     </>
