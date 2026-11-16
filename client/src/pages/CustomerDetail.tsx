@@ -42,6 +42,7 @@ import {
 import { jobRoute, opportunityRoute } from "@/lib/customerNavigation";
 import ConversationPreview from "@/components/sms/ConversationPreview";
 import { CallButton, CallHistoryCard } from "@/components/calls/ClickToCall";
+import { AssignmentCard } from "@/components/AssignmentCard";
 import { isSalesUser } from "@shared/salesAccess";
 import {
   StartEstimateButton,
@@ -484,6 +485,7 @@ export default function CustomerDetail() {
                   {customer.email}
                 </p>
               </div>
+              <AssignmentCard type="customer" id={customerId} label={formatDisplayName(identity.name)} phone={customer.phone} />
               <h2 className="font-semibold text-[#33475b]">
                 About this contact
               </h2>

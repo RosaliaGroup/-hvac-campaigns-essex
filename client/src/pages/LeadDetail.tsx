@@ -14,6 +14,7 @@ import AppointmentDialog from "@/components/AppointmentDialog";
 import PropertyLinkSection from "@/components/PropertyLinkSection";
 import ConversationPreview from "@/components/sms/ConversationPreview";
 import { CallButton, CallHistoryCard } from "@/components/calls/ClickToCall";
+import { AssignmentCard } from "@/components/AssignmentCard";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { isSalesUser } from "@shared/salesAccess";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -187,6 +188,7 @@ export default function LeadDetail() {
 
             <Card>
               <CardHeader className="pb-3"><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
+              <CardContent className="px-6 pb-3"><AssignmentCard type="lead" id={leadId} label={name} phone={cap.phone} /></CardContent>
               <CardContent className="flex flex-wrap gap-2">
                 <CallButton phone={cap.phone} leadCaptureId={leadId} customerId={cap.customerId} />
                 <Button size="sm" variant="outline" disabled={!cap.phone} onClick={() => cap.phone && navigate(isSales ? `/contacts/communications?leadCaptureId=${leadId}&compose=sms` : internalSmsConversationPath(cap.phone))}>

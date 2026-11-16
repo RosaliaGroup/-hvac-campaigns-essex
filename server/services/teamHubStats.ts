@@ -5,8 +5,8 @@
  */
 import type { Express, Request, Response } from "express";
 import { timingSafeEqual } from "node:crypto";
-import { and, eq, gte, lt, sql } from "drizzle-orm";
-import { appointments, callLogs, smsInboxMessages, teamMembers } from "../../drizzle/schema";
+import { and, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
+import { appointments, callLogs, customers, leadCaptures, properties, smsInboxMessages, teamMembers } from "../../drizzle/schema";
 import { getDb } from "../db";
 
 function secretOk(req: Request): boolean {
@@ -66,6 +66,79 @@ export function registerTeamHubStatsRoute(app: Express) {
       });
     } catch (err) {
       console.error("[TeamHubStats]", err instanceof Error ? err.message : err);
+      res.status(500).json({ error: "failed" });
+    }
+  });
+
+  /**
+   * Contact list for assigning work to setters in the Team Hub (same secret).
+   * Commercial customers, past customers and recent leads; counts only what a
+   * setter needs to plan the work. Never includes financial data.
+   */
+  app.get("/api/team-hub/contacts", async (req: Request, res: Response) => {
+    if (!secretOk(req)) return res.status(401).json({ error: "unauthorized" });
+    const db = await getDb();
+    if (!db) return res.status(503).json({ error: "db unavailable" });
+    try {
+      const custRows = await db
+        .select({
+          id: customers.id,
+          type: customers.type,
+          firstName: customers.firstName,
+          lastName: customers.lastName,
+          companyName: customers.companyName,
+          displayName: customers.displayName,
+          email: customers.email,
+          phone: customers.phone,
+          status: customers.status,
+          source: customers.source,
+          notes: customers.notes,
+          qbo: customers.quickbooksCustomerId,
+          createdAt: customers.createdAt,
+        })
+        .from(customers);
+      const props = await db.select({ customerId: properties.customerId, propertyType: properties.propertyType, city: properties.city }).from(properties);
+      const propBy = new Map<number, { propertyType: string | null; city: string | null }>();
+      for (const p of props) if (p.customerId && !propBy.has(p.customerId)) propBy.set(p.customerId, { propertyType: (p.propertyType as string) ?? null, city: p.city ?? null });
+      const lastCall = await db
+        .select({ customerId: callLogs.customerId, at: sql<Date>`MAX(${callLogs.createdAt})` })
+        .from(callLogs)
+        .where(isNotNull(callLogs.customerId))
+        .groupBy(callLogs.customerId);
+      const callBy = new Map(lastCall.map((c) => [c.customerId, c.at]));
+      const since = new Date(Date.now() - 120 * 864e5);
+      const leads = await db
+        .select({
+          id: leadCaptures.id,
+          name: leadCaptures.name,
+          firstName: leadCaptures.firstName,
+          lastName: leadCaptures.lastName,
+          email: leadCaptures.email,
+          phone: leadCaptures.phone,
+          status: leadCaptures.status,
+          channel: leadCaptures.channel,
+          captureType: leadCaptures.captureType,
+          message: leadCaptures.message,
+          customerId: leadCaptures.customerId,
+          assignedTo: leadCaptures.assignedTo,
+          createdAt: leadCaptures.createdAt,
+        })
+        .from(leadCaptures)
+        .where(gte(leadCaptures.createdAt, since))
+        .orderBy(desc(leadCaptures.createdAt));
+      res.json({
+        customers: custRows.map((c) => ({
+          ...c,
+          notes: (c.notes ?? "").slice(0, 400),
+          dnc: /do\s*not\s*(call|contact)/i.test(c.notes ?? ""),
+          propertyType: propBy.get(c.id)?.propertyType ?? null,
+          city: propBy.get(c.id)?.city ?? null,
+          lastCallAt: callBy.get(c.id) ?? null,
+        })),
+        leads: leads.map((l) => ({ ...l, message: (l.message ?? "").slice(0, 300) })),
+      });
+    } catch (err) {
+      console.error("[TeamHubContacts]", err instanceof Error ? err.message : err);
       res.status(500).json({ error: "failed" });
     }
   });
