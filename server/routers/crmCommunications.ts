@@ -447,8 +447,8 @@ export const crmCommunicationsRouter = router({
       const scope = await salesScopeFor(ctx.user);
       const scoped = scope
         ? or(
-            scope.customers.size ? inArray(crmExternalContacts.customerId, [...scope.customers]) : sql`FALSE`,
-            scope.leads.size ? inArray(crmExternalContacts.leadCaptureId, [...scope.leads]) : sql`FALSE`,
+            scope.customers.size ? inArray(crmExternalContacts.customerId, Array.from(scope.customers)) : sql`FALSE`,
+            scope.leads.size ? inArray(crmExternalContacts.leadCaptureId, Array.from(scope.leads)) : sql`FALSE`,
           )
         : undefined;
       const db = await dbOrThrow();

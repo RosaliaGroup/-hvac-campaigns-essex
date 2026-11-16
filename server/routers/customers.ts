@@ -408,7 +408,7 @@ export const customersRouter = router({
       const scope = await salesScopeFor(ctx.user);
       if (scope) {
         if (scope.customers.size === 0) return { items: [], total: 0 };
-        conditions.push(inArray(customers.id, [...scope.customers]));
+        conditions.push(inArray(customers.id, Array.from(scope.customers)));
       }
       if (input.search?.trim()) {
         const q = `%${input.search.trim()}%`;
