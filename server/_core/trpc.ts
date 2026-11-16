@@ -2,7 +2,7 @@ import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
-import { isSalesAllowedProcedure, isSalesUser } from "@shared/salesAccess";
+import { SALES_OWNED_TARGETS, isSalesAllowedProcedure, isSalesUser } from "@shared/salesAccess";
 import { isMarketingAllowedProcedure, isMarketingUser } from "@shared/marketingAccess";
 
 const t = initTRPC.context<TrpcContext>().create({
@@ -90,6 +90,17 @@ export const restrictSalesToAllowlist = t.middleware(async opts => {
       code: "FORBIDDEN",
       message: "Sales access covers leads, contacts, appointments and calls only.",
     });
+  }
+  // A setter only sees the contacts and leads assigned to her (Daily Hub batch).
+  const owned = isSalesUser(ctx.user) ? SALES_OWNED_TARGETS[path] : undefined;
+  if (owned) {
+    const target = owned(await opts.getRawInput().catch(() => null));
+    if (target) {
+      const { salesScopeFor, inScope } = await import("../services/salesScope");
+      if (!inScope(await salesScopeFor(ctx.user), target.type, target.id)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "This contact isn't in your list. Work from My contacts in the Daily Hub." });
+      }
+    }
   }
   return next();
 });

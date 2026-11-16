@@ -23,6 +23,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { getDb } from "../db";
 import { isSalesUser } from "@shared/salesAccess";
 import { assignedIdsForEmail } from "./teamHub";
+import { salesScopeFor } from "../services/salesScope";
 import {
   getContactTimeline,
   logCommunication,
@@ -219,7 +220,7 @@ export const crmCommunicationsRouter = router({
     }),
   leadOptions: protectedProcedure
     .input(z.object({ search: z.string().max(255).optional() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await dbOrThrow();
       const term = `%${input.search ?? ""}%`;
       const [manual, captures] = await Promise.all([
@@ -244,6 +245,12 @@ export const crmCommunicationsRouter = router({
           .orderBy(desc(leadCaptures.createdAt))
           .limit(100),
       ]);
+      // Setters pick only from the leads assigned to them.
+      const scope = await salesScopeFor(ctx.user);
+      if (scope) {
+        manual.length = 0;
+        captures.splice(0, captures.length, ...captures.filter(c => scope.leads.has(c.id)));
+      }
       return [
         ...manual.map(l => ({
           id: l.id,
@@ -435,7 +442,15 @@ export const crmCommunicationsRouter = router({
     .mutation(({input})=>createSelectedContact(input,input.from)),
   contacts: protectedProcedure
     .input(z.object({ search: z.string().max(255).optional() }))
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
+      // Setters see only contacts linked to a customer or lead assigned to them.
+      const scope = await salesScopeFor(ctx.user);
+      const scoped = scope
+        ? or(
+            scope.customers.size ? inArray(crmExternalContacts.customerId, Array.from(scope.customers)) : sql`FALSE`,
+            scope.leads.size ? inArray(crmExternalContacts.leadCaptureId, Array.from(scope.leads)) : sql`FALSE`,
+          )
+        : undefined;
       const db = await dbOrThrow();
       const term = `%${input.search ?? ""}%`;
       return db
@@ -443,6 +458,7 @@ export const crmCommunicationsRouter = router({
         .from(crmExternalContacts)
         .where(
           and(
+            scoped,
             // Only TASK-generated, explicitly selected Gmail, or manual
             // contacts belong in Contacts. Never promote generic Gmail sync.
             sql`(

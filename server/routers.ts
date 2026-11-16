@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { salesScopeFor } from "./services/salesScope";
 import { callsRouter } from "./routers/calls";
 import { teamHubRouter } from "./routers/teamHub";
 import { isSalesUser, redactLeadCaptureForSales } from "@shared/salesAccess";
@@ -598,7 +599,14 @@ export const appRouter = router({
         })
       )
       .query(async ({ input, ctx }) => {
-        const leads = (await db.getAllLeadCaptures(input)).map((l: any) =>
+        // Setters see only the leads assigned to them (Daily Hub batch).
+        const scope = await salesScopeFor(ctx.user);
+        const fetched = scope
+          ? (await db.getAllLeadCaptures({ ...input, limit: 5000, offset: 0 }))
+              .filter((l: any) => scope.leads.has(Number(l.id)))
+              .slice(input.offset ?? 0, (input.offset ?? 0) + (input.limit ?? 100))
+          : await db.getAllLeadCaptures(input);
+        const leads = fetched.map((l: any) =>
           isSalesUser(ctx.user) ? redactLeadCaptureForSales(l) : l,
         );
         // Attach the SAME server-derived relationship the Contacts list uses,

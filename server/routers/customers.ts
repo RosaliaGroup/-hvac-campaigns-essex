@@ -4,6 +4,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { getDb } from "../db";
+import { inScope, salesScopeFor } from "../services/salesScope";
 import { toPatch } from "../_core/zodPatch";
 import {
   customers,
@@ -399,11 +400,16 @@ export const customersRouter = router({
         })
         .default({ limit: 50, offset: 0, sort: "newest", completedOnly: false })
     )
-    .query(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       const db = await getDb();
       if (!db) return { items: [], total: 0 };
 
       const conditions = [];
+      const scope = await salesScopeFor(ctx.user);
+      if (scope) {
+        if (scope.customers.size === 0) return { items: [], total: 0 };
+        conditions.push(inArray(customers.id, Array.from(scope.customers)));
+      }
       if (input.search?.trim()) {
         const q = `%${input.search.trim()}%`;
         conditions.push(
@@ -583,7 +589,7 @@ export const customersRouter = router({
         })
         .default({ q: "", limit: 10 })
     )
-    .query(async ({ input }): Promise<{ results: SchedulingResult[] }> => {
+    .query(async ({ input, ctx }): Promise<{ results: SchedulingResult[] }> => {
       const db = await getDb();
       if (!db) return { results: [] };
       const q = input.q.trim();
@@ -749,7 +755,8 @@ export const customersRouter = router({
           ),
       ].slice(0, input.limit);
 
-      return { results };
+      const scope = await salesScopeFor(ctx.user);
+      return { results: scope ? results.filter((x) => inScope(scope, x.kind, x.refId)) : results };
     }),
 
   /** Properties for a single customer, with formatted address — powers the dialog property picker. */
