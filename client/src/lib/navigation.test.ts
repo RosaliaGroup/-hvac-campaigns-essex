@@ -334,7 +334,6 @@ describe("getVisibleDepartments", () => {
       "SEO Intelligence",
       "Market Intel",
       "Revenue Attribution",
-      "SMS Campaigns",
       "Campaign Performance",
       "Google Ads",
       "Facebook/Instagram",

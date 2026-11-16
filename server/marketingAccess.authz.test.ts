@@ -84,7 +84,7 @@ describe("marketing role — server allowlist", () => {
 
   it("lets marketing reach its pages (no FORBIDDEN from the guard)", async () => {
     const mk = createCaller(ctxFor("marketing"));
-    for (const path of ["seo.getOverview", "aiVa.listSocialPosts", "smsCampaigns.listContacts", "attribution.getOverview", "teamHub.assignment"]) {
+    for (const path of ["seo.getOverview", "aiVa.listSocialPosts", "attribution.getOverview", "teamHub.assignment"]) {
       expect(await codeOf(call(mk, path)), path).not.toBe("FORBIDDEN");
     }
   });
@@ -95,8 +95,8 @@ describe("marketing role — server allowlist", () => {
   });
 
   it("limits marketing to the Marketing screens and the Daily Hub", () => {
-    for (const ok of ["/team-hub", "/marketing-dashboard", "/seo-intelligence?tab=x", "/sms-campaigns", "/facebook-campaigns"]) expect(isMarketingRoute(ok), ok).toBe(true);
-    for (const no of ["/command-center", "/lead-dashboard", "/customers", "/calendar", "/opportunities", "/analytics", "/team-management"]) {
+    for (const ok of ["/team-hub", "/marketing-dashboard", "/seo-intelligence?tab=x", "/facebook-campaigns"]) expect(isMarketingRoute(ok), ok).toBe(true);
+    for (const no of ["/sms-campaigns", "/command-center", "/lead-dashboard", "/customers", "/calendar", "/opportunities", "/analytics", "/team-management"]) {
       expect(isMarketingRoute(no), no).toBe(false);
     }
   });
@@ -130,7 +130,7 @@ describe("marketing-only viewer (no role change, env MARKETING_ONLY_EMAILS)", ()
 
   it("stays read-only: allowlisted mutations are still refused", async () => {
     const mk = viewerMk();
-    for (const path of ["smsCampaigns.sendBulk", "aiVa.schedulePost", "marketIntel.runNow", "seo.setStatus"]) {
+    for (const path of ["smsCampaigns.sendBulk", "smsCampaigns.listContacts", "smsCampaigns.getConversations", "conversationCrm.context", "aiVa.schedulePost", "marketIntel.runNow", "seo.setStatus"]) {
       expect(await codeOf(call(mk, path)), path).toBe("FORBIDDEN");
     }
   });
