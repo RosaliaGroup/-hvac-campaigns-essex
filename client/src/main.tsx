@@ -3,6 +3,7 @@ import { trpc } from "@/lib/trpc";
 import { UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
+import { toast } from "sonner";
 import { getViewAs } from "./lib/viewAs";
 import { createRoot, hydrateRoot } from "react-dom/client";
 import superjson from "superjson";
@@ -36,6 +37,9 @@ queryClient.getMutationCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.mutation.state.error;
     redirectToLoginIfUnauthorized(error);
+    if (error instanceof TRPCClientError && /read-only|requires member access|Marketing access covers/i.test(error.message)) {
+      toast.error("View only: changes are turned off for your login.");
+    }
     console.error("[API Mutation Error]", error);
   }
 });
