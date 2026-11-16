@@ -112,8 +112,21 @@ export default function Communications() {
     setCardName(card.data?.name ?? "");
     setCardPhone(card.data?.phone ?? "");
   }, [card.data]);
+  // A ?compose=sms|newEmail link (Text / Email buttons on a lead or contact)
+  // opens the composer once, after the contact has loaded.
+  const pendingCompose = useRef<"sms" | "newEmail" | null>(
+    (() => {
+      const c = new URLSearchParams(window.location.search).get("compose");
+      return c === "sms" || c === "newEmail" ? c : null;
+    })()
+  );
   useEffect(() => {
-    setCompose(null);
+    if (contactId !== null && pendingCompose.current) {
+      setCompose(pendingCompose.current);
+      pendingCompose.current = null;
+    } else {
+      setCompose(null);
+    }
     setDraft("");
   }, [contactId, messageId]);
   const saveCard = trpc.crmCommunications.saveContactCard.useMutation({
@@ -412,8 +425,23 @@ export default function Communications() {
       )}
       <div className="grid min-w-0 md:h-[calc(100dvh-240px)] md:min-h-[420px] md:grid-cols-[280px_minmax(0,1fr)] gap-4">
         <aside className="min-w-0 md:h-full md:overflow-y-auto pr-1">
+          {contactId !== null ? (
+            <button
+              type="button"
+              onClick={() => {
+                setContactId(null);
+                setFolder("all");
+                setMessageId(null);
+                setCompose(null);
+                try { window.history.replaceState(null, "", "/contacts/communications"); } catch { /* ignore */ }
+              }}
+              className="flex items-center gap-2 rounded-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+            >
+              <ArrowLeft className="h-4 w-4" /> All communications
+            </button>
+          ) : (
           <nav aria-label="Communication folders" className="space-y-1 mb-6">
-            {folders.map(item => (
+            {folders.filter(item => !(isSales && item.id === "sms")).map(item => (
               <button
                 key={item.id}
                 onClick={() => {
@@ -432,6 +460,7 @@ export default function Communications() {
               </button>
             ))}
           </nav>
+          )}
 
           {contactId !== null && (
             <section
@@ -512,7 +541,7 @@ export default function Communications() {
             </section>
           )}
 
-          {contactId !== null && (
+          {contactId !== null && !isSales && (
             <div className="mt-4">
               <ContactProfilePanel
                 key={contactId}
