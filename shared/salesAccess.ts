@@ -88,6 +88,7 @@ export const SALES_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   "crmCommunications.sendText",
   // Team Hub inside the CRM (tasks, clock, reports)
   "teamHub.link",
+  "teamHub.assignment",
 ]);
 
 export function isSalesAllowedProcedure(path: string): boolean {
