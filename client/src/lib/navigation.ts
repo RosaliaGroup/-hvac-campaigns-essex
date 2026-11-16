@@ -242,6 +242,8 @@ export const INTERNAL_ROUTE_PREFIXES: string[] = [
   "/ai-script-manager",
   "/admin",
   "/team-management",
+  "/team-hub",
+  "/call-qc",
   "/assessment-submissions",
   "/analytics",
   "/takeoff-ai",
