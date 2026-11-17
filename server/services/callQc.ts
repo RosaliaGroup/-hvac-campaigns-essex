@@ -181,7 +181,14 @@ export async function attachPendingRecordings(): Promise<number> {
 export async function transcribeRecording(downloadUrl: string): Promise<string> {
   const form = new FormData();
   form.append("model", process.env.CALL_QC_TRANSCRIBE_MODEL?.trim() || "deepgram/nova-3");
-  form.append("file_url", downloadUrl);
+  // Upload the audio itself: Telnyx rejects the recording's download link
+  // ("file_url content-length not found"), since that link has no size header.
+  const audio = await fetch(downloadUrl, { signal: AbortSignal.timeout(60_000) });
+  if (!audio.ok) throw new Error(`Recording download failed (${audio.status})`);
+  const buf = await audio.arrayBuffer();
+  if (buf.byteLength < 1000) throw new Error("Recording file is empty");
+  const isWav = /\.wav(\?|$)/i.test(downloadUrl) || (audio.headers.get("content-type") ?? "").includes("wav");
+  form.append("file", new Blob([buf], { type: isWav ? "audio/wav" : "audio/mpeg" }), isWav ? "call.wav" : "call.mp3");
   form.append("response_format", "verbose_json");
   form.append("model_config", JSON.stringify({ multichannel: true, utterances: true, smart_format: true, punctuate: true }));
   const res = await fetch(`${TELNYX_API}/ai/audio/transcriptions`, {
@@ -307,7 +314,8 @@ async function callsNeedingQc(): Promise<number[]> {
         like(callLogs.recordingUrl, `${RECORDING_PREFIX}%`),
         sql`${callLogs.agentTeamMemberId} IS NOT NULL`,
         gte(callLogs.createdAt, since),
-        sql`(${callQcReviews.id} IS NULL OR (${callQcReviews.status} = 'pending' AND ${callQcReviews.attempts} < ${MAX_ATTEMPTS}))`,
+        // Calls that failed only because of the old file_url upload get one more try.
+        sql`(${callQcReviews.id} IS NULL OR (${callQcReviews.status} = 'pending' AND ${callQcReviews.attempts} < ${MAX_ATTEMPTS}) OR (${callQcReviews.status} = 'failed' AND ${callQcReviews.error} LIKE '%content-length not found%'))`,
       ),
     )
     .orderBy(callLogs.createdAt)
