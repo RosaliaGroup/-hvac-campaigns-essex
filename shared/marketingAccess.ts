@@ -28,6 +28,7 @@ export const MARKETING_ALLOWED_PROCEDURES: ReadonlySet<string> = new Set([
   // Team Hub inside the CRM (tasks, clock, reports)
   "teamHub.link",
   "teamHub.assignment",
+  "teamHub.ping",
 
   // Marketing Dashboard (social posts)
   "aiVa.listSocialPosts",

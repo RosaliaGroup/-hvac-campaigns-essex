@@ -41,6 +41,7 @@ import {
 import { Bell, ChevronRight, ClipboardCheck, Inbox, LayoutDashboard, LineChart, ListTodo, LogOut, Mail, Megaphone, Menu, UserRound } from "lucide-react";
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useHideActionsForViewers } from "./ViewOnlyActions";
+import { useActivityPing } from "@/hooks/useActivityPing";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
@@ -248,6 +249,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   // Read-only users: hide controls that would try to change something.
   const mainRef = useRef<HTMLElement>(null);
   useHideActionsForViewers(mainRef, user?.teamRole === "viewer");
+  // Team members (not the owner): record real activity for the clock-out proof-of-work email.
+  useActivityPing(!!user && user.role !== "admin" && ["sales", "marketing", "viewer"].includes(String(user.teamRole)), location);
   const departments = useMemo(() => getVisibleDepartments(role), [role]);
   const activeItemKey = useMemo(
     () => getActiveItemKey(departments, location),

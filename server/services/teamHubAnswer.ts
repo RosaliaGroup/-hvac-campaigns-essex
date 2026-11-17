@@ -59,6 +59,21 @@ export function parseAnswer(text: string | undefined): { confident: boolean; ans
 }
 
 export function registerTeamHubAnswerRoute(app: Express) {
+  // Clock-in / clock-out emails to the owner (built by the Daily Hub).
+  app.post("/api/team-hub/notify", async (req: Request, res: Response) => {
+    if (!secretOk(req)) return res.status(401).json({ error: "unauthorized" });
+    const subject = String(req.body?.subject ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, 150);
+    const html = String(req.body?.html ?? "").slice(0, 60_000);
+    if (!subject || !html) return res.status(400).json({ error: "subject and html required" });
+    try {
+      const sent = await sendEmail({ to: "sales@mechanicalenterprise.com", subject, html });
+      return sent ? res.json({ ok: true }) : res.status(502).json({ error: "send failed" });
+    } catch (e) {
+      console.warn("[teamHub] notify failed", e);
+      return res.status(502).json({ error: "send failed" });
+    }
+  });
+
   app.post("/api/team-hub/answer", async (req: Request, res: Response) => {
     if (!secretOk(req)) return res.status(401).json({ error: "unauthorized" });
     const question = String(req.body?.question ?? "").trim().slice(0, 2000);
