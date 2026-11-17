@@ -17,4 +17,8 @@ describe("parseAnswer", () => {
     expect(parseAnswer('{"confident": false, "answer": "", "clarify": "Which pages?"}')).toEqual({ confident: false, answer: "", clarify: "Which pages?" });
     expect(parseAnswer('{"confident": true, "answer": "Do X.", "clarify": "Which?"}').clarify).toBe("");
   });
+  it("marks chat messages that need no reply", () => {
+    expect(parseAnswer('{"confident": false, "answer": "", "clarify": "", "no_reply": true}').noReply).toBe(true);
+    expect(parseAnswer('{"confident": true, "answer": "Do X.", "no_reply": true}').noReply).toBeUndefined();
+  });
 });
