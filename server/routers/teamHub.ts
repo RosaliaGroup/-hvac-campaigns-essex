@@ -44,6 +44,8 @@ export async function assignedIdsForEmail(emailRaw: string): Promise<{ customers
   return entry;
 }
 
+const lastPing = new Map<string, number>();
+
 const target = z.object({ type: z.enum(["customer", "lead"]), id: z.number().int().positive() });
 
 export const teamHubRouter = router({
@@ -69,6 +71,22 @@ export const teamHubRouter = router({
       await hubCall({ action: "assign", crm_type: input.type, crm_id: input.id, person: input.person, what: input.action, label: input.label, phone: input.phone });
       return { ok: true };
     }),
+
+  /**
+   * One "active minute" for the signed-in team member (see useActivityPing).
+   * A query so read-only (viewer) logins can send it too. Owners/admins and
+   * previews are ignored; at most one per member per 50 seconds.
+   */
+  ping: protectedProcedure.input(z.object({ page: z.string().max(80) })).query(async ({ ctx, input }) => {
+    const u = ctx.user as { email?: string; role?: string; preview?: boolean };
+    const email = String(u?.email ?? "").trim().toLowerCase();
+    if (!email || u.preview || u.role === "admin") return { ok: false };
+    const last = lastPing.get(email) ?? 0;
+    if (Date.now() - last < 50_000) return { ok: true };
+    lastPing.set(email, Date.now());
+    await hubCall({ action: "activity", email, source: "crm", page: input.page }).catch(() => null);
+    return { ok: true };
+  }),
 
   link: protectedProcedure.query(async ({ ctx }) => {
     const secret = process.env.TEAM_HUB_SECRET?.trim();
