@@ -8,7 +8,7 @@ import { TelnyxRTC } from "@telnyx/webrtc";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Loader2, Mic, MicOff, PhoneOff, PhoneOutgoing } from "lucide-react";
+import { Grid3x3, Loader2, Mic, MicOff, PhoneOff, PhoneOutgoing } from "lucide-react";
 
 type Phase = "connecting" | "ready" | "dialing" | "ringing" | "active" | "ended" | "error";
 
@@ -49,6 +49,8 @@ export function BrowserDialer({
   const [phase, setPhase] = useState<Phase>("connecting");
   const [error, setError] = useState<string | null>(null);
   const [muted, setMuted] = useState(false);
+  const [showPad, setShowPad] = useState(false);
+  const [sent, setSent] = useState("");
   const [seconds, setSeconds] = useState(0);
   const [callerId, setCallerId] = useState<string | null>(null);
 
@@ -201,6 +203,25 @@ export function BrowserDialer({
     setMuted(!muted);
   }
 
+  // Keypad tones for extensions and phone menus ("press 1 for sales").
+  function sendDigit(d: string) {
+    const c = callRef.current;
+    if (!c || phase !== "active") return;
+    try { c.dtmf?.(d); } catch { /* ignore */ }
+    setSent((v) => (v + d).slice(-20));
+  }
+  useEffect(() => {
+    if (phase !== "active") { setSent(""); return; }
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (/^[0-9*#]$/.test(e.key)) sendDigit(e.key);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
   const inCall = phase === "dialing" || phase === "ringing" || phase === "active";
 
   return (
@@ -242,6 +263,9 @@ export function BrowserDialer({
                   {muted ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
                   {muted ? "Unmute" : "Mute"}
                 </Button>
+                <Button variant="outline" onClick={() => setShowPad((v) => !v)} disabled={phase !== "active"} aria-pressed={showPad}>
+                  <Grid3x3 className="h-4 w-4 mr-1" /> Keypad
+                </Button>
                 <Button variant="destructive" onClick={hangup}>
                   <PhoneOff className="h-4 w-4 mr-1" /> Hang up
                 </Button>
@@ -253,6 +277,19 @@ export function BrowserDialer({
               </Button>
             )}
           </div>
+          {phase === "active" && showPad && (
+            <div className="w-full max-w-[220px]">
+              <div className="h-6 text-center font-mono text-sm tracking-widest" aria-live="polite">{sent}</div>
+              <div className="grid grid-cols-3 gap-2">
+                {["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"].map((d) => (
+                  <Button key={d} type="button" variant="outline" className="h-11 text-lg" onClick={() => sendDigit(d)}>
+                    {d}
+                  </Button>
+                ))}
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center mt-1">For extensions and phone menus. You can also type the numbers on your keyboard.</p>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground text-center">
             Use your headset. The browser will ask for microphone access the first time. After the call, add your notes on the lead.
           </p>
