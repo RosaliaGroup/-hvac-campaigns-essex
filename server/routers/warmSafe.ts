@@ -33,7 +33,15 @@ export const nominationInput = z.object({
   nominatorEmail: z.string().trim().max(254).optional(),
   relationship: z.string().trim().max(200).optional(),
   nomineeFirstName: z.string().trim().max(120).optional(),
+  // Nov 18 (owner): collect what we used to request by text after the fact.
+  // Contact fields are only sent when the nominee knows and agreed to be called.
+  nomineeFullName: z.string().trim().max(200).optional(),
+  nomineeAddress: z.string().trim().max(300).optional(),
   nomineeTown: z.string().trim().min(1).max(120),
+  nomineePhone: z.string().trim().max(40).optional(),
+  nomineeBestTime: z.string().trim().max(120).optional(),
+  nomineeIs65Plus: z.enum(["yes", "no", "unsure"]).optional(),
+  nomineeOwnsHome: z.enum(["yes", "no", "unsure"]).optional(),
   heatingSituation: z.string().trim().min(1).max(4000),
   nomineeKnows: z.boolean(),
   wantsOwnAssessment: z.boolean().optional(),
@@ -46,6 +54,21 @@ export const nominationInput = z.object({
 });
 export type NominationInput = z.infer<typeof nominationInput>;
 
+const ans = (v?: "yes" | "no" | "unsure") => (v === "yes" ? "Yes" : v === "no" ? "No" : v === "unsure" ? "Not sure" : null);
+
+/** Flags the public-terms requirements (65+, owns the home, NJ) that need checking. */
+export function eligibilityNote(n: NominationInput): string {
+  const gaps: string[] = [];
+  if (n.nomineeIs65Plus === "no") gaps.push("nominator says they are under 65");
+  if (n.nomineeOwnsHome === "no") gaps.push("nominator says they don't own the home");
+  if (!n.nomineeIs65Plus || n.nomineeIs65Plus === "unsure") gaps.push("confirm age 65+");
+  if (!n.nomineeOwnsHome || n.nomineeOwnsHome === "unsure") gaps.push("confirm they own the home");
+  if (n.nomineeKnows && !n.nomineePhone) gaps.push("no phone given for them — ask the nominator");
+  if (!n.nomineeAddress) gaps.push("no street address — ask the nominator");
+  if (!gaps.length) return "";
+  return `<p style="margin:10px 0 0;font-size:13px;color:#8a5a00;background:#fff7e6;padding:8px 10px;border-radius:4px">To check: ${esc(gaps.join("; "))}</p>`;
+}
+
 export function nominationEmailHtml(n: NominationInput, when: string): string {
   const row = (k: string, v?: string | null) =>
     v ? `<tr><td style="padding:6px 12px 6px 0;color:#666;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:6px 0">${esc(v)}</td></tr>` : "";
@@ -56,7 +79,8 @@ export function nominationEmailHtml(n: NominationInput, when: string): string {
   </div>
   <div style="background:#f9f9f9;padding:18px 20px;border:1px solid #eee;font-size:14px">
     <h2 style="font-size:15px;margin:0 0 6px;color:#1e3a5f">Nominee</h2>
-    <table>${row("First name", n.nomineeFirstName)}${row("Town", n.nomineeTown)}${row("Knows about nomination", n.nomineeKnows ? "Yes" : "NO — get their OK before calling")}</table>
+    <table>${row("Name", n.nomineeFullName || n.nomineeFirstName)}${row("Address", n.nomineeAddress)}${row("Town", n.nomineeTown)}${row("Phone", n.nomineeKnows ? n.nomineePhone : null)}${row("Best time to call", n.nomineeKnows ? n.nomineeBestTime : null)}${row("65 or older", ans(n.nomineeIs65Plus))}${row("Owns the home", ans(n.nomineeOwnsHome))}${row("Knows about nomination", n.nomineeKnows ? "Yes — agreed we can contact them" : "NO — ask the nominator to get their OK before calling")}</table>
+    ${eligibilityNote(n)}
     <h2 style="font-size:15px;margin:16px 0 6px;color:#1e3a5f">Their heating situation</h2>
     <p style="margin:0;white-space:pre-line;background:#fff;border-left:4px solid #ff6b35;padding:10px 12px">${esc(n.heatingSituation)}</p>
     <h2 style="font-size:15px;margin:16px 0 6px;color:#1e3a5f">Nominated by</h2>
@@ -91,6 +115,10 @@ export const warmSafeRouter = router({
       return { success: true };
     }
 
+    if (!input.nomineeKnows) {
+      // Without the nominee's OK we don't keep their phone.
+      input = { ...input, nomineePhone: undefined, nomineeBestTime: undefined };
+    }
     const when = new Date().toLocaleString("en-US", { timeZone: "America/New_York", dateStyle: "full", timeStyle: "short" });
     const emailed = await sendEmail({
       to: INBOX,

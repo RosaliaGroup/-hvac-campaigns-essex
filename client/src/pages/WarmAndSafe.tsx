@@ -44,8 +44,13 @@ export default function WarmAndSafe() {
     nominatorPhone: "",
     nominatorEmail: "",
     relationship: "",
-    nomineeFirstName: "",
+    nomineeFullName: "",
+    nomineeAddress: "",
     nomineeTown: "",
+    nomineePhone: "",
+    nomineeBestTime: "",
+    nomineeIs65Plus: "" as "" | "yes" | "no" | "unsure",
+    nomineeOwnsHome: "" as "" | "yes" | "no" | "unsure",
     heatingSituation: "",
     nomineeKnows: false,
     wantsOwnAssessment: false,
@@ -77,6 +82,12 @@ export default function WarmAndSafe() {
       await nominate.mutateAsync({
         ...form,
         nominatorEmail: form.nominatorEmail || undefined,
+        nomineeFullName: form.nomineeFullName || undefined,
+        nomineeAddress: form.nomineeAddress || undefined,
+        nomineePhone: form.nomineeKnows && form.nomineePhone ? form.nomineePhone : undefined,
+        nomineeBestTime: form.nomineeKnows && form.nomineeBestTime ? form.nomineeBestTime : undefined,
+        nomineeIs65Plus: form.nomineeIs65Plus || undefined,
+        nomineeOwnsHome: form.nomineeOwnsHome || undefined,
         pageUrl: typeof window !== "undefined" ? window.location.href : undefined,
         website: honeypot.website || undefined,
         company_url: honeypot.company_url || undefined,
@@ -299,8 +310,29 @@ export default function WarmAndSafe() {
               <form onSubmit={handleSubmit} className="space-y-3">
                 <HoneypotFields values={honeypot} onChange={setHoneypot} />
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pt-1">About them</p>
-                <Input placeholder="Their first name (optional)" value={form.nomineeFirstName} onChange={set("nomineeFirstName")} />
+                <Input placeholder="Their full name" value={form.nomineeFullName} onChange={set("nomineeFullName")} />
+                <Input autoComplete="off" placeholder="Their street address" value={form.nomineeAddress} onChange={set("nomineeAddress")} />
                 <Input required placeholder="Their town (e.g. Newark)" value={form.nomineeTown} onChange={set("nomineeTown")} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="text-sm text-gray-700">
+                    Are they 65 or older?
+                    <select className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" value={form.nomineeIs65Plus} onChange={(e) => setForm({ ...form, nomineeIs65Plus: e.target.value as typeof form.nomineeIs65Plus })}>
+                      <option value="">Choose…</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                      <option value="unsure">Not sure</option>
+                    </select>
+                  </label>
+                  <label className="text-sm text-gray-700">
+                    Do they own the home?
+                    <select className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" value={form.nomineeOwnsHome} onChange={(e) => setForm({ ...form, nomineeOwnsHome: e.target.value as typeof form.nomineeOwnsHome })}>
+                      <option value="">Choose…</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                      <option value="unsure">Not sure</option>
+                    </select>
+                  </label>
+                </div>
                 <textarea
                   required
                   rows={4}
@@ -311,8 +343,16 @@ export default function WarmAndSafe() {
                 />
                 <label className="flex items-start gap-2 text-sm text-gray-700">
                   <input type="checkbox" className="mt-1" checked={form.nomineeKnows} onChange={(e) => setForm({ ...form, nomineeKnows: e.target.checked })} />
-                  They know I'm nominating them
+                  They know I'm nominating them and it's OK for Mechanical Enterprise to contact them
                 </label>
+                {form.nomineeKnows ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Input type="tel" inputMode="tel" autoComplete="off" placeholder="Their phone" value={form.nomineePhone} onChange={set("nomineePhone")} />
+                    <Input placeholder="Best time to call them" value={form.nomineeBestTime} onChange={set("nomineeBestTime")} />
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500">If they don't know yet, that's fine: we'll call you first, and only contact them once they agree.</p>
+                )}
                 <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 pt-3">About you</p>
                 <Input required autoComplete="name" placeholder="Your name" value={form.nominatorName} onChange={set("nominatorName")} />
                 <Input required type="tel" inputMode="tel" autoComplete="tel" placeholder="Your phone" value={form.nominatorPhone} onChange={set("nominatorPhone")} />
