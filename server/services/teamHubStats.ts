@@ -6,7 +6,7 @@
 import type { Express, Request, Response } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
-import { appointments, callLogs, customers, leadCaptures, properties, smsInboxMessages, teamMembers } from "../../drizzle/schema";
+import { appointments, callLogs, crmCommunications, crmExternalContacts, customers, leadCaptures, properties, smsInboxMessages, teamMembers } from "../../drizzle/schema";
 import { getDb } from "../db";
 
 function secretOk(req: Request): boolean {
@@ -29,6 +29,56 @@ export function nyDayBounds(date: string): [Date, Date] {
 }
 
 export function registerTeamHubStatsRoute(app: Express) {
+  /**
+   * Email outreach report for partner updates (read-only, hub secret).
+   * GET /api/team-hub/email-report?days=60
+   * Outbound email count, and every distinct outside sender who emailed us back, with their contact record.
+   */
+  app.get("/api/team-hub/email-report", async (req: Request, res: Response) => {
+    if (!secretOk(req)) return res.status(401).json({ error: "unauthorized" });
+    const days = Math.min(Math.max(Number(req.query.days ?? 60) || 60, 1), 365);
+    const db = await getDb();
+    if (!db) return res.status(503).json({ error: "db unavailable" });
+    try {
+      const since = new Date(Date.now() - days * 86400 * 1000);
+      const sent = await db
+        .select({ n: sql<number>`COUNT(*)`, people: sql<number>`COUNT(DISTINCT LOWER(${crmCommunications.toAddress}))` })
+        .from(crmCommunications)
+        .where(and(eq(crmCommunications.channel, "email"), eq(crmCommunications.direction, "outbound"), gte(crmCommunications.occurredAt, since)));
+      const inbound = await db
+        .select({
+          from: crmCommunications.fromAddress,
+          subject: crmCommunications.subject,
+          body: crmCommunications.body,
+          at: crmCommunications.occurredAt,
+          contactId: crmCommunications.externalContactId,
+          name: crmExternalContacts.name,
+          company: crmExternalContacts.company,
+          title: crmExternalContacts.title,
+          source: crmExternalContacts.source,
+        })
+        .from(crmCommunications)
+        .leftJoin(crmExternalContacts, eq(crmExternalContacts.id, crmCommunications.externalContactId))
+        .where(and(eq(crmCommunications.channel, "email"), eq(crmCommunications.direction, "inbound"), gte(crmCommunications.occurredAt, since)))
+        .orderBy(desc(crmCommunications.occurredAt))
+        .limit(2000);
+      const skip = /(mechanicalenterprise\.com|rosaliagroup\.com|abrevo\.co|no-?reply|mailer-daemon|postmaster|notifications?@|google\.com|facebookmail|meta\.com|thumbtack|quickbooks|intuit|stripe|telnyx|railway|github)/i;
+      const seen = new Map<string, unknown>();
+      for (const r of inbound) {
+        const addr = String(r.from ?? "").toLowerCase().replace(/.*</, "").replace(/>.*/, "").trim();
+        if (!addr || skip.test(addr) || seen.has(addr)) continue;
+        seen.set(addr, {
+          email: addr, name: r.name ?? null, company: r.company ?? null, title: r.title ?? null, source: r.source ?? null,
+          subject: r.subject ?? null, preview: String(r.body ?? "").replace(/\s+/g, " ").slice(0, 240), at: r.at, linked: !!r.contactId,
+        });
+      }
+      res.json({ days, sentEmails: Number(sent[0]?.n ?? 0), sentPeople: Number(sent[0]?.people ?? 0), replies: [...seen.values()] });
+    } catch (err) {
+      console.error("[TeamHubEmailReport]", err instanceof Error ? err.message : err);
+      res.status(500).json({ error: "failed" });
+    }
+  });
+
   app.get("/api/team-hub/stats", async (req: Request, res: Response) => {
     if (!secretOk(req)) return res.status(401).json({ error: "unauthorized" });
     const email = String(req.query.email ?? "").trim().toLowerCase();
