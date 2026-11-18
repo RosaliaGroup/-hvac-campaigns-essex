@@ -11,6 +11,7 @@ Allow: /rebate-calculator
 Disallow: /m/
 Disallow: /m/create-account
 Disallow: /api/
+Disallow: /sp-k7w3/
 Disallow: /admin
 Disallow: /command-center
 Disallow: /marketing-dashboard
