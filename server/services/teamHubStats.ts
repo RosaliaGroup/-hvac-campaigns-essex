@@ -72,7 +72,7 @@ export function registerTeamHubStatsRoute(app: Express) {
           subject: r.subject ?? null, preview: String(r.body ?? "").replace(/\s+/g, " ").slice(0, 240), at: r.at, linked: !!r.contactId,
         });
       }
-      res.json({ days, sentEmails: Number(sent[0]?.n ?? 0), sentPeople: Number(sent[0]?.people ?? 0), replies: [...seen.values()] });
+      res.json({ days, sentEmails: Number(sent[0]?.n ?? 0), sentPeople: Number(sent[0]?.people ?? 0), replies: Array.from(seen.values()) });
     } catch (err) {
       console.error("[TeamHubEmailReport]", err instanceof Error ? err.message : err);
       res.status(500).json({ error: "failed" });
