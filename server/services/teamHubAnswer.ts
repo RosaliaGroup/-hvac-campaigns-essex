@@ -94,6 +94,25 @@ export function parseAnswer(text: string | undefined): { confident: boolean; ans
   }
 }
 
+
+const ROLEPLAY_SCENARIOS: Record<string, string> = {
+  pm: `You are Linda Torres, property manager for 3 garden-style apartment buildings in Bloomfield, NJ (48 units total). The buildings have gas boilers about 20 years old; tenants complained about heat last winter and you had two emergency repair calls. You already use a small local HVAC contractor for repairs. Big spending decisions need the building owner, Mr. Feld. You are busy and a little guarded, but fair. If the rep is professional, asks good questions and makes it easy, you agree to a walkthrough.
+Objections to raise naturally, roughly in this order and only one per reply: (1) "I'm busy, what is this about?" (2) "We already have an HVAC guy." (3) "Can you just send me a price?" (4) "I'd have to run it by the owner." Only after they handle these well, ask "OK, when could someone come look?"
+If the rep quotes a price or a number, push on it ("So it's that much?") and become more skeptical. If they badmouth your current contractor, get colder. If they ask good discovery questions (number of buildings, units, equipment type, age, problems, who decides, timeline), answer them with the facts above.`,
+  owner: `You are Raj Patel, owner of a 2-story office building in Kearny, NJ with 3 rooftop units about 18 years old. One unit shut off twice on hot days last summer. You worry about cost and disruption to tenants, and you decide together with your business partner. You are friendly but short on time.
+Objections, one per reply: (1) "How did you get my number?" (2) "Is it going to cost me a fortune?" (3) "Can't you just repair them?" (4) "My partner has to agree." Only after they handle these well, ask when someone can come look.`,
+};
+const ROLEPLAY_RULES = `
+This is a sales training role-play for an appointment setter at Mechanical Enterprise, a licensed HVAC contractor in Newark, NJ that sells replacements, new installations and maintenance contracts. You play ONLY the prospect, on a phone call. Rules:
+- Reply in 1 to 3 short spoken sentences, like a real person on the phone. No narration, no stage directions, no lists.
+- Stay in character. Never coach, never mention that this is a role-play or that you are an AI.
+- Raise the objections as described, one at a time, and react realistically to what the rep actually says.
+- When the rep has booked a specific day and time with you and confirmed it, say a short goodbye and end your message with [CALL ENDED].
+- If the rep is rude, pushy, or keeps quoting prices, end the call politely and end your message with [CALL ENDED].`;
+const ROLEPLAY_GRADER = `You are a sales coach scoring an appointment-setter's practice call for Mechanical Enterprise (HVAC replacements, installs and maintenance contracts in New Jersey). The rep must NOT quote prices or diagnose equipment; the walkthrough or assessment produces the proposal.
+Score 0-10 on each: opening (name, company, reason within 15 seconds), discovery (buildings/units, equipment, age, problems, decision maker, timeline), objections (handled each one calmly, no criticizing other contractors), rules (no prices, no diagnoses, no promises), booking (specific day and time from two options, repeated back, email confirmation offered, decision maker included), language (clear, professional English).
+Reply with ONLY JSON: {"scores":{"opening":n,"discovery":n,"objections":n,"rules":n,"booking":n,"language":n},"total":n,"strengths":["..."],"improve":["..."],"booked":true|false}. total is the sum (max 60). Give 2-3 strengths and 2-3 specific improvements, each one short sentence quoting or pointing to what the rep said.`;
+
 export function registerTeamHubAnswerRoute(app: Express) {
   // Clock-in / clock-out emails to the owner (built by the Daily Hub).
   app.post("/api/team-hub/notify", async (req: Request, res: Response) => {
@@ -143,4 +162,50 @@ export function registerTeamHubAnswerRoute(app: Express) {
     if (!out.confident) return giveUp(out.clarify, chat && out.noReply);
     return res.json(out);
   });
+  /**
+   * Practice call with an AI prospect.
+   * POST /api/team-hub/roleplay  { name, scenario: "pm"|"owner", history: [{role:"rep"|"prospect", text}], finish? }
+   * Returns { reply, ended } or, with finish, { scorecard } and emails the owner the transcript and score.
+   */
+  app.post("/api/team-hub/roleplay", async (req: Request, res: Response) => {
+    if (!secretOk(req)) return res.status(401).json({ error: "unauthorized" });
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: "unavailable" });
+    const scenarioId = req.body?.scenario === "owner" ? "owner" : "pm";
+    const name = String(req.body?.name ?? "A setter").slice(0, 80);
+    const hist = (Array.isArray(req.body?.history) ? req.body.history : []).slice(-40)
+      .map((m: any) => ({ role: m?.role === "prospect" ? "prospect" : "rep", text: String(m?.text ?? "").slice(0, 1200) }))
+      .filter((m: any) => m.text.trim());
+    const transcript = hist.map((m: any) => `${m.role === "rep" ? name : "Prospect"}: ${m.text}`).join("\n");
+    if (req.body?.finish === true) {
+      if (hist.filter((m: any) => m.role === "rep").length < 2) return res.status(400).json({ error: "too short" });
+      const r = await callAnthropicModelChain({ apiKey, models: ["claude-sonnet-5", "claude-haiku-4-5"], system: ROLEPLAY_GRADER,
+        messages: [{ role: "user", content: `Transcript:\n${transcript}` }], maxTokens: 700 });
+      if (!r.ok) return res.status(502).json({ error: "grading failed" });
+      let card: any = null;
+      try { card = JSON.parse((r.text ?? "").slice((r.text ?? "").indexOf("{"), (r.text ?? "").lastIndexOf("}") + 1)); } catch { /* keep null */ }
+      if (!card) return res.status(502).json({ error: "grading failed" });
+      const rows = Object.entries(card.scores ?? {}).map(([k, v]) => `<tr><td style="padding:2px 10px 2px 0">${esc(k)}</td><td><b>${esc(String(v))}</b>/10</td></tr>`).join("");
+      await sendEmail({
+        to: "sales@mechanicalenterprise.com",
+        subject: `Role-play: ${name} scored ${card.total}/60${card.booked ? " · booked" : ""}`.slice(0, 150),
+        html: `<p style="font-family:Arial,sans-serif"><b>${esc(name)}</b> finished a practice call with the AI prospect (${scenarioId === "pm" ? "property manager" : "building owner"}).</p>`
+          + `<table style="font-family:Arial,sans-serif;font-size:14px">${rows}</table>`
+          + `<p style="font-family:Arial,sans-serif"><b>Strengths:</b><br>${(card.strengths ?? []).map((x: string) => "• " + esc(x)).join("<br>")}</p>`
+          + `<p style="font-family:Arial,sans-serif"><b>To improve:</b><br>${(card.improve ?? []).map((x: string) => "• " + esc(x)).join("<br>")}</p>`
+          + `<pre style="white-space:pre-wrap;font-family:Arial,sans-serif;font-size:13px;background:#f5f5f5;padding:10px">${esc(transcript)}</pre>`,
+      }).catch((e) => console.warn("[teamHub] roleplay email failed", e));
+      return res.json({ scorecard: card });
+    }
+    const messages = hist.length && hist[0].role === "prospect" ? [{ role: "user", content: "(The phone rings and you answer.)" }] : [];
+    for (const m of hist) messages.push({ role: m.role === "rep" ? "user" : "assistant", content: m.text });
+    if (!messages.length || messages[messages.length - 1].role !== "user") messages.push({ role: "user", content: "(The phone rings and you answer.)" });
+    const r = await callAnthropicModelChain({ apiKey, models: ["claude-sonnet-5", "claude-haiku-4-5"],
+      system: ROLEPLAY_SCENARIOS[scenarioId] + "\n" + ROLEPLAY_RULES, messages, maxTokens: 200 });
+    if (!r.ok) return res.status(502).json({ error: "unavailable" });
+    const text = (r.text ?? "").trim();
+    const ended = text.includes("[CALL ENDED]");
+    return res.json({ reply: text.replace("[CALL ENDED]", "").trim(), ended });
+  });
+
 }
