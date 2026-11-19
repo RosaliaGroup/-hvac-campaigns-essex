@@ -22,6 +22,7 @@ import { startDueReminderSweep } from "../services/dueReminderSweep";
 import { registerClickToCallRoutes } from "../services/clickToCall";
 import { registerTeamHubStatsRoute } from "../services/teamHubStats";
 import { registerTeamHubAnswerRoute } from "../services/teamHubAnswer";
+import { registerTeamHubFollowupRoute } from "../services/teamHubFollowup";
 import { startCallQcSweep } from "../services/callQc";
 import { registerSmsWebhookRoutes, assertWebhookSecurityOrExit } from "../services/smsWebhook";
 import { registerHvacHomeownerImportRoute } from "../services/hvacHomeownerImportRoute";
@@ -88,6 +89,7 @@ async function startServer() {
   registerClickToCallRoutes(app);
   registerTeamHubStatsRoute(app);
   registerTeamHubAnswerRoute(app);
+  registerTeamHubFollowupRoute(app);
   // Temporary token-gated, outbound-disabled purchased-homeowner import.
   registerHvacHomeownerImportRoute(app);
   // Public, token-verified unsubscribe for the homeowner email campaign (link + one-click POST).
