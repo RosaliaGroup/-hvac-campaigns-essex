@@ -17,13 +17,8 @@ import { callAnthropicModelChain } from "../_core/anthropic";
 import { upsertExternalContact } from "./crmCommunications";
 import { composeGmail } from "./gmailCompose";
 
-export const OWNER_SIGNATURE = [
-  "Ana Haynes",
-  "Mechanical Enterprise",
-  "(862) 419-1763",
-  "sales@mechanicalenterprise.com",
-  "mechanicalenterprise.com",
-].join("\n");
+// The signature is the sales@ mailbox's own Gmail signature (Ana's full signature),
+// added by composeGmail with her personal cell replaced by the business line.
 
 const SENDABLE = ["no_answer", "voicemail", "conversation", "follow_up", "visit_booked"];
 
@@ -99,7 +94,7 @@ export function registerTeamHubFollowupRoute(app: Express) {
     if (/\$\s?\d/.test(body)) return res.status(422).json({ error: "Draft mentioned a price; not sent." });
 
     try {
-      await composeGmail({ externalContactId: contactId, subject, body: `${body}\n\n${OWNER_SIGNATURE}`, action: "send", senderEmail: null });
+      await composeGmail({ externalContactId: contactId, subject, body, action: "send", senderEmail: null, withMailboxSignature: true });
       return res.json({ ok: true, sent: true, subject });
     } catch (e) {
       console.warn("[teamHub] follow-up email failed", e);

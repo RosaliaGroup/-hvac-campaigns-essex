@@ -34,6 +34,36 @@ export function composeMime(
     ].join("\r\n")
   ).toString("base64url");
 }
+/** Owner's personal cell must never reach prospects; signatures use the business line. */
+const OWNER_CELL = /\+?1?[\s.-]*\(?201\)?[\s.-]*449[\s.-]*6850/g;
+export function cleanSignatureHtml(html: string) {
+  return html
+    .replace(/tel:\+?1?[\s.-]*\(?201\)?[\s.-]*449[\s.-]*6850/g, "tel:+18624191763")
+    .replace(OWNER_CELL, "(862) 419-1763");
+}
+const escHtml = (v: string) => v.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+export function htmlToText(html: string) {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n").replace(/<\/(div|p|tr|li|h\d)>/gi, "\n")
+    .replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+/** multipart/alternative: plain text body + HTML body with the signature. */
+export function composeMimeWithSignature(to: string, subject: string, body: string, signatureHtml: string, from: string = CRM_MAILBOX) {
+  if (!/^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/.test(to) || /[\r\n]/.test(subject) || /[\r\n]/.test(from))
+    throw new Error("Invalid email headers");
+  const b64 = (v: string) => Buffer.from(v).toString("base64").match(/.{1,76}/g)?.join("\r\n") ?? "";
+  const boundary = "me_" + Math.random().toString(36).slice(2);
+  const text = `${body}\n\n${htmlToText(signatureHtml)}`;
+  const html = `<div>${escHtml(body).split(/\n{2,}/).map((p) => `<p style="margin:0 0 12px">${p.replace(/\n/g, "<br>")}</p>`).join("")}</div><br><div class="gmail_signature">${signatureHtml}</div>`;
+  return Buffer.from([
+    `From: ${from}`, `To: ${to}`, `Subject: =?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`, "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`, "",
+    `--${boundary}`, "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64(text),
+    `--${boundary}`, "Content-Type: text/html; charset=UTF-8", "Content-Transfer-Encoding: base64", "", b64(html),
+    `--${boundary}--`, "",
+  ].join("\r\n")).toString("base64url");
+}
 export async function composeGmail(
   input: {
     externalContactId: number;
@@ -42,6 +72,8 @@ export async function composeGmail(
     action: "draft" | "send";
     /** Signed-in CRM user; sends as their verified alias when they have one. */
     senderEmail?: string | null;
+    /** Append the CRM mailbox's Gmail signature (HTML), with the owner's cell swapped for the business line. */
+    withMailboxSignature?: boolean;
   },
   fetchImpl: typeof fetch = fetch
 ) {
@@ -89,7 +121,13 @@ export async function composeGmail(
   if (String(profile.emailAddress).toLowerCase() !== CRM_MAILBOX)
     throw new Error(`Connect ${CRM_MAILBOX} before composing email.`);
   const sender = await resolveSender(input.senderEmail, request);
-  const raw = composeMime(to, input.subject, input.body, fromHeader(sender));
+  let raw = composeMime(to, input.subject, input.body, fromHeader(sender));
+  if (input.withMailboxSignature) {
+    const sa = await request(`settings/sendAs/${encodeURIComponent(sender.email)}`).catch(() => null);
+    const sig = typeof sa?.signature === "string" ? sa.signature.trim() : "";
+    if (!sig) throw new Error("No Gmail signature found on the CRM mailbox; not sent.");
+    raw = composeMimeWithSignature(to, input.subject, input.body, cleanSignatureHtml(sig), fromHeader(sender));
+  }
   if (input.action === "draft") {
     const draft = await request("drafts", {
       method: "POST",
