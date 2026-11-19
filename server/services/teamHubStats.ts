@@ -6,7 +6,7 @@
 import type { Express, Request, Response } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { and, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
-import { appointments, callLogs, crmCommunications, crmExternalContacts, customers, leadCaptures, properties, smsInboxMessages, teamMembers } from "../../drizzle/schema";
+import { prospectWorkflowQueue, appointments, callLogs, crmCommunications, crmExternalContacts, customers, leadCaptures, properties, smsInboxMessages, teamMembers } from "../../drizzle/schema";
 import { getDb } from "../db";
 
 function secretOk(req: Request): boolean {
@@ -34,6 +34,20 @@ export function registerTeamHubStatsRoute(app: Express) {
    * GET /api/team-hub/email-report?days=60
    * Outbound email count, and every distinct outside sender who emailed us back, with their contact record.
    */
+  // Read-only: prospects whose email came from Apollo (for credit claims on bounces).
+  app.get("/api/team-hub/apollo-prospects", async (req: Request, res: Response) => {
+    if (!secretOk(req)) return res.status(401).json({ error: "unauthorized" });
+    const db = await getDb();
+    if (!db) return res.status(503).json({ error: "db unavailable" });
+    try {
+      const rows = await db.select({ email: prospectWorkflowQueue.email, company: prospectWorkflowQueue.company, state: prospectWorkflowQueue.state, createdAt: prospectWorkflowQueue.createdAt, lastError: prospectWorkflowQueue.lastError })
+        .from(prospectWorkflowQueue).where(sql`${prospectWorkflowQueue.evidence} LIKE 'Apollo.io verified%'`).orderBy(prospectWorkflowQueue.createdAt).limit(5000);
+      return res.json({ count: rows.length, rows: rows.map((r) => ({ ...r, lastError: r.lastError ? String(r.lastError).slice(0, 120) : null })) });
+    } catch (e) {
+      return res.status(500).json({ error: e instanceof Error ? e.message : "failed" });
+    }
+  });
+
   app.get("/api/team-hub/email-report", async (req: Request, res: Response) => {
     if (!secretOk(req)) return res.status(401).json({ error: "unauthorized" });
     const days = Math.min(Math.max(Number(req.query.days ?? 60) || 60, 1), 365);
