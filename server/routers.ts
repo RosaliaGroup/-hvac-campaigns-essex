@@ -1,4 +1,5 @@
 import { COOKIE_NAME } from "@shared/const";
+import { isInServiceArea, normalizeZip } from "@shared/serviceArea";
 import { salesScopeFor } from "./services/salesScope";
 import { callsRouter } from "./routers/calls";
 import { teamHubRouter } from "./routers/teamHub";
@@ -261,6 +262,9 @@ export const appRouter = router({
           // First-touch marketing attribution: the client sends document.referrer
           // (empty string for a direct visit). UTM/gclid are parsed from pageUrl.
           referrer: z.string().optional(),
+          // First page of the visit (SPA entry URL). Attribution prefers it over
+          // pageUrl so UTM/gclid and the landing path survive in-app navigation.
+          landingUrl: z.string().max(2000).optional(),
           // ── Spam protection (never persisted) ──
           // Honeypots: hidden off-screen inputs a human never fills.
           website: z.string().optional(),
@@ -344,10 +348,12 @@ export const appRouter = router({
         try {
           if (input.pageUrl && /^https?:\/\//i.test(input.pageUrl)) selfHost = new URL(input.pageUrl).host;
         } catch { /* ignore malformed pageUrl */ }
-        const attribution = extractAttribution(input.pageUrl, input.referrer, selfHost);
+        const landingUrl = input.landingUrl && /^https?:\/\//i.test(input.landingUrl) ? input.landingUrl : undefined;
+        const attribution = extractAttribution(landingUrl ?? input.pageUrl, input.referrer, selfHost);
         // Strip attribution-only + spam-protection fields; neither is persisted.
         const {
           referrer: _referrer,
+          landingUrl: _landingUrl,
           website: _website,
           company_url: _companyUrl,
           _ts: _tsField,
@@ -397,7 +403,7 @@ export const appRouter = router({
         contactInfo.push(`Marketing channel: ${attribution.channel ?? "unknown"}`);
         await notifyOwner({
           title: `New Lead Capture: ${input.captureType.replace(/_/g, ' ')}`,
-          content: `A visitor has submitted their contact information:\n\n${contactInfo.join('\n')}\nCapture Type: ${input.captureType}\nPage: ${input.pageUrl || 'Unknown'}\nMessage: ${input.message || 'None'}\n\nLog in to your dashboard to follow up.`,
+          content: `A visitor has submitted their contact information:\n\n${contactInfo.join('\n')}\nCapture Type: ${input.captureType}\nPage: ${input.pageUrl || 'Unknown'}\nLanding page: ${landingUrl || input.pageUrl || 'Unknown'}\nMessage: ${input.message || 'None'}\n\nLog in to your dashboard to follow up.`,
         });
 
         // Send email notifications via Resend
@@ -438,6 +444,11 @@ export const appRouter = router({
             : isPartnership
             ? `New Partnership Inquiry – ${leadName}`
             : `New Quote Request – ${leadName}`;
+          // Any form that sent a ZIP outside the residential service area gets
+          // flagged so sales can triage it at a glance (shared/serviceArea.ts).
+          const leadZip = normalizeZip(msgFields["ZIP"] ?? msgFields["Zip"] ?? msgFields["ZIP Code"]);
+          const outOfArea = leadZip !== null && !isInServiceArea(leadZip);
+          const salesSubjectFinal = outOfArea ? `[Out of area ${leadZip}] ${salesSubject}` : salesSubject;
           const salesHeading = isChecklist ? "PSE&G Checklist Download" : isCareer ? "New Job Application" : isPartnership ? "New Partnership Inquiry" : "New Quote Request";
 
           // 1. Client confirmation email (or checklist delivery)
@@ -558,7 +569,7 @@ export const appRouter = router({
               body: JSON.stringify({
                 from: "Mechanical Enterprise <noreply@mechanicalenterprise.com>",
                 to: ["sales@mechanicalenterprise.com"],
-                subject: salesSubject,
+                subject: salesSubjectFinal,
                 html: `
                   <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
                     <h2 style="color:#1e3a5f">${salesHeading}</h2>
@@ -571,6 +582,7 @@ export const appRouter = router({
                     ${detailsHtml}
                     <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666;width:40%">Page</td><td style="padding:6px 0">${input.pageUrl ?? "Unknown"}</td></tr>
+                      <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Landing page</td><td style="padding:6px 0">${landingUrl ?? input.pageUrl ?? "Unknown"}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Submitted</td><td style="padding:6px 0">${timestamp}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Source</td><td style="padding:6px 0">${input.captureType.replace(/_/g, " ")}</td></tr>
                       <tr style="border-bottom:1px solid #eee"><td style="padding:6px 0;color:#666">Marketing channel</td><td style="padding:6px 0">${attribution.channel ?? "unknown"}</td></tr>

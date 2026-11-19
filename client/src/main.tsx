@@ -11,6 +11,9 @@ import App from "./App";
 import { getLoginUrl } from "./const";
 import { describeProxyFailure } from "@/lib/proxyResponse";
 import "./index.css";
+import { recordFirstTouch } from "@/lib/captureContext";
+
+recordFirstTouch();
 
 const queryClient = new QueryClient();
 
