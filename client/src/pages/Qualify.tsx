@@ -18,6 +18,7 @@ import HoneypotFields, { type HoneypotValues } from "@/components/HoneypotFields
 import { trackConversion } from "@/lib/conversions";
 import { TcpaDisclosure } from "@/components/TcpaDisclosure";
 import { TCPA_FORM_VERSION } from "@shared/leadFormVersion";
+import { isInServiceArea, normalizeZip, joinName } from "@shared/serviceArea";
 
 type Step = "details" | "book";
 
@@ -48,8 +49,21 @@ export default function Qualify() {
   const [honeypot, setHoneypot] = useState<HoneypotValues>({ website: "", company_url: "" });
   const loadedAt = useRef(Date.now());
 
+  const zipValid = normalizeZip(form.zip) !== null;
+  const zipInArea = isInServiceArea(form.zip);
+  const [outOfArea, setOutOfArea] = useState(false);
+
   const canContinue =
-    form.firstName && form.phone && form.zip && form.homeType && form.currentSystem && form.replacing && form.ownOrRent;
+    form.firstName && form.phone && zipValid && form.homeType && form.currentSystem && form.replacing && form.ownOrRent;
+
+  function handleContinue() {
+    // Owner rule (Nov 10 2026): homeowners within ~30 mi of 07105 only.
+    if (!zipInArea) {
+      setOutOfArea(true);
+      return;
+    }
+    setStep("book");
+  }
 
   const captureLead = trpc.leadCaptures.create.useMutation({
     onSuccess: () => {
@@ -81,12 +95,12 @@ export default function Qualify() {
     setSubmitting(true);
     setSubmitError(false);
     captureLead.mutate({
-      name: `${form.firstName} ${form.lastName}`.trim() || undefined,
+      name: joinName(form.firstName, form.lastName) || undefined,
       email: form.email || undefined,
       phone: form.phone || undefined,
       captureType: "qualify_form",
       ...captureContext(),
-      message: `Service: Free In-Home Assessment\nReplacing: ${form.replacing}\nTiming: ${form.timing || "Not specified"}\nHome Type: ${form.homeType}\nSq Ft: ${form.sqft || "Not specified"}\nCurrent System: ${form.currentSystem}\nOwn/Rent: ${form.ownOrRent}\nZIP: ${form.zip}\nPreferred Date: ${bookingForm.preferredDate || "Not specified"}\nPreferred Time: ${bookingForm.preferredTime || "Not specified"}\nNotes: ${bookingForm.notes || "None"}`,
+      message: `Service: Free In-Home Assessment\nReplacing: ${form.replacing}\nTiming: ${form.timing || "Not specified"}\nHome Type: ${form.homeType}\nSq Ft: ${form.sqft || "Not specified"}\nCurrent System: ${form.currentSystem}\nOwn/Rent: ${form.ownOrRent}\nZIP: ${normalizeZip(form.zip) ?? form.zip}\nPreferred Date: ${bookingForm.preferredDate || "Not specified"}\nPreferred Time: ${bookingForm.preferredTime || "Not specified"}\nNotes: ${bookingForm.notes || "None"}`,
       website: honeypot.website || undefined,
       company_url: honeypot.company_url || undefined,
       _ts: loadedAt.current,
@@ -167,6 +181,7 @@ export default function Qualify() {
                   <Label>First Name *</Label>
                   <Input
                     placeholder="Ana"
+                    autoComplete="given-name"
                     value={form.firstName}
                     onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))}
                   />
@@ -175,6 +190,7 @@ export default function Qualify() {
                   <Label>Last Name</Label>
                   <Input
                     placeholder="Haynes"
+                    autoComplete="family-name"
                     value={form.lastName}
                     onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))}
                   />
@@ -194,8 +210,11 @@ export default function Qualify() {
                   <Label>ZIP Code *</Label>
                   <Input
                     placeholder="07105"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    maxLength={10}
                     value={form.zip}
-                    onChange={e => setForm(f => ({ ...f, zip: e.target.value }))}
+                    onChange={e => { setOutOfArea(false); setForm(f => ({ ...f, zip: e.target.value })); }}
                   />
                 </div>
               </div>
@@ -292,10 +311,21 @@ export default function Qualify() {
                 </div>
               )}
 
+              {outOfArea && (
+                <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+                  <p className="font-semibold mb-1">Sorry, ZIP {normalizeZip(form.zip)} is outside our service area.</p>
+                  <p>
+                    We install systems in North and Central New Jersey (Essex, Bergen, Hudson, Passaic, Union,
+                    Morris, Somerset, Middlesex and northern Monmouth counties). We recommend a licensed
+                    contractor closer to you.
+                  </p>
+                </div>
+              )}
+
               <Button
                 className="w-full bg-[#ff6b35] hover:bg-[#ff6b35]/90 text-white font-semibold text-lg py-6"
-                disabled={!canContinue}
-                onClick={() => setStep("book")}
+                disabled={!canContinue || outOfArea}
+                onClick={handleContinue}
               >
                 Continue <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
