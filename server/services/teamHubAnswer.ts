@@ -11,6 +11,7 @@ import type { Express, Request, Response } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { callAnthropicModelChain } from "../_core/anthropic";
 import { sendEmail } from "./emailService";
+import { sendTelnyxSms, toE164 } from "./telnyxSms";
 
 const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -25,6 +26,12 @@ export async function escalateToOwner(name: string, source: string, question: st
       + `<blockquote style="border-left:3px solid #c2501b;margin:0;padding:6px 12px;white-space:pre-wrap">${esc(question)}</blockquote>`
       + `<p>Answer it on the board: <a href="https://mechanicalenterprise.com/p/team-8b159de4">Daily Hub → Questions from the team</a>. Your answer shows in their Questions box.</p>`,
   }).catch((e) => console.warn("[teamHub] escalate email failed", e));
+  // Text the owner too: a team question must never wait unseen (owner rule, Nov 23).
+  const phone = toE164(process.env.OWNER_ALERT_PHONE ?? "");
+  if (phone) {
+    await sendTelnyxSms(phone, `Team question from ${who} (${source === "abrevo" ? "Abrevo" : "Daily Hub"}): ${question}`.slice(0, 480))
+      .catch((e) => console.warn("[teamHub] escalate SMS failed", e));
+  }
 }
 
 function secretOk(req: Request): boolean {
@@ -48,6 +55,7 @@ export const HELPDESK = `# Help desk (how to fix common problems)
 ## CRM calls (browser dialer)
 - Use a headset. The first time, the browser asks for the microphone: click Allow. If they can't hear you: click the lock icon left of the address bar → Microphone → Allow, then refresh the page (F5).
 - Extensions and phone menus ("press 1"): during the call press Keypad (next to Mute) and tap the numbers, or type the numbers on your keyboard.
+- Rosalia Outreach phone page (Jazmin): it has only Hang up and Mute, no keypad yet. At a phone menu, stay on the line (most menus reach an operator if you press nothing). If not, hang up, log "Follow-up set" with the note "phone menu, needs keypad", and go to the next contact.
 - After every call, log the result in My contacts (no answer, voicemail, conversation, follow-up, visit booked, not interested, do not call, bad number) with a short note.
 - Call only 9 AM–8 PM. Anyone who says don't call: mark "do not call" and never contact them again.
 - If the dialer shows an error: refresh the page (F5) and try again; if it still fails, say what the error says.
@@ -73,6 +81,12 @@ Rules:
 - Never invent prices, promises, phone numbers, people or steps.
 - If the question is too vague to act on (e.g. "some pages don't work", "I can't log in", "it's not working" without saying which page, account or task, or what error they see), set confident to false and put in "clarify" one short, friendly reply asking for exactly what's missing: which page/account/task (name or link) and what happens when they try (the exact error or what they see). Otherwise "clarify" is "".
 Reply with JSON only: {"confident": true|false, "answer": "...", "clarify": "..."} (answer is "" when not confident).`;
+
+const BEST_EFFORT = `You are covering for the owner, Ana, who hasn't been able to reply yet. The team member has been waiting, and no question may wait more than 5 minutes. Use the guide below as your source. Give the most helpful answer you can right now, in 2-5 short sentences:
+- If the guide answers it, give the steps.
+- If it doesn't, give a safe, practical way to keep working (a workaround, or which task to do meanwhile) and say Ana will confirm the rest.
+- Never approve spending, prices, contracts, sending documents, or anything outside their tasks; never invent facts, numbers, logins or policies. Never tell them to stop working or to contact anyone outside the team.
+Reply with JSON only: {"answer": "..."}`;
 
 const CHAT_RULE = `
 
@@ -147,6 +161,20 @@ export function registerTeamHubAnswerRoute(app: Express) {
     if (req.body?.escalate_only === true) return giveUp();
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) return giveUp();
+    // Second try after the owner hasn't answered for ~4 minutes: always give something useful.
+    if (req.body?.mode === "best_effort") {
+      const r = await callAnthropicModelChain({
+        apiKey,
+        models: ["claude-sonnet-5", "claude-haiku-4-5"],
+        system: `${BEST_EFFORT}\n\n<guide>\n${guide}\n</guide>`,
+        messages: [{ role: "user", content: question }],
+        maxTokens: 500,
+      });
+      const m = r.ok ? (r.text ?? "").match(/\{[\s\S]*\}/) : null;
+      let answer = "";
+      try { answer = m ? String(JSON.parse(m[0]).answer ?? "").trim().slice(0, 1500) : ""; } catch { answer = ""; }
+      return res.json({ confident: !!answer, answer, best_effort: true });
+    }
     const r = await callAnthropicModelChain({
       apiKey,
       models: ["claude-sonnet-5", "claude-haiku-4-5"],
