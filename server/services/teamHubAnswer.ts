@@ -11,7 +11,6 @@ import type { Express, Request, Response } from "express";
 import { timingSafeEqual } from "node:crypto";
 import { callAnthropicModelChain } from "../_core/anthropic";
 import { sendEmail } from "./emailService";
-import { sendTelnyxSms, toE164 } from "./telnyxSms";
 
 const esc = (v: string) => v.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -26,12 +25,6 @@ export async function escalateToOwner(name: string, source: string, question: st
       + `<blockquote style="border-left:3px solid #c2501b;margin:0;padding:6px 12px;white-space:pre-wrap">${esc(question)}</blockquote>`
       + `<p>Answer it on the board: <a href="https://mechanicalenterprise.com/p/team-8b159de4">Daily Hub → Questions from the team</a>. Your answer shows in their Questions box.</p>`,
   }).catch((e) => console.warn("[teamHub] escalate email failed", e));
-  // Text the owner too: a team question must never wait unseen (owner rule, Nov 23).
-  const phone = toE164(process.env.OWNER_ALERT_PHONE ?? "");
-  if (phone) {
-    await sendTelnyxSms(phone, `Team question from ${who} (${source === "abrevo" ? "Abrevo" : "Daily Hub"}): ${question}`.slice(0, 480))
-      .catch((e) => console.warn("[teamHub] escalate SMS failed", e));
-  }
 }
 
 function secretOk(req: Request): boolean {
@@ -82,11 +75,11 @@ Rules:
 - If the question is too vague to act on (e.g. "some pages don't work", "I can't log in", "it's not working" without saying which page, account or task, or what error they see), set confident to false and put in "clarify" one short, friendly reply asking for exactly what's missing: which page/account/task (name or link) and what happens when they try (the exact error or what they see). Otherwise "clarify" is "".
 Reply with JSON only: {"confident": true|false, "answer": "...", "clarify": "..."} (answer is "" when not confident).`;
 
-const BEST_EFFORT = `You are covering for the owner, Ana, who hasn't been able to reply yet. The team member has been waiting, and no question may wait more than 5 minutes. Use the guide below as your source. Give the most helpful answer you can right now, in 2-5 short sentences:
-- If the guide answers it, give the steps.
-- If it doesn't, give a safe, practical way to keep working (a workaround, or which task to do meanwhile) and say Ana will confirm the rest.
-- Never approve spending, prices, contracts, sending documents, or anything outside their tasks; never invent facts, numbers, logins or policies. Never tell them to stop working or to contact anyone outside the team.
-Reply with JSON only: {"answer": "..."}`;
+const BEST_EFFORT = `You are the team's support desk (Claude), answering for Ana, the owner. Ana does not want to be interrupted: you answer every question yourself, right away. Use the guide below (their tasks, recent chat, tutorials, help desk) and common sense about calling, email and CRM work.
+- Give a clear, complete answer in 2-6 short sentences: the steps, or a safe workaround and what to do next.
+- If something truly needs Ana's decision (approving spending, prices, contracts, sending company documents, hiring/pay, or policy the guide doesn't cover), still tell them what to do now, say Ana will confirm that part, and set needs_ana true.
+- Never invent facts, numbers, logins or policies. Never tell them to stop working.
+Reply with JSON only: {"answer": "...", "needs_ana": true|false}`;
 
 const CHAT_RULE = `
 
@@ -155,8 +148,9 @@ export function registerTeamHubAnswerRoute(app: Express) {
       ? { name: String(req.body.escalate.name ?? "").slice(0, 80), source: String(req.body.escalate.source ?? "hub").slice(0, 20) }
       : null;
     const giveUp = async (clarify = "", noReply = false) => {
-      if (asker && !noReply) await escalateToOwner(asker.name, asker.source, question);
-      return res.json({ confident: false, answer: "", clarify, no_reply: noReply, escalated: !!asker && !noReply });
+      // Chat: the bot follows up with best_effort, which escalates only Ana-only decisions.
+      if (asker && !noReply && !chat) await escalateToOwner(asker.name, asker.source, question);
+      return res.json({ confident: false, answer: "", clarify, no_reply: noReply, escalated: !!asker && !noReply && !chat });
     };
     if (req.body?.escalate_only === true) return giveUp();
     const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -172,8 +166,15 @@ export function registerTeamHubAnswerRoute(app: Express) {
       });
       const m = r.ok ? (r.text ?? "").match(/\{[\s\S]*\}/) : null;
       let answer = "";
-      try { answer = m ? String(JSON.parse(m[0]).answer ?? "").trim().slice(0, 1500) : ""; } catch { answer = ""; }
-      return res.json({ confident: !!answer, answer, best_effort: true });
+      let needsAna = false;
+      try {
+        const j = m ? JSON.parse(m[0]) : {};
+        answer = String(j.answer ?? "").trim().slice(0, 1500);
+        needsAna = j.needs_ana === true;
+      } catch { answer = ""; }
+      // Only decisions that are Ana's go to her (email, no texts): everything else is answered here.
+      if ((needsAna || !answer) && asker) await escalateToOwner(asker.name, asker.source, question);
+      return res.json({ confident: !!answer, answer, best_effort: true, needs_ana: needsAna });
     }
     const r = await callAnthropicModelChain({
       apiKey,
