@@ -5344,14 +5344,14 @@ export const blogPosts: BlogPostData[] = [
     "title": "Central AC Replacement Cost in NJ: Quote Checklist",
     "slug": "central-ac-replacement-nj-cost",
     "date": "April 12, 2026",
-    "readTime": "5 min read",
+    "readTime": "6 min read",
     "category": "HVAC Guides",
     "metaDescription": "Compare central AC replacement quotes in NJ: equipment, ductwork, electrical, permits and installation scope. Request a property-specific assessment.",
     "excerpt": "Understand what changes a central AC replacement quote in New Jersey, which costs to ask bidders to separate, and what to send for a useful assessment.",
     "sections": [
       {
         "type": "intro",
-        "content": "The useful answer to 'What does central AC replacement cost in NJ?' starts with the property and installation scope. A condenser price alone is not an installed-system quote. Equipment selection, the existing indoor unit, ducts, electrical work, access and required approvals all need review. Mechanical Enterprise can assess the property and prepare a scope; this guide explains how to compare the resulting proposals without treating an online estimate as a binding price."
+        "content": "The useful answer to \"What does central AC replacement cost in New Jersey?\" starts with the property, not a single equipment number. A condenser price alone is not an installed-system quote — the indoor coil, ductwork, electrical connections, access conditions and any required permits all shape the final scope. Mechanical Enterprise assesses the property and prepares a written scope before pricing is finalized. In New Jersey, that also means confirming any local permit or inspection requirements before a contractor sets an installation date. This guide explains how to compare the resulting proposals, and why an online estimate should be treated as a starting point rather than a binding price."
       },
       {
         "type": "h2",
@@ -5359,7 +5359,7 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "Ask each bidder to identify the proposed equipment, the work included and the assumptions behind the proposal. Is the indoor equipment part of the replacement? Are controls, removal and disposal, startup checks and documentation included? If a line item is excluded, ask who will handle it. A lower total may describe a smaller scope rather than the same installation at a lower price."
+        "content": "Ask each bidder to identify the proposed equipment, the work included and the assumptions behind the price. Is the indoor coil part of the replacement? Are controls, removal and disposal, startup checks and closeout documentation included? If a line item is excluded, ask who is responsible for it and how that work will be priced. A lower total may simply describe a smaller scope rather than the same installation priced lower."
       },
       {
         "type": "checklist",
@@ -5370,9 +5370,17 @@ export const blogPosts: BlogPostData[] = [
           "Access requirements and protection of the occupied property.",
           "Permits, inspections and who coordinates them where required.",
           "Startup checks, operating instructions and closeout documents.",
-          "Manufacturer warranty terms and any separately priced coverage.",
+          "Manufacturer warranty terms and any separately priced coverage options.",
           "Payment milestones, assumptions and change-order process."
         ]
+      },
+      {
+        "type": "h2",
+        "content": "What actually changes the installed price"
+      },
+      {
+        "type": "paragraph",
+        "content": "Several factors influence the installed cost of a central air conditioning system, even when two bidders propose similar equipment capacity. Ductwork condition and layout matter: undersized, leaky or hard-to-reach ducts add labor that an equipment price alone does not cover. Electrical capacity matters too — older panels or disconnects may need upgrading to support new equipment safely, and that should be identified before installation day rather than discovered partway through the job. Access conditions, such as attic or crawlspace work, tight mechanical closets, or multi-story installations, change how long a job takes and how many technicians it requires. Removal and disposal of the old unit, refrigerant recovery, and any permit or inspection fees are legitimate parts of an installed price — ask whether they are already included in the number you were given or billed separately as the work proceeds."
       },
       {
         "type": "h2",
@@ -5380,7 +5388,11 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "A straightforward equipment replacement and a project requiring duct changes, difficult access or electrical work should not be priced as identical jobs. Share known comfort problems and prior repairs with the contractor, rather than asking only for the same equipment size. A site assessment helps establish which existing components can remain and which need further evaluation. In a condo or multifamily building, confirm equipment ownership and coordinate access with management before scheduling work."
+        "content": "A straightforward equipment swap in a Union County split-level and a project that also requires duct modifications, difficult rooftop access or electrical panel work should not be priced as identical jobs. Share known comfort problems, prior repair history, and any rooms that run consistently warm or cold with your contractor, rather than asking only for a price on \"the same size unit.\" A site assessment helps establish which existing components — ductwork, line sets, electrical disconnects — can remain in place and which need further evaluation before an installation date is set."
+      },
+      {
+        "type": "paragraph",
+        "content": "In a condo or garden-style building, such as the multifamily properties common across Hudson County, confirm who owns the outdoor equipment and coordinate access and scheduling with the building or association before work begins. Shared walls, limited crane or hoist access, and association approval timelines can all change the installation plan even when the equipment itself is unchanged. Ask whether the contractor you're considering has experience coordinating directly with property managers before you schedule a date."
       },
       {
         "type": "h2",
@@ -5398,7 +5410,15 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "These details help organize the assessment; they do not replace a site visit or confirm a final equipment selection. Ask for a written scope that identifies unresolved items. If a component cannot be inspected before the quote, agree how it will be evaluated and how additional work would be approved."
+        "content": "These details help organize the assessment; they do not replace a site visit or confirm a final equipment selection. Ask for a written scope that identifies any unresolved items — for example, whether existing ductwork needs modification or an electrical panel needs evaluation — and agree in advance how additional work would be approved if something is found once the system is opened up."
+      },
+      {
+        "type": "h2",
+        "content": "Optional coverage and what affects eligibility"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise offers an optional 10-year parts-and-labor coverage plan for new installations. It is administered through a third-party service agreement backed by A-rated insurers, and it is priced separately from the installation rather than included automatically in every quote. This plan is unrelated to any utility or government program and is purchased directly through Mechanical Enterprise. Existing systems may qualify for the same coverage, but only after an inspection confirms the equipment meets the program's age and condition requirements — eligibility is confirmed at the time of assessment, not before a technician has looked at the system. If coverage is something you want to compare across bids, ask each contractor whether it is built into their price or offered as a separate option, what it actually covers, and how claims are handled. Because it is an add-on rather than a standard inclusion, it should appear as its own line in any quote you are comparing, not folded into the installation total."
       },
       {
         "type": "h2",
@@ -5406,26 +5426,30 @@ export const blogPosts: BlogPostData[] = [
       },
       {
         "type": "paragraph",
-        "content": "For replacement planning, see [central AC installation in NJ](/central-ac-installation-nj). If you are deciding whether to keep an existing system, start with [AC repair and assessment](/ac-repair-nj). Property managers coordinating multiple units can use our [commercial property management services](/commercial/for-property-management)."
+        "content": "For replacement planning across Essex, Bergen, Passaic, Middlesex, Morris, Sussex and Somerset counties, as well as Union and Hudson, see [central AC installation in NJ](/central-ac-installation-nj). If you're still deciding whether to repair or replace an existing system, start with [AC repair and assessment](/ac-repair-nj). Mechanical Enterprise has served the region for 20 years and can prepare a scope specific to your property before you commit to an equipment selection."
       },
       {
         "type": "cta_box",
         "content": "Send your property details and current equipment information to discuss a central AC replacement scope with Mechanical Enterprise.",
-        "buttonText": "Request an installation assessment",
-        "buttonUrl": "#blog-assessment"
+        "buttonText": "Request a property assessment",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
       }
     ],
+    "updatedDate": "November 23, 2026",
     "faqSchema": [
       {
         "question": "Can I get a final central AC replacement price from equipment photos?",
-        "answer": "Photos help prepare an assessment, but access, system compatibility and installation requirements may need a site review before a final scope is confirmed."
+        "answer": "Photos help prepare an assessment, but access, system compatibility and installation requirements usually need a site review before a final scope is confirmed."
       },
       {
         "question": "Should I compare quotes only by their total price?",
-        "answer": "Compare the equipment and scope, exclusions, startup documentation, warranty terms and payment milestones alongside the total price."
+        "answer": "Compare the equipment and scope, exclusions, startup documentation, coverage terms and payment milestones alongside the total price, not the total alone."
+      },
+      {
+        "question": "Does the optional 10-year coverage cost extra?",
+        "answer": "Yes, it's a paid add-on available for new installations and for existing systems that pass an eligibility inspection; it isn't included automatically in a replacement quote."
       }
-    ],
-    "updatedDate": "October 21, 2026"
+    ]
   },
   {
     "title": "HVAC Financing Options in NJ",
