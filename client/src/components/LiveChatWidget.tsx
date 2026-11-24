@@ -47,6 +47,40 @@ const AUTO_OPEN_MS = 8_000;
 const AUTO_OPEN_KEY = "me_chat_auto_opened";
 const GREETING = "Hi! I'm Jessica from Mechanical Enterprise. 👋 How can I help you today?";
 
+/* ── Deep links: ?chat=<key> (or #chat=<key>) ──────────────────────── */
+const DEEP_LINKS: Record<string, { menu: string; service?: string }> = {
+  residential: { menu: "🏠 Residential" },
+  commercial: { menu: "🏢 Commercial" },
+  "residential-service": { menu: "🏠 Residential", service: RES_SERVICE },
+  "residential-emergency": { menu: "🏠 Residential", service: RES_EMERGENCY },
+  "commercial-service": { menu: "🏢 Commercial", service: COM_SERVICE },
+  "commercial-emergency": { menu: "🏢 Commercial", service: COM_EMERGENCY },
+};
+const CHAT_PARAM = "chat";
+const HASH_PREFIX = /^#\/?\??/;
+
+/** Read the chat deep-link from ?chat= or #chat=. Returns null when absent. */
+function readChatDeepLink(): { value: string; fromHash: boolean } | null {
+  const q = new URLSearchParams(window.location.search).get(CHAT_PARAM);
+  if (q !== null) return { value: q.trim().toLowerCase(), fromHash: false };
+  const h = new URLSearchParams(window.location.hash.replace(HASH_PREFIX, "")).get(CHAT_PARAM);
+  if (h !== null) return { value: h.trim().toLowerCase(), fromHash: true };
+  return null;
+}
+
+/** Strip only the chat param (query or hash); every other param is untouched. */
+function clearChatDeepLink(fromHash: boolean) {
+  const url = new URL(window.location.href);
+  if (fromHash) {
+    const hp = new URLSearchParams(url.hash.replace(HASH_PREFIX, ""));
+    hp.delete(CHAT_PARAM);
+    url.hash = hp.toString();
+  } else {
+    url.searchParams.delete(CHAT_PARAM);
+  }
+  window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+}
+
 /* ── Service options that go straight to inline form ────────────────── */
 const SERVICE_OPTIONS = new Set([RES_SERVICE, RES_EMERGENCY, COM_SERVICE, COM_EMERGENCY]);
 
@@ -240,6 +274,24 @@ export default function LiveChatWidget() {
     window.history.replaceState(null, "", url.toString());
   }, []);
 
+  /* ── deep link: ?chat=... opens a specific screen ──────────────── */
+  useEffect(() => {
+    const apply = () => {
+      const link = readChatDeepLink();
+      if (!link) return;
+      if (new URLSearchParams(window.location.search).get("service_booking")) return; // Stripe return wins
+      autoOpenFired.current = true;
+      const target = DEEP_LINKS[link.value]; // unknown value → main menu
+      setOpen(true);
+      if (target) openScreen(target.menu, target.service);
+      clearChatDeepLink(link.fromHash);
+    };
+    apply();
+    window.addEventListener("hashchange", apply);
+    return () => window.removeEventListener("hashchange", apply);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /* ── auto-open ─────────────────────────────────────────────────── */
   useEffect(() => {
     if (autoOpenFired.current) return;
@@ -271,6 +323,33 @@ export default function LiveChatWidget() {
     setSvcSqft("Under 2,000 sq ft"); setSvcFloors(""); setSvcCurrentSystem("Unknown");
     setSvcServiceNeeded("Repair"); setSvcValidationError(false); setSvcPayError("");
   }, []);
+
+  /* ── service option → inline form (shared by menu click + deep link) ── */
+  const applyServiceOption = (label: string) => {
+    if (label.includes("Emergency")) setSvcEmergency(true);
+    if (label.includes("Maintenance")) setSvcType("Maintenance");
+    else if (label.includes("Service") || label.includes("Repair")) setSvcType("Repair");
+  };
+
+  /* ── deep link: land directly on a menu / form (same state the buttons set) ── */
+  const openScreen = (menuLabel: string, serviceLabel?: string) => {
+    resetChat();
+    setFlowCategory(CATEGORY_MAP[menuLabel] ?? null);
+    const msgs: ChatMessage[] = [
+      { role: "assistant", text: GREETING },
+      { role: "user", text: menuLabel },
+      { role: "assistant", text: FOLLOW_UP_CONFIG[menuLabel].reply },
+    ];
+    if (serviceLabel) {
+      msgs.push({ role: "user", text: serviceLabel }, { role: "assistant", text: FOLLOW_UP_REPLIES[serviceLabel] });
+      applyServiceOption(serviceLabel);
+      setUserMsgCount(1);
+      setMenuLevel("service-form");
+    } else {
+      setMenuLevel(MENU_KEY_MAP[menuLabel] ?? "main");
+    }
+    setMessages(msgs);
+  };
 
   /* ── main menu click ───────────────────────────────────────────── */
   const handleMainMenuClick = useCallback((label: string) => {
@@ -315,9 +394,7 @@ export default function LiveChatWidget() {
 
     // Service options → inline form
     if (SERVICE_OPTIONS.has(label)) {
-      if (label.includes("Emergency")) setSvcEmergency(true);
-      if (label.includes("Maintenance")) setSvcType("Maintenance");
-      else if (label.includes("Service") || label.includes("Repair")) setSvcType("Repair");
+      applyServiceOption(label);
       typeThen(600, () => { setMessages((p) => [...p, { role: "assistant", text: reply }]); setMenuLevel("service-form"); });
       return;
     }
@@ -527,6 +604,39 @@ export default function LiveChatWidget() {
     }]);
   };
 
+  /* ── share link for the current screen ─────────────────────────── */
+  const [shareLabel, setShareLabel] = useState("");
+  const shareKey = (() => {
+    if (menuLevel === "service-form" && !svcSubmitted && (flowCategory === "residential" || flowCategory === "commercial")) {
+      return `${flowCategory}-${svcEmergency ? "emergency" : "service"}`;
+    }
+    if (menuLevel === "residential" || menuLevel === "commercial") return menuLevel;
+    return "open";
+  })();
+  const handleShare = async () => {
+    const url = `${window.location.origin}/?${CHAT_PARAM}=${shareKey}`;
+    const isMobile = window.matchMedia?.("(pointer: coarse)").matches;
+    try {
+      if (isMobile && typeof navigator.share === "function") {
+        await navigator.share({ title: "Mechanical Enterprise", url });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return; // user dismissed the sheet
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = url; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+    setShareLabel("Link copied");
+    setTimeout(() => setShareLabel(""), 2000);
+  };
+
   /* ── pricing helpers ───────────────────────────────────────────── */
   const pricing = isCommercial ? P.commercial : P.residential;
   const emergencyPrice = pricing.emergency.price;
@@ -563,6 +673,11 @@ export default function LiveChatWidget() {
               <div style={{ fontWeight: 600, fontSize: 15, lineHeight: 1.3 }}>Jessica</div>
               <div style={{ fontSize: 12, opacity: 0.75 }}>Mechanical Enterprise • Online</div>
             </div>
+            <button onClick={handleShare} aria-label="Copy link to this chat screen" title="Share link"
+              style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 4, display: "flex", alignItems: "center", gap: 4, fontSize: 12, opacity: shareLabel ? 1 : 0.7 }}>
+              {shareLabel && <span role="status">{shareLabel}</span>}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+            </button>
             <button onClick={() => setOpen(false)} aria-label="Close chat" style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 4, fontSize: 20, lineHeight: 1, opacity: 0.7 }} onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")} onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}>✕</button>
           </div>
 
