@@ -25,6 +25,103 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "PTAC vs Mini-Split vs VRF: NJ Multifamily Retrofits",
+    "slug": "ptac-vs-mini-split-vs-vrf-multifamily-retrofits",
+    "date": "November 25, 2026",
+    "readTime": "8 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "Compare PTAC, mini-split, and VRF retrofit options for NJ multifamily buildings, plus what drives install quality and optional coverage.",
+    "excerpt": "A side-by-side look at PTAC, ductless mini-split, and VRF systems for multifamily retrofits in North and Central New Jersey, with a bidder checklist and planning guidance.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Property managers across Essex, Hudson, and Bergen counties face the same question when a multifamily retrofit comes up: PTAC, ductless mini-split, or VRF? Each system has a different installation footprint, maintenance profile, and long-term cost structure, and the wrong choice can mean recurring repair calls, uneven comfort complaints from tenants, and a shorter equipment life. Mechanical Enterprise LLC has spent more than 20 years installing and servicing all three system types across North and Central Jersey multifamily and mixed-use buildings. This guide breaks down how PTAC, mini-split, and VRF systems perform in real retrofit conditions, what drives installation quality, and how an optional paid parts & labor coverage program can factor into your replacement planning."
+      },
+      {
+        "type": "h2",
+        "content": "How the Three Systems Compare"
+      },
+      {
+        "type": "paragraph",
+        "content": "PTAC units are self-contained, through-wall boxes installed one per room or unit, typically under a window. Ductless mini-splits pair an outdoor condenser with one or more indoor heads, connected by refrigerant line sets, and serve a single apartment or a small group of zones. VRF (variable refrigerant flow) systems scale that same refrigerant-piping concept up to building level, with shared outdoor units feeding dozens of indoor units through a branch controller network. The right fit depends on your building's electrical capacity, wall construction, unit count, and whether tenants need independent heating and cooling control or centralized building-level management."
+      },
+      {
+        "type": "h2",
+        "content": "PTAC Units in Multifamily Buildings"
+      },
+      {
+        "type": "paragraph",
+        "content": "PTAC remains common in older apartment stock across Union and Passaic counties because the sleeve-and-unit design is simple to swap without major construction. Each tenant gets independent control, and a single failed unit does not affect neighboring apartments. The tradeoff is a shorter service life, more frequent coil and filter cleaning, and sleeve or gasket wear that lets outside air and noise into the unit over time. Installation quality on the sleeve seal and electrical connection matters as much as the equipment brand, since a poorly sealed sleeve drives up energy use and tenant complaints regardless of which PTAC model is installed."
+      },
+      {
+        "type": "h2",
+        "content": "Ductless Mini-Splits for Unit-by-Unit Retrofits"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mini-splits work well in buildings without existing ductwork, including masonry mid-rises common in Hudson County, where running new duct branches would be disruptive or impossible. They run quieter than most PTAC units, offer higher efficiency, and allow flexible zoning so bedrooms and living areas can be controlled separately. The retrofit challenge is routing line sets through exterior walls or chases without compromising the building envelope, and managing condensate drainage correctly in each unit. Line-set length, electrical sizing, and proper refrigerant charging all affect long-term reliability, which is why installation detail matters more here than with a plug-and-play PTAC swap."
+      },
+      {
+        "type": "h2",
+        "content": "VRF Systems for Larger Multifamily Portfolios"
+      },
+      {
+        "type": "paragraph",
+        "content": "VRF makes sense for larger multifamily or mixed-use properties where centralized equipment reduces the number of outdoor condensers on the roof or in the yard. A single VRF system can serve many apartments, with simultaneous heating and cooling available to different zones from the same refrigerant loop. These systems require engineered design, careful refrigerant piping layout, and commissioning by technicians familiar with the branch controller programming. Because VRF concentrates more capacity into fewer pieces of equipment, a preventive maintenance agreement becomes more important than with PTAC or mini-split retrofits, since a single compressor issue can affect comfort across multiple units at once."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and Optional Coverage"
+      },
+      {
+        "type": "paragraph",
+        "content": "Across all three system types, the installation determines how long the equipment lasts and how often it needs repair, regardless of brand. Proper sleeve sealing, correct refrigerant charge, accurate line-set sizing, and commissioning that matches manufacturer specifications all reduce callbacks. Mechanical Enterprise, licensed in New Jersey as NJ Master HVACR Contractor #19HC00400700, installs under those standards on new multifamily work. For owners who want additional protection on new installations, we offer an optional 10-year parts & labor coverage program, administered through a third-party extended service agreement backed by A-rated insurers; this is a separately purchased add-on, not a standard or no-cost feature. Eligible existing systems may qualify for this coverage after passing an inspection against program criteria, but not every system will qualify, so coverage should never be assumed for equipment already in place."
+      },
+      {
+        "type": "h2",
+        "content": "What to Send Us When Requesting Bids"
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Unit count and current system type (PTAC, mini-split, RTU, split) for each building",
+          "Existing electrical panel capacity and any recent electrical upgrades",
+          "Condition notes on existing sleeves, line sets, or refrigerant piping",
+          "Recent utility bills or energy usage by building, if available",
+          "Floor plans or unit square footage for load calculations",
+          "Maintenance history and any recurring complaint patterns",
+          "Access constraints: elevator availability, parking, after-hours scheduling needs",
+          "Whether you want a single bid for equipment replacement or an ongoing maintenance agreement included in scope"
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": "When comparing bidders, ask how they size equipment for your specific building rather than a generic per-door estimate, what their response process looks like for repair calls once the system is installed, and whether they offer a preventive maintenance agreement separate from the installation contract. Ask for details on how refrigerant piping and electrical work will be documented for future service visits, since incomplete records slow down troubleshooting years later. A bid that only lists equipment cost without addressing service planning leaves gaps that show up as repair bills down the road."
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning a PTAC, mini-split, or VRF retrofit for your property? Request a commercial service visit or consultation with Mechanical Enterprise LLC.",
+        "buttonText": "Request a Commercial Consultation",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Which system is right for a building with no existing ductwork?",
+        "answer": "Ductless mini-splits or VRF are typically better suited than ducted equipment for buildings without existing duct runs, since both rely on refrigerant piping rather than ductwork. PTAC is also ductless but serves one room or unit at a time rather than multiple zones from shared equipment."
+      },
+      {
+        "question": "Can older PTAC units be replaced one at a time instead of all at once?",
+        "answer": "Yes, PTAC sleeves generally allow unit-by-unit replacement without affecting neighboring apartments, which is one reason many multifamily owners phase PTAC retrofits over time rather than replacing an entire building at once."
+      },
+      {
+        "question": "Does the optional parts & labor coverage apply to any existing system?",
+        "answer": "No. Coverage is available for new installations, and eligible existing systems may qualify only after passing an inspection against program criteria. Not every existing system will qualify, so coverage should never be assumed for equipment already in place."
+      }
+    ]
+  },
+
+  {
     "title": "Mini-Split & VRF Systems for Mixed-Use Buildings",
     "slug": "mini-split-vrf-mixed-use-buildings-nj",
     "date": "November 18, 2026",
