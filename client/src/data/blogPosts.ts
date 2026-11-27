@@ -25,6 +25,102 @@ export type BlogPostData = {
 
 export const blogPosts: BlogPostData[] = [
   {
+    "title": "PTAC Replacement for NJ Condo & HOA Boards",
+    "slug": "ptac-replacement-condo-associations-nj",
+    "date": "November 27, 2026",
+    "readTime": "7 min read",
+    "category": "Commercial HVAC",
+    "metaDescription": "PTAC replacement planning for NJ condo associations: installation quality, system fit, optional 10-year coverage, and portfolio maintenance agreements.",
+    "excerpt": "A practical guide for condo and HOA boards planning PTAC replacement across a building: what drives installation quality, how optional coverage works, and how to structure a bid request.",
+    "sections": [
+      {
+        "type": "intro",
+        "content": "Condo and HOA boards managing PTAC-equipped buildings face a recurring problem: aging units, inconsistent comfort complaints from owners, and repair bills that eventually outpace the value of another patch job. Replacing a building's PTAC fleet is a capital decision that touches unit owners, building systems, and multi-year budgets. Mechanical Enterprise LLC works with condo associations and property managers across northern New Jersey to plan PTAC replacement projects that prioritize correct system sizing, installation quality, and a documented maintenance path — not just swapping boxes unit by unit."
+      },
+      {
+        "type": "h2",
+        "content": "Why PTAC Replacement Is a Board-Level Decision"
+      },
+      {
+        "type": "paragraph",
+        "content": "A single failed PTAC is a work order. A building full of units approaching end of life is a capital planning problem that belongs in front of the board and the reserve study, not handled unit-by-unit as complaints come in. Piecemeal replacement often means mismatched equipment, inconsistent sleeve conditions, and repeat vendor visits that cost more over time than a coordinated project. Boards that treat PTAC replacement as a scheduled phase — tied to a budget cycle and a defined scope — get more predictable pricing, less disruption for owners, and a clearer record for future audits or sale disclosures. Mechanical Enterprise helps associations scope that phase before a single unit comes out of the wall."
+      },
+      {
+        "type": "h2",
+        "content": "Installation Quality and System Fit Come First"
+      },
+      {
+        "type": "paragraph",
+        "content": "Correct installation starts before the old unit is removed. Wall sleeve condition, electrical capacity, and unit sizing all affect whether a replacement performs the way an owner expects on day one. Reusing a sleeve that no longer seals properly, or installing a unit sized for a different room load, creates comfort complaints and premature wear regardless of brand. Mechanical Enterprise's installation process includes sleeve and electrical assessment, correct sizing for the space, and commissioning before a unit is signed off as complete. For associations replacing PTACs building-wide, this same process is applied unit by unit so the finished project performs consistently across every line, not just the ones that happened to have an intact sleeve."
+      },
+      {
+        "type": "h2",
+        "content": "Optional 10-Year Parts & Labor Coverage for Eligible Systems"
+      },
+      {
+        "type": "paragraph",
+        "content": "Once a new PTAC, mini-split, or other system is installed, boards can add optional 10-year parts and labor coverage as a separately purchased extended service agreement, backed by an A-rated insurer and administered by a third party — it is not bundled into the installation price and is never included at no cost. The coverage carries no deductible and applies across all major brands. Existing equipment already in the building may also qualify for this coverage, but only after it passes an eligibility inspection; coverage is never assumed for equipment that hasn't been evaluated. Full terms are available for review before any association commits to a term."
+      },
+      {
+        "type": "h2",
+        "content": "Repair Response and Preventive Maintenance Agreements"
+      },
+      {
+        "type": "paragraph",
+        "content": "Most association HVAC budgets are consumed by reactive repair calls rather than planned maintenance. A Comfort Membership agreement shifts that balance: it provides parts and labor coverage for a chosen term (3, 5, or 10 years), preventive maintenance visits scheduled across the year, priority scheduling when a unit does fail, and a replacement credit that applies toward the next system installed by Mechanical Enterprise. Billing is structured monthly rather than as a single upfront payment, and the association retains ownership of every unit covered under the agreement — this is a service agreement, not a lease or equipment rental. For boards managing dozens of PTAC units, a single membership agreement replaces a patchwork of individual service calls with one predictable line item."
+      },
+      {
+        "type": "h2",
+        "content": "Replacement Planning Across Your Portfolio"
+      },
+      {
+        "type": "paragraph",
+        "content": "Associations rarely replace every PTAC at once, and they shouldn't have to. Mechanical Enterprise prices portfolio work on a per-unit, per-year basis across PTACs, mini-splits, rooftop units, and split systems, so boards can phase replacement across budget years without losing visibility into what's been done and what's still pending. Reporting is delivered on a quarterly cadence, giving property managers a consistent record to bring to board meetings and reserve study updates. For buildings considering alternatives to wall-sleeve PTACs — including ductless mini-split or VRV/VRF systems for specific floors or common areas — that evaluation can be built into the same planning process rather than handled as a separate project."
+      },
+      {
+        "type": "h2",
+        "content": "Serving Condo Associations Across Essex, Hudson, Bergen & Beyond"
+      },
+      {
+        "type": "paragraph",
+        "content": "Mechanical Enterprise LLC is a New Jersey Master HVACR Contractor (License #19HC00400700) serving condo associations, property managers, and general contractors across Essex, Hudson, Bergen, Passaic, Union, Middlesex, Morris, Sussex, and Somerset counties, with 20 years in the trade. Multifamily buildings in older Hudson County high-rises and garden-style complexes across Essex and Union counties frequently carry mixed-age PTAC fleets installed over multiple decades — exactly the kind of portfolio where a phased, documented replacement plan pays off compared to calling a different vendor every time a unit fails."
+      },
+      {
+        "type": "checklist",
+        "items": [
+          "Total unit count by type (PTAC, mini-split, RTU, split) and approximate age of each",
+          "Wall sleeve dimensions and visible condition, plus electrical panel capacity per unit",
+          "Access logistics — unit owner coordination requirements, building hours, elevator or loading restrictions",
+          "Any existing manufacturer warranty documentation still in effect",
+          "Maintenance and repair history, including recurring complaint units",
+          "Preferred phasing timeline tied to your reserve study or budget cycle",
+          "Proof of license and insurance from every bidder under consideration"
+        ]
+      },
+      {
+        "type": "cta_box",
+        "content": "Planning a PTAC replacement or maintenance agreement for your association? Request a service visit or portfolio consultation from Mechanical Enterprise LLC.",
+        "buttonText": "Request a Service Visit",
+        "buttonUrl": "https://mechanicalenterprise.com/commercial"
+      }
+    ],
+    "faqSchema": [
+      {
+        "question": "Should our association replace all PTACs at once or phase the project?",
+        "answer": "Most associations phase PTAC replacement across budget years rather than replacing every unit in a single cycle. Portfolio pricing is quoted per unit per year, which lets boards align replacement phases with reserve study timing while still tracking the project under one plan and one quarterly report."
+      },
+      {
+        "question": "Can our existing PTAC units qualify for the 10-year coverage, or only new installs?",
+        "answer": "New installations by Mechanical Enterprise can be enrolled directly. Existing PTAC units already in the building may also qualify for the optional 10-year parts and labor coverage, but only after they pass an eligibility inspection — coverage is never assumed without that review."
+      },
+      {
+        "question": "Does a Comfort Membership agreement cover the whole building or individual units?",
+        "answer": "Comfort Membership agreements can be structured around a building's full PTAC, mini-split, RTU, or split system count, with preventive maintenance visits and priority scheduling applied across the covered units. The association retains ownership of all equipment under the agreement."
+      }
+    ]
+  },
+
+  {
     "title": "PTAC vs Mini-Split vs VRF: NJ Multifamily Retrofits",
     "slug": "ptac-vs-mini-split-vs-vrf-multifamily-retrofits",
     "date": "November 25, 2026",
