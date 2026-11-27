@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Assessment Retake · Mechanical Enterprise</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>html,body{margin:0}[hidden]{display:none!important}img{max-width:100%}
+
+:root{
+  --paper:#F3F5F8; --surface:#FFFFFF; --sunk:#E6EBF2; --ink:#0F2A4A; --text:#14243A; --muted:#5B6B80; --line:#D5DDE8;
+  --accent:#E8672A; --accent-ink:#FFFFFF; --accent-soft:#FCE6DA;
+  --blue:#1B5FA8; --blue-soft:#DCE8F6;
+  --mint:#DDF0E5; --mint-ink:#1E5A3E; --good:#2E7D4F; --warn:#A86A12; --bad:#B8342A; --bad-soft:#F8DEDA;
+  --display:"Archivo","Segoe UI",sans-serif; --body:"Inter","Segoe UI",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace; --r:14px; --bar:#0F2A4A; --bar-ink:#F3F5F8;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0B1526; --surface:#122036; --sunk:#182A44; --ink:#E4ECF7; --text:#DCE5F2; --muted:#93A3BA; --line:#24385A;
+  --accent:#FF8A4F; --accent-ink:#1E0C03; --accent-soft:#3D2416; --blue:#6FA8F0; --blue-soft:#1A3355;
+  --mint:#173A2B; --mint-ink:#9FE0BD; --good:#6FCF97; --warn:#E3A84A; --bad:#FF8A7A; --bad-soft:#3B1F1B; --bar:#07101E; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0B1526; --surface:#122036; --sunk:#182A44; --ink:#E4ECF7; --text:#DCE5F2; --muted:#93A3BA; --line:#24385A;
+  --accent:#FF8A4F; --accent-ink:#1E0C03; --accent-soft:#3D2416; --blue:#6FA8F0; --blue-soft:#1A3355;
+  --mint:#173A2B; --mint-ink:#9FE0BD; --good:#6FCF97; --warn:#E3A84A; --bad:#FF8A7A; --bad-soft:#3B1F1B; --bar:#07101E; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--text);font:15px/1.55 var(--body);-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bar)}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.1;text-wrap:balance;margin:0;color:var(--ink)}
+p{margin:0}
+a{color:var(--blue)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bar);color:var(--bar-ink)}
+.bar-in{display:flex;align-items:center;gap:16px;padding-block:12px;max-width:1240px;margin:0 auto;flex-wrap:wrap}
+.brand{font:700 15px/1.15 var(--display);display:flex;align-items:center;gap:10px}
+.mk{display:flex;gap:3px}.mk i{width:14px;height:6px;border-radius:3px;background:#3E86D6}.mk i+i{background:#E8672A}
+.brand small{font:500 11px/1 var(--body);opacity:.7;letter-spacing:.08em;text-transform:uppercase}
+.meter{flex:1;min-width:160px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.meter i{height:6px;border-radius:3px;background:rgba(255,255,255,.16);overflow:hidden;position:relative}
+.meter i b{position:absolute;inset:0 auto 0 0;background:#E8672A;transition:width .4s ease}
+.clock{font:500 14px/1 var(--mono);font-variant-numeric:tabular-nums;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.12)}
+.clock.over{background:#E8672A;color:#fff}
+
+.shell{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px;padding-block:28px 64px}
+.rail{display:flex;flex-direction:column;gap:6px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 76px);align-self:start}
+.step{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid transparent;background:transparent;text-align:left;cursor:pointer}
+.step:hover{background:var(--sunk)}
+.step[aria-current="true"]{background:var(--surface);border-color:var(--line)}
+.step .n{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font:700 15px var(--display);background:var(--sunk);color:var(--muted)}
+.step[aria-current="true"] .n{background:var(--accent);color:var(--accent-ink)}
+.step.done .n{background:var(--mint);color:var(--mint-ink)}
+.step b{display:block;font-weight:600;font-size:14px;color:var(--ink)}
+.step span{font-size:12px;color:var(--muted)}
+.step em{font:500 11px var(--mono);color:var(--muted);font-style:normal}
+.main{min-width:0}
+@media (max-width:900px){
+  .shell{grid-template-columns:1fr;gap:18px;padding-block:16px 56px}
+  .rail{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}
+  .step{grid-template-columns:30px auto;flex:0 0 auto}
+  .step em,.step span{display:none}
+  .step .n{width:30px;height:30px}
+}
+
+.eyebrow{font:600 12px/1.2 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lede{color:var(--muted);max-width:66ch;font-size:16px}
+.head{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.head h2{font-size:clamp(28px,4vw,40px);font-weight:800}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:12px 20px;font-weight:600;cursor:pointer;background:var(--accent);color:var(--accent-ink);transition:transform .15s ease}
+.btn:hover{transform:translateY(-1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.btn.alt{background:var(--sunk);color:var(--ink)}
+.btn.sm{padding:8px 14px;font-size:13px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:600;font-size:13px;min-width:0;color:var(--ink)}
+input[type=text],input[type=email],input[type=tel],input[type=url],select,textarea{width:100%;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-weight:400;font-size:15px;color:var(--text)}
+textarea{resize:vertical;min-height:110px;line-height:1.5}
+.pill{display:inline-flex;align-items:center;gap:6px;font:600 12px/1 var(--body);padding:6px 10px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.pill.ok{background:var(--mint);color:var(--mint-ink)}
+.pill.hot{background:var(--accent-soft);color:var(--accent)}
+.pill.blue{background:var(--blue-soft);color:var(--blue)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:700px){.grid2{grid-template-columns:1fr}}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(30px);opacity:0;background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-weight:600;transition:.25s;z-index:20;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:start}
+@media (max-width:900px){.hero{grid-template-columns:1fr}}
+.hero h1{font-size:clamp(34px,5.5vw,58px);font-weight:800;letter-spacing:-.02em}
+.hero h1 span{color:var(--accent)}
+.video{border-radius:var(--r);overflow:hidden;background:#0F2A4A;aspect-ratio:16/9;max-width:100%}
+.video video{width:100%;height:100%;display:block}
+.stages{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:26px}
+@media (max-width:900px){.stages{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stage-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px;border-top:4px solid var(--blue)}
+.stage-card .k{font:800 30px/1 var(--display);color:var(--accent)}
+.stage-card b{font-size:15px;color:var(--ink)}
+.stage-card .meta{display:flex;gap:8px;margin-top:auto;flex-wrap:wrap}
+
+.deck{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:clamp(18px,3vw,32px);animation:rise .3s ease}
+@keyframes rise{from{transform:translateY(8px);opacity:.4}to{transform:none;opacity:1}}
+.qcard h3{font-size:clamp(19px,2.4vw,24px);font-weight:700;margin:10px 0 18px}
+.quote{border-left:4px solid var(--accent);background:var(--paper);padding:12px 16px;border-radius:0 10px 10px 0;margin:0 0 14px;font-size:15px;white-space:pre-wrap}
+.opts{display:grid;gap:10px}
+.opt{display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:center;text-align:left;padding:14px;border-radius:12px;border:1.5px solid var(--line);background:var(--paper);cursor:pointer;transition:border-color .15s,background .15s}
+.opt:hover{border-color:var(--ink)}
+.opt .l{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font:700 14px var(--mono);background:var(--surface);border:1px solid var(--line)}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.opt[aria-pressed="true"] .l{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.dots{display:flex;gap:6px;flex-wrap:wrap}
+.dots button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font:600 12px var(--mono);cursor:pointer;color:var(--muted)}
+.dots button.ans{background:var(--mint);color:var(--mint-ink);border-color:transparent}
+.dots button.cur{outline:2px solid var(--accent);outline-offset:1px}
+.kbd{font:500 11px var(--mono);padding:2px 6px;border:1px solid var(--line);border-radius:5px;color:var(--muted)}
+
+.compose{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:18px;margin-bottom:18px}
+@media (max-width:900px){.compose{grid-template-columns:1fr}}
+.brief{display:flex;flex-direction:column;gap:10px}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:14px;background:var(--paper);border-radius:10px;padding:10px 12px}
+.facts dt{color:var(--muted)}.facts dd{margin:0}
+.mail{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.mail .to{display:grid;grid-template-columns:74px 1fr;border-bottom:1px solid var(--line);font-size:14px}
+.mail .to span{padding:10px 12px;color:var(--muted);background:var(--paper)}
+.mail .to input{border:0;border-radius:0;background:transparent}
+.mail textarea{border:0;border-radius:0;background:transparent;min-height:220px}
+.sms{background:var(--paper);border:1px solid var(--line);border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.sms textarea{background:var(--surface);border-radius:16px;min-height:120px}
+.count{display:flex;align-items:center;gap:10px;font:500 12px var(--mono);color:var(--muted)}
+.count i{flex:1;height:5px;border-radius:3px;background:var(--sunk);position:relative;overflow:hidden}
+.count i b{position:absolute;inset:0 auto 0 0;background:var(--good)}
+.count.over{color:var(--bad)} .count.over i b{background:var(--bad)}
+
+.calls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:9px 14px;font-weight:600;font-size:14px;cursor:pointer;display:flex;gap:8px;align-items:center}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.callwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,360px);gap:22px;align-items:start}
+@media (max-width:1000px){.callwrap{grid-template-columns:1fr}}
+.phone{background:#0F2A4A;border-radius:34px;padding:10px;max-width:440px;width:100%;box-shadow:0 20px 50px -30px rgba(15,42,74,.6)}
+.screen{background:var(--paper);border-radius:26px;overflow:hidden;display:flex;flex-direction:column;height:580px}
+@media (max-width:500px){.screen{height:520px}}
+.caller{display:flex;gap:12px;align-items:center;padding:14px 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.av{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font:700 16px var(--display);background:var(--blue-soft);color:var(--blue);flex:0 0 auto}
+.live{margin-left:auto;font:500 12px var(--mono);color:var(--good);display:flex;align-items:center;gap:6px}
+.live::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.thread{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:84%;padding:10px 14px;border-radius:18px;white-space:pre-wrap;word-wrap:break-word;animation:rise .25s ease}
+.msg.them{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:6px}
+.msg.me{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:6px}
+.sys{align-self:center;font:500 12px var(--mono);color:var(--muted);text-align:center}
+.typing{align-self:flex-start;display:flex;gap:4px;padding:12px 14px;background:var(--surface);border:1px solid var(--line);border-radius:18px}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:bounce 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes bounce{50%{transform:translateY(-4px);opacity:.5}}
+.composer{display:flex;gap:8px;padding:10px;background:var(--surface);border-top:1px solid var(--line)}
+.composer textarea{min-height:44px;max-height:120px;border-radius:22px;padding:10px 14px}
+.composer .btn{padding:0 18px}
+
+.cal{display:grid;gap:10px;margin-bottom:20px}
+.cal-row{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:stretch}
+.cal-row>b{font-size:13px;color:var(--ink);display:flex;flex-direction:column;justify-content:center}
+.cal-row>b small{font-weight:500;color:var(--muted);font-size:12px}
+.slots{display:grid;gap:8px}
+.slots.site{grid-template-columns:repeat(3,minmax(0,1fr))}
+.slots.phone4{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:760px){.cal-row{grid-template-columns:1fr}.slots.phone4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:460px){.slots.site{grid-template-columns:1fr}}
+.slot{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;min-height:86px;display:flex;flex-direction:column;gap:6px;transition:background .2s,border-color .2s}
+.slot .t{font:600 13px var(--mono);color:var(--ink)} .slot .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.slot .who{font-size:13px;font-weight:600;background:var(--mint);color:var(--mint-ink);padding:4px 8px;border-radius:7px}
+.slot.clash{border-color:var(--bad);background:var(--bad-soft)} .slot.clash .who{background:var(--surface);color:var(--bad)}
+.leads{display:grid;gap:12px}
+.lead{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:800px){.lead{grid-template-columns:1fr}}
+.lead h4{font:700 17px var(--display)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;margin-top:8px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;word-break:break-word}
+.ctl{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:460px){.ctl{grid-template-columns:1fr}}
+.ctl .full{grid-column:1/-1}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;font-weight:500}
+.check input{width:18px;height:18px;accent-color:var(--accent);flex:0 0 auto}
+
+.prog{display:grid;gap:10px}
+.prog .line{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+
+.page{max-width:900px;margin:0 auto;padding-block:24px 64px;display:grid;gap:22px}
+.intro h1{font:800 clamp(28px,4.5vw,42px)/1.1 var(--display);color:var(--ink);margin:6px 0 10px}
+.score{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
+.score .tile{background:var(--sunk);border-radius:12px;padding:12px 16px;min-width:140px}
+.score .tile b{display:block;font:800 28px/1 var(--display);color:var(--ink)}
+.why{margin:10px 0 0;padding-left:20px;display:grid;gap:8px}
+.why li b{color:var(--ink)}
+.need{background:var(--mint);color:var(--mint-ink);border-radius:12px;padding:14px 18px}
+.need ul{margin:8px 0 0;padding-left:20px;display:grid;gap:4px}
+.sec{display:grid;gap:14px}
+.sec>h2{font:800 24px/1.15 var(--display);color:var(--ink);margin:0}
+.q{display:grid;gap:10px}
+.q h3{font:600 16px/1.4 var(--body);margin:0;color:var(--ink)}
+.q textarea,.q input[type=text],.q input[type=email]{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--text)}
+.q textarea{min-height:110px;resize:vertical}
+.cnt{font:500 12px var(--mono);color:var(--muted)} .cnt.over{color:var(--bad)}
+.tip{font-size:13px;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px}
+table.facts2{border-collapse:collapse;width:100%;font-size:14px}
+table.facts2 th,table.facts2 td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.facts2 th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tblw{overflow-x:auto}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check input{width:18px;height:18px;margin-top:2px}
+.missing{color:var(--bad);font-size:13px}
+
+</style></head><body>
+<form hidden method='post' name='retake'><input type="hidden" name="form-name" value="retake"><input name="bot-field"><input name="name"><input name="email"><input name="finished"><textarea name="answers"></textarea><textarea name="data"></textarea></form>
+
+<header class="bar"><div class="bar-in wrap">
+  <div class="brand"><span class="mk"><i></i><i></i></span><span>Mechanical Enterprise<br><small>Sales Assistant · retake</small></span></div>
+  <div class="clock" id="clock" title="Time spent">00:00</div>
+</div></header>
+
+<div class="wrap"><main class="page" id="page">
+
+<section class="panel intro">
+  <span class="eyebrow">Sales Assistant assessment · retake for Eugene Obi</span>
+  <h1>Thank you for completing the assessment, Eugene.</h1>
+  <p>We reviewed your answers and listened to your voicemail. Your written work was strong and you followed the main rules, so we're giving you a short retake focused on the parts we still need to see: <b>booking the next step clearly</b> and <b>how you sound on the phone</b>.</p>
+  <div class="score">
+    <div class="tile"><span class="muted">Your score</span><b>close to passing</b></div>
+    <div class="tile"><span class="muted">This retake</span><b>pass 42 / 60</b></div>
+  </div>
+  <p><b>What you did well:</b> you never gave a price, never diagnosed equipment or made promises, your writing was clear and professional, you put the no-heat boiler emergency first, and your voicemail was easy to understand.</p>
+
+  <h2 style="font:800 22px/1.2 var(--display);color:var(--ink);margin:18px 0 0">What to improve</h2>
+  <ol class="why">
+    <li><b>Say who you are, every time.</b> You said "this is Eugene with our team." Always give your name <b>and the company</b>: "Hi, this is Eugene with Mechanical Enterprise."</li>
+    <li><b>Lock in the next step.</b> Your calls ended with "next week" or "Tuesday or Wednesday". Every call must end with a <b>specific day and time</b> from two options you offer, repeated back, and "I'll send you an email confirming it."</li>
+    <li><b>Answer what the person just said.</b> In your first call you pasted a full script with notes like "[Listen]" and "[If hesitant]". On a real call you reply in 1–3 sentences to what the customer just said. Long scripted answers score lower here.</li>
+    <li><b>Voicemail.</b> Yours was clear, but it had no company name and <b>no callback number</b>, and it said "Craig" instead of Greg. A voicemail needs: name, company, reason, callback number said slowly, and the number repeated.</li>
+    <li><b>Quick checks.</b> From 8:00 AM to 1:00 PM, two visits of 90 minutes plus 30 minutes of travel end at 11:30 AM; a third would end at 1:30 PM, so only 2 fit. On the board, a lead with an invalid phone number goes <b>on hold</b> until we get a good number; don't schedule a call to it.</li>
+  </ol>
+
+  <div class="need" style="margin-top:18px">
+    <b>To pass this retake you need:</b>
+    <ul>
+      <li>at least <b>42 of 60 points</b> (70%);</li>
+      <li>all <b>three practice calls completed</b> and <b>all four voice recordings</b> sent;</li>
+      <li><b>only the facts given</b>. Any invented name, fact or promise scores zero for that item;</li>
+      <li>no prices, no diagnoses, no promises.</li>
+    </ul>
+    <p style="margin-top:8px">It takes about 45 minutes. You'll need a microphone for Part 4 (your phone works). Your answers save in this browser as you go. Please write and speak your own answers, without AI tools or scripts.</p>
+  </div>
+
+  <div class="row" style="margin-top:16px">
+    <label class="f" style="flex:1 1 220px">Full name<input type="text" id="cname" autocomplete="name"></label>
+    <label class="f" style="flex:1 1 220px">Email<input type="email" id="cemail" autocomplete="email"></label>
+  </div>
+</section>
+
+<section class="sec" id="p1">
+  <span class="eyebrow">Part 1 · Quick checks · 6 pts</span><h2>Time zones, scheduling and the board</h2>
+  <div id="mc"></div>
+</section>
+
+<section class="sec" id="p2">
+  <span class="eyebrow">Part 2 · Writing · 8 pts</span><h2>Two short pieces</h2>
+  <div id="writing"></div>
+</section>
+
+<section class="sec" id="p3">
+  <span class="eyebrow">Part 3 · Practice calls · 24 pts</span><h2>Three calls. Complete all three.</h2>
+  <p class="lede">Type exactly what you would say out loud, in 1–3 sentences per reply, answering what the contact just said. The contact answers after each reply. When a call ends, press <b>Start next call</b>. Each call is scored on: your opening (your name, the company, why you're calling), your discovery questions, the rules (no prices, no diagnosis, no promises), booking a specific day and time, and confirming by email.</p>
+  <div class="calls" id="calltabs" role="tablist"></div>
+  <div class="callwrap" id="callwrap"></div>
+</section>
+
+<section class="sec" id="p4">
+  <span class="eyebrow">Part 4 · Your voice · 22 pts</span><h2>Four short recordings</h2>
+  <p class="lede">We need to hear you. For each item, open <a href="https://vocaroo.com/" target="_blank" rel="noopener"><b>vocaroo.com</b></a>, press the red button, speak, press stop, then <b>Save &amp; share</b> and paste the link here (it looks like https://voca.ro/…). Speak as if you're on the phone: natural pace, clear, friendly. Don't read a long script.</p>
+  <div id="voice"></div>
+</section>
+
+<section class="sec" id="p5">
+  <div class="panel" style="display:grid;gap:12px">
+    <span class="eyebrow">Finish</span>
+    <label class="check"><input type="checkbox" id="honest"> <span>These are my own answers and my own voice, without AI tools or a prepared script.</span></label>
+    <div id="missing" class="missing"></div>
+    <div class="row"><button class="btn" id="send" type="button">Send my retake</button><span class="muted" id="sendmsg" style="font-size:13px"></span></div>
+  </div>
+</section>
+
+<section class="panel" id="done" hidden>
+  <span class="eyebrow">Received</span>
+  <h2 style="font:800 26px/1.2 var(--display);color:var(--ink);margin:6px 0 8px">Thank you, your retake was sent.</h2>
+  <p>Once you complete the assessment, we will advise you of the next steps.</p>
+</section>
+</main></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(t){ const el=$("#toast"); el.textContent=t; el.classList.add("show"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("show"),2200); }
+
+const MC=[
+ {id:"q1",q:"A building owner in Denver (Mountain Time, 2 hours behind Eastern) asks you to call him at 10:00 AM his time. What time is that in Eastern Time?",o:["8:00 AM","11:00 AM","12:00 PM (noon)","1:00 PM"]},
+ {id:"q2",q:"Our technicians are free from 9:00 AM to 1:00 PM. Each site visit takes 60 minutes, plus 30 minutes of travel between visits. How many visits fit in that window?",o:["2","3","4","5"]},
+ {id:"q3",q:"A past customer wants a maintenance renewal, but the phone number on file is invalid. What do you do on the pipeline board?",o:["Schedule a call to the number anyway","Mark the lead Do Not Call","Put the lead on hold, email asking for a good number, and note the date","Delete the lead"]},
+];
+const W=[
+ {id:"w1",title:"Confirmation email · 4 pts",ask:"You booked a walkthrough with Rita Shah (property manager, Brookside Offices, 15 Lake Ave, Bloomfield) for Wednesday at 11:00 AM. Write the confirmation email (90 words or fewer): who is coming, day and time, address, what will happen, and how to reschedule. Don't add any facts.",limit:{n:90,unit:"words"}},
+ {id:"w2",title:"Technician handoff note · 4 pts",ask:"Write the handoff note for our technicians from these call notes (60 words or fewer). Keep every important fact and don't add any:\n\nSunrise Laundromat, 88 Broad St, Bloomfield. Owner Joyce Park; she decides with her business partner, Dan. 1 rooftop unit about 15 years old, keeps tripping the breaker. Wants replacement options. Site visit Friday 9:00 AM. Park on the street; the back lot is private. Dan will meet the technician. Call Joyce 30 minutes before arriving.",limit:{n:60,unit:"words"}},
+];
+const CALLS=[
+ {id:"c1",who:"Rita Shah",ini:"RS",role:"Property manager · 2 office buildings, Bloomfield",
+  brief:"Rita filled out our website form about maintenance for her two office buildings. You're calling her back.",goal:"Book a walkthrough on a specific day and time (our visits: Tue or Wed, 9:00 AM, 11:00 AM or 1:00 PM) and confirm it by email.",
+  lines:["Rita Shah.","Sorry, who is this again? I get a lot of calls.","Okay. We have rooftop units on both buildings. Just tell me what a tune-up costs.","Can your guy come tonight around 7? That's when I'm free.","Fine. Which days do you have?"],
+  end:"Wednesday at 11 works. Send me the details."},
+ {id:"c2",who:"Victor Lang",ini:"VL",role:"Developer · new 18-unit building, Newark",
+  brief:"Victor replied to our email. He's starting an 18-unit apartment building next year.",goal:"Book a plan review: get the drawings and set a specific day and time for our team to go over them with him, and confirm by email.",
+  lines:["Lang Development, Victor.","Yeah, I saw your email. Honestly, just email me a price sheet.","Are heat pumps cheaper to run than gas around here?","How long would your team need for the review?","Alright. What do you need from me?"],
+  end:"I'll send the drawings today. Put the time in an email."},
+ {id:"c3",who:"Joyce Park",ini:"JP",role:"Business owner · Sunrise Laundromat",
+  brief:"Joyce received our quote to replace her rooftop unit two weeks ago and hasn't decided.",goal:"Book a specific time for our team to go over the quote with Joyce and her business partner, and confirm by email.",
+  lines:["Sunrise Laundromat, Joyce speaking.","Oh, the quote. My brother-in-law does HVAC on the side. He says he can do it cheaper.","Do I have to pay a deposit to hold a spot?","My partner Dan has to agree before I sign anything.","When would that be?"],
+  end:"Thursday at 1 is good for both of us. Email me."},
+];
+const VOICE=[
+ {id:"v1",title:"Voicemail · 7 pts",ask:"Leave a voicemail for Kevin Marsh (Northline Distribution). He asked about replacing a rooftop unit that shuts off on hot days. Give your name, the company, why you're calling, and the callback number (973) 555-0190 said slowly and repeated. Under 45 seconds."},
+ {id:"v2",title:"Call 1 out loud · 5 pts",ask:"Record yourself saying your replies from Call 1 with Rita Shah, as you would on the phone (you can look at what you typed)."},
+ {id:"v3",title:"Call 2 out loud · 5 pts",ask:"Record yourself saying your replies from Call 2 with Victor Lang."},
+ {id:"v4",title:"Call 3 out loud · 5 pts",ask:"Record yourself saying your replies from Call 3 with Joyce Park."},
+];
+
+const KEY="me-retake-eo3v7-v1";
+const blank=()=>({cand:{name:"",email:""},mc:{},w:{},c:{c1:[],c2:[],c3:[]},cur:"c1",day:{},v:{},honest:false,started:null,secs:0,sent:false});
+let S=blank();
+try{ const r=localStorage.getItem(KEY); if(r){ const o=JSON.parse(r); S=Object.assign(blank(),o); S.c=Object.assign(blank().c,o.c||{}); } }catch(e){}
+let st; function save(){ clearTimeout(st); st=setTimeout(()=>{ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){} },200); }
+
+/* clock */
+setInterval(()=>{ if(S.sent) return; if(!S.started) return; S.secs++; if(S.secs%10===0) save(); const m=Math.floor(S.secs/60),s=S.secs%60; $("#clock").textContent=String(m).padStart(2,"0")+":"+String(s).padStart(2,"0"); },1000);
+function touch(){ if(!S.started){ S.started=new Date().toISOString(); save(); } }
+
+/* candidate */
+$("#cname").value=S.cand.name; $("#cemail").value=S.cand.email;
+$("#cname").oninput=e=>{S.cand.name=e.target.value; touch(); save(); check();};
+$("#cemail").oninput=e=>{S.cand.email=e.target.value; touch(); save(); check();};
+
+/* part 1 */
+$("#mc").innerHTML=MC.map((q,i)=>`<article class="panel q"><span class="eyebrow">Question ${i+1} · 2 pts</span><h3>${esc(q.q)}</h3><div class="opts">${q.o.map((o,k)=>`<button type="button" class="opt" data-q="${q.id}" data-k="${k}" aria-pressed="${S.mc[q.id]===k}"><span class="l">${"ABCD"[k]}</span><span>${esc(o)}</span></button>`).join("")}</div></article>`).join("");
+document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{ const q=b.dataset.q,k=+b.dataset.k; S.mc[q]=k; touch(); save(); document.querySelectorAll(`.opt[data-q="${q}"]`).forEach(x=>x.setAttribute("aria-pressed",String(+x.dataset.k===k))); check(); });
+
+/* text items */
+function count(lim,v){ v=v||""; const n=lim.unit==="words"?(v.trim()?v.trim().split(/\s+/).length:0):v.length; return {n,over:n>lim.n}; }
+function textItems(list,host,store){
+  host.innerHTML=list.map(x=>`<article class="panel q"><span class="eyebrow">${esc(x.title)}</span><h3 style="white-space:pre-wrap">${esc(x.ask)}</h3>${x.tip?`<p class="tip">${esc(x.tip)}</p>`:""}<textarea id="t_${x.id}" aria-label="${esc(x.title)}">${esc(store[x.id]||"")}</textarea><span class="cnt" id="n_${x.id}"></span></article>`).join("");
+  list.forEach(x=>{ const t=$("#t_"+x.id), n=$("#n_"+x.id); const up=()=>{ const c=count(x.limit,t.value); n.textContent=`${c.n} / ${x.limit.n} ${x.limit.unit}`; n.classList.toggle("over",c.over); };
+    up(); t.oninput=()=>{ store[x.id]=t.value; touch(); save(); up(); check(); }; });
+}
+textItems(W,$("#writing"),S.w);
+S.v=S.v||{};
+$("#voice").innerHTML=VOICE.map(x=>`<article class="panel q"><span class="eyebrow">${esc(x.title)}</span><h3>${esc(x.ask)}</h3><label class="f">Vocaroo link<input type="url" id="v_${x.id}" placeholder="https://voca.ro/…" value="${esc(S.v[x.id]||"")}"></label><span class="cnt" id="vn_${x.id}"></span></article>`).join("");
+const okV=u=>/^https:\/\/(voca\.ro|vocaroo\.com)\/\S+/.test((u||"").trim());
+VOICE.forEach(x=>{ const i=$("#v_"+x.id),n=$("#vn_"+x.id); const up=()=>{ n.textContent=i.value.trim()?(okV(i.value)?"Link looks good":"Paste a voca.ro link"):""; n.classList.toggle("over",!!i.value.trim()&&!okV(i.value)); }; up(); i.oninput=()=>{ S.v[x.id]=i.value.trim(); touch(); save(); up(); check(); }; });
+
+/* calls */
+function callDone(id){ const c=CALLS.find(x=>x.id===id); return S.c[id].length>=c.lines.length; }
+function renderCall(){
+  const c=CALLS.find(x=>x.id===S.cur)||CALLS[0], rep=S.c[c.id], done=rep.length>=c.lines.length;
+  $("#calltabs").innerHTML=CALLS.map((x,k)=>`<button class="tab" role="tab" data-c="${x.id}" aria-selected="${x.id===c.id}">Call ${k+1} · ${esc(x.who)} ${callDone(x.id)?'<span class="pill ok">Done</span>':""}</button>`).join("");
+  const nx=CALLS.find(x=>!callDone(x.id));
+  let th=`<p class="sys">Call connected · ${esc(c.who)}</p>`;
+  c.lines.forEach((l,k)=>{ if(k<=rep.length) th+=`<p class="msg them">${esc(l)}</p>`; if(k<rep.length) th+=`<p class="msg me">${esc(rep[k])}</p>`; });
+  if(done){ th+=`<p class="msg them">${esc(c.end)}</p><p class="sys">Call ended</p>`;
+    th+= nx?`<div class="sys" style="margin-top:10px"><button class="btn" type="button" id="nextCall">Start next call · ${esc(nx.who)} →</button></div>`:`<p class="sys">All three calls done. Go on to Part 4.</p>`; }
+  $("#callwrap").innerHTML=`
+    <div class="phone"><div class="screen">
+      <div class="caller"><span class="av">${c.ini}</span><div><b>${esc(c.who)}</b><div class="muted" style="font-size:12px">${esc(c.role)}</div></div><span class="live">${done?"ENDED":"ON CALL"}</span></div>
+      <div class="thread" id="thread">${th}</div>
+      <form class="composer" id="say"><textarea id="line" rows="1" placeholder="Type what you'd say…" aria-label="Your reply" ${done||S.sent?"disabled":""}></textarea><button class="btn" type="submit" ${done||S.sent?"disabled":""}>Say</button></form>
+    </div></div>
+    <aside class="panel" style="display:grid;gap:8px"><span class="eyebrow">Your brief</span><p>${esc(c.brief)}</p><p><b>Goal:</b> ${esc(c.goal)}</p>
+      <div class="row"><button class="btn alt sm" type="button" id="undo" ${rep.length&&!S.sent?"":"disabled"}>Undo my last line</button></div></aside>`;
+  const t=$("#thread"); t.scrollTop=t.scrollHeight;
+  document.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{ S.cur=b.dataset.c; save(); renderCall(); });
+  const nb=$("#nextCall"); if(nb) nb.onclick=()=>{ S.cur=nx.id; save(); renderCall(); $("#p3").scrollIntoView({behavior:"smooth"}); };
+  $("#undo").onclick=()=>{ rep.pop(); save(); renderCall(); check(); };
+  $("#say").onsubmit=e=>{ e.preventDefault(); if(S.sent) return; const v=$("#line").value.trim(); if(!v) return; touch();
+    rep.push(v); save(); $("#line").value=""; $("#line").disabled=true;
+    t.insertAdjacentHTML("beforeend",`<p class="msg me">${esc(v)}</p><div class="typing"><i></i><i></i><i></i></div>`); t.scrollTop=t.scrollHeight;
+    setTimeout(()=>{ renderCall(); check(); if(rep.length>=c.lines.length){ const n2=CALLS.find(x=>!callDone(x.id)); toast(n2?`Call finished. Next: ${n2.who}`:"All three calls finished"); } else $("#line").focus({preventScroll:true}); },900); };
+  $("#line").onkeydown=e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); $("#say").requestSubmit(); } };
+}
+renderCall();
+
+/* finish */
+$("#honest").checked=!!S.honest; $("#honest").onchange=e=>{ S.honest=e.target.checked; save(); check(); };
+function missingList(){
+  const m=[];
+  if(!S.cand.name.trim()) m.push("your name"); if(!/.+@.+\..+/.test(S.cand.email)) m.push("your email");
+  MC.forEach((q,i)=>{ if(S.mc[q.id]==null) m.push(`Part 1 question ${i+1}`); });
+  W.forEach((x,i)=>{ if(!(S.w[x.id]||"").trim()) m.push(`Part 2 item ${i+1}`); });
+  CALLS.forEach((x,i)=>{ if(!callDone(x.id)) m.push(`call ${i+1} with ${x.who}`); });
+  VOICE.forEach((x,i)=>{ if(!okV(S.v[x.id])) m.push(`recording ${i+1}`); });
+  if(!S.honest) m.push("the own-answers box");
+  return m;
+}
+function check(){ if(S.sent) return; const m=missingList(); $("#missing").textContent=m.length?"Still to do: "+m.join(", ")+".":""; $("#send").disabled=!!m.length; }
+check();
+
+function answersText(){
+  const L=[]; const T=(S.secs/60).toFixed(0);
+  L.push(`SALES ASSISTANT RETAKE (eo3v7) — ${S.cand.name} <${S.cand.email}>`,`Started: ${S.started}  Finished: ${new Date().toISOString()}  Time: ~${T} min`,`Own answers, no AI tools: ${S.honest?"yes":"no"}`,"");
+  L.push("PART 1 — QUICK CHECKS"); MC.forEach((q,i)=>L.push(`${i+1}. ${q.q} → ${S.mc[q.id]!=null?"ABCD"[S.mc[q.id]]+") "+q.o[S.mc[q.id]]:"(blank)"}`)); L.push("");
+  L.push("PART 2 — WRITING"); W.forEach((x,i)=>L.push(`${i+1}. ${x.title}\n${S.w[x.id]||"(blank)"}\n`));
+  L.push("PART 3 — PRACTICE CALLS"); CALLS.forEach((c,i)=>{ L.push(`Call ${i+1} with ${c.who}:`); c.lines.forEach((l,k)=>{ L.push(`${c.who.split(" ")[0]}: ${l}`); if(S.c[c.id][k]!=null) L.push(`Candidate: ${S.c[c.id][k]}`); }); if(callDone(c.id)) L.push(`${c.who.split(" ")[0]}: ${c.end}`); L.push(""); });
+  L.push("PART 4 — VOICE"); VOICE.forEach((x,i)=>L.push(`${i+1}. ${x.title}: ${S.v[x.id]||"(blank)"}`));
+  return L.join("\n");
+}
+$("#send").onclick=async()=>{
+  if(missingList().length) return check();
+  $("#send").disabled=true; $("#sendmsg").textContent="Sending…";
+  const fin=new Date().toISOString();
+  const body=new URLSearchParams({"form-name":"retake","bot-field":"",name:S.cand.name,email:S.cand.email,finished:fin,answers:answersText(),data:JSON.stringify({v:1,id:"eo3v7",cand:S.cand,started:S.started,finished:fin,secs:S.secs,mc:S.mc,w:S.w,c:S.c,voice:S.v,honest:S.honest})});
+  try{ const r=await fetch("https://careers.mechanicalenterprise.com/",{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:body.toString()});
+    S.sent=true; save(); showDone(); }
+  catch(e){ $("#send").disabled=false; $("#sendmsg").textContent="It didn't send. Check your connection and press Send again. Your answers are saved."; }
+};
+function showDone(){ document.querySelectorAll("#page>section:not(#done)").forEach(s=>s.hidden=true); $("#done").hidden=false; window.scrollTo({top:0}); }
+if(S.sent) showDone();
+</script>
+</body></html>
