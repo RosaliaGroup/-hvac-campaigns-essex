@@ -61,7 +61,7 @@
   },
   "/hvac-weehawken-nj": {
     "title": "Weehawken NJ HVAC Installation | Optional 10-Yr Coverage",
-    "description": "HVAC installation in Weehawken, NJ sized to your home, with optional 10-year parts & labor coverage. Free assessment. Call (862) 419-1763."
+    "description": "HVAC installation in Weehawken, NJ sized to your home, with optional 10-year parts & labor coverage. Free assessment — call (862) 419-1763."
   },
   "/blog/pseg-instant-rebate-program-nj": {
     "title": "Quality NJ Heat Pump Installs, Optional Coverage & Rebates",
@@ -125,7 +125,7 @@
   },
   "/hvac-bloomfield-nj": {
     "title": "Bloomfield NJ Heat Pump & HVAC Installation | 10-Yr Coverage",
-    "description": "Heat pump & HVAC installation in Bloomfield, NJ sized to your home, with optional 10-year parts & labor coverage. Free assessment: (862) 419-1763."
+    "description": "Heat pump & HVAC installation in Bloomfield, NJ, sized to your home. Optional 10-year parts & labor coverage. Free assessment — call (862) 419-1763."
   },
   "/blog/energy-efficient-hvac-nj": {
     "title": "Energy Efficient HVAC Systems for NJ Homes | Guide",
@@ -157,7 +157,7 @@
   },
   "/blog/heat-pump-installation-nj-guide": {
     "title": "Heat Pump Installation in NJ: Complete 2026 Guide",
-    "description": "Learn how heat pump installation works in NJ homes, from system types to the process. Call (862) 419-1763 for a free assessment."
+    "description": "Learn how NJ heat pump installation works: load calculations, system types, sizing and optional 10-year parts & labor coverage. Call (862) 419-1763."
   },
   "/blog/pseg-rebate-application-process": {
     "title": "PSE&G HVAC Rebate Application Process: Step-by-Step Guide",
@@ -813,7 +813,7 @@
   },
   "/commercial/for-commercial-partners": {
     "title": "Commercial HVAC Partners for NJ Brokers & Facility Teams",
-    "description": "Commercial HVAC partnerships for NJ brokers and facility teams: property assessments, planned maintenance and service coordination. Call (862) 419-1763."
+    "description": "Commercial HVAC partnerships for NJ brokers and facility teams: replacement assessments, maintenance planning and responsive service. Call (862) 419-1763."
   },
   "/blog/nj-heat-pump-rebates-2026": {
     "title": "NJ Heat Pump Rebates 2026: Complete Homeowner Guide",
@@ -870,5 +870,9 @@
   "/blog/pseg-on-bill-repayment-hvac": {
     "title": "NJ HVAC Financing Options: Quality Installs & Fit",
     "description": "Compare NJ HVAC financing options for a properly sized install with optional 10-year parts & labor coverage. Call (862) 419-1763 for a written quote."
+  },
+  "/hvac-kearny-nj": {
+    "title": "Kearny NJ HVAC Installation | Heat Pump & AC Sizing",
+    "description": "Kearny, NJ heat pump & AC installation sized to your home. Optional 10-year parts & labor coverage. Free assessment — call (862) 419-1763."
   }
 }
